@@ -17,7 +17,7 @@ import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactOpenTasksPreview } from "./ContactOpenTasksPreview";
 import { ContactNotesSection } from "./ContactNotesSection";
 import { ContactOverviewKpi } from "./ContactOverviewKpi";
-import { ProductCoverageGrid, CoverageSummaryCard } from "@/app/components/contacts/ProductCoverageGrid";
+import { ClientCoverageWidget } from "@/app/components/contacts/ClientCoverageWidget";
 
 export default async function ContactDetailPage({
   params,
@@ -35,9 +35,8 @@ export default async function ContactDetailPage({
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 lg:gap-8">
       <div className="space-y-6 min-w-0">
         <ContactOverviewKpi contactId={id} />
-        <CoverageSummaryCard contactId={id} />
         <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <ProductCoverageGrid contactId={id} />
+          <ClientCoverageWidget contactId={id} />
         </div>
         <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Kontaktní údaje</h2>

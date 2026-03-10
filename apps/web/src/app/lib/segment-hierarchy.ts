@@ -94,3 +94,25 @@ export function caseTypeToSegments(caseType: string): string[] {
   const normalized = caseType?.toLowerCase().trim() ?? "";
   return CASE_TYPE_TO_SEGMENTS[normalized] ?? [];
 }
+
+/** Mapování segmentu na caseType obchodu pro „založit obchod“ z coverage položky. */
+export const SEGMENT_TO_CASE_TYPE: Record<string, string> = {
+  HYPO: "hypotéka",
+  UVER: "úvěr",
+  ZP: "pojištění",
+  DPS: "dps",
+  INV: "investice",
+  DIP: "investice",
+  MAJ: "majetek",
+  NEM: "majetek",
+  AUTO_PR: "auto",
+  AUTO_HAV: "auto",
+  ODP: "pojištění",
+  CEST: "pojištění",
+  FIRMA_POJ: "pojištění",
+  ZDRAV: "pojištění",
+};
+
+export function segmentToCaseType(segmentCode: string): string {
+  return SEGMENT_TO_CASE_TYPE[segmentCode] ?? "jiné";
+}

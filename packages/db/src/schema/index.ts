@@ -13,3 +13,4 @@ export * from "./notifications";
 export * from "./messages";
 export * from "./mindmap";
 export * from "./advisor-preferences";
+export * from "./coverage";
