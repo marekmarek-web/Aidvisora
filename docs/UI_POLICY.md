@@ -1,6 +1,6 @@
-# UI policy – Advisor CRM (WePlan MVP)
+# UI policy – Aidvisora
 
-Pravidla pro konzistentní chování UI v CRM (board, panely, formuláře). Reference: `portal/weplan.html`.
+Pravidla pro konzistentní chování UI v CRM (board, panely, formuláře). Reference: `portal/portal reference`.
 
 ## Popovery a modály
 

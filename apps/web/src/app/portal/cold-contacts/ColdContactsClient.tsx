@@ -167,7 +167,7 @@ export function ColdContactsClient({
             </div>
           </div>
           <p className="text-amber-700 text-xs mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            Data z externích zdrojů kontrolujte. WePlan neručí za správnost AI extrakce.
+            Data z externích zdrojů kontrolujte. Aidvisora neručí za správnost AI extrakce.
           </p>
 
           {extracted.length > 0 && (

@@ -16,10 +16,19 @@ export default function LoginPage() {
 function LoginPageInner() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/portal/today";
+  const errorParam = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => {
+    if (!errorParam) return "";
+    if (errorParam === "otp_expired") return "Odkaz z e-mailu vypršel. Přihlaste se heslem nebo zaregistrujte se znovu.";
+    try {
+      return decodeURIComponent(errorParam);
+    } catch {
+      return errorParam;
+    }
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +61,7 @@ function LoginPageInner() {
     <div className="min-h-screen flex flex-col">
       <nav className="bg-white border-b border-[var(--brand-border)] px-4 py-3 flex items-center justify-between">
         <Link href="/" className="font-bold text-lg" style={{ color: "var(--brand-main)" }}>
-          Advisor CRM
+          Aidvisora
         </Link>
         <Link href="/" className="text-slate-600 hover:text-slate-900 text-sm">
           ← Zpět

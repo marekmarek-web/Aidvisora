@@ -90,10 +90,16 @@ export function LandingLoginPage() {
       const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
       setLoading(false);
       if (error) {
-        setMessage(error.message);
+        if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
+          setMessage("Supabase limitoval odesílání e-mailů (moc pokusů). Zkuste za 10–15 minut, nebo v Supabase vypněte Confirm email: Authentication → Providers → Email.");
+        } else {
+          setMessage(error.message);
+        }
         return;
       }
-      setMessage("Zkontrolujte e-mail pro potvrzení registrace.");
+      // Po registraci rovnou do aplikace (bez čekání na potvrzovací e-mail)
+      const nextPath = next.startsWith("/") ? next : "/portal/today";
+      window.location.href = `/register/complete?next=${encodeURIComponent(nextPath)}`;
     }
   }
 
@@ -167,7 +173,7 @@ export function LandingLoginPage() {
               W
             </div>
             <h1 className="font-light text-[24px] md:text-[48px] tracking-[2px] mb-1" style={{ fontFamily: "var(--wp-font)" }}>
-              WePlan
+              Aidvisora
             </h1>
             <p className="text-[14px] tracking-[1px] opacity-80 transition-all" style={{ fontFamily: "var(--wp-font)" }}>
               {isLogin ? "Vítejte zpět" : "Vytvořit nový účet"}

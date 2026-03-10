@@ -3,7 +3,7 @@
  * Partner-level: legacy data below. Product-level: eucs-zivot-rating.json (EUCS).
  *
  * DISCLAIMER: These ratings are purely informational. The advisor is responsible
- * for all recommendations. WePlan does not recommend specific products.
+ * for all recommendations. Aidvisora does not recommend specific products.
  */
 
 import eucsZivotRating from "./eucs-zivot-rating.json";
@@ -14,7 +14,7 @@ const eucsItems = (eucsZivotRating as { items: EucsZivotItem[] }).items ?? [];
 /** EUCS ŽP disclaimer (z eucs-zivot-rating.json). */
 export const EUCS_ZP_DISCLAIMER =
   (eucsZivotRating as { disclaimer?: string }).disclaimer ??
-  "Rating je pouze informativní. WePlan nedává doporučení. Poradce odpovídá za rozhodnutí.";
+  "Rating je pouze informativní. Aidvisora nedává doporučení. Poradce odpovídá za rozhodnutí.";
 
 /** Product-level EUCS rating lookup. Normalizes partner/product name for match. */
 export function getEucsRatingForProduct(partnerName: string, productName: string): EucsZivotItem | undefined {
@@ -126,4 +126,4 @@ export function findRatingByPartnerName(name: string): InsuranceRating | undefin
 
 /** Legacy disclaimer (partner-level popover). */
 export const ZP_RATING_DISCLAIMER =
-  "Tyto ratingy jsou pouze informativní. Poradce odpovídá za všechna doporučení. WePlan nedoporučuje konkrétní produkty.";
+  "Tyto ratingy jsou pouze informativní. Poradce odpovídá za všechna doporučení. Aidvisora nedoporučuje konkrétní produkty.";

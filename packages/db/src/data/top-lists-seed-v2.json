@@ -1,5 +1,5 @@
 {
-  "project": "WePlan",
+  "project": "Aidvisora",
   "generatedAt": "2026-03-03T16:47:49",
   "note": "Top seznamy (pojišťovny/investiční společnosti/banky/penzijní společnosti) podle veřejně dohledatelných produktových řad. Nezaručuje dostupnost v Beplan; slouží jako seed. U každého partnera lze doplnit další interní varianty z brokerpool dropdownů.\nÚpravy v2: doplněny životní produkty z PDF (včetně Maxima MaxEfekt), segmenty mají plné české názvy; Slavia označena jako excluded dle požadavku.",
   "segments": [

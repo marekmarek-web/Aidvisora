@@ -73,7 +73,7 @@ Dokument zachycuje výchozí rozhodnutí pro věci, které v zadání nejsou exp
 ## E-mail provider
 
 - **Výchozí:** Resend (nastavte `RESEND_API_KEY` v `.env.local`). Bez klíče se e-maily logují do konzole.
-- **From adresa:** `EMAIL_FROM` env proměnná (default `WePlan <noreply@weplan.cz>`).
+- **From adresa:** `EMAIL_FROM` env proměnná (default `Aidvisora <noreply@aidvisora.cz>`).
 - Šablony: `apps/web/src/lib/email/templates.ts` (Připomínka servisu, Nový dokument, Platební instrukce).
 - Všechny e-maily respektují `notification_unsubscribed_at` na kontaktu; nepošle se e-mail odhlášenému klientovi.
 - Unsubscribe odkaz v každém e-mailu; token logika v existujících `unsubscribe_tokens`.
@@ -87,7 +87,7 @@ Dokument zachycuje výchozí rozhodnutí pro věci, které v zadání nejsou exp
 ## ŽP rating
 
 - Pouze informativní; data v `apps/web/src/data/insurance-ratings.ts`.
-- Disclaimer vždy zobrazen: „Poradce odpovídá za rozhodnutí. WePlan nedoporučuje."
+- Disclaimer vždy zobrazen: „Poradce odpovídá za rozhodnutí. Aidvisora nedoporučuje."
 
 ## Board views
 

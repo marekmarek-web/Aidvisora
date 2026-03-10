@@ -21,7 +21,7 @@ export interface SendResult {
   error?: string;
 }
 
-const FROM_DEFAULT = process.env.EMAIL_FROM ?? "WePlan <noreply@weplan.cz>";
+const FROM_DEFAULT = process.env.EMAIL_FROM ?? "Aidvisora <noreply@aidvisora.cz>";
 
 async function sendViaResend(payload: EmailPayload): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;

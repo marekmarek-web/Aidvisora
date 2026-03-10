@@ -57,3 +57,22 @@ Jsi Supabase AI asistent v režimu „GPT mini“:
 | **Chat** | Na začátek chatu vložit blok instrukcí výše |
 
 Tím dostaneš chování podobné „GPT mini“: krátké, přesné odpovědi a SQL bez zbytečného textu.
+
+---
+
+## 4. Vypnutí (Confirm email, AI Assistant)
+
+### Prompt pro ChatGPT / Supabase AI (zkopíruj a vlož)
+
+```
+Jsem v projektu Aidvisora s Supabase. Napiš mi přesné kroky (bez SQL, jen v dashboardu), jak:
+1) Vypnout potvrzování e-mailu při registraci (Confirm email).
+2) Vypnout nebo odpojit AI Assistant / OpenAI v Supabase (odstranit API klíč).
+Stručně, odrážky.
+```
+
+### Rychlé kroky bez AI
+
+- **Vypnutí Confirm email:** Supabase → **Authentication** → **Providers** → **Email** → vypni **Confirm email** → Save.
+- **Vypnutí AI Assistant v Supabase:** **Project Settings** → **Integrations** (nebo **API**) → sekce **OpenAI** / **AI** → smaž API klíč nebo ho nevyplňuj a ulož. AI panel v SQL Editoru pak nebude volat OpenAI.
+- **Vypnutí AI v aplikaci (Aidvisora):** Na Vercelu a v `.env` smaž nebo nevyplňuj `OPENAI_API_KEY`. Funkce „Roztřídit pomocí AI“ v cold contacts pak nebude dostupná.

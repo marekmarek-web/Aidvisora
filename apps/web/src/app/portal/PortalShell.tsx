@@ -97,7 +97,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 min-w-0 ml-12 md:ml-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
           <header className="wp-app-header shrink-0 gap-2">
             <div className="flex items-center gap-8 flex-1 min-w-0">
-              <span className="font-bold text-xl shrink-0" style={{ color: "var(--wp-text)" }}>WePlan</span>
+              <span className="font-bold text-xl shrink-0" style={{ color: "var(--wp-text)" }}>Aidvisora</span>
               <PortalHeaderSearch onOpenGlobalSearch={() => globalSearchRef.current?.open()} />
             </div>
             <div className="flex items-center gap-3 shrink-0">

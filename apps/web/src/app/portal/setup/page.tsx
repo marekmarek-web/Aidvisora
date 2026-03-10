@@ -20,7 +20,7 @@ const INTEGRATIONS: Integration[] = [
   {
     id: "google-calendar",
     name: "Google Calendar",
-    description: "Synchronizujte schůzky a události z WePlan s Google Kalendářem. Obousměrná synchronizace.",
+    description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Obousměrná synchronizace.",
     icon: "📅",
     status: "disconnected",
     category: "calendar",
@@ -50,7 +50,7 @@ const INTEGRATIONS: Integration[] = [
     category: "email",
     configFields: [
       { key: "apiKey", label: "API Key", type: "password", placeholder: "re_..." },
-      { key: "fromEmail", label: "Odesílatel", type: "text", placeholder: "info@weplan.cz" },
+      { key: "fromEmail", label: "Odesílatel", type: "text", placeholder: "info@aidvisora.cz" },
     ],
   },
   {
@@ -94,7 +94,7 @@ export default function SetupPage() {
       <div>
         <h1 className="text-xl font-bold" style={{ color: "var(--wp-text)" }}>Nastavení & Integrace</h1>
         <p className="text-sm mt-1" style={{ color: "var(--wp-text-muted)" }}>
-          Propojte WePlan s externími službami. Konfigurace se ukládá zabezpečeně.
+          Propojte Aidvisora s externími službami. Konfigurace se ukládá zabezpečeně.
         </p>
       </div>
 
@@ -119,7 +119,7 @@ export default function SetupPage() {
         </button>
         {howItWorksOpen && (
           <div className="border-t border-slate-100 px-5 py-4 bg-slate-50/50 text-sm text-slate-600 space-y-2">
-            <p>Integrace propojují WePlan s kalendáři, e-maily a AI nástroji. Po vyplnění údajů (API klíče, OAuth) a uložení je služba připojena.</p>
+            <p>Integrace propojují Aidvisora s kalendáři, e-maily a AI nástroji. Po vyplnění údajů (API klíče, OAuth) a uložení je služba připojena.</p>
             <p>Připojení a odpojení potvrzujte v kartě dané integrace. Konfigurace se ukládá šifrovaně na serveru.</p>
           </div>
         )}

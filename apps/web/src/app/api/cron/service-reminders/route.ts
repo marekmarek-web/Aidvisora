@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const { error } = await resend.emails.send({
       from,
       to: c.email,
-      subject: "Připomínka servisního termínu – WePlan",
+      subject: "Připomínka servisního termínu – Aidvisora",
       html: `<p>Dobrý den, ${c.firstName} ${c.lastName},</p><p>připomínáme Vám, že máte naplánovaný servisní termín (${c.nextServiceDue}). Obraťte se na svého poradce.</p>`,
     });
     if (!error) sent++;

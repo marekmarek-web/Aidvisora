@@ -1,4 +1,4 @@
-# Advisor CRM
+# Aidvisora
 
 CRM pro finanční poradce v ČR – MVP dle specifikace (domácnosti, pipeline, meeting notes, compliance).
 
@@ -25,6 +25,7 @@ CRM pro finanční poradce v ČR – MVP dle specifikace (domácnosti, pipeline,
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
      - `SUPABASE_SERVICE_ROLE_KEY` (pro server)
      - `DATABASE_URL` nebo `SUPABASE_DB_URL` (Postgres connection string pro Drizzle)
+   - **Registrace bez e-mailu:** Aplikace po registraci rovnou přesměruje do portálu. Pokud v Supabase máš zapnuté „Confirm email“, buď ho v **Authentication → Providers → Email** vypni, nebo nakonfiguruj vlastní SMTP (Supabase defaultní e-maily často nedorazí).
 
 3. **Databáze**
    - **Důležité:** Pokud používáte existující Supabase projekt a vidíte chyby typu `column X does not exist` nebo `relation Y does not exist`, spusťte migraci schématu (načte `DATABASE_URL` z `apps/web/.env.local`):
@@ -92,14 +93,18 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
    Pro Vercel je vhodný **connection pooler** (Supabase → Project Settings → Database → Connection string → **Transaction** pooler, port 6543). Na konec můžeš přidat `?sslmode=require` (nebo kód to doplní sám).
 4. **Redirect URLs:** Supabase → Authentication → URL Configuration → Redirect URLs musí obsahovat tvou produkční adresu, např. `https://advisorcrm-web.vercel.app/**`.
 
+**„Nepodařilo se dokončit registraci“ po přihlášení:** Účet v Supabase máš, ale při přesměrování na dokončení se vytváří workspace v databázi. Chyba znamená, že Vercel se nedostane k DB. Zkontroluj: (1) Na Vercelu je nastavená **DATABASE_URL** (celý connection string na tvůj Supabase projekt). (2) V Supabase jsou vytvořené tabulky – spusť v SQL Editoru skript z `docs/supabase-run-in-sql-editor.sql`. (3) Vercel → Deployments → poslední deploy → **Runtime Logs** / **Functions** – tam uvidíš přesnou chybovou hlášku.
+
+**Google / Apple přihlášení:** Návod je v `docs/GOOGLE-APPLE-LOGIN.md`.
+
 ## Struktura
 
-- `apps/web` – Next.js aplikace (WePlan MVP)
+- `apps/web` – Next.js aplikace (Aidvisora)
 - `packages/db` – Drizzle schema, client, seed
 - `docs/` – PRD, ASSUMPTIONS, ROADMAP, DATA_MODEL, API, SECURITY, COMPLIANCE_CZ, UI_POLICY
 - `legal/` – DPA a DPIA šablony
 
-**UI reference:** V kořeni repozitáře složka `portal/` – soubor `weplan.html` slouží jako vizuální reference pro Monday-like board (sloupce, pickery, layout). Logika a data jsou v advisor-crm.
+**UI reference:** V kořeni repozitáře složka `portal/` – soubor `portal reference (board layout)` slouží jako vizuální reference pro Monday-like board (sloupce, pickery, layout). Logika a data jsou v advisor-crm.
 
 ## Akceptační kritéria MVP
 

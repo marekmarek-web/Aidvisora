@@ -105,7 +105,7 @@ export async function sendPaymentPdfToClient(contactId: string): Promise<{ ok: t
     const { error } = await resend.emails.send({
       from,
       to: contact.email,
-      subject: "Platební instrukce – WePlan",
+      subject: "Platební instrukce – Aidvisora",
       html: `<p>Dobrý den, ${contact.firstName} ${contact.lastName},</p><p>v příloze naleznete platební instrukce.</p><p><a href="${unsubLink}">Odhlásit se z notifikací</a></p>`,
       attachments: [{ filename: "platebni-instrukce.pdf", content: pdfBuffer }],
     });

@@ -13,7 +13,13 @@ export type EnsureMembershipResult =
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
   try {
-    const supabase = await createClient();
+    let supabase;
+    try {
+      supabase = await createClient();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: m || "Chyba připojení k Supabase." };
+    }
     const {
       data: { user },
     } = await supabase.auth.getUser();

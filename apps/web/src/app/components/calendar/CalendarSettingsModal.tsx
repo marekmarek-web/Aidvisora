@@ -6,7 +6,7 @@ import type { CalendarSettings, CalendarPresetId, TodayStyle, CalendarFontSize }
 import { getPresetSettings, ensureAccentLight } from "@/app/portal/calendar/calendar-settings";
 
 const PRESET_OPTIONS: { id: CalendarPresetId; label: string }[] = [
-  { id: "default", label: "WePlan výchozí" },
+  { id: "default", label: "Aidvisora výchozí" },
   { id: "minimal", label: "Minimal" },
   { id: "contrast", label: "Kontrastní" },
 ];

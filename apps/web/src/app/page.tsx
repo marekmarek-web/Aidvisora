@@ -1,5 +1,5 @@
 /**
- * Úvodní stránka Advisor CRM – přihlášení s animovaným pozadím.
+ * Úvodní stránka Aidvisora – přihlášení s animovaným pozadím.
  * Témata: Barevný přechod a Tmavá elegance. Funkční přihlášení a tlačítko Otevřít Portál.
  */
 import { Suspense } from "react";

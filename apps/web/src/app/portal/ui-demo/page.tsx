@@ -94,8 +94,8 @@ export default function UiDemoPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-700">Accordion (FAQ)</h2>
         <Accordion>
-          <AccordionItem title="Co je WePlan?" defaultOpen>
-            WePlan je CRM a plánovací nástroj pro finanční poradce.
+          <AccordionItem title="Co je Aidvisora?" defaultOpen>
+            Aidvisora je CRM a plánovací nástroj pro finanční poradce.
           </AccordionItem>
           <AccordionItem title="Jak přidám kontakt?">
             V menu zvolte Kontakty → Přidat kontakt a vyplňte údaje.

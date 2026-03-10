@@ -2,17 +2,34 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/register/complete";
+  try {
+    const url = new URL(request.url);
+    const { searchParams } = url;
+    const origin = url.origin;
+    const code = searchParams.get("code");
+    const errorCode = searchParams.get("error_code");
+    const errorDesc = searchParams.get("error_description");
+    const next = searchParams.get("next") ?? "/register/complete";
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+    if (errorCode === "otp_expired" || errorDesc?.includes("expired")) {
+      return NextResponse.redirect(`${origin}/login?error=otp_expired`);
     }
-  }
+    if (errorCode || errorDesc) {
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorDesc || errorCode || "auth_failed")}`);
+    }
 
-  return NextResponse.redirect(`${origin}${next.startsWith("/") ? next : "/" + next}`);
+    if (code) {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+      }
+    }
+
+    return NextResponse.redirect(`${origin}${next.startsWith("/") ? next : "/" + next}`);
+  } catch (e) {
+    const origin = request.url ? new URL(request.url).origin : "https://localhost:3000";
+    const msg = e instanceof Error ? e.message : "Přihlášení selhalo.";
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
+  }
 }

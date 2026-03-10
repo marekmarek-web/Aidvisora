@@ -407,7 +407,7 @@ export async function seedDemoData(): Promise<{ ok: boolean; message: string }> 
   }
 
   const demoNotifications = [
-    { contactIdx: 0, template: "welcome", subject: "Vítejte u WePlan", recipient: "jan.novak@example.cz" },
+    { contactIdx: 0, template: "welcome", subject: "Vítejte u Aidvisora", recipient: "jan.novak@example.cz" },
     { contactIdx: 1, template: "reminder", subject: "Připomínka schůzky", recipient: "petra.s@example.cz" },
     { contactIdx: 2, template: "reminder", subject: "Podklady pro schůzku", recipient: "martin.d@example.cz" },
     { contactIdx: 3, template: "offer", subject: "Nabídka hypotéky", recipient: "lucie.c@example.cz" },

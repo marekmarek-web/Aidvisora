@@ -1,6 +1,6 @@
-# WePlan UI systém
+# Aidvisora UI systém
 
-Jednotný design systém aplikace WePlan (dashboard-inspired). Všechny styly jsou centralizované; nepoužívejte náhodné inline styly ani ad-hoc Tailwind třídy pro barvy/spacing/radius.
+Jednotný design systém aplikace Aidvisora (dashboard-inspired). Všechny styly jsou centralizované; nepoužívejte náhodné inline styly ani ad-hoc Tailwind třídy pro barvy/spacing/radius.
 
 ---
 

@@ -31,7 +31,11 @@ function RegisterPageInner() {
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) {
       setLoading(false);
-      setMessage(error.message);
+      if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
+        setMessage("Supabase limitoval odesílání e-mailů. Zkuste za 10–15 minut, nebo v Supabase vypněte Confirm email (Authentication → Providers → Email).");
+      } else {
+        setMessage(error.message);
+      }
       return;
     }
     if (token) {
@@ -51,7 +55,7 @@ function RegisterPageInner() {
     <div className="min-h-screen flex flex-col">
       <nav className="bg-monday-surface border-b border-monday-border px-4 py-3 flex items-center justify-between">
         <Link href="/" className="font-bold text-lg text-monday-text">
-          Advisor CRM
+          Aidvisora
         </Link>
         <Link href="/login" className="text-monday-text-muted hover:text-monday-text text-sm">
           Už mám účet

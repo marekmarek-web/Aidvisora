@@ -10,7 +10,7 @@ import { TooltipBlurListener } from "./components/TooltipBlurListener";
 const dmSans = DM_Sans({ subsets: ["latin", "latin-ext"], weight: ["400", "500", "700"], variable: "--font-dm-sans" });
 
 export const metadata: Metadata = {
-  title: "Advisor CRM – Portál poradce",
+  title: "Aidvisora – Portál poradce",
   description: "CRM pro finanční poradce v ČR. Domácnosti, pipeline, meeting notes, smlouvy.",
 };
 

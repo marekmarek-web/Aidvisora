@@ -160,7 +160,7 @@ export function PortalSidebar({
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm shrink-0" style={{ background: "var(--wp-primary)" }}>
               W
             </div>
-            {!collapsed && <span className="font-bold text-sm truncate" style={{ color: "var(--wp-text)" }}>WePlan</span>}
+            {!collapsed && <span className="font-bold text-sm truncate" style={{ color: "var(--wp-text)" }}>Aidvisora</span>}
           </Link>
           <div className="flex items-center gap-1 shrink-0">
             {onCollapsedChange && (
@@ -193,7 +193,7 @@ export function PortalSidebar({
         {!collapsed && (
           <div className="p-3 border-t" style={{ borderColor: "var(--wp-border)" }}>
             <div className="flex items-center gap-2 px-2 text-xs" style={{ color: "var(--wp-text-muted)" }}>
-              <span>WePlan CRM</span>
+              <span>Aidvisora CRM</span>
               <span className="ml-auto">v2.0</span>
             </div>
           </div>
