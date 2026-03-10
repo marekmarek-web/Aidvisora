@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { acceptClientInvitation } from "@/app/actions/auth";
 
 type ThemeId = "original" | "darkElegance";
 
@@ -45,18 +46,32 @@ const themes: Record<ThemeId, {
   },
 };
 
+function getInitialMessage(errorParam: string | null): string {
+  if (!errorParam) return "";
+  if (errorParam === "otp_expired") return "Odkaz z e-mailu vypršel. Přihlaste se heslem nebo zaregistrujte se znovu.";
+  try {
+    return decodeURIComponent(errorParam);
+  } catch {
+    return errorParam;
+  }
+}
+
 export function LandingLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/portal/today";
+  const token = searchParams.get("token");
+  const registerParam = searchParams.get("register");
+  const errorParam = searchParams.get("error");
 
   const [activeTheme, setActiveTheme] = useState<ThemeId>("darkElegance");
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(() => !registerParam && !token);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [gdprConsent, setGdprConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => getInitialMessage(errorParam));
 
   const current = themes[activeTheme];
 
@@ -77,6 +92,22 @@ export function LandingLoginPage() {
     setLoading(true);
     setMessage("");
     const supabase = createClient();
+    if (token) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setLoading(false);
+        setMessage(error.message);
+        return;
+      }
+      const result = await acceptClientInvitation(token, gdprConsent);
+      setLoading(false);
+      if (!result.ok) {
+        setMessage(result.error);
+        return;
+      }
+      window.location.href = "/client";
+      return;
+    }
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
@@ -97,7 +128,6 @@ export function LandingLoginPage() {
         }
         return;
       }
-      // Po registraci rovnou do aplikace (bez čekání na potvrzovací e-mail)
       const nextPath = next.startsWith("/") ? next : "/portal/today";
       window.location.href = `/register/complete?next=${encodeURIComponent(nextPath)}`;
     }
@@ -176,12 +206,12 @@ export function LandingLoginPage() {
               Aidvisora
             </h1>
             <p className="text-[14px] tracking-[1px] opacity-80 transition-all" style={{ fontFamily: "var(--wp-font)" }}>
-              {isLogin ? "Vítejte zpět" : "Vytvořit nový účet"}
+              {token ? "Registrace do Client Zone" : isLogin ? "Vítejte zpět" : "Vytvořit nový účet"}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" style={{ fontFamily: "var(--wp-font)" }}>
-            {!isLogin && (
+            {!isLogin && !token && (
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Jméno a příjmení</label>
                 <input
@@ -192,6 +222,12 @@ export function LandingLoginPage() {
                   className={inputClasses}
                 />
               </div>
+            )}
+            {token && (
+              <label className={`flex items-center gap-2 text-sm ${activeTheme === "darkElegance" ? "text-white/90" : "text-slate-700"}`}>
+                <input type="checkbox" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required />
+                Souhlasím s <a href="/gdpr" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline opacity-90">zpracováním osobních údajů (GDPR)</a>
+              </label>
             )}
 
             <div>
@@ -209,8 +245,8 @@ export function LandingLoginPage() {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-bold uppercase tracking-wider opacity-80">Heslo</label>
-                {isLogin && (
-                  <Link href="/login" className="text-xs font-bold opacity-60 hover:opacity-100 transition-opacity">
+                {isLogin && !token && (
+                  <Link href="/" className="text-xs font-bold opacity-60 hover:opacity-100 transition-opacity">
                     Zapomenuté heslo?
                   </Link>
                 )}
@@ -236,9 +272,11 @@ export function LandingLoginPage() {
               disabled={loading}
               className={`w-full mt-6 py-4 rounded-xl font-bold tracking-wide transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 ${current.btnStyle}`}
             >
-              {loading ? "…" : isLogin ? "PŘIHLÁSIT SE" : "VYTVOŘIT ÚČET"}
+              {loading ? "…" : token ? "VSTOUPIT DO CLIENT ZONE" : isLogin ? "PŘIHLÁSIT SE" : "VYTVOŘIT ÚČET"}
             </button>
 
+            {!token && (
+            <>
             <div className="flex items-center gap-4 my-6 opacity-60">
               <div className={`h-[1px] flex-1 ${activeTheme === "darkElegance" ? "bg-white/20" : "bg-slate-300"}`} />
               <span className="text-xs font-bold uppercase tracking-wider">Nebo</span>
@@ -265,6 +303,8 @@ export function LandingLoginPage() {
                 {isLogin ? "Zaregistrujte se" : "Přihlaste se"}
               </button>
             </p>
+            </>
+            )}
 
             <div className="pt-6 border-t border-white/10 mt-6">
               <button

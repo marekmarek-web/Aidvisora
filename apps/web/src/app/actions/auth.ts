@@ -24,7 +24,7 @@ export async function ensureMembership(): Promise<EnsureMembershipResult> {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return { ok: false, error: "Nejprve se přihlaste.", redirectTo: "/login" };
+      return { ok: false, error: "Nejprve se přihlaste.", redirectTo: "/" };
     }
     const existing = await getMembership(user.id);
     if (existing) {

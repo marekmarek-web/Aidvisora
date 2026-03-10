@@ -49,7 +49,7 @@ export default function RegisterCompletePage() {
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <a href="/login" className="text-sm font-semibold text-indigo-600 hover:underline">
+            <a href="/" className="text-sm font-semibold text-indigo-600 hover:underline">
               Zpět na přihlášení
             </a>
             <button

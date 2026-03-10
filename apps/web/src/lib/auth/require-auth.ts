@@ -38,7 +38,7 @@ export async function requireAuth(): Promise<AuthContext> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
   const m = await getMembership(user.id);
   if (!m) {
