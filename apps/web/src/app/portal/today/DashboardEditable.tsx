@@ -16,6 +16,7 @@ import {
   Target,
   ChevronRight,
   Plus,
+  GripVertical,
   type LucideIcon,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
@@ -323,38 +324,40 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
   };
 
   return (
-    <div className="flex flex-col md:flex-row flex-1 min-h-0 w-full" style={{ gap: 0, animation: "wp-fade-in 0.3s ease" }}>
-      {/* ── Left panel: projects section ── */}
-      <div className="wp-projects-section flex-1 min-w-0">
-        {/* Header – dashboardv2: Moje nástěnka, datum s dnem v týdnu, Upravit + ChevronRight */}
-        <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col md:flex-row flex-1 min-h-0 w-full gap-0 animate-[wp-fade-in_0.3s_ease]">
+      {/* Left panel: main content */}
+      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 m-0">Moje nástěnka</h2>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 m-0 tracking-tight">Moje nástěnka</h2>
             <p className="text-sm font-bold text-slate-500 mt-1 m-0">
               {new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          <button type="button" onClick={openCustomize} className="flex items-center gap-1 text-sm font-bold text-indigo-600 hover:underline">
+          <button type="button" onClick={openCustomize} className="min-h-[44px] flex items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-2 -mx-2 rounded-lg">
             Upravit <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* P0-C: Colored KPI cards – live, klikatelné */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        {/* KPI cards – live, clickable, modern SaaS style */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {KPI_CARDS.map((card) => {
             const IconComponent = card.Icon;
             return (
               <Link
                 key={card.key}
                 href={card.href}
-                className="flex flex-col rounded-2xl p-3 sm:p-4 transition-all hover:shadow-md border min-h-[80px] sm:min-h-0"
+                className="flex flex-col rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all duration-200 border shadow-sm hover:shadow-md min-h-[88px] sm:min-h-[100px]"
                 style={{ background: card.bg, borderColor: card.border, textDecoration: "none" }}
               >
-                <div className="flex items-center gap-2">
-                  <IconComponent size={20} strokeWidth={1.8} className="shrink-0 sm:w-[22px] sm:h-[22px]" style={{ color: card.text }} />
-                  <span className="text-xl sm:text-2xl font-bold" style={{ color: card.text }}>{kpis[card.key]}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.6)" }}>
+                    <IconComponent size={22} strokeWidth={1.8} style={{ color: card.text }} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-bold tabular-nums" style={{ color: card.text }}>{kpis[card.key]}</span>
                 </div>
-                <span className="text-xs font-medium mt-1" style={{ color: card.text, opacity: 0.85 }}>{card.label}</span>
+                <span className="text-xs sm:text-sm font-semibold mt-2 block" style={{ color: card.text, opacity: 0.9 }}>{card.label}</span>
               </Link>
             );
           })}
@@ -407,12 +410,12 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
                     <Link
                       key={a.id}
                       href={a.href}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border transition-shadow hover:shadow-md ${a.className}`}
+                      className={`flex items-center gap-4 p-4 rounded-2xl border shadow-sm transition-all hover:shadow-md min-h-[72px] ${a.className}`}
                     >
-                      <div className="bg-white/60 p-2 rounded-xl shadow-sm shrink-0">
+                      <div className="bg-white/70 p-2.5 rounded-xl shadow-sm shrink-0">
                         <Icon size={20} />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-sm leading-tight mb-0.5">{a.title}</h4>
                         <p className="text-xs font-semibold opacity-80 truncate">{a.desc}</p>
                       </div>
@@ -432,7 +435,7 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
           return (
             <div className="mb-6">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Dnešní priority</h3>
-              <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                   {priorityTasks.length > 0 && (
                     <div className="p-4">
@@ -483,22 +486,25 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
           );
         })()}
 
-        {/* Widget grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pb-6">
+        {/* Widget grid – draggable cards, modern SaaS style */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pb-6">
           {visibleOrder.map((id) => {
             const href = widgetHref[id];
             const WidgetIconComponent = WIDGET_ICONS[id];
             const header = (
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--wp-text)" }}>
-                  <span className="touch-none cursor-grab active:cursor-grabbing" style={{ color: "var(--wp-text-muted)", opacity: 0.5 }} aria-hidden>⋮⋮</span>
-                  {WidgetIconComponent && (
-                    <span className="flex items-center justify-center rounded-[var(--wp-radius-sm)] p-1 shrink-0" style={{ background: "var(--wp-bg)", color: "var(--wp-text-muted)" }}>
-                      <WidgetIconComponent size={18} strokeWidth={1.8} />
-                    </span>
-                  )}
-                  {WIDGET_LABELS[id]}
-                </h2>
+              <div className="flex items-center gap-3 mb-3">
+                <span
+                  className="touch-none cursor-grab active:cursor-grabbing p-2 -m-2 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-50 flex items-center justify-center shrink-0 min-w-[44px] min-h-[44px]"
+                  aria-hidden
+                >
+                  <GripVertical size={18} strokeWidth={2} />
+                </span>
+                {WidgetIconComponent && (
+                  <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-600 shrink-0">
+                    <WidgetIconComponent size={18} strokeWidth={1.8} />
+                  </span>
+                )}
+                <h2 className="text-sm font-semibold truncate text-slate-800">{WIDGET_LABELS[id]}</h2>
               </div>
             );
             const body = renderWidgetContent(id);
@@ -510,10 +516,10 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, id)}
-                className={`wp-card cursor-grab active:cursor-grabbing rounded-2xl p-4 ${draggedWidgetId === id ? "opacity-50" : ""} ${draggedWidgetId ? "border-dashed" : ""} ${href ? "border-b-[3px] border-b-indigo-500" : ""}`}
+                className={`cursor-grab active:cursor-grabbing rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""} ${href ? "ring-1 ring-slate-100" : ""}`}
               >
                 {href ? (
-                  <Link href={href} className="block -m-4 p-4 rounded-2xl hover:bg-black/5 transition-colors text-inherit no-underline" aria-label={`Přejít na ${WIDGET_LABELS[id]}`}>
+                  <Link href={href} className="block -m-5 p-5 rounded-2xl sm:rounded-3xl hover:bg-slate-50/80 transition-colors text-inherit no-underline" aria-label={`Přejít na ${WIDGET_LABELS[id]}`}>
                     {header}
                     {body}
                   </Link>
@@ -532,17 +538,17 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
         <DashboardMiniNotes initialNotes={initialNotes} />
       </div>
 
-      {/* ── Right panel: sidecalendar layout – sticky sidebar + patička Nová aktivita ── */}
-      <aside className="w-full lg:w-[380px] mt-4 lg:mt-0 flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-100 bg-white sticky top-[73px] h-[calc(100vh-73px)]">
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+      {/* Right panel: side calendar, agenda, zprávy, Nová aktivita */}
+      <aside className="w-full lg:w-[380px] mt-6 lg:mt-0 flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-100 bg-white lg:bg-slate-50/30 sticky top-[73px] h-[calc(100vh-73px)] lg:rounded-l-2xl overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-white">
           <CalendarWidget onNewActivity={() => router.push("/portal/calendar?new=1")} />
           <MessengerPreview />
         </div>
-        <div className="border-t border-slate-100 bg-slate-50/50 p-4 lg:p-6 flex-shrink-0">
+        <div className="border-t border-slate-100 bg-white p-4 lg:p-6 flex-shrink-0">
           <button
             type="button"
             onClick={() => router.push("/portal/calendar?new=1")}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase flex items-center justify-center gap-2 transition-colors"
+            className="w-full min-h-[52px] py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 hover:shadow-xl transition-all active:scale-[0.98]"
           >
             <Plus size={20} /> Nová aktivita
           </button>
@@ -551,9 +557,9 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
 
       {/* Customize modal */}
       {customizeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setCustomizeOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setCustomizeOpen(false)}>
           <div
-            className="wp-card w-full max-w-md p-5 shadow-xl"
+            className="w-full max-w-md p-6 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-base font-semibold mb-4" style={{ color: "var(--wp-text)" }}>Upravit nástěnku</h3>

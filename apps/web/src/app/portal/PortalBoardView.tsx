@@ -365,6 +365,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
       if (columnId === "item") {
         return { ...b, items: { ...b.items, [itemId]: { ...item, name: String(value) } } };
       }
+      // Never change item.name when updating a non-item column (e.g. status)
       return {
         ...b,
         items: { ...b.items, [itemId]: { ...item, cells: { ...item.cells, [columnId]: value } } },

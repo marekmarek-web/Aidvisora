@@ -186,3 +186,13 @@ export async function updatePortalProfile(fullName: string): Promise<void> {
   });
   if (error) throw new Error(error.message);
 }
+
+/** Změna hesla přihlášeného uživatele (Supabase Auth). */
+export async function updatePortalPassword(newPassword: string): Promise<void> {
+  await requireAuthInAction();
+  const trimmed = newPassword?.trim();
+  if (!trimmed || trimmed.length < 6) throw new Error("Heslo musí mít alespoň 6 znaků.");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: trimmed });
+  if (error) throw new Error(error.message);
+}

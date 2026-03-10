@@ -1,9 +1,18 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { globalSearch, type SearchResult } from "@/app/actions/search";
 
-/** Na stránce Zápisky (/portal/notes) řídí vyhledávání v zápiscích. Jinde klik/focus otevře GlobalSearch. */
+const EMPTY_RESULTS: SearchResult = {
+  contacts: [],
+  contracts: [],
+  opportunities: [],
+  events: [],
+};
+
+/** Na stránce Zápisky řídí vyhledávání v zápiscích. Jinde funguje inline dropdown bez otevírání okna. */
 export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -11,11 +20,30 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
   const isNotesPage = pathname === "/portal/notes";
 
   const [value, setValue] = useState("");
+  const [results, setResults] = useState<SearchResult>(EMPTY_RESULTS);
+  const [loading, setLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const urlQ = searchParams.get("q") ?? "";
 
   useEffect(() => {
     setValue(urlQ);
   }, [urlQ]);
+
+  const runSearch = useCallback((q: string) => {
+    if (!q.trim()) {
+      setResults(EMPTY_RESULTS);
+      setDropdownOpen(false);
+      return;
+    }
+    setLoading(true);
+    setDropdownOpen(true);
+    globalSearch(q)
+      .then(setResults)
+      .catch(() => setResults(EMPTY_RESULTS))
+      .finally(() => setLoading(false));
+  }, []);
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,49 +51,66 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
       setValue(v);
       if (isNotesPage) {
         const next = new URLSearchParams(searchParams.toString());
-        if (v.trim()) next.set("q", v); else next.delete("q");
+        if (v.trim()) next.set("q", v);
+        else next.delete("q");
         router.replace(`${pathname}${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
+        return;
       }
+      clearTimeout(timerRef.current);
+      if (!v.trim()) {
+        setResults(EMPTY_RESULTS);
+        setDropdownOpen(false);
+        return;
+      }
+      timerRef.current = setTimeout(() => runSearch(v), 300);
     },
-    [isNotesPage, pathname, router, searchParams]
+    [isNotesPage, pathname, router, searchParams, runSearch]
   );
 
-  const handleFocus = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>) => {
-      if (!isNotesPage && onOpenGlobalSearch) {
-        e.target.blur();
-        onOpenGlobalSearch();
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
       }
-    },
-    [isNotesPage, onOpenGlobalSearch]
-  );
+    }
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownOpen]);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLInputElement>) => {
-      if (!isNotesPage && onOpenGlobalSearch) {
-        e.preventDefault();
-        onOpenGlobalSearch();
-      }
-    },
-    [isNotesPage, onOpenGlobalSearch]
-  );
+  const closeAndNavigate = useCallback((href: string) => {
+    setValue("");
+    setResults(EMPTY_RESULTS);
+    setDropdownOpen(false);
+    router.push(href);
+  }, [router]);
 
   const placeholder = isNotesPage
     ? "Hledat v zápiscích (klient, název, obsah)…"
-    : "Hledat…";
+    : "Hledat kontakty, smlouvy, případy…";
+
+  const hasResults =
+    results.contacts.length > 0 ||
+    results.contracts.length > 0 ||
+    results.opportunities.length > 0 ||
+    results.events.length > 0;
+
+  const showDropdown = !isNotesPage && dropdownOpen && value.trim().length > 0;
 
   return (
-    <div className="wp-search-wrapper hidden sm:flex">
+    <div ref={wrapperRef} className="wp-search-wrapper hidden sm:flex relative">
       <input
         className="wp-search-input"
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        onFocus={handleFocus}
-        onClick={handleClick}
-        readOnly={!isNotesPage}
+        onFocus={() => !isNotesPage && value.trim() && setDropdownOpen(true)}
+        readOnly={false}
         aria-label="Hledat"
+        aria-expanded={showDropdown}
+        aria-haspopup="listbox"
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -82,6 +127,88 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
         <circle cx="11" cy="11" r="8" />
         <path d="M21 21l-4.35-4.35" />
       </svg>
+
+      {showDropdown && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-full mt-1 z-[9999] max-h-[70vh] overflow-y-auto border border-monday-border bg-monday-surface shadow-xl rounded-[var(--wp-radius-sm)]"
+        >
+          {loading && (
+            <p className="px-4 py-3 text-xs text-monday-text/50">Hledám…</p>
+          )}
+          {!loading && !hasResults && (
+            <p className="px-4 py-3 text-xs text-monday-text/50">Žádné výsledky</p>
+          )}
+          {!loading && hasResults && (
+            <div className="p-2">
+              {results.contacts.length > 0 && (
+                <div className="mb-1">
+                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-monday-text/40">Kontakty</p>
+                  {results.contacts.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/portal/contacts/${c.id}`}
+                      onClick={() => closeAndNavigate(`/portal/contacts/${c.id}`)}
+                      className="flex items-center px-2 py-2 text-sm text-monday-text hover:bg-monday-row-hover rounded-[var(--wp-radius-sm)]"
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      {c.email && <span className="ml-2 text-monday-text/50">{c.email}</span>}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.contracts.length > 0 && (
+                <div className="mb-1">
+                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-monday-text/40">Smlouvy</p>
+                  {results.contracts.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/portal/contacts/${c.contactId}`}
+                      onClick={() => closeAndNavigate(`/portal/contacts/${c.contactId}`)}
+                      className="flex px-2 py-2 text-sm text-monday-text hover:bg-monday-row-hover rounded-[var(--wp-radius-sm)]"
+                    >
+                      {c.label || "Smlouva"}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.opportunities.length > 0 && (
+                <div className="mb-1">
+                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-monday-text/40">Případy</p>
+                  {results.opportunities.map((o) => (
+                    <Link
+                      key={o.id}
+                      href="/portal/pipeline"
+                      onClick={() => closeAndNavigate("/portal/pipeline")}
+                      className="flex px-2 py-2 text-sm text-monday-text hover:bg-monday-row-hover rounded-[var(--wp-radius-sm)]"
+                    >
+                      {o.title}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.events.length > 0 && (
+                <div className="mb-1">
+                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-monday-text/40">Události</p>
+                  {results.events.map((ev) => (
+                    <Link
+                      key={ev.id}
+                      href="/portal/calendar"
+                      onClick={() => closeAndNavigate("/portal/calendar")}
+                      className="flex px-2 py-2 text-sm text-monday-text hover:bg-monday-row-hover rounded-[var(--wp-radius-sm)]"
+                    >
+                      <span>{ev.title}</span>
+                      <span className="ml-2 text-monday-text/50 text-[11px]">
+                        {new Date(ev.startAt).toLocaleDateString("cs-CZ")}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

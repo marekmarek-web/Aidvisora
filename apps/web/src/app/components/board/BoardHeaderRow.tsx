@@ -67,9 +67,21 @@ export function BoardHeaderRow({
           }}
         />
       ))}
-      <div className="b-cell">
-        <span className="text-[11px] text-[var(--board-text-muted)]">⋯</span>
-      </div>
+      {onAddColumnAfter && visibleColumns.length > 0 ? (
+        <button
+          type="button"
+          className="b-cell min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--board-text-muted)] hover:bg-[var(--board-cell-hover)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--board-accent)]"
+          onClick={() => onAddColumnAfter(visibleColumns[visibleColumns.length - 1]!.id)}
+          title="Přidat sloupec vpravo"
+          aria-label="Přidat sloupec vpravo"
+        >
+          <span className="text-[11px]">⋯</span>
+        </button>
+      ) : (
+        <div className="b-cell">
+          <span className="text-[11px] text-[var(--board-text-muted)]">⋯</span>
+        </div>
+      )}
     </div>
   );
 }

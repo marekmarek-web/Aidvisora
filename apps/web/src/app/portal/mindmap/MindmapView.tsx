@@ -29,6 +29,8 @@ export function MindmapView({ initial }: MindmapViewProps) {
     updateNodePosition,
     updateViewport,
     addNode,
+    updateNode,
+    deleteNode,
     setSelectedNodeId,
     setDirty,
   } = useMindmapState({
@@ -191,6 +193,11 @@ export function MindmapView({ initial }: MindmapViewProps) {
             entityType={initial.entityType}
             entityId={initial.entityId}
             onClose={() => setSelectedNodeId(null)}
+            onUpdateNode={updateNode}
+            onDeleteNode={(id) => {
+              deleteNode(id);
+              setSelectedNodeId(null);
+            }}
             fullscreenOnMobile={!!selectedNode}
           />
         </div>

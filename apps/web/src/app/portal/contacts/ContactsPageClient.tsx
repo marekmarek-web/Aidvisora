@@ -363,7 +363,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                       </th>
                       <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Kontakt</th>
                       <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">Spojení</th>
-                      <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden lg:table-cell">Status</th>
+                      <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden lg:table-cell">Stav</th>
                       <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden xl:table-cell">Štítky</th>
                       <th className="px-4 md:px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Akce</th>
                     </tr>

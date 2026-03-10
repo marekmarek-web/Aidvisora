@@ -277,7 +277,7 @@ export function PortalCalendarView() {
   const searchParams = useSearchParams();
   const [settings, setSettings] = useState<CalendarSettings>(() => loadCalendarSettings());
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [mode, setMode] = useState<ViewMode>("month");
+  const [mode, setMode] = useState<ViewMode>("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [events, setEvents] = useState<EventRow[]>([]);
   const [contacts, setContacts] = useState<ContactRow[]>([]);

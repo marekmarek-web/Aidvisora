@@ -15,7 +15,7 @@ export const noteTemplates = pgTable("note_templates", {
 export const meetingNotes = pgTable("meeting_notes", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
-  contactId: uuid("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "cascade" }),
   opportunityId: uuid("opportunity_id").references(() => opportunities.id, { onDelete: "set null" }),
   templateId: uuid("template_id").references(() => noteTemplates.id, { onDelete: "set null" }),
   meetingAt: timestamp("meeting_at", { withTimezone: true }).notNull(),

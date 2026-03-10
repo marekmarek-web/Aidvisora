@@ -43,7 +43,7 @@ export function CustomSelectNav({ className = "" }: { className?: string }) {
           --selected-element-border-color: var(--option-border-color);
           display: grid;
           place-content: center;
-          font-family: "Jura", sans-serif;
+          font-family: var(--wp-font);
         }
         .wp-custom-select-wrap select {
           width: var(--select-width);

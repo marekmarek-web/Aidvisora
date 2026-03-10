@@ -80,13 +80,13 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   const notes = initialNotes.slice(0, 8);
   if (notes.length === 0) {
     return (
-      <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm p-6">
+      <div className="mt-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm p-6">
         <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-1">
           <FileText size={18} className="text-indigo-600" /> Vision Board
         </h3>
         <p className="text-xs font-bold text-slate-500 mb-4">Rychlé poznámky a nápady</p>
         <p className="text-sm text-slate-500 mb-4">Zatím žádné zápisky.</p>
-        <Link href="/portal/notes" className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:underline">
+        <Link href="/portal/notes" className="inline-flex items-center gap-2 min-h-[44px] text-sm font-semibold text-indigo-600 hover:underline">
           <Plus size={16} /> Přidat
         </Link>
       </div>
@@ -162,8 +162,8 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   });
 
   return (
-    <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between flex-wrap gap-2">
+    <div className="mt-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-5 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
             <FileText size={18} className="text-indigo-600" /> Vision Board
@@ -171,8 +171,8 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
           <p className="text-xs font-bold text-slate-500 mt-0.5">Rychlé poznámky a nápady</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/portal/notes" className="text-xs font-semibold text-indigo-600 hover:underline">Všechny zápisky</Link>
-          <Link href="/portal/notes" className="text-xs font-semibold text-indigo-600 py-1.5 px-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 inline-flex items-center gap-1 transition-colors">
+          <Link href="/portal/notes" className="text-xs font-semibold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center">Všechny zápisky</Link>
+          <Link href="/portal/notes" className="text-xs font-semibold text-indigo-600 min-h-[44px] py-2.5 px-4 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 inline-flex items-center gap-1 transition-colors">
             <Plus size={14} /> Přidat
           </Link>
         </div>

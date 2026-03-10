@@ -33,7 +33,7 @@ export default async function NotificationsPage() {
                   <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Příjemce</th>
                   <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Předmět</th>
                   <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Kanál</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Stav</th>
                   <th className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Kontakt</th>
                 </tr>
               </thead>

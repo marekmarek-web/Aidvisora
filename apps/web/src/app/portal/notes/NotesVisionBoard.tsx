@@ -232,7 +232,7 @@ export function NotesVisionBoard({
     const meetingAt = note.meetingAt instanceof Date ? note.meetingAt : new Date(note.meetingAt);
     setFormData({
       title: contentTitle(c),
-      client: note.contactId,
+      client: note.contactId ?? "",
       date: meetingAt.toISOString().slice(0, 10),
       time: meetingAt.toISOString().slice(11, 16),
       type: note.domain || "hypo",
@@ -259,7 +259,7 @@ export function NotesVisionBoard({
   };
 
   const handleSave = async () => {
-    if (!formData.title.trim() || !formData.client) return;
+    if (!formData.title.trim()) return;
     setSaving(true);
     try {
       const content: Record<string, unknown> = {
@@ -284,7 +284,7 @@ export function NotesVisionBoard({
         });
       } else {
         const newId = await createMeetingNote({
-          contactId: formData.client,
+          contactId: formData.client?.trim() || null,
           meetingAt,
           domain: formData.type,
           content,
@@ -312,12 +312,15 @@ export function NotesVisionBoard({
     ? notes.filter((n) => noteMatchesSearch(n, searchQuery))
     : notes;
 
-  const isFormValid = formData.title.trim() !== "" && formData.client !== "";
+  const isFormValid = formData.title.trim() !== "";
 
-  const contactOptions = contacts.map((c) => ({
-    value: c.id,
-    label: [c.firstName, c.lastName].filter(Boolean).join(" ") || "—",
-  }));
+  const contactOptions = [
+    { value: "", label: "Obecný zápisek" },
+    ...contacts.map((c) => ({
+      value: c.id,
+      label: [c.firstName, c.lastName].filter(Boolean).join(" ") || "—",
+    })),
+  ];
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] overflow-hidden font-sans">

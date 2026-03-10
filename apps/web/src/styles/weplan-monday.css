@@ -50,6 +50,14 @@
   border-radius: 4px;
 }
 
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Resize handle – přesně na dělící čáře sloupce (hitbox 12px, čára na hraně) */
 .col-resize-hitbox {
   position: absolute;
@@ -541,7 +549,7 @@ body.is-resizing {
   position: absolute;
   background: var(--tip-bg);
   color: var(--tip-text);
-  font-family: 'DM Mono', monospace;
+  font-family: var(--wp-font-mono);
   font-size: 0.72rem;
   font-weight: 400;
   white-space: nowrap;
@@ -693,7 +701,7 @@ body.is-resizing {
 .btn {
   padding: 10px 22px;
   border-radius: var(--radius);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--wp-font);
   font-size: 0.85rem;
   font-weight: 500;
   border: 1px solid var(--tip-surface);
@@ -789,7 +797,7 @@ body.is-resizing {
 }
 
 .note {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--wp-font-mono);
   font-size: 0.65rem;
   color: var(--tip-muted);
   font-weight: 100;

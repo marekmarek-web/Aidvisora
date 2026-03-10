@@ -9,7 +9,7 @@ import { ChevronDown } from "lucide-react";
 const CHANGEABLE_TYPES: { type: ColumnType; label: string }[] = [
   { type: "text", label: "Text" },
   { type: "number", label: "Číslo" },
-  { type: "status", label: "Status" },
+  { type: "status", label: "STAV" },
   { type: "date", label: "Datum" },
   { type: "product", label: "Produkt" },
 ];

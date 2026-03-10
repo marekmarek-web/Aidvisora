@@ -65,7 +65,12 @@ export function ContextMenu({ items, anchorRect, anchorEl, anchorGap = 4, onClos
   return createPortal(
     <div
       className="b-menu"
-      style={{ top: position.top, left: position.left }}
+      style={{
+        position: "fixed",
+        top: position.top,
+        left: position.left,
+        zIndex: 9999,
+      }}
       ref={menuRef}
     >
       {items.map((item, i) => {

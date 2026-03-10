@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
-import { db, tasks, contacts, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte } from "db";
+import { db, tasks, contacts, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
 import { logActivity } from "./activity";
 
 export type TaskRow = {
@@ -83,6 +83,17 @@ export async function getTasksList(
     completedAt: r.completedAt,
     createdAt: r.createdAt,
   }));
+}
+
+/** Count of open (incomplete) tasks for the current tenant; for sidebar badge. */
+export async function getOpenTasksCount(): Promise<number> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) return 0;
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tasks)
+    .where(and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt)));
+  return Number(rows[0]?.count ?? 0);
 }
 
 export async function getTasksForDate(dateStr: string): Promise<TaskRow[]> {

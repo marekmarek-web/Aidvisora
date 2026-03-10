@@ -28,15 +28,15 @@ export async function getMeetingNotesList(contactId?: string): Promise<MeetingNo
   if (!hasPermission(auth.roleName, "meeting_notes:read")) throw new Error("Forbidden");
   const cond = contactId ? and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.contactId, contactId)) : eq(meetingNotes.tenantId, auth.tenantId);
   const rows = await db.select({ id: meetingNotes.id, meetingAt: meetingNotes.meetingAt, domain: meetingNotes.domain, contactId: meetingNotes.contactId, createdAt: meetingNotes.createdAt }).from(meetingNotes).where(cond).orderBy(desc(meetingNotes.meetingAt)).limit(50);
-  const contactIds = [...new Set(rows.map((r) => r.contactId))];
+  const contactIds = [...new Set(rows.map((r) => r.contactId).filter(Boolean))] as string[];
   const contactList = contactIds.length ? await db.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName }).from(contacts).where(eq(contacts.tenantId, auth.tenantId)) : [];
   const nameMap = Object.fromEntries(contactList.map((c) => [c.id, `${c.firstName} ${c.lastName}`]));
-  return rows.map((r) => ({ id: r.id, meetingAt: r.meetingAt, domain: r.domain, contactName: nameMap[r.contactId] ?? "—", createdAt: r.createdAt }));
+  return rows.map((r) => ({ id: r.id, meetingAt: r.meetingAt, domain: r.domain, contactName: r.contactId ? (nameMap[r.contactId] ?? "—") : "Obecný zápisek", createdAt: r.createdAt }));
 }
 
 /** Pro Vision Board: zápisky včetně content pro náhled karet */
 export type MeetingNoteForBoard = MeetingNoteRow & {
-  contactId: string;
+  contactId?: string;
   content: Record<string, unknown> | null;
 };
 
@@ -56,15 +56,15 @@ export async function getMeetingNotesForBoard(): Promise<MeetingNoteForBoard[]> 
     .where(eq(meetingNotes.tenantId, auth.tenantId))
     .orderBy(desc(meetingNotes.meetingAt))
     .limit(100);
-  const contactIds = [...new Set(rows.map((r) => r.contactId))];
+  const contactIds = [...new Set(rows.map((r) => r.contactId).filter(Boolean))] as string[];
   const contactList = contactIds.length ? await db.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName }).from(contacts).where(eq(contacts.tenantId, auth.tenantId)) : [];
   const nameMap = Object.fromEntries(contactList.map((c) => [c.id, `${c.firstName} ${c.lastName}`]));
   return rows.map((r) => ({
     id: r.id,
     meetingAt: r.meetingAt,
     domain: r.domain,
-    contactId: r.contactId,
-    contactName: nameMap[r.contactId] ?? "—",
+    contactId: r.contactId ?? undefined,
+    contactName: r.contactId ? (nameMap[r.contactId] ?? "—") : "Obecný zápisek",
     createdAt: r.createdAt,
     content: r.content as Record<string, unknown> | null,
   }));
@@ -79,14 +79,15 @@ export async function getMeetingNotesByOpportunityId(opportunityId: string): Pro
     .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.opportunityId, opportunityId)))
     .orderBy(desc(meetingNotes.meetingAt))
     .limit(50);
-  const contactIds = [...new Set(rows.map((r) => r.contactId))];
+  const contactIds = [...new Set(rows.map((r) => r.contactId).filter(Boolean))] as string[];
   const contactList = contactIds.length ? await db.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName }).from(contacts).where(eq(contacts.tenantId, auth.tenantId)) : [];
   const nameMap = Object.fromEntries(contactList.map((c) => [c.id, `${c.firstName} ${c.lastName}`]));
-  return rows.map((r) => ({ id: r.id, meetingAt: r.meetingAt, domain: r.domain, contactName: nameMap[r.contactId] ?? "—", createdAt: r.createdAt }));
+  return rows.map((r) => ({ id: r.id, meetingAt: r.meetingAt, domain: r.domain, contactName: r.contactId ? (nameMap[r.contactId] ?? "—") : "Obecný zápisek", createdAt: r.createdAt }));
+
 }
 
 export async function createMeetingNote(form: {
-  contactId: string;
+  contactId?: string | null;
   templateId?: string;
   meetingAt: string;
   domain: string;
@@ -97,7 +98,7 @@ export async function createMeetingNote(form: {
   if (!hasPermission(auth.roleName, "meeting_notes:write")) throw new Error("Forbidden");
   const [row] = await db.insert(meetingNotes).values({
     tenantId: auth.tenantId,
-    contactId: form.contactId,
+    contactId: form.contactId ?? null,
     opportunityId: form.opportunityId || null,
     templateId: form.templateId || null,
     meetingAt: new Date(form.meetingAt),
@@ -110,7 +111,7 @@ export async function createMeetingNote(form: {
 
 export type MeetingNoteDetail = {
   id: string;
-  contactId: string;
+  contactId: string | null;
   templateId: string | null;
   meetingAt: Date;
   domain: string;

@@ -124,7 +124,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
         <GlobalSearch ref={globalSearchRef} />
 
-        {/* AI asistent – fixed dole v pravém rohu obrazovky, stejné styly jako AI Search Bar */}
+        {/* Aidvisora – fixed dole v pravém rohu obrazovky */}
         <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
           {aiSearchOpen ? (
             <div className="flex items-center gap-2 w-full max-w-[420px]">
@@ -138,7 +138,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => setAiSearchOpen(false)}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                aria-label="Zavřít AI asistenta"
+                aria-label="Zavřít Aidvisora"
               >
                 <span className="text-lg leading-none">×</span>
               </button>
@@ -146,7 +146,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           ) : (
             <AiSearchBar
               variant="trigger"
-              triggerLabel="AI asistent"
+              triggerLabel="Aidvisora"
               onTriggerClick={() => setAiSearchOpen(true)}
             />
           )}

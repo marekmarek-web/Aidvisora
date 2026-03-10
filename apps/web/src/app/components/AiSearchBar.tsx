@@ -28,7 +28,7 @@ export function AiSearchBar({
   onClose,
   className = "",
   variant = "bar",
-  triggerLabel = "AI asistent",
+  triggerLabel = "Aidvisora",
   onTriggerClick,
 }: AiSearchBarProps) {
   const [internalValue, setInternalValue] = useState("");

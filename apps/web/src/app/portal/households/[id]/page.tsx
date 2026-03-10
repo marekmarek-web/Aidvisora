@@ -24,12 +24,10 @@ export default async function HouseholdDetailPage({
   }));
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-12">
-      <HouseholdDetailClient
+    <HouseholdDetailClient
         household={household}
         contacts={contacts}
         opportunities={opportunities}
       />
-    </div>
   );
 }

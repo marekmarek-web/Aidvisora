@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Camera,
@@ -19,8 +20,19 @@ import {
   MapPin,
   Globe,
   Save,
+  Settings,
+  Bell,
+  FileText,
+  BarChart3,
 } from "lucide-react";
-import { updatePortalProfile } from "@/app/actions/auth";
+import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
+
+const VALID_TABS = ["osobni", "rezervace", "integrace", "notifikace", "fakturace"] as const;
+type TabId = (typeof VALID_TABS)[number];
+
+function isValidTab(t: string): t is TabId {
+  return VALID_TABS.includes(t as TabId);
+}
 
 export type AdvisorProfileInitial = {
   email: string;
@@ -74,7 +86,23 @@ const MOCK_INTEGRATIONS = [
 
 export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial }) {
   const parsed = parseFullName(initial.fullName);
-  const [activeTab, setActiveTab] = useState<string>("osobni");
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTabState] = useState<TabId>(isValidTab(tabParam ?? "") ? (tabParam as TabId) : "osobni");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (isValidTab(t ?? "")) setActiveTabState(t as TabId);
+    else setActiveTabState("osobni");
+  }, [searchParams]);
+
+  const setActiveTab = (tabId: TabId) => {
+    setActiveTabState(tabId);
+    router.replace(`${pathname}?tab=${tabId}`);
+  };
+
   const [copied, setCopied] = useState(false);
   const [firstName, setFirstName] = useState(parsed.firstName);
   const [lastName, setLastName] = useState(parsed.lastName);
@@ -84,6 +112,12 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
   const bookingLink = "weplan.cz/rezervace"; // placeholder
@@ -110,6 +144,35 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
     }
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    if (!password.trim()) {
+      setPasswordError("Zadejte nové heslo.");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setPasswordError("Hesla se neshodují.");
+      return;
+    }
+    if (password.length < 6) {
+      setPasswordError("Heslo musí mít alespoň 6 znaků.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await updatePortalPassword(password);
+      setPasswordSuccess(true);
+      setPassword("");
+      setPasswordConfirm("");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Změna hesla selhala.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   const inputClass =
     "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 placeholder:font-medium min-h-[44px]";
 
@@ -133,7 +196,9 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
           </Link>
           <div className="w-px h-6 bg-slate-200 hidden sm:block" aria-hidden />
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 min-w-0 truncate">
-            <span>Nastavení CRM</span>
+            <Link href="/portal/setup" className="hover:text-indigo-600 transition-colors">
+              Nastavení CRM
+            </Link>
             <span className="opacity-30">/</span>
             <span className="text-slate-800">Můj profil</span>
           </div>
@@ -218,7 +283,7 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setActiveTab(tab.id as TabId)}
               className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap min-h-[44px] flex items-end
                 ${activeTab === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-800"}
               `}
@@ -231,7 +296,8 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
           ))}
         </div>
 
-        {/* Hlavní obsah */}
+        {/* Hlavní obsah podle tabu */}
+        {activeTab === "osobni" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 space-y-6">
             {/* Osobní a firemní údaje */}
@@ -339,28 +405,53 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
                 <Key size={18} className="text-slate-400 shrink-0" />
                 <h2 className="text-lg font-black text-slate-900">Zabezpečení účtu</h2>
               </div>
-              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <form onSubmit={handleUpdatePassword} className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
                     Nové heslo
                   </label>
-                  <input type="password" placeholder="••••••••" className={inputClass} autoComplete="new-password" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={inputClass}
+                    autoComplete="new-password"
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
                     Potvrdit nové heslo
                   </label>
-                  <input type="password" placeholder="••••••••" className={inputClass} autoComplete="new-password" />
+                  <input
+                    type="password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    placeholder="••••••••"
+                    className={inputClass}
+                    autoComplete="new-password"
+                  />
                 </div>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2 space-y-2">
+                  {passwordError && (
+                    <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg border border-rose-200" role="alert">
+                      {passwordError}
+                    </p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200" role="status">
+                      Heslo bylo změněno.
+                    </p>
+                  )}
                   <button
-                    type="button"
-                    className="px-5 py-2.5 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]"
+                    type="submit"
+                    disabled={passwordSaving}
+                    className="px-5 py-2.5 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px] disabled:opacity-60"
                   >
-                    Aktualizovat heslo
+                    {passwordSaving ? "Ukládám…" : "Aktualizovat heslo"}
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
 
@@ -386,12 +477,12 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
                   {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
                 </button>
               </div>
-              <button
-                type="button"
+              <Link
+                href="/portal/calendar"
                 className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px]"
               >
                 Nastavit dostupnost <ChevronRight size={14} aria-hidden />
-              </button>
+              </Link>
             </div>
 
             {/* Licence */}
@@ -426,12 +517,14 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
                     </div>
                   </div>
                 ))}
-                <button
-                  type="button"
+                <a
+                  href="https://www.cnb.cz/cs/dohledove-sluzby/registr-oznameni/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   Aktualizovat z registru ČNB
-                </button>
+                </a>
               </div>
             </div>
 
@@ -442,8 +535,9 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
               </div>
               <div className="p-4 space-y-3">
                 {MOCK_INTEGRATIONS.map((int) => (
-                  <div
+                  <Link
                     key={int.id}
+                    href="/portal/setup"
                     className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -462,19 +556,165 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
                     {int.status === "connected" ? (
                       <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
                     ) : (
-                      <button
-                        type="button"
-                        className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 min-h-[44px]"
-                      >
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 min-h-[44px] inline-flex items-center">
                         Připojit
-                      </button>
+                      </span>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
           </div>
         </div>
+        )}
+
+        {activeTab === "rezervace" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl sm:rounded-[24px] p-6 sm:p-8 text-white shadow-lg shadow-indigo-900/20 relative overflow-hidden group">
+                <Globe className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10 group-hover:scale-110 transition-transform duration-700 pointer-events-none" aria-hidden />
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-4 flex items-center gap-2">
+                  <LinkIcon size={12} aria-hidden /> Rezervační odkaz
+                </h2>
+                <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">
+                  Pošlete tento odkaz klientům, aby si mohli sami naplánovat schůzku přímo do vašeho kalendáře.
+                </p>
+                <div className="bg-white/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
+                  <span className="text-xs font-medium truncate opacity-90">{bookingLink}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
+                    title="Kopírovat odkaz"
+                  >
+                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
+                  </button>
+                </div>
+                <Link
+                  href="/portal/calendar"
+                  className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px] inline-flex"
+                >
+                  Nastavit dostupnost <ChevronRight size={14} aria-hidden />
+                </Link>
+              </div>
+            </div>
+            <div className="lg:col-span-1" />
+          </div>
+        )}
+
+        {activeTab === "integrace" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex items-center justify-between flex-wrap gap-3">
+                  <h2 className="text-lg font-black text-slate-900">Připojené účty</h2>
+                  <Link
+                    href="/portal/setup"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors min-h-[44px]"
+                  >
+                    <Settings size={14} /> Spravovat integrace v Nastavení
+                  </Link>
+                </div>
+                <div className="p-4 space-y-3">
+                  {MOCK_INTEGRATIONS.map((int) => (
+                    <Link
+                      key={int.id}
+                      href="/portal/setup"
+                      className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                          {int.id === "google" ? <GoogleIcon /> : <MicrosoftIcon />}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-slate-800">{int.name}</h4>
+                          <p className={`text-xs font-medium ${int.status === "connected" ? "text-emerald-600" : "text-slate-400"}`}>
+                            {int.status === "connected" ? "Připojeno" : "Nepřipojeno"}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50">
+                  <h3 className="font-black text-slate-900">Licence a oprávnění</h3>
+                </div>
+                <div className="p-4 space-y-3">
+                  {MOCK_LICENSES.map((lic, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+                      <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
+                        {lic.status === "valid" ? <CheckCircle size={12} strokeWidth={3} aria-hidden /> : <AlertCircle size={12} strokeWidth={3} aria-hidden />}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{lic.name}</h4>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-slate-400" : "text-amber-600"}`}>
+                          Platnost do: {lic.expiry}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <a
+                    href="https://www.cnb.cz/cs/dohledove-sluzby/registr-oznameni/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    Aktualizovat z registru ČNB
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "notifikace" && (
+          <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Bell size={24} className="text-slate-400" />
+              <h2 className="text-lg font-black text-slate-900">Notifikace a oznámení</h2>
+            </div>
+            <p className="text-slate-600 text-sm mb-6 max-w-xl">
+              Přehled odeslaných e-mailů, notifikací a zpráv od klientů. Nastavení kanálů a šablon najdete v Nastavení.
+            </p>
+            <Link
+              href="/portal/notifications"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors min-h-[44px]"
+            >
+              <Bell size={18} /> Přejít do Oznámení
+            </Link>
+          </div>
+        )}
+
+        {activeTab === "fakturace" && (
+          <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText size={24} className="text-slate-400" />
+              <h2 className="text-lg font-black text-slate-900">Smlouvy a fakturace</h2>
+            </div>
+            <p className="text-slate-600 text-sm mb-6 max-w-xl">
+              Přehled smluv, plateb a produkce. Smlouvy podle období a produkční reporty.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/portal/contracts"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors min-h-[44px]"
+              >
+                <FileText size={18} /> Smlouvy
+              </Link>
+              <Link
+                href="/portal/production"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors min-h-[44px]"
+              >
+                <BarChart3 size={18} /> Produkce
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

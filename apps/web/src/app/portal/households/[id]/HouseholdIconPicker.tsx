@@ -23,7 +23,7 @@ export function HouseholdIconDisplay({ iconId }: { iconId: string | null }) {
   const { Icon } = getIconById(iconId);
   return (
     <div
-      className="w-14 h-14 md:w-16 md:h-16 rounded-[var(--wp-radius-sm)] bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0"
+      className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0"
       aria-hidden
     >
       <Icon size={28} className="md:w-8 md:h-8" strokeWidth={1.8} />
@@ -48,7 +48,7 @@ export function HouseholdIconPicker({
           type="button"
           disabled={disabled}
           onClick={() => onChange(value === id ? null : id)}
-          className={`w-10 h-10 rounded-[var(--wp-radius-sm)] border flex items-center justify-center transition-all shrink-0 disabled:opacity-50 ${
+          className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all shrink-0 disabled:opacity-50 ${
             value === id
               ? "bg-indigo-100 border-indigo-300 text-indigo-700"
               : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
