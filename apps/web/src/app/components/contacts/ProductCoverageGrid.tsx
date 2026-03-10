@@ -120,7 +120,7 @@ export function CoverageSummaryCard({ contactId }: { contactId: string }) {
   }, [allKeys, getStatus]);
 
   return (
-    <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Celkové pokrytí portfolia</h3>
       <p className="text-sm mb-2">
         <span className="font-semibold" style={{ color: "var(--wp-success)" }}>{progress.done} hotovo</span>

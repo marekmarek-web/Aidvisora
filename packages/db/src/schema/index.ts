@@ -12,3 +12,4 @@ export * from "./board-views";
 export * from "./notifications";
 export * from "./messages";
 export * from "./mindmap";
+export * from "./advisor-preferences";

@@ -146,7 +146,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   if (loading) return <p className="text-slate-500 text-sm">Načítám smlouvy…</p>;
 
   return (
-    <div className="rounded-xl border border-monday-border bg-white p-6 shadow-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
       <ConfirmDeleteModal
         open={deleteConfirmId !== null}
         title="Opravdu smazat smlouvu?"
@@ -154,14 +154,14 @@ export function ContractsSection({ contactId }: { contactId: string }) {
         onCancel={() => setDeleteConfirmId(null)}
         loading={deletePending}
       />
-      <h2 className="font-semibold text-slate-800 mb-3">Smlouvy</h2>
-      <p className="text-xs text-slate-500 mb-2">
+      <h2 className="font-semibold text-slate-800 mb-2">Produkty / Smlouvy</h2>
+      <p className="text-xs text-slate-500 mb-4">
         {EUCS_ZP_DISCLAIMER}
       </p>
-      <ul className="space-y-2 mb-4">
+      <ul className="space-y-3 mb-4">
         {list.map((c) => (
-          <li key={c.id} className="flex items-center justify-between text-sm border-b border-slate-100 pb-2">
-            <span>
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm min-h-[44px]">
+            <span className="min-w-0">
               {c.contractNumber ? (
                 <>
                   <span className="font-medium text-slate-800">č. {c.contractNumber}</span>
@@ -172,11 +172,11 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               {c.premiumAmount ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč` : ""}
               {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
             </span>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => startEdit(c)} className="text-monday-blue font-medium">
+            <div className="flex gap-2 shrink-0">
+              <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-slate-100 min-h-[44px]">
                 Upravit
               </button>
-              <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="text-red-600 font-medium">
+              <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]">
                 Smazat
               </button>
             </div>
@@ -319,9 +319,9 @@ export function ContractsSection({ contactId }: { contactId: string }) {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="rounded-lg px-3 py-2 text-sm font-semibold border border-monday-border text-slate-700 hover:bg-slate-50"
+          className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold bg-[var(--wp-accent)] text-white hover:opacity-90 min-h-[44px]"
         >
-          + Přidat smlouvu
+          + Přidat produkt / smlouvu
         </button>
       )}
     </div>

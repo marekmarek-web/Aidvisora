@@ -324,9 +324,9 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
   };
 
   return (
-    <div className="flex flex-col md:flex-row flex-1 min-h-0 w-full gap-0 animate-[wp-fade-in_0.3s_ease]">
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-8 animate-[wp-fade-in_0.3s_ease]">
       {/* Left panel: main content */}
-      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:pr-0">
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
@@ -538,8 +538,8 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
         <DashboardMiniNotes initialNotes={initialNotes} />
       </div>
 
-      {/* Right panel: side calendar, agenda, zprávy, Nová aktivita */}
-      <aside className="w-full lg:w-[380px] mt-6 lg:mt-0 flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-100 bg-white lg:bg-slate-50/30 sticky top-[73px] h-[calc(100vh-73px)] lg:rounded-l-2xl overflow-hidden">
+      {/* Right panel: side calendar, agenda, zprávy, Nová aktivita – vizuálně oddělená plocha */}
+      <aside className="w-full lg:w-[380px] mt-6 lg:mt-0 flex-shrink-0 flex flex-col border-t lg:border-0 lg:rounded-2xl lg:shadow-md lg:border border-slate-200 bg-white lg:bg-white sticky top-[73px] h-[calc(100vh-73px)] overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-white">
           <CalendarWidget onNewActivity={() => router.push("/portal/calendar?new=1")} />
           <MessengerPreview />

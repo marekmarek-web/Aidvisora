@@ -104,26 +104,24 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
 
   if (loading)
     return (
-      <p className="text-monday-text-muted text-sm">
-        Načítám compliance data…
-      </p>
+      <p className="text-slate-500 text-sm">Načítám KYC & AML data…</p>
     );
 
   return (
-    <div className="rounded-xl border border-monday-border bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-monday-text mb-3 text-sm">
-        Compliance
+    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+        KYC & AML
       </h2>
 
-      {/* ── Tab bar ────────────────────────────────────── */}
-      <div className="flex gap-1 mb-4 border-b border-monday-border">
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-4 border-b border-slate-200">
         <button
           type="button"
           onClick={() => setTab("aml")}
-          className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors min-h-[44px] ${
             tab === "aml"
-              ? "border-monday-blue text-monday-blue"
-              : "border-transparent text-monday-text-muted hover:text-monday-text"
+              ? "border-[var(--wp-accent)] text-[var(--wp-accent)]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
           AML
@@ -131,10 +129,10 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
         <button
           type="button"
           onClick={() => setTab("consents")}
-          className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors min-h-[44px] ${
             tab === "consents"
-              ? "border-monday-blue text-monday-blue"
-              : "border-transparent text-monday-text-muted hover:text-monday-text"
+              ? "border-[var(--wp-accent)] text-[var(--wp-accent)]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
           Souhlasy
@@ -145,18 +143,16 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
       {tab === "aml" && (
         <div>
           {amlList.length === 0 && !showAmlForm && (
-            <p className="text-sm text-monday-text-muted mb-3">
-              Zatím žádné AML kontroly.
-            </p>
+            <p className="text-sm text-slate-500 mb-3">Zatím žádné AML kontroly.</p>
           )}
 
           <ul className="space-y-2 mb-4">
             {amlList.map((row) => (
               <li
                 key={row.id}
-                className="flex items-center gap-3 text-sm border-b border-monday-border/50 pb-2"
+                className="flex items-center gap-3 text-sm border-b border-slate-100 pb-2 min-h-[44px]"
               >
-                <span className="text-monday-text">
+                <span className="text-slate-800">
                   {new Date(row.checkDate).toLocaleDateString("cs-CZ")}
                 </span>
                 {row.riskLevel && (
@@ -169,40 +165,30 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                   </span>
                 )}
                 {row.notes && (
-                  <span className="text-monday-text-muted truncate max-w-xs">
-                    {row.notes}
-                  </span>
+                  <span className="text-slate-500 truncate max-w-xs">{row.notes}</span>
                 )}
               </li>
             ))}
           </ul>
 
           {showAmlForm ? (
-            <form onSubmit={handleAmlSubmit} className="space-y-2 max-w-md">
+            <form onSubmit={handleAmlSubmit} className="space-y-3 max-w-md">
               <div>
-                <label className="block text-xs font-medium text-monday-text-muted">
-                  Datum kontroly
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Datum kontroly</label>
                 <input
                   type="date"
                   value={amlForm.checkDate}
-                  onChange={(e) =>
-                    setAmlForm((f) => ({ ...f, checkDate: e.target.value }))
-                  }
+                  onChange={(e) => setAmlForm((f) => ({ ...f, checkDate: e.target.value }))}
                   required
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
+                  className="w-full rounded-[var(--wp-radius)] border border-slate-200 px-2 py-2 text-sm min-h-[44px]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-monday-text-muted">
-                  Úroveň rizika
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Úroveň rizika</label>
                 <select
                   value={amlForm.riskLevel}
-                  onChange={(e) =>
-                    setAmlForm((f) => ({ ...f, riskLevel: e.target.value }))
-                  }
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
+                  onChange={(e) => setAmlForm((f) => ({ ...f, riskLevel: e.target.value }))}
+                  className="w-full rounded-[var(--wp-radius)] border border-slate-200 px-2 py-2 text-sm min-h-[44px]"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -210,30 +196,26 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-monday-text-muted">
-                  Poznámky
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Poznámky</label>
                 <textarea
                   value={amlForm.notes}
-                  onChange={(e) =>
-                    setAmlForm((f) => ({ ...f, notes: e.target.value }))
-                  }
+                  onChange={(e) => setAmlForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={3}
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm resize-none"
+                  className="w-full rounded-[var(--wp-radius)] border border-slate-200 px-2 py-1.5 text-sm resize-none"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={amlSubmitting}
-                  className="rounded px-3 py-1.5 text-sm font-semibold text-white bg-monday-blue disabled:opacity-50"
+                  className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold text-white bg-[var(--wp-accent)] disabled:opacity-50 min-h-[44px]"
                 >
                   {amlSubmitting ? "Ukládám…" : "Uložit"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAmlForm(false)}
-                  className="rounded px-3 py-1.5 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover"
+                  className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 min-h-[44px]"
                 >
                   Zrušit
                 </button>
@@ -243,7 +225,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
             <button
               type="button"
               onClick={() => setShowAmlForm(true)}
-              className="rounded-lg px-3 py-2 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover"
+              className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 min-h-[44px]"
             >
               + Nová kontrola
             </button>
@@ -255,7 +237,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
       {tab === "consents" && (
         <div>
           {consentList.length === 0 && !showConsentForm && (
-            <p className="text-sm text-monday-text-muted mb-3">
+            <p className="text-sm text-slate-500 mb-3">
               Zatím žádné souhlasy.
             </p>
           )}
@@ -266,10 +248,10 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
               return (
                 <li
                   key={row.id}
-                  className="flex items-center justify-between text-sm border-b border-monday-border/50 pb-2"
+                  className="flex items-center justify-between text-sm border-b border-slate-100 pb-2"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-monday-text font-medium truncate">
+                    <span className="text-slate-800 font-medium truncate">
                       {row.purposeName}
                     </span>
                     <span
@@ -281,11 +263,11 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                     >
                       {isActive ? "Aktivní" : "Odvolán"}
                     </span>
-                    <span className="text-monday-text-muted shrink-0">
+                    <span className="text-slate-500 shrink-0">
                       {new Date(row.grantedAt).toLocaleDateString("cs-CZ")}
                     </span>
                     {row.revokedAt && (
-                      <span className="text-monday-text-muted shrink-0">
+                      <span className="text-slate-500 shrink-0">
                         →{" "}
                         {new Date(row.revokedAt).toLocaleDateString("cs-CZ")}
                       </span>
@@ -311,7 +293,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
               className="space-y-2 max-w-md"
             >
               <div>
-                <label className="block text-xs font-medium text-monday-text-muted">
+                <label className="block text-xs font-medium text-slate-500">
                   Účel zpracování
                 </label>
                 <select
@@ -323,7 +305,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                     }))
                   }
                   required
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
                 >
                   <option value="">— vyberte —</option>
                   {purposes.map((p) => (
@@ -334,7 +316,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-monday-text-muted">
+                <label className="block text-xs font-medium text-slate-500">
                   Zdroj
                 </label>
                 <input
@@ -344,21 +326,21 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                     setConsentForm((f) => ({ ...f, source: e.target.value }))
                   }
                   placeholder="např. e-mail, formulář"
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={consentSubmitting}
-                  className="rounded px-3 py-1.5 text-sm font-semibold text-white bg-monday-blue disabled:opacity-50"
+                  className="rounded px-3 py-1.5 text-sm font-semibold text-white bg-[var(--wp-accent)] disabled:opacity-50"
                 >
                   {consentSubmitting ? "Ukládám…" : "Udělit souhlas"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowConsentForm(false)}
-                  className="rounded px-3 py-1.5 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover"
+                  className="rounded px-3 py-1.5 text-sm font-semibold border border-slate-200 text-slate-800 hover:bg-slate-50"
                 >
                   Zrušit
                 </button>
@@ -368,7 +350,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
             <button
               type="button"
               onClick={() => setShowConsentForm(true)}
-              className="rounded-lg px-3 py-2 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover"
+              className="rounded-lg px-3 py-2 text-sm font-semibold border border-slate-200 text-slate-800 hover:bg-slate-50"
             >
               + Udělit souhlas
             </button>

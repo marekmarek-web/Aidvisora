@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
-import { db, notificationLog, contacts, eq, desc, sql } from "db";
+import { db, notificationLog, contacts, eq, desc, and, gte } from "db";
 
 export type NotificationRow = {
   id: string;
@@ -48,4 +48,21 @@ export async function getNotificationLog(limit = 50): Promise<NotificationRow[]>
         : null,
     sentAt: r.sentAt,
   }));
+}
+
+/** Počet notifikací za posledních 7 dní; pro badge u zvonečku v headeru. */
+export async function getNotificationBadgeCount(): Promise<number> {
+  const auth = await requireAuthInAction();
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  const rows = await db
+    .select({ id: notificationLog.id })
+    .from(notificationLog)
+    .where(
+      and(
+        eq(notificationLog.tenantId, auth.tenantId),
+        gte(notificationLog.sentAt, since)
+      )
+    );
+  return rows.length;
 }

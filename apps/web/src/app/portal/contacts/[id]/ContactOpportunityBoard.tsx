@@ -40,7 +40,7 @@ export function ContactOpportunityBoard({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-500">
         Načítám obchody…
       </div>
     );
@@ -49,11 +49,11 @@ export function ContactOpportunityBoard({ contactId }: { contactId: string }) {
   const totalOpps = stages.reduce((s, st) => s + st.opportunities.length, 0);
   if (totalOpps === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-slate-500 text-sm">U tohoto klienta zatím nejsou žádné obchody.</p>
         <Link
           href="/portal/pipeline"
-          className="inline-block mt-3 text-sm font-medium text-blue-600 hover:underline"
+          className="inline-flex items-center mt-3 text-sm font-medium text-[var(--wp-accent)] hover:underline min-h-[44px]"
         >
           Přidat obchod na obchodní nástěnce →
         </Link>
@@ -72,7 +72,7 @@ export function ContactOpportunityBoard({ contactId }: { contactId: string }) {
           return (
             <div
               key={stage.id}
-              className="min-w-[240px] rounded-xl bg-white border border-slate-200 flex-shrink-0 shadow-sm overflow-hidden"
+              className="min-w-[240px] rounded-[var(--wp-radius-lg)] bg-white border border-slate-200 flex-shrink-0 shadow-sm overflow-hidden"
             >
               <div
                 className="flex items-center justify-between px-3 py-2"

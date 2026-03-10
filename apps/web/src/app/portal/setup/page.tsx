@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { seedDemoData } from "@/app/actions/seed-demo";
+import { getQuickActionsConfig, setQuickActionsConfig } from "@/app/actions/preferences";
+import {
+  QUICK_ACTIONS_CATALOG,
+  type QuickActionId,
+} from "@/lib/quick-actions";
 import { useToast } from "@/app/components/Toast";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 type IntegrationStatus = "connected" | "disconnected" | "coming_soon";
 
@@ -84,6 +90,26 @@ export default function SetupPage() {
   const [configs, setConfigs] = useState<Record<string, Record<string, string>>>({});
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [seedMsg, setSeedMsg] = useState("");
+  const [quickOrder, setQuickOrder] = useState<QuickActionId[]>([]);
+  const [quickVisible, setQuickVisible] = useState<Record<string, boolean>>({});
+  const [quickLoading, setQuickLoading] = useState(true);
+  const [quickSaving, setQuickSaving] = useState(false);
+
+  useEffect(() => {
+    getQuickActionsConfig().then((c) => {
+      const catalogIds = QUICK_ACTIONS_CATALOG.map((a) => a.id);
+      const order = (c.order.length ? c.order.filter((id) => catalogIds.includes(id as QuickActionId)) : [...catalogIds]) as QuickActionId[];
+      const missing = catalogIds.filter((id) => !order.includes(id));
+      setQuickOrder([...order, ...missing]);
+      setQuickVisible(
+        catalogIds.reduce<Record<string, boolean>>((acc, id) => {
+          acc[id] = c.visible[id] !== false;
+          return acc;
+        }, {})
+      );
+      setQuickLoading(false);
+    });
+  }, []);
 
   function handleSave(integrationId: string) {
     toast.showToast("Konfigurace uložena");
@@ -158,6 +184,102 @@ export default function SetupPage() {
         </div>
         {seedMsg && (
           <p className="text-xs text-amber-700 mt-2 bg-amber-100 rounded-[var(--wp-radius-sm)] px-3 py-2">{seedMsg}</p>
+        )}
+      </div>
+
+      {/* Nastavení rychlého tlačítka */}
+      <div className="wp-card overflow-hidden">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 px-5 pt-5 pb-2">
+          Rychlé tlačítko „+ Nový“
+        </h2>
+        <p className="text-sm text-slate-600 px-5 pb-4">
+          Vyberte položky a pořadí v menu „+ Nový“ v horní liště aplikace. Skryté položky se v menu nezobrazí.
+        </p>
+        {quickLoading ? (
+          <div className="px-5 pb-5 text-sm text-slate-500">Načítám…</div>
+        ) : (
+          <div className="border-t border-slate-100 px-5 py-4 space-y-2">
+            {quickOrder.map((id, index) => {
+              const item = QUICK_ACTIONS_CATALOG.find((a) => a.id === id);
+              if (!item) return null;
+              const visible = quickVisible[id] !== false;
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-3 py-2 min-h-[44px] rounded-[var(--wp-radius-sm)] hover:bg-slate-50 px-2 -mx-2"
+                >
+                  <div className="flex flex-col gap-0 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index === 0) return;
+                        const next = [...quickOrder];
+                        [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                        setQuickOrder(next);
+                      }}
+                      className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                      disabled={index === 0}
+                      aria-label="Posunout nahoru"
+                    >
+                      <ChevronUp size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index === quickOrder.length - 1) return;
+                        const next = [...quickOrder];
+                        [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                        setQuickOrder(next);
+                      }}
+                      className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                      disabled={index === quickOrder.length - 1}
+                      aria-label="Posunout dolů"
+                    >
+                      <ChevronDown size={18} />
+                    </button>
+                  </div>
+                  <label className="flex-1 flex items-center gap-3 cursor-pointer min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      onChange={(e) =>
+                        setQuickVisible((prev) => ({ ...prev, [id]: e.target.checked }))
+                      }
+                      className="rounded border-slate-300 text-[var(--wp-accent)] focus:ring-[var(--wp-accent)]"
+                    />
+                    <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                  </label>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              disabled={quickSaving}
+              onClick={async () => {
+                setQuickSaving(true);
+                try {
+                  await setQuickActionsConfig(
+                    quickOrder,
+                    QUICK_ACTIONS_CATALOG.reduce<Record<string, boolean>>(
+                      (acc, a) => {
+                        acc[a.id] = quickVisible[a.id] !== false;
+                        return acc;
+                      },
+                      {}
+                    )
+                  );
+                  toast.showToast("Nastavení rychlého tlačítka uloženo");
+                } catch (e) {
+                  toast.showToast(e instanceof Error ? e.message : "Chyba při ukládání");
+                } finally {
+                  setQuickSaving(false);
+                }
+              }}
+              className="wp-btn wp-btn-primary mt-4"
+            >
+              {quickSaving ? "Ukládám…" : "Uložit"}
+            </button>
+          </div>
         )}
       </div>
 

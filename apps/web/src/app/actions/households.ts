@@ -163,3 +163,25 @@ export async function removeHouseholdMember(memberId: string) {
   if (!h) throw new Error("Forbidden");
   await db.delete(householdMembers).where(eq(householdMembers.id, memberId));
 }
+
+/** Nastaví domácnost kontaktu: null = odebrat z domácnosti, jinak přidat do zvolené domácnosti (případně přesunout). */
+export async function setContactHousehold(contactId: string, householdId: string | null): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "households:write")) throw new Error("Forbidden");
+  const existing = await db
+    .select({ id: householdMembers.id })
+    .from(householdMembers)
+    .where(eq(householdMembers.contactId, contactId));
+  for (const row of existing) {
+    await db.delete(householdMembers).where(eq(householdMembers.id, row.id));
+  }
+  if (householdId) {
+    const [h] = await db
+      .select({ id: households.id })
+      .from(households)
+      .where(and(eq(households.tenantId, auth.tenantId), eq(households.id, householdId)))
+      .limit(1);
+    if (!h) throw new Error("Domácnost nenalezena");
+    await db.insert(householdMembers).values({ householdId, contactId, role: null });
+  }
+}

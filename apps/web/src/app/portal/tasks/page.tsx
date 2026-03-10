@@ -78,6 +78,13 @@ export default function TasksPage() {
     if (contactId) setNewContactId(contactId);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#new-task-form") {
+      const el = document.getElementById("new-task-form");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
   const reload = useCallback(
     async (f?: Filter) => {
       setLoading(true);
@@ -382,12 +389,22 @@ export default function TasksPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
               Moje úkoly
             </h1>
-            <button
-              type="button"
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:bg-slate-50 transition-all w-fit"
-            >
-              <LayoutList size={16} /> Šablony úkolů
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => document.getElementById("new-task-form")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-[var(--wp-radius-sm)] text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-all min-h-[44px]"
+              >
+                <Plus size={18} /> Vytvořit úkol
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:bg-slate-50 transition-all w-fit min-h-[44px]"
+                title="Připravujeme"
+              >
+                <LayoutList size={16} /> Šablony úkolů
+              </button>
+            </div>
           </div>
 
           {/* Smart input pro nový úkol */}

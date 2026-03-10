@@ -19,7 +19,7 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
           Otevřené úkoly
         </h3>
@@ -30,14 +30,14 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
           Otevřené úkoly
         </h3>
         <p className="text-sm text-slate-500">Žádné otevřené úkoly.</p>
         <Link
           href="#ukoly"
-          className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
+          className="mt-3 inline-flex items-center min-h-[44px] text-sm font-medium text-[var(--wp-accent)] hover:underline"
         >
           Úkoly a schůzky →
         </Link>
@@ -46,7 +46,7 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
         Otevřené úkoly ({tasks.length})
       </h3>
@@ -65,7 +65,7 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
       </ul>
       <Link
         href="#ukoly"
-        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline"
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--wp-accent)] hover:underline min-h-[44px] items-center"
       >
         Všechny úkoly
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

@@ -98,14 +98,39 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
 
   const showDropdown = !isNotesPage && dropdownOpen && value.trim().length > 0;
 
+  const firstResultHref =
+    !loading && hasResults
+      ? results.contacts[0]
+        ? `/portal/contacts/${results.contacts[0].id}`
+        : results.contracts[0]
+          ? `/portal/contacts/${results.contracts[0].contactId}`
+          : results.opportunities[0]
+            ? "/portal/pipeline"
+            : results.events[0]
+              ? "/portal/calendar"
+              : null
+      : null;
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== "Enter" || isNotesPage) return;
+      if (firstResultHref) {
+        e.preventDefault();
+        closeAndNavigate(firstResultHref);
+      }
+    },
+    [isNotesPage, firstResultHref, closeAndNavigate]
+  );
+
   return (
-    <div ref={wrapperRef} className="wp-search-wrapper hidden sm:flex relative">
+    <div ref={wrapperRef} className="wp-search-wrapper flex relative min-w-0 flex-1 min-h-[44px]">
       <input
         className="wp-search-input"
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         onFocus={() => !isNotesPage && value.trim() && setDropdownOpen(true)}
         readOnly={false}
         aria-label="Hledat"

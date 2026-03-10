@@ -15,6 +15,8 @@ import { ContactTasksAndEvents } from "./ContactTasksAndEvents";
 import { ContactOpportunityBoard } from "./ContactOpportunityBoard";
 import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactOpenTasksPreview } from "./ContactOpenTasksPreview";
+import { ContactNotesSection } from "./ContactNotesSection";
+import { ContactOverviewKpi } from "./ContactOverviewKpi";
 import { ProductCoverageGrid, CoverageSummaryCard } from "@/app/components/contacts/ProductCoverageGrid";
 
 export default async function ContactDetailPage({
@@ -32,11 +34,12 @@ export default async function ContactDetailPage({
   const overviewContent = (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 lg:gap-8">
       <div className="space-y-6 min-w-0">
+        <ContactOverviewKpi contactId={id} />
         <CoverageSummaryCard contactId={id} />
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white shadow-sm overflow-hidden">
           <ProductCoverageGrid contactId={id} />
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Kontaktní údaje</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
           <p className="flex flex-col gap-0.5">
@@ -143,7 +146,7 @@ export default async function ContactDetailPage({
     <div className="space-y-6 md:space-y-8">
       <ContractsSection contactId={id} />
       <ClientFinancialSummary contactId={id} />
-      <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800 mb-2 text-sm">Platební instrukce</h2>
         <SendPaymentPdfButton contactId={id} />
       </div>
@@ -153,17 +156,24 @@ export default async function ContactDetailPage({
   const aktivitaContent = (
     <div className="space-y-6 md:space-y-8">
       <ContactActivityTimeline contactId={id} />
-      <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800 mb-3 text-sm">Zprávy</h2>
         <ChatThread contactId={id} currentUserType="advisor" />
       </div>
     </div>
   );
 
+  const zapiskyContent = (
+    <div className="space-y-6 md:space-y-8">
+      <ContactNotesSection contactId={id} />
+    </div>
+  );
+
   const tabs = [
     { id: "prehled" as const, label: "Přehled", content: overviewContent },
-    { id: "smlouvy" as const, label: "Smlouvy", content: smlouvyContent },
+    { id: "smlouvy" as const, label: "Produkty", content: smlouvyContent },
     { id: "dokumenty" as const, label: "Dokumenty", content: <div className="space-y-6 md:space-y-8"><DocumentsSection contactId={id} /></div> },
+    { id: "zapisky" as const, label: "Zápisky", content: zapiskyContent },
     { id: "aktivita" as const, label: "Aktivita", content: aktivitaContent },
     { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="space-y-6 md:space-y-8"><ContactTasksAndEvents contactId={id} /></div> },
     { id: "obchody" as const, label: "Obchody", content: <div className="space-y-6 md:space-y-8"><ContactOpportunityBoard contactId={id} /></div> },
@@ -184,21 +194,21 @@ export default async function ContactDetailPage({
   const addressLine = [contact.street, [contact.city, contact.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-8">
-      <div className="sticky top-0 z-20 bg-slate-100 border-b border-slate-200 px-4 sm:px-6 md:px-8 pt-4 md:pt-6 pb-0">
-        <nav className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-4" aria-label="Breadcrumb">
-          <Link href="/portal/contacts" className="hover:text-indigo-600 transition-colors">Kontakty</Link>
-          <span className="mx-2">/</span>
-          <span className="text-slate-700 normal-case tracking-normal font-semibold">{contact.firstName} {contact.lastName}</span>
+    <div className="min-h-screen bg-[var(--wp-bg)] pb-8">
+      <div className="sticky top-0 z-20 bg-[var(--wp-bg)] border-b border-slate-200/80 px-4 sm:px-6 md:px-8 pt-4 md:pt-6 pb-0">
+        <nav className="flex items-center text-sm font-medium text-slate-500 mb-4" aria-label="Breadcrumb">
+          <Link href="/portal/contacts" className="hover:text-[var(--wp-accent)] transition-colors">Kontakty</Link>
+          <span className="mx-2 text-slate-300">/</span>
+          <span className="text-slate-800 font-semibold">{contact.firstName} {contact.lastName}</span>
         </nav>
 
-        {/* Hero card */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-6">
+        {/* Hero card v2 */}
+        <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white shadow-lg overflow-hidden mb-6">
           <div className="p-4 sm:p-6 md:p-8">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 md:gap-6">
               <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6 min-w-0">
                 <div
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl md:text-3xl shadow-md shrink-0"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-[var(--wp-radius-lg)] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl md:text-3xl shadow-md shrink-0"
                   aria-hidden
                 >
                   {contact.avatarUrl ? (
@@ -264,35 +274,35 @@ export default async function ContactDetailPage({
                 {contact.phone && (
                   <a
                     href={`tel:${contact.phone.replace(/\s/g, "")}`}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
+                    className="inline-flex items-center gap-2 rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                     Zavolat
                   </a>
                 )}
                 <Link
-                  href={`#aktivita`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
+                  href="#aktivita"
+                  className="inline-flex items-center gap-2 rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                   Zpráva
                 </Link>
                 <Link
                   href={`/portal/contacts/${id}/summary`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
+                  className="inline-flex items-center gap-2 rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                   Klientská zpráva
                 </Link>
                 <Link
                   href={`/portal/mindmap?contactId=${id}`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
+                  className="inline-flex items-center gap-2 rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors min-h-[44px]"
                 >
                   Strategická mapa
                 </Link>
                 <Link
                   href={`/portal/contacts/${id}/edit`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2.5 text-sm font-semibold shadow-md hover:bg-slate-800 transition-colors min-h-[44px]"
+                  className="inline-flex items-center gap-2 rounded-[var(--wp-radius)] bg-slate-900 text-white px-4 py-2.5 text-sm font-semibold shadow-md hover:bg-slate-800 transition-colors min-h-[44px]"
                 >
                   Upravit
                 </Link>

@@ -89,6 +89,15 @@ CREATE TABLE IF NOT EXISTS mindmap_edges (
   dashed boolean DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS advisor_preferences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  quick_actions jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, user_id)
+);
 `;
 
 const client = postgres(connectionString, { max: 1, prepare: false });

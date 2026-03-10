@@ -12,6 +12,7 @@ const dmSans = DM_Sans({ subsets: ["latin", "latin-ext"], weight: ["400", "500",
 export const metadata: Metadata = {
   title: "Aidvisora – Portál poradce",
   description: "CRM pro finanční poradce v ČR. Domácnosti, pipeline, meeting notes, smlouvy.",
+  icons: { icon: "/favicon.png", apple: "/favicon.png" },
 };
 
 export default function RootLayout({

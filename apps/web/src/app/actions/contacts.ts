@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { contacts } from "db";
 import { eq, and, asc, inArray } from "db";
+import { createAdminClient } from "@/lib/supabase/server";
 
 export type ContactRow = {
   id: string;
@@ -234,6 +235,7 @@ export async function updateContact(
     serviceCycleMonths?: string;
     lastServiceDate?: string;
     nextServiceDue?: string;
+    avatarUrl?: string | null;
   }
 ) {
   const auth = await requireAuthInAction();
@@ -259,8 +261,50 @@ export async function updateContact(
       ...(form.serviceCycleMonths != null && { serviceCycleMonths: form.serviceCycleMonths || null }),
       ...(form.lastServiceDate != null && { lastServiceDate: form.lastServiceDate || null }),
       ...(form.nextServiceDue != null && { nextServiceDue: form.nextServiceDue || null }),
+      ...(form.avatarUrl !== undefined && { avatarUrl: form.avatarUrl || null }),
       updatedAt: new Date(),
     })
+    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+}
+
+const AVATAR_MAX_SIZE = 3 * 1024 * 1024; // 3 MB
+const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+/** Nahraje profilovou fotku kontaktu do Storage a uloží URL do contacts.avatar_url. */
+export async function uploadContactAvatar(contactId: string, formData: FormData): Promise<string | null> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  const file = formData.get("file") as File | null;
+  if (!file?.size) throw new Error("Vyberte obrázek");
+  if (file.size > AVATAR_MAX_SIZE) throw new Error("Soubor je příliš velký (max 3 MB)");
+  if (!AVATAR_TYPES.includes(file.type)) throw new Error("Povolené formáty: JPEG, PNG, WebP, GIF");
+  const ext = file.name.replace(/^.*\./, "") || "jpg";
+  const path = `${auth.tenantId}/avatars/${contactId}/${Date.now()}.${ext.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const admin = createAdminClient();
+  const { error: uploadError } = await admin.storage.from("documents").upload(path, file, { upsert: true });
+  if (uploadError) {
+    const msg = uploadError.message?.toLowerCase().includes("bucket") || uploadError.message?.toLowerCase().includes("not found")
+      ? "Úložiště není nastavené. V Supabase vytvořte bucket „documents“."
+      : uploadError.message;
+    throw new Error(msg);
+  }
+  const { data: urlData } = admin.storage.from("documents").getPublicUrl(path);
+  const url = urlData?.publicUrl ?? null;
+  if (url) {
+    await db
+      .update(contacts)
+      .set({ avatarUrl: url, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
+  }
+  return url;
+}
+
+/** Smaže kontakt. Závislosti (household_members, dokumenty, atd.) řeší DB CASCADE / SET NULL. */
+export async function deleteContact(id: string): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  await db
+    .delete(contacts)
     .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
 }
 

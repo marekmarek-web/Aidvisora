@@ -57,24 +57,25 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        className="flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-[var(--wp-radius-sm)] bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
         aria-expanded={open}
         aria-haspopup="true"
+        aria-label="Profil a nastavení"
       >
         {initials}
       </button>
       {open && (
-        <div className="wp-dropdown absolute right-0 top-full mt-1 w-48">
+        <div className="wp-dropdown absolute right-0 top-full mt-1 w-48 z-[9999] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1">
           <Link
             href="/portal/profile"
-            className="wp-dropdown-item block text-slate-700"
+            className="block px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
             onClick={() => setOpen(false)}
           >
             Profil
           </Link>
           <Link
             href="/portal/setup"
-            className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+            className="block px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
             onClick={() => setOpen(false)}
           >
             Nastavení
@@ -85,7 +86,7 @@ export function UserMenu() {
               setOpen(false);
               signOut();
             }}
-            className="wp-dropdown-item block w-full text-left text-slate-700"
+            className="block w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
           >
             Odhlásit se
           </button>
