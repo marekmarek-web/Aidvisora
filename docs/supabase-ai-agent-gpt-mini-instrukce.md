@@ -76,3 +76,21 @@ Stručně, odrážky.
 - **Vypnutí Confirm email:** Supabase → **Authentication** → **Providers** → **Email** → vypni **Confirm email** → Save.
 - **Vypnutí AI Assistant v Supabase:** **Project Settings** → **Integrations** (nebo **API**) → sekce **OpenAI** / **AI** → smaž API klíč nebo ho nevyplňuj a ulož. AI panel v SQL Editoru pak nebude volat OpenAI.
 - **Vypnutí AI v aplikaci (Aidvisora):** Na Vercelu a v `.env` smaž nebo nevyplňuj `OPENAI_API_KEY`. Funkce „Roztřídit pomocí AI“ v cold contacts pak nebude dostupná.
+
+---
+
+## 5. Migrace: mindmap – sloupec `name` (libovolné mapy)
+
+V aplikaci máme tabulku `mindmap_maps`. Přidáváme podporu **libovolných map** (standalone) – k tomu je potřeba sloupec `name` (název mapy). V Supabase SQL Editoru nebo přes AI Assistant spusť:
+
+### Prompt pro Supabase AI (zkopíruj a vlož do chatu)
+
+```
+V tabulce mindmap_maps přidej sloupec name (text, nullable). Použij idempotentní příkaz (ADD COLUMN IF NOT EXISTS). Tabulka slouží pro strategické mapy: u kontaktů/domácností je name null, u „standalone“ map tam bude název mapy. Vygeneruj jen SQL, žádný úvod.
+```
+
+### SQL (můžeš spustit přímo v SQL Editoru)
+
+```sql
+ALTER TABLE mindmap_maps ADD COLUMN IF NOT EXISTS name text;
+```

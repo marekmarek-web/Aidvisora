@@ -42,6 +42,7 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lifecycle_stage text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS avatar_url text;
 ALTER TABLE board_views ADD COLUMN IF NOT EXISTS groups_config jsonb;
 ALTER TABLE households ADD COLUMN IF NOT EXISTS icon text;
+ALTER TABLE mindmap_maps ADD COLUMN IF NOT EXISTS name text;
 CREATE TABLE IF NOT EXISTS notification_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,

@@ -5,8 +5,9 @@ export const mindmapMaps = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").notNull(),
-    entityType: text("entity_type").notNull(), // 'contact' | 'household'
+    entityType: text("entity_type").notNull(), // 'contact' | 'household' | 'standalone'
     entityId: uuid("entity_id").notNull(),
+    name: text("name"), // for standalone: display name; null for contact/household
     viewport: jsonb("viewport"), // { pan: { x, y }, zoom }
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

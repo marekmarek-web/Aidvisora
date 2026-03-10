@@ -479,12 +479,13 @@ ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS custom_fields jsonb;
 
 ALTER TABLE households ADD COLUMN IF NOT EXISTS icon text;
 
--- 15. mindmap
+-- 15. mindmap (klient/domácnost nebo libovolná standalone mapa)
 CREATE TABLE IF NOT EXISTS mindmap_maps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
   entity_type text NOT NULL,
   entity_id uuid NOT NULL,
+  name text,
   viewport jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -514,6 +515,7 @@ CREATE TABLE IF NOT EXISTS mindmap_edges (
   dashed boolean DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE mindmap_maps ADD COLUMN IF NOT EXISTS name text;
 
 -- Globální partneři (tenant_id NULL) – volitelné, pro dropdown u smluv
 INSERT INTO partners (tenant_id, name, segment) SELECT NULL, 'UNIQA', 'ZP' WHERE NOT EXISTS (SELECT 1 FROM partners WHERE tenant_id IS NULL AND name = 'UNIQA' AND segment = 'ZP');

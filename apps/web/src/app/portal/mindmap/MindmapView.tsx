@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback } from "react";
+import Link from "next/link";
 import { Download, Sparkles } from "lucide-react";
 import { saveMindmap } from "@/app/actions/mindmap";
 import type { MindmapState } from "@/app/actions/mindmap";
@@ -85,10 +86,18 @@ export function MindmapView({ initial }: MindmapViewProps) {
     <div className="h-screen flex flex-col bg-[#f8fafc] text-slate-800 overflow-hidden">
       <header className="bg-white/90 backdrop-blur-md border-b border-slate-100 px-6 py-3 z-50 flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-6">
+          {initial.entityType === "standalone" && (
+            <Link
+              href="/portal/mindmap"
+              className="text-slate-500 hover:text-slate-800 text-sm font-medium"
+            >
+              ← Výběr map
+            </Link>
+          )}
           <div className="h-4 w-px bg-slate-200" />
           <div className="flex items-center gap-2">
             <h1 className="font-bold text-slate-900">
-              Mapování: {initial.entityName}
+              {initial.entityType === "standalone" ? initial.entityName : `Mapování: ${initial.entityName}`}
             </h1>
             <span
               className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md border ${

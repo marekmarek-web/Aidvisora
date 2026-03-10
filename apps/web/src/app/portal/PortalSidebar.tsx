@@ -125,8 +125,10 @@ export function PortalSidebar({
   return (
     <>
       <div className="md:hidden fixed left-0 top-0 bottom-0 z-20 w-12 wp-sidebar flex flex-col items-center pt-3 gap-2" style={{ background: "var(--wp-surface)", borderRight: "1px solid var(--wp-border)" }}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm">
-          W
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm" style={{ background: "var(--wp-primary)" }}>
+          <svg viewBox="0 0 40 40" className="w-4 h-4" fill="currentColor" aria-hidden>
+            <path d="M20 6L8 34h4l2.5-7h11L28 34h4L20 6zm-2.2 20l2.8-8 2.8 8h-5.6z" />
+          </svg>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
@@ -157,8 +159,10 @@ export function PortalSidebar({
       >
         <div className="p-3 border-b flex items-center justify-between min-h-[52px]" style={{ borderColor: "var(--wp-border)" }}>
           <Link href="/portal" className={`flex items-center gap-2.5 px-2 py-1.5 min-w-0 ${collapsed ? "justify-center" : ""}`}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm shrink-0" style={{ background: "var(--wp-primary)" }}>
-              W
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm shrink-0" style={{ background: "var(--wp-primary)" }}>
+              <svg viewBox="0 0 40 40" className="w-4 h-4" fill="currentColor" aria-hidden>
+                <path d="M20 6L8 34h4l2.5-7h11L28 34h4L20 6zm-2.2 20l2.8-8 2.8 8h-5.6z" />
+              </svg>
             </div>
             {!collapsed && <span className="font-bold text-sm truncate" style={{ color: "var(--wp-text)" }}>Aidvisora</span>}
           </Link>

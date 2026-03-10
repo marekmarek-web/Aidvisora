@@ -7,12 +7,26 @@ import "@/styles/board.css";
 /** Portal je vždy dynamický – vyžaduje auth a DB, neprerenderovat při buildu. */
 export const dynamic = "force-dynamic";
 
+function isRedirectError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
+}
+
 export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const auth = await requireAuth();
+  let auth;
+  try {
+    auth = await requireAuth();
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    const msg = e instanceof Error ? e.message : String(e);
+    const safe = msg.includes("connect") || msg.includes("ENOTFOUND") || msg.includes("authentication")
+      ? "database_error"
+      : "auth_error";
+    redirect(`/?error=${encodeURIComponent(safe)}`);
+  }
   if (auth.roleName === "Client") {
     redirect("/client");
   }

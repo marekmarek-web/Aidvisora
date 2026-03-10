@@ -6,7 +6,7 @@ import type { MindmapNode } from "./types";
 
 type MindmapSidePanelProps = {
   node: MindmapNode | null;
-  entityType: "contact" | "household";
+  entityType: "contact" | "household" | "standalone";
   entityId: string;
   onClose: () => void;
   /** When true, panel uses full width/height (mobile fullscreen overlay). */
@@ -23,7 +23,12 @@ export function MindmapSidePanel({ node, entityType, entityId, onClose, fullscre
     );
   }
 
-  const entityHref = entityType === "contact" ? `/portal/contacts/${entityId}` : `/portal/households/${entityId}`;
+  const entityHref =
+    entityType === "contact"
+      ? `/portal/contacts/${entityId}`
+      : entityType === "household"
+        ? `/portal/households/${entityId}`
+        : "/portal/mindmap";
   const contractId = node.entityType === "contract" ? node.entityId : null;
   const opportunityId = node.entityType === "opportunity" ? node.entityId : null;
   const taskId = node.entityType === "task" ? node.entityId : null;
@@ -70,9 +75,10 @@ export function MindmapSidePanel({ node, entityType, entityId, onClose, fullscre
               href={entityHref}
               className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
             >
-              <User size={16} /> Otevřít {entityType === "household" ? "domácnost" : "klienta"}
+              <User size={16} />{" "}
+              {entityType === "standalone" ? "Výběr map" : entityType === "household" ? "Otevřít domácnost" : "Otevřít klienta"}
             </Link>
-            {contractId && (
+            {contractId && entityType === "contact" && (
               <Link
                 href={`/portal/contacts/${entityId}#smlouvy`}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"

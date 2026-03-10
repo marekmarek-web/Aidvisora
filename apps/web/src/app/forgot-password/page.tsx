@@ -34,8 +34,10 @@ export default function ForgotPasswordPage() {
     >
       <div className="w-full max-w-md p-10 rounded-[32px] border border-white/10 bg-[#1a1c2e]/70 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl text-white">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center text-2xl font-bold mb-4 shadow-lg shadow-indigo-500/30">
-            W
+          <div className="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
+            <svg viewBox="0 0 40 40" className="w-8 h-8 text-white" fill="currentColor" aria-hidden>
+              <path d="M20 6L8 34h4l2.5-7h11L28 34h4L20 6zm-2.2 20l2.8-8 2.8 8h-5.6z" />
+            </svg>
           </div>
           <h1 className="font-light text-2xl md:text-3xl tracking-[2px] mb-1">Aidvisora</h1>
           <p className="text-sm tracking-[1px] opacity-80">Obnovení hesla</p>

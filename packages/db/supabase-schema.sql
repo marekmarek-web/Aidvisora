@@ -472,12 +472,13 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tags text[];
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lifecycle_stage text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS avatar_url text;
 
--- 15. mindmap (strategická mapa klienta/domácnosti)
+-- 15. mindmap (strategická mapa klienta/domácnosti nebo libovolná standalone mapa)
 CREATE TABLE IF NOT EXISTS mindmap_maps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
   entity_type text NOT NULL,
   entity_id uuid NOT NULL,
+  name text,
   viewport jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),

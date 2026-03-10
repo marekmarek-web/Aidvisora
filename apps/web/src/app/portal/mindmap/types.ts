@@ -27,7 +27,7 @@ export type MindmapEdge = {
 };
 
 export type MindmapContext = {
-  entityType: "contact" | "household";
+  entityType: MindmapEntityType;
   entityId: string;
   entityName: string;
 };
