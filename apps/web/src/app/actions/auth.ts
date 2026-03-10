@@ -91,6 +91,12 @@ export async function ensureMembership(): Promise<EnsureMembershipResult> {
         error: "Na Vercelu v Environment Variables přidej DATABASE_URL (celý connection string z Supabase → Database).",
       };
     }
+    if (msg.includes("MaxClients") || msg.includes("max clients") || msg.toLowerCase().includes("pool")) {
+      return {
+        ok: false,
+        error: "Server je momentálně přetížen. Zkuste to za minutu znovu.",
+      };
+    }
     return { ok: false, error: msg || "Nepodařilo se dokončit registraci." };
   }
 }

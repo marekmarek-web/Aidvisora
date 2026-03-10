@@ -49,6 +49,8 @@ const themes: Record<ThemeId, {
 function getInitialMessage(errorParam: string | null): string {
   if (!errorParam) return "";
   if (errorParam === "otp_expired") return "Odkaz z e-mailu vypršel. Přihlaste se heslem nebo zaregistrujte se znovu.";
+  if (errorParam === "database_error") return "Problém s připojením k databázi. Zkuste to za chvíli znovu.";
+  if (errorParam === "auth_error") return "Přihlášení se nezdařilo. Zkontrolujte údaje nebo to zkuste znovu po chvíli.";
   try {
     return decodeURIComponent(errorParam);
   } catch {

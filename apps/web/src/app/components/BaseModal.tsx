@@ -51,12 +51,14 @@ export function BaseModal({
 
   useEffect(() => {
     if (!open || !ref.current) return;
-    const focusables = ref.current.querySelectorAll<HTMLElement>(
+    const el = ref.current;
+    const focusables = el.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-    first?.focus();
+    // Focus first only when focus is outside the modal (e.g. opening), never steal from active input
+    if (!el.contains(document.activeElement)) first?.focus();
 
     function trap(e: KeyboardEvent) {
       if (e.key !== "Tab") return;
@@ -72,8 +74,8 @@ export function BaseModal({
         }
       }
     }
-    ref.current.addEventListener("keydown", trap);
-    return () => ref.current?.removeEventListener("keydown", trap);
+    el.addEventListener("keydown", trap);
+    return () => el.removeEventListener("keydown", trap);
   }, [open]);
 
   const [backdropTarget, setBackdropTarget] = useState<EventTarget | null>(null);

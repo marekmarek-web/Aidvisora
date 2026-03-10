@@ -169,24 +169,24 @@ export function NewClientWizard({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Jméno *</label>
-                  <input value={form.firstName} onChange={set("firstName")} className={inputCls} autoFocus />
+                  <input key="firstName" value={form.firstName} onChange={set("firstName")} className={inputCls} autoComplete="given-name" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Příjmení *</label>
-                  <input value={form.lastName} onChange={set("lastName")} className={inputCls} />
+                  <input key="lastName" value={form.lastName} onChange={set("lastName")} className={inputCls} autoComplete="family-name" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">E-mail</label>
-                <input type="email" value={form.email} onChange={set("email")} className={inputCls} />
+                <input key="email" type="email" value={form.email} onChange={set("email")} className={inputCls} autoComplete="email" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Telefon</label>
-                <input value={form.phone} onChange={set("phone")} className={inputCls} />
+                <input key="phone" value={form.phone} onChange={set("phone")} className={inputCls} autoComplete="tel" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Datum narození</label>
-                <input type="date" value={form.birthDate} onChange={set("birthDate")} className={inputCls} />
+                <input key="birthDate" type="date" value={form.birthDate} onChange={set("birthDate")} className={inputCls} />
               </div>
             </>
           )}

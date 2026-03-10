@@ -22,9 +22,14 @@ export default async function PortalLayout({
   } catch (e) {
     if (isRedirectError(e)) throw e;
     const msg = e instanceof Error ? e.message : String(e);
-    const safe = msg.includes("connect") || msg.includes("ENOTFOUND") || msg.includes("authentication")
-      ? "database_error"
-      : "auth_error";
+    const isDbError =
+      msg.includes("connect") ||
+      msg.includes("ENOTFOUND") ||
+      msg.includes("authentication") ||
+      msg.includes("MaxClients") ||
+      msg.includes("max clients") ||
+      msg.toLowerCase().includes("pool");
+    const safe = isDbError ? "database_error" : "auth_error";
     redirect(`/?error=${encodeURIComponent(safe)}`);
   }
   if (auth.roleName === "Client") {
