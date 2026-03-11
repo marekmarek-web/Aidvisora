@@ -1,0 +1,284 @@
+"use client";
+
+import React, { useState } from 'react';
+import { 
+  ArrowLeft, Save, User, Mail, Phone, MapPin, 
+  Calendar, Hash, Tag, Building2, ChevronRight, X, Plus, Info
+} from 'lucide-react';
+
+// --- MOCK DATA ---
+const INITIAL_DATA = {
+  title: 'Ing.',
+  firstName: 'Lucie',
+  lastName: 'Černá',
+  email: 'lucie.c@example.cz',
+  phone: '+420 604 777 888',
+  birthDate: '1995-01-30',
+  personalId: '955130/1234',
+  street: 'Americká 18',
+  city: 'Plzeň',
+  zip: '301 00',
+  source: 'Doporučení od klienta',
+  tags: ['VIP', 'Investorka', 'Lékařka']
+};
+
+export default function EditContactView() {
+  const [formData, setFormData] = useState(INITIAL_DATA);
+  const [newTag, setNewTag] = useState('');
+
+  // Handle inputs
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle tags
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' && newTag.trim() !== '') {
+      e.preventDefault();
+      if (!formData.tags.includes(newTag.trim())) {
+        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
+      }
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  // Sdílené CSS třídy pro inputy
+  const labelClass = "block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1";
+  const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 placeholder:font-medium";
+  const iconInputClass = "w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800";
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] font-lato text-slate-800 pb-20">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+      `}</style>
+
+      {/* --- TOP NAV --- */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <button className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors">
+            <ArrowLeft size={16} /> Zpět na profil klienta
+          </button>
+          <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+             <span>Kontakty</span>
+             <span className="opacity-30">/</span>
+             <span>Lucie Černá</span>
+             <span className="opacity-30">/</span>
+             <span className="text-slate-800">Úprava</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+            Zrušit
+          </button>
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 active:scale-95">
+            <Save size={16} /> Uložit změny
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-[1000px] mx-auto p-8 space-y-8">
+        
+        {/* HLAVIČKA */}
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 mb-2">
+            Upravit kontakt
+          </h1>
+          <p className="text-sm font-medium text-slate-500">
+            Zde můžete upravit veškeré osobní a kontaktní údaje klienta.
+          </p>
+        </div>
+
+        <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+          
+          {/* --- KARTA 1: OSOBNÍ ÚDAJE --- */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-50 flex items-center gap-3 bg-slate-50/30">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <User size={16} />
+              </div>
+              <h2 className="text-lg font-black text-slate-900">Základní údaje</h2>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Titul</label>
+                  <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Ing." className={inputClass} />
+                </div>
+                <div className="md:col-span-5">
+                  <label className={labelClass}>Jméno *</label>
+                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required className={inputClass} />
+                </div>
+                <div className="md:col-span-5">
+                  <label className={labelClass}>Příjmení *</label>
+                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required className={inputClass} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div>
+                  <label className={labelClass}>Datum narození</label>
+                  <div className="relative">
+                    <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} className={iconInputClass} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Rodné číslo / Osobní ID</label>
+                  <div className="relative">
+                    <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="text" name="personalId" value={formData.personalId} onChange={handleChange} placeholder="Např. 900101/1234" className={iconInputClass} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- KARTA 2: SPOJENÍ A ADRESA --- */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-50 flex items-center gap-3 bg-slate-50/30">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <MapPin size={16} />
+              </div>
+              <h2 className="text-lg font-black text-slate-900">Kontaktní údaje</h2>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelClass}>E-mail</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jmeno@email.cz" className={iconInputClass} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Telefon</label>
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+420 123 456 789" className={iconInputClass} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-50 space-y-6">
+                <div>
+                  <label className={labelClass}>Ulice a číslo popisné</label>
+                  <input type="text" name="street" value={formData.street} onChange={handleChange} placeholder="Např. Václavské náměstí 1" className={inputClass} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  <div className="md:col-span-8">
+                    <label className={labelClass}>Město</label>
+                    <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Praha" className={inputClass} />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className={labelClass}>PSČ</label>
+                    <input type="text" name="zip" value={formData.zip} onChange={handleChange} placeholder="110 00" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- KARTA 3: SEGMENTACE A DALŠÍ INFO --- */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-50 flex items-center gap-3 bg-slate-50/30">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Tag size={16} />
+              </div>
+              <h2 className="text-lg font-black text-slate-900">Segmentace a vazby</h2>
+            </div>
+            
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              <div className="space-y-6">
+                <div>
+                  <label className={labelClass}>Zdroj / Doporučil</label>
+                  <input type="text" name="source" value={formData.source} onChange={handleChange} placeholder="Např. Web, Reference..." className={inputClass} />
+                </div>
+                
+                <div>
+                  <label className={labelClass}>Vazba na domácnost</label>
+                  <button className="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl text-sm font-bold text-slate-700 transition-all group">
+                    <span className="flex items-center gap-2">
+                      <Building2 size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                      Rodina Černých (Hlava rodiny)
+                    </span>
+                    <ChevronRight size={16} className="text-slate-400 group-hover:text-indigo-600" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Štítky (Tags)</label>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl min-h-[120px] flex flex-col focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400 focus-within:bg-white transition-all">
+                  
+                  {/* Zobrazení aktivních štítků */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {formData.tags.map(tag => (
+                      <span key={tag} className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
+                        {tag}
+                        <button 
+                          onClick={() => removeTag(tag)}
+                          className="p-0.5 rounded-md hover:bg-rose-100 hover:text-rose-600 text-slate-400 transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Input pro nový štítek */}
+                  <div className="flex items-center gap-2 mt-auto pt-2 border-t border-slate-200/60">
+                    <Plus size={14} className="text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Přidat štítek a potvrdit Enterem..." 
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={handleAddTag}
+                      className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium flex-1"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] font-medium text-slate-400 mt-2 flex items-center gap-1.5">
+                  <Info size={12} /> Štítky slouží k rychlé filtraci v klientské databázi.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          {/* SPODNÍ AKCE A DANGER ZONE */}
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-6 mt-10 mb-8 gap-4">
+            <button className="text-sm font-bold text-rose-600 hover:text-rose-700 hover:underline px-2 py-1">
+              Smazat kontakt navždy
+            </button>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button className="flex-1 sm:flex-none px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm">
+                Zrušit
+              </button>
+              <button className="flex-1 sm:flex-none px-8 py-3.5 bg-[#1a1c2e] text-white rounded-xl font-black tracking-wide shadow-xl shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                <Save size={18} /> Uložit všechny změny
+              </button>
+            </div>
+          </div>
+
+        </form>
+
+      </main>
+    </div>
+  );
+}

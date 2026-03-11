@@ -1,0 +1,771 @@
+"use client";
+
+import React, { useState } from 'react';
+import { 
+  ArrowLeft, Edit2, Plus, Search, MapPin, 
+  Phone, Mail, Target, Briefcase, TrendingUp, 
+  Shield, User, Sparkles, ChevronRight, Activity, 
+  Home, CheckCircle, AlertCircle, Calendar, FileText,
+  MessageSquare, MoreHorizontal, Clock, ArrowUpRight, Zap,
+  Download, UploadCloud, File, ShieldAlert, FileCheck, Check,
+  Car, Heart, CreditCard, ShieldCheck, BarChart2, Circle, PiggyBank
+} from 'lucide-react';
+
+// --- MOCK DATA ---
+const CLIENT = {
+  id: 'c1',
+  firstName: 'Jan',
+  lastName: 'Novák',
+  title: 'MUDr.',
+  fullName: 'MUDr. Jan Novák',
+  status: 'vip',
+  tags: ['Podnikatel', 'Lékař', 'Aktivní investor'],
+  email: 'jan.novak@example.cz',
+  phone: '+420 777 123 456',
+  address: 'Sluneční 145, Praha 4',
+  birthDate: '15. 04. 1980 (45 let)',
+  household: { id: 'h1', name: 'Rodina Novákova', role: 'Hlava rodiny' },
+  
+  metrics: {
+    aum: '5 200 000 Kč',
+    monthlyInvestment: '25 000 Kč',
+    healthScore: 88,
+    clientSince: '2019'
+  },
+
+  products: [
+    { id: 'p1', type: 'investice', name: 'Portu - Dlouhodobé portfolio', provider: 'Portu', value: '1.2M Kč', detail: '15 000 Kč / měs', status: 'active', date: '12. 05. 2021', number: 'PORT-123456' },
+    { id: 'p2', type: 'investice', name: 'Conseq Repofond', provider: 'Conseq', value: '4.0M Kč', detail: 'Jednorázová', status: 'active', date: '08. 11. 2023', number: 'CQ-987654' },
+    { id: 'p3', type: 'pojisteni', name: 'Životní pojištění FLEXI', provider: 'Kooperativa', value: 'Krytí 3M Kč', detail: '2 500 Kč / měs', status: 'active', date: '14. 02. 2019', number: 'KOOP-112233' },
+    { id: 'p4', type: 'hypo', name: 'Refinancování hypotéky', provider: 'Česká spořitelna', value: '4.5M Kč', detail: 'Sazba 4.2%', status: 'pending', date: 'Řeší se', number: '—' },
+    { id: 'p5', type: 'pojisteni', name: 'Pojištění odpovědnosti (Lékař)', provider: 'Allianz', value: '—', detail: 'V jednání', status: 'planned', date: 'Návrh', number: '—' }
+  ],
+
+  recentTasks: [
+    { id: 't1', text: 'Příprava modelace pro refinancování', date: 'Dnes', type: 'urgent' },
+    { id: 't2', text: 'Zaslat report výkonnosti portfolia', date: 'Zítra', type: 'normal' }
+  ],
+
+  recentNotes: [
+    { id: 'n1', text: 'Klient uvažuje o koupi investiční nemovitosti v příštím roce. Chce připravit cashflow analýzu.', date: 'Před 2 dny', author: 'Martin Dvořák' },
+    { id: 'n2', text: 'Změna trvalého bydliště nahlášena. Nutno aktualizovat ve smlouvách Kooperativa a Conseq.', date: '15. 02. 2026', author: 'Asistentka' }
+  ],
+
+  documents: [
+    { id: 'd1', name: 'Smlouva_ŽP_Kooperativa.pdf', type: 'pdf', date: '14. 02. 2019', size: '2.4 MB' },
+    { id: 'd2', name: 'Obcansky_prukaz_kopie.jpg', type: 'image', date: '12. 05. 2021', size: '1.1 MB' },
+    { id: 'd3', name: 'Zaznam_z_jednani_Hypo.pdf', type: 'pdf', date: 'Dnes', size: '0.8 MB' }
+  ],
+
+  kyc: {
+    idValidity: '15. 04. 2030',
+    amlRisk: 'Nízké',
+    pepStatus: 'Ne',
+    lastCheck: '12. 05. 2025'
+  }
+};
+
+// Data pro Widget "Pokrytí produktů"
+const INITIAL_COVERAGE = [
+  {
+    id: 'auto', title: 'Pojištění auta', icon: Car, color: 'bg-indigo-50 border-indigo-100', iconColor: 'text-indigo-400',
+    items: [{ id: 'pov', label: 'POV', status: 'none' }, { id: 'hav', label: 'HAV', status: 'none' }]
+  },
+  {
+    id: 'majetek', title: 'Pojištění majetku', icon: Home, color: 'bg-yellow-50 border-yellow-100', iconColor: 'text-yellow-500',
+    items: [{ id: 'nemovitost', label: 'Nemovitost', status: 'none' }, { id: 'domacnost', label: 'Domácnost', status: 'none' }, { id: 'oboji', label: 'Obojí', status: 'none' }]
+  },
+  {
+    id: 'odpovednost', title: 'Pojištění odpovědnosti', icon: ShieldCheck, color: 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-500', single: true,
+    items: [{ id: 'main', label: 'Nastavit', status: 'active' }]
+  },
+  {
+    id: 'zam_odpovednost', title: 'Pojištění zaměstnanecké odpovědnosti', icon: ShieldCheck, color: 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-500', single: true,
+    items: [{ id: 'main', label: 'Nastavit', status: 'none' }]
+  },
+  {
+    id: 'zivot', title: 'Životní pojištění', icon: Heart, color: 'bg-rose-50 border-rose-100', iconColor: 'text-rose-400', single: true,
+    items: [{ id: 'main', label: 'Nastavit', status: 'none' }]
+  },
+  {
+    id: 'uvery', title: 'Úvěry', icon: CreditCard, color: 'bg-amber-50 border-amber-100', iconColor: 'text-blue-500',
+    items: [{ id: 'hypo', label: 'Hypotéky', status: 'active' }, { id: 'stavebko', label: 'Stavební spoření', status: 'none' }, { id: 'americka', label: 'Americké hypotéky', status: 'none' }, { id: 'spotrebitelsky', label: 'Spotřebitelské úvěry', status: 'none' }]
+  },
+  {
+    id: 'investice', title: 'Investice', icon: TrendingUp, color: 'bg-purple-50 border-purple-100', iconColor: 'text-purple-400',
+    items: [{ id: 'dip', label: 'DIP', status: 'none' }, { id: 'pravidelne', label: 'Pravidelné', status: 'none' }, { id: 'jednorazove', label: 'Jednorázové', status: 'none' }]
+  },
+  {
+    id: 'dps', title: 'DPS', icon: PiggyBank, color: 'bg-blue-50 border-blue-100', iconColor: 'text-slate-500', single: true,
+    items: [{ id: 'main', label: 'Nastavit', status: 'none' }]
+  }
+];
+
+// --- HELPER PRO DESIGN PRODUKTŮ ---
+function getProductDesign(type) {
+  switch(type) {
+    case 'hypo': return { icon: <Home size={16}/>, color: 'text-blue-600 bg-blue-50 border-blue-200' };
+    case 'investice': return { icon: <TrendingUp size={16}/>, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
+    case 'pojisteni': return { icon: <Shield size={16}/>, color: 'text-rose-600 bg-rose-50 border-rose-200' };
+    default: return { icon: <Briefcase size={16}/>, color: 'text-purple-600 bg-purple-50 border-purple-200' };
+  }
+}
+
+export default function ClientProfileView() {
+  const [activeTab, setActiveTab] = useState('prehled');
+  
+  // Stav pro widget pokrytí
+  const [coverageData, setCoverageData] = useState(INITIAL_COVERAGE);
+
+  // Funkce pro přepínání stavu produktu ve widgetu
+  const handleToggleCoverage = (categoryId, itemId) => {
+    setCoverageData(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          items: cat.items.map(item => {
+            if (item.id === itemId) {
+              const nextStatus = item.status === 'none' ? 'pending' : item.status === 'pending' ? 'active' : 'none';
+              return { ...item, status: nextStatus };
+            }
+            return item;
+          })
+        };
+      }
+      return cat;
+    }));
+  };
+
+  // Výpočet progresu z widgetu
+  let activeCount = 0;
+  let pendingCount = 0;
+  let noneCount = 0;
+  coverageData.forEach(cat => {
+    cat.items.forEach(item => {
+      if (item.status === 'active') activeCount++;
+      else if (item.status === 'pending') pendingCount++;
+      else noneCount++;
+    });
+  });
+  const totalCount = activeCount + pendingCount + noneCount;
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] font-lato text-slate-800 pb-20">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
+
+      {/* --- TOP NAV --- */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <button className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors">
+            <ArrowLeft size={16} /> Zpět na kontakty
+          </button>
+          <div className="w-px h-6 bg-slate-200"></div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+             <span>Databáze</span>
+             <span className="opacity-30">/</span>
+             <span className="text-slate-800">{CLIENT.fullName}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
+            <FileText size={16} /> Klientská zpráva
+          </button>
+          <button className="flex items-center gap-2 px-5 py-2 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 active:scale-95">
+            <Edit2 size={14} /> Upravit
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-[1400px] mx-auto p-8 space-y-6">
+        
+        {/* --- HLAVIČKA KLIENTA --- */}
+        <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50 to-blue-50/30 rounded-bl-full -z-10 opacity-50"></div>
+
+          <div className="flex flex-col xl:flex-row justify-between gap-8 z-10">
+            <div className="flex items-start gap-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-slate-800 to-[#1a1c2e] flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-slate-900/20 border-4 border-white">
+                  {CLIENT.firstName[0]}{CLIENT.lastName[0]}
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-amber-400 text-amber-950 p-1.5 rounded-full border-4 border-white shadow-sm" title="VIP Klient">
+                  <StarIcon className="w-4 h-4 fill-current" />
+                </div>
+              </div>
+              
+              <div className="pt-1">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">{CLIENT.fullName}</h1>
+                  <div className="flex gap-1.5">
+                    {CLIENT.tags.map(tag => (
+                      <span key={tag} className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-slate-200">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-slate-500">
+                  <span className="flex items-center gap-2 hover:text-indigo-600 cursor-pointer transition-colors"><Mail size={16} className="text-slate-400" /> {CLIENT.email}</span>
+                  <span className="flex items-center gap-2 hover:text-indigo-600 cursor-pointer transition-colors"><Phone size={16} className="text-slate-400" /> {CLIENT.phone}</span>
+                  <span className="flex items-center gap-2"><MapPin size={16} className="text-slate-400" /> {CLIENT.address}</span>
+                  <span className="flex items-center gap-2"><Calendar size={16} className="text-slate-400" /> {CLIENT.birthDate}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex xl:flex-col gap-2 justify-center xl:justify-start">
+              <button className="flex items-center gap-2 px-5 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-black transition-colors w-full justify-center">
+                <Phone size={16} /> Zavolat
+              </button>
+              <button className="flex items-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-sm font-black transition-colors w-full justify-center">
+                <MessageSquare size={16} /> Zpráva
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* --- TABY NAVIGACE --- */}
+        <div className="flex items-center gap-8 border-b border-slate-200 px-2 overflow-x-auto hide-scrollbar">
+          {[
+            { id: 'prehled', label: 'Přehled' },
+            { id: 'produkty', label: `Produkty (${CLIENT.products.length})` },
+            { id: 'dokumenty', label: 'Dokumenty' },
+            { id: 'zapisky', label: 'Zápisky' },
+            { id: 'kyc', label: 'KYC & AML' }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap
+                ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-800'}
+              `}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <div className="absolute bottom-0 left-0 w-full h-[3px] bg-indigo-600 rounded-t-full"></div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* =========================================
+            OBSAH ZÁLOŽEK (SWITCH)
+        ========================================= */}
+
+        {/* --- ZÁLOŽKA 1: PŘEHLED --- */}
+        {activeTab === 'prehled' && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in duration-300">
+            <div className="xl:col-span-2 space-y-6">
+
+              {/* NOVÉ: CELKOVÉ POKRYTÍ PORTFOLIA */}
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 flex flex-col justify-center">
+                <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-4">Celkové pokrytí portfolia</h3>
+                <div className="flex gap-2 text-sm font-bold mb-3">
+                  <span className="text-emerald-600">{activeCount} hotovo</span><span className="text-slate-300">,</span>
+                  <span className="text-amber-500">{pendingCount} řeší se</span><span className="text-slate-300">,</span>
+                  <span className="text-slate-500">{noneCount} nic</span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(activeCount/totalCount)*100}%` }}></div>
+                  <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${(pendingCount/totalCount)*100}%` }}></div>
+                </div>
+              </div>
+
+              {/* NOVÉ: POKRYTÍ PRODUKTŮ WIDGET */}
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <BarChart2 size={20} className="text-indigo-500" /> Pokrytí produktů
+                  </h2>
+                  <button className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                    Obchody <ChevronRight size={16} />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  {/* Středový progress */}
+                  <div className="max-w-md mx-auto mb-8 text-center">
+                    <div className="flex justify-center gap-2 text-sm font-bold mb-2">
+                      <span className="text-emerald-600">{activeCount} hotovo</span><span className="text-slate-300">,</span>
+                      <span className="text-amber-500">{pendingCount} řeší se</span><span className="text-slate-300">,</span>
+                      <span className="text-slate-500">{noneCount} nic</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(activeCount/totalCount)*100}%` }}></div>
+                        <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${(pendingCount/totalCount)*100}%` }}></div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">Klikni na položku pro změnu stavu.</p>
+                  </div>
+
+                  {/* Mřížka karet segmentů */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    {coverageData.map(cat => (
+                      <div key={cat.id} className={`rounded-2xl border p-5 flex flex-col ${cat.color}`}>
+                        <div className="flex flex-col items-center justify-center mb-6 text-center">
+                          <div className={`p-2.5 bg-white rounded-xl shadow-sm mb-3 ${cat.iconColor}`}>
+                            <cat.icon size={20} />
+                          </div>
+                          <h4 className="font-bold text-slate-800 text-sm leading-tight">{cat.title}</h4>
+                        </div>
+
+                        <div className={`flex flex-col gap-2 mt-auto ${cat.single ? 'items-center justify-center' : ''}`}>
+                          {cat.items.map(item => (
+                            <button
+                              key={item.id}
+                              onClick={() => handleToggleCoverage(cat.id, item.id)}
+                              className={`flex items-center gap-2.5 text-sm font-bold p-1.5 rounded-lg transition-colors hover:bg-white/40
+                                ${cat.single ? 'flex-col justify-center w-full' : 'text-left w-full'}
+                                ${item.status === 'active' ? 'text-emerald-600' : item.status === 'pending' ? 'text-amber-500' : 'text-slate-500'}
+                              `}
+                            >
+                              {item.status === 'active' && <CheckCircle size={cat.single ? 20 : 16} className="text-emerald-500 fill-emerald-100 shrink-0" />}
+                              {item.status === 'pending' && <Clock size={cat.single ? 20 : 16} className="text-amber-500 shrink-0" />}
+                              {item.status === 'none' && <Circle size={cat.single ? 20 : 16} className="text-slate-300 shrink-0" />}
+
+                              <span>
+                                {cat.single && item.status === 'active' ? 'Hotovo' : cat.single && item.status === 'pending' ? 'Řeší se' : item.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Původní 4 KPI Metriky Klienta */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Osobní AUM</span>
+                  <div className="text-xl font-black text-slate-900">{CLIENT.metrics.aum}</div>
+                </div>
+                <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Měs. investice</span>
+                  <div className="text-xl font-black text-emerald-600">{CLIENT.metrics.monthlyInvestment}</div>
+                </div>
+                <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">Health Score <Activity size={12}/></span>
+                  <div className="text-xl font-black text-indigo-600">{CLIENT.metrics.healthScore}%</div>
+                </div>
+                <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Klientem od</span>
+                  <div className="text-xl font-black text-slate-900">{CLIENT.metrics.clientSince}</div>
+                </div>
+              </div>
+
+              {/* Zápisky / Poslední interakce */}
+              <div className="bg-amber-50/50 rounded-[24px] border border-amber-100 p-6 flex items-start gap-4">
+                <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl flex-shrink-0">
+                  <FileText size={24} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-black text-amber-900 uppercase tracking-widest">Poslední zápisek</h3>
+                    <span className="text-[10px] font-bold text-amber-700">{CLIENT.recentNotes[0].date}</span>
+                  </div>
+                  <p className="text-sm font-medium text-amber-900/80 leading-relaxed italic">
+                    "{CLIENT.recentNotes[0].text}"
+                  </p>
+                </div>
+                <button className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0 border border-amber-200">
+                  <Plus size={16} />
+                </button>
+              </div>
+
+              {/* Produkty (Portfolio) */}
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <Briefcase size={20} className="text-indigo-500" /> Sjednané a rozjednané produkty
+                  </h2>
+                  <button onClick={() => setActiveTab('produkty')} className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                    Zobrazit vše <ChevronRight size={16} />
+                  </button>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                  {CLIENT.products.map(product => {
+                    const design = getProductDesign(product.type);
+                    return (
+                      <div key={product.id} className="p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all bg-slate-50/30 group flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${design.color}`}>
+                            {design.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-slate-900 text-[15px] group-hover:text-indigo-600 transition-colors">{product.name}</h3>
+                              {product.status === 'pending' && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest rounded">Rozjednáno</span>}
+                              {product.status === 'planned' && <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[9px] font-black uppercase tracking-widest rounded">Návrh</span>}
+                            </div>
+                            <p className="text-xs font-bold text-slate-500">{product.provider}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-8 md:text-right">
+                          <div className="hidden sm:block">
+                            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Detail</span>
+                            <span className="text-sm font-bold text-slate-600">{product.detail}</span>
+                          </div>
+                          <div className="w-24">
+                            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Hodnota</span>
+                            <span className="text-sm font-black text-slate-900">{product.value}</span>
+                          </div>
+                          <div className="text-slate-300 group-hover:text-indigo-600 transition-colors hidden md:block">
+                            <ChevronRight size={20} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2">
+                    <Plus size={16} /> Přidat produkt
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="xl:col-span-1 space-y-6">
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+                  <h3 className="font-black text-slate-900 flex items-center gap-2">
+                    <CheckCircle size={18} className="text-emerald-500" /> Otevřené úkoly
+                  </h3>
+                  <button className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                    <Plus size={16} />
+                  </button>
+                </div>
+                <div className="p-4 space-y-2">
+                  {CLIENT.recentTasks.map(task => (
+                    <div key={task.id} className="flex gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
+                      <button className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 group-hover:border-emerald-400 text-transparent flex-shrink-0 transition-colors flex items-center justify-center">
+                        <CheckCircle size={12} className="stroke-[3]" />
+                      </button>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800 mb-1 leading-snug">{task.text}</p>
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded inline-block
+                          ${task.type === 'urgent' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}
+                        `}>
+                          {task.date}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[24px] p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-900/10">
+                <Sparkles className="absolute -top-4 -right-4 w-24 h-24 text-white/5" />
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                    <Zap size={16} className="text-amber-400" />
+                  </div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">AI Analýza</h3>
+                </div>
+                <p className="text-sm font-bold leading-relaxed mb-6 text-indigo-50">
+                  Klient má vysoký objem peněz na běžném účtu (dle posledního výpisu). Navrhněte mu přesun 500k Kč do <strong className="text-white">Conseq Repofondu</strong> pro lepší úročení bez rizika.
+                </p>
+                <button className="w-full py-3 bg-white text-indigo-950 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors shadow-lg flex items-center justify-center gap-2">
+                  Založit příležitost <ArrowUpRight size={14} />
+                </button>
+              </div>
+
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 group cursor-pointer hover:border-indigo-200 transition-colors">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 block">Součást domácnosti</span>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex -space-x-3">
+                    <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-800 text-white flex items-center justify-center text-xs font-black z-30">JN</div>
+                    <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-600 text-white flex items-center justify-center text-xs font-black z-20">EN</div>
+                    <div className="w-10 h-10 rounded-full border-2 border-white bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black z-10">TN</div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{CLIENT.household.name}</h4>
+                    <p className="text-xs font-bold text-slate-500">3 členové</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <span className="text-xs font-bold text-slate-500">Role: <strong className="text-slate-800">{CLIENT.household.role}</strong></span>
+                  <span className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Otevřít rodinu <ChevronRight size={14} />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- ZÁLOŽKA 2: PRODUKTY --- */}
+        {activeTab === 'produkty' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900">Všechny produkty klienta</h2>
+              <button className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all">
+                <Plus size={16} /> Nový produkt
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {CLIENT.products.map(product => {
+                const design = getProductDesign(product.type);
+                return (
+                  <div key={product.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden hover:shadow-md hover:border-indigo-200 transition-all group flex flex-col cursor-pointer">
+                    <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-start justify-between">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${design.color} mb-4`}>
+                        {design.icon}
+                      </div>
+                      {product.status === 'active' && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-emerald-100">Aktivní</span>}
+                      {product.status === 'pending' && <span className="px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-amber-100">V řešení</span>}
+                      {product.status === 'planned' && <span className="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-md border border-slate-200">Návrh</span>}
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors leading-tight">{product.name}</h3>
+                      <p className="text-sm font-bold text-slate-500 mb-6">{product.provider}</p>
+                      
+                      <div className="grid grid-cols-2 gap-4 mt-auto">
+                        <div>
+                          <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Hodnota</span>
+                          <span className="text-sm font-black text-slate-900">{product.value}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pravidelně</span>
+                          <span className="text-sm font-bold text-slate-600">{product.detail}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between text-xs font-bold text-slate-500">
+                      <span>Smlouva: {product.number}</span>
+                      <span>Sjednáno: {product.date}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* --- ZÁLOŽKA 3: DOKUMENTY --- */}
+        {activeTab === 'dokumenty' && (
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm animate-in fade-in duration-300">
+            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30 rounded-t-[32px]">
+              <h2 className="text-xl font-black text-slate-900">Správce souborů</h2>
+              <div className="flex items-center gap-3">
+                <div className="relative hidden md:block">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input type="text" placeholder="Hledat soubor..." className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all" />
+                </div>
+                <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                  <UploadCloud size={16} /> Nahrát soubor
+                </button>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Název souboru</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Typ</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Nahráno</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Velikost</th>
+                    <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Akce</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CLIENT.documents.map((doc, idx) => (
+                    <tr key={doc.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group cursor-pointer">
+                      <td className="px-8 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${doc.type === 'pdf' ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'}`}>
+                            <File size={16} />
+                          </div>
+                          <span className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{doc.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-500 uppercase">{doc.type}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-500">{doc.date}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-500">{doc.size}</td>
+                      <td className="px-8 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Stáhnout">
+                            <Download size={16} />
+                          </button>
+                          <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all">
+                            <MoreHorizontal size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Drag & Drop zóna fallback */}
+            <div className="p-8">
+              <div className="border-2 border-dashed border-slate-200 rounded-[24px] p-10 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-500 transition-all cursor-pointer">
+                <UploadCloud size={32} className="mb-3" />
+                <p className="text-sm font-bold">Přetáhněte soubory sem</p>
+                <p className="text-xs mt-1">Podporované formáty: PDF, JPG, PNG (max 10MB)</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- ZÁLOŽKA 4: ZÁPISKY (Timeline) --- */}
+        {activeTab === 'zapisky' && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in duration-300">
+            <div className="xl:col-span-2 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black text-slate-900">Historie a poznámky</h2>
+                <button className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all">
+                  <Plus size={16} /> Nový zápisek
+                </button>
+              </div>
+
+              {/* Timeline */}
+              <div className="relative space-y-6 before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
+                {CLIENT.recentNotes.map((note, idx) => (
+                  <div key={note.id} className="relative flex items-start justify-between md:justify-normal md:odd:flex-row-reverse group">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-[#f8fafc] bg-white text-indigo-500 shadow-sm z-10 group-hover:scale-110 transition-transform">
+                      <FileText size={18} />
+                    </div>
+                    <div className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] ml-4 md:ml-0 hover:shadow-md hover:border-indigo-200 transition-all">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-md">{note.date}</span>
+                        <button className="text-slate-300 hover:text-indigo-600 transition-colors"><MoreHorizontal size={16}/></button>
+                      </div>
+                      <p className="text-sm font-medium text-slate-700 leading-relaxed mb-4">
+                        {note.text}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 border-t border-slate-50 pt-3">
+                        <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">
+                          {note.author.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        Vytvořil(a): {note.author}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Pravý sloupec pro Zápisky */}
+            <div className="xl:col-span-1">
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-[24px] border border-amber-100 p-6 sticky top-28">
+                <h3 className="font-black text-amber-900 mb-2 flex items-center gap-2">
+                  <Sparkles size={18} className="text-amber-500" /> Tipy pro zápisky
+                </h3>
+                <p className="text-sm text-amber-800/80 font-medium leading-relaxed mb-4">
+                  Používejte zápisky jako centrální mozek pro všechny schůzky. Umělá inteligence z nich dokáže automaticky generovat úkoly a příležitosti.
+                </p>
+                <button className="text-xs font-black uppercase tracking-widest text-amber-700 bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all w-full">
+                  Zobrazit Vision Board
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- ZÁLOŽKA 5: KYC & AML --- */}
+        {activeTab === 'kyc' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in duration-300">
+            
+            {/* Průkazy totožnosti */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+                <h3 className="font-black text-slate-900 flex items-center gap-2">
+                  <User size={18} className="text-blue-500" /> Průkazy totožnosti
+                </h3>
+              </div>
+              <div className="p-6 flex-1 flex flex-col justify-center">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-bl-full -z-10"></div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-500">Občanský průkaz</span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded">
+                      <Check size={10} strokeWidth={3} /> Platný
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm font-bold text-slate-800">
+                    <div>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Číslo dokladu</span>
+                      123456789
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Platnost do</span>
+                      {CLIENT.kyc.idValidity}
+                    </div>
+                  </div>
+                </div>
+                <button className="mt-4 w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                  Nahrát nový doklad
+                </button>
+              </div>
+            </div>
+
+            {/* AML Rizikový profil */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+                <h3 className="font-black text-slate-900 flex items-center gap-2">
+                  <ShieldAlert size={18} className="text-amber-500" /> AML Profil
+                </h3>
+              </div>
+              <div className="p-6 space-y-4 flex-1">
+                
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-500"><FileCheck size={18} /></div>
+                    <span className="font-bold text-sm text-slate-700">Rizikový profil</span>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-black uppercase tracking-widest rounded-lg">
+                    {CLIENT.kyc.amlRisk}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500"><User size={18} /></div>
+                    <span className="font-bold text-sm text-slate-700">Politicky exponovaná osoba (PEP)</span>
+                  </div>
+                  <span className="font-black text-sm text-slate-800">{CLIENT.kyc.pepStatus}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-blue-500"><Clock size={18} /></div>
+                    <span className="font-bold text-sm text-slate-700">Poslední AML kontrola</span>
+                  </div>
+                  <span className="font-black text-sm text-slate-800">{CLIENT.kyc.lastCheck}</span>
+                </div>
+
+              </div>
+              <div className="p-6 bg-slate-50/50 border-t border-slate-50">
+                <button className="w-full py-3 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#2a2d4a] transition-colors shadow-lg shadow-indigo-900/10">
+                  Spustit AML dotazník
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </main>
+
+    </div>
+  );
+}
+
+// Mini icon component helper
+function StarIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}

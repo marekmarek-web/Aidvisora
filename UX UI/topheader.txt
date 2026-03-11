@@ -1,0 +1,124 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Search, Bell, Plus, UserPlus, 
+  CheckSquare, CalendarPlus, Briefcase, Settings2 
+} from 'lucide-react';
+
+export default function TopHeader() {
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Zavření dropdown menu při kliknutí mimo něj
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setQuickMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] font-lato text-slate-800">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+      `}</style>
+
+      {/* --- SAMOTNÁ KOMPONENTA HLAVIČKY --- */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        
+        <div className="flex items-center gap-12 flex-1">
+          {/* Logo / Značka Aidvisora */}
+          <div className="flex items-center gap-3">
+            <span className="font-black text-xl text-slate-900 tracking-tight">Aidvisora</span>
+          </div>
+          
+          {/* Hlavní vyhledávací pole (Search bar) */}
+          <div className="relative group max-w-2xl w-full hidden md:block">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Hledat kontakty, smlouvy, případy..." 
+              className="w-full pl-12 pr-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-300 transition-all text-slate-700 placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+        
+        {/* Pravá část (Akce a Profil) */}
+        <div className="flex items-center gap-5">
+          
+          {/* Quickbar / Rychlé akce */}
+          <div className="relative" ref={menuRef}>
+            <button 
+              onClick={() => setQuickMenuOpen(!quickMenuOpen)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 border rounded-xl text-sm font-bold transition-all active:scale-95
+                ${quickMenuOpen 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-inner' 
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'
+                }
+              `}
+            >
+              <Plus size={16} className={quickMenuOpen ? "rotate-45 transition-transform" : "transition-transform"} /> 
+              <span className="hidden sm:block">Nový</span>
+            </button>
+
+            {/* Dropdown menu rychlých akcí */}
+            {quickMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3 py-2">
+                  Rychlé akce
+                </div>
+                
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors text-left">
+                  <UserPlus size={16} className="text-blue-500" /> Nový klient
+                </button>
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors text-left">
+                  <Briefcase size={16} className="text-amber-500" /> Nový obchod
+                </button>
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors text-left">
+                  <CheckSquare size={16} className="text-emerald-500" /> Nový úkol
+                </button>
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors text-left">
+                  <CalendarPlus size={16} className="text-indigo-500" /> Naplánovat schůzku
+                </button>
+                
+                <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-400 transition-colors text-left group">
+                  <Settings2 size={14} className="group-hover:rotate-90 transition-transform" /> Upravit nabídku
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Notifikace (Zvoneček) */}
+          <button className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors" title="Notifikace">
+            <Bell size={20} />
+            <span className="absolute top-1.5 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+          </button>
+
+          {/* Profilové kolečko */}
+          <button className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center text-sm font-black shadow-sm hover:bg-slate-200 hover:text-slate-800 transition-colors" title="Profil uživatele">
+            MF
+          </button>
+          
+        </div>
+      </header>
+
+      {/* Zbytek stránky (jen pro ukázku kontextu v náhledu) */}
+      <main className="p-8 max-w-[1200px] mx-auto mt-8">
+        <div className="bg-white rounded-[24px] border border-slate-200 border-dashed p-12 text-center text-slate-400">
+          <h2 className="text-lg font-bold text-slate-600 mb-2">Toto je vaše nová globální hlavička</h2>
+          <p>Tlačítko "+" se nyní chová jako chytrý Quickbar. Klikněte na něj pro zobrazení možností.</p>
+        </div>
+      </main>
+
+    </div>
+  );
+}
