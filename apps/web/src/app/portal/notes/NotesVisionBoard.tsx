@@ -607,13 +607,12 @@ export function NotesVisionBoard({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Kontakt / Klient *</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Kontakt / Klient (nepovinné)</label>
                   <select
                     value={formData.client}
                     onChange={(e) => setFormData({ ...formData, client: e.target.value })}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                   >
-                    <option value="">— vyberte klienta —</option>
                     {contactOptions.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}

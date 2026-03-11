@@ -68,12 +68,7 @@ export function MindmapSidePanel({
   }, [node, onUpdateNode, editTitle, editSubtitle, editValue, editDetail, editProgress]);
 
   if (!node) {
-    return (
-      <div className="w-80 shrink-0 border-l border-slate-200 bg-white/95 backdrop-blur p-6 flex flex-col items-center justify-center text-center text-slate-500">
-        <p className="text-sm font-medium">Klikněte na uzel pro zobrazení detailu.</p>
-        <p className="text-xs mt-2">Nebo použijte nástroje vlevo pro přidání kategorie či položky.</p>
-      </div>
-    );
+    return null;
   }
 
   const entityHref =
@@ -160,6 +155,17 @@ export function MindmapSidePanel({
             <p className="text-sm text-slate-500 mt-1">{node.subtitle ?? "—"}</p>
           )}
         </div>
+
+        {/* Uložit změny – výrazné tlačítko pro aplikaci editací */}
+        {canEdit && !isCore && (
+          <button
+            type="button"
+            onClick={applyEdits}
+            className="w-full py-2.5 px-4 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            Uložit změny
+          </button>
+        )}
 
         {/* Metadata: hodnota, popis, progres (pro položku/cíl) */}
         {(node.type === "item" || node.type === "goal" || node.type === "category") && (

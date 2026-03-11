@@ -94,7 +94,7 @@ export function MeetingNotesForm({
         });
       } else {
         await createMeetingNote({
-          contactId,
+          contactId: contactId.trim() || null,
           templateId,
           meetingAt: meetingAt || new Date().toISOString().slice(0, 16),
           domain,
@@ -115,15 +115,14 @@ export function MeetingNotesForm({
         {editingNote ? "Upravit zápisek" : "Nový zápisek"}
       </h3>
       <div>
-        <label className="block text-sm font-semibold text-slate-600 mb-1">Kontakt *</label>
+        <label className="block text-sm font-semibold text-slate-600 mb-1">Kontakt (volitelný)</label>
         <select
           value={contactId}
           onChange={(e) => setContactId(e.target.value)}
-          required
           disabled={!!editingNote}
           className="w-full rounded-lg border border-monday-border px-3 py-2 disabled:opacity-60"
         >
-          <option value="">— vyberte —</option>
+          <option value="">— bez klienta (obecný zápisek) —</option>
           {contacts.map((c) => (
             <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
           ))}

@@ -87,11 +87,13 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     saveTimerRef.current = setTimeout(() => {
       const view = board.views.find((v) => v.id === activeViewId);
       if (view) {
+        // Per-view: each board view has its own column config and groups (editable column/template logika)
         saveBoardViewConfig(dbViewId, {
           columnsConfig: view.columns,
           groupsConfig: board.groups.map((g) => ({ id: g.id, name: g.name, color: g.color, collapsed: g.collapsed, subtitle: g.subtitle })),
         }).catch(() => {});
       }
+      // Always use item.name from state (never from cells) so changing status never overwrites client name
       const allItems = board.groups.flatMap((g, gi) =>
         g.itemIds.map((itemId, ii) => {
           const item = board.items[itemId];
@@ -195,7 +197,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
   const onAddView = useCallback(() => {
     const newView = {
       id: nextViewIdSeq(),
-      name: "Pipeline view",
+      name: "Nástěnka",
       columns: activeView ? activeView.columns.map((c) => ({ ...c })) : [],
     };
     setBoard((b) => ({ ...b, views: [...b.views, newView] }));
@@ -628,7 +630,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                     <div className="fixed inset-0 z-30" onClick={() => setMobileMenuOpen(false)} aria-hidden />
                     <div className="absolute right-0 top-full mt-1 py-2 min-w-[200px] bg-white border border-slate-200 rounded-[var(--wp-radius-sm)] shadow-lg z-40">
                       <div className="px-3 py-2 border-b border-slate-100">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase mb-1.5">Status</p>
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase mb-1.5">STAV</p>
                         <select
                           value={filterStatus ?? ""}
                           onChange={(e) => { setFilterStatus(e.target.value || null); triggerTableLoading(); }}

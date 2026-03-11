@@ -508,10 +508,43 @@
   overflow: hidden;
 }
 
+.wp-cal-tasks-panel.wp-cal-tasks-panel--collapsed {
+  min-height: 0;
+}
+
+.wp-cal-tasks-panel.wp-cal-tasks-panel--collapsed .wp-cal-tasks-panel-body {
+  display: none;
+}
+
 .wp-cal-tasks-panel-header {
   padding: var(--wp-space-3);
   border-bottom: 1px solid rgba(166, 168, 179, 0.12);
   background: linear-gradient(to bottom, rgba(250, 251, 253, 1) 0%, rgba(255, 255, 255, 0) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wp-space-2);
+  min-height: 44px;
+}
+
+.wp-cal-tasks-panel-header .wp-cal-tasks-panel-toggle {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--wp-text-muted);
+  cursor: pointer;
+  border-radius: var(--wp-radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.wp-cal-tasks-panel-header .wp-cal-tasks-panel-toggle:hover {
+  background: var(--wp-link-hover-bg);
+  color: var(--wp-text);
 }
 
 .wp-cal-tasks-panel-header h3 {
@@ -521,6 +554,8 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ══════════════════════════════════════════
@@ -735,7 +770,7 @@
   font-size: 20px;
 }
 
-/* ── New activity button (DASHBOARD.txt add-btn style) ── */
+/* ── New activity button (Aidvisora paleta: --wp-primary) ── */
 .wp-cal-new-btn {
   display: flex;
   align-items: center;
@@ -745,14 +780,15 @@
   font-size: var(--wp-fs-xs);
   font-weight: var(--wp-fw-semibold);
   color: #fff;
-  background: var(--wp-cal-accent);
+  background: var(--wp-primary);
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(72, 95, 237, 0.3);
-  transition: opacity 0.2s;
+  box-shadow: 0 2px 8px rgba(31, 28, 46, 0.25);
+  transition: opacity 0.2s, background 0.2s;
   font-family: var(--wp-font);
 }
 
 .wp-cal-new-btn:hover {
-  opacity: 0.9;
+  background: var(--wp-primary-hover);
+  opacity: 0.95;
 }

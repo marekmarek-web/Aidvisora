@@ -25,7 +25,7 @@ export default async function ContactDetailPage({
         </h1>
         <div className="flex gap-2">
           <Link href={`/dashboard/contacts/${id}/summary`} className="rounded-xl px-4 py-2 text-sm font-semibold border border-[var(--brand-border)] text-slate-700 hover:bg-slate-50">
-            Client summary (PDF)
+            Klientská zpráva (PDF)
           </Link>
           <Link href={`/dashboard/contacts/${id}/edit`} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: "var(--brand-main)" }}>
             Upravit

@@ -17,7 +17,7 @@ export function Accordion({ children, className = "" }: AccordionProps) {
   return (
     <section
       className={`faq-container ${className}`}
-      aria-label="Frequently Asked Questions"
+      aria-label="Často kladené otázky"
     >
       {children}
     </section>

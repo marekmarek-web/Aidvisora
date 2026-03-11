@@ -39,7 +39,7 @@ export default {
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
       },
       borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
-      fontFamily: { sans: ["var(--font-inter)", "Inter", "sans-serif"] },
+      fontFamily: { sans: ["var(--font-dm-sans)", "var(--wp-font)", "system-ui", "sans-serif"], mono: ["var(--wp-font-mono)", "monospace"] },
       fontSize: { monday: ["13px", { lineHeight: "1.4" }], "monday-sm": ["12px", { lineHeight: "1.4" }] },
     },
   },

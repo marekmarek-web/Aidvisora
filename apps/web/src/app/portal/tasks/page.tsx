@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -71,6 +71,7 @@ export default function TasksPage() {
   const [newDueDate, setNewDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const newTaskFormRef = useRef<HTMLFormElement>(null);
 
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#new-task-form") {
-      const el = document.getElementById("new-task-form");
+      const el = newTaskFormRef.current ?? document.getElementById("new-task-form");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
@@ -392,14 +393,15 @@ export default function TasksPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => document.getElementById("new-task-form")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => newTaskFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-[var(--wp-radius-sm)] text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-all min-h-[44px] min-w-[44px]"
               >
                 <Plus size={18} /> Vytvořit úkol
               </button>
               <button
                 type="button"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:bg-slate-50 transition-all w-fit min-h-[44px]"
+                disabled
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-400 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide w-fit min-h-[44px] cursor-not-allowed"
                 title="Připravujeme"
               >
                 <LayoutList size={16} /> Šablony úkolů
@@ -409,6 +411,7 @@ export default function TasksPage() {
 
           {/* Smart input pro nový úkol: na mobilu plně stacked */}
           <form
+            ref={newTaskFormRef}
             id="new-task-form"
             onSubmit={handleCreate}
             className="bg-white p-4 md:p-3 rounded-[var(--wp-radius-sm)] border border-indigo-100 shadow-lg shadow-indigo-900/5 flex flex-col gap-3 md:gap-3 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all"

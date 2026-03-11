@@ -324,9 +324,9 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
   };
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-8 animate-[wp-fade-in_0.3s_ease]">
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-10 animate-[wp-fade-in_0.3s_ease]">
       {/* Left panel: main content */}
-      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:pr-0">
+      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:pr-2">
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
@@ -538,13 +538,18 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
         <DashboardMiniNotes initialNotes={initialNotes} />
       </div>
 
-      {/* Right panel: side calendar, agenda, zprávy, Nová aktivita – vizuálně oddělená plocha */}
-      <aside className="w-full lg:w-[380px] mt-6 lg:mt-0 flex-shrink-0 flex flex-col border-t lg:border-0 lg:rounded-2xl lg:shadow-md lg:border border-slate-200 bg-white lg:bg-white sticky top-[73px] h-[calc(100vh-73px)] overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-white">
-          <CalendarWidget onNewActivity={() => router.push("/portal/calendar?new=1")} />
-          <MessengerPreview />
+      {/* Right panel: side calendar – vizuálně oddělená plocha */}
+      <aside className="w-full lg:w-[380px] mt-8 lg:mt-0 flex-shrink-0 flex flex-col border-t border-slate-200 lg:border lg:border-l-2 lg:border-slate-200 lg:rounded-2xl lg:shadow-md bg-slate-50/50 lg:bg-white sticky top-[73px] h-[calc(100vh-73px)] overflow-hidden lg:ml-0">
+        <div className="flex-1 overflow-y-auto p-5 lg:p-6 space-y-6 bg-white lg:bg-white">
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Kalendář</h3>
+            <CalendarWidget onNewActivity={() => router.push("/portal/calendar?new=1")} />
+          </section>
+          <section className="pt-5 border-t border-slate-100">
+            <MessengerPreview />
+          </section>
         </div>
-        <div className="border-t border-slate-100 bg-white p-4 lg:p-6 flex-shrink-0">
+        <div className="border-t border-slate-200 bg-white p-5 lg:p-6 flex-shrink-0">
           <button
             type="button"
             onClick={() => router.push("/portal/calendar?new=1")}

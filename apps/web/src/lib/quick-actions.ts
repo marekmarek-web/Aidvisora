@@ -1,6 +1,8 @@
 /**
  * Katalog rychlých akcí pro tlačítko „+ Nový“ v headeru.
  * Jediný zdroj pravdy – sdílený mezi PortalShell a stránkou Nastavení.
+ * icon: název pro mapování na Lucide ikonu v QuickNewMenu (UserPlus, Briefcase, CheckSquare, CalendarPlus, …).
+ * iconColor: Tailwind třída pro barvu ikony (text-blue-500, text-amber-500, …).
  */
 export type QuickActionId =
   | "new_task"
@@ -17,18 +19,22 @@ export type QuickActionItem = {
   id: QuickActionId;
   label: string;
   href: string;
+  /** Název ikony pro QuickNewMenu (UserPlus | Briefcase | CheckSquare | CalendarPlus | …) */
+  iconName?: "UserPlus" | "Briefcase" | "CheckSquare" | "CalendarPlus" | "Calendar" | "Network" | "StickyNote" | "FileText" | "Building";
+  /** Tailwind text color třída pro ikonu */
+  iconColor?: string;
 };
 
 export const QUICK_ACTIONS_CATALOG: QuickActionItem[] = [
-  { id: "new_task", label: "Nový úkol", href: "/portal/tasks#new-task-form" },
-  { id: "new_meeting", label: "Nová schůzka", href: "/portal/calendar?new=1" },
-  { id: "new_contact", label: "Nový kontakt", href: "/portal/contacts/new" },
-  { id: "new_deal", label: "Nový obchod", href: "/portal/pipeline" },
-  { id: "calendar", label: "Kalendář", href: "/portal/calendar" },
-  { id: "mindmap", label: "Strategická mapa", href: "/portal/mindmap" },
-  { id: "note", label: "Poznámka", href: "/portal/notes" },
-  { id: "document", label: "Dokument", href: "/portal/contacts" },
-  { id: "household", label: "Domácnost", href: "/portal/households" },
+  { id: "new_task", label: "Nový úkol", href: "/portal/tasks#new-task-form", iconName: "CheckSquare", iconColor: "text-emerald-500" },
+  { id: "new_meeting", label: "Naplánovat schůzku", href: "/portal/calendar?new=1", iconName: "CalendarPlus", iconColor: "text-indigo-500" },
+  { id: "new_contact", label: "Nový klient", href: "/portal/contacts/new", iconName: "UserPlus", iconColor: "text-blue-500" },
+  { id: "new_deal", label: "Nový obchod", href: "/portal/pipeline", iconName: "Briefcase", iconColor: "text-amber-500" },
+  { id: "calendar", label: "Kalendář", href: "/portal/calendar", iconName: "Calendar", iconColor: "text-slate-500" },
+  { id: "mindmap", label: "Strategická mapa", href: "/portal/mindmap", iconName: "Network", iconColor: "text-slate-500" },
+  { id: "note", label: "Poznámka", href: "/portal/notes", iconName: "StickyNote", iconColor: "text-slate-500" },
+  { id: "document", label: "Dokument", href: "/portal/contacts", iconName: "FileText", iconColor: "text-slate-500" },
+  { id: "household", label: "Domácnost", href: "/portal/households", iconName: "Building", iconColor: "text-slate-500" },
 ];
 
 export const DEFAULT_QUICK_ACTIONS_ORDER: QuickActionId[] = QUICK_ACTIONS_CATALOG.map(

@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PRODUCTION_DOMAIN = "https://www.aidvisora.cz";
+
 export async function middleware(request: NextRequest) {
+  // Přesměrovat starou Vercel URL na produkční doménu (aby Google login neposílal na advisorcrm-web.vercel.app)
+  const host = request.headers.get("host") ?? "";
+  if (host.includes("advisorcrm-web.vercel.app")) {
+    const path = request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("code") ? "/auth/callback" : request.nextUrl.pathname;
+    const url = new URL(path + request.nextUrl.search, PRODUCTION_DOMAIN);
+    return NextResponse.redirect(url);
+  }
+
   // Odkaz z e-mailu vypršel (otp_expired) → úvodní stránka s chybou
   if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("error_code") === "otp_expired") {
     const url = request.nextUrl.clone();

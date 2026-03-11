@@ -106,7 +106,7 @@ export function LinesAndDotsLoader({ className = "" }: LinesAndDotsLoaderProps) 
         }
       `}</style>
 
-      <div className={`lines-and-dots ${className}`} role="status" aria-label="Loading">
+      <div className={`lines-and-dots ${className}`} role="status" aria-label="Načítání">
         {sectors.map((i) => {
           const fraction = i / SECTOR_COUNT;
           const sectorStyle: React.CSSProperties = {

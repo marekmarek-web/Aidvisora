@@ -83,7 +83,7 @@ function RowComponent({
                 className="shrink-0 cursor-pointer"
               />
               {mondayStyle && (
-                <div className="avatar-dot">
+                <div className="avatar-dot" aria-hidden="true" title="">
                   <User size={14} />
                 </div>
               )}

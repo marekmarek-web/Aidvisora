@@ -142,7 +142,7 @@ export function SwipeNotificationItem({
             onClick={() => onDelete(data.id)}
             tabIndex={offset === 0 ? -1 : 0}
             aria-hidden={offset === 0}
-            aria-label="Delete"
+            aria-label="Smazat"
             style={deleteBtnStyle}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

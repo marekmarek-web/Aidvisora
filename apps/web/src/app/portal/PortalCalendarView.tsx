@@ -296,6 +296,7 @@ export function PortalCalendarView() {
   const [selectedDate, setSelectedDate] = useState(todayStrInitial);
   const [dayTasks, setDayTasks] = useState<TaskRow[]>([]);
   const [dayTasksLoading, setDayTasksLoading] = useState(false);
+  const [tasksPanelCollapsed, setTasksPanelCollapsed] = useState(false);
 
   const dayNames = useMemo(() => getDayNames(settings.firstDayOfWeek), [settings.firstDayOfWeek]);
 
@@ -619,14 +620,24 @@ export function PortalCalendarView() {
               </div>
             </div>
 
-            {/* Tasks panel: side on desktop, stacked below on mobile */}
-            <div className={`wp-cal-tasks-panel ${isMobile ? "shrink-0 max-h-[40vh] border-t" : ""}`}>
+            {/* Tasks panel: side on desktop, stacked below on mobile; rozevíratelný */}
+            <div className={`wp-cal-tasks-panel ${isMobile ? "shrink-0 max-h-[40vh] border-t" : ""} ${tasksPanelCollapsed ? "wp-cal-tasks-panel--collapsed" : ""}`}>
               <div className="wp-cal-tasks-panel-header">
                 <h3>
                   Úkoly pro {new Date(selectedDate + "T12:00:00").toLocaleDateString("cs-CZ", { weekday: "short", day: "numeric", month: "short" })}
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setTasksPanelCollapsed((c) => !c)}
+                  className="wp-cal-tasks-panel-toggle"
+                  aria-label={tasksPanelCollapsed ? "Rozbalit panel Úkoly" : "Sbalit panel Úkoly"}
+                >
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: tasksPanelCollapsed ? "rotate(180deg)" : "none" }}>
+                    <path strokeLinecap="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
-              <div className="flex-1 overflow-auto p-3">
+              <div className="wp-cal-tasks-panel-body flex-1 overflow-auto p-3 min-h-0">
                 {dayTasksLoading ? (
                   <p style={{ fontSize: "var(--wp-fs-xs)", color: "var(--wp-text-muted)" }}>Načítám…</p>
                 ) : dayTasks.length === 0 ? (

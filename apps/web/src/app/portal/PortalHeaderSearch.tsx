@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import Link from "next/link";
 import { globalSearch, type SearchResult } from "@/app/actions/search";
 
@@ -12,8 +12,10 @@ const EMPTY_RESULTS: SearchResult = {
   events: [],
 };
 
-/** Na stránce Zápisky řídí vyhledávání v zápiscích. Jinde funguje inline dropdown bez otevírání okna. */
-export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?: () => void }) {
+export type PortalHeaderSearchHandle = { focus: () => void };
+
+/** Na stránce Zápisky řídí vyhledávání v zápiscích. Jinde funguje inline dropdown bez otevírání okna. Cmd/Ctrl+K fokusuje input. */
+export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, object>(function PortalHeaderSearch(_, ref) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,7 +27,19 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const urlQ = searchParams.get("q") ?? "";
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus() {
+        inputRef.current?.focus();
+        if (value.trim()) setDropdownOpen(true);
+      },
+    }),
+    [value]
+  );
 
   useEffect(() => {
     setValue(urlQ);
@@ -125,6 +139,7 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
   return (
     <div ref={wrapperRef} className="wp-search-wrapper flex relative min-w-0 flex-1 min-h-[44px]">
       <input
+        ref={inputRef}
         className="wp-search-input"
         type="text"
         placeholder={placeholder}
@@ -236,4 +251,4 @@ export function PortalHeaderSearch({ onOpenGlobalSearch }: { onOpenGlobalSearch?
       )}
     </div>
   );
-}
+});

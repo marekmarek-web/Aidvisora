@@ -24,7 +24,7 @@ export default async function ClientSummaryPage({
       </div>
       <div className="rounded-xl border border-[var(--brand-border)] bg-white p-8 shadow-sm">
         <h1 className="text-xl font-bold mb-6" style={{ color: "var(--brand-dark)" }}>
-          Client summary
+          Klientská zpráva
         </h1>
         <section className="mb-6">
           <h2 className="text-sm font-semibold text-slate-500 uppercase mb-2">Kontakt</h2>

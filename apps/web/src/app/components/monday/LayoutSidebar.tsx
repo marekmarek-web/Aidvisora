@@ -19,16 +19,16 @@ export function LayoutSidebar() {
           <span className="text-monday-text font-semibold text-sm">Advisor</span>
         </div>
         <nav className="mt-2 space-y-0.5">
-          <NavItem href="/board" label="Home" />
-          <NavItem href="/board" label="My work" />
-          <NavItem href="/board" label="More" />
+          <NavItem href="/board" label="Úvod" />
+          <NavItem href="/board" label="Moje práce" />
+          <NavItem href="/board" label="Více" />
         </nav>
       </div>
 
       {/* Workspace + boards */}
       <div className="flex-1 overflow-auto p-3">
         <p className="text-monday-text-muted text-xs font-semibold uppercase tracking-wider px-2 py-1.5">
-          Workspace
+          Pracovní prostor
         </p>
         <ul className="mt-1 space-y-0.5">
           <li>
@@ -36,7 +36,7 @@ export function LayoutSidebar() {
               href="/board"
               className="flex items-center gap-2 px-3 py-2 rounded-[var(--monday-radius)] text-monday-text text-sm hover:bg-monday-row-hover"
             >
-              Contacts
+              Kontakty
             </Link>
           </li>
           <li>

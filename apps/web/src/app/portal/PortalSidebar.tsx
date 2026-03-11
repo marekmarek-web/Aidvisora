@@ -15,7 +15,6 @@ import {
   TrendingUp,
   Calendar,
   StickyNote,
-  PhoneCall,
   Bell,
   Palette,
   Settings,
@@ -23,10 +22,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getOpenTasksCount } from "@/app/actions/tasks";
+import { getUnreadConversationsCount } from "@/app/actions/messages";
 
 export const PORTAL_SIDEBAR_WIDTH_PX = 260;
 export const PORTAL_SIDEBAR_COLLAPSED_PX = 48;
@@ -41,7 +42,7 @@ interface PortalSidebarProps {
   onMobileDrawerClose?: () => void;
 }
 
-type NavItem = { href: string; label: string; Icon: LucideIcon; badgeKey?: "tasks" | null };
+type NavItem = { href: string; label: string; Icon: LucideIcon; badgeKey?: "tasks" | "messages" | null };
 
 const SECTIONS: { section: string; items: NavItem[] }[] = [
   {
@@ -49,6 +50,7 @@ const SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       { href: "/portal/today", label: "Nástěnka", Icon: Home },
       { href: "/portal/tasks", label: "Úkoly", Icon: CheckSquare, badgeKey: "tasks" },
+      { href: "/portal/messages", label: "Zprávy", Icon: MessageCircle, badgeKey: "messages" },
       { href: "/portal/calendar", label: "Kalendář", Icon: Calendar },
       { href: "/portal/notes", label: "Zápisky", Icon: StickyNote },
     ],
@@ -58,7 +60,6 @@ const SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       { href: "/portal/contacts", label: "Kontakty", Icon: Users },
       { href: "/portal/households", label: "Domácnosti", Icon: Building },
-      { href: "/portal/cold-contacts", label: "Studené kontakty", Icon: PhoneCall },
     ],
   },
   {
@@ -134,6 +135,7 @@ export function PortalSidebar({
     [isControlled, onMobileDrawerClose]
   );
   const [openTasksCount, setOpenTasksCount] = useState<number | null>(null);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
@@ -149,6 +151,16 @@ export function PortalSidebar({
   useEffect(() => {
     getOpenTasksCount().then(setOpenTasksCount).catch(() => setOpenTasksCount(0));
   }, [pathname]);
+  useEffect(() => {
+    getUnreadConversationsCount().then(setUnreadMessagesCount).catch(() => setUnreadMessagesCount(0));
+  }, [pathname]);
+  useEffect(() => {
+    const onRefresh = () => {
+      getUnreadConversationsCount().then(setUnreadMessagesCount).catch(() => setUnreadMessagesCount(0));
+    };
+    window.addEventListener("portal-messages-badge-refresh", onRefresh);
+    return () => window.removeEventListener("portal-messages-badge-refresh", onRefresh);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -303,7 +315,12 @@ export function PortalSidebar({
                 {items.map((item) => {
                   const isActive = isItemActive(pathname, item.href);
                   const Icon = item.Icon;
-                  const badge = item.badgeKey === "tasks" && openTasksCount != null && openTasksCount > 0 ? openTasksCount : null;
+                  const badge =
+                    item.badgeKey === "tasks" && openTasksCount != null && openTasksCount > 0
+                      ? openTasksCount
+                      : item.badgeKey === "messages" && unreadMessagesCount != null && unreadMessagesCount > 0
+                        ? unreadMessagesCount
+                        : null;
                   return (
                     <li key={item.href}>
                       <Link
@@ -349,7 +366,7 @@ export function PortalSidebar({
         <div className="p-4 border-t border-slate-100 flex-shrink-0 bg-slate-50/50">
           <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} min-h-[44px]`}>
             <Link
-              href="/portal/profile"
+              href="/portal/setup?tab=profil"
               className={`flex items-center overflow-hidden rounded-xl hover:bg-white/80 transition-colors p-2 -m-2 ${collapsed ? "justify-center" : "gap-3 flex-1 min-w-0"}`}
               title={collapsed ? (userEmail ?? "Profil") : undefined}
             >

@@ -30,7 +30,7 @@ const COLUMN_LUCIDE: Record<string, React.ReactNode> = {
 const CHANGEABLE_TYPES: { type: ColumnType; label: string }[] = [
   { type: "text", label: "Text" },
   { type: "number", label: "Číslo" },
-  { type: "status", label: "Status" },
+  { type: "status", label: "STAV" },
   { type: "date", label: "Datum" },
   { type: "product", label: "Produkt" },
 ];
@@ -90,12 +90,15 @@ export function ColumnHeader({
     setRenameVal(column.title);
   }, [column.title]);
 
-  useEffect(() => {
-    if (menuOpen && menuButtonRef.current && mondayStyle && typeof document !== "undefined") {
+  const updateMenuPosition = useCallback(() => {
+    if (menuButtonRef.current && typeof document !== "undefined") {
       const rect = menuButtonRef.current.getBoundingClientRect();
       setMenuPosition({ top: rect.bottom + 4, left: rect.left });
     }
-  }, [menuOpen, mondayStyle]);
+  }, []);
+  useEffect(() => {
+    if (menuOpen) updateMenuPosition();
+  }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpen) { setTypeMenuOpen(false); return; }
@@ -175,15 +178,21 @@ export function ColumnHeader({
         {!mondayStyle && (
           <div className="relative shrink-0 opacity-0 group-hover:opacity-100" ref={ref}>
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               className="p-0.5 rounded hover:bg-monday-row-hover text-monday-text-muted"
-              aria-label="Column menu"
+              aria-label="Menu sloupce"
             >
               &#x22EF;
             </button>
-            {menuOpen && (
-              <div className="wp-dropdown wp-popover absolute left-0 top-full mt-1 z-50">
+            {menuOpen && typeof document !== "undefined" && createPortal(
+              <div
+                id="column-header-menu-portal"
+                role="menu"
+                className="wp-dropdown wp-popover fixed z-[400] w-max max-w-[min(400px,100vw)] py-1"
+                style={{ top: menuPosition.top, left: menuPosition.left }}
+              >
                 <button type="button" onClick={() => { setEditing(true); setMenuOpen(false); }} className="wp-dropdown-item">Přejmenovat sloupec</button>
                 <button type="button" onClick={() => { onSort(column.id, "asc"); setMenuOpen(false); }} className="wp-dropdown-item">Seřadit vzestupně</button>
                 <button type="button" onClick={() => { onSort(column.id, "desc"); setMenuOpen(false); }} className="wp-dropdown-item">Seřadit sestupně</button>
@@ -223,7 +232,8 @@ export function ColumnHeader({
                 {onDelete && column.type !== "item" && (
                   <button type="button" onClick={() => { onDelete(column.id); setMenuOpen(false); }} className="wp-dropdown-item text-red-600">Smazat sloupec</button>
                 )}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         )}

@@ -65,6 +65,30 @@ export function newDocumentTemplate(params: {
   };
 }
 
+export function newMessageAdvisorTemplate(params: {
+  contactName: string;
+  bodyPreview: string;
+  messagesUrl: string;
+}) {
+  const html = layout(`
+    <h2 style="font-size: 16px; margin: 0 0 12px;">Nová zpráva od klienta</h2>
+    <p style="font-size: 14px; line-height: 1.5;">
+      Máte novou zprávu od klienta <strong>${params.contactName}</strong>.
+    </p>
+    <p style="font-size: 14px; line-height: 1.5; color: #676879; margin: 12px 0;">
+      ${params.bodyPreview}
+    </p>
+    <p style="font-size: 14px;">
+      <a href="${params.messagesUrl}" style="color: #0073ea;">Otevřít konverzaci v portálu</a>
+    </p>
+  `);
+
+  return {
+    subject: `Nová zpráva od klienta: ${params.contactName}`,
+    html,
+  };
+}
+
 export function paymentInstructionTemplate(params: {
   contactName: string;
   partnerName: string;

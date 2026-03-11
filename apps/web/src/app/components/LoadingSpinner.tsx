@@ -189,7 +189,7 @@ export function LoadingSpinner({
   return (
     <span
       role="status"
-      aria-label="Loading"
+      aria-label="Načítání"
       className={className}
       style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color }}
     >

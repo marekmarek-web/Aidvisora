@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect } from "react";
 import Link from "next/link";
-import { Download, Sparkles } from "lucide-react";
+import { Download, Sparkles, Info } from "lucide-react";
 import { saveMindmap } from "@/app/actions/mindmap";
 import type { MindmapState } from "@/app/actions/mindmap";
 import type { MindmapNode } from "./types";
@@ -50,6 +50,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
     return () => mq.removeEventListener("change", update);
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [infoPopoverOpen, setInfoPopoverOpen] = useState(false);
 
   const handleSave = useCallback(async () => {
     setSaveError(null);
@@ -204,6 +205,26 @@ export function MindmapView({ initial }: MindmapViewProps) {
 
       <div ref={canvasContainerRef} className="flex-1 flex min-h-0 relative">
         <div className="flex-1 min-w-0 relative flex flex-col">
+          {!selectedNode && (
+            <div className="absolute top-3 right-3 z-10 md:top-4 md:right-4">
+              <button
+                type="button"
+                onClick={() => setInfoPopoverOpen((o) => !o)}
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white/90 backdrop-blur flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-700 shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:w-8 md:h-8"
+                aria-label="Nápověda"
+              >
+                <Info size={18} />
+              </button>
+              {infoPopoverOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" aria-hidden onClick={() => setInfoPopoverOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-white rounded-xl shadow-xl border border-slate-200 z-50 text-left text-sm text-slate-600">
+                    <p>Klikněte na uzel pro zobrazení detailu. Nebo použijte nástroje vlevo pro přidání kategorie či položky.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <MindmapCanvas
             nodes={nodes}
             edges={edges}
@@ -232,13 +253,8 @@ export function MindmapView({ initial }: MindmapViewProps) {
             mobile={isMobile}
           />
         </div>
-        <div
-          className={
-            selectedNode
-              ? "fixed inset-0 z-50 md:relative md:inset-auto md:z-auto md:w-80 md:shrink-0 flex flex-col"
-              : "hidden md:flex md:w-80 md:shrink-0 flex-col"
-          }
-        >
+        {selectedNode && (
+        <div className="fixed inset-0 z-50 md:relative md:inset-auto md:z-auto md:w-80 md:shrink-0 flex flex-col">
           <MindmapSidePanel
             node={selectedNode}
             entityType={initial.entityType}
@@ -252,6 +268,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
             fullscreenOnMobile={!!selectedNode}
           />
         </div>
+        )}
       </div>
     </div>
   );

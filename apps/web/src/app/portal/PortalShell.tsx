@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense } from "react";
-import Link from "next/link";
 import { PortalSidebar, PORTAL_SIDEBAR_COLLAPSED_PX } from "./PortalSidebar";
-import { PortalHeaderSearch } from "./PortalHeaderSearch";
-import { QuickNewMenu } from "./QuickNewMenu";
+import { PortalHeaderSearch, type PortalHeaderSearchHandle } from "./PortalHeaderSearch";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "@/app/components/UserMenu";
-import { GlobalSearch, type GlobalSearchHandle } from "@/app/components/GlobalSearch";
 import { ToastProvider } from "@/app/components/Toast";
-import { AiSearchBar } from "@/app/components/AiSearchBar";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -33,8 +29,7 @@ function getStoredSidebarState() {
 }
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
-  const globalSearchRef = useRef<GlobalSearchHandle>(null);
-  const [aiSearchOpen, setAiSearchOpen] = useState(false);
+  const headerSearchRef = useRef<PortalHeaderSearchHandle>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarStateInitialized, setSidebarStateInitialized] = useState(false);
@@ -83,8 +78,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  const handleAiSubmit = useCallback((_value: string) => {
-    setAiSearchOpen(false);
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        headerSearchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   return (
@@ -100,7 +102,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
         <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6">
+          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-4 sm:px-6 md:px-8 py-4">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}
@@ -111,16 +113,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 <path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
               </svg>
             </button>
-            <Link href="/portal" className="shrink-0 flex items-center" aria-label="Aidvisora – úvod">
-              <img src="/logo.png" alt="Aidvisora" className="h-8 w-auto max-w-[140px] object-contain" />
-            </Link>
-            <div className="flex-1 min-w-0 max-w-md">
+            <div className="flex-1 min-w-0 max-w-md md:max-w-2xl">
               <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded animate-pulse" aria-hidden />}>
-                <PortalHeaderSearch onOpenGlobalSearch={() => globalSearchRef.current?.open()} />
+                <PortalHeaderSearch ref={headerSearchRef} />
               </Suspense>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <QuickNewMenu />
               <NotificationBell />
               <UserMenu />
             </div>
@@ -130,42 +128,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               {children}
             </div>
           </div>
-        </div>
-        <GlobalSearch ref={globalSearchRef} />
-
-        {/* Aidvisora – fixed with safe area, below drawer z-index */}
-        <div
-          className="fixed flex flex-col items-end gap-2"
-          style={{
-            bottom: "max(1rem, env(safe-area-inset-bottom, 1rem))",
-            right: "max(1rem, env(safe-area-inset-right, 1rem))",
-            zIndex: "var(--z-ai-widget, 40)",
-          }}
-        >
-          {aiSearchOpen ? (
-            <div className="flex items-center gap-2 w-full max-w-[420px]">
-              <AiSearchBar
-                placeholder="Ask WeAI"
-                onSubmit={handleAiSubmit}
-                onClose={() => setAiSearchOpen(false)}
-                className="flex-1 min-w-0"
-              />
-              <button
-                type="button"
-                onClick={() => setAiSearchOpen(false)}
-                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                aria-label="Zavřít Aidvisora"
-              >
-                <span className="text-lg leading-none">×</span>
-              </button>
-            </div>
-          ) : (
-            <AiSearchBar
-              variant="trigger"
-              triggerLabel="Aidvisora"
-              onTriggerClick={() => setAiSearchOpen(true)}
-            />
-          )}
         </div>
       </div>
     </ToastProvider>

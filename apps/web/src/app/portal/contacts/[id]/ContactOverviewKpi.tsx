@@ -27,14 +27,14 @@ export function ContactOverviewKpi({ contactId }: { contactId: string }) {
   if (!data) return null;
 
   return (
-    <div className="flex flex-wrap gap-4">
-      <div className="rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-3 shadow-sm min-h-[44px] flex items-center">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2">Počet smluv</span>
-        <span className="text-lg font-bold text-slate-800">{data.contractCount}</span>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Počet smluv</span>
+        <div className="text-xl font-black text-slate-900">{data.contractCount}</div>
       </div>
-      <div className="rounded-[var(--wp-radius)] border border-slate-200 bg-white px-4 py-3 shadow-sm min-h-[44px] flex items-center">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2">Měsíční pojistné</span>
-        <span className="text-lg font-bold text-slate-800">{fmtCZK(data.totalMonthly)}</span>
+      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Měsíční pojistné</span>
+        <div className="text-xl font-black text-slate-900">{fmtCZK(data.totalMonthly)}</div>
       </div>
     </div>
   );
