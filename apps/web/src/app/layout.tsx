@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import "../styles/monday.css";
 import "../styles/weplan-theme.css";
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className={dmSans.className}>
         <TooltipBlurListener />
         {children}
+        <Analytics />
       </body>
     </html>
   );
