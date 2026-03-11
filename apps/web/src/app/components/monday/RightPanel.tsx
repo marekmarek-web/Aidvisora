@@ -74,7 +74,7 @@ export function RightPanel({ itemId, itemName, onClose, getActivity, appendActiv
   }, [onClose]);
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: "updates", label: "Updates" },
+    { id: "updates", label: "Příspěvky" },
     { id: "files", label: "Soubory" },
     { id: "contracts", label: "Smlouvy" },
     { id: "activity", label: "Historie změn" },
