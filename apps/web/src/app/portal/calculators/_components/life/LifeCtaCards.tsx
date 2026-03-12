@@ -37,9 +37,9 @@ export function LifeCtaCards() {
             <Link
               key={card.href}
               href={card.href}
-              className="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-[#fde047]/30 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-[#fbbf24]/30 min-h-[44px]"
+              className="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-indigo-50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-indigo-200 min-h-[44px]"
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#0a0f29] text-white group-hover:bg-[#fbbf24] transition-colors duration-300">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-slate-800 text-white group-hover:bg-indigo-600 transition-colors duration-300">
                 <Icon className="w-8 h-8" />
               </div>
               <h4 className="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">

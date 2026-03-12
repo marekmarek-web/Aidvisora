@@ -23,9 +23,9 @@ export function CalculatorResultsCard({
   cta,
 }: CalculatorResultsCardProps) {
   return (
-    <div className="bg-[#0a0f29] text-white rounded-2xl shadow-2xl shadow-[#0a0f29]/30 border border-slate-800 p-8 overflow-hidden relative h-full flex flex-col justify-between">
-      <div className="absolute top-0 right-0 w-48 h-48 bg-[#0B3A7A] opacity-20 rounded-full blur-2xl -mr-10 -mt-10" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#fbbf24] opacity-10 rounded-full blur-xl -ml-10 -mb-10" />
+    <div className="bg-[#0b1120] text-white rounded-2xl shadow-xl border border-slate-800 p-8 overflow-hidden relative h-full flex flex-col justify-between">
+      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-600 opacity-20 rounded-full blur-2xl -mr-10 -mt-10" />
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-400" />
 
       <div>
         <h3 className="text-slate-400 font-medium mb-2 relative z-10 text-sm uppercase tracking-wider">
@@ -50,7 +50,7 @@ export function CalculatorResultsCard({
                   row.highlight === "gain"
                     ? "font-bold text-green-400 text-lg"
                     : row.highlight === "percent"
-                      ? "font-bold text-[#fbbf24] text-lg"
+                      ? "font-bold text-emerald-400 text-lg"
                       : "font-bold text-white text-lg"
                 }
               >

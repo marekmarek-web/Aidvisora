@@ -145,7 +145,7 @@ export function InvestmentContactModal({
               Mám zájem o plán
             </h3>
             <p className="text-sm text-slate-600 mt-2 flex items-center gap-2">
-              <span className="text-[#fbbf24]">●</span>
+              <span className="text-indigo-500">●</span>
               <span>
                 Strategie: <strong className="text-[#0B3A7A]">{profileName}</strong>
               </span>
@@ -162,7 +162,7 @@ export function InvestmentContactModal({
                   name="email"
                   required
                   placeholder="vas@email.cz"
-                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-[#fbbf24] focus:border-transparent outline-none transition-shadow bg-slate-50 focus:bg-white"
+                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none transition-shadow bg-slate-50 focus:bg-white"
                 />
               </div>
               <div>
@@ -173,7 +173,7 @@ export function InvestmentContactModal({
                   type="tel"
                   name="telefon"
                   placeholder="+420 777 ..."
-                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-[#fbbf24] focus:border-transparent outline-none bg-slate-50 focus:bg-white"
+                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none bg-slate-50 focus:bg-white"
                 />
               </div>
               <div className="flex items-start gap-3 mt-2 bg-blue-50/50 p-3 rounded-lg">
@@ -182,7 +182,7 @@ export function InvestmentContactModal({
                   id="consent"
                   name="consent"
                   required
-                  className="mt-1 w-4 h-4 rounded border-slate-300 focus:ring-[#fbbf24] cursor-pointer"
+                  className="mt-1 w-4 h-4 rounded border-slate-300 focus:ring-indigo-200 cursor-pointer"
                 />
                 <label htmlFor="consent" className="text-xs text-slate-600 cursor-pointer select-none">
                   Souhlasím se zpracováním osobních údajů pro účely vytvoření investičního plánu.

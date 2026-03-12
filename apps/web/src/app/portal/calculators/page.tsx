@@ -38,7 +38,7 @@ export default function CalculatorsPage() {
                 <div
                   className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
                     isActive
-                      ? "bg-[#0a0f29] text-white group-hover:bg-[#fbbf24]"
+                      ? "bg-indigo-600 text-white group-hover:bg-indigo-500"
                       : "bg-slate-200 text-slate-400"
                   }`}
                 >
@@ -62,7 +62,7 @@ export default function CalculatorsPage() {
               <Link
                 key={def.id}
                 href={def.route}
-                className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 shadow-sm hover:border-[#fbbf24]/30 hover:shadow-lg transition-all flex flex-col items-center text-center gap-3 group"
+                className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 shadow-sm hover:border-indigo-300 hover:shadow-lg transition-all flex flex-col items-center text-center gap-3 group"
               >
                 {cardContent}
               </Link>

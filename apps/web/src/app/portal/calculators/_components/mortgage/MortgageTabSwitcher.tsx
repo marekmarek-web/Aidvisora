@@ -13,10 +13,10 @@ export function MortgageTabSwitcher({ type, onTypeChange }: MortgageTabSwitcherP
       <button
         type="button"
         onClick={() => onTypeChange("new")}
-        className={`min-h-[44px] min-w-[44px] px-5 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+        className={`min-h-[44px] min-w-[44px] px-4 sm:px-5 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all touch-manipulation ${
           type === "new"
-            ? "bg-[#fbbf24] text-[#0a0f29] shadow-lg"
-            : "bg-white/10 text-white hover:bg-white/20"
+            ? "bg-indigo-600 text-white shadow-md"
+            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
         }`}
       >
         Nová hypotéka
@@ -24,10 +24,10 @@ export function MortgageTabSwitcher({ type, onTypeChange }: MortgageTabSwitcherP
       <button
         type="button"
         onClick={() => onTypeChange("refi")}
-        className={`min-h-[44px] min-w-[44px] px-5 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+        className={`min-h-[44px] min-w-[44px] px-4 sm:px-5 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all touch-manipulation ${
           type === "refi"
-            ? "bg-[#fbbf24] text-[#0a0f29] shadow-lg"
-            : "bg-white/10 text-white hover:bg-white/20"
+            ? "bg-indigo-600 text-white shadow-md"
+            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
         }`}
       >
         Refinancování

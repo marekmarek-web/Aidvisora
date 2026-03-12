@@ -216,7 +216,7 @@ export function LifeContactModal({
                   name="name"
                   required
                   placeholder="Jan Novák"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
@@ -228,7 +228,7 @@ export function LifeContactModal({
                   name="email"
                   required
                   placeholder="vas@email.cz"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
@@ -242,7 +242,7 @@ export function LifeContactModal({
                   type="tel"
                   name="phone"
                   placeholder="+420 777 ..."
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export function LifeContactModal({
                       (nepovinné)
                     </span>
                   </label>
-                  <label className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-[#fbbf24] transition-all group">
+                  <label className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-indigo-300 transition-all group">
                     <input
                       type="file"
                       name="attachment"
@@ -263,7 +263,7 @@ export function LifeContactModal({
                       onChange={handleFileChange}
                     />
                     <svg
-                      className="w-8 h-8 text-slate-300 group-hover:text-[#fbbf24] mb-2 transition-colors"
+                      className="w-8 h-8 text-slate-300 group-hover:text-indigo-500 mb-2 transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -276,7 +276,7 @@ export function LifeContactModal({
                       />
                     </svg>
                     <span
-                      className={`text-xs ${fileName ? "text-[#fbbf24] font-medium" : "text-slate-500"}`}
+                      className={`text-xs ${fileName ? "text-indigo-500 font-medium" : "text-slate-500"}`}
                     >
                       {fileName ?? "Klikněte pro nahrání smlouvy"}
                     </span>

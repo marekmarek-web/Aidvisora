@@ -21,7 +21,7 @@ export function InvestmentStrategySwitcher({
       <label className="text-xs font-bold text-blue-200 uppercase tracking-widest">
         Vyberte strategii
       </label>
-      <div className="inline-flex bg-slate-900/50 p-1.5 rounded-xl backdrop-blur-md border border-white/10 w-fit flex-wrap gap-1">
+      <div className="inline-flex bg-slate-900/50 p-1.5 rounded-xl backdrop-blur-md border border-white/10 w-full sm:w-fit flex-wrap gap-2 sm:gap-1">
         {profiles.map((profile, index) => {
           const Icon = PROFILE_ICONS[index] ?? Shield;
           const isActive = index === activeIndex;
@@ -32,7 +32,7 @@ export function InvestmentStrategySwitcher({
               onClick={() => onSelect(index)}
               className={`flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-bold transition-all duration-200 min-h-[44px] touch-manipulation ${
                 isActive
-                  ? "bg-[#fbbf24] text-[#0a0f29] shadow-lg"
+                  ? "bg-indigo-600 text-white shadow-md"
                   : "text-slate-300 hover:text-white hover:bg-white/10"
               }`}
               data-profile={index}

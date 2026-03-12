@@ -166,7 +166,7 @@ export function PensionContactModal({
                   name="name"
                   required
                   placeholder="Jan Novák"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
@@ -178,7 +178,7 @@ export function PensionContactModal({
                   name="email"
                   required
                   placeholder="vas@email.cz"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
@@ -189,7 +189,7 @@ export function PensionContactModal({
                   type="tel"
                   name="phone"
                   placeholder="+420 777 ..."
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#fbbf24] outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div className="pt-4">

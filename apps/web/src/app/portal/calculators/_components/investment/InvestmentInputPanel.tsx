@@ -54,7 +54,7 @@ export function InvestmentInputPanel({
             onChange={(e) =>
               onInitialChange(clampInitial(parseCurrency(e.target.value)))
             }
-            className="text-right font-extrabold text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-56 bg-transparent transition-colors p-1"
+            className="text-right font-extrabold text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-56 bg-transparent transition-colors p-1"
           />
         </div>
         <input
@@ -85,7 +85,7 @@ export function InvestmentInputPanel({
             onChange={(e) =>
               onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))
             }
-            className="text-right font-extrabold text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-56 bg-transparent transition-colors p-1"
+            className="text-right font-extrabold text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-56 bg-transparent transition-colors p-1"
           />
         </div>
         <input
@@ -119,7 +119,7 @@ export function InvestmentInputPanel({
               onYearsChange(clampYears(parseInt(e.target.value, 10)))}
             className="flex-1 min-h-[28px] touch-manipulation"
           />
-          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-[#0a0f29] min-w-[80px] text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-slate-900 min-w-[80px] text-center">
             {years} let
           </div>
         </div>
@@ -143,7 +143,7 @@ export function InvestmentInputPanel({
           />
         </svg>
         <div className="text-sm text-slate-600">
-          <strong className="block text-[#0a0f29] mb-1">{profileTitle}</strong>
+          <strong className="block text-slate-900 mb-1">{profileTitle}</strong>
           <span>{profileDescription}</span>
         </div>
       </div>

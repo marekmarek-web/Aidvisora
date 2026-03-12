@@ -4,17 +4,18 @@
 
 import type { BankEntry, ProductSubType } from "./mortgage.types";
 
+/** Logos from public/logos; empty string = use initials fallback in UI */
 export const BANKS_DATA: BankEntry[] = [
-  { id: "fio", name: "Fio banka", baseRate: 4.18, loanRate: 5.9, logoUrl: "/images/fio-logo.png" },
-  { id: "moneta", name: "Moneta Money Bank", baseRate: 4.19, loanRate: 6.0, logoUrl: "/images/moneta-logo.png" },
-  { id: "ucb", name: "UniCredit Bank", baseRate: 4.29, loanRate: 6.5, logoUrl: "/images/unicredit-logo.png" },
-  { id: "airbank", name: "Air Bank", baseRate: 4.39, loanRate: 6.2, logoUrl: "/images/airbank-logo.png" },
-  { id: "rb", name: "Raiffeisenbank", baseRate: 4.34, loanRate: 5.9, logoUrl: "/images/raiffeisenbank-logo.png" },
-  { id: "partners", name: "Partners Banka", baseRate: 4.59, loanRate: 6.4, logoUrl: "/images/partners-logo.png" },
-  { id: "csob", name: "ČSOB / Hypoteční banka", baseRate: 4.79, loanRate: 7.9, logoUrl: "/images/csob-logo.png" },
-  { id: "kb", name: "Komerční banka", baseRate: 4.59, loanRate: 6.9, logoUrl: "/images/kb-logo.png" },
-  { id: "cs", name: "Česká spořitelna", baseRate: 4.59, loanRate: 7.5, logoUrl: "/images/ceskasporitelna-logo.png" },
-  { id: "mbank", name: "mBank", baseRate: 4.79, loanRate: 6.2, logoUrl: "/images/mbank-logo.png" },
+  { id: "fio", name: "Fio banka", baseRate: 4.18, loanRate: 5.9, logoUrl: "" },
+  { id: "moneta", name: "Moneta Money Bank", baseRate: 4.19, loanRate: 6.0, logoUrl: "" },
+  { id: "ucb", name: "UniCredit Bank", baseRate: 4.29, loanRate: 6.5, logoUrl: "/logos/unicredit-logo.png" },
+  { id: "airbank", name: "Air Bank", baseRate: 4.39, loanRate: 6.2, logoUrl: "" },
+  { id: "rb", name: "Raiffeisenbank", baseRate: 4.34, loanRate: 5.9, logoUrl: "/logos/raiffeisenbank-logo.png" },
+  { id: "partners", name: "Partners Banka", baseRate: 4.59, loanRate: 6.4, logoUrl: "" },
+  { id: "csob", name: "ČSOB / Hypoteční banka", baseRate: 4.79, loanRate: 7.9, logoUrl: "/logos/csob-logo.png" },
+  { id: "kb", name: "Komerční banka", baseRate: 4.59, loanRate: 6.9, logoUrl: "/logos/kb-logo.png" },
+  { id: "cs", name: "Česká spořitelna", baseRate: 4.59, loanRate: 7.5, logoUrl: "" },
+  { id: "mbank", name: "mBank", baseRate: 4.79, loanRate: 6.2, logoUrl: "/logos/mbank-logo.png" },
 ];
 
 export const PRODUCT_TYPES: Record<"mortgage" | "loan", ProductSubType[]> = {

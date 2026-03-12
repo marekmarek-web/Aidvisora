@@ -39,14 +39,14 @@ export function MortgageCalculatorPage() {
   const offers = useMemo(() => getOffers(state), [state]);
 
   return (
-    <div className="pt-0">
+    <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
         <CalculatorPageHeader
           title="Kalkulačka hypoték a úvěrů"
           subtitle="Měsíční splátka hypotéky nebo úvěru podle zadaných parametrů. Srovnání nabídek bank."
         />
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <MortgageProductSwitcher
             product={state.product}
             onProductChange={(product) =>

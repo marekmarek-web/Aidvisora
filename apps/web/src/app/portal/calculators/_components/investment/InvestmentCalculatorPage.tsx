@@ -67,14 +67,14 @@ export function InvestmentCalculatorPage() {
   );
 
   return (
-    <div className="pt-0">
+    <div className="pt-0 pb-8 sm:pb-12">
       <CalculatorPageShell>
         <CalculatorPageHeader
           title="Investiční kalkulačka"
           subtitle="Projekce hodnoty investice v čase při pravidelném investování a zvolené strategii."
         />
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <InvestmentStrategySwitcher
             profiles={INVESTMENT_PROFILES}
             activeIndex={profileIndex}
@@ -111,14 +111,14 @@ export function InvestmentCalculatorPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <CalculatorChartCard
             title="Projekce vývoje"
-            icon={<span className="text-[#fbbf24]">📈</span>}
+            icon={<span className="text-indigo-500">📈</span>}
             caption="Graf ukazuje odhadovaný vývoj hodnoty investice v čase při pravidelném investování a zvolené strategii."
           >
             <InvestmentGrowthChart data={growthChartData} />
           </CalculatorChartCard>
           <CalculatorChartCard
             title="Složení portfolia"
-            icon={<span className="text-[#fbbf24]">📊</span>}
+            icon={<span className="text-indigo-500">📊</span>}
           >
             <InvestmentAllocationChart data={allocationChartData} />
           </CalculatorChartCard>

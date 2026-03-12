@@ -70,7 +70,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
   return (
     <div className="bg-white rounded-2xl p-5 md:p-10 shadow-sm border border-[#D6E6FF]/60">
       <h3 className="text-slate-500 font-bold uppercase tracking-wider text-sm mb-8 flex items-center gap-2">
-        <Users className="w-4 h-4 text-[#fbbf24]" />
+        <Users className="w-4 h-4 text-indigo-500" />
         Vaše údaje
       </h3>
 
@@ -98,7 +98,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
                 inputMode="numeric"
                 value={formatCurrency(value)}
                 onChange={(e) => handleTextChange(id, e.target.value)}
-                className="text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
+                className="text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
               />
             </div>
             <input
@@ -133,7 +133,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
       <div className="h-px bg-slate-100 my-8" />
 
       <h3 className="text-slate-500 font-bold uppercase tracking-wider text-sm mb-8 flex items-center gap-2">
-        <Landmark className="w-4 h-4 text-[#fbbf24]" />
+        <Landmark className="w-4 h-4 text-indigo-500" />
         Majetek a Rodina
       </h3>
 
@@ -154,7 +154,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
             onChange={(e) =>
               handleChildrenChange(parseInt(e.target.value, 10) || 0)
             }
-            className="w-full bg-slate-50 border border-slate-200 text-[#0a0f29] font-bold py-3.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#fbbf24] min-h-[48px]"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-900 font-bold py-3.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-200 min-h-[48px]"
           />
         </div>
         <div>
@@ -166,7 +166,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
             onClick={handleSpouseToggle}
             className={`w-full py-3.5 rounded-xl font-bold border-2 transition-all min-h-[48px] ${
               state.hasSpouse
-                ? "border-[#fbbf24] bg-orange-50 text-[#fbbf24]"
+                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
                 : "border-slate-200 text-slate-400 bg-slate-50"
             }`}
           >

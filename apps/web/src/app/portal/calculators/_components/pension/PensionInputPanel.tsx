@@ -53,7 +53,7 @@ export function PensionInputPanel({
   return (
     <div className="bg-white rounded-2xl p-5 md:p-10 shadow-sm border border-[#D6E6FF]/60">
       <h3 className="text-slate-500 font-bold uppercase tracking-wider text-sm mb-8 flex items-center gap-2">
-        <PiggyBank className="w-4 h-4 text-[#fbbf24]" />
+        <PiggyBank className="w-4 h-4 text-indigo-500" />
         Vaše údaje
       </h3>
 
@@ -73,7 +73,7 @@ export function PensionInputPanel({
               onChange={(e) =>
                 handleRangeChange("age", parseInt(e.target.value, 10) || LIMITS.age.min)
               }
-              className="text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-24 bg-transparent transition-colors p-1 min-w-0"
+              className="text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-24 bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -110,7 +110,7 @@ export function PensionInputPanel({
                   parseInt(e.target.value, 10) || LIMITS.retireAge.min
                 )
               }
-              className="text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-24 bg-transparent transition-colors p-1 min-w-0"
+              className="text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-24 bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -140,7 +140,7 @@ export function PensionInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.salary)}
               onChange={(e) => handleTextChange("salary", e.target.value)}
-              className="text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
+              className="text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -170,7 +170,7 @@ export function PensionInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.rent)}
               onChange={(e) => handleTextChange("rent", e.target.value)}
-              className="text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
+              className="text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-48 md:w-56 bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -198,7 +198,7 @@ export function PensionInputPanel({
             onChange={(e) =>
               update({ scenario: e.target.value as PensionState["scenario"] })
             }
-            className="w-full bg-slate-50 border border-slate-200 text-[#0a0f29] font-bold py-3.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#fbbf24] min-h-[48px]"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-900 font-bold py-3.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-200 min-h-[48px]"
           >
             {SCENARIO_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -216,19 +216,19 @@ export function PensionInputPanel({
             type="text"
             readOnly
             value={`${formatCurrency(estimatedPension)} Kč`}
-            className="w-full bg-slate-100 border border-slate-200 text-[#0a0f29] font-bold py-3.5 px-4 rounded-xl cursor-not-allowed min-h-[48px]"
+            className="w-full bg-slate-100 border border-slate-200 text-slate-900 font-bold py-3.5 px-4 rounded-xl cursor-not-allowed min-h-[48px]"
           />
         </div>
       </div>
 
-      <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100">
+      <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
         <div className="flex items-start gap-2">
-          <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
           <div>
-            <div className="text-sm font-bold text-amber-900 mb-1">
+            <div className="text-sm font-bold text-slate-900 mb-1">
               Proč mi vychází tak málo?
             </div>
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <p className="text-xs text-slate-700 leading-relaxed">
               Demografická realita: méně pracujících na jednoho důchodce a vyšší
               průměrný věk znamenají tlak na výši státních důchodů. Odhad vychází
               z náhradových poměrů a scénáře vývoje; reálná výše může být nižší.

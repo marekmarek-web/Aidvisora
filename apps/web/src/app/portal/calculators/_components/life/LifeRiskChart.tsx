@@ -27,7 +27,7 @@ export function LifeRiskChart({ chartData }: LifeRiskChartProps) {
           >
             <div className="w-full h-full flex flex-col justify-end items-center">
               <div
-                className="w-full bg-[#fbbf24] rounded-t-lg transition-all duration-500 ease-out min-h-[4px]"
+                className="w-full bg-indigo-500 rounded-t-lg transition-all duration-500 ease-out min-h-[4px]"
                 style={{ height: `${chybiHeight}%` }}
               >
                 {item.chybi > 0 && (

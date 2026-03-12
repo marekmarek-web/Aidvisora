@@ -126,7 +126,7 @@ export function MortgageInputPanel({
   const loanMaxLabel = state.product === "mortgage" ? "30 mil." : "2,5 mil.";
 
   return (
-    <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-[#D6E6FF]/60 space-y-6">
+    <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
       <div>
         <label className="block text-sm font-bold text-slate-600 tracking-wide mb-2">
           <span className="uppercase">{loanLabel}</span>{" "}
@@ -138,7 +138,7 @@ export function MortgageInputPanel({
             inputMode="numeric"
             value={formatCurrency(state.loan)}
             onChange={(e) => handleLoanChange(parseCurrency(e.target.value))}
-            className="flex-1 text-right font-extrabold text-2xl md:text-3xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none bg-transparent transition-colors p-1 min-w-0"
+            className="flex-1 text-right font-extrabold text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
           />
         </div>
         <input
@@ -148,7 +148,7 @@ export function MortgageInputPanel({
           step={lim.step}
           value={state.loan}
           onChange={(e) => handleLoanChange(parseInt(e.target.value, 10))}
-          className="w-full min-h-[28px] touch-manipulation"
+          className="w-full min-h-[36px] sm:min-h-[28px] touch-manipulation py-1"
         />
         <div className="flex justify-between text-xs font-medium text-slate-400 mt-1">
           <span>{loanMinLabel}</span>
@@ -168,7 +168,7 @@ export function MortgageInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.extra)}
               onChange={(e) => handleExtraChange(parseCurrency(e.target.value))}
-              className="flex-1 text-right font-extrabold text-2xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none bg-transparent transition-colors p-1 min-w-0"
+              className="flex-1 text-right font-extrabold text-2xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -178,7 +178,7 @@ export function MortgageInputPanel({
             step={EXTRA_LIMITS.step}
             value={state.extra}
             onChange={(e) => handleExtraChange(parseInt(e.target.value, 10))}
-            className="w-full min-h-[28px] touch-manipulation"
+            className="w-full min-h-[36px] sm:min-h-[28px] touch-manipulation py-1"
           />
         </div>
       )}
@@ -197,7 +197,7 @@ export function MortgageInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.own)}
               onChange={(e) => handleOwnChange(parseCurrency(e.target.value))}
-              className="flex-1 text-right font-extrabold text-2xl text-[#0a0f29] border-b-2 border-slate-200 focus:border-[#fbbf24] outline-none bg-transparent transition-colors p-1 min-w-0"
+              className="flex-1 text-right font-extrabold text-2xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -207,7 +207,7 @@ export function MortgageInputPanel({
             step={OWN_LIMITS.step}
             value={state.own}
             onChange={(e) => handleOwnChange(parseInt(e.target.value, 10))}
-            className="w-full min-h-[28px] touch-manipulation"
+            className="w-full min-h-[36px] sm:min-h-[28px] touch-manipulation py-1"
           />
           <div className="flex flex-wrap gap-2 mt-3" role="group" aria-label={isMortgage ? "LTV" : "Akontace"}>
             {(isMortgage ? LTV_BUTTONS_MORTGAGE : LTV_BUTTONS_AUTO)
@@ -217,9 +217,9 @@ export function MortgageInputPanel({
                   key={pct}
                   type="button"
                   onClick={() => setLtv(pct)}
-                  className={`min-h-[44px] px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                  className={`min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl font-bold text-sm transition-all touch-manipulation ${
                     state.ltvLock === pct
-                      ? "bg-[#fbbf24] text-[#0a0f29]"
+                      ? "bg-indigo-600 text-white"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
@@ -235,7 +235,7 @@ export function MortgageInputPanel({
           <div className="text-xs font-semibold text-slate-500 uppercase mb-1">
             Odhadovaná hodnota nemovitosti
           </div>
-          <div className="font-bold text-lg text-[#0a0f29]">
+          <div className="font-bold text-lg text-slate-900">
             {formatCurrency(result.propertyValue)} Kč
           </div>
         </div>
@@ -246,16 +246,16 @@ export function MortgageInputPanel({
           <div className="text-xs font-semibold text-slate-500 uppercase mb-1">
             Výše úvěru
           </div>
-          <div className="font-bold text-lg text-[#0a0f29]">
+          <div className="font-bold text-lg text-slate-900">
             {formatCurrency(result.borrowingAmount)} Kč
           </div>
         </div>
       )}
 
       {result.showLtvWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-amber-600 font-bold">!</span>
-          <p className="text-sm text-amber-800">
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+          <span className="text-rose-600 font-bold">!</span>
+          <p className="text-sm text-rose-800">
             LTV přes 91 % ({result.ltvWarningValue} %) znamená vyšší úrok.
           </p>
         </div>
@@ -286,7 +286,7 @@ export function MortgageInputPanel({
             onChange={(e) => handleTermChange(parseInt(e.target.value, 10))}
             className="flex-1 min-h-[28px] touch-manipulation"
           />
-          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-[#0a0f29] min-w-[80px] text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-slate-900 min-w-[80px] text-center">
             {state.term} {state.term === 1 ? "rok" : "let"}
           </div>
         </div>
@@ -304,7 +304,7 @@ export function MortgageInputPanel({
           <select
             value={state.fix}
             onChange={(e) => handleFixChange(parseInt(e.target.value, 10))}
-            className="w-full border border-slate-300 rounded-xl px-4 py-3 font-medium text-[#0a0f29] focus:ring-2 focus:ring-[#fbbf24] outline-none bg-slate-50 focus:bg-white min-h-[48px]"
+            className="w-full border border-slate-300 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none bg-slate-50 focus:bg-white min-h-[48px]"
           >
             {FIX_OPTIONS.map((years) => (
               <option key={years} value={years}>
@@ -325,9 +325,9 @@ export function MortgageInputPanel({
               key={sub.id}
               type="button"
               onClick={() => selectSubType(sub.id)}
-              className={`min-h-[44px] px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+              className={`min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl font-bold text-sm transition-all touch-manipulation ${
                 (state.product === "mortgage" ? state.mortgageType : state.loanType) === sub.id
-                  ? "bg-[#fbbf24] text-[#0a0f29]"
+                  ? "bg-indigo-600 text-white"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >

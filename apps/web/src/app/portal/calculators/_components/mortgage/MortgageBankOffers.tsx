@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { CheckCircle2, ChevronRight } from "lucide-react";
 import { formatCurrency, formatRate } from "@/lib/calculators/mortgage/formatters";
 import type { BankOffer } from "@/lib/calculators/mortgage/mortgage.types";
 
@@ -9,8 +11,10 @@ export interface MortgageBankOffersProps {
   onRequestOffer?: (bankName: string) => void;
 }
 
-function fallbackLogoUrl(bankId: string): string {
-  return `https://placehold.co/100x30/1e293b/ffffff?text=${encodeURIComponent(bankId.toUpperCase())}`;
+function getInitials(name: string): string {
+  const first = name.split(/\s+/)[0] ?? "";
+  if (first.length <= 3) return first;
+  return first.slice(0, 2).toUpperCase();
 }
 
 export function MortgageBankOffers({
@@ -18,58 +22,100 @@ export function MortgageBankOffers({
   onRequestOffer,
 }: MortgageBankOffersProps) {
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-bold text-slate-900 mb-4">
-        Nabídky bank
-      </h3>
-      <div className="grid grid-cols-1 gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+          Srovnání nabídek trhu
+        </h3>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+          Seřazeno od nejnižší splátky
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {offers.map((offer, index) => (
-          <div
+          <BankOfferCard
             key={offer.bank.id}
-            className="animate-fade-in bg-white border border-slate-200 rounded-[var(--wp-radius-sm)] shadow-sm p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-md transition-all"
-            style={{ animationDelay: `${index * 70}ms` }}
-          >
-            <div className="relative w-[100px] h-8 flex items-center shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={offer.bank.logoUrl}
-                alt=""
-                className="max-w-[100px] max-h-8 object-contain object-left"
-                onError={(e) => {
-                  const t = e.target as HTMLImageElement;
-                  if (t) t.src = fallbackLogoUrl(offer.bank.id);
-                }}
-              />
-            </div>
-            <div className="flex-1 flex flex-row justify-between w-full md:w-auto items-center gap-4">
-              <div className="text-center md:text-left">
-                <div className="text-xs text-slate-400 font-semibold uppercase">
-                  Úrok
-                </div>
-                <div className="font-bold text-slate-900 text-lg">
-                  {formatRate(offer.rate)}
-                </div>
-              </div>
-              <div className="text-center md:text-right">
-                <div className="text-xs text-slate-400 font-semibold uppercase">
-                  Měsíčně
-                </div>
-                <div className="font-bold text-xl text-slate-900">
-                  {formatCurrency(offer.monthlyPayment)} Kč
-                </div>
-              </div>
-            </div>
-            {onRequestOffer != null && (
-              <button
-                type="button"
-                onClick={() => onRequestOffer(offer.bank.name)}
-                className="min-h-[44px] w-full md:w-auto bg-gradient-to-r from-[#fbbf24] to-[#fde047] hover:from-[#fde047] hover:to-[#fbbf24] text-[#0a0f29] font-bold py-2 px-6 rounded-xl shadow-md hover:shadow-lg transition-all"
-              >
-                Chci nabídku
-              </button>
-            )}
-          </div>
+            offer={offer}
+            index={index}
+            onRequestOffer={onRequestOffer}
+          />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function BankOfferCard({
+  offer,
+  index,
+  onRequestOffer,
+}: {
+  offer: BankOffer;
+  index: number;
+  onRequestOffer?: (bankName: string) => void;
+}) {
+  const [logoError, setLogoError] = useState(false);
+  const showLogo = offer.bank.logoUrl && !logoError;
+  const initials = getInitials(offer.bank.name);
+
+  return (
+    <div
+      className="animate-fade-in bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col relative overflow-hidden min-h-0"
+      style={{ animationDelay: `${index * 70}ms` }}
+    >
+      {index === 0 && (
+        <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10 shadow-sm flex items-center gap-1">
+          <CheckCircle2 size={10} /> Top volba
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-slate-100 text-slate-700 shrink-0 overflow-hidden">
+          {showLogo ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={offer.bank.logoUrl}
+              alt=""
+              className="w-full h-full object-contain"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        <div className="min-w-0">
+          <h4 className="font-bold text-slate-800 text-sm leading-tight truncate">
+            {offer.bank.name}
+          </h4>
+          <span className="text-xs font-black text-indigo-600">
+            {formatRate(offer.rate)} p.a.
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-3 border-t border-slate-100 flex items-end justify-between gap-3 flex-wrap sm:flex-nowrap">
+        <div className="min-w-0 flex-1">
+          <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+            Splátka
+          </span>
+          <span className="font-black text-base text-slate-900 break-all">
+            {formatCurrency(offer.monthlyPayment)} Kč
+          </span>
+        </div>
+        {onRequestOffer != null ? (
+          <button
+            type="button"
+            onClick={() => onRequestOffer(offer.bank.name)}
+            className="min-h-[44px] min-w-[44px] shrink-0 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all text-sm touch-manipulation"
+          >
+            Chci nabídku
+          </button>
+        ) : (
+          <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0 flex-shrink-0" aria-hidden>
+            <ChevronRight size={14} />
+          </div>
+        )}
       </div>
     </div>
   );

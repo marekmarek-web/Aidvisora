@@ -16,7 +16,7 @@ export function PensionCalculatorPage() {
   const result = useMemo(() => runCalculations(state), [state]);
 
   return (
-    <div className="pt-0">
+    <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
         <CalculatorPageHeader
           title="Penzijní kalkulačka"

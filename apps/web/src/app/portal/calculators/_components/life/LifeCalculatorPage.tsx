@@ -18,7 +18,7 @@ export function LifeCalculatorPage() {
   const result = useMemo(() => runCalculations(state), [state]);
 
   return (
-    <div className="pt-0">
+    <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
         <CalculatorPageHeader
           title="Kalkulačka životního pojištění"
@@ -40,7 +40,7 @@ export function LifeCalculatorPage() {
           <CalculatorChartCard
             title="Analýza rizika (Měsíční bilance)"
             icon={
-              <span className="text-[#fbbf24] text-sm font-bold uppercase">
+              <span className="text-indigo-500 text-sm font-bold uppercase">
                 Graf
               </span>
             }
