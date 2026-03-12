@@ -3,14 +3,20 @@
 import { useEffect } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
-import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate } from "@/lib/analyses/financial/formatters";
-import { FUND_DETAILS } from "@/lib/analyses/financial/constants";
+import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate, pluralizeYears } from "@/lib/analyses/financial/formatters";
+import { FUND_DETAILS, FUND_LOGOS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
 
 const RETIREMENT_AGE = 65;
 
 const MIN_RATE = 0.01;
 const MAX_RATE = 0.25;
+
+/** Zaokrouhlí částku na celé stovky (bez desetinných míst). */
+function roundToHundreds(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value / 100) * 100;
+}
 
 /** Vrátí možnosti zhodnocení: default−1 %, default, default+1 % (clamp 1–25 %), bez duplicit. */
 function getYieldOptions(productKey: string): { value: number; label: string }[] {
@@ -90,7 +96,7 @@ export function StepStrategy() {
     const inv = investments.find((i) => i.productKey === "ishares" && i.type === "monthly");
     if (!inv || (inv.amount ?? 0) !== 0) return;
     const years = goal.horizon ?? goal.years ?? 20;
-    updateInvestment("ishares", "monthly", "amount", goal.computed.pmt);
+    updateInvestment("ishares", "monthly", "amount", roundToHundreds(goal.computed.pmt));
     updateInvestment("ishares", "monthly", "years", years);
   }, [profile, data.goals, investments, updateInvestment]);
 
@@ -130,6 +136,26 @@ export function StepStrategy() {
               />
               <span className="text-sm font-semibold text-slate-700">Konzervativní režim (snížené výnosy v projekci)</span>
             </label>
+            {(() => {
+              const rentaGoal = data.goals?.find((g) => g.type === "renta" && (g.computed?.pmt ?? 0) > 0);
+              if (!rentaGoal?.computed?.pmt) return null;
+              return (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pmt = rentaGoal.computed!.pmt ?? 0;
+                      const years = rentaGoal.horizon ?? rentaGoal.years ?? 20;
+                      updateInvestment("ishares", "monthly", "amount", roundToHundreds(pmt));
+                      updateInvestment("ishares", "monthly", "years", years);
+                    }}
+                    className="min-h-[44px] px-4 py-2 rounded-xl font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                  >
+                    Přenést z cíle (renta → ETF World měsíčně)
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           <div>
@@ -140,7 +166,23 @@ export function StepStrategy() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {investments.map((inv) => (
                 <div key={inv.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="font-bold text-slate-800 text-sm mb-2">{getProductName(inv.productKey)}</div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`h-10 w-10 flex items-center justify-center rounded bg-slate-100 text-slate-600 font-bold text-sm shrink-0 ${FUND_LOGOS[inv.productKey] ? "hidden" : ""}`} data-fallback>
+                      {getProductName(inv.productKey, inv.type).slice(0, 2).toUpperCase()}
+                    </span>
+                    {FUND_LOGOS[inv.productKey] ? (
+                      <img
+                        src={FUND_LOGOS[inv.productKey]}
+                        alt=""
+                        className="h-10 w-10 object-contain rounded shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                          (e.target as HTMLImageElement).previousElementSibling?.classList.remove("hidden");
+                        }}
+                      />
+                    ) : null}
+                    <div className="font-bold text-slate-800 text-sm flex-1 min-w-0">{getProductName(inv.productKey, inv.type)}</div>
+                  </div>
                   <div className="text-xs text-slate-500 mb-2">{getTypeLabel(inv.type)}</div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <label className="text-xs font-semibold text-slate-600">Zhodnocení:</label>
@@ -164,8 +206,9 @@ export function StepStrategy() {
                       <input
                         type="number"
                         min={0}
-                        value={inv.amount || ""}
-                        onChange={(e) => updateInvestment(inv.productKey, inv.type, "amount", parseFloat(e.target.value) || 0)}
+                        step={100}
+                        value={inv.amount != null && inv.amount !== "" ? Math.round(roundToHundreds(inv.amount)) : ""}
+                        onChange={(e) => updateInvestment(inv.productKey, inv.type, "amount", roundToHundreds(parseFloat(e.target.value) || 0))}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                       />
                     </div>
@@ -173,7 +216,7 @@ export function StepStrategy() {
                       <label className="block text-xs font-semibold text-slate-500 mb-0.5">
                         Roky
                         {inv.type === "pension" && yearsToRetirement != null && (
-                          <span className="text-indigo-500 ml-1">(do důchodu: {yearsToRetirement})</span>
+                          <span className="text-indigo-500 ml-1">(do důchodu: {pluralizeYears(yearsToRetirement)})</span>
                         )}
                       </label>
                       <input
@@ -227,8 +270,8 @@ export function StepStrategy() {
               {conservativeMode && (
                 <div className="text-xs text-indigo-700 mt-1">+ konzervativní režim (−2 %)</div>
               )}
-              {yearsToRetirement != null && (
-                <div className="text-xs text-slate-500 mt-1">Do důchodu: {yearsToRetirement} let (věk {clientAge})</div>
+              {yearsToRetirement != null && clientAge != null && (
+                <div className="text-xs text-slate-500 mt-1">Do důchodu: {pluralizeYears(yearsToRetirement)} (věk {clientAge})</div>
               )}
             </div>
           </div>

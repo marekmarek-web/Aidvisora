@@ -16,10 +16,10 @@ Chart.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement
 export function StepSummary() {
   const data = useStore((s) => s.data);
   const analysisId = useStore((s) => s.analysisId);
-  const [showPrintReport, setShowPrintReport] = useState(false);
-  const [reportHtml, setReportHtml] = useState("");
+  const [printPayload, setPrintPayload] = useState<{ html: string } | null>(null);
   const [savingToDocs, setSavingToDocs] = useState(false);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
   const chartRefs = useRef<{ growth: Chart | null; allocation: Chart | null }>({ growth: null, allocation: null });
   const canSaveToDocuments = Boolean(data.clientId);
 
@@ -33,11 +33,17 @@ export function StepSummary() {
     : undefined;
 
   const handlePrintReport = () => {
+    setPrintError(null);
     chartRefs.current.growth = null;
     chartRefs.current.allocation = null;
     setIsPreparingPrint(true);
-    setReportHtml(buildReportHTML(data, reportOptions));
-    setShowPrintReport(true);
+    try {
+      const html = buildReportHTML(data, reportOptions);
+      setPrintPayload({ html });
+    } catch {
+      setPrintError("Nepodařilo se připravit report k tisku. Zkuste to znovu.");
+      setIsPreparingPrint(false);
+    }
   };
 
   const handleSaveReportToDocuments = async () => {
@@ -64,58 +70,69 @@ export function StepSummary() {
   };
 
   useEffect(() => {
-    if (!showPrintReport || !reportHtml) return;
+    if (!printPayload?.html) return;
 
-    const drawCharts = () => {
+    let cancelled = false;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    const runPrint = () => {
+      if (cancelled) return;
       const growthCanvas = document.getElementById("pdf-chart-growth") as HTMLCanvasElement | null;
       const allocationCanvas = document.getElementById("pdf-chart-allocation") as HTMLCanvasElement | null;
 
-      if (growthCanvas) {
-        const { labels, values } = getGrowthChartData(data);
-        chartRefs.current.growth = new Chart(growthCanvas, {
-          type: "line",
-          data: {
-            labels: labels.map(String),
-            datasets: [{ label: "Hodnota portfolia (Kč)", data: values, borderColor: "rgb(15, 23, 42)", backgroundColor: "rgba(15, 23, 42, 0.1)", fill: true }],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: { title: { display: true, text: "Rok" } },
-              y: { beginAtZero: true },
+      try {
+        if (growthCanvas) {
+          const { labels, values } = getGrowthChartData(data);
+          chartRefs.current.growth = new Chart(growthCanvas, {
+            type: "line",
+            data: {
+              labels: labels.map(String),
+              datasets: [{ label: "Hodnota portfolia (Kč)", data: values, borderColor: "rgb(15, 23, 42)", backgroundColor: "rgba(15, 23, 42, 0.1)", fill: true }],
             },
-          },
-        });
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { title: { display: true, text: "Rok" } },
+                y: { beginAtZero: true },
+              },
+            },
+          });
+        }
+        if (allocationCanvas) {
+          const { labels, values } = getAllocationChartData(data);
+          chartRefs.current.allocation = new Chart(allocationCanvas, {
+            type: "doughnut",
+            data: {
+              labels,
+              datasets: [{ data: values, backgroundColor: ["#0f172a", "#1e40af", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2"] }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: "bottom" } },
+            },
+          });
+        }
+      } catch {
+        // grafy nepovinné, pokračujeme na tisk
       }
 
-      if (allocationCanvas) {
-        const { labels, values } = getAllocationChartData(data);
-        chartRefs.current.allocation = new Chart(allocationCanvas, {
-          type: "doughnut",
-          data: {
-            labels,
-            datasets: [{ data: values, backgroundColor: ["#0f172a", "#1e40af", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2"] }],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom" } },
-          },
-        });
-      }
-
-      requestAnimationFrame(() => {
+      timeouts.push(
         setTimeout(() => {
+          if (cancelled) return;
           setIsPreparingPrint(false);
           window.print();
-        }, 300);
-      });
+        }, 400)
+      );
     };
 
-    const t = setTimeout(drawCharts, 100);
+    // Po vykreslení print rootu počkáme na DOM a pak vykreslíme grafy a spustíme tisk
+    timeouts.push(setTimeout(runPrint, 200));
+
     return () => {
-      clearTimeout(t);
+      cancelled = true;
+      timeouts.forEach((t) => clearTimeout(t));
       if (chartRefs.current.growth) {
         chartRefs.current.growth.destroy();
         chartRefs.current.growth = null;
@@ -124,11 +141,12 @@ export function StepSummary() {
         chartRefs.current.allocation.destroy();
         chartRefs.current.allocation = null;
       }
+      setIsPreparingPrint(false);
     };
-  }, [showPrintReport, reportHtml, data]);
+  }, [printPayload, data]);
 
   useEffect(() => {
-    const afterPrint = () => setShowPrintReport(false);
+    const afterPrint = () => setPrintPayload(null);
     window.addEventListener("afterprint", afterPrint);
     return () => window.removeEventListener("afterprint", afterPrint);
   }, []);
@@ -182,6 +200,7 @@ export function StepSummary() {
             type="button"
             onClick={handlePrintReport}
             disabled={isPreparingPrint}
+            aria-busy={isPreparingPrint}
             className="min-h-[44px] inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 disabled:opacity-60"
           >
             <Printer className="w-5 h-5" /> {isPreparingPrint ? "Připravuji tisk…" : "Export / tisk reportu"}
@@ -197,17 +216,18 @@ export function StepSummary() {
             </button>
           )}
         </div>
+        {printError && <p className="text-sm text-red-600 mt-2" role="alert">{printError}</p>}
         {!canSaveToDocuments && (data.householdId || data.clientId === undefined) && (
           <p className="text-xs text-slate-500 mt-2">Pro uložení reportu do dokumentů otevřete analýzu z profilu klienta (s clientId).</p>
         )}
       </div>
 
-      {showPrintReport && (
+      {printPayload?.html && (
         <div
           id="report-print-root"
           style={{ position: "fixed", left: "-9999px", top: 0, width: "210mm", zIndex: 9999 }}
         >
-          <div dangerouslySetInnerHTML={{ __html: reportHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: printPayload.html }} />
         </div>
       )}
 

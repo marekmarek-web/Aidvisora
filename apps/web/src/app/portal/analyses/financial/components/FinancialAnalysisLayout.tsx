@@ -64,39 +64,51 @@ export function FinancialAnalysisLayout() {
   async function handleConvertToTask() {
     setConvertError(null);
     setConvertLoading("task");
+    const title = notes.trim().split(/\n/)[0]?.slice(0, 200) || "Úkol z finanční analýzy";
+    const payload = {
+      title,
+      description: notes.trim() || undefined,
+      contactId: data.clientId ?? undefined,
+      analysisId: analysisId ?? undefined,
+    };
+    let id: string | null = null;
     try {
-      const title = notes.trim().split(/\n/)[0]?.slice(0, 200) || "Úkol z finanční analýzy";
-      const id = await createTask({
-        title,
-        description: notes.trim() || undefined,
-        contactId: data.clientId ?? undefined,
-        analysisId: analysisId ?? undefined,
-      });
-      if (id) router.push("/portal/tasks");
-      else setConvertError("Úkol se nepodařilo vytvořit.");
-    } catch (e) {
-      setConvertError(e instanceof Error ? e.message : "Nepodařilo se vytvořit úkol.");
-    } finally {
-      setConvertLoading(null);
+      id = await createTask(payload);
+    } catch {
+      id = null;
+    }
+    setConvertLoading(null);
+    if (id) {
+      setTimeout(() => {
+        window.location.href = "/portal/tasks";
+      }, 0);
+    } else {
+      setConvertError("Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.");
     }
   }
 
   async function handleConvertToNote() {
     setConvertError(null);
     setConvertLoading("note");
+    const payload = {
+      contactId: data.clientId ?? null,
+      meetingAt: new Date().toISOString().slice(0, 16),
+      domain: "financial_analysis",
+      content: { obsah: notes.trim() || "Poznámky z finanční analýzy." },
+    };
+    let id: string | null = null;
     try {
-      const id = await createMeetingNote({
-        contactId: data.clientId ?? null,
-        meetingAt: new Date().toISOString().slice(0, 16),
-        domain: "financial_analysis",
-        content: { obsah: notes.trim() || "Poznámky z finanční analýzy." },
-      });
-      if (id) router.push("/portal/notes");
-      else setConvertError("Zápisek se nepodařilo vytvořit.");
-    } catch (e) {
-      setConvertError(e instanceof Error ? e.message : "Nepodařilo se vytvořit zápisek.");
-    } finally {
-      setConvertLoading(null);
+      id = await createMeetingNote(payload);
+    } catch {
+      id = null;
+    }
+    setConvertLoading(null);
+    if (id) {
+      setTimeout(() => {
+        window.location.href = "/portal/notes";
+      }, 0);
+    } else {
+      setConvertError("Nepodařilo se vytvořit zápisek. Zkuste to znovu nebo zkopírujte text do zápisků ručně.");
     }
   }
 
