@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypotéka bez kontaktu | Kalkulačka hypoték a úvěrů 2025</title>
+    
+    <!-- 1. KROK: Styly a knihovny -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/images/logo_M_white.png">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            50: '#f8fafc',
+                            850: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        brand: {
+                            dark: '#0a0f29',    /* Midnight Blue */
+                            gold: '#fbbf24',    /* ZLATÁ (Amber 500) */
+                            lightgold: '#fde047', /* Světlejší žlutá pro gradienty */
+                            main: '#0B3A7A',    
+                            light: '#EAF3FF',  
+                            border: '#D6E6FF',  /* Světlá pro ohraničení */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    keyframes: {
+                        scroll: {
+                            '0%': { transform: 'translateX(0)' },
+                            '100%': { transform: 'translateX(-50%)' },
+                        },
+                        shimmer: {
+                            '0%': { transform: 'skewX(-20deg) translateX(-150%)' },
+                            '100%': { transform: 'skewX(-20deg) translateX(150%)' }
+                        }
+                    },
+                    animation: {
+                        scroll: 'scroll 40s linear infinite',
+                        shimmer: 'shimmer 2.5s infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Globální styly */
+        :root { font-family: 'Inter', sans-serif; }
+        
+        /* Zabránění horizontálnímu posuvu */
+        body { overflow-x: hidden; }
+    
+        .glass-header-top {
+            background-color: #0a0f29;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-header-scrolled {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(11, 58, 122, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+        }
+    
+        /* Styl navigačních odkazů */
+        .nav-link {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            padding: 0.6rem 1rem;
+            border-radius: 9999px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+        }
+    
+        .nav-dropdown-panel { visibility: hidden; opacity: 0; transform: translateY(-4px); transition: visibility 0.2s, opacity 0.2s, transform 0.2s; }
+        .nav-dropdown-group:hover .nav-dropdown-panel { visibility: visible; opacity: 1; transform: translateY(0); }
+        .nav-dropdown-group:hover .nav-dropdown-trigger { background: rgba(255,255,255,0.1); }
+        .glass-header-scrolled .nav-dropdown-group:hover .nav-dropdown-trigger { background: rgba(11, 58, 122, 0.08); }
+        .glass-header-scrolled .nav-dropdown-trigger { color: #0B3A7A; }
+        .glass-header-scrolled .nav-dropdown-trigger svg { color: #64748b; }
+        .nav-inner { padding-top: env(safe-area-inset-top, 0px); }
+        body.header-offset { padding-top: calc(5rem + env(safe-area-inset-top, 0px)); }
+
+        /* Styly pro kalkulačku */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #fbbf24; border: 3px solid #fff; cursor: pointer; margin-top: -10px; box-shadow: 0 4px 6px rgba(251, 191, 36, 0.4); transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e2e8f0; border-radius: 3px; }
+        input[type=range]:focus { outline: none; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .bank-logo { max-width: 100px; max-height: 30px; object-fit: contain; object-position: left center; }
+        .partner-logo { height: 70px; width: auto; object-fit: contain; filter: grayscale(100%); opacity: 0.7; transition: all 0.3s; margin: 0 60px; }
+        .partner-logo:hover { filter: grayscale(0%); opacity: 1; }
+        
+        .review-badge { transition: transform 0.2s, box-shadow 0.2s; }
+        .review-badge:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .trophy-badge { position: relative; overflow: hidden; }
+        .trophy-icon { position: absolute; right: -2px; bottom: -2px; font-size: 2.5rem; color: #fbbf24; opacity: 0.1; pointer-events: none; }
+        
+        .disabled-btn { opacity: 0.5; cursor: not-allowed; background-color: #e2e8f0 !important; color: #94a3b8 !important; pointer-events: none; }
+        
+        main { padding-top: 0; }
+        
+        @media (max-width: 1023px) {
+            #mobile-result-container { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 40; padding: 1rem; background-color: transparent; pointer-events: none; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 1; }
+            #mobile-result-container.hidden-mobile-float { transform: translateY(150%); opacity: 0; }
+            #mobile-result-card { pointer-events: auto; margin: 0 auto; max-width: 450px; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.15); }
+            #hypo-srovnavac { padding-bottom: 40px !important; }
+        }
+    </style>
+</head>
+<body class="bg-white font-sans text-slate-800 header-offset">
+
+    <nav class="fixed top-0 left-0 right-0 w-full z-50 transition-all duration-500 glass-header-top" id="navbar">
+        <div class="nav-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center gap-4">
+                <div class="flex items-center gap-3 cursor-pointer shrink-0" onclick="window.location.href='/'">
+                    <div id="logo-icon" class="bg-white text-brand-dark font-bold w-10 h-10 flex items-center justify-center rounded-full text-xl transition-all duration-300 shadow-sm overflow-hidden">
+                        <img id="logo-img" src="../logo_M_white.png" alt="M" class="w-3/5 h-3/5 object-contain invert transition-all duration-300">
+                    </div>
+                    <div class="flex flex-col leading-tight">
+                        <span id="logo-text" class="text-lg font-bold text-white transition-colors duration-300">Marek Marek<span class="text-brand-gold">.</span></span>
+                        <span id="logo-subtext" class="text-[0.6rem] text-slate-300 font-bold tracking-widest uppercase transition-colors duration-300">Finanční partner</span>
+                    </div>
+                </div>
+                <div class="hidden lg:flex items-center justify-center flex-1 gap-1">
+                    <a href="/#sluzby" class="nav-link text-white hover:bg-white/10 hover:backdrop-blur-md">Služby</a>
+                    <div id="nav-divider" class="h-4 w-px bg-white/20 mx-2 transition-colors duration-300"></div>
+                    <a href="/financni-plan/" class="nav-link text-white hover:bg-white/10 hover:backdrop-blur-md">Rodiny a jednotlivci</a>
+                    <div id="nav-divider-2" class="h-4 w-px bg-white/20 mx-2 transition-colors duration-300"></div>
+                    <a href="/podnikatele/" class="nav-link text-white hover:bg-white/10 hover:backdrop-blur-md">Podnikatelé a firmy</a>
+                    <div id="nav-divider-3" class="h-4 w-px bg-white/20 mx-2 transition-colors duration-300"></div>
+                    <div class="nav-dropdown-group relative" aria-haspopup="true">
+                        <span class="nav-dropdown-trigger nav-link text-white hover:bg-white/10 cursor-pointer flex items-center gap-1 rounded-full px-4 py-2.5 transition-colors">
+                            Nástroje
+                            <svg class="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </span>
+                        <div class="nav-dropdown-panel absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 rounded-2xl border border-slate-200/70 bg-white/95 backdrop-blur-xl shadow-lg p-2 z-50 pointer-events-auto">
+                            <a href="/hypotecnikalkulacka/" class="block rounded-xl px-3 py-2.5 hover:bg-slate-50 transition">
+                                <span class="font-medium text-slate-800">Hypoteční kalkulačka</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Měsíční splátka a náklady</span>
+                            </a>
+                            <a href="/investicnikalkulacka/" class="block rounded-xl px-3 py-2.5 hover:bg-slate-50 transition">
+                                <span class="font-medium text-slate-800">Investiční kalkulačka</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Projekce zhodnocení</span>
+                            </a>
+                            <a href="/zivotnikalkulacka/" class="block rounded-xl px-3 py-2.5 hover:bg-slate-50 transition">
+                                <span class="font-medium text-slate-800">Kalkulačka životního pojištění</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Potřebné krytí</span>
+                            </a>
+                            <a href="/penzijnikalkulacka/" class="block rounded-xl px-3 py-2.5 hover:bg-slate-50 transition">
+                                <span class="font-medium text-slate-800">Penzijní kalkulačka</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Státní příspěvky</span>
+                            </a>
+                            <div class="border-t border-slate-100 mt-2 pt-2">
+                                <a href="/#sluzby" class="block rounded-xl px-3 py-2.5 hover:bg-slate-50 transition font-semibold text-brand-main">Všechny kalkulačky →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hlavní obsah (sekce kalkulačky) -->
+    <main>
+        <section id="hypo-srovnavac" class="bg-brand-light py-10 px-4 md:py-20">
+            <div class="max-w-7xl mx-auto">
+
+                <!-- HLAVIČKA KALKULAČKY -->
+                <div class="bg-gradient-to-br from-brand-dark to-[#1e3a6e] rounded-3xl p-8 md:p-12 text-white mb-10 shadow-2xl relative overflow-hidden">
+                    <!-- Decorative Elements -->
+                    <div class="absolute top-0 right-0 w-96 h-96 bg-brand-gold opacity-10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                    
+                    <div class="relative z-10 flex flex-col lg:flex-row justify-between items-start gap-8">
+                        
+                        <!-- Textová část -->
+                        <div class="flex-1">
+                            <h2 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">
+                                Kalkulačka hypoték a úvěrů<br>
+                                <span class="text-brand-gold">Srovnání bez kontaktu</span>
+                            </h2>
+                            <p id="mainDesc" class="text-blue-100 opacity-90 text-lg mb-8 max-w-2xl leading-relaxed">
+                                <strong>Hypotéka bez telefonního čísla</strong> a nutnosti registrace. 
+                                Spočítejte si splátku pro nové bydlení, auto či konsolidaci úvěrů. 
+                                Přesně, rychle a zcela anonymně.
+                            </p>
+
+                            <!-- MAIN PRODUCT SWITCH -->
+                            <div class="flex flex-col gap-4">
+                                <!-- Product Type Switcher -->
+                                <div class="inline-flex bg-slate-900/50 p-1 rounded-xl border border-white/10 w-fit mb-2">
+                                    <button class="prod-switch active px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 bg-brand-gold text-brand-dark shadow-lg" data-prod="mortgage" onclick="switchProduct('mortgage')">
+                                        <i class="fas fa-home mr-2"></i>Hypotéka
+                                    </button>
+                                    <button class="prod-switch px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 text-slate-300 hover:text-white hover:bg-white/5" data-prod="loan" onclick="switchProduct('loan')">
+                                        <i class="fas fa-hand-holding-usd mr-2"></i>Úvěry
+                                    </button>
+                                </div>
+
+                                <!-- Common Tabs (New/Refi) -->
+                                <div id="subTabs" class="inline-flex bg-white/10 p-1.5 rounded-xl backdrop-blur-md border border-white/10 w-fit transition-all duration-300">
+                                    <button class="hx-tab active px-8 py-3 rounded-lg text-sm font-bold transition-all duration-200 bg-white text-brand-dark shadow-lg" data-tab="new" onclick="switchTab('new')">
+                                        <span id="tabNewText">Nová hypotéka</span>
+                                    </button>
+                                    <button class="hx-tab px-8 py-3 rounded-lg text-sm font-bold transition-all duration-200 text-white hover:bg-white/10" data-tab="refi" onclick="switchTab('refi')">
+                                        Refinancování
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recenze -->
+                        <div class="flex flex-col gap-3 min-w-[240px]">
+                            <!-- Google Badge -->
+                            <a href="https://www.google.com/search?q=marek+marek+recenze" 
+                            target="_blank" 
+                            class="review-badge bg-white rounded-xl py-3 px-4 shadow-lg flex items-center gap-4 group no-underline text-slate-800">
+                                <div class="bg-white p-1.5 rounded-full border border-slate-100 shrink-0">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="w-5 h-5">
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <span class="font-bold text-lg">4.8</span>
+                                        <div class="flex text-brand-gold text-xs">
+                                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                                        </div>
+                                        <span class="text-xs text-slate-400">/ 5</span>
+                                    </div>
+                                    <div class="text-xs font-semibold text-slate-500 group-hover:text-brand-gold transition-colors">
+                                        Zobrazit recenze
+                                    </div>
+                                </div>
+                            </a>
+
+                            <!-- Seznam/Firmy.cz Badge -->
+                            <a href="https://www.firmy.cz/detail/13091457-marek-marek-privatni-financni-planovani-roudnice-nad-labem.html" 
+                            target="_blank" 
+                            class="review-badge bg-white rounded-xl py-3 px-4 shadow-lg flex items-center gap-4 group no-underline text-slate-800 trophy-badge">
+                                <!-- Trophy Icon Background -->
+                                <i class="fas fa-trophy trophy-icon"></i>
+                                
+                                <div class="bg-[#cc0000] p-1.5 rounded-full shrink-0 w-8 h-8 flex items-center justify-center text-white font-serif font-bold text-xs">
+                                    S
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-0.5">
+                                        <span class="font-bold text-sm">Firmy.cz</span>
+                                        <i class="fas fa-trophy text-brand-gold text-sm"></i>
+                                    </div>
+                                    <div class="text-xs font-semibold text-slate-500 group-hover:text-[#cc0000] transition-colors">
+                                        Ověřená firma
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- GRID ROZLOŽENÍ -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                    <!-- LEVÁ ČÁST: VSTUPY (7 columns) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        
+                        <!-- Karta vstupů -->
+                        <div class="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-brand-border/60">
+                            
+                            <!-- Product Sub-Type Buttons -->
+                            <div class="mb-8">
+                                <label class="block text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">Typ produktu</label>
+                                
+                                <!-- Buttons Container -->
+                                <div id="subTypeContainer" class="flex flex-wrap gap-3">
+                                    <!-- JS injected buttons will go here -->
+                                </div>
+                                
+                                <!-- Dynamic Info Text -->
+                                <div id="subTypeInfoBox" class="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-700 animate-fade-in hidden">
+                                    <div class="flex items-start gap-3">
+                                        <i class="fas fa-info-circle text-brand-main mt-0.5 text-lg"></i>
+                                        <div id="subTypeInfoText"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Půjčka / Dluh (Základní Input) -->
+                            <div class="mb-10">
+                                <div class="flex justify-between items-end mb-4">
+                                    <label id="loanLabel" class="text-sm font-bold text-slate-600 tracking-wide uppercase">Kolik si chcete půjčit <span class="text-slate-400 font-normal normal-case">(v Kč)</span></label>
+                                    <input type="text" id="loanInputDisplay" class="text-right font-extrabold text-3xl text-brand-dark border-b-2 border-slate-200 focus:border-brand-gold outline-none w-56 bg-transparent transition-colors p-1" value="6 000 000">
+                                </div>
+                                <input type="range" id="loanRange" min="500000" max="30000000" step="100000" value="6000000" class="w-full">
+                                <div class="flex justify-between text-xs font-medium text-slate-400 mt-3">
+                                    <span id="loanMinLabel">500 tis.</span>
+                                    <span id="loanMaxLabel">30 mil.</span>
+                                </div>
+                            </div>
+
+                            <!-- Extra Money (Only for Consolidation) -->
+                            <div id="extraMoneyBlock" class="mb-10 hidden">
+                                <div class="flex justify-between items-end mb-4">
+                                    <label class="text-sm font-bold text-slate-600 tracking-wide uppercase">Potřebujete peníze navíc? <span class="text-slate-400 font-normal normal-case">(v Kč)</span></label>
+                                    <input type="text" id="extraInputDisplay" class="text-right font-extrabold text-3xl text-brand-dark border-b-2 border-slate-200 focus:border-brand-gold outline-none w-56 bg-transparent transition-colors p-1" value="0">
+                                </div>
+                                <input type="range" id="extraRange" min="0" max="1000000" step="10000" value="0" class="w-full">
+                                <div class="flex justify-between text-xs font-medium text-slate-400 mt-3">
+                                    <span>0 Kč</span>
+                                    <span>1 mil.</span>
+                                </div>
+                            </div>
+
+                            <!-- Vlastní zdroje (LTV base logic) -->
+                            <div id="ownResourcesBlock" class="mb-10 transition-all duration-300">
+                                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-3">
+                                    <label class="text-sm font-bold text-slate-600 tracking-wide uppercase">Vlastní zdroje <span class="text-slate-400 font-normal normal-case">(v Kč)</span></label>
+                                    
+                                    <!-- LTV / Akontace Tlačítka -->
+                                    <div id="ltvButtonsContainer" class="flex flex-wrap items-center gap-2 bg-slate-50 p-1 rounded-lg">
+                                        <!-- Injected via JS -->
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end mb-2">
+                                    <input type="text" id="ownInputDisplay" class="text-right font-extrabold text-3xl text-brand-dark border-b-2 border-slate-200 focus:border-brand-gold outline-none w-56 bg-transparent transition-colors p-1" value="600 000">
+                                </div>
+                                
+                                <input type="range" id="ownRange" min="0" max="15000000" step="10000" value="600 000" class="w-full">
+                                <div class="flex justify-between text-xs font-medium text-slate-400 mt-3">
+                                    <span>0 Kč</span>
+                                    <span>15 mil.</span>
+                                </div>
+                                
+                                <!-- Investiční/Americká hypo upozornění -->
+                                <div id="investInfo" class="hidden mt-3 text-xs text-brand-gold font-medium flex items-center gap-2">
+                                    <i class="fas fa-lock"></i> U tohoto typu hypotéky je maximální LTV omezeno (typicky 60–70 %).
+                                </div>
+                            </div>
+
+                            <!-- Info box nemovitost / auto -->
+                            <div id="propertyInfoBlock" class="bg-blue-50/50 rounded-xl p-4 mb-8 flex justify-between items-center border border-blue-100/50 transition-all duration-300">
+                                <div class="text-sm text-slate-500 font-medium">
+                                    <i class="fas fa-home mr-2 text-brand-main" id="propertyIcon"></i>
+                                    <span id="propertyLabel">Hodnota nemovitosti:</span>
+                                </div>
+                                <div class="font-bold text-brand-dark text-lg" id="propertyValueDisplay">6 600 000 Kč</div>
+                            </div>
+
+                            <!-- Parametry Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <!-- Doba splácení (Range Slider for better UX) -->
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-600 mb-4 uppercase tracking-wide">Doba splácení</label>
+                                    <div class="flex items-center gap-4">
+                                        <input type="range" id="termRange" min="5" max="35" step="1" value="30" class="flex-1">
+                                        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-brand-dark min-w-[80px] text-center">
+                                            <span id="termDisplay">30</span> let
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between text-xs font-medium text-slate-400 mt-2">
+                                        <span id="termMinLabel">5 let</span>
+                                        <span id="termMaxLabel">35 let</span>
+                                    </div>
+                                </div>
+
+                                <!-- Fixace (Only for Mortgage) -->
+                                <div id="fixationBlock">
+                                    <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wide">Fixace úroku</label>
+                                    <div class="relative">
+                                        <select id="fix" class="w-full appearance-none bg-slate-50 border border-slate-200 text-brand-dark font-bold py-3.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-transparent cursor-pointer shadow-sm" onchange="calculate()">
+                                            <option value="3">3 roky</option>
+                                            <option value="5" selected>5 let</option>
+                                            <option value="7">7 let</option>
+                                            <option value="10">10 let</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                            <i class="fas fa-chevron-down text-xs"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- LTV info (Optional warning - Only Mortgage) -->
+                            <div id="ltvWarning" class="hidden mt-6 p-4 bg-orange-50 text-orange-800 rounded-xl text-sm border border-orange-100 flex items-start gap-3 transition-all duration-300">
+                                <i class="fas fa-exclamation-triangle mt-0.5 text-brand-gold"></i>
+                                <div>
+                                    <strong>Pozor na vysoké LTV (<span id="ltvValueWarning"></span>%).</strong> 
+                                    Většina bank poskytuje hypotéky maximálně do 80 % nebo 90 % hodnoty nemovitosti.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- PRAVÁ ČÁST: STICKY VÝSLEDEK (5 columns) -->
+                    <div class="lg:col-span-5">
+                        <div class="sticky top-8">
+                            <!-- Dark Card -->
+                            <div class="bg-brand-dark text-white rounded-2xl shadow-2xl shadow-brand-dark/30 border border-slate-800 p-8 overflow-hidden relative">
+                                <!-- Background decoration -->
+                                <div class="absolute top-0 right-0 w-48 h-48 bg-brand-main opacity-20 rounded-full blur-2xl -mr-10 -mt-10"></div>
+                                <div class="absolute bottom-0 left-0 w-32 h-32 bg-brand-gold opacity-10 rounded-full blur-xl -ml-10 -mb-10"></div>
+
+                                <h3 class="text-slate-400 font-medium mb-2 relative z-10 text-sm uppercase tracking-wider">Měsíční splátka od</h3>
+                                <div class="flex items-baseline gap-2 mb-8 relative z-10">
+                                    <span id="monthlyPayment" class="text-5xl md:text-6xl font-black text-white tracking-tight">--</span>
+                                    <span class="text-2xl font-medium text-slate-500">Kč</span>
+                                </div>
+
+                                <div class="space-y-0 relative z-10 bg-slate-800/50 rounded-xl p-1 backdrop-blur-sm border border-white/5">
+                                    <div class="flex justify-between items-center p-4 border-b border-white/10">
+                                        <span class="text-slate-300 text-sm">Odhad úroku</span>
+                                        <span class="font-bold text-brand-gold text-lg" id="rateResult">-- %</span>
+                                    </div>
+                                    <!-- LTV Row -->
+                                    <div id="ltvResultRow" class="flex justify-between items-center p-4 border-b border-white/10 transition-all duration-300">
+                                        <span class="text-slate-300 text-sm" id="ltvResultLabel">LTV</span>
+                                        <span class="font-bold text-brand-gold text-lg" id="ltvResult">-- %</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-4">
+                                        <span class="text-slate-300 text-sm">Celkem zaplatíte</span>
+                                        <span class="font-bold text-white text-lg" id="totalPaidResult">-- Kč</span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-8 relative z-10">
+                                    <button onclick="openGenericModal()" class="group relative w-full bg-gradient-to-r from-brand-gold to-brand-lightgold hover:to-brand-gold text-brand-dark font-extrabold py-5 px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all transform hover:scale-[1.02] overflow-hidden">
+                                        <!-- Shimmer effect -->
+                                        <div class="absolute top-0 left-0 w-full h-full bg-white/30 skew-x-[-20deg] animate-shimmer"></div>
+                                        
+                                        <div class="relative flex items-center justify-center gap-3">
+                                            <span class="text-lg">Chci nezávaznou nabídku</span>
+                                            <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                                        </div>
+                                    </button>
+                                    <p class="text-xs text-slate-500 mt-4 text-center leading-relaxed opacity-60">
+                                        Kliknutím získáte srovnání na míru. Nejedná se o návrh na uzavření smlouvy.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Seznam Bank (ROZTAŽENÉ POD INPUTY) -->
+                <div class="max-w-7xl mx-auto mt-12 mb-20">
+                     <div id="offersContainer" class="grid grid-cols-1 gap-4">
+                        <!-- Offers injected via JS -->
+                     </div>
+                </div>
+
+                <!-- Mobilní floating splátka -->
+                <div id="mobile-result-container" class="lg:hidden hidden-mobile-float">
+                    <div class="bg-brand-dark text-white rounded-2xl shadow-2xl shadow-brand-dark/30 border border-slate-800 p-6 overflow-hidden relative" id="mobile-result-card">
+                         <div class="absolute top-0 right-0 w-32 h-32 bg-brand-main opacity-20 rounded-full blur-2xl -mr-10 -mt-10"></div>
+                         <h3 class="text-slate-400 font-medium mb-1 relative z-10 text-xs uppercase tracking-wider">Měsíční splátka od</h3>
+                         <div class="flex items-baseline gap-2 mb-4 relative z-10">
+                             <span id="monthlyPaymentMobile" class="text-3xl font-black text-white tracking-tight">--</span>
+                             <span class="text-lg font-medium text-slate-500">Kč</span>
+                         </div>
+                         <button onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); openGenericModal();" class="w-full bg-gradient-to-r from-brand-gold to-brand-lightgold text-brand-dark font-extrabold py-3 rounded-xl shadow-lg transition-all">
+                             Získejte nezávaznou nabídku
+                         </button>
+                    </div>
+                </div>
+
+                <!-- 6. NOVÝ ROZCESTNÍK (POD LOGY) -->
+                <div class="max-w-7xl mx-auto mt-20 mb-20 pt-10 border-t border-brand-border/50">
+                    <h3 class="text-2xl font-bold text-[#0a0f29] mb-8 text-center">Spočítejte si sami</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        
+                        <!-- Card 1: Investice -->
+                        <a href="/investicnikalkulacka/" class="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-brand-gold/20 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-brand-gold/30">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#0a0f29] text-white group-hover:bg-brand-gold group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-chart-line text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">Investiční kalkulačka</h4>
+                            <p class="text-slate-500 group-hover:text-slate-700 text-sm transition-colors duration-300">Zhodnocování úspor a tvorba renty na stáří.</p>
+                        </a>
+
+                        <!-- Card 2: Penze -->
+                        <a href="https://www.marek-marek.cz/penzijnikalkulacka" class="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-brand-gold/20 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-brand-gold/30">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#0a0f29] text-white group-hover:bg-brand-gold group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-piggy-bank text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">Penzijní kalkulačka</h4>
+                            <p class="text-slate-500 group-hover:text-slate-700 text-sm transition-colors duration-300">Spočítejte si realitu státního důchodu a nutné úspory.</p>
+                        </a>
+
+                         <!-- Card 3: Životní pojištění -->
+                         <a href="/zivotnikalkulacka/" class="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-brand-gold/20 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-brand-gold/30">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#0a0f29] text-white group-hover:bg-brand-gold group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-heart-pulse text-2xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">Životní pojištění</h4>
+                            <p class="text-slate-500 group-hover:text-slate-700 text-sm transition-colors duration-300">Výpočet potřebného krytí pro zajištění rodiny a příjmů.</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Marquee loga bank -->
+                <div class="mt-24 pt-10 border-t border-brand-border/50 overflow-hidden marquee-container relative">
+                    <div class="flex whitespace-nowrap overflow-hidden py-4">
+                        <div class="flex animate-scroll min-w-full items-center">
+                            <!-- 1st set of logos -->
+                            <img src="/images/kb-logo.png" alt="KB" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=KB';">
+                            <img src="/images/csob-logo.png" alt="ČSOB" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=CSOB';">
+                            <img src="/images/raiffeisenbank-logo.png" alt="Raiffeisen_Bank" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=RB';">
+                            <img src="/images/unicredit-logo.png" alt="UniCredit" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=UCB';">
+                            <img src="/images/ceskasporitelna-logo.png" alt="Česká spořitelna" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=CS';">
+                            
+                            <!-- 2nd set of logos (Duplicate for seamless loop) -->
+                            <img src="/images/kb-logo.png" alt="KB" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=KB';">
+                            <img src="/images/csob-logo.png" alt="ČSOB" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=CSOB';">
+                            <img src="/images/raiffeisenbank-logo.png" alt="Raiffeisen_Bank" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=RB';">
+                            <img src="/images/unicredit-logo.png" alt="UniCredit" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=UCB';">
+                            <img src="/images/ceskasporitelna-logo.png" alt="Česká spořitelna" class="partner-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=CS';">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-brand-dark text-slate-400 py-16 border-t border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="bg-white text-brand-dark font-bold w-8 h-8 flex items-center justify-center rounded">
+                            <img src="../logo_M_white.png" alt="Marek Marek Logo" class="w-full h-full object-contain p-1 invert">
+                        </div>
+                        <span class="text-xl font-bold text-white">Marek Marek.</span>
+                    </div>
+                    <p class="text-sm text-slate-400 mb-4">
+                        Pomáhám klientům budovat a chránit majetek pomocí ověřených strategií.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="https://www.instagram.com/marekmarek_pfp/" class="text-slate-400 hover:text-white transition" target="_blank" rel="noopener"><i class="fab fa-instagram text-xl"></i></a>
+                        <a href="https://www.facebook.com/SMMarkx" class="text-slate-400 hover:text-white transition" target="_blank" rel="noopener"><i class="fab fa-facebook text-xl"></i></a>
+                        <a href="https://www.linkedin.com/in/marek-marek-489394226/" class="text-slate-400 hover:text-white transition" target="_blank" rel="noopener"><i class="fab fa-linkedin text-xl"></i></a>
+                        <a href="http://wa.me/420778511166" class="text-slate-400 hover:text-white transition" target="_blank" rel="noopener"><i class="fab fa-whatsapp text-xl"></i></a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">Menu</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/#sluzby" class="hover:text-brand-gold transition">Služby</a></li>
+                        <li><a href="/hypotecnikalkulacka/" class="hover:text-brand-gold transition">Hypoteční kalkulačka</a></li>
+                        <li><a href="/investicnikalkulacka/" class="hover:text-brand-gold transition">Investiční kalkulačka</a></li>
+                        <li><a href="/financni-plan/" class="hover:text-brand-gold transition">Rodiny a jednotlivci</a></li>
+                        <li><a href="/podnikatele/" class="hover:text-brand-gold transition">Podnikatelé a firmy</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">Kontakt</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 mr-3 text-brand-gold"></i>
+                            <span>Jana z Dražic 99<br>Roudnice nad Labem</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone mr-3 text-brand-gold"></i>
+                            <span>+420 778 511 166</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-envelope mr-3 text-brand-gold"></i>
+                            <a href="mailto:kontakt@marek-marek.cz" class="hover:text-brand-gold transition">kontakt@marek-marek.cz</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">Informace</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/gdpr/" class="hover:text-white transition">Ochrana osobních údajů</a></li>
+                        <li><a href="/cookies/" class="hover:text-white transition">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
+                <p>&copy; 2025 Marek Marek. Všechna práva vyhrazena.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- KONTAKTNÍ MODAL -->
+    <div id="contactModal" class="fixed inset-0 z-50 hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
+        
+        <!-- Modal Content -->
+        <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div id="modalContentContainer" class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 pointer-events-auto relative overflow-hidden">
+                <!-- Modal content injected by renderModalContent() -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript pro funkčnost -->
+    <script>
+        // --- CONFIG & DATA ---
+        // Aktuální sazby dle Hypoindex.cz (listopad 2025), 3Y/5Y fixace do 80 % LTV
+        const banksData = [
+            { id: 'fio', name: 'Fio banka', baseRate: 4.18, loanRate: 5.9, logoUrl: '/images/fio-logo.png' },
+            { id: 'moneta', name: 'Moneta Money Bank', baseRate: 4.19, loanRate: 6.0, logoUrl: '/images/moneta-logo.png' },
+            { id: 'ucb', name: 'UniCredit Bank', baseRate: 4.29, loanRate: 6.5, logoUrl: '/images/unicredit-logo.png' },
+            { id: 'airbank', name: 'Air Bank', baseRate: 4.39, loanRate: 6.2, logoUrl: '/images/airbank-logo.png' },
+            { id: 'rb', name: 'Raiffeisenbank', baseRate: 4.34, loanRate: 5.9, logoUrl: '/images/raiffeisenbank-logo.png' },
+            { id: 'partners', name: 'Partners Banka', baseRate: 4.59, loanRate: 6.4, logoUrl: '/images/partners-logo.png' },
+            { id: 'csob', name: 'ČSOB / Hypoteční banka', baseRate: 4.79, loanRate: 7.9, logoUrl: '/images/csob-logo.png' },
+            { id: 'kb', name: 'Komerční banka', baseRate: 4.59, loanRate: 6.9, logoUrl: '/images/kb-logo.png' },
+            { id: 'cs', name: 'Česká spořitelna', baseRate: 4.59, loanRate: 7.5, logoUrl: '/images/ceskasporitelna-logo.png' },
+            { id: 'mbank', name: 'mBank', baseRate: 4.79, loanRate: 6.2, logoUrl: '/images/mbank-logo.png' }
+        ];
+
+        // Definitions of product sub-types with info text
+        const productTypes = {
+            mortgage: [
+                { id: 'standard', label: 'Klasická', info: 'Nejčastější hypotéka na vlastní bydlení. Výhodná sazba a možnost LTV až 90 %.' },
+                { id: 'investment', label: 'Investiční', info: 'Hypotéka na nemovitost k pronájmu. Pozor: LTV je bankami omezeno na maximálně 70 %.' },
+                { id: 'american', label: 'Americká', info: 'Neúčelová hypotéka zajištěná nemovitostí. Peníze můžete použít na cokoliv, ale sazba bývá vyšší. Max LTV 70 %.' }
+            ],
+            loan: [
+                { id: 'consumer', label: 'Spotřebitelský', info: 'Klasická půjčka na cokoliv bez zajištění nemovitostí. Rychlé vyřízení.' },
+                { id: 'auto', label: 'Auto / Leasing', info: 'Účelová půjčka na nákup automobilu. Často s výhodnější sazbou než běžný úvěr.' },
+                { id: 'consolidation', label: 'Konsolidace', info: 'Sloučení více půjček, kreditek a kontokorentů do jedné. Získáte nižší splátku a lepší přehled.' }
+            ]
+        };
+
+        // --- STATE MANAGEMENT ---
+        let state = {
+            product: 'mortgage', 
+            mortgageType: 'standard', 
+            loanType: 'consumer', 
+            loan: 6000000,
+            own: 600000, 
+            extra: 0, 
+            term: 30,
+            fix: 5,
+            type: 'new',
+            ltvLock: 90 
+        };
+
+        const limits = {
+            mortgage: { min: 500000, max: 30000000, step: 100000, default: 6000000 },
+            loan: { min: 20000, max: 2500000, step: 5000, default: 200000 }
+        };
+
+        // --- DOM ELEMENTS ---
+        function getEls() {
+            return {
+                // Inputs
+                loanRange: document.getElementById('loanRange'),
+                loanInput: document.getElementById('loanInputDisplay'),
+                ownRange: document.getElementById('ownRange'),
+                ownInput: document.getElementById('ownInputDisplay'),
+                extraRange: document.getElementById('extraRange'),
+                extraInput: document.getElementById('extraInputDisplay'),
+                termRange: document.getElementById('termRange'),
+                
+                // Displays
+                propertyValueDisplay: document.getElementById('propertyValueDisplay'),
+                termDisplay: document.getElementById('termDisplay'),
+                monthly: document.getElementById('monthlyPayment'),
+                rate: document.getElementById('rateResult'),
+                ltv: document.getElementById('ltvResult'),
+                ltvLabel: document.getElementById('ltvResultLabel'),
+                total: document.getElementById('totalPaidResult'),
+                
+                // Sections & Labels
+                loanLabel: document.getElementById('loanLabel'),
+                loanMinLabel: document.getElementById('loanMinLabel'),
+                loanMaxLabel: document.getElementById('loanMaxLabel'),
+                termMinLabel: document.getElementById('termMinLabel'),
+                termMaxLabel: document.getElementById('termMaxLabel'),
+                tabNewText: document.getElementById('tabNewText'),
+                propertyLabel: document.getElementById('propertyLabel'),
+                propertyIcon: document.getElementById('propertyIcon'),
+                
+                // Containers
+                subTabs: document.getElementById('subTabs'),
+                ownResourcesBlock: document.getElementById('ownResourcesBlock'),
+                fixationBlock: document.getElementById('fixationBlock'),
+                propertyInfoBlock: document.getElementById('propertyInfoBlock'),
+                extraMoneyBlock: document.getElementById('extraMoneyBlock'),
+                ltvResultRow: document.getElementById('ltvResultRow'),
+                ltvWarning: document.getElementById('ltvWarning'),
+                ltvValueWarning: document.getElementById('ltvValueWarning'),
+                offersContainer: document.getElementById('offersContainer'),
+                
+                // Sub Type Logic
+                subTypeContainer: document.getElementById('subTypeContainer'),
+                subTypeInfoBox: document.getElementById('subTypeInfoBox'),
+                subTypeInfoText: document.getElementById('subTypeInfoText'),
+                investInfo: document.getElementById('investInfo'),
+                ltvButtonsContainer: document.getElementById('ltvButtonsContainer'),
+                
+                // Modals & Switches
+                modal: document.getElementById('contactModal'),
+                modalBackdrop: document.getElementById('modalBackdrop'),
+                modalContentContainer: document.getElementById('modalContentContainer'),
+                tabs: document.querySelectorAll('.hx-tab'),
+                prodSwitches: document.querySelectorAll('.prod-switch'),
+                fixationSelect: document.getElementById('fix')
+            };
+        }
+
+        // --- FORMATTERS ---
+        const formatCurrency = (num) => num.toFixed(0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        const parseCurrency = (str) => parseInt(str.replace(/\s/g, '').replace(' ', ''), 10) || 0;
+
+        // --- RENDER HELPERS ---
+        function renderLtvButtons() {
+            const els = getEls();
+            els.ltvButtonsContainer.innerHTML = '';
+            
+            if (state.product === 'mortgage') {
+                const values = [90, 80, 70, 60, 50];
+                const label = document.createElement('span');
+                label.className = "text-xs font-bold text-slate-400 pl-2";
+                label.innerText = "LTV:";
+                els.ltvButtonsContainer.appendChild(label);
+
+                values.forEach(val => {
+                    const isActive = state.ltvLock === val;
+                    let disabled = false;
+                    if ((state.mortgageType === 'investment' || state.mortgageType === 'american') && val > 70) {
+                        disabled = true;
+                    }
+                    
+                    const button = document.createElement('button');
+                    button.innerText = val + '%';
+                    button.className = `text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${isActive ? 'bg-brand-gold text-brand-dark shadow-md' : 'text-slate-600 hover:bg-brand-gold hover:text-brand-dark'} ${disabled ? 'disabled-btn' : ''}`;
+                    button.onclick = () => { if (!disabled) setLtv(val); };
+                    els.ltvButtonsContainer.appendChild(button);
+                });
+
+            } else if (state.product === 'loan' && state.loanType === 'auto') {
+                const values = [0, 10, 20, 30, 40, 50];
+                const label = document.createElement('span');
+                label.className = "text-xs font-bold text-slate-400 pl-2";
+                label.innerText = "Akontace:";
+                els.ltvButtonsContainer.appendChild(label);
+
+                values.forEach(val => {
+                    const isActive = state.ltvLock === val;
+                    const button = document.createElement('button');
+                    button.innerText = val + '%';
+                    button.className = `text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${isActive ? 'bg-brand-gold text-brand-dark shadow-md' : 'text-slate-600 hover:bg-brand-gold hover:text-brand-dark'}`;
+                    button.onclick = () => setLtv(val);
+                    els.ltvButtonsContainer.appendChild(button);
+                });
+            }
+        }
+
+        function renderSubTypeButtons() {
+            const els = getEls();
+            const types = productTypes[state.product];
+            const currentSelected = state.product === 'mortgage' ? state.mortgageType : state.loanType;
+            
+            let html = '';
+            els.subTypeInfoBox.classList.add('hidden');
+
+            types.forEach(t => {
+                const isActive = t.id === currentSelected;
+                const activeClass = isActive 
+                    ? 'bg-brand-gold text-brand-dark border-brand-gold shadow-md' 
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-white hover:border-slate-300';
+                
+                html += `
+                    <button onclick="selectSubType('${t.id}')" class="${activeClass} px-4 py-3 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 group border">
+                        ${t.label}
+                    </button>
+                `;
+                
+                if (isActive) {
+                    els.subTypeInfoText.innerHTML = t.info;
+                    els.subTypeInfoBox.classList.remove('hidden');
+                }
+            });
+            els.subTypeContainer.innerHTML = html;
+        }
+
+        // --- ACTION HANDLERS ---
+        function selectSubType(id) {
+            if (state.product === 'mortgage') {
+                state.mortgageType = id;
+                if (id === 'investment' || id === 'american') {
+                    const currentLtv = getCalculatedLtv();
+                    if (state.ltvLock > 70 || currentLtv > 70) {
+                        setLtv(70); 
+                    }
+                }
+            } else {
+                state.loanType = id;
+            }
+            updateViewConfig();
+            renderSubTypeButtons();
+            renderLtvButtons();
+            calculate();
+        }
+
+        function switchProduct(prodType) {
+            const els = getEls();
+            state.product = prodType;
+            
+            if (prodType === 'mortgage') {
+                state.mortgageType = 'standard';
+                state.loan = limits.mortgage.default;
+                state.ltvLock = 90;
+                
+                // FINANČNÍ MATEMATIKA: Simplified per user request
+                // Own = 10% of Loan Amount for 90% LTV
+                state.own = state.loan * 0.1;
+
+                els.loanInput.value = formatCurrency(state.loan);
+                els.loanRange.value = state.loan;
+                els.ownInput.value = formatCurrency(state.own);
+                els.ownRange.value = state.own;
+            } else {
+                state.loanType = 'consumer';
+                state.loan = limits.loan.default;
+                state.own = 0; 
+                state.extra = 0; 
+                els.loanInput.value = formatCurrency(state.loan);
+                els.loanRange.value = state.loan;
+            }
+            state.term = 30; 
+            els.termRange.value = state.term;
+
+            els.prodSwitches.forEach(btn => {
+                if(btn.dataset.prod === prodType) {
+                    btn.classList.add('bg-brand-gold', 'text-brand-dark', 'shadow-lg');
+                    btn.classList.remove('text-slate-300', 'hover:bg-white/5');
+                } else {
+                    btn.classList.remove('bg-brand-gold', 'text-brand-dark', 'shadow-lg');
+                    btn.classList.add('text-slate-300', 'hover:bg-white/5');
+                }
+            });
+
+            updateViewConfig();
+            renderSubTypeButtons();
+            renderLtvButtons();
+            calculate();
+        }
+
+        function switchTab(type) {
+            const els = getEls();
+            state.type = type;
+            els.tabs.forEach(t => {
+                if(t.dataset.tab === type) {
+                    t.classList.add('bg-white', 'text-brand-dark', 'shadow-lg');
+                    t.classList.remove('text-white', 'hover:bg-white/10');
+                } else {
+                    t.classList.remove('bg-white', 'text-brand-dark', 'shadow-lg');
+                    t.classList.add('text-white', 'hover:bg-white/10');
+                }
+            });
+            calculate();
+        }
+
+        function updateViewConfig() {
+            const els = getEls();
+            els.tabNewText.innerText = state.product === 'mortgage' ? 'Nová hypotéka' : 'Nový úvěr';
+
+            const lim = limits[state.product];
+            els.loanRange.min = lim.min;
+            els.loanRange.max = lim.max;
+            els.loanRange.step = lim.step;
+            
+            if (state.product === 'mortgage') {
+                els.loanMinLabel.innerText = "500 tis.";
+                els.loanMaxLabel.innerText = "30 mil.";
+                els.termRange.min = 5;
+                els.termRange.max = 35;
+                els.termMinLabel.innerText = "5 let";
+                els.termMaxLabel.innerText = "35 let";
+                els.ownResourcesBlock.classList.remove('hidden');
+                els.fixationBlock.classList.remove('hidden');
+                els.propertyInfoBlock.classList.remove('hidden');
+                els.ltvResultRow.classList.remove('hidden');
+                els.extraMoneyBlock.classList.add('hidden');
+                els.ltvWarning.classList.remove('hidden');
+                els.loanLabel.innerHTML = '<span class="uppercase">Kolik si chcete půjčit</span> <span class="text-slate-400 font-normal normal-case">(v Kč)</span>';
+                els.propertyLabel.innerText = "Hodnota nemovitosti:";
+                els.propertyIcon.className = "fas fa-home mr-2 text-brand-main";
+                els.ltvLabel.innerText = "LTV";
+                
+                if(state.mortgageType === 'investment' || state.mortgageType === 'american') {
+                    els.investInfo.classList.remove('hidden');
+                } else {
+                    els.investInfo.classList.add('hidden');
+                }
+            } else {
+                els.loanMinLabel.innerText = "20 tis.";
+                els.loanMaxLabel.innerText = "2,5 mil.";
+                if(state.loanType === 'auto') {
+                    els.termRange.max = 10;
+                    els.termMaxLabel.innerText = "10 let";
+                } else {
+                    els.termRange.max = 12;
+                    els.termMaxLabel.innerText = "12 let";
+                }
+                els.termRange.min = 1;
+                els.termMinLabel.innerText = "1 rok";
+                els.fixationBlock.classList.add('hidden');
+                els.ltvWarning.classList.add('hidden');
+                els.investInfo.classList.add('hidden'); 
+                
+                if (state.loanType === 'consolidation') {
+                    els.loanLabel.innerHTML = '<span class="uppercase">Kolik máte stávající závazky</span> <span class="text-slate-400 font-normal normal-case">(v Kč)</span>';
+                    els.extraMoneyBlock.classList.remove('hidden');
+                    els.ownResourcesBlock.classList.add('hidden');
+                    els.propertyInfoBlock.classList.add('hidden');
+                    els.ltvResultRow.classList.add('hidden');
+                } 
+                else if (state.loanType === 'auto') {
+                    els.loanLabel.innerHTML = '<span class="uppercase">Cena vozu</span> <span class="text-slate-400 font-normal normal-case">(v Kč)</span>';
+                    els.ownResourcesBlock.classList.remove('hidden'); 
+                    els.propertyInfoBlock.classList.remove('hidden'); 
+                    els.propertyLabel.innerText = "Výše úvěru:";
+                    els.propertyIcon.className = "fas fa-car mr-2 text-brand-main";
+                    els.ltvResultRow.classList.remove('hidden');
+                    els.ltvLabel.innerText = "Akontace";
+                    els.extraMoneyBlock.classList.add('hidden');
+                } 
+                else { 
+                    els.loanLabel.innerHTML = '<span class="uppercase">Kolik si chcete půjčit</span> <span class="text-slate-400 font-normal normal-case">(v Kč)</span>';
+                    els.ownResourcesBlock.classList.add('hidden');
+                    els.propertyInfoBlock.classList.add('hidden');
+                    els.extraMoneyBlock.classList.add('hidden');
+                    els.ltvResultRow.classList.add('hidden');
+                }
+            }
+            els.termDisplay.innerText = state.term;
+        }
+
+        // --- HELPER FOR LTV CALCULATION ---
+        function getCalculatedLtv() {
+            if (state.product === 'mortgage') {
+                const propertyValue = state.loan + state.own;
+                if (propertyValue > 0) {
+                    return Math.round((state.loan / propertyValue) * 100);
+                }
+                return 0;
+            } else if (state.product === 'loan' && state.loanType === 'auto') {
+                if (state.loan > 0) {
+                    return Math.round((state.own / state.loan) * 100); 
+                }
+                return 0;
+            }
+            return 0;
+        }
+
+        // --- LOGIC: UPDATE INPUTS ---
+        function updateLoan(val) {
+            const els = getEls();
+            const lim = limits[state.product];
+            if (val < lim.min) val = lim.min;
+            if (val > lim.max) val = lim.max;
+            
+            state.loan = val;
+            els.loanInput.value = formatCurrency(val);
+            els.loanRange.value = val;
+
+            if (state.ltvLock !== null) {
+                 if (state.product === 'mortgage') {
+                    // Own = (100 - LTV_Button)% * Loan Amount
+                    const ownPercent = (100 - state.ltvLock) / 100;
+                    state.own = Math.round((state.loan * ownPercent) / 1000) * 1000;
+                } 
+                else if (state.product === 'loan' && state.loanType === 'auto') {
+                    const akoDec = state.ltvLock / 100;
+                    state.own = Math.round((state.loan * akoDec) / 1000) * 1000;
+                }
+                
+                els.ownInput.value = formatCurrency(state.own);
+                els.ownRange.value = state.own;
+            }
+            calculate();
+        }
+
+        function updateOwn(val) {
+            const els = getEls();
+            state.own = val;
+            els.ownInput.value = formatCurrency(val);
+            els.ownRange.value = val;
+            state.ltvLock = null; // Manual change breaks LTV button link
+            renderLtvButtons();
+            calculate();
+        }
+        
+        function updateExtra(val) {
+            const els = getEls();
+            state.extra = val;
+            els.extraInput.value = formatCurrency(val);
+            els.extraRange.value = val;
+            calculate();
+        }
+
+        function setLtv(targetVal) {
+            const els = getEls();
+            if ((state.mortgageType === 'investment' || state.mortgageType === 'american') && targetVal > 70) return;
+
+            state.ltvLock = targetVal;
+            renderLtvButtons();
+            
+            if (state.product === 'mortgage') {
+                // Own = (100 - targetVal)% * Loan Amount
+                const ownPercent = (100 - targetVal) / 100;
+                state.own = Math.round((state.loan * ownPercent) / 1000) * 1000;
+            } 
+            else if (state.product === 'loan' && state.loanType === 'auto') {
+                state.own = Math.round((state.loan * (targetVal / 100)) / 1000) * 1000;
+            }
+            
+            els.ownInput.value = formatCurrency(state.own);
+            els.ownRange.value = state.own;
+            calculate();
+        }
+
+        // --- MAIN CALCULATION LOGIC ---
+        function calculate() {
+            const els = getEls();
+            let finalRate = 0;
+            let monthlyPayment = 0;
+            let totalPaid = 0;
+            let borrowingAmount = state.loan;
+
+            // --- MORTGAGE ---
+            if (state.product === 'mortgage') {
+                const propertyValue = state.loan + state.own;
+                els.propertyValueDisplay.innerText = formatCurrency(propertyValue) + " Kč";
+                
+                const calcLtv = getCalculatedLtv();
+                
+                // Rate Adjustment based on LTV
+                let penalty = 0.0;
+                
+                // Penalizace až nad 91% (protože zjednodušený výpočet 90% tlačítka dává reálné LTV cca 91%)
+                if (calcLtv > 91) penalty += 1.5;
+                
+                if (state.mortgageType === 'american') penalty += 1.5; 
+                if (state.mortgageType === 'investment') penalty += 0.4; 
+                if (state.type === 'refi') penalty -= 0.2;
+
+                const base = Math.min(...banksData.map(b => b.baseRate));
+                finalRate = base + penalty;
+
+                // Minimální sazba dle trhu (nejlepší nabídky od 4,18 % – Hypoindex 11/2025)
+                if (finalRate < 4.19) finalRate = 4.19;
+
+                const fixYears = parseInt(els.fixationSelect.value);
+                if (fixYears < 5) finalRate += 0.1;
+                else if (fixYears > 7) {
+                     let discounted = finalRate - 0.15;
+                     if (discounted < 4.19) finalRate = 4.19;
+                     else finalRate = discounted;
+                }
+                
+                // Display LTV (If button is active, we show button value for consistency)
+                els.ltv.innerText = (state.ltvLock !== null ? state.ltvLock : calcLtv) + " %";
+                
+                if (calcLtv > 91) {
+                    els.ltvWarning.classList.remove('hidden');
+                    els.ltvValueWarning.innerText = calcLtv;
+                } else {
+                    els.ltvWarning.classList.add('hidden');
+                }
+            }
+            
+            // --- LOAN ---
+            else {
+                let typeMod = 0;
+                if (state.loanType === 'auto') typeMod = -1.0; 
+                if (state.loanType === 'consolidation') typeMod = -0.5;
+
+                const avgRate = (banksData.reduce((acc, b) => acc + (b.loanRate || 7.0), 0) / banksData.length);
+                finalRate = avgRate + typeMod; 
+
+                if (state.loanType === 'auto') {
+                    borrowingAmount = Math.max(0, state.loan - state.own); 
+                    els.propertyValueDisplay.innerText = formatCurrency(borrowingAmount) + " Kč"; 
+                    els.ltv.innerText = getCalculatedLtv() + " %";
+                }
+                else if (state.loanType === 'consolidation') {
+                    borrowingAmount = state.loan + state.extra;
+                }
+            }
+            
+            const r = finalRate / 100 / 12; 
+            const n = state.term * 12; 
+            
+            if (borrowingAmount > 0) {
+                monthlyPayment = (r > 0) ? (borrowingAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : borrowingAmount / n;
+            }
+
+            totalPaid = monthlyPayment * n;
+
+            els.monthly.innerText = formatCurrency(Math.round(monthlyPayment));
+            els.rate.innerText = finalRate.toFixed(2).replace('.', ',') + ' %';
+            els.total.innerText = formatCurrency(Math.round(totalPaid)) + ' Kč';
+
+            renderOffers(finalRate, n, borrowingAmount);
+        }
+
+        function renderOffers(calcRate, months, borrowingAmount) {
+            const els = getEls();
+            let html = '';
+            
+            const sorted = [...banksData].sort((a,b) => {
+                if(state.product === 'mortgage') return a.baseRate - b.baseRate;
+                return (a.loanRate || 10) - (b.loanRate || 10);
+            });
+
+            sorted.forEach((bank, index) => {
+                let bankRateVal = 0;
+                if (state.product === 'mortgage') {
+                    let p = 0;
+                    let ltv = getCalculatedLtv();
+                    
+                    if(ltv > 91) p += 1.5; 
+                    
+                    if(state.mortgageType==='american') p+=1.5;
+                    if(state.mortgageType==='investment') p+=0.4;
+                    if(state.type==='refi') p-=0.2;
+                    const fixYears = parseInt(els.fixationSelect.value);
+                    if (fixYears < 5) p += 0.1; 
+                    else if (fixYears > 7) p -= 0.15;
+                    
+                    bankRateVal = bank.baseRate + p;
+                    if(bankRateVal < 4.19) bankRateVal = 4.19;
+                } else {
+                    let mod = 0;
+                    if(state.loanType === 'auto') mod = -1.0;
+                    if(state.loanType === 'consolidation') mod = -0.5;
+                    bankRateVal = (bank.loanRate || 6.9) + mod;
+                }
+
+                const r = bankRateVal/100/12;
+                let pmt = borrowingAmount > 0 ? Math.round((r > 0) ? (borrowingAmount * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1) : borrowingAmount / months) : 0;
+                
+                const delay = index * 70;
+                html += `
+                <div class="animate-fade-in bg-white border border-slate-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-6 hover:shadow-lg hover:border-brand-gold transition-all group" style="animation-delay: ${delay}ms">
+                    <img src="${bank.logoUrl}" class="bank-logo h-8" onerror="this.onerror=null;this.src='https://placehold.co/100x30/1e293b/ffffff?text=${bank.id.toUpperCase()}';">
+                    <div class="flex-1 flex flex-row justify-between w-full md:w-auto items-center gap-4">
+                        <div class="text-center md:text-left">
+                            <div class="text-xs text-slate-400 font-semibold uppercase">Úrok</div>
+                            <div class="font-bold text-brand-dark text-lg">${bankRateVal.toFixed(2).replace('.', ',')} %</div>
+                        </div>
+                        <div class="text-center md:text-right">
+                            <div class="text-xs text-slate-400 font-semibold uppercase">Měsíčně</div>
+                            <div class="font-bold text-xl text-brand-dark">${formatCurrency(pmt)} Kč</div>
+                        </div>
+                    </div>
+                    <button onclick="openModal('${bank.name}')" class="bg-gradient-to-r from-brand-gold to-brand-lightgold text-brand-dark font-bold py-2 px-6 rounded-xl shadow-md hover:shadow-lg hover:from-brand-lightgold hover:to-brand-gold transition-all transform hover:-translate-y-0.5 w-full md:w-auto">
+                        Chci nabídku
+                    </button>
+                </div>`;
+            });
+            els.offersContainer.innerHTML = html;
+        }
+
+        // --- MODAL & FORM ---
+        function renderModalContent(bankName, contextText) {
+            return `
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-brand-dark transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 z-10">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="bg-gradient-to-r from-slate-50 to-white px-8 py-8 border-b border-slate-100">
+                    <h3 class="text-2xl font-bold text-brand-dark">Mám zájem o nabídku</h3>
+                    <p class="text-sm text-slate-600 mt-2 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-brand-gold"></i>
+                        <span>${contextText}</span>
+                    </p>
+                </div>
+                <div class="p-8">
+                    <form id="leadForm" onsubmit="submitForm(event)" method="POST" action="https://formsubmit.co/ajax/kontakt@marek-marek.cz">
+                        <input type="hidden" name="banka" value="${bankName || 'Obecná poptávka'}">
+                        <input type="hidden" name="typ_produktu" value="${state.product === 'mortgage' ? 'Hypotéka' : 'Úvěr'}">
+                        <input type="hidden" name="typ_detail" value="${state.product === 'mortgage' ? state.mortgageType : state.loanType}">
+                        <input type="hidden" name="vyse_uveru" value="${state.loan}">
+                        <input type="hidden" name="vlastni_zdroje" value="${state.own}">
+                        <input type="hidden" name="doba_splaceni" value="${state.term}">
+                        <input type="hidden" name="fixace" value="${state.fix}">
+                        <input type="hidden" name="ltv_akontace" value="${getCalculatedLtv()}">
+
+                        <div class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Jméno a příjmení <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <i class="fas fa-user absolute left-4 top-3.5 text-slate-400"></i>
+                                    <input type="text" name="name" required placeholder="Jan Novák" class="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-brand-gold outline-none transition-shadow bg-slate-50">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">E-mail <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <i class="fas fa-envelope absolute left-4 top-3.5 text-slate-400"></i>
+                                    <input type="email" name="email" required placeholder="vas@email.cz" class="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-brand-gold outline-none transition-shadow bg-slate-50">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Telefon <span class="text-slate-400 font-normal">(nepovinné)</span></label>
+                                <div class="relative">
+                                    <i class="fas fa-phone absolute left-4 top-3.5 text-slate-400"></i>
+                                    <input type="tel" name="phone" placeholder="+420 777 ..." class="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-brand-gold outline-none transition-shadow bg-slate-50">
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3 mt-2 bg-blue-50/50 p-3 rounded-lg">
+                                <input type="checkbox" id="consent" required class="mt-1 w-4 h-4 text-brand-gold rounded border-slate-300">
+                                <label for="consent" class="text-xs text-slate-600 cursor-pointer">
+                                    Souhlasím se zpracováním osobních údajů za účelem vytvoření nezávazné nabídky.
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full mt-8 bg-brand-dark hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+                            <span>Odeslat poptávku</span>
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </form>
+                </div>`;
+        }
+
+        function openGenericModal() {
+            const els = getEls();
+            const contextText = "Poptáváte srovnání <strong>všech bank</strong>";
+            els.modalContentContainer.innerHTML = renderModalContent(null, contextText);
+            openModalInternal();
+        }
+
+        function openModal(bankName) {
+            const els = getEls();
+            const contextText = `Vybraná banka: <strong class="text-brand-main">${bankName}</strong>`;
+            els.modalContentContainer.innerHTML = renderModalContent(bankName, contextText);
+            openModalInternal();
+        }
+        
+        function openModalInternal() {
+            const els = getEls();
+            els.modal.classList.remove('hidden');
+            setTimeout(() => {
+                els.modalBackdrop.classList.remove('opacity-0');
+                els.modalContentContainer.classList.remove('opacity-0', 'scale-95');
+                els.modalContentContainer.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const els = getEls();
+            els.modalBackdrop.classList.add('opacity-0');
+            els.modalContentContainer.classList.remove('scale-100');
+            els.modalContentContainer.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => els.modal.classList.add('hidden'), 300);
+        }
+        
+        async function submitForm(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Odesílám...';
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch("https://formsubmit.co/ajax/kontakt@marek-marek.cz", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                     document.getElementById('modalContentContainer').innerHTML = `
+                        <div class="p-12 text-center">
+                            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-sm"><i class="fas fa-check"></i></div>
+                            <h3 class="2xl font-bold text-brand-dark mb-2">Poptávka odeslána!</h3>
+                            <p class="text-slate-600 mb-8">Děkuji. Budu Vás brzy kontaktovat.</p>
+                            <button onclick="closeModal()" class="text-brand-gold font-bold hover:underline">Zavřít okno</button>
+                        </div>`;
+                } else {
+                    throw new Error('Chyba při odesílání');
+                }
+            } catch (error) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert("Omlouváme se, došlo k chybě při odesílání formuláře. Zkuste to prosím později.");
+                console.error(error);
+            }
+        }
+
+        // --- HEADER JS ---
+        function updateHeader() {
+            const byId = (id) => document.getElementById(id);
+            const $$ = (selector) => document.querySelectorAll(selector);
+            const navbar = byId('navbar');
+            const logoIcon = byId('logo-icon');
+            const logoText = byId('logo-text');
+            const logoSubtext = byId('logo-subtext');
+            const navLinks = $$('.nav-link');
+            const dividers = $$('[id^="nav-divider"]');
+            const logoImg = byId('logo-img');
+
+            if (!navbar) return;
+
+            if (window.scrollY > 20) {
+                navbar.classList.add('glass-header-scrolled');
+                navbar.classList.remove('glass-header-top');
+                if(logoIcon) { logoIcon.classList.remove('bg-white', 'text-brand-dark'); logoIcon.classList.add('bg-brand-dark', 'text-white'); }
+                if(logoImg) { logoImg.classList.remove('invert'); }
+                if(logoText) { logoText.classList.remove('text-white'); logoText.classList.add('text-brand-dark'); }
+                if(logoSubtext) { logoSubtext.classList.remove('text-slate-300'); logoSubtext.classList.add('text-slate-500'); }
+                navLinks.forEach(link => { link.classList.remove('text-white'); link.classList.add('text-brand-main'); });
+                dividers.forEach(div => { div.classList.remove('bg-white/20'); div.classList.add('bg-brand-border'); });
+            } else {
+                navbar.classList.remove('glass-header-scrolled');
+                navbar.classList.add('glass-header-top');
+                if(logoIcon) { logoIcon.classList.add('bg-white', 'text-brand-dark'); logoIcon.classList.remove('bg-brand-dark', 'text-white'); }
+                if(logoImg) { logoImg.classList.add('invert'); }
+                if(logoText) { logoText.classList.add('text-white'); logoText.classList.remove('text-brand-dark'); }
+                if(logoSubtext) { logoSubtext.classList.add('text-slate-300'); logoSubtext.classList.remove('text-slate-500'); }
+                navLinks.forEach(link => { link.classList.add('text-white'); link.classList.remove('text-brand-main'); });
+                dividers.forEach(div => { div.classList.add('bg-white/20'); div.classList.remove('bg-brand-border'); });
+            }
+        }
+
+        function initHeaderListeners() {
+            window.addEventListener('scroll', updateHeader);
+            updateHeader(); 
+        }
+        
+        // --- MAIN INIT ---
+        function init() {
+            const els = getEls();
+            els.loanRange.addEventListener('input', (e) => updateLoan(parseInt(e.target.value)));
+            els.ownRange.addEventListener('input', (e) => updateOwn(parseInt(e.target.value)));
+            els.loanInput.addEventListener('change', (e) => updateLoan(parseCurrency(e.target.value)));
+            els.ownInput.addEventListener('change', (e) => updateOwn(parseCurrency(e.target.value)));
+            els.termRange.addEventListener('input', (e) => {
+                state.term = parseInt(e.target.value);
+                els.termDisplay.innerText = state.term;
+                calculate();
+            });
+            initHeaderListeners();
+            switchProduct('mortgage');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+    <script>
+(function() {
+    var byId = function(id) { return document.getElementById(id); };
+    var $$ = function(sel) { return document.querySelectorAll(sel); };
+
+    function updateHeader() {
+        var navbar = byId('navbar');
+        if (!navbar) return;
+
+        var logoIcon = byId('logo-icon');
+        var logoImg = byId('logo-img');
+        var logoText = byId('logo-text');
+        var logoSubtext = byId('logo-subtext');
+        var navLinks = $$('.nav-link');
+        var dividers = $$('[id^="nav-divider"]');
+
+        if (window.scrollY > 20) {
+            navbar.classList.add('glass-header-scrolled');
+            navbar.classList.remove('glass-header-top');
+            if (logoIcon) { logoIcon.classList.remove('bg-white', 'text-brand-dark'); logoIcon.classList.add('bg-brand-dark', 'text-white'); }
+            if (logoImg) logoImg.classList.remove('invert');
+            if (logoText) { logoText.classList.remove('text-white'); logoText.classList.add('text-brand-dark'); }
+            if (logoSubtext) { logoSubtext.classList.remove('text-slate-300'); logoSubtext.classList.add('text-slate-500'); }
+            navLinks.forEach(function(link) {
+                link.classList.remove('text-white', 'hover:bg-white/10', 'hover:backdrop-blur-md');
+                link.classList.add('text-brand-main', 'hover:bg-brand-light');
+            });
+            dividers.forEach(function(div) {
+                div.classList.remove('bg-white/20');
+                div.classList.add('bg-brand-border');
+            });
+        } else {
+            navbar.classList.remove('glass-header-scrolled');
+            navbar.classList.add('glass-header-top');
+            if (logoIcon) { logoIcon.classList.add('bg-white', 'text-brand-dark'); logoIcon.classList.remove('bg-brand-dark', 'text-white'); }
+            if (logoImg) logoImg.classList.add('invert');
+            if (logoText) { logoText.classList.add('text-white'); logoText.classList.remove('text-brand-dark'); }
+            if (logoSubtext) { logoSubtext.classList.add('text-slate-300'); logoSubtext.classList.remove('text-slate-500'); }
+            navLinks.forEach(function(link) {
+                link.classList.add('text-white', 'hover:bg-white/10', 'hover:backdrop-blur-md');
+                link.classList.remove('text-brand-main', 'hover:bg-brand-light');
+            });
+            dividers.forEach(function(div) {
+                div.classList.add('bg-white/20');
+                div.classList.remove('bg-brand-border');
+            });
+        }
+    }
+
+    window.addEventListener('scroll', updateHeader);
+    document.addEventListener('DOMContentLoaded', function() {
+        updateHeader();
+    });
+})();
+    </script>
+</body>
+</html>
