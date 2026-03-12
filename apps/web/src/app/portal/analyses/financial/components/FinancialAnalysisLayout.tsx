@@ -15,10 +15,11 @@ import { StepGoals } from "./steps/StepGoals";
 import { StepStrategy } from "./steps/StepStrategy";
 import { StepIncomeProtection } from "./steps/StepIncomeProtection";
 import { StepSummary } from "./steps/StepSummary";
+import { StepBenefitsRisks } from "./steps/StepBenefitsRisks";
 import { PersonalFALinkBanner } from "./PersonalFALinkBanner";
 import { StickyNote, CheckSquare, FileText } from "lucide-react";
 
-const STEP_COMPONENTS = [
+const STEP_COMPONENTS_BASE = [
   StepClientInfo,
   StepCashflow,
   StepAssetsLiabilities,
@@ -28,6 +29,21 @@ const STEP_COMPONENTS = [
   StepIncomeProtection,
   StepSummary,
 ];
+
+function getStepComponents(includeCompany: boolean) {
+  if (!includeCompany) return STEP_COMPONENTS_BASE;
+  return [
+    StepClientInfo,
+    StepCashflow,
+    StepBenefitsRisks,
+    StepAssetsLiabilities,
+    StepCredits,
+    StepGoals,
+    StepStrategy,
+    StepIncomeProtection,
+    StepSummary,
+  ];
+}
 
 export function FinancialAnalysisLayout() {
   const router = useRouter();
@@ -42,7 +58,8 @@ export function FinancialAnalysisLayout() {
   const prevStep = useFinancialAnalysisStore((s) => s.prevStep);
   const nextStep = useFinancialAnalysisStore((s) => s.nextStep);
 
-  const StepComponent = STEP_COMPONENTS[currentStep - 1];
+  const stepComponents = getStepComponents(data.includeCompany ?? false);
+  const StepComponent = stepComponents[currentStep - 1];
 
   async function handleConvertToTask() {
     setConvertError(null);

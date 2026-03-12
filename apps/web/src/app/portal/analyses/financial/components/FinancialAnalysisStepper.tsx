@@ -1,19 +1,21 @@
 "use client";
 
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
-import { STEP_TITLES } from "@/lib/analyses/financial/constants";
+import { getStepTitles } from "@/lib/analyses/financial/constants";
 import { Check } from "lucide-react";
 import clsx from "clsx";
 
 export function FinancialAnalysisStepper() {
   const currentStep = useFinancialAnalysisStore((s) => s.currentStep);
   const totalSteps = useFinancialAnalysisStore((s) => s.totalSteps);
+  const includeCompany = useFinancialAnalysisStore((s) => s.data.includeCompany ?? false);
   const goToStep = useFinancialAnalysisStore((s) => s.goToStep);
+  const stepTitles = getStepTitles(includeCompany);
 
   return (
     <div className="w-full max-w-4xl mb-8 relative z-10 overflow-x-auto">
       <div className="flex justify-between items-center relative min-w-0">
-        {STEP_TITLES.map((title, i) => {
+        {stepTitles.map((title, i) => {
           const stepNum = i + 1;
           const isActive = currentStep === stepNum;
           const isCompleted = currentStep > stepNum;

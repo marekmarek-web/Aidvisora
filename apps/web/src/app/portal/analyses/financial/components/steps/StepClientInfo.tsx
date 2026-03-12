@@ -20,6 +20,7 @@ function ageFromBirthDate(birthDate: string): number | null {
 export function StepClientInfo() {
   const data = useFinancialAnalysisStore((s) => s.data);
   const setClient = useFinancialAnalysisStore((s) => s.setClient);
+  const setData = useFinancialAnalysisStore((s) => s.setData);
   const setPartner = useFinancialAnalysisStore((s) => s.setPartner);
   const addChild = useFinancialAnalysisStore((s) => s.addChild);
   const updateChild = useFinancialAnalysisStore((s) => s.updateChild);
@@ -28,6 +29,7 @@ export function StepClientInfo() {
   const client = data.client;
   const partner = data.partner;
   const children = data.children;
+  const includeCompany = data.includeCompany ?? false;
   const age = ageFromBirthDate(client.birthDate);
 
   return (
@@ -125,6 +127,19 @@ export function StepClientInfo() {
             className="w-5 h-5 text-indigo-500 rounded border-slate-300 focus:ring-indigo-400"
           />
           <label htmlFor="has-partner" className="text-slate-700 font-bold cursor-pointer select-none">Přidat partnera / partnerku</label>
+        </div>
+
+        <div className="bg-amber-50/80 p-4 rounded-xl border border-amber-200 flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="include-company"
+            checked={includeCompany}
+            onChange={(e) => setData({ includeCompany: e.target.checked })}
+            className="min-w-[20px] w-5 h-5 text-indigo-500 rounded border-slate-300 focus:ring-indigo-400"
+          />
+          <label htmlFor="include-company" className="text-slate-700 font-bold cursor-pointer select-none">
+            Tato analýza zahrnuje i firmu (s.r.o.)
+          </label>
         </div>
 
         {client.hasPartner && (

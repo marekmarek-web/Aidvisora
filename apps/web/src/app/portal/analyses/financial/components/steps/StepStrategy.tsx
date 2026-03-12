@@ -2,8 +2,40 @@
 
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
-import { getProductName, getStrategyProfileLabel, formatCzk, formatPercent } from "@/lib/analyses/financial/formatters";
+import { getProductName, getStrategyProfileLabel, formatCzk } from "@/lib/analyses/financial/formatters";
+import { FUND_DETAILS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
+
+const MIN_RATE = 0.01;
+const MAX_RATE = 0.25;
+
+/** Vrátí možnosti zhodnocení: default−1 %, default, default+1 % (clamp 1–25 %), bez duplicit. */
+function getYieldOptions(productKey: string): { value: number; label: string }[] {
+  const detail = FUND_DETAILS[productKey];
+  const defaultRate = detail?.defaultRate ?? 0.06;
+  const seen = new Set<number>();
+  return [-0.01, 0, 0.01]
+    .map((off) => {
+      const rate = Math.round((defaultRate + off) * 100) / 100;
+      const clamped = Math.max(MIN_RATE, Math.min(MAX_RATE, rate));
+      return { value: clamped, label: `${Math.round(clamped * 100)} %` };
+    })
+    .filter((o) => {
+      if (seen.has(o.value)) return false;
+      seen.add(o.value);
+      return true;
+    });
+}
+
+/** Pro select: pokud aktuální rate není v options, vrátí střední (default) hodnotu. */
+function getSelectYield(productKey: string, currentRate: number | undefined): number {
+  const opts = getYieldOptions(productKey);
+  const rate = currentRate ?? FUND_DETAILS[productKey]?.defaultRate ?? 0.06;
+  const exact = opts.find((o) => Math.abs(o.value - rate) < 0.001);
+  if (exact) return exact.value;
+  const mid = opts[Math.floor(opts.length / 2)];
+  return mid?.value ?? 0.06;
+}
 
 const PROFILE_OPTIONS = [
   { value: "dynamic" as const, label: "Dynamický" },
@@ -30,10 +62,8 @@ export function StepStrategy() {
   const investments = data.investments ?? [];
   const totals = selectStrategyTotals(data);
 
-  const applyYieldOffset = (inv: (typeof investments)[0], offset: -1 | 0 | 1) => {
-    const base = inv.annualRate ?? 0.06;
-    const newRate = Math.round((base + offset * 0.01) * 100) / 100;
-    const clamped = Math.max(0.01, Math.min(0.25, newRate));
+  const setYield = (inv: (typeof investments)[0], rate: number) => {
+    const clamped = Math.max(MIN_RATE, Math.min(MAX_RATE, rate));
     updateInvestment(inv.productKey, inv.type, "annualRate", clamped);
   };
 
@@ -95,18 +125,18 @@ export function StepStrategy() {
                   <div className="font-bold text-slate-800 text-sm mb-2">{getProductName(inv.productKey)}</div>
                   <div className="text-xs text-slate-500 mb-2">{getTypeLabel(inv.type)}</div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="text-xs font-semibold text-slate-600">Zhodnocení:</span>
-                    {([-1, 0, 1] as const).map((off) => (
-                      <button
-                        key={off}
-                        type="button"
-                        onClick={() => applyYieldOffset(inv, off)}
-                        className="min-h-[36px] px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-indigo-100 hover:text-indigo-700"
-                      >
-                        {off === -1 ? "−1 %" : off === 0 ? "0" : "+1 %"}
-                      </button>
-                    ))}
-                    <span className="text-xs text-slate-500 ml-1">→ {(inv.annualRate ?? 0) * 100} % p.a.</span>
+                    <label className="text-xs font-semibold text-slate-600">Zhodnocení:</label>
+                    <select
+                      value={getSelectYield(inv.productKey, inv.annualRate)}
+                      onChange={(e) => setYield(inv, parseFloat(e.target.value))}
+                      className="min-h-[44px] px-3 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    >
+                      {getYieldOptions(inv.productKey).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <div>

@@ -72,6 +72,43 @@ export interface CashflowState {
   isReserveMet?: boolean;
 }
 
+/** Finance firmy (krok 2 FA s.r.o.) – výnosy, zisk, rezerva, měsíční splátka úvěrů. */
+export interface CompanyFinance {
+  /** Roční tržby (Kč) */
+  revenue?: number;
+  /** Roční zisk / EBITDA (Kč) */
+  profit?: number;
+  /** Hotovostní rezerva firmy (Kč) */
+  reserve?: number;
+  /** Úvěry/Leasingy – měsíční splátka (Kč) */
+  loanPayment?: number;
+}
+
+/** Benefity firmy – DPS/DIP/IŽP, příspěvky, počet zaměstnanců, jednatelé. */
+export interface CompanyBenefits {
+  dps?: boolean;
+  dip?: boolean;
+  izp?: boolean;
+  /** Příspěvek na osobu (Kč/měsíc) */
+  amountPerPerson?: number;
+  /** Počet zaměstnanců */
+  employeeCount?: number;
+  /** Příspěvky jednatelům (Kč/měsíc celkem) */
+  directorsAmount?: number;
+  /** Roční náklad (vypočteno nebo zadané) */
+  annualCost?: number;
+}
+
+/** Rizika pojištění firmy – zaškrtávací položky (6 kategorií). */
+export interface CompanyRisks {
+  property?: boolean;
+  interruption?: boolean;
+  liability?: boolean;
+  director?: boolean;
+  fleet?: boolean;
+  cyber?: boolean;
+}
+
 export interface AssetListItem {
   id: number;
   type: string;
@@ -266,6 +303,14 @@ export interface FinancialAnalysisData {
   client: ClientInfo;
   partner: PartnerInfo;
   children: ChildEntry[];
+  /** Tato analýza zahrnuje i firmu (s.r.o.) – zobrazí cashflow firmy a krok Benefity & Rizika */
+  includeCompany?: boolean;
+  /** Finance firmy (výnosy, zisk, rezerva, splátky) – když includeCompany */
+  companyFinance?: CompanyFinance;
+  /** Benefity firmy (DPS/DIP/IŽP, příspěvky) – když includeCompany */
+  companyBenefits?: CompanyBenefits;
+  /** Pojištění firmy – rizika (Majetek, Přerušení, …) – když includeCompany */
+  companyRisks?: CompanyRisks;
   cashflow: CashflowState;
   assets: AssetsState;
   liabilities: LiabilitiesState;
@@ -303,6 +348,8 @@ export interface FundDetail {
   liquidity: string;
   suitable: string;
   why: string;
+  /** Výchozí roční zhodnocení (např. 0.06 = 6 %); pro dropdown průměr ±1 % */
+  defaultRate?: number;
 }
 
 /** Liability provider group */

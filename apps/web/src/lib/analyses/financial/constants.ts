@@ -16,6 +16,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Čtvrtletní / Roční',
     suitable: 'Konzervativní investoři',
     why: 'Zajišťuje stabilní, inflaci překonávající výnos s nižší volatilitou.',
+    defaultRate: 0.06,
   },
   atris: {
     name: 'ATRIS',
@@ -27,6 +28,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Roční',
     suitable: 'Investoři s delším horizontem',
     why: 'Přináší expozici vůči reálným aktivům mimo veřejné trhy.',
+    defaultRate: 0.06,
   },
   penta: {
     name: 'PENTA Public',
@@ -38,6 +40,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Čtvrtletní (s výpovědní lhůtou)',
     suitable: 'Zkušení investoři',
     why: 'Umožňuje podílet se na úspěchu největších firem v regionu.',
+    defaultRate: 0.09,
   },
   ishares: {
     name: 'iShares Core MSCI World',
@@ -49,6 +52,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Denní (Burza)',
     suitable: 'Všichni investoři (základ portfolia)',
     why: 'Maximální diverzifikace za minimální poplatek.',
+    defaultRate: 0.12,
   },
   fidelity2040: {
     name: 'Fidelity Target 2040',
@@ -60,6 +64,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Denní',
     suitable: 'Investoři s cílem kolem roku 2040',
     why: 'Automaticky řídí alokaci a snižuje riziko s blížícím se cílem.',
+    defaultRate: 0.07,
   },
   conseq: {
     name: 'Conseq Globální',
@@ -71,6 +76,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Denní',
     suitable: 'Pravidelné investování',
     why: 'Aktivní správa může v určitých fázích překonat trh.',
+    defaultRate: 0.06,
   },
 };
 
@@ -239,4 +245,16 @@ export const STEP_TITLES = [
   'Shrnutí',
 ] as const;
 
+/** Počet kroků bez firemního rozšíření. */
 export const TOTAL_STEPS = 8;
+
+/** Titulky kroků; při includeCompany vloží „Benefity & Rizika“ za Cashflow. */
+export function getStepTitles(includeCompany: boolean): readonly string[] {
+  if (!includeCompany) return STEP_TITLES;
+  return [
+    STEP_TITLES[0],
+    STEP_TITLES[1],
+    'Benefity & Rizika',
+    ...STEP_TITLES.slice(2),
+  ];
+}

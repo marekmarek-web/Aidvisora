@@ -3,7 +3,7 @@
  * Extracted from financni-analyza.html (Phase 1). Preserve formulas 1:1.
  */
 
-import type { FinancialAnalysisData, CashflowIncomes, CashflowExpenses, GoalEntry, InvestmentEntry, InsuranceExpenseItem, BenefitVsSalaryComparison } from './types';
+import type { FinancialAnalysisData, CashflowIncomes, CashflowExpenses, GoalEntry, InvestmentEntry, InsuranceExpenseItem, BenefitVsSalaryComparison, CompanyFinance } from './types';
 import { RENTA_INFLATION, RENTA_WITHDRAWAL_RATE, BENEFIT_OPTIMIZATION } from './constants';
 
 /** Options for benefit vs salary comparison (optional owner tax savings for director/owner). */
@@ -48,6 +48,17 @@ export function reserveGap(reserveCash: number, target: number): number {
 
 export function isReserveMet(reserveCash: number, target: number): boolean {
   return reserveCash >= target;
+}
+
+/** Cash runway firmy (měsíce): rezerva / (měsíční zisk − měsíční splátka). Nula nebo záporný cashflow → null. */
+export function companyRunway(cf: CompanyFinance | undefined): number | null {
+  if (!cf) return null;
+  const reserve = Number(cf.reserve) || 0;
+  const profit = Number(cf.profit) || 0;
+  const loanPayment = Number(cf.loanPayment) || 0;
+  const monthlySurplus = profit / 12 - loanPayment;
+  if (monthlySurplus <= 0) return null;
+  return reserve / monthlySurplus;
 }
 
 // ----- Assets / Liabilities -----

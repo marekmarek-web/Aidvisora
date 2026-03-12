@@ -34,6 +34,8 @@ export function getDefaultState(): FinancialAnalysisData {
     },
     partner: { name: '', birthDate: '', occupation: '', sports: '' },
     children: [],
+    includeCompany: false,
+    companyFinance: undefined,
     cashflow: {
       incomeType: 'zamestnanec',
       incomeGross: 0,

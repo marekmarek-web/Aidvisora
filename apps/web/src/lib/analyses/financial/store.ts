@@ -122,29 +122,45 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
 
   hydrate: () => {
     const loaded = loadFromStorage();
-    if (loaded) set({ data: loaded.data, currentStep: loaded.currentStep });
+    if (loaded) {
+      const totalSteps = loaded.data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+      const currentStep = Math.min(loaded.currentStep, totalSteps);
+      set({ data: loaded.data, currentStep, totalSteps });
+    }
   },
 
   loadFromServerPayload: (parsed) => {
     const loaded = mergeLoadedState(defaultData, parsed);
-    set({ data: loaded.data, currentStep: loaded.currentStep });
+    const totalSteps = loaded.data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+    const currentStep = Math.min(loaded.currentStep, totalSteps);
+    set({ data: loaded.data, currentStep, totalSteps });
   },
 
   setAnalysisId: (id) => set({ analysisId: id }),
 
   setData: (partial) => {
-    set((s) => ({ data: { ...s.data, ...partial } }));
+    set((s) => {
+      const newData = { ...s.data, ...partial };
+      const totalSteps = newData.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+      let currentStep = s.currentStep;
+      if (currentStep > totalSteps) currentStep = totalSteps;
+      return { data: newData, totalSteps, currentStep };
+    });
     get().saveToStorage();
   },
 
   setCurrentStep: (step) => {
-    const n = Math.max(1, Math.min(TOTAL_STEPS, step));
+    const { data } = get();
+    const maxStep = data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+    const n = Math.max(1, Math.min(maxStep, step));
     set({ currentStep: n });
     get().saveToStorage();
   },
 
   goToStep: (step) => {
-    if (step >= 1 && step <= TOTAL_STEPS) {
+    const { data } = get();
+    const maxStep = data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+    if (step >= 1 && step <= maxStep) {
       set({ currentStep: step });
       get().saveToStorage();
       return true;
@@ -183,7 +199,7 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
     const next = getDefaultState();
     if (prev.clientId != null) next.clientId = prev.clientId;
     if (prev.householdId != null) next.householdId = prev.householdId;
-    set({ data: next, currentStep: 1, analysisId: null });
+    set({ data: next, currentStep: 1, totalSteps: TOTAL_STEPS, analysisId: null });
   },
 
   loadFromFile: (json) => {
@@ -195,7 +211,9 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
     }
     try {
       const loaded = mergeLoadedState(getDefaultState(), parsed);
-      set({ data: loaded.data, currentStep: loaded.currentStep, analysisId: null });
+      const totalSteps = loaded.data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+      const currentStep = Math.min(loaded.currentStep, totalSteps);
+      set({ data: loaded.data, currentStep, totalSteps, analysisId: null });
       get().recalcInvestmentsFv();
       get().recalcLoansTotal();
       get().recalcAssetTotals();

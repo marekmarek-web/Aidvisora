@@ -4,7 +4,8 @@ import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/
 import { selectTotalIncome, selectTotalExpense, selectSurplus, selectReserveTarget, selectReserveGap, selectIsReserveMet } from "@/lib/analyses/financial/selectors";
 import { GROSS_FROM_NET_FACTOR, INSURANCE_COMPANIES_CS } from "@/lib/analyses/financial/constants";
 import type { InsuranceItemType } from "@/lib/analyses/financial/types";
-import { ArrowDown, ArrowUp, Plus, Shield, Trash2 } from "lucide-react";
+import { companyRunway } from "@/lib/analyses/financial/calculations";
+import { ArrowDown, ArrowUp, Plus, Shield, Trash2, Building2 } from "lucide-react";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { ProvenanceBadge } from "../ProvenanceBadge";
 
@@ -39,6 +40,7 @@ function InputAmount({
 
 export function StepCashflow() {
   const data = useStore((s) => s.data);
+  const setData = useStore((s) => s.setData);
   const setCashflowField = useStore((s) => s.setCashflowField);
   const addIncomeOther = useStore((s) => s.addIncomeOther);
   const updateIncomeOther = useStore((s) => s.updateIncomeOther);
@@ -62,6 +64,12 @@ export function StepCashflow() {
   const incomeOther = inc.otherDetails || [];
   const expenseOther = exp.otherDetails || [];
   const insuranceItems = exp.insuranceItems || [];
+  const includeCompany = data.includeCompany ?? false;
+  const cf = data.companyFinance ?? {};
+  const runway = companyRunway(data.companyFinance);
+  const setCompanyFinance = (patch: Partial<typeof cf>) => {
+    setData({ companyFinance: { ...cf, ...patch } });
+  };
 
   const handleMainIncomeNet = (v: number) => {
     setCashflowField("incomes.main", v);
@@ -249,6 +257,39 @@ export function StepCashflow() {
           <div className="text-2xl font-bold text-blue-800">{formatCzk(surplusVal)}</div>
         </div>
       </div>
+
+      {includeCompany && (
+        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-6 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center"><Building2 className="w-4 h-4 text-amber-700" /></div>
+            <h3 className="text-xl font-bold text-slate-900">Finance firmy</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <InputAmount label="Roční tržby (Kč)" value={cf.revenue ?? 0} onChange={(v) => setCompanyFinance({ revenue: v })} id="cf-revenue" />
+            <InputAmount label="Roční zisk / EBITDA (Kč)" value={cf.profit ?? 0} onChange={(v) => setCompanyFinance({ profit: v })} id="cf-profit" />
+            <InputAmount label="Hotovostní rezerva firmy (Kč)" value={cf.reserve ?? 0} onChange={(v) => setCompanyFinance({ reserve: v })} id="cf-reserve" />
+            <InputAmount label="Úvěry / Leasingy – měsíční splátka (Kč)" value={cf.loanPayment ?? 0} onChange={(v) => setCompanyFinance({ loanPayment: v })} id="cf-loan" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-4 border border-amber-100">
+              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Roční tržby</span>
+              <span className="text-lg font-bold text-slate-900">{formatCzk(cf.revenue ?? 0)}</span>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-amber-100">
+              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Roční zisk</span>
+              <span className="text-lg font-bold text-slate-900">{formatCzk(cf.profit ?? 0)}</span>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-amber-100">
+              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Cash runway</span>
+              <span className="text-lg font-bold text-slate-900">{runway != null ? `${runway.toFixed(1)} měs.` : "—"}</span>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-amber-100">
+              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Dluhová služba</span>
+              <span className="text-lg font-bold text-slate-900">{formatCzk(cf.loanPayment ?? 0)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6">
         <div className="flex items-center gap-3 mb-4">

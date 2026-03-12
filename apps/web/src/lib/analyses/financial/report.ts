@@ -3,8 +3,8 @@
  * Extracted from financni-analyza.html (Phase 1). Preserves behavior 1:1.
  */
 
-import type { FinancialAnalysisData } from './types';
-import { CREDIT_WISH_BANKS } from './constants';
+import type { FinancialAnalysisData, CompanyRisks } from './types';
+import { CREDIT_WISH_BANKS, FUND_DETAILS } from './constants';
 import {
   totalIncome,
   totalExpense,
@@ -13,6 +13,7 @@ import {
   futureRentMonthly,
   capitalForRenta,
   investmentFv,
+  companyRunway,
 } from './calculations';
 import { formatCzk, getProductName, getStrategyDesc, getStrategyProfileLabel } from './formatters';
 
@@ -437,6 +438,77 @@ function renderCreditWishesPDF(list: FinancialAnalysisData['newCreditWishList'])
   return html;
 }
 
+/** Jedna stránka PDF per vybraný produkt (amount > 0). Pořadí dle HTML: název, badge, investice, popis, riziko/horizont/likvidita, strategie, výhody, parametry, očekávaná FV. */
+function renderProductDetailPages(data: FinancialAnalysisData): string {
+  const invs = (data.investments || []).filter((i) => (i.amount || 0) > 0);
+  const conservative = data.strategy?.conservativeMode ?? false;
+  const getTypeName = (type: string) => (type === 'lump' ? 'Jednorázová' : type === 'pension' ? 'Penzijní spoření' : 'Pravidelná');
+  let html = '';
+  invs.forEach((inv) => {
+    const detail = FUND_DETAILS[inv.productKey];
+    if (!detail) return;
+    const name = getProductName(inv.productKey);
+    const amount = inv.amount ?? 0;
+    const typeName = getTypeName(inv.type);
+    const fv = inv.computed?.fv ?? 0;
+    const displayRate = Math.max(0, (inv.annualRate ?? 0) - (conservative ? 0.02 : 0));
+    const badgeClass = inv.type === 'lump' ? 'inv-badge inv-badge-lump' : inv.type === 'pension' ? 'inv-badge inv-badge-pension' : 'inv-badge inv-badge-monthly';
+    html += `
+    <section class="pdf-page">
+      <div class="pdf-section">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6mm;">
+          <div>
+            <h2 class="h2" style="font-size: 18pt; font-weight: 700; color: #0f172a; margin: 0 0 2mm 0;">${escapeHtml(name)}</h2>
+            <span class="${badgeClass}" style="display: inline-block; padding: 1.5mm 4mm; border-radius: 2mm; font-size: 8pt; font-weight: 600;">${typeName}</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 9pt; color: #64748b;">Vaše investice</div>
+            <div style="font-size: 14pt; font-weight: 700; color: #0B3A7A;">${formatCzk(amount)} ${inv.type === 'lump' ? 'Kč' : 'Kč/měs'}</div>
+          </div>
+        </div>
+        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.why)}</p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-bottom: 6mm;">
+          <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
+            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Riziko</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${escapeHtml(detail.risks)}</div>
+          </div>
+          <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
+            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Likvidita</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${escapeHtml(detail.liquidity)}</div>
+          </div>
+          <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
+            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Výnos</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${(displayRate * 100).toFixed(1)} % p.a.</div>
+          </div>
+        </div>
+        <div class="h2">Investiční cíl</div>
+        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.goal)}</p>
+        <div class="h2">Vhodné pro</div>
+        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.suitable)}</p>
+        <table class="table" style="margin-bottom: 5mm;">
+          <tbody>
+            <tr><td style="width: 40%; color: #64748b;">Aktiva</td><td style="font-weight: 600;">${escapeHtml(detail.assets)}</td></tr>
+            <tr><td style="color: #64748b;">Výnos</td><td style="font-weight: 600;">${escapeHtml(detail.yield)}</td></tr>
+          </tbody>
+        </table>
+        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 4mm; border-radius: 3mm; border: 1px solid #bae6fd;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 8pt; color: #64748b;">Očekávaná hodnota na konci horizontu</div>
+              <div style="font-size: 14pt; font-weight: 700; color: #0B3A7A;">${formatCzk(Math.round(fv))}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 8pt; color: #64748b;">Typ investice</div>
+              <div style="font-size: 11pt; font-weight: 600; color: #334155;">${typeName}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  });
+  return html;
+}
+
 function renderGoalCoverage(data: FinancialAnalysisData): string {
   const totalTarget = (data.goals || []).reduce((acc, g) => acc + (g.computed?.fvTarget ?? 0), 0);
   const totalFV = (data.investments || []).reduce((acc, i) => acc + (i.computed?.fv ?? 0), 0);
@@ -505,6 +577,7 @@ function buildPages34(data: FinancialAnalysisData): string {
             </table>
         </div>
     </section>
+    ${renderProductDetailPages(data)}
     <section class="pdf-page">
         <div class="h2">Vývoj hodnoty majetku</div>
         <div style="height: 90mm; width: 100%;"><canvas id="pdf-chart-growth"></canvas></div>
@@ -624,6 +697,82 @@ function provenanceSuffix(path: string, opts?: BuildReportHTMLOptions): string {
     ? ` (příjem/závazek z firmy ${opts.linkedCompanyName} – sdílený údaj)`
     : " (sdílený údaj)";
   return `<span style="font-size:9pt;color:#64748b;">${label}</span>`;
+}
+
+const COMPANY_RISK_LABELS: { key: keyof CompanyRisks; label: string }[] = [
+  { key: 'property', label: 'Majetek' },
+  { key: 'interruption', label: 'Přerušení provozu' },
+  { key: 'liability', label: 'Odpovědnost' },
+  { key: 'director', label: 'D&O (ředitelé)' },
+  { key: 'fleet', label: 'Flotila' },
+  { key: 'cyber', label: 'Kyber' },
+];
+
+/** Firemní část PDF – titulka, PŘEHLED SITUACE (KPI), FIREMNÍ POJIŠTĚNÍ (rizika X/6), Benefity, ZAJIŠTĚNÍ PŘÍJMŮ. */
+function renderCompanyPDFSection(data: FinancialAnalysisData): string {
+  if (!data.includeCompany) return '';
+  const today = new Date().toLocaleDateString('cs-CZ');
+  const clientName = data.client?.name || 'Klient';
+  const cf = data.companyFinance ?? {};
+  const runway = companyRunway(data.companyFinance);
+  const risks = data.companyRisks ?? {};
+  const riskCount = COMPANY_RISK_LABELS.filter((r) => risks[r.key]).length;
+  const benefits = data.companyBenefits ?? {};
+  const benefitLabels: string[] = [];
+  if (benefits.dps) benefitLabels.push('DPS');
+  if (benefits.dip) benefitLabels.push('DIP');
+  if (benefits.izp) benefitLabels.push('IŽP');
+  const benefitSummary = benefitLabels.length ? benefitLabels.join(', ') + (benefits.annualCost ? ` – roční náklad cca ${formatCzk(benefits.annualCost ?? 0)}` : '') : 'Nejsou zadány.';
+
+  let html = `
+  <section class="pdf-page pdf-title-page">
+    <div style="text-align: center;">
+      <div style="width: 80px; height: 80px; background: #92400e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">S</div>
+      <h1 class="h1" style="font-size: 36px; margin-bottom: 10px;">FINANČNÍ ANALÝZA – FIRMA</h1>
+      <p style="font-size: 16px; color: #64748b; margin-bottom: 40px;">Společnost a jednatel</p>
+      <div style="display: inline-block; text-align: left; background: #fffbeb; padding: 24px; border-radius: 12px; border: 1px solid #fcd34d; min-width: 280px;">
+        <p style="margin-bottom: 8px; color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: bold;">Jednatel</p>
+        <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 16px 0;">${escapeHtml(clientName)}</h2>
+        <p style="margin-bottom: 8px; margin-top: 12px; color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: bold;">Datum vyhotovení</p>
+        <h3 style="font-size: 14px; color: #0f172a; margin: 0;">${today}</h3>
+      </div>
+    </div>
+  </section>
+  <section class="pdf-page">
+    <div class="pdf-section">
+      <div class="h2">PŘEHLED SITUACE (firma)</div>
+      <div class="kpi">
+        <div class="box"><span class="lbl">Roční tržby</span><div class="val" style="color: #0B3A7A;">${formatCzk(cf.revenue ?? 0)}</div></div>
+        <div class="box"><span class="lbl">Roční zisk</span><div class="val" style="color: #0f172a;">${formatCzk(cf.profit ?? 0)}</div></div>
+        <div class="box"><span class="lbl">Cash runway</span><div class="val" style="color: #ffcc00;">${runway != null ? `${runway.toFixed(1)} měs.` : '—'}</div></div>
+        <div class="box"><span class="lbl">Dluhová služba</span><div class="val" style="color: #0f172a;">${formatCzk(cf.loanPayment ?? 0)}</div></div>
+      </div>
+      <div class="interpretation">
+        <p><strong>Doporučení:</strong> ${riskCount >= 4 ? 'Firma má dobré pokrytí rizik.' : riskCount >= 2 ? 'Doporučujeme doplnit další kategorie pojištění firmy.' : 'Zvažte rozšíření firemního pojištění (majetek, odpovědnost, přerušení provozu).'}</p>
+      </div>
+    </div>
+    <div class="pdf-section" style="margin-top: 8mm;">
+      <div class="h2">FIREMNÍ POJIŠTĚNÍ</div>
+      <p style="font-size: 10pt; color: #64748b; margin-bottom: 4mm;">Pokrytí rizik: <strong>${riskCount}/6</strong></p>
+      <table class="table" style="font-size: 9pt;">
+        <thead><tr><th>Kategorie</th><th style="text-align: center;">Pokryto</th></tr></thead>
+        <tbody>
+          ${COMPANY_RISK_LABELS.map((r) => `<tr><td>${r.label}</td><td style="text-align: center;">${risks[r.key] ? 'Ano' : 'Ne'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="pdf-section" style="margin-top: 8mm;">
+      <div class="h2">Benefity</div>
+      <p style="font-size: 10pt; color: #334155;">${escapeHtml(benefitSummary)}</p>
+      ${(benefits.employeeCount ?? 0) > 0 ? `<p style="font-size: 9pt; color: #64748b; margin-top: 2mm;">Zaměstnanců: ${benefits.employeeCount}, příspěvek na osobu: ${formatCzk(benefits.amountPerPerson ?? 0)} Kč/měs.</p>` : ''}
+    </div>
+    <div class="pdf-section" style="margin-top: 8mm;">
+      <div class="h2">Zajištění příjmů (jednatel)</div>
+      <p style="font-size: 10pt; color: #334155;">Pro doporučení pojištění jednatele viz sekci „Zajištění příjmů“ v osobní části analýzy.</p>
+    </div>
+  </section>
+  `;
+  return html;
 }
 
 /**
@@ -754,6 +903,7 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
     </div>
   </section>
   ` : ''}
+  ${renderCompanyPDFSection(data)}
 </div>
   `.trim();
 }

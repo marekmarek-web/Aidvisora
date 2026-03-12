@@ -20,12 +20,12 @@ export function mergeLoadedState(
   parsed: { data?: Record<string, unknown>; currentStep?: number }
 ): LoadedState {
   const data: FinancialAnalysisData = JSON.parse(JSON.stringify(defaultData));
-  const currentStep = Math.min(
-    Math.max(1, Number(parsed?.currentStep) || 1),
-    TOTAL_STEPS
-  );
 
-  if (!parsed?.data) return { data, currentStep };
+  if (!parsed?.data) {
+    const maxStep = data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+    const currentStep = Math.min(Math.max(1, Number(parsed?.currentStep) || 1), maxStep);
+    return { data, currentStep };
+  }
 
   const p = parsed.data as Record<string, unknown>;
 
@@ -140,6 +140,39 @@ export function mergeLoadedState(
     }
   }
 
+  if (p.includeCompany !== undefined) data.includeCompany = Boolean(p.includeCompany);
+  if (p.companyFinance && typeof p.companyFinance === 'object') {
+    const cf = p.companyFinance as Record<string, unknown>;
+    data.companyFinance = {
+      revenue: Number(cf.revenue) || 0,
+      profit: Number(cf.profit) || 0,
+      reserve: Number(cf.reserve) || 0,
+      loanPayment: Number(cf.loanPayment) || 0,
+    };
+  }
+  if (p.companyBenefits && typeof p.companyBenefits === 'object') {
+    const b = p.companyBenefits as Record<string, unknown>;
+    data.companyBenefits = {
+      dps: Boolean(b.dps),
+      dip: Boolean(b.dip),
+      izp: Boolean(b.izp),
+      amountPerPerson: Number(b.amountPerPerson) || 0,
+      employeeCount: Number(b.employeeCount) || 0,
+      directorsAmount: Number(b.directorsAmount) || 0,
+      annualCost: Number(b.annualCost) || 0,
+    };
+  }
+  if (p.companyRisks && typeof p.companyRisks === 'object') {
+    const r = p.companyRisks as Record<string, unknown>;
+    data.companyRisks = {
+      property: Boolean(r.property),
+      interruption: Boolean(r.interruption),
+      liability: Boolean(r.liability),
+      director: Boolean(r.director),
+      fleet: Boolean(r.fleet),
+      cyber: Boolean(r.cyber),
+    };
+  }
   if (p.clientId != null) data.clientId = String(p.clientId);
   if (p.householdId != null) data.householdId = String(p.householdId);
   if (p.notes !== undefined) data.notes = p.notes == null ? null : String(p.notes);
@@ -148,6 +181,8 @@ export function mergeLoadedState(
     (data as unknown as Record<string, unknown>)._provenance = { ...(p._provenance as Record<string, string>) };
   }
 
+  const maxStep = data.includeCompany ? TOTAL_STEPS + 1 : TOTAL_STEPS;
+  const currentStep = Math.min(Math.max(1, Number(parsed?.currentStep) || 1), maxStep);
   return { data, currentStep };
 }
 
