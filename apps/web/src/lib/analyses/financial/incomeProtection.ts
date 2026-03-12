@@ -8,8 +8,9 @@ import { INSURANCE_COMPANIES_CS } from './constants';
 const RISK_TYPES: InsuredRiskType[] = [
   'death',
   'invalidity',
-  'sickness',
   'tn',
+  'sickness',
+  'daily_compensation',
   'critical_illness',
   'hospitalization',
 ];
@@ -18,10 +19,26 @@ const RISK_LABELS: Record<InsuredRiskType, string> = {
   death: 'Smrt',
   invalidity: 'Invalidita',
   sickness: 'PN',
-  tn: 'TN',
+  tn: 'Trvalé následky',
+  daily_compensation: 'Denní odškodné',
   critical_illness: 'Závažná onemocnění',
   hospitalization: 'Hospitalizace',
 };
+
+const URAZOVKA_RISKS: InsuredRiskType[] = ['tn', 'daily_compensation', 'hospitalization'];
+
+/** Risk types for children under 18 (no PN, no death). */
+const CHILD_EXCLUDED_RISKS: InsuredRiskType[] = ['death', 'sickness'];
+
+function getAgeFromBirthDate(birthDate: string): number | null {
+  if (!birthDate?.trim()) return null;
+  const yearOnly = birthDate.match(/^\d{4}$/);
+  if (yearOnly) return new Date().getFullYear() - parseInt(yearOnly[0], 10);
+  const m = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/) || birthDate.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (!m) return null;
+  const year = m[3] ? parseInt(m[3], 10) : parseInt(m[1], 10);
+  return new Date().getFullYear() - year;
+}
 
 /** Build list of persons for the step from client/partner/children. Merges with existing by personKey. */
 export function getDerivedIncomeProtectionPersons(
@@ -48,12 +65,18 @@ export function getDerivedIncomeProtectionPersons(
   });
 
   if (client?.hasPartner && partner) {
+    const partnerIncomeType = data.cashflow?.partnerIncomeType ?? 'zamestnanec';
+    const partnerEmploymentType =
+      partnerIncomeType === 'osvc' ? 'osvc'
+      : partnerIncomeType === 'invalidni_duchod' ? 'invalidni_duchod'
+      : partnerIncomeType === 'starobni_duchod' ? 'starobni_duchod'
+      : 'employee';
     list.push({
       personKey: 'partner',
       displayName: partner.name || 'Partner',
       role: 'Partner',
       roleType: 'partner',
-      employmentType: 'employee',
+      employmentType: partnerEmploymentType,
       insurancePlans: getExisting('partner')?.insurancePlans ?? [],
       funding: getExisting('partner')?.funding,
     });
@@ -72,6 +95,32 @@ export function getDerivedIncomeProtectionPersons(
   });
 
   return list;
+}
+
+/** Get risk types filtered for a specific person context. */
+export function getRiskTypesForPerson(
+  personKey: string,
+  data: FinancialAnalysisData,
+  planType?: 'full' | 'urazovka'
+): InsuredRiskType[] {
+  let types = [...RISK_TYPES];
+
+  if (planType === 'urazovka') {
+    types = types.filter((rt) => URAZOVKA_RISKS.includes(rt));
+  }
+
+  if (personKey.startsWith('child_')) {
+    const idx = parseInt(personKey.replace('child_', ''), 10);
+    const child = data.children?.[idx];
+    if (child) {
+      const age = getAgeFromBirthDate(child.birthDate);
+      if (age != null && age < 18) {
+        types = types.filter((rt) => !CHILD_EXCLUDED_RISKS.includes(rt));
+      }
+    }
+  }
+
+  return types;
 }
 
 export function getRiskTypes(): InsuredRiskType[] {

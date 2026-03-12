@@ -3,18 +3,14 @@
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { User, PlusCircle } from "lucide-react";
 
-function ageFromBirthDate(birthDate: string): number | null {
+function ageFromBirthYear(birthDate: string): number | null {
   if (!birthDate?.trim()) return null;
+  const yearOnly = birthDate.match(/^\d{4}$/);
+  if (yearOnly) return new Date().getFullYear() - parseInt(yearOnly[0], 10);
   const m = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/) || birthDate.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   if (!m) return null;
   const year = m[3] ? parseInt(m[3], 10) : parseInt(m[1], 10);
-  const month = m[2] ? parseInt(m[2], 10) - 1 : parseInt(m[2] ?? "1", 10) - 1;
-  const day = m[1] ? parseInt(m[1], 10) : 1;
-  const birth = new Date(year, month, day);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
-  return isNaN(age) ? null : age;
+  return new Date().getFullYear() - year;
 }
 
 export function StepClientInfo() {
@@ -30,7 +26,8 @@ export function StepClientInfo() {
   const partner = data.partner;
   const children = data.children;
   const includeCompany = data.includeCompany ?? false;
-  const age = ageFromBirthDate(client.birthDate);
+  const age = ageFromBirthYear(client.birthDate);
+  const partnerAge = ageFromBirthYear(partner.birthDate);
 
   return (
     <>
@@ -56,17 +53,17 @@ export function StepClientInfo() {
                 value={client.name}
                 onChange={(e) => setClient({ name: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                placeholder=""
               />
             </div>
-            <div className="md:col-span-3">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Rok narození</label>
               <input
-                type="text"
-                value={client.birthDate}
+                type="number"
+                min={1920}
+                max={new Date().getFullYear()}
+                value={client.birthDate || ""}
                 onChange={(e) => setClient({ birthDate: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                placeholder="RRRR-MM-DD"
               />
             </div>
             <div className="md:col-span-1">
@@ -75,14 +72,13 @@ export function StepClientInfo() {
                 {age != null ? `${age} let` : "—"}
               </div>
             </div>
-            <div className="md:col-span-4">
+            <div className="md:col-span-5">
               <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
               <input
                 type="email"
                 value={client.email}
                 onChange={(e) => setClient({ email: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                placeholder=""
               />
             </div>
             <div className="md:col-span-4">
@@ -92,7 +88,6 @@ export function StepClientInfo() {
                 value={client.phone}
                 onChange={(e) => setClient({ phone: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                placeholder=""
               />
             </div>
             <div className="md:col-span-4">
@@ -102,7 +97,6 @@ export function StepClientInfo() {
                 value={client.occupation}
                 onChange={(e) => setClient({ occupation: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                placeholder=""
               />
             </div>
             <div className="md:col-span-4">
@@ -112,7 +106,6 @@ export function StepClientInfo() {
                 value={client.sports}
                 onChange={(e) => setClient({ sports: e.target.value })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                placeholder=""
               />
             </div>
           </div>
@@ -153,37 +146,59 @@ export function StepClientInfo() {
                   value={partner.name}
                   onChange={(e) => setPartner({ name: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                  placeholder=""
                 />
               </div>
-              <div className="md:col-span-3">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Rok narození</label>
                 <input
-                  type="text"
-                  value={partner.birthDate}
+                  type="number"
+                  min={1920}
+                  max={new Date().getFullYear()}
+                  value={partner.birthDate || ""}
                   onChange={(e) => setPartner({ birthDate: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                  placeholder="RRRR-MM-DD"
                 />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Věk</label>
+                <div className="w-full px-2 py-3 bg-slate-100 text-blue-800 font-bold text-center rounded-xl text-sm">
+                  {partnerAge != null ? `${partnerAge} let` : "—"}
+                </div>
+              </div>
+              <div className="md:col-span-5">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <input
+                  type="email"
+                  value={partner.email ?? ""}
+                  onChange={(e) => setPartner({ email: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div className="md:col-span-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Telefon <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <input
+                  type="tel"
+                  value={partner.phone ?? ""}
+                  onChange={(e) => setPartner({ phone: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div className="md:col-span-4">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Povolání partnera</label>
                 <input
                   type="text"
                   value={partner.occupation ?? ""}
                   onChange={(e) => setPartner({ occupation: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                  placeholder=""
                 />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-4">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Sporty</label>
                 <input
                   type="text"
                   value={partner.sports ?? ""}
                   onChange={(e) => setPartner({ sports: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                  placeholder=""
                 />
               </div>
             </div>
@@ -218,12 +233,17 @@ export function StepClientInfo() {
                     className="flex-1 px-3 py-2 border border-slate-200 rounded-lg"
                   />
                   <input
-                    type="text"
-                    value={child.birthDate}
+                    type="number"
+                    min={1920}
+                    max={new Date().getFullYear()}
+                    value={child.birthDate || ""}
                     onChange={(e) => updateChild(child.id, "birthDate", e.target.value)}
-                    placeholder="Datum narození"
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg"
+                    placeholder="Rok narození"
+                    className="w-28 px-3 py-2 border border-slate-200 rounded-lg"
                   />
+                  <div className="text-sm text-slate-500 flex items-center min-w-[60px]">
+                    {ageFromBirthYear(child.birthDate) != null ? `${ageFromBirthYear(child.birthDate)} let` : ""}
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeChild(child.id)}

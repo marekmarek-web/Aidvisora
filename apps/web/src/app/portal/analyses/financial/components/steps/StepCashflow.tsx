@@ -66,6 +66,12 @@ export function StepCashflow() {
   const insuranceItems = exp.insuranceItems || [];
   const includeCompany = data.includeCompany ?? false;
   const cf = data.companyFinance ?? {};
+
+  const personOptions = [
+    { key: "client", label: data.client?.name || "Klient" },
+    ...(data.client?.hasPartner && data.partner ? [{ key: "partner", label: data.partner.name || "Partner" }] : []),
+    ...(data.children ?? []).map((c, i) => ({ key: `child_${i}`, label: c.name || `Dítě ${i + 1}` })),
+  ];
   const runway = companyRunway(data.companyFinance);
   const setCompanyFinance = (patch: Partial<typeof cf>) => {
     setData({ companyFinance: { ...cf, ...patch } });
@@ -115,8 +121,45 @@ export function StepCashflow() {
             </div>
             <ProvenanceBadge path="cashflow.incomes.main" data={data as unknown as Record<string, unknown>} />
           </div>
-            <InputAmount label="Hrubá mzda (pro pojištění)" value={data.cashflow.incomeGross ?? 0} onChange={handleMainIncomeGross} id="income-gross" />
-            <InputAmount label="Příjem partnera (čistého)" value={inc.partner ?? 0} onChange={(v) => setCashflowField("incomes.partner", v)} id="income-partner" />
+            {data.cashflow.incomeType === "zamestnanec" && (
+              <InputAmount label="Hrubá mzda (pro pojištění)" value={data.cashflow.incomeGross ?? 0} onChange={handleMainIncomeGross} id="income-gross" />
+            )}
+            {data.client?.hasPartner && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="partner-income-type">Partner – typ příjmu</label>
+                  <select
+                    id="partner-income-type"
+                    value={data.cashflow.partnerIncomeType ?? "zamestnanec"}
+                    onChange={(e) => setCashflowField("partnerIncomeType", e.target.value)}
+                    className="w-full min-h-[44px] px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  >
+                    <option value="zamestnanec">Zaměstnanec</option>
+                    <option value="osvc">OSVČ</option>
+                    <option value="invalidni_duchod">Invalidní důchod</option>
+                    <option value="starobni_duchod">Starobní důchod</option>
+                  </select>
+                </div>
+                {data.cashflow.partnerIncomeType === "zamestnanec" ? (
+                  <InputAmount
+                    label="Hrubá mzda partnera (pro pojištění)"
+                    value={data.cashflow.partnerGross ?? 0}
+                    onChange={(v) => {
+                      setCashflowField("partnerGross", v);
+                      setCashflowField("incomes.partner", Math.round(v * GROSS_FROM_NET_FACTOR));
+                    }}
+                    id="income-partner-gross"
+                  />
+                ) : (
+                  <InputAmount
+                    label="Příjem partnera (čistého)"
+                    value={inc.partner ?? 0}
+                    onChange={(v) => setCashflowField("incomes.partner", v)}
+                    id="income-partner"
+                  />
+                )}
+              </>
+            )}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1 flex flex-wrap items-center gap-2">
                 Ostatní (nájem, dávky…)
@@ -183,10 +226,20 @@ export function StepCashflow() {
                     <select
                       value={item.insurer ?? ""}
                       onChange={(e) => updateExpenseInsuranceItem(item.id, { insurer: e.target.value || undefined })}
-                      className="min-w-[160px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="min-w-[140px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
                     >
                       {INSURANCE_COMPANIES_CS.map((name) => (
                         <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={item.forPersonKey ?? ""}
+                      onChange={(e) => updateExpenseInsuranceItem(item.id, { forPersonKey: e.target.value || undefined })}
+                      className="min-w-[120px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
+                    >
+                      <option value="">Pro koho?</option>
+                      {personOptions.map((p) => (
+                        <option key={p.key} value={p.key}>{p.label}</option>
                       ))}
                     </select>
                     <input

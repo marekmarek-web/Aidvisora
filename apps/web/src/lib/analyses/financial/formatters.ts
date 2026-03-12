@@ -56,6 +56,7 @@ export const PRODUCT_NAMES: Record<string, string> = {
   atris: 'ATRIS',
   penta: 'PENTA',
   ishares: 'iShares MSCI World ETF',
+  alternative: 'Alternativní investice',
   fidelity2040: 'Fidelity Target 2040',
   conseq: 'Conseq Globální',
 };
@@ -66,15 +67,26 @@ export function getProductName(key: string): string {
 
 /** Strategy profile description. */
 export function getStrategyDesc(profile: string): string {
+  if (profile === 'dynamic_plus')
+    return 'Maximální růst s alternativními investicemi (10+ let). Nejvyšší potenciální výnos 12 %+ p.a.';
   if (profile === 'dynamic')
-    return 'Maximální růst pro dlouhodobé cíle (10+ let). Vyšší kolísavost, ale nejvyšší potenciální výnos.';
-  if (profile === 'conservative') return 'Ochrana kapitálu s mírným zhodnocením. Pro krátké horizonty a rezervu.';
-  return 'Kompromis mezi výnosem a stabilitou (5-10 let). Zlatá střední cesta.';
+    return 'Vysoký růst pro dlouhodobé cíle (10+ let). Vyšší kolísavost, potenciální výnos 9 % p.a.';
+  if (profile === 'conservative') return 'Ochrana kapitálu s mírným zhodnocením 5 % p.a. Pro krátké horizonty a rezervu.';
+  return 'Kompromis mezi výnosem a stabilitou (5-10 let). Výnos 7 % p.a.';
 }
 
 /** Strategy profile label for report. */
 export function getStrategyProfileLabel(profile: string): string {
-  if (profile === 'dynamic') return 'Dynamická';
-  if (profile === 'conservative') return 'Konzervativní';
-  return 'Vyvážená';
+  if (profile === 'dynamic_plus') return 'Dynamická+ (12 %)';
+  if (profile === 'dynamic') return 'Dynamická (9 %)';
+  if (profile === 'conservative') return 'Konzervativní (5 %)';
+  return 'Vyvážená (7 %)';
+}
+
+/** Expected annual rate for a strategy profile. */
+export function getProfileRate(profile: string): number {
+  if (profile === 'dynamic_plus') return 0.12;
+  if (profile === 'dynamic') return 0.09;
+  if (profile === 'conservative') return 0.05;
+  return 0.07;
 }

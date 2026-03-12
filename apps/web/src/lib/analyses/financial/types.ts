@@ -17,6 +17,9 @@ export interface ClientInfo {
 export interface PartnerInfo {
   name: string;
   birthDate: string;
+  age?: string;
+  email?: string;
+  phone?: string;
   occupation?: string;
   sports?: string;
 }
@@ -47,6 +50,7 @@ export interface InsuranceExpenseItem {
   insurer?: string;
   amount: number;
   note?: string;
+  forPersonKey?: string;
 }
 
 export interface CashflowExpenses {
@@ -64,6 +68,10 @@ export interface CashflowExpenses {
 export interface CashflowState {
   incomeType: string;
   incomeGross: number;
+  /** Partner: zamestnanec | osvc | invalidni_duchod | starobni_duchod */
+  partnerIncomeType?: string;
+  /** Hrubá mzda partnera (pouze když partnerIncomeType === 'zamestnanec'); čistá se odvodí. */
+  partnerGross?: number;
   incomes: CashflowIncomes;
   expenses: CashflowExpenses;
   reserveCash: number;
@@ -123,9 +131,16 @@ export interface AssetListItem {
   note?: string;
 }
 
+export interface RealEstateItem {
+  id: string;
+  label: string;
+  value: number;
+}
+
 export interface AssetsState {
   cash: number;
   realEstate: number;
+  realEstateItems?: RealEstateItem[];
   investments: number;
   investmentsList: AssetListItem[];
   pension: number;
@@ -181,6 +196,9 @@ export interface GoalEntry {
   targetAmount?: number | null;
   initialAmount?: number;
   lumpSumNow?: number;
+  useInflationFV?: boolean;
+  pensionDeduction?: boolean;
+  pensionAmount?: number;
   computed: GoalComputed;
 }
 
@@ -204,7 +222,7 @@ export interface CreditWishEntry {
 }
 
 export interface StrategyState {
-  profile: 'dynamic' | 'balanced' | 'conservative';
+  profile: 'dynamic_plus' | 'dynamic' | 'balanced' | 'conservative';
   conservativeMode: boolean;
 }
 
@@ -233,6 +251,7 @@ export type InsuredRiskType =
   | 'invalidity'
   | 'sickness'
   | 'tn'
+  | 'daily_compensation'
   | 'critical_illness'
   | 'hospitalization';
 
@@ -252,6 +271,7 @@ export interface IncomeProtectionPlan {
   id: string;
   provider: string;
   policyType?: string;
+  planType?: 'full' | 'urazovka';
   annualContribution?: number;
   monthlyPremium?: number;
   fundingSource?: InsuranceFundingSource;
@@ -268,7 +288,7 @@ export type IncomeProtectionRoleType =
   | 'owner'
   | 'partner_company';
 
-export type IncomeProtectionEmploymentType = 'employee' | 'osvc' | 'mixed';
+export type IncomeProtectionEmploymentType = 'employee' | 'osvc' | 'mixed' | 'invalidni_duchod' | 'starobni_duchod';
 
 export interface BenefitVsSalaryComparison {
   salaryIncreaseGrossEquivalent?: number;

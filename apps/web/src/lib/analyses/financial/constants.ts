@@ -54,6 +54,18 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     why: 'Maximální diverzifikace za minimální poplatek.',
     defaultRate: 0.12,
   },
+  alternative: {
+    name: 'Alternativní investice',
+    manager: 'Různé',
+    goal: 'Nadstandardní výnos z alternativních aktiv',
+    assets: 'Private Equity, Venture Capital, Komodity',
+    yield: 'Růst hodnoty + Dividendy',
+    risks: 'Vysoké riziko, Nízká likvidita',
+    liquidity: 'Roční / Víceletá',
+    suitable: 'Zkušení investoři s dlouhým horizontem',
+    why: 'Potenciálně nejvyšší výnos za cenu nízké likvidity a vyššího rizika.',
+    defaultRate: 0.12,
+  },
   fidelity2040: {
     name: 'Fidelity Target 2040',
     manager: 'Fidelity International',
@@ -76,7 +88,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     liquidity: 'Denní',
     suitable: 'Pravidelné investování',
     why: 'Aktivní správa může v určitých fázích překonat trh.',
-    defaultRate: 0.06,
+    defaultRate: 0.07,
   },
 };
 
@@ -166,6 +178,26 @@ export function getLiabilityProviderOptions(): string[] {
   return LIABILITY_PROVIDERS.flatMap((g) => g.names);
 }
 
+/** Only bank providers – for mortgage dropdown. */
+export function getMortgageProviderOptions(): string[] {
+  const bankGroup = LIABILITY_PROVIDERS.find((g) => g.group === 'Banky');
+  return bankGroup ? [...bankGroup.names] : [];
+}
+
+/** Providers filtered by loan type. */
+export function getLoanProvidersByType(loanType: string): string[] {
+  if (loanType === 'Leasing') {
+    const leasing = LIABILITY_PROVIDERS.find((g) => g.group === 'Leasingové společnosti');
+    return leasing ? [...leasing.names] : [];
+  }
+  if (loanType === 'Spotřebitelský úvěr' || loanType === 'Kreditní karta' || loanType === 'Kontokorent') {
+    return LIABILITY_PROVIDERS
+      .filter((g) => g.group === 'Banky' || g.group === 'Nebankovní poskytovatelé' || g.group === '—')
+      .flatMap((g) => g.names);
+  }
+  return getLiabilityProviderOptions();
+}
+
 export const LOAN_TYPES = [
   'Spotřebitelský úvěr',
   'Kreditní karta',
@@ -174,7 +206,7 @@ export const LOAN_TYPES = [
   'Jiný',
 ] as const;
 
-export const INVESTMENT_ASSET_TYPES = ['Akcie', 'Dluhopisy', 'Krypto', 'ETF', 'Jiné'] as const;
+export const INVESTMENT_ASSET_TYPES = ['Akcie', 'Dluhopisy', 'Krypto', 'ETF', 'Stavební spoření', 'Zlato', 'Kovy', 'Jiné'] as const;
 export const PENSION_ASSET_TYPES = ['DPS', 'DIP', 'PP'] as const;
 
 export const CREDIT_WISH_BANKS: CreditWishBank[] = [
@@ -197,7 +229,7 @@ export const CREDIT_PURPOSE_OPTIONS: { value: string; label: string }[] = [
   { value: 'ostatni', label: 'Ostatní' },
 ];
 
-export const LTV_OPTIONS = [80, 90, 95] as const;
+export const LTV_OPTIONS = [80, 90] as const;
 
 export const STORAGE_KEY = 'financial_plan_state';
 

@@ -43,6 +43,8 @@ export function mergeLoadedState(
     const cf = p.cashflow as Record<string, unknown>;
     data.cashflow.incomeType = (cf.incomeType as string) || 'zamestnanec';
     data.cashflow.incomeGross = Number(cf.incomeGross) || 0;
+    data.cashflow.partnerIncomeType = (cf.partnerIncomeType as string) || 'zamestnanec';
+    data.cashflow.partnerGross = Number(cf.partnerGross) || 0;
     data.cashflow.reserveCash = Number(cf.reserveCash) || 0;
     data.cashflow.reserveTargetMonths = Number(cf.reserveTargetMonths) ?? 6;
     if (cf.incomes && typeof cf.incomes === 'object') {

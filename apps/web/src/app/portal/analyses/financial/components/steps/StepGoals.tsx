@@ -49,6 +49,9 @@ export function StepGoals() {
   const [strategy, setStrategy] = useState(0.07);
   const [initial, setInitial] = useState(0);
   const [lumpsum, setLumpsum] = useState(0);
+  const [useInflationFV, setUseInflationFV] = useState(true);
+  const [pensionDeduction, setPensionDeduction] = useState(false);
+  const [pensionAmount, setPensionAmount] = useState(0);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [chartGoalId, setChartGoalId] = useState<number | null>(null);
 
@@ -58,17 +61,26 @@ export function StepGoals() {
   const chartGoal = (chartGoalId != null ? goals.find((g) => g.id === chartGoalId) : null) ?? goals[0] ?? null;
 
   const handleAdd = () => {
+    const goalData = {
+      type, name, amount, horizon, strategy, initial, lumpsum,
+      useInflationFV: type === "renta" ? useInflationFV : undefined,
+      pensionDeduction: type === "renta" ? pensionDeduction : undefined,
+      pensionAmount: type === "renta" && pensionDeduction ? pensionAmount : undefined,
+    };
     if (editingId != null) {
-      updateGoal(editingId, { type, name, amount, horizon, strategy, initial, lumpsum });
+      updateGoal(editingId, goalData);
       setEditingId(null);
     } else {
-      addGoal({ type, name, amount, horizon, strategy, initial, lumpsum });
+      addGoal(goalData);
     }
     setName("");
     setAmount(0);
     setHorizon(10);
     setInitial(0);
     setLumpsum(0);
+    setUseInflationFV(true);
+    setPensionDeduction(false);
+    setPensionAmount(0);
   };
 
   const handleEdit = (g: (typeof goals)[0]) => {
@@ -79,6 +91,9 @@ export function StepGoals() {
     setStrategy(g.annualRate ?? 0.07);
     setInitial(g.initialAmount ?? 0);
     setLumpsum(g.lumpSumNow ?? 0);
+    setUseInflationFV(g.useInflationFV ?? true);
+    setPensionDeduction(g.pensionDeduction ?? false);
+    setPensionAmount(g.pensionAmount ?? 0);
     setEditingId(g.id);
   };
 
@@ -174,12 +189,45 @@ export function StepGoals() {
                 <input type="number" value={lumpsum || ""} onChange={(e) => setLumpsum(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
               </div>
             </div>
+            {type === "renta" && (
+              <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-100">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useInflationFV}
+                    onChange={(e) => setUseInflationFV(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-500"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">Započítat inflaci do FV (3 % p.a.)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pensionDeduction}
+                    onChange={(e) => setPensionDeduction(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-500"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">Započítat důchod (snižuje potřebný kapitál)</span>
+                </label>
+                {pensionDeduction && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Očekávaný měsíční důchod (Kč)</label>
+                    <input
+                      type="number"
+                      value={pensionAmount || ""}
+                      onChange={(e) => setPensionAmount(parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex gap-2">
               <button type="button" onClick={handleAdd} className="min-h-[44px] flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500">
                 <Plus className="w-5 h-5" /> {editingId != null ? "Uložit" : "Přidat cíl"}
               </button>
               {editingId != null && (
-                <button type="button" onClick={() => { setEditingId(null); setName(""); setAmount(0); setHorizon(10); setInitial(0); setLumpsum(0); }} className="min-h-[44px] px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold">Zrušit</button>
+                <button type="button" onClick={() => { setEditingId(null); setName(""); setAmount(0); setHorizon(10); setInitial(0); setLumpsum(0); setUseInflationFV(true); setPensionDeduction(false); setPensionAmount(0); }} className="min-h-[44px] px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold">Zrušit</button>
               )}
             </div>
           </div>

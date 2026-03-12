@@ -6,13 +6,19 @@ import { computeInsurance } from "@/lib/analyses/financial/report";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import {
   getDerivedIncomeProtectionPersons,
-  getRiskTypes,
+  getRiskTypesForPerson,
   getRiskLabel,
   getDefaultInsuredRisks,
   getInsuranceCompanies,
   showBenefitOptimization,
 } from "@/lib/analyses/financial/incomeProtection";
-import type { IncomeProtectionPlan, InsuredRiskEntry, InsuranceFundingSource } from "@/lib/analyses/financial/types";
+import type {
+  IncomeProtectionPlan,
+  InsuredRiskEntry,
+  InsuranceFundingSource,
+  InsuredRiskType,
+  FinancialAnalysisData,
+} from "@/lib/analyses/financial/types";
 import { Shield, Plus, Trash2, Calculator } from "lucide-react";
 import { ProvenanceBadge } from "../ProvenanceBadge";
 
@@ -21,6 +27,11 @@ const FUNDING_LABELS: Record<InsuranceFundingSource, string> = {
   personal: "Osobně",
   osvc: "OSVČ",
 };
+
+const PLAN_TYPE_OPTIONS = [
+  { value: "full" as const, label: "Plné pojištění" },
+  { value: "urazovka" as const, label: "Pouze úrazové pojištění" },
+];
 
 export function StepIncomeProtection() {
   const data = useFinancialAnalysisStore((s) => s.data);
@@ -33,9 +44,11 @@ export function StepIncomeProtection() {
   const setIncomeProtectionPlanRisks = useFinancialAnalysisStore((s) => s.setIncomeProtectionPlanRisks);
   const setIncomeProtectionPersonFunding = useFinancialAnalysisStore((s) => s.setIncomeProtectionPersonFunding);
   const recalcBenefitVsSalary = useFinancialAnalysisStore((s) => s.recalcBenefitVsSalary);
+  const setInsurance = useFinancialAnalysisStore((s) => s.setInsurance);
 
   const ins = useMemo(() => computeInsurance(data), [data]);
   const companies = useMemo(() => getInsuranceCompanies(), []);
+  const invalidity50Plus = data.insurance?.invalidity50Plus ?? false;
 
   const persons = useMemo(() => {
     const derived = getDerivedIncomeProtectionPersons(data, incomeProtection.persons);
@@ -67,21 +80,29 @@ export function StepIncomeProtection() {
     });
   };
 
-  const totalMonthlyPerPerson = (plans: IncomeProtectionPlan[]) => {
-    return plans.reduce((sum, p) => sum + (p.monthlyPremium ?? p.annualContribution ?? 0) / 12, 0);
-  };
+  const planMonthly = (p: IncomeProtectionPlan) =>
+    p.monthlyPremium != null ? p.monthlyPremium : (p.annualContribution ?? 0) / 12;
+
+  const riskPriceTotal = (p: IncomeProtectionPlan) =>
+    (p.insuredRisks ?? []).reduce((s, r) => s + (r.enabled && r.finalPrice ? r.finalPrice : 0), 0);
+
+  const planTotalMonthly = (p: IncomeProtectionPlan) => planMonthly(p) + riskPriceTotal(p);
+
+  const totalMonthlyPerPerson = (plans: IncomeProtectionPlan[]) =>
+    plans.reduce((sum, p) => sum + planTotalMonthly(p), 0);
+
   const grandTotalMonthly = persons.reduce(
     (sum, p) => sum + totalMonthlyPerPerson(p.insurancePlans ?? []),
     0
   );
   const companyTotalMonthly = persons.reduce((sum, p) => {
     const fromCompany = (p.insurancePlans ?? []).filter((pl) => pl.fundingSource === "company");
-    return sum + fromCompany.reduce((s, pl) => s + (pl.monthlyPremium ?? (pl.annualContribution ?? 0) / 12), 0);
+    return sum + fromCompany.reduce((s, pl) => s + planTotalMonthly(pl), 0);
   }, 0);
   const personalOsvcTotalMonthly = Math.max(0, grandTotalMonthly - companyTotalMonthly);
 
   const companyMonthlyFromPlansForPerson = (plans: IncomeProtectionPlan[]) =>
-    plans.filter((pl) => pl.fundingSource === "company").reduce((s, pl) => s + (pl.monthlyPremium ?? (pl.annualContribution ?? 0) / 12), 0);
+    plans.filter((pl) => pl.fundingSource === "company").reduce((s, pl) => s + planTotalMonthly(pl), 0);
   const personalOsvcMonthlyForPerson = (plans: IncomeProtectionPlan[]) =>
     Math.max(0, totalMonthlyPerPerson(plans) - companyMonthlyFromPlansForPerson(plans));
 
@@ -95,6 +116,21 @@ export function StepIncomeProtection() {
         <p className="text-slate-500 mt-1">
           Doporučené krytí a navržené řešení pojištění pro každého člena analýzy.
         </p>
+      </div>
+
+      {/* 50% invalidity checkbox (moved from Strategy) */}
+      <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={invalidity50Plus}
+            onChange={(e) => setInsurance({ invalidity50Plus: e.target.checked })}
+            className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400"
+          />
+          <span className="text-sm font-semibold text-slate-700">
+            Použít poloviční doporučení na invaliditu (volba poradce)
+          </span>
+        </label>
       </div>
 
       <div className="space-y-8">
@@ -131,7 +167,7 @@ export function StepIncomeProtection() {
                     value={person.employmentType ?? "employee"}
                     onChange={(e) =>
                       setIncomeProtectionPerson(person.personKey, {
-                        employmentType: e.target.value as "employee" | "osvc" | "mixed",
+                        employmentType: e.target.value as "employee" | "osvc" | "mixed" | "invalidni_duchod" | "starobni_duchod",
                       })
                     }
                     className="min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium"
@@ -139,28 +175,30 @@ export function StepIncomeProtection() {
                     <option value="employee">Zaměstnanec</option>
                     <option value="osvc">OSVČ</option>
                     <option value="mixed">Kombinace</option>
+                    <option value="invalidni_duchod">Invalidní důchod</option>
+                    <option value="starobni_duchod">Starobní důchod</option>
                   </select>
                 </div>
               )}
             </div>
 
             <div className="p-4 sm:p-6 space-y-6">
-              {/* Doporučené zajištění (read-only) */}
+              {/* Doporučené zajištění (read-only) – ordered: Smrt, Invalidita, TN, PN */}
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                 <h4 className="text-sm font-bold text-slate-700 mb-3">Doporučené krytí</h4>
                 {person.personKey === "client" && ins.netIncome > 0 && (
                   <ul className="text-sm text-slate-600 space-y-1">
-                    <li>Invalidita: {formatCzk(ins.invalidity.capital)}</li>
-                    <li>PN: {Math.round(ins.sickness.dailyBenefit).toLocaleString("cs-CZ")} Kč/den</li>
-                    <li>TN: {formatCzk(ins.tn.base)} (progrese {ins.tn.progress}×)</li>
                     <li>Smrt: {ins.death.individual ? "individuálně" : formatCzk(ins.death.coverage)}</li>
+                    <li>Invalidita: {formatCzk(ins.invalidity.capital)}</li>
+                    <li>TN: {formatCzk(ins.tn.base)} (progrese {ins.tn.progress}×)</li>
+                    <li>PN: {Math.round(ins.sickness.dailyBenefit).toLocaleString("cs-CZ")} Kč/den</li>
                   </ul>
                 )}
                 {person.personKey === "partner" && ins.partnerInsurance && (
                   <ul className="text-sm text-slate-600 space-y-1">
+                    <li>Smrt: {formatCzk(ins.partnerInsurance.death.coverage)}</li>
                     <li>Invalidita: {formatCzk(ins.partnerInsurance.invalidity.capital)}</li>
                     <li>PN: {Math.round(ins.partnerInsurance.sickness.dailyBenefit).toLocaleString("cs-CZ")} Kč/den</li>
-                    <li>Smrt: {formatCzk(ins.partnerInsurance.death.coverage)}</li>
                   </ul>
                 )}
                 {person.personKey.startsWith("child_") && ins.childInsurance.length > 0 && (() => {
@@ -299,6 +337,8 @@ export function StepIncomeProtection() {
                     <PlanCard
                       key={plan.id}
                       plan={plan}
+                      personKey={person.personKey}
+                      data={data}
                       companies={companies}
                       onUpdate={(partial) => updateIncomeProtectionPlan(person.personKey, plan.id, partial)}
                       onRemove={() => removeIncomeProtectionPlan(person.personKey, plan.id)}
@@ -347,23 +387,29 @@ export function StepIncomeProtection() {
 
 function PlanCard({
   plan,
+  personKey,
+  data,
   companies,
   onUpdate,
   onRemove,
   onRisksChange,
 }: {
   plan: IncomeProtectionPlan;
+  personKey: string;
+  data: FinancialAnalysisData;
   companies: string[];
   onUpdate: (partial: Partial<IncomeProtectionPlan>) => void;
   onRemove: () => void;
   onRisksChange: (risks: InsuredRiskEntry[]) => void;
 }) {
+  const planType = plan.planType ?? "full";
+  const riskTypes = getRiskTypesForPerson(personKey, data, planType);
   const risks = plan.insuredRisks?.length ? plan.insuredRisks : getDefaultInsuredRisks();
-  const riskTypes = getRiskTypes();
 
   const ensureRisks = (): InsuredRiskEntry[] => {
     const current = plan.insuredRisks ?? [];
-    return riskTypes.map((rt) => current.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false });
+    const allTypes = getRiskTypesForPerson(personKey, data);
+    return allTypes.map((rt) => current.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false });
   };
 
   const toggleRisk = (riskType: string, enabled: boolean) => {
@@ -375,6 +421,11 @@ function PlanCard({
     const next = ensureRisks().map((r) => (r.riskType === riskType ? { ...r, ...patch } : r));
     onRisksChange(next);
   };
+
+  const riskPriceSum = riskTypes.reduce((sum, rt) => {
+    const entry = risks.find((r) => r.riskType === rt);
+    return sum + (entry?.enabled && entry?.finalPrice ? entry.finalPrice : 0);
+  }, 0);
 
   return (
     <div className="border border-slate-200 rounded-xl p-4 bg-white">
@@ -395,6 +446,15 @@ function PlanCard({
         >
           {(Object.entries(FUNDING_LABELS) as [InsuranceFundingSource, string][]).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        <select
+          value={planType}
+          onChange={(e) => onUpdate({ planType: e.target.value as "full" | "urazovka" })}
+          className="min-h-[44px] px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm"
+        >
+          {PLAN_TYPE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
         <button
@@ -436,42 +496,58 @@ function PlanCard({
           />
         </label>
       </div>
-      <div className="space-y-2">
-        <span className="text-xs font-bold text-slate-600">Rizika</span>
-        {riskTypes.map((rt) => {
-          const entry = risks.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false };
-          return (
-            <div key={rt} className="flex flex-wrap items-center gap-2 py-1">
-              <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={entry.enabled}
-                  onChange={(e) => toggleRisk(rt, e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-500"
-                />
-                <span className="text-sm font-medium text-slate-700">{getRiskLabel(rt)}</span>
-              </label>
-              {entry.enabled && (
-                <>
+
+      {/* Risk pills – spread, aligned grid */}
+      <div>
+        <span className="text-xs font-bold text-slate-600 mb-2 block">Rizika</span>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {riskTypes.map((rt) => {
+            const entry = risks.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false };
+            return (
+              <div
+                key={rt}
+                className={`rounded-xl border p-3 transition-colors ${
+                  entry.enabled
+                    ? "border-indigo-300 bg-indigo-50/50"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <label className="flex items-center gap-2 min-h-[36px] cursor-pointer mb-2">
                   <input
-                    type="number"
-                    placeholder="Krytí (Kč)"
-                    value={entry.coverageAmount ?? ""}
-                    onChange={(e) => updateRisk(rt, { coverageAmount: e.target.value === "" ? undefined : Number(e.target.value) })}
-                    className="w-24 min-h-[36px] rounded border border-slate-200 px-2 text-sm"
+                    type="checkbox"
+                    checked={entry.enabled}
+                    onChange={(e) => toggleRisk(rt, e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-500"
                   />
-                  <input
-                    type="number"
-                    placeholder="Cena"
-                    value={entry.finalPrice ?? ""}
-                    onChange={(e) => updateRisk(rt, { finalPrice: e.target.value === "" ? undefined : Number(e.target.value) })}
-                    className="w-20 min-h-[36px] rounded border border-slate-200 px-2 text-sm"
-                  />
-                </>
-              )}
-            </div>
-          );
-        })}
+                  <span className="text-sm font-semibold text-slate-700">{getRiskLabel(rt as InsuredRiskType)}</span>
+                </label>
+                {entry.enabled && (
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="number"
+                      placeholder="Krytí (Kč)"
+                      value={entry.coverageAmount ?? ""}
+                      onChange={(e) => updateRisk(rt, { coverageAmount: e.target.value === "" ? undefined : Number(e.target.value) })}
+                      className="w-full min-h-[36px] rounded-lg border border-slate-200 px-2 text-sm"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Cena (Kč/měs)"
+                      value={entry.finalPrice ?? ""}
+                      onChange={(e) => updateRisk(rt, { finalPrice: e.target.value === "" ? undefined : Number(e.target.value) })}
+                      className="w-full min-h-[36px] rounded-lg border border-slate-200 px-2 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {riskPriceSum > 0 && (
+          <div className="mt-3 text-sm font-semibold text-indigo-700">
+            Celkem z rizik: {formatCzk(riskPriceSum)} / měsíc
+          </div>
+        )}
       </div>
     </div>
   );

@@ -293,7 +293,7 @@ export function computeInsurance(data: FinancialAnalysisData): InsuranceResult {
   const ownAssetRentaMonthly = Math.round((totalLiquidAssets * RENT_RATE) / 12);
   const invalidityGapMonthly = Math.max(0, invalidityNeedMonthly - statePensionD3 - ownAssetRentaMonthly);
   let invalidityCapital = Math.ceil((invalidityGapMonthly * RENT_MULTIPLIER) / 100000) * 100000;
-  if (invalidity50Plus && clientAge >= 50) invalidityCapital = Math.ceil((invalidityCapital * 0.5) / 100000) * 100000;
+  if (invalidity50Plus) invalidityCapital = Math.ceil((invalidityCapital * 0.5) / 100000) * 100000;
   const invalidityRentaFromInsurance = Math.round(invalidityCapital / RENT_MULTIPLIER);
 
   // Sickness

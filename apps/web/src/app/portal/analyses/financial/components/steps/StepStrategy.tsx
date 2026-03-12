@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
-import { getProductName, getStrategyProfileLabel, formatCzk } from "@/lib/analyses/financial/formatters";
+import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate } from "@/lib/analyses/financial/formatters";
 import { FUND_DETAILS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
+
+const RETIREMENT_AGE = 65;
 
 const MIN_RATE = 0.01;
 const MAX_RATE = 0.25;
@@ -38,9 +41,10 @@ function getSelectYield(productKey: string, currentRate: number | undefined): nu
 }
 
 const PROFILE_OPTIONS = [
-  { value: "dynamic" as const, label: "Dynamický" },
-  { value: "balanced" as const, label: "Vyvážený" },
-  { value: "conservative" as const, label: "Konzervativní" },
+  { value: "conservative" as const, label: "Konzervativní (5 %)" },
+  { value: "balanced" as const, label: "Vyvážený (7 %)" },
+  { value: "dynamic" as const, label: "Dynamický (9 %)" },
+  { value: "dynamic_plus" as const, label: "Dynamický+ (12 %)" },
 ];
 
 function getTypeLabel(type: string): string {
@@ -53,19 +57,42 @@ export function StepStrategy() {
   const data = useStore((s) => s.data);
   const setStrategyProfile = useStore((s) => s.setStrategyProfile);
   const setConservativeMode = useStore((s) => s.setConservativeMode);
-  const setInsurance = useStore((s) => s.setInsurance);
   const updateInvestment = useStore((s) => s.updateInvestment);
 
   const profile = data.strategy?.profile ?? "balanced";
   const conservativeMode = data.strategy?.conservativeMode ?? false;
-  const invalidity50Plus = data.insurance?.invalidity50Plus ?? false;
   const investments = data.investments ?? [];
   const totals = selectStrategyTotals(data);
+
+  const birthYear = parseInt(data.client?.birthDate ?? "", 10);
+  const clientAge = !isNaN(birthYear) ? new Date().getFullYear() - birthYear : null;
+  const yearsToRetirement = clientAge != null ? Math.max(1, RETIREMENT_AGE - clientAge) : null;
+  const profileRate = getProfileRate(profile);
 
   const setYield = (inv: (typeof investments)[0], rate: number) => {
     const clamped = Math.max(MIN_RATE, Math.min(MAX_RATE, rate));
     updateInvestment(inv.productKey, inv.type, "annualRate", clamped);
   };
+
+  // Default pension years from years to retirement (when client age is set and product still has 30)
+  useEffect(() => {
+    if (yearsToRetirement == null || yearsToRetirement === 30) return;
+    investments
+      .filter((i) => i.type === "pension" && i.years === 30)
+      .forEach((inv) => updateInvestment(inv.productKey, "pension", "years", yearsToRetirement));
+  }, [yearsToRetirement, data.client?.birthDate, investments, updateInvestment]);
+
+  // Sync first renta goal into iShares monthly when profile is Dynamický+ and amount not yet set
+  useEffect(() => {
+    if (profile !== "dynamic_plus") return;
+    const goal = data.goals?.find((g) => g.type === "renta" && (g.computed?.pmt ?? 0) > 0);
+    if (!goal?.computed?.pmt) return;
+    const inv = investments.find((i) => i.productKey === "ishares" && i.type === "monthly");
+    if (!inv || (inv.amount ?? 0) !== 0) return;
+    const years = goal.horizon ?? goal.years ?? 20;
+    updateInvestment("ishares", "monthly", "amount", goal.computed.pmt);
+    updateInvestment("ishares", "monthly", "years", years);
+  }, [profile, data.goals, investments, updateInvestment]);
 
   return (
     <>
@@ -103,15 +130,6 @@ export function StepStrategy() {
               />
               <span className="text-sm font-semibold text-slate-700">Konzervativní režim (snížené výnosy v projekci)</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer mt-4 pt-4 border-t border-slate-200">
-              <input
-                type="checkbox"
-                checked={invalidity50Plus}
-                onChange={(e) => setInsurance({ invalidity50Plus: e.target.checked })}
-                className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400"
-              />
-              <span className="text-sm font-semibold text-slate-700">Pro osoby 50+ použít 50 % částky na invaliditu (dobrovolná volba poradce)</span>
-            </label>
           </div>
 
           <div>
@@ -141,7 +159,7 @@ export function StepStrategy() {
                   <div className="space-y-2">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-0.5">
-                        {inv.type === "lump" ? "Částka (Kč)" : inv.type === "monthly" ? "Měsíčně (Kč)" : "Měsíčně (Kč)"}
+                        {inv.type === "lump" ? "Částka (Kč)" : "Měsíčně (Kč)"}
                       </label>
                       <input
                         type="number"
@@ -152,12 +170,18 @@ export function StepStrategy() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-0.5">Roky</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-0.5">
+                        Roky
+                        {inv.type === "pension" && yearsToRetirement != null && (
+                          <span className="text-indigo-500 ml-1">(do důchodu: {yearsToRetirement})</span>
+                        )}
+                      </label>
                       <input
                         type="number"
                         min={1}
-                        max={40}
+                        max={50}
                         value={inv.years || ""}
+                        placeholder={inv.type === "pension" && yearsToRetirement != null ? String(yearsToRetirement) : ""}
                         onChange={(e) => updateInvestment(inv.productKey, inv.type, "years", parseInt(e.target.value, 10) || 1)}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                       />
@@ -199,8 +223,12 @@ export function StepStrategy() {
             <div className="mt-4 pt-4 border-t border-slate-200">
               <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Profil</span>
               <div className="font-semibold text-slate-800 mt-1">{getStrategyProfileLabel(profile)}</div>
+              <div className="text-xs text-slate-500 mt-1">Očekávaný výnos: {Math.round(profileRate * 100)} % p.a.</div>
               {conservativeMode && (
-                <div className="text-xs text-indigo-700 mt-1">+ konzervativní režim</div>
+                <div className="text-xs text-indigo-700 mt-1">+ konzervativní režim (−2 %)</div>
+              )}
+              {yearsToRetirement != null && (
+                <div className="text-xs text-slate-500 mt-1">Do důchodu: {yearsToRetirement} let (věk {clientAge})</div>
               )}
             </div>
           </div>

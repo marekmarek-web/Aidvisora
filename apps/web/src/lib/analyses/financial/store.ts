@@ -69,13 +69,16 @@ export interface FinancialAnalysisStore {
   removeLoan: (id: number | string) => void;
   recalcLoansTotal: () => void;
   // Goals
-  addGoal: (raw: { type: string; name: string; amount?: number; horizon?: number; strategy?: number; initial?: number; lumpsum?: number }) => void;
-  updateGoal: (id: number, raw: Partial<{ type: string; name: string; amount: number; horizon: number; strategy: number; initial: number; lumpsum: number }>) => void;
+  addGoal: (raw: { type: string; name: string; amount?: number; horizon?: number; strategy?: number; initial?: number; lumpsum?: number; useInflationFV?: boolean; pensionDeduction?: boolean; pensionAmount?: number }) => void;
+  updateGoal: (id: number, raw: Partial<{ type: string; name: string; amount: number; horizon: number; strategy: number; initial: number; lumpsum: number; useInflationFV: boolean; pensionDeduction: boolean; pensionAmount: number }>) => void;
   removeGoal: (id: number) => void;
   // Credit wishes
   addCreditWish: (entry: Omit<CreditWishEntry, "id">) => void;
   removeCreditWish: (id: number | string) => void;
   // Strategy
+  addRealEstateItem: (label: string, value: number) => void;
+  updateRealEstateItem: (id: string, patch: { label?: string; value?: number }) => void;
+  removeRealEstateItem: (id: string) => void;
   setStrategyProfile: (profile: FinancialAnalysisData["strategy"]["profile"]) => void;
   setConservativeMode: (value: boolean) => void;
   updateInvestment: (productKey: string, type: "lump" | "monthly" | "pension", field: keyof InvestmentEntry, value: number) => void;
@@ -603,13 +606,18 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
   },
 
   addGoal: (raw) => {
-    const strategyLabel = (raw.strategy ?? 0.07) >= 0.09 ? "dynamic" : (raw.strategy ?? 0.07) <= 0.05 ? "conservative" : "balanced";
+    const rate = raw.strategy ?? 0.07;
+    const strategyLabel = rate >= 0.12 ? "dynamic_plus" : rate >= 0.09 ? "dynamic" : rate <= 0.05 ? "conservative" : "balanced";
     const horizon = raw.horizon ?? 1;
-    const annualRate = raw.strategy ?? 0.07;
+    const annualRate = rate;
     const initial = raw.initial ?? 0;
     const lumpsum = raw.lumpsum ?? 0;
     const amount = raw.amount ?? 0;
-    const { fvTarget, pmt, netNeeded } = computeGoalComputed(raw.type, amount, horizon, annualRate, initial, lumpsum);
+    const { fvTarget, pmt, netNeeded } = computeGoalComputed(raw.type, amount, horizon, annualRate, initial, lumpsum, {
+      useInflationFV: raw.useInflationFV,
+      pensionDeduction: raw.pensionDeduction,
+      pensionAmount: raw.pensionAmount,
+    });
     const goal: GoalEntry = {
       id: Date.now(),
       type: raw.type,
@@ -621,6 +629,9 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
       amount,
       initialAmount: initial,
       lumpSumNow: lumpsum,
+      useInflationFV: raw.useInflationFV,
+      pensionDeduction: raw.pensionDeduction,
+      pensionAmount: raw.pensionAmount,
       computed: { fvTarget, pmt, netNeeded },
     };
     set((s) => ({ data: { ...s.data, goals: [...s.data.goals, goal] } }));
@@ -638,8 +649,15 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
         const annualRate = raw.strategy ?? g.annualRate ?? 0.07;
         const initial = raw.initial ?? g.initialAmount ?? 0;
         const lumpsum = raw.lumpsum ?? g.lumpSumNow ?? 0;
-        const strategyLabel = annualRate >= 0.09 ? "dynamic" : annualRate <= 0.05 ? "conservative" : "balanced";
-        const { fvTarget, pmt, netNeeded } = computeGoalComputed(type, amount, horizon, annualRate, initial, lumpsum);
+        const useInflationFV = raw.useInflationFV ?? g.useInflationFV;
+        const pensionDeduction = raw.pensionDeduction ?? g.pensionDeduction;
+        const pensionAmount = raw.pensionAmount ?? g.pensionAmount;
+        const strategyLabel = annualRate >= 0.12 ? "dynamic_plus" : annualRate >= 0.09 ? "dynamic" : annualRate <= 0.05 ? "conservative" : "balanced";
+        const { fvTarget, pmt, netNeeded } = computeGoalComputed(type, amount, horizon, annualRate, initial, lumpsum, {
+          useInflationFV,
+          pensionDeduction,
+          pensionAmount,
+        });
         return {
           ...g,
           type,
@@ -651,6 +669,9 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
           annualRate,
           initialAmount: initial,
           lumpSumNow: lumpsum,
+          useInflationFV,
+          pensionDeduction,
+          pensionAmount,
           computed: { fvTarget, pmt, netNeeded },
         };
       });
@@ -674,6 +695,34 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
     set((s) => ({
       data: { ...s.data, newCreditWishList: s.data.newCreditWishList.filter((c) => c.id !== id) },
     }));
+    get().saveToStorage();
+  },
+
+  addRealEstateItem: (label, value) => {
+    const item = { id: `re-${Date.now()}`, label, value };
+    set((s) => {
+      const items = [...(s.data.assets.realEstateItems ?? []), item];
+      const total = items.reduce((a, b) => a + (b.value || 0), 0);
+      return { data: { ...s.data, assets: { ...s.data.assets, realEstateItems: items, realEstate: total } } };
+    });
+    get().saveToStorage();
+  },
+
+  updateRealEstateItem: (id, patch) => {
+    set((s) => {
+      const items = (s.data.assets.realEstateItems ?? []).map((i) => i.id === id ? { ...i, ...patch } : i);
+      const total = items.reduce((a, b) => a + (b.value || 0), 0);
+      return { data: { ...s.data, assets: { ...s.data.assets, realEstateItems: items, realEstate: total } } };
+    });
+    get().saveToStorage();
+  },
+
+  removeRealEstateItem: (id) => {
+    set((s) => {
+      const items = (s.data.assets.realEstateItems ?? []).filter((i) => i.id !== id);
+      const total = items.reduce((a, b) => a + (b.value || 0), 0);
+      return { data: { ...s.data, assets: { ...s.data.assets, realEstateItems: items, realEstate: total } } };
+    });
     get().saveToStorage();
   },
 

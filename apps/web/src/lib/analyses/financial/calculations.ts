@@ -158,12 +158,26 @@ export function capitalForRenta(futureRentMonthly: number): number {
 }
 
 /** FV target for a goal: for renta = capitalForRenta(futureRentMonthly), else = amount. */
-export function goalFvTarget(goal: { type: string; amount?: number; years?: number; horizon?: number }): number {
+export function goalFvTarget(goal: {
+  type: string;
+  amount?: number;
+  years?: number;
+  horizon?: number;
+  useInflationFV?: boolean;
+  pensionDeduction?: boolean;
+  pensionAmount?: number;
+}): number {
   const amt = Number(goal?.amount) || 0;
   if (goal?.type === 'renta') {
     const years = goal.years ?? goal.horizon ?? 1;
-    const futureRent = futureRentMonthly(amt, years);
-    return capitalForRenta(futureRent);
+    const useInflation = goal.useInflationFV ?? true;
+    const pensionMonthly = (goal.pensionDeduction && goal.pensionAmount) ? goal.pensionAmount : 0;
+    const effectiveRent = Math.max(0, amt - pensionMonthly);
+    if (useInflation) {
+      const futureRent = futureRentMonthly(effectiveRent, years);
+      return capitalForRenta(futureRent);
+    }
+    return (effectiveRent * 12) / RENTA_WITHDRAWAL_RATE;
   }
   return amt;
 }
@@ -193,9 +207,18 @@ export function computeGoalComputed(
   horizonYears: number,
   annualRate: number,
   initial: number,
-  lumpsum: number
+  lumpsum: number,
+  options?: { useInflationFV?: boolean; pensionDeduction?: boolean; pensionAmount?: number }
 ): { fvTarget: number; pmt: number; netNeeded: number } {
-  const fvTarget = goalFvTarget({ type, amount, years: horizonYears, horizon: horizonYears });
+  const fvTarget = goalFvTarget({
+    type,
+    amount,
+    years: horizonYears,
+    horizon: horizonYears,
+    useInflationFV: options?.useInflationFV,
+    pensionDeduction: options?.pensionDeduction,
+    pensionAmount: options?.pensionAmount,
+  });
   const initialTotal = initial + lumpsum;
   const { pmt, netNeeded } = pmtToReachFv(fvTarget, initialTotal, annualRate, horizonYears);
   return { fvTarget, pmt, netNeeded };
