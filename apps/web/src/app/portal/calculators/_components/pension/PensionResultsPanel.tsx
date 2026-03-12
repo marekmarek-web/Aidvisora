@@ -5,7 +5,8 @@ import type { PensionResult } from "@/lib/calculators/pension/pension.types";
 
 export interface PensionResultsPanelProps {
   result: PensionResult;
-  onCtaPrimary: () => void;
+  /** Optional: when provided, CTA button is shown (web/lead mode). */
+  onCtaPrimary?: () => void;
 }
 
 export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPanelProps) {
@@ -51,28 +52,30 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
         </div>
 
         <div className="pt-4">
-          <button
-            type="button"
-            onClick={onCtaPrimary}
-            className="group relative w-full bg-gradient-to-r from-[#fbbf24] to-[#fde047] hover:to-[#fbbf24] text-[#0a0f29] font-extrabold py-5 px-6 rounded-xl shadow-lg shadow-[#fbbf24]/30 transition-all transform hover:scale-[1.02] overflow-hidden min-h-[48px]"
-          >
-            <div className="relative flex items-center justify-center gap-3">
-              <span className="text-lg">Chci tento plán nastavit</span>
-              <svg
-                className="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 8l4 4m0 0l-4 4m4-4H3"
-                />
-              </svg>
-            </div>
-          </button>
+          {onCtaPrimary != null && (
+            <button
+              type="button"
+              onClick={onCtaPrimary}
+              className="group relative w-full bg-gradient-to-r from-[#fbbf24] to-[#fde047] hover:to-[#fbbf24] text-[#0a0f29] font-extrabold py-5 px-6 rounded-xl shadow-lg shadow-[#fbbf24]/30 transition-all transform hover:scale-[1.02] overflow-hidden min-h-[48px]"
+            >
+              <div className="relative flex items-center justify-center gap-3">
+                <span className="text-lg">Chci tento plán nastavit</span>
+                <svg
+                  className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </div>
+            </button>
+          )}
           <p className="text-xs text-slate-500 mt-3 text-center leading-relaxed">
             Výpočet předpokládá zhodnocení 7 % p.a. (akciové trhy).
           </p>
