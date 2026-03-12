@@ -12,6 +12,7 @@ import { computeGoalComputed, computeBenefitVsSalaryComparison } from "./calcula
 import { loansListBalanceSum, loansListPaymentsSum, monthlyPayment } from "./calculations";
 import { ownResourcesFromLtv, ownResourcesFromAko } from "./calculations";
 import { recomputeInvestmentsFv } from "./charts";
+import { getProfileRate } from "./formatters";
 
 export interface FinancialAnalysisStore {
   data: FinancialAnalysisData;
@@ -237,7 +238,7 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
   },
 
   addChild: () => {
-    const child: ChildEntry = { id: Date.now(), name: "", birthDate: "" };
+    const child: ChildEntry = { id: Date.now(), name: "", birthDate: "", sports: "" };
     set((s) => ({ data: { ...s.data, children: [...s.data.children, child] } }));
     get().saveToStorage();
     return child;
@@ -727,7 +728,14 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
   },
 
   setStrategyProfile: (profile) => {
-    set((s) => ({ data: { ...s.data, strategy: { ...s.data.strategy, profile } } }));
+    const rate = getProfileRate(profile);
+    set((s) => ({
+      data: {
+        ...s.data,
+        strategy: { ...s.data.strategy, profile },
+        investments: s.data.investments.map((inv) => ({ ...inv, annualRate: rate })),
+      },
+    }));
     get().recalcInvestmentsFv();
     get().saveToStorage();
   },

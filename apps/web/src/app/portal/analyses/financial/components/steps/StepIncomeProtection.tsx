@@ -111,7 +111,7 @@ export function StepIncomeProtection() {
       <div className="mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
           <Shield className="w-8 h-8 text-indigo-600" />
-          Zajištění příjmů
+          Zajištění
         </h2>
         <p className="text-slate-500 mt-1">
           Doporučené krytí a navržené řešení pojištění pro každého člena analýzy.

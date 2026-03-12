@@ -15,8 +15,6 @@ export const contractSegments = [
   "HYPO",
   "UVER",
   "FIRMA_POJ",
-  "ZDRAV",
-  "NEM",
 ] as const;
 
 /** Mapování kódu segmentu na plný název pro UI. */
@@ -33,8 +31,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   HYPO: "Hypotéky",
   UVER: "Úvěry",
   FIRMA_POJ: "Pojištění firem",
-  ZDRAV: "Zdraví / úraz / nemoc",
-  NEM: "Majetek",
 };
 
 /** Katalog partnerů (globální nebo per-tenant). */

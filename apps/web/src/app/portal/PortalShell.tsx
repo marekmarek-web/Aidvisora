@@ -103,7 +103,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
         <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-4 sm:px-6 md:px-8 py-4">
+          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-4 sm:px-6 md:px-8 py-4">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}

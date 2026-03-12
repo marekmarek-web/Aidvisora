@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
-import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate, pluralizeYears } from "@/lib/analyses/financial/formatters";
+import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate } from "@/lib/analyses/financial/formatters";
 import { FUND_DETAILS, FUND_LOGOS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
 
@@ -16,6 +16,13 @@ const MAX_RATE = 0.25;
 function roundToHundreds(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value / 100) * 100;
+}
+
+/** Česká pluralizace roků: 1 rok, 2–4 roky, 5+ let. */
+function pluralizeYears(n: number): string {
+  if (n === 1) return "1 rok";
+  if (n >= 2 && n <= 4) return `${n} roky`;
+  return `${n} let`;
 }
 
 /** Vrátí možnosti zhodnocení: default−1 %, default, default+1 % (clamp 1–25 %), bez duplicit. */
@@ -207,7 +214,7 @@ export function StepStrategy() {
                         type="number"
                         min={0}
                         step={100}
-                        value={inv.amount != null && inv.amount !== "" ? Math.round(roundToHundreds(inv.amount)) : ""}
+                        value={inv.amount != null && Number.isFinite(inv.amount) ? Math.round(roundToHundreds(inv.amount)) : ""}
                         onChange={(e) => updateInvestment(inv.productKey, inv.type, "amount", roundToHundreds(parseFloat(e.target.value) || 0))}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                       />

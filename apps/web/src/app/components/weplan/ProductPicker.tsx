@@ -86,6 +86,9 @@ export function ProductPicker({
   }, {});
   const categories = Object.keys(byCategory).sort();
 
+  const filteredPartners = partners.filter((p) => !segment || p.segment === segment);
+  const partnerOptions = filteredPartners.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+
   return (
     <div className={`space-y-2 text-[13px] ${className}`}>
       {segment != null && (
@@ -103,20 +106,15 @@ export function ProductPicker({
           className="w-full rounded-[6px] border border-monday-border px-2 py-1.5 text-monday-text bg-monday-surface focus:outline-none focus:ring-1 focus:ring-monday-blue"
         >
           <option value="">— vyberte</option>
-          {(() => {
-            const filtered = partners.filter((p) => !segment || p.segment === segment);
-            const seen = new Set<string>();
-            return filtered.filter((p) => {
-              if (seen.has(p.id)) return false;
-              seen.add(p.id);
-              return true;
-            });
-          })().map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.segment ? `(${segmentLabel(p.segment)})` : ""}
-              </option>
-            ))}
+          {partnerOptions.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} {p.segment ? `(${segmentLabel(p.segment)})` : ""}
+            </option>
+          ))}
         </select>
+        {!loadingPartners && segment && partnerOptions.length === 0 && (
+          <p className="text-[11px] text-slate-500 mt-1">Pro tento segment zatím nejsou partneři v katalogu. Můžete vyplnit název partnera a produktu ručně níže.</p>
+        )}
       </div>
       {value.partnerId && (
         <div>

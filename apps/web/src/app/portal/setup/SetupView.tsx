@@ -563,7 +563,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 </div>
                 <h3 className="font-bold text-lg mb-2">Dvoufázové ověření</h3>
                 <p className="text-sm font-medium text-slate-300 leading-relaxed mb-5">Zvyšte bezpečnost svého účtu pomocí aplikace Authenticator.</p>
-                <button type="button" className="w-full bg-white text-slate-900 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
+                <button type="button" onClick={() => toast.showToast("Funkce 2FA připravujeme.")} className="w-full bg-white text-slate-900 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
                   Aktivovat 2FA
                 </button>
               </div>

@@ -16,6 +16,7 @@ import {
   companyRunway,
 } from './calculations';
 import { formatCzk, getProductName, getStrategyDesc, getStrategyProfileLabel } from './formatters';
+import { getAgeFromBirthDate } from './incomeProtection';
 
 export const PDF_STYLES = `
 @page { size: A4; margin: 10mm; }
@@ -277,7 +278,7 @@ export function computeInsurance(data: FinancialAnalysisData): InsuranceResult {
   const hasPartner = Boolean(data.client?.hasPartner);
   const riskJob = (data.insurance?.riskJob as string) || 'low';
   const invalidity50Plus = Boolean(data.insurance?.invalidity50Plus);
-  const clientAge = parseInt(String(data.client?.age), 10) || 35;
+  const clientAge = getAgeFromBirthDate(data.client?.birthDate ?? '') ?? 35;
   const incomeType = data.cashflow?.incomeType || 'zamestnanec';
   const isOSVC = incomeType === 'osvc';
 

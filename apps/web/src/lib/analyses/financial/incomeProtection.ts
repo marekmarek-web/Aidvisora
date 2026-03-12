@@ -30,13 +30,19 @@ const URAZOVKA_RISKS: InsuredRiskType[] = ['tn', 'daily_compensation', 'hospital
 /** Risk types for children under 18 (no PN, no death). */
 const CHILD_EXCLUDED_RISKS: InsuredRiskType[] = ['death', 'sickness'];
 
-function getAgeFromBirthDate(birthDate: string): number | null {
+/** Věk z data/roku narození (RRRR nebo RRRR-MM-DD). Exportováno pro report a další moduly. */
+export function getAgeFromBirthDate(birthDate: string): number | null {
   if (!birthDate?.trim()) return null;
   const yearOnly = birthDate.match(/^\d{4}$/);
-  if (yearOnly) return new Date().getFullYear() - parseInt(yearOnly[0], 10);
+  if (yearOnly) {
+    const y = parseInt(yearOnly[0], 10);
+    if (y < 1900 || y > new Date().getFullYear()) return null;
+    return new Date().getFullYear() - y;
+  }
   const m = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/) || birthDate.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   if (!m) return null;
   const year = m[3] ? parseInt(m[3], 10) : parseInt(m[1], 10);
+  if (year < 1900 || year > new Date().getFullYear()) return null;
   return new Date().getFullYear() - year;
 }
 

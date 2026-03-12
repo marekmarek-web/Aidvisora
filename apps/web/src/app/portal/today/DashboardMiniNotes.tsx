@@ -80,7 +80,7 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   const notes = initialNotes.slice(0, 8);
   if (notes.length === 0) {
     return (
-      <div className="mt-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm p-6">
+      <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm p-6">
         <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-1">
           <FileText size={18} className="text-indigo-600" /> Zápisky
         </h3>
@@ -162,7 +162,7 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   });
 
   return (
-    <div className="mt-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+    <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
       <div className="px-4 sm:px-5 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">

@@ -308,7 +308,8 @@ function CoverageItemRow({
         ? "bg-amber-50 text-amber-700 border-amber-200 shadow-sm"
         : "bg-slate-50/50 text-slate-500 border-slate-200 hover:bg-white hover:shadow-md";
 
-  const label = single && isDone ? "Hotovo" : single && isPending ? "Řeší se" : item.label;
+  const label =
+    single && isDone ? "Hotovo" : single && isPending ? "Řeší se" : single && isNone ? "Nastavit" : item.label;
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -428,17 +429,11 @@ export function useClientCoverage(contactId: string) {
   };
 }
 
-/** Položky podle spec: bez „Americké hypotéky“. */
-function filterSpecItems(items: ResolvedCoverageItem[]): ResolvedCoverageItem[] {
-  return items.filter((item) => item.label !== "Americké hypotéky");
-}
-
 /** Hlavní widget – použití na záložce Přehled (spec „pokryti produktu.txt“). */
 export function ClientCoverageWidget({ contactId }: { contactId: string }) {
   const { items, summary, loading, error, refetch } = useClientCoverage(contactId);
 
-  const filtered = filterSpecItems(items);
-  const byCategory = filtered.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
+  const byCategory = items.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;

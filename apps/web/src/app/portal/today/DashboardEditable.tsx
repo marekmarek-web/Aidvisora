@@ -10,40 +10,47 @@ import {
   Users,
   CalendarClock,
   Wrench,
-  Activity,
   AlertCircle,
   Star,
   Target,
   ChevronRight,
   Plus,
   GripVertical,
+  Sparkles,
+  MessageSquare,
+  BarChart3,
+  FileText,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
-import { segmentLabel } from "@/app/lib/segment-labels";
+import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import { CalendarWidget } from "@/app/components/calendar/CalendarWidget";
 import { MessengerPreview } from "@/app/components/dashboard/MessengerPreview";
 import { DashboardMiniNotes } from "./DashboardMiniNotes";
 
 const STORAGE_KEY = "weplan_dashboard_widgets";
 
+/* V3: 7 widgetů dle plánu */
 const WIDGET_IDS = [
-  "todayEvents",
-  "overdueTasks",
-  "pipelineAtRisk",
-  "anniversaries",
-  "serviceDue",
-  "recentActivity",
+  "summaryDay",
+  "myTasks",
+  "messages",
+  "activeDeals",
+  "production",
+  "clientCare",
+  "financialAnalyses",
 ] as const;
 
 const WIDGET_LABELS: Record<(typeof WIDGET_IDS)[number], string> = {
-  todayEvents: "Dnešní schůzky",
-  overdueTasks: "Po termínu",
-  pipelineAtRisk: "Pipeline v ohrožení",
-  anniversaries: "Blížící se výročí smluv",
-  serviceDue: "Servis k provedení",
-  recentActivity: "Poslední aktivita",
+  summaryDay: "Shrnutí dne",
+  myTasks: "Moje úkoly",
+  messages: "Zprávy od klientů",
+  activeDeals: "Aktivní obchody",
+  production: "Produkce",
+  clientCare: "Péče o klienty",
+  financialAnalyses: "Finanční analýzy",
 };
 
 type WidgetId = (typeof WIDGET_IDS)[number];
@@ -76,9 +83,9 @@ function saveConfig(config: DashboardConfig) {
   } catch {}
 }
 
-/* ── P0-C: Colored KPI cards with prokliky (ikony = sidebar) ── */
-const KPI_CARDS: {
-  key: keyof Pick<DashboardKpis, "meetingsToday" | "tasksOpen" | "opportunitiesOpen" | "totalContacts">;
+/* ── V3: 3 fixní KPI karty (ne draggable) ── */
+const KPI_CARDS_V3: {
+  key: keyof Pick<DashboardKpis, "meetingsToday" | "tasksOpen" | "opportunitiesOpen">;
   label: string;
   href: string;
   bg: string;
@@ -89,20 +96,30 @@ const KPI_CARDS: {
   { key: "meetingsToday", label: "Schůzky dnes", href: "/portal/calendar", bg: "#edf2ff", text: "#3b5bdb", border: "#c5d5ff", Icon: Calendar },
   { key: "tasksOpen", label: "Úkoly ke splnění", href: "/portal/tasks", bg: "#fff8e1", text: "#e68900", border: "#ffe082", Icon: CheckSquare },
   { key: "opportunitiesOpen", label: "Otevřené případy", href: "/portal/pipeline", bg: "#f3e8ff", text: "#7c3aed", border: "#d8b4fe", Icon: Briefcase },
-  { key: "totalContacts", label: "Kontakty", href: "/portal/contacts", bg: "#ecfdf5", text: "#059669", border: "#a7f3d0", Icon: Users },
 ];
 
 /* ── Widget ikony (stejné jako sidebar) ── */
 const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
-  todayEvents: Calendar,
-  overdueTasks: CheckSquare,
-  pipelineAtRisk: Briefcase,
-  anniversaries: CalendarClock,
-  serviceDue: Wrench,
-  recentActivity: Activity,
+  summaryDay: Calendar,
+  myTasks: CheckSquare,
+  messages: MessageSquare,
+  activeDeals: Briefcase,
+  production: TrendingUp,
+  clientCare: Wrench,
+  financialAnalyses: FileText,
 };
 
-export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: DashboardKpis; initialNotes?: MeetingNoteForBoard[] }) {
+export function DashboardEditable({
+  kpis,
+  initialNotes = [],
+  advisorName = null,
+  initialAnalyses = [],
+}: {
+  kpis: DashboardKpis;
+  initialNotes?: MeetingNoteForBoard[];
+  advisorName?: string | null;
+  initialAnalyses?: FinancialAnalysisListItem[];
+}) {
   const router = useRouter();
   const [config, setConfig] = useState<DashboardConfig>({ order: [...WIDGET_IDS], hidden: [] });
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -194,161 +211,184 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
   );
 
   const widgetHref: Partial<Record<WidgetId, string>> = {
-    todayEvents: "/portal/calendar",
-    overdueTasks: "/portal/tasks",
-    pipelineAtRisk: "/portal/pipeline",
-    anniversaries: "/portal/contacts",
-    serviceDue: "/portal/contacts",
+    summaryDay: "/portal/calendar",
+    myTasks: "/portal/tasks",
+    messages: "/portal/contacts",
+    activeDeals: "/portal/pipeline",
+    production: "/portal/production",
+    clientCare: "/portal/contacts",
+    financialAnalyses: "/portal/analyses",
   };
 
   const renderWidgetContent = (id: WidgetId) => {
     switch (id) {
-      case "todayEvents":
-        return kpis.todayEvents.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-text-muted)" }}>Žádné schůzky na dnes.</p>
-        ) : (
-          <ul className="space-y-2">
-            {kpis.todayEvents.map((ev) => (
-              <li key={ev.id} className="flex items-center gap-3 text-sm">
-                <span className="text-xs font-mono px-1.5 py-0.5 rounded min-w-[40px] text-center" style={{ color: "var(--wp-text-muted)", background: "var(--wp-bg)" }}>
-                  {new Date(ev.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-                <span className="font-medium" style={{ color: "var(--wp-text)" }}>{ev.title}</span>
-                {ev.contactName && <span className="text-xs" style={{ color: "var(--wp-text-muted)" }}>({ev.contactName})</span>}
-              </li>
-            ))}
-          </ul>
+      case "summaryDay": {
+        const hasOverdue = kpis.overdueTasks.length > 0;
+        const hasDueToday = (kpis.tasksDueToday?.length ?? 0) > 0;
+        const hasRisk = kpis.pipelineAtRisk.length > 0;
+        const hasEvents = kpis.todayEvents.length > 0;
+        const lines: string[] = [];
+        if (hasOverdue) lines.push(`${kpis.overdueTasks.length} úkolů po termínu`);
+        if (hasDueToday) lines.push(`${kpis.tasksDueToday!.length} úkolů na dnes`);
+        if (hasRisk) lines.push(`${kpis.pipelineAtRisk.length} obchodů v ohrožení`);
+        if (hasEvents) lines.push(`${kpis.todayEvents.length} schůzek dnes`);
+        return (
+          <div className="space-y-3 text-sm text-slate-700">
+            {lines.length > 0 ? (
+              <ul className="list-disc list-inside space-y-1">
+                {lines.map((l, i) => (
+                  <li key={i}>{l}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-slate-500">Dnes nemáte urgentní položky.</p>
+            )}
+            <p className="text-xs text-slate-500 italic pt-2 border-t border-slate-100">
+              Doporučení na základě dnešních priorit. AI asistent bude dostupný později.
+            </p>
+          </div>
         );
-      case "overdueTasks":
-        return kpis.overdueTasks.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-success)" }}>Vše splněno!</p>
+      }
+      case "myTasks": {
+        const all = [...kpis.overdueTasks, ...(kpis.tasksDueToday ?? [])].slice(0, 7);
+        return all.length === 0 ? (
+          <p className="text-sm py-3 text-emerald-600">Vše splněno!</p>
         ) : (
           <ul className="space-y-2">
-            {kpis.overdueTasks.slice(0, 5).map((t) => (
+            {all.map((t) => (
               <li key={t.id} className="flex items-center gap-2 text-sm">
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "rgba(229,83,75,0.1)", color: "var(--wp-danger)" }}>
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-rose-100 text-rose-700">
                   {new Date(t.dueDate).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })}
                 </span>
-                <span className="font-medium truncate" style={{ color: "var(--wp-text)" }}>{t.title}</span>
-                {t.contactName && <span className="text-xs truncate ml-auto" style={{ color: "var(--wp-text-muted)" }}>({t.contactName})</span>}
+                <span className="font-medium truncate text-slate-800">{t.title}</span>
+                {t.contactName && <span className="text-xs truncate ml-auto text-slate-500">({t.contactName})</span>}
               </li>
             ))}
-          </ul>
-        );
-      case "pipelineAtRisk":
-        return kpis.pipelineAtRisk.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-text-muted)" }}>Žádné případy v ohrožení.</p>
-        ) : (
-          <ul className="space-y-2">
-            {kpis.pipelineAtRisk.slice(0, 5).map((o) => (
-              <li key={o.id} className="flex items-center gap-2 text-sm">
-                <span className="font-medium truncate" style={{ color: "var(--wp-text)" }}>{o.title}</span>
-                {o.contactName && <span className="text-xs truncate" style={{ color: "var(--wp-text-muted)" }}>({o.contactName})</span>}
-                <span className="text-xs ml-auto whitespace-nowrap" style={{ color: "var(--wp-text-muted)" }}>{new Date(o.expectedCloseDate).toLocaleDateString("cs-CZ")}</span>
-              </li>
-            ))}
-          </ul>
-        );
-      case "anniversaries":
-        return kpis.upcomingAnniversaries.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-text-muted)" }}>Žádná výročí v blízké době.</p>
-        ) : (
-          <ul className="space-y-2">
-            {kpis.upcomingAnniversaries.slice(0, 5).map((c) => (
-              <li key={c.id} className="flex items-center gap-2 text-sm">
-                <span className="font-medium truncate" style={{ color: "var(--wp-text)" }}>{c.partnerName ?? "—"}</span>
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "var(--wp-cal-accent-light)", color: "var(--wp-cal-accent)" }}>{segmentLabel(c.segment)}</span>
-                <span className="text-xs ml-auto whitespace-nowrap" style={{ color: "var(--wp-text-muted)" }}>{new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}</span>
-                <span className="text-xs truncate" style={{ color: "var(--wp-text-muted)" }}>({c.contactName})</span>
-              </li>
-            ))}
-          </ul>
-        );
-      case "serviceDue":
-        return kpis.serviceDueContacts.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-text-muted)" }}>Žádný servis k provedení.</p>
-        ) : (
-          <ul className="space-y-2">
-            {kpis.serviceDueContacts.slice(0, 5).map((c) => (
-              <li key={c.id} className="flex items-center gap-2 text-sm">
-                <Link href={`/portal/contacts/${c.id}`} className="font-medium hover:underline truncate" style={{ color: "var(--wp-cal-accent)" }}>
-                  {c.firstName} {c.lastName}
-                </Link>
-                <span className="text-xs ml-auto whitespace-nowrap" style={{ color: "var(--wp-text-muted)" }}>{new Date(c.nextServiceDue).toLocaleDateString("cs-CZ")}</span>
-              </li>
-            ))}
-          </ul>
-        );
-      case "recentActivity": {
-        const actionLabels: Record<string, string> = {
-          status_change: "Změna stavu",
-          won: "Výhra obchodu",
-          lost: "Ztráta obchodu",
-          edit: "Úprava",
-          create: "Vytvoření",
-          product_change: "Změna produktu",
-          stage_change: "Změna fáze",
-        };
-        const entityLabels: Record<string, string> = {
-          contact: "Kontakt",
-          opportunity: "Obchod",
-          contract: "Smlouva",
-          board_item: "Položka boardu",
-          task: "Úkol",
-        };
-        return kpis.recentActivity.length === 0 ? (
-          <p className="text-sm py-3" style={{ color: "var(--wp-text-muted)" }}>Zatím žádná aktivita.</p>
-        ) : (
-          <ul className="space-y-2">
-            {kpis.recentActivity.slice(0, 6).map((a) => {
-              const actionText = actionLabels[a.action] ?? a.action;
-              const meta = a.meta as { label?: string; stageId?: string; newValue?: string } | undefined;
-              const suffix = meta?.label ? ` na ${meta.label}` : meta?.newValue ? ` na ${meta.newValue}` : "";
-              const entityText = entityLabels[a.entityType] ?? a.entityType;
-              return (
-                <li key={a.id} className="flex items-center gap-3 text-sm">
-                  <span className="text-xs font-mono min-w-[70px]" style={{ color: "var(--wp-text-muted)" }}>
-                    {new Date(a.createdAt).toLocaleString("cs-CZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  <span className="font-medium" style={{ color: "var(--wp-text)" }}>{actionText}{suffix}</span>
-                  <span className="text-xs" style={{ color: "var(--wp-text-muted)" }}>{entityText}</span>
-                </li>
-              );
-            })}
           </ul>
         );
       }
+      case "messages":
+        return <MessengerPreview embedded />;
+      case "activeDeals": {
+        const atRisk = kpis.pipelineAtRisk.slice(0, 3);
+        const step34 = (kpis.opportunitiesInStep3And4 ?? []).slice(0, 4);
+        const show = atRisk.length > 0 || step34.length > 0;
+        return !show ? (
+          <p className="text-sm py-3 text-slate-500">Žádné aktivní obchody.</p>
+        ) : (
+          <ul className="space-y-2">
+            {atRisk.map((o) => (
+              <li key={o.id} className="flex items-center gap-2 text-sm">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 text-orange-700">Ohrožení</span>
+                <span className="font-medium truncate text-slate-800">{o.title}</span>
+                {o.contactName && <span className="text-xs truncate text-slate-500">({o.contactName})</span>}
+              </li>
+            ))}
+            {step34.map((o) => (
+              <li key={o.id} className="flex items-center gap-2 text-sm">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-700">{o.stageName}</span>
+                <span className="font-medium truncate text-slate-800">{o.title}</span>
+                {o.contactName && <span className="text-xs truncate text-slate-500">({o.contactName})</span>}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      case "production":
+        return (
+          <div className="text-sm text-slate-700 space-y-2">
+            <p>Přehled produkce, plnění cílů a statistiky.</p>
+            <Link href="/portal/production" className="inline-flex items-center gap-1 text-indigo-600 font-semibold hover:underline">
+              Otevřít produkci <ChevronRight size={14} />
+            </Link>
+          </div>
+        );
+      case "clientCare": {
+        const service = kpis.serviceDueContacts.slice(0, 3);
+        const ann = kpis.upcomingAnniversaries.slice(0, 3);
+        const hasAny = service.length > 0 || ann.length > 0;
+        return !hasAny ? (
+          <p className="text-sm py-3 text-slate-500">Žádná péče k zobrazení.</p>
+        ) : (
+          <ul className="space-y-2">
+            {service.map((c) => (
+              <li key={c.id} className="flex items-center gap-2 text-sm">
+                <span className="shrink-0 text-slate-400">Servis</span>
+                <Link href={`/portal/contacts/${c.id}`} className="font-medium hover:underline truncate text-indigo-600">
+                  {c.firstName} {c.lastName}
+                </Link>
+                <span className="text-xs ml-auto whitespace-nowrap text-slate-500">{new Date(c.nextServiceDue).toLocaleDateString("cs-CZ")}</span>
+              </li>
+            ))}
+            {ann.map((c) => (
+              <li key={c.id} className="flex items-center gap-2 text-sm">
+                <span className="shrink-0 text-slate-400">Výročí</span>
+                <span className="font-medium truncate text-slate-800">{c.partnerName ?? "—"}</span>
+                <span className="text-xs text-slate-500">({c.contactName})</span>
+                <span className="text-xs ml-auto whitespace-nowrap text-slate-500">{new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      case "financialAnalyses":
+        return initialAnalyses.length === 0 ? (
+          <p className="text-sm py-3 text-slate-500">Žádné finanční analýzy.</p>
+        ) : (
+          <ul className="space-y-2">
+            {initialAnalyses.slice(0, 5).map((a) => (
+              <li key={a.id} className="flex items-center gap-2 text-sm">
+                <Link href={`/portal/analyses/financial?id=${encodeURIComponent(a.id)}`} className="font-medium hover:underline truncate text-indigo-600">
+                  {a.clientName ?? "Analýza"}
+                </Link>
+                <span className="text-xs ml-auto whitespace-nowrap text-slate-500">
+                  {new Date(a.updatedAt).toLocaleDateString("cs-CZ")}
+                </span>
+              </li>
+            ))}
+            <Link href="/portal/analyses" className="inline-block mt-2 text-xs font-semibold text-indigo-600 hover:underline">
+              Všechny analýzy →
+            </Link>
+          </ul>
+        );
       default:
         return null;
     }
   };
 
+  const greetingName = advisorName?.trim() || "poradce";
+  const dateLabel = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
   return (
-    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-12 animate-[wp-fade-in_0.3s_ease]">
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-12 animate-[wp-fade-in_0.3s_ease] bg-[#f8fafc]">
       {/* Left panel: main content */}
       <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8 lg:pr-4">
-        {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+        {/* V3: Úvod – pozdrav a datum */}
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 m-0 tracking-tight">Moje nástěnka</h2>
-            <p className="text-sm font-bold text-slate-500 mt-1 m-0">
-              {new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 m-0 tracking-tight">
+              Dobrý den, {greetingName} 👋
+            </h1>
+            <p className="text-sm font-bold text-slate-500 mt-1 m-0">{dateLabel}</p>
           </div>
-          <button type="button" onClick={openCustomize} className="min-h-[44px] flex items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-2 -mx-2 rounded-lg">
-            Upravit <ChevronRight size={16} />
+          <button
+            type="button"
+            onClick={openCustomize}
+            className="min-h-[44px] flex items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-2 -mx-2 rounded-lg"
+          >
+            Upravit nástěnku <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* KPI cards – live, clickable, modern SaaS style */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
-          {KPI_CARDS.map((card) => {
+        {/* V3: Fixní řada 3 KPI karet (ne draggable) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8">
+          {KPI_CARDS_V3.map((card) => {
             const IconComponent = card.Icon;
             return (
               <Link
                 key={card.key}
                 href={card.href}
-                className="flex flex-col rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all duration-200 border shadow-sm hover:shadow-md min-h-[88px] sm:min-h-[100px]"
+                className="flex flex-col rounded-[24px] p-4 sm:p-5 transition-all duration-200 border shadow-sm hover:shadow-md min-h-[88px] sm:min-h-[100px]"
                 style={{ background: card.bg, borderColor: card.border, textDecoration: "none" }}
               >
                 <div className="flex items-center gap-3">
@@ -361,6 +401,37 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
               </Link>
             );
           })}
+        </div>
+
+        {/* V3: Rychlé vstupy – karta ve stylu V3 */}
+        <div className="mb-6 rounded-[24px] border border-slate-100 bg-white shadow-sm p-4 sm:p-5">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Rychlé vstupy</h3>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/portal/contacts/new"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <Users size={18} /> Nový klient
+            </Link>
+            <Link
+              href="/portal/tasks"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <CheckSquare size={18} /> Nový úkol
+            </Link>
+            <Link
+              href="/portal/analyses/financial"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <Target size={18} /> Finanční analýza
+            </Link>
+            <Link
+              href="/portal/calendar"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <Calendar size={18} /> Kalendář
+            </Link>
+          </div>
         </div>
 
         {/* Focus Alerts – pouze z kpis */}
@@ -410,7 +481,7 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
                     <Link
                       key={a.id}
                       href={a.href}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border shadow-sm transition-all hover:shadow-md min-h-[72px] ${a.className}`}
+                      className={`flex items-center gap-4 p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:shadow-md min-h-[72px] ${a.className}`}
                     >
                       <div className="bg-white/70 p-2.5 rounded-xl shadow-sm shrink-0">
                         <Icon size={20} />
@@ -435,7 +506,7 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
           return (
             <div className="mb-6">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Dnešní priority</h3>
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+              <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                   {priorityTasks.length > 0 && (
                     <div className="p-4">
@@ -516,10 +587,10 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, id)}
-                className={`cursor-grab active:cursor-grabbing rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""} ${href ? "ring-1 ring-slate-100" : ""}`}
+                className={`cursor-grab active:cursor-grabbing rounded-[24px] border border-slate-100 bg-white px-6 py-5 shadow-sm hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""} ${href ? "ring-1 ring-slate-100" : ""}`}
               >
                 {href ? (
-                  <Link href={href} className="block -m-5 p-5 rounded-2xl sm:rounded-3xl hover:bg-slate-50/80 transition-colors text-inherit no-underline" aria-label={`Přejít na ${WIDGET_LABELS[id]}`}>
+                  <Link href={href} className="block -m-5 p-5 rounded-[24px] hover:bg-slate-50/80 transition-colors text-inherit no-underline" aria-label={`Přejít na ${WIDGET_LABELS[id]}`}>
                     {header}
                     {body}
                   </Link>
@@ -541,7 +612,7 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
       </div>
 
       {/* Right panel: side calendar – vizuálně oddělená plocha */}
-      <aside className="w-full lg:w-[380px] mt-10 lg:mt-0 flex-shrink-0 flex flex-col border-t border-slate-200 lg:border-2 lg:border-slate-200 lg:rounded-2xl lg:shadow-lg bg-slate-50/50 lg:bg-white sticky top-[73px] h-[calc(100vh-73px)] overflow-hidden lg:ml-2">
+      <aside className="w-full lg:w-[380px] mt-10 lg:mt-0 flex-shrink-0 flex flex-col border-t border-slate-200 lg:border lg:border-slate-100 lg:rounded-[24px] lg:shadow-sm bg-slate-50/50 lg:bg-white sticky top-[73px] h-[calc(100vh-73px)] overflow-hidden lg:ml-2">
         <div className="flex-1 overflow-y-auto p-5 lg:p-6 space-y-6 bg-white lg:bg-white">
           <section className="space-y-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Kalendář</h3>
@@ -566,7 +637,7 @@ export function DashboardEditable({ kpis, initialNotes = [] }: { kpis: Dashboard
       {customizeOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setCustomizeOpen(false)}>
           <div
-            className="w-full max-w-md p-6 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white shadow-xl"
+            className="w-full max-w-md p-6 rounded-[24px] border border-slate-100 bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-base font-semibold mb-4" style={{ color: "var(--wp-text)" }}>Upravit nástěnku</h3>

@@ -28,6 +28,7 @@ export interface ChildEntry {
   id: number;
   name: string;
   birthDate: string;
+  sports?: string;
 }
 
 export interface OtherDetailItem {

@@ -169,28 +169,29 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
           </div>
         )}
 
-        {/* Search + Filtry + Řazení */}
-        {list.length > 0 && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="relative flex-1 min-w-0 max-w-md">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" aria-hidden />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Hledat domácnost, jméno člena…"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
-                />
-              </div>
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shrink-0"
-                title="Filtry (připraveno pro budoucí rozšíření)"
-              >
-                <Filter size={18} /> Filtry
-              </button>
+        {/* Search + Filtry + Řazení – vždy viditelné pro konzistentní layout */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0 max-w-md">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" aria-hidden />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Hledat domácnost, jméno člena…"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                aria-label="Hledat domácnost"
+              />
             </div>
+            <button
+              type="button"
+              className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shrink-0"
+              title="Filtry (připraveno pro budoucí rozšíření)"
+            >
+              <Filter size={18} /> Filtry
+            </button>
+          </div>
+          {list.length > 0 && (
             <div className="flex items-center gap-2 text-sm font-bold text-slate-500 shrink-0">
               Řadit podle:{" "}
               <button
@@ -201,8 +202,8 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
                 Název ({sortOrder === "asc" ? "A–Z" : "Z–A"})
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* List: empty vs filtered empty vs cards */}
         {list.length === 0 ? (

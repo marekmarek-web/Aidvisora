@@ -26,6 +26,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [form, setForm] = useState({
     segment: "ZP",
     partnerId: "",
@@ -80,6 +81,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitError(null);
     const payload = {
       segment: form.segment,
       partnerId: form.partnerId || undefined,
@@ -93,41 +95,45 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       anniversaryDate: form.anniversaryDate || undefined,
       note: form.note || undefined,
     };
-    let contractId: string | null = null;
-    if (editingId) {
-      await updateContract(editingId, payload);
-      contractId = editingId;
-      setEditingId(null);
-    } else {
-      contractId = await createContract(contactId, payload);
-      setAdding(false);
-    }
-    if (contractId && contractFile?.size) {
-      const fd = new FormData();
-      fd.set("file", contractFile);
-      fd.set("name", contractFile.name);
-      try {
-        await uploadDocument(contactId, fd, { contractId, visibleToClient: false });
-      } catch (err) {
-        console.error("Upload smlouvy selhal:", err);
+    try {
+      let contractId: string | null = null;
+      if (editingId) {
+        await updateContract(editingId, payload);
+        contractId = editingId;
+        setEditingId(null);
+      } else {
+        contractId = await createContract(contactId, payload);
+        setAdding(false);
       }
-      setContractFile(null);
+      if (contractId && contractFile?.size) {
+        const fd = new FormData();
+        fd.set("file", contractFile);
+        fd.set("name", contractFile.name);
+        try {
+          await uploadDocument(contactId, fd, { contractId, visibleToClient: false });
+        } catch (err) {
+          console.error("Upload smlouvy selhal:", err);
+        }
+        setContractFile(null);
+      }
+      setForm({
+        segment: "ZP",
+        partnerId: "",
+        productId: "",
+        partnerName: "",
+        productName: "",
+        premiumAmount: "",
+        premiumAnnual: "",
+        contractNumber: "",
+        startDate: "",
+        anniversaryDate: "",
+        note: "",
+      });
+      setPickerValue({ partnerId: "", productId: "" });
+      load();
+    } catch {
+      setSubmitError("Smlouvu se nepodařilo uložit. Zkontrolujte vyplněné údaje a zkuste to znovu.");
     }
-    setForm({
-      segment: "ZP",
-      partnerId: "",
-      productId: "",
-      partnerName: "",
-      productName: "",
-      premiumAmount: "",
-      premiumAnnual: "",
-      contractNumber: "",
-      startDate: "",
-      anniversaryDate: "",
-      note: "",
-    });
-    setPickerValue({ partnerId: "", productId: "" });
-    load();
   }
 
   async function doDelete(id: string) {
@@ -221,7 +227,11 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             <label className="block text-xs font-medium text-slate-500">Segment</label>
             <select
               value={form.segment}
-              onChange={(e) => setForm((f) => ({ ...f, segment: e.target.value }))}
+              onChange={(e) => {
+                const seg = e.target.value;
+                setForm((f) => ({ ...f, segment: seg, partnerId: "", productId: "", partnerName: "", productName: "" }));
+                setPickerValue({ partnerId: "", productId: "" });
+              }}
               className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
             >
               {segments.map((s) => (
@@ -331,6 +341,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
             />
           </div>
+          {submitError && <p className="text-sm text-red-600" role="alert">{submitError}</p>}
           <div className="flex gap-2">
             <button
               type="submit"
@@ -340,7 +351,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             </button>
             <button
               type="button"
-              onClick={() => { setAdding(false); setEditingId(null); setContractFile(null); }}
+              onClick={() => { setAdding(false); setEditingId(null); setContractFile(null); setSubmitError(null); }}
               className="rounded px-3 py-1.5 text-sm font-semibold border border-slate-300 text-slate-600"
             >
               Zrušit

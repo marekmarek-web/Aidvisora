@@ -92,6 +92,17 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
   },
 };
 
+/** Logo paths – složka logos v public (nebo repo root logos zkopírovat do apps/web/public/logos). */
+export const FUND_LOGOS: Record<string, string> = {
+  creif: '/logos/creif.png',
+  atris: '/logos/atris.png',
+  penta: '/logos/Penta.png',
+  ishares: '/logos/ishares.png',
+  alternative: '',
+  fidelity2040: '/logos/fidelity.png',
+  conseq: '/logos/conseq.png',
+};
+
 export const LIABILITY_PROVIDERS: LiabilityProviderGroup[] = [
   {
     group: 'Banky',
@@ -259,12 +270,10 @@ export const INSURANCE_COMPANIES_CS: string[] = [
   "Kooperativa",
   "Slavia pojišťovna",
   "Česká podnikatelská pojišťovna",
-  "HDI pojišťovna",
   "Maxima pojišťovna",
   "NN pojišťovna",
   "UNIQA",
   "AXA",
-  "Pojistíme.cz",
   "Jiná / neuvedeno",
 ];
 
@@ -275,20 +284,20 @@ export const STEP_TITLES = [
   'Úvěry',
   'Cíle',
   'Strategie',
-  'Zajištění příjmů',
+  'Zajištění',
   'Shrnutí',
 ] as const;
 
 /** Počet kroků bez firemního rozšíření. */
 export const TOTAL_STEPS = 8;
 
-/** Titulky kroků; při includeCompany vloží „Benefity & Rizika“ za Cashflow. */
+/** Titulky kroků; při includeCompany vloží „FIRMA“ za Cashflow. */
 export function getStepTitles(includeCompany: boolean): readonly string[] {
   if (!includeCompany) return STEP_TITLES;
   return [
     STEP_TITLES[0],
     STEP_TITLES[1],
-    'Benefity & Rizika',
+    'FIRMA',
     ...STEP_TITLES.slice(2),
   ];
 }

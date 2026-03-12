@@ -96,20 +96,101 @@ export default function MindmapPage() {
 
   if (!contactId && !householdId) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] p-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Mindmap</h1>
-          <p className="text-slate-600 mb-8">
-            Vyberte libovolnou mapu, klienta nebo domácnost pro zobrazení a úpravu mapy.
-          </p>
+      <MindmapListView
+        contacts={contacts}
+        households={households}
+        standaloneMaps={standaloneMaps}
+        newMapName={newMapName}
+        setNewMapName={setNewMapName}
+        creating={creating}
+        handleCreateStandaloneMap={handleCreateStandaloneMap}
+        error={error}
+        setError={setError}
+      />
+    );
+  }
 
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-              {error}
-              <button type="button" onClick={() => setError(null)} className="ml-2 underline">Zavřít</button>
-            </div>
-          )}
+  if (!state) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
+        <p className="text-slate-500">Žádná data.</p>
+      </div>
+    );
+  }
 
+  return <MindmapView initial={state} />;
+}
+
+/** List view: same layout pattern as Contacts (header, count, search, action). */
+function MindmapListView({
+  contacts,
+  households,
+  standaloneMaps,
+  newMapName,
+  setNewMapName,
+  creating,
+  handleCreateStandaloneMap,
+  error,
+  setError,
+}: {
+  contacts: ContactRow[];
+  households: HouseholdRow[];
+  standaloneMaps: StandaloneMapRow[];
+  newMapName: string;
+  setNewMapName: (v: string) => void;
+  creating: boolean;
+  handleCreateStandaloneMap: () => Promise<void>;
+  error: string | null;
+  setError: (v: string | null) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const q = searchQuery.trim().toLowerCase();
+  const filteredMaps = q ? standaloneMaps.filter((m) => m.name.toLowerCase().includes(q)) : standaloneMaps;
+  const filteredContacts = q ? contacts.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) : contacts;
+  const filteredHouseholds = q ? households.filter((h) => h.name.toLowerCase().includes(q)) : households;
+  const totalItems = filteredMaps.length + filteredContacts.length + filteredHouseholds.length;
+  const totalAll = standaloneMaps.length + contacts.length + households.length;
+
+  return (
+    <div className="p-4 sm:p-6 min-h-screen bg-[#f8fafc]">
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 flex-wrap">
+              Mindmap
+              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg border border-slate-200">
+                {totalItems === totalAll ? `${totalAll} celkem` : `${totalItems} / ${totalAll}`}
+              </span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Vyberte mapu, klienta nebo domácnost pro zobrazení a úpravu.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="search"
+              placeholder="Hledat mapu, klienta, domácnost…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 md:w-72 min-w-0 pl-4 pr-4 py-2.5 bg-white border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
+            />
+            <button
+              type="button"
+              onClick={handleCreateStandaloneMap}
+              disabled={creating}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              {creating ? "Vytvářím…" : "Nová mapa"}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center justify-between">
+            {error}
+            <button type="button" onClick={() => setError(null)} className="underline">Zavřít</button>
+          </div>
+        )}
+
+        <div className="max-w-2xl">
           <section className="space-y-4 mb-10">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Libovolné mapy</h2>
             <p className="text-slate-600 text-sm">Mapy nezávislé na klientovi (např. náborové schůzky, projekty).</p>
@@ -132,10 +213,12 @@ export default function MindmapPage() {
               </button>
             </div>
             <ul className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {standaloneMaps.length === 0 ? (
-                <li className="px-6 py-4 text-slate-500 text-sm">Žádné libovolné mapy. Vytvořte první výše.</li>
+              {filteredMaps.length === 0 ? (
+                <li className="px-6 py-4 text-slate-500 text-sm">
+                  {standaloneMaps.length === 0 ? "Žádné libovolné mapy. Vytvořte první výše." : "Žádné výsledky pro hledaný výraz."}
+                </li>
               ) : (
-                standaloneMaps.map((m) => (
+                filteredMaps.map((m) => (
                   <li key={m.id}>
                     <Link
                       href={`/portal/mindmap/${m.id}`}
@@ -175,10 +258,10 @@ export default function MindmapPage() {
           <section className="space-y-4">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Domácnosti</h2>
             <ul className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {households.length === 0 ? (
-                <li className="px-6 py-4 text-slate-500 text-sm">Žádné domácnosti</li>
+              {filteredHouseholds.length === 0 ? (
+                <li className="px-6 py-4 text-slate-500 text-sm">{households.length === 0 ? "Žádné domácnosti" : "Žádné výsledky pro hledaný výraz."}</li>
               ) : (
-                households.map((h) => (
+                filteredHouseholds.map((h) => (
                   <li key={h.id}>
                     <Link
                       href={`/portal/mindmap?householdId=${h.id}`}
@@ -193,16 +276,6 @@ export default function MindmapPage() {
           </section>
         </div>
       </div>
-    );
-  }
-
-  if (!state) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
-        <p className="text-slate-500">Žádná data.</p>
-      </div>
-    );
-  }
-
-  return <MindmapView initial={state} />;
+    </div>
+  );
 }

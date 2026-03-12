@@ -244,6 +244,13 @@ export function StepClientInfo() {
                   <div className="text-sm text-slate-500 flex items-center min-w-[60px]">
                     {ageFromBirthYear(child.birthDate) != null ? `${ageFromBirthYear(child.birthDate)} let` : ""}
                   </div>
+                  <input
+                    type="text"
+                    value={child.sports ?? ""}
+                    onChange={(e) => updateChild(child.id, "sports", e.target.value)}
+                    placeholder="Sporty"
+                    className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg"
+                  />
                   <button
                     type="button"
                     onClick={() => removeChild(child.id)}

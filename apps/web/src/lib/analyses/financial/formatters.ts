@@ -50,19 +50,21 @@ export function exportFilename(clientName: string): string {
   return `financni-plan-${safe}-${date}.json`;
 }
 
-/** Product display names. */
+/** Product display names (screenshot/reference: CREIF, PENTA, ATRIS, ETF World, Fidelity 2040, Conseq Globální). */
 export const PRODUCT_NAMES: Record<string, string> = {
   creif: 'CREIF',
   atris: 'ATRIS',
   penta: 'PENTA',
-  ishares: 'iShares MSCI World ETF',
+  ishares: 'ETF World',
   alternative: 'Alternativní investice',
-  fidelity2040: 'Fidelity Target 2040',
+  fidelity2040: 'Fidelity 2040',
   conseq: 'Conseq Globální',
 };
 
-export function getProductName(key: string): string {
-  return PRODUCT_NAMES[key] ?? key;
+export function getProductName(key: string, type?: string): string {
+  const base = PRODUCT_NAMES[key] ?? key;
+  if (key === 'atris' && type === 'lump') return 'ATRIS (Vklad)';
+  return base;
 }
 
 /** Strategy profile description. */
@@ -89,4 +91,11 @@ export function getProfileRate(profile: string): number {
   if (profile === 'dynamic') return 0.09;
   if (profile === 'conservative') return 0.05;
   return 0.07;
+}
+
+/** Česká pluralizace pro roky: 1 rok, 2–4 roky, 5+ let. */
+export function pluralizeYears(n: number): string {
+  if (n === 1) return '1 rok';
+  if (n >= 2 && n <= 4) return `${n} roky`;
+  return `${n} let`;
 }

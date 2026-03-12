@@ -12,8 +12,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   HYPO: "Hypotéky",
   UVER: "Úvěry",
   FIRMA_POJ: "Pojištění firem",
-  ZDRAV: "Zdraví / úraz / nemoc",
-  NEM: "Majetek",
 };
 
 export function segmentLabel(code: string): string {
