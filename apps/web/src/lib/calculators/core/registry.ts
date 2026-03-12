@@ -12,7 +12,7 @@ const CALCULATORS: CalculatorDefinition[] = [
     route: "/portal/calculators/investment",
     status: "active",
     engineRef: "investment",
-    modes: ["standalone"],
+    modes: ["standalone", "embedded"],
   },
   {
     id: "mortgage",
@@ -34,7 +34,8 @@ const CALCULATORS: CalculatorDefinition[] = [
     description: "Státní příspěvky a nutné úspory.",
     icon: "piggy-bank",
     route: "/portal/calculators/pension",
-    status: "coming_soon",
+    status: "active",
+    engineRef: "pension",
     modes: ["standalone"],
   },
   {

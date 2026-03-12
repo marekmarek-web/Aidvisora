@@ -20,7 +20,7 @@ export type DashboardKpis = {
   totalContacts: number;
   todayEvents: TodayEvent[];
   overdueTasks: Array<{ id: string; title: string; dueDate: string; contactName: string | null }>;
-  upcomingAnniversaries: Array<{ id: string; partnerName: string | null; segment: string; anniversaryDate: string; contactName: string }>;
+  upcomingAnniversaries: Array<{ id: string; contactId: string; partnerName: string | null; segment: string; anniversaryDate: string; contactName: string }>;
   serviceDueContacts: Array<{ id: string; firstName: string; lastName: string; nextServiceDue: string }>;
   pipelineAtRisk: Array<{ id: string; title: string; expectedCloseDate: string; contactName: string | null }>;
   recentActivity: Array<{ id: string; action: string; entityType: string; meta?: Record<string, unknown> | null; createdAt: Date }>;
@@ -137,6 +137,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     db
       .select({
         id: contracts.id,
+        contactId: contacts.id,
         partnerName: contracts.partnerName,
         segment: contracts.segment,
         anniversaryDate: contracts.anniversaryDate,
@@ -246,6 +247,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
 
   const upcomingAnniversaries = anniversariesList.map((c) => ({
     id: c.id,
+    contactId: c.contactId,
     partnerName: c.partnerName,
     segment: c.segment,
     anniversaryDate: c.anniversaryDate!,

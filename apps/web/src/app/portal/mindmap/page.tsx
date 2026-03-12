@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMindmap } from "@/app/actions/mindmap";
+import { ListPageShell, ListPageHeader, ListPageToolbar, ListPageSearchInput } from "@/app/components/list-page";
 import { listStandaloneMaps, createStandaloneMap } from "@/app/actions/mindmap";
 import type { MindmapState } from "@/app/actions/mindmap";
 import { MindmapView } from "./MindmapView";
@@ -152,49 +153,44 @@ function MindmapListView({
   const totalAll = standaloneMaps.length + contacts.length + households.length;
 
   return (
-    <div className="p-4 sm:p-6 min-h-screen bg-[#f8fafc]">
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 flex-wrap">
-              Mindmap
-              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg border border-slate-200">
-                {totalItems === totalAll ? `${totalAll} celkem` : `${totalItems} / ${totalAll}`}
-              </span>
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">Vyberte mapu, klienta nebo domácnost pro zobrazení a úpravu.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="search"
-              placeholder="Hledat mapu, klienta, domácnost…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 md:w-72 min-w-0 pl-4 pr-4 py-2.5 bg-white border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
-            />
-            <button
-              type="button"
-              onClick={handleCreateStandaloneMap}
-              disabled={creating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              {creating ? "Vytvářím…" : "Nová mapa"}
-            </button>
-          </div>
+    <ListPageShell>
+      <ListPageHeader
+        title="Mindmap"
+        count={totalItems}
+        totalCount={totalAll}
+        subtitle="Vyberte mapu, klienta nebo domácnost pro zobrazení a úpravu."
+        actions={
+          <button
+            type="button"
+            onClick={handleCreateStandaloneMap}
+            disabled={creating}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+          >
+            {creating ? "Vytvářím…" : "Nová mapa"}
+          </button>
+        }
+      />
+
+      <ListPageToolbar>
+        <ListPageSearchInput
+          placeholder="Hledat mapu, klienta, domácnost…"
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+      </ListPageToolbar>
+
+      {error && (
+        <div className="rounded-[var(--wp-radius-sm)] border border-rose-200 bg-rose-50 p-4 text-rose-700 text-sm flex items-center justify-between">
+          {error}
+          <button type="button" onClick={() => setError(null)} className="font-medium hover:underline">Zavřít</button>
         </div>
+      )}
 
-        {error && (
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center justify-between">
-            {error}
-            <button type="button" onClick={() => setError(null)} className="underline">Zavřít</button>
-          </div>
-        )}
-
-        <div className="max-w-2xl">
-          <section className="space-y-4 mb-10">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Libovolné mapy</h2>
-            <p className="text-slate-600 text-sm">Mapy nezávislé na klientovi (např. náborové schůzky, projekty).</p>
-            <div className="flex flex-wrap gap-2 items-center">
+      <div className="max-w-2xl space-y-8">
+        <section className="space-y-4">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Libovolné mapy</h2>
+          <p className="text-slate-600 text-sm">Mapy nezávislé na klientovi (např. náborové schůzky, projekty).</p>
+          <div className="flex flex-wrap gap-2 items-center">
               <input
                 type="text"
                 placeholder="Název nové mapy"
@@ -212,70 +208,69 @@ function MindmapListView({
                 {creating ? "Vytvářím…" : "Nová mapa"}
               </button>
             </div>
-            <ul className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {filteredMaps.length === 0 ? (
-                <li className="px-6 py-4 text-slate-500 text-sm">
-                  {standaloneMaps.length === 0 ? "Žádné libovolné mapy. Vytvořte první výše." : "Žádné výsledky pro hledaný výraz."}
+          <ul className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden">
+            {filteredMaps.length === 0 ? (
+              <li className="px-6 py-4 text-slate-500 text-sm">
+                {standaloneMaps.length === 0 ? "Žádné libovolné mapy. Vytvořte první výše." : "Žádné výsledky pro hledaný výraz."}
+              </li>
+            ) : (
+              filteredMaps.map((m) => (
+                <li key={m.id}>
+                  <Link
+                    href={`/portal/mindmap/${m.id}`}
+                    className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
+                  >
+                    <span>{m.name}</span>
+                    <span className="text-slate-400 text-xs font-normal ml-2">
+                      {new Date(m.updatedAt).toLocaleDateString("cs-CZ")}
+                    </span>
+                  </Link>
                 </li>
-              ) : (
-                filteredMaps.map((m) => (
-                  <li key={m.id}>
-                    <Link
-                      href={`/portal/mindmap/${m.id}`}
-                      className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
-                    >
-                      <span>{m.name}</span>
-                      <span className="text-slate-400 text-xs font-normal ml-2">
-                        {new Date(m.updatedAt).toLocaleDateString("cs-CZ")}
-                      </span>
-                    </Link>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
+              ))
+            )}
+          </ul>
+        </section>
 
-          <section className="space-y-4 mb-10">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Klienti</h2>
-            <ul className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {contacts.length === 0 ? (
-                <li className="px-6 py-4 text-slate-500 text-sm">Žádní klienti</li>
-              ) : (
-                contacts.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/portal/mindmap?contactId=${c.id}`}
-                      className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
-                    >
-                      {c.firstName} {c.lastName}
-                    </Link>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
+        <section className="space-y-4">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Klienti</h2>
+          <ul className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden">
+            {filteredContacts.length === 0 ? (
+              <li className="px-6 py-4 text-slate-500 text-sm">{contacts.length === 0 ? "Žádní klienti" : "Žádné výsledky pro hledaný výraz."}</li>
+            ) : (
+              filteredContacts.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/portal/mindmap?contactId=${c.id}`}
+                    className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
+                  >
+                    {c.firstName} {c.lastName}
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
 
-          <section className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Domácnosti</h2>
-            <ul className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {filteredHouseholds.length === 0 ? (
-                <li className="px-6 py-4 text-slate-500 text-sm">{households.length === 0 ? "Žádné domácnosti" : "Žádné výsledky pro hledaný výraz."}</li>
-              ) : (
-                filteredHouseholds.map((h) => (
-                  <li key={h.id}>
-                    <Link
-                      href={`/portal/mindmap?householdId=${h.id}`}
-                      className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
-                    >
-                      {h.name}
-                    </Link>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
-        </div>
+        <section className="space-y-4">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Domácnosti</h2>
+          <ul className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden">
+            {filteredHouseholds.length === 0 ? (
+              <li className="px-6 py-4 text-slate-500 text-sm">{households.length === 0 ? "Žádné domácnosti" : "Žádné výsledky pro hledaný výraz."}</li>
+            ) : (
+              filteredHouseholds.map((h) => (
+                <li key={h.id}>
+                  <Link
+                    href={`/portal/mindmap?householdId=${h.id}`}
+                    className="block px-6 py-4 hover:bg-slate-50 transition-colors font-medium text-slate-800"
+                  >
+                    {h.name}
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
       </div>
-    </div>
+    </ListPageShell>
   );
 }

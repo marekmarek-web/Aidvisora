@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TrendingUp, Calculator, PiggyBank, HeartPulse } from "lucide-react";
 import { getCalculators } from "@/lib/calculators/core/registry";
 import type { CalculatorIconId } from "@/lib/calculators/core/types";
+import { ListPageShell, ListPageHeader, ListPageEmpty } from "@/app/components/list-page";
 
 const ICON_MAP: Record<CalculatorIconId, React.ComponentType<{ className?: string }>> = {
   "trending-up": TrendingUp,
@@ -15,18 +16,21 @@ export default function CalculatorsPage() {
   const calculators = getCalculators();
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-            Kalkulačky
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Hypoteční, investiční a další kalkulačky pro poradce.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {calculators.map((def) => {
+    <ListPageShell>
+      <ListPageHeader
+        title="Kalkulačky"
+        count={calculators.length}
+        subtitle="Hypoteční, investiční a další kalkulačky pro poradce."
+      />
+      {calculators.length === 0 ? (
+        <ListPageEmpty
+          icon="🧮"
+          title="Žádné kalkulačky"
+          description="V registru nejsou momentálně žádné kalkulačky."
+        />
+      ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {calculators.map((def) => {
             const Icon = ICON_MAP[def.icon] ?? Calculator;
             const isActive = def.status === "active";
             const cardContent = (
@@ -54,28 +58,28 @@ export default function CalculatorsPage() {
             );
 
             if (isActive) {
-              return (
-                <Link
-                  key={def.id}
-                  href={def.route}
-                  className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 hover:border-[#fbbf24]/30 hover:shadow-lg transition-all flex flex-col items-center text-center gap-3 group"
-                >
-                  {cardContent}
-                </Link>
-              );
-            }
-
             return (
-              <div
+              <Link
                 key={def.id}
-                className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-slate-50/50 p-6 flex flex-col items-center text-center gap-3 opacity-75"
+                href={def.route}
+                className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white p-6 shadow-sm hover:border-[#fbbf24]/30 hover:shadow-lg transition-all flex flex-col items-center text-center gap-3 group"
               >
                 {cardContent}
-              </div>
+              </Link>
             );
-          })}
-        </div>
+          }
+
+          return (
+            <div
+              key={def.id}
+              className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-slate-50/50 p-6 flex flex-col items-center text-center gap-3 opacity-75"
+            >
+              {cardContent}
+            </div>
+          );
+        })}
       </div>
-    </div>
+      )}
+    </ListPageShell>
   );
 }

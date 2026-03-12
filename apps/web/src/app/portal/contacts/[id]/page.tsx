@@ -43,20 +43,28 @@ export default async function ContactDetailPage({
   if (!contact) notFound();
 
   const overviewContent = (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-      <div className="xl:col-span-2 space-y-6">
-        <ClientCoverageWidget contactId={id} />
-        <ContactOverviewKpi contactId={id} />
-        <ContactLastNotePreview contactId={id} />
-        <ContactProductsPreview contactId={id} />
-        <ContactFinancialAnalysesSection contactId={id} />
+    <div className="space-y-8">
+      {/* První blok: Pokrytí produktů na celou šířku */}
+      <ClientCoverageWidget contactId={id} />
+
+      {/* Druhý blok: KPI, poznámky, produkty, finanční analýzy + Domácnost */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="xl:col-span-2 space-y-6">
+          <ContactOverviewKpi contactId={id} />
+          <ContactLastNotePreview contactId={id} />
+          <ContactProductsPreview contactId={id} />
+          <ContactFinancialAnalysesSection contactId={id} />
+        </div>
+        <aside className="xl:col-span-1 space-y-6">
+          {household && <ContactHouseholdCard household={household} />}
+        </aside>
       </div>
 
-      <aside className="xl:col-span-1 space-y-6">
+      {/* Třetí blok: Úkoly a AI analýza pod hlavním obsahem */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ContactOpenTasksPreview contactId={id} />
         <ContactAiAnalysisCard />
-        {household && <ContactHouseholdCard household={household} />}
-      </aside>
+      </div>
     </div>
   );
 

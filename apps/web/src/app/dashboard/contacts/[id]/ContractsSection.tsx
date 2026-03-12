@@ -131,8 +131,13 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       });
       setPickerValue({ partnerId: "", productId: "" });
       load();
-    } catch {
-      setSubmitError("Smlouvu se nepodařilo uložit. Zkontrolujte vyplněné údaje a zkuste to znovu.");
+    } catch (err) {
+      console.error("Chyba při ukládání smlouvy:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Smlouvu se nepodařilo uložit. Zkontrolujte vyplněné údaje a zkuste to znovu.";
+      setSubmitError(message);
     }
   }
 

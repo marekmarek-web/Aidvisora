@@ -238,7 +238,7 @@ function CoverageActionsMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1">
+          <div className="absolute right-0 bottom-full mb-1 z-20 min-w-[180px] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1">
             {item.linkedContractId && (
               <Link
                 href={`/portal/contacts/${contactId}#produkty`}
@@ -329,18 +329,18 @@ function CoverageItemRow({
     single && isDone ? "Hotovo" : single && isPending ? "Řeší se" : single && isNone ? "Nastavit" : item.label;
 
   return (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center gap-2 w-full min-w-0">
       <button
         type="button"
         onClick={handleCycleStatus}
         disabled={updating}
-        className={`group/btn flex items-center gap-3 text-[13px] font-bold px-3 py-2.5 rounded-xl w-full border transition-all duration-300 transform active:scale-95 min-h-[44px] touch-manipulation ${single ? "justify-center" : "text-left"} ${btnClass}`}
+        className={`group/btn flex items-center gap-3 text-[13px] font-bold px-3 py-2.5 rounded-xl w-full min-w-0 border transition-all duration-300 transform active:scale-95 min-h-[44px] touch-manipulation ${single ? "justify-center" : "text-left"} ${btnClass}`}
         title="Klikni na položku pro změnu stavu"
       >
         {isDone && <CheckCircle2 size={16} className="text-emerald-500 shrink-0" aria-hidden />}
         {isPending && <Clock size={16} className="text-amber-500 shrink-0" aria-hidden />}
         {isNone && <Circle size={16} className="text-slate-300 shrink-0 group-hover/btn:text-indigo-400 transition-colors" aria-hidden />}
-        <span>{label}</span>
+        <span className="min-w-0 line-clamp-2 text-left break-words">{label}</span>
       </button>
       {!single && (
         <CoverageActionsMenu
@@ -396,7 +396,7 @@ function CoverageAreaCard({
         </div>
         <h4 className="font-black text-slate-800 text-[15px] tracking-tight leading-tight">{displayName}</h4>
       </div>
-      <div className={`relative z-10 flex flex-col gap-2 mt-auto ${single ? "items-center justify-center" : ""}`}>
+      <div className={`relative z-10 flex flex-col gap-2 mt-auto min-w-0 ${single ? "items-center justify-center" : ""}`}>
         {items.map((item) => (
           <CoverageItemRow
             key={item.itemKey}
@@ -521,7 +521,7 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
             Obchody <span aria-hidden>→</span>
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {CATEGORY_ORDER.filter((cat) => byCategory[cat]?.length).map((category) => (
             <CoverageAreaCard
               key={category}

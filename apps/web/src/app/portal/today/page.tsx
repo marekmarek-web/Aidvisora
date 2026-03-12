@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDashboardKpis } from "@/app/actions/dashboard";
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
 import { listFinancialAnalyses } from "@/app/actions/financial-analyses";
+import { getProductionSummary } from "@/app/actions/production";
 import { DashboardEditable } from "./DashboardEditable";
 import { LinesAndDotsLoader } from "@/app/components/LinesAndDotsLoader";
 
@@ -22,10 +23,15 @@ async function DashboardContent() {
   const { data: { user } } = await supabase.auth.getUser();
   const advisorName = (user?.user_metadata?.full_name as string | undefined) ?? null;
 
-  const [kpis, notes, analyses] = await Promise.all([
+  let productionError: string | null = null;
+  const [kpis, notes, analyses, production] = await Promise.all([
     getDashboardKpis(),
     getMeetingNotesForBoard().catch(() => []),
     listFinancialAnalyses().catch(() => []),
+    getProductionSummary("month").catch((e) => {
+      productionError = e instanceof Error ? e.message : "Nepodařilo se načíst produkci.";
+      return null;
+    }),
   ]);
   return (
     <DashboardEditable
@@ -33,6 +39,8 @@ async function DashboardContent() {
       initialNotes={notes}
       advisorName={advisorName}
       initialAnalyses={analyses}
+      productionSummary={production}
+      productionError={productionError}
     />
   );
 }

@@ -6,6 +6,7 @@ import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
 import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate } from "@/lib/analyses/financial/formatters";
 import { FUND_DETAILS, FUND_LOGOS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
+import { EmbeddedInvestmentProjection } from "@/app/portal/calculators/_components/investment/EmbeddedInvestmentProjection";
 
 const RETIREMENT_AGE = 65;
 
@@ -242,6 +243,23 @@ export function StepStrategy() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 className="text-slate-800 font-bold mb-2">Projekce vývoje</h3>
+            <p className="text-slate-500 text-sm mb-4">
+              Odhadovaný vývoj hodnoty portfolia v čase při zvoleném profilu (stejná logika jako investiční kalkulačka).
+            </p>
+            <div className="min-h-[300px] w-full">
+              <EmbeddedInvestmentProjection
+                faDataSlice={{
+                  investments: data.investments ?? [],
+                  strategy: data.strategy ?? { profile: "balanced", conservativeMode: false },
+                  client: data.client ? { birthDate: data.client.birthDate } : undefined,
+                }}
+                emptyMessage="Vyplňte produkty a částky pro projekci."
+              />
             </div>
           </div>
         </div>

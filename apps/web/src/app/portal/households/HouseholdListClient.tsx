@@ -3,10 +3,17 @@
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Home, Plus, Search, ChevronDown, ChevronUp, User, Baby, Filter } from "lucide-react";
+import { Home, Plus, ChevronDown, ChevronUp, User, Baby, Filter } from "lucide-react";
 import { createHousehold, deleteHousehold } from "@/app/actions/households";
 import type { HouseholdRowWithMembers, HouseholdMemberSummary } from "@/app/actions/households";
-import { EmptyState } from "@/app/components/EmptyState";
+import {
+  ListPageShell,
+  ListPageHeader,
+  ListPageToolbar,
+  ListPageSearchInput,
+  ListPageEmpty,
+  ListPageNoResults,
+} from "@/app/components/list-page";
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 import { useToast } from "@/app/components/Toast";
 
@@ -114,42 +121,46 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
 
   return (
     <>
-      <div className="space-y-6 md:space-y-8">
-        {/* Top bar: title + CTA */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Domácnosti</h1>
-          {!showForm ? (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-sm font-bold shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 shrink-0"
-            >
-              <Plus size={18} />
-              Nová domácnost
-            </button>
-          ) : (
-            <form onSubmit={handleCreate} className="flex items-center gap-2 flex-wrap">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Název domácnosti"
-                className="flex-1 min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                autoFocus
-                required
-              />
-              <button type="submit" disabled={pending} className="px-4 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-sm font-bold disabled:opacity-50">
-                {pending ? "…" : "Vytvořit"}
-              </button>
+      <ListPageShell>
+        <ListPageHeader
+          title="Domácnosti"
+          count={filteredList.length}
+          totalCount={list.length}
+          subtitle="Seskupení kontaktů a členů domácnosti."
+          actions={
+            !showForm ? (
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setName(""); }}
-                className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-medium hover:bg-slate-50"
+                onClick={() => setShowForm(true)}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 shrink-0"
               >
-                Zrušit
+                <Plus size={16} />
+                Nová domácnost
               </button>
-            </form>
-          )}
-        </div>
+            ) : (
+              <form onSubmit={handleCreate} className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Název domácnosti"
+                  className="flex-1 min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                  autoFocus
+                  required
+                />
+                <button type="submit" disabled={pending} className="px-4 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-sm font-bold disabled:opacity-50">
+                  {pending ? "…" : "Vytvořit"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForm(false); setName(""); }}
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-medium hover:bg-slate-50"
+                >
+                  Zrušit
+                </button>
+              </form>
+            )
+          }
+        />
 
         {/* Metrics (real data only) */}
         {list.length > 0 && (
@@ -169,31 +180,24 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
           </div>
         )}
 
-        {/* Search + Filtry + Řazení – vždy viditelné pro konzistentní layout */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="relative flex-1 min-w-0 max-w-md">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" aria-hidden />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Hledat domácnost, jméno člena…"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
-                aria-label="Hledat domácnost"
-              />
-            </div>
-            <button
-              type="button"
-              className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shrink-0"
-              title="Filtry (připraveno pro budoucí rozšíření)"
-            >
-              <Filter size={18} /> Filtry
-            </button>
-          </div>
+        {/* Toolbar: search + filtry + řazení */}
+        <ListPageToolbar>
+          <ListPageSearchInput
+            placeholder="Hledat domácnost, jméno člena…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            aria-label="Hledat domácnost"
+          />
+          <button
+            type="button"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-bold hover:bg-slate-100 transition-colors shrink-0"
+            title="Filtry (připraveno pro budoucí rozšíření)"
+          >
+            <Filter size={18} /> Filtry
+          </button>
           {list.length > 0 && (
             <div className="flex items-center gap-2 text-sm font-bold text-slate-500 shrink-0">
-              Řadit podle:{" "}
+              Řadit:{" "}
               <button
                 type="button"
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
@@ -203,30 +207,19 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
               </button>
             </div>
           )}
-        </div>
+        </ListPageToolbar>
 
-        {/* List: empty vs filtered empty vs cards */}
+        {/* List: empty vs no-results vs cards */}
         {list.length === 0 ? (
-          <div className="bg-white rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm p-12">
-            <EmptyState
-              icon="🏠"
-              title="Zatím žádné domácnosti"
-              description="Vytvořte domácnost pro seskupení kontaktů."
-              actionLabel="Vytvořit domácnost"
-              onAction={() => setShowForm(true)}
-            />
-          </div>
+          <ListPageEmpty
+            icon="🏠"
+            title="Zatím žádné domácnosti"
+            description="Vytvořte domácnost pro seskupení kontaktů."
+            actionLabel="Vytvořit domácnost"
+            onAction={() => setShowForm(true)}
+          />
         ) : filteredList.length === 0 ? (
-          <div className="bg-white rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm p-12 text-center">
-            <p className="text-slate-500 font-medium">Žádné domácnosti nevyhovují hledání.</p>
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="mt-3 text-sm font-medium text-indigo-600 hover:underline"
-            >
-              Zrušit filtr
-            </button>
-          </div>
+          <ListPageNoResults onReset={() => setSearchQuery("")} resetLabel="Zrušit vyhledávání" />
         ) : (
           <div className="space-y-4">
             {filteredList.map((h) => {
@@ -341,7 +334,7 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
             })}
           </div>
         )}
-      </div>
+      </ListPageShell>
 
       <ConfirmDeleteModal
         open={deleteModalId !== null}

@@ -3,10 +3,17 @@
 import { useMemo, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Download, Phone, Mail, CheckSquare, ArrowRight, MessageSquare } from "lucide-react";
+import { Plus, Download, Phone, Mail, CheckSquare, ArrowRight, MessageSquare } from "lucide-react";
 import { NewClientWizard } from "@/app/components/weplan/NewClientWizard";
 import { useToast } from "@/app/components/Toast";
-import { EmptyState } from "@/app/components/EmptyState";
+import {
+  ListPageShell,
+  ListPageHeader,
+  ListPageToolbar,
+  ListPageSearchInput,
+  ListPageEmpty,
+  ListPageNoResults,
+} from "@/app/components/list-page";
 import { SkeletonLine, SkeletonTableRow } from "@/app/components/Skeleton";
 import { exportContactsCsv, updateContactsLifecycle, addTagToContacts, type ContactRow } from "@/app/actions/contacts";
 
@@ -176,92 +183,89 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
     return `mailto:${selectedContactsWithEmail.map((c) => c.email).filter(Boolean).join(",")}`;
   }, [selectedContactsWithEmail]);
 
+  const handleResetSearchAndFilters = () => {
+    setSearchQuery("");
+    setLifecycleFilter("");
+    setTagFilter("");
+  };
+
   return (
     <>
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* --- Page header --- */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 flex-wrap">
-              Kontakty
-              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg border border-slate-200">
-                {filteredList.length === list.length ? `${list.length} celkem` : `${filteredList.length} / ${list.length}`}
-              </span>
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">Centrální adresář klientů a leadů.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={exporting || list.length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:shadow-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download size={16} />
-              Exportovat CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => setWizardOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              <Plus size={16} />
-              Nový klient
-            </button>
-          </div>
-        </div>
+      <ListPageShell>
+        <ListPageHeader
+          title="Kontakty"
+          count={filteredList.length}
+          totalCount={list.length}
+          subtitle="Centrální adresář klientů a leadů."
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={exporting || list.length === 0}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:shadow-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={16} />
+                Exportovat CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => setWizardOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+              >
+                <Plus size={16} />
+                Nový klient
+              </button>
+            </>
+          }
+        />
 
         {list.length === 0 ? (
-          <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white overflow-hidden">
-            <EmptyState
-              icon="👤"
-              title="Zatím žádné kontakty"
-              description="Přidejte prvního klienta a začněte spravovat vztahy."
-              actionLabel="Přidat první kontakt"
-              onAction={() => setWizardOpen(true)}
-            />
-          </div>
+          <ListPageEmpty
+            icon="👤"
+            title="Zatím žádné kontakty"
+            description="Přidejte prvního klienta a začněte spravovat vztahy."
+            actionLabel="Přidat první kontakt"
+            onAction={() => setWizardOpen(true)}
+          />
+        ) : filteredList.length === 0 ? (
+          <ListPageNoResults onReset={handleResetSearchAndFilters} resetLabel="Zrušit vyhledávání a filtry" />
         ) : (
           <>
-            {/* --- Filter panel: tabs + search + tags --- */}
-            <div className="bg-white p-2 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-1 overflow-x-auto px-2 min-w-0">
-                {LIFECYCLE_TABS.map((tab) => (
-                  <button
-                    key={tab.value || "all"}
-                    type="button"
-                    onClick={() => { setLifecycleFilter(tab.value); triggerTableLoading(); }}
-                    className={`px-4 py-2 rounded-[var(--wp-radius-xs)] text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
-                      lifecycleFilter === tab.value ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 w-full md:w-auto px-2 flex-shrink-0">
-                <div className="relative flex-1 md:w-72 min-w-0">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="search"
-                    placeholder="Hledat jméno, e-mail, telefon…"
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); triggerTableLoading(); }}
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
-                  />
-                </div>
-                <select
-                  value={tagFilter}
-                  onChange={(e) => { setTagFilter(e.target.value); triggerTableLoading(); }}
-                  className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
-                >
-                  <option value="">Všechny štítky</option>
-                  {uniqueTags.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+            <ListPageToolbar
+              leftSlot={
+                <>
+                  {LIFECYCLE_TABS.map((tab) => (
+                    <button
+                      key={tab.value || "all"}
+                      type="button"
+                      onClick={() => { setLifecycleFilter(tab.value); triggerTableLoading(); }}
+                      className={`px-4 py-2 rounded-[var(--wp-radius-xs)] text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
+                        lifecycleFilter === tab.value ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
                   ))}
-                </select>
-              </div>
-            </div>
+                </>
+              }
+            >
+              <ListPageSearchInput
+                placeholder="Hledat jméno, e-mail, telefon…"
+                value={searchQuery}
+                onChange={(v) => { setSearchQuery(v); triggerTableLoading(); }}
+              />
+              <select
+                value={tagFilter}
+                onChange={(e) => { setTagFilter(e.target.value); triggerTableLoading(); }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                <option value="">Všechny štítky</option>
+                {uniqueTags.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </ListPageToolbar>
 
             {/* --- Bulk action bar --- */}
             {selectedIds.size > 0 && (
@@ -623,7 +627,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
             </div>
           </>
         )}
-      </div>
+      </ListPageShell>
 
       <NewClientWizard
         open={wizardOpen}

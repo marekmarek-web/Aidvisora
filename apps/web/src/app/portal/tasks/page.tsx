@@ -53,9 +53,14 @@ const inputCls = "wp-input w-full";
 const selectCls = "wp-select w-full min-h-[40px]";
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
+  const initialFilter = (() => {
+    const f = searchParams.get("filter");
+    return f && FILTERS.some((x) => x.key === f) ? (f as Filter) : "all";
+  })();
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
   const [mobileEditId, setMobileEditId] = useState<string | null>(null);
@@ -73,10 +78,11 @@ export default function TasksPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const newTaskFormRef = useRef<HTMLFormElement>(null);
 
-  const searchParams = useSearchParams();
   useEffect(() => {
     const contactId = searchParams.get("contactId");
     if (contactId) setNewContactId(contactId);
+    const filterParam = searchParams.get("filter");
+    if (filterParam && FILTERS.some((f) => f.key === filterParam)) setFilter(filterParam as Filter);
   }, [searchParams]);
 
   useEffect(() => {

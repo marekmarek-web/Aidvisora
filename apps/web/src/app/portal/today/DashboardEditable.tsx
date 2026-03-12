@@ -24,39 +24,18 @@ import {
   BarChart3,
   FileText,
   TrendingUp,
-  type LucideIcon,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
+import type { ProductionSummary } from "@/app/actions/production";
 import { CalendarWidget } from "@/app/components/calendar/CalendarWidget";
 import { MessengerPreview } from "@/app/components/dashboard/MessengerPreview";
+import { DashboardCard } from "@/app/components/dashboard/DashboardCard";
 import { DashboardMiniNotes } from "./DashboardMiniNotes";
+import { WIDGET_IDS, WIDGET_LABELS, WIDGET_ICONS, WIDGET_HREF, type WidgetId } from "./dashboard-config";
 
 const STORAGE_KEY = "weplan_dashboard_widgets";
-
-/* V3: 7 widgetů dle plánu */
-const WIDGET_IDS = [
-  "summaryDay",
-  "myTasks",
-  "messages",
-  "activeDeals",
-  "production",
-  "clientCare",
-  "financialAnalyses",
-] as const;
-
-const WIDGET_LABELS: Record<(typeof WIDGET_IDS)[number], string> = {
-  summaryDay: "Shrnutí dne",
-  myTasks: "Moje úkoly",
-  messages: "Zprávy od klientů",
-  activeDeals: "Aktivní obchody",
-  production: "Produkce",
-  clientCare: "Péče o klienty",
-  financialAnalyses: "Finanční analýzy",
-};
-
-type WidgetId = (typeof WIDGET_IDS)[number];
 
 interface DashboardConfig {
   order: WidgetId[];
@@ -100,27 +79,20 @@ const KPI_CARDS_V3: {
   { key: "opportunitiesOpen", label: "Otevřené případy", subtitle: "Pipeline", href: "/portal/pipeline", subtitleColor: "text-indigo-600", Icon: Briefcase },
 ];
 
-/* ── Widget ikony (stejné jako sidebar) ── */
-const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
-  summaryDay: Sparkles,
-  myTasks: CheckSquare,
-  messages: MessageSquare,
-  activeDeals: Briefcase,
-  production: TrendingUp,
-  clientCare: Wrench,
-  financialAnalyses: FileText,
-};
-
 export function DashboardEditable({
   kpis,
   initialNotes = [],
   advisorName = null,
   initialAnalyses = [],
+  productionSummary = null,
+  productionError = null,
 }: {
   kpis: DashboardKpis;
   initialNotes?: MeetingNoteForBoard[];
   advisorName?: string | null;
   initialAnalyses?: FinancialAnalysisListItem[];
+  productionSummary?: ProductionSummary | null;
+  productionError?: string | null;
 }) {
   const router = useRouter();
   const [config, setConfig] = useState<DashboardConfig>({ order: [...WIDGET_IDS], hidden: [] });
@@ -212,16 +184,6 @@ export function DashboardEditable({
     [config]
   );
 
-  const widgetHref: Partial<Record<WidgetId, string>> = {
-    summaryDay: "/portal/calendar",
-    myTasks: "/portal/tasks",
-    messages: "/portal/contacts",
-    activeDeals: "/portal/pipeline",
-    production: "/portal/production",
-    clientCare: "/portal/contacts",
-    financialAnalyses: "/portal/analyses",
-  };
-
   const renderWidgetContent = (id: WidgetId) => {
     switch (id) {
       case "summaryDay": {
@@ -275,7 +237,11 @@ export function DashboardEditable({
           <div className="flex flex-col h-full">
             <div className="space-y-3 flex-1">
               {all.map((t) => (
-                <div key={t.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
+                <Link
+                  key={t.id}
+                  href={`/portal/tasks${isOverdue(t.dueDate) ? "?filter=overdue" : "?filter=today"}`}
+                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group no-underline text-inherit"
+                >
                   <span className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 shrink-0" aria-hidden />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-800 leading-tight mb-1 group-hover:text-indigo-600 transition-colors truncate">{t.title}</p>
@@ -284,12 +250,9 @@ export function DashboardEditable({
                       {t.contactName && <span className="normal-case font-semibold text-slate-500 truncate"> · {t.contactName}</span>}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
-            <Link href="/portal/tasks" className="mt-4 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
-              Zobrazit všechny úkoly <ChevronRight size={14} />
-            </Link>
           </div>
         );
       }
@@ -305,7 +268,7 @@ export function DashboardEditable({
           <div className="flex flex-col h-full">
             <div className="space-y-3 flex-1">
               {atRisk.map((o) => (
-                <Link key={o.id} href="/portal/pipeline" className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">Ohrožení</span>
                   </div>
@@ -314,7 +277,7 @@ export function DashboardEditable({
                 </Link>
               ))}
               {step34.map((o) => (
-                <Link key={o.id} href="/portal/pipeline" className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{o.stageName}</span>
                   </div>
@@ -323,45 +286,68 @@ export function DashboardEditable({
                 </Link>
               ))}
             </div>
-            <Link href="/portal/pipeline" className="mt-4 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
-              Otevřít Board <ChevronRight size={14} />
-            </Link>
           </div>
         );
       }
       case "production": {
-        const current = 0;
-        const target = 1;
-        const pct = target ? Math.round((current / target) * 100) : 0;
+        const totalPremium = productionSummary?.totalPremium ?? 0;
+        const totalAnnual = productionSummary?.totalAnnual ?? 0;
+        const totalCount = productionSummary?.totalCount ?? 0;
+        const periodLabel = productionSummary?.periodLabel ?? "";
+        const target: number | null = null; // cíl zatím "—"
+        const pct = target && target > 0 ? Math.round((totalPremium / target) * 100) : 0;
+        if (productionError) {
+          return (
+            <div className="flex flex-col h-full justify-center">
+              <p className="text-sm text-rose-600 mb-2">{productionError}</p>
+              <Link href="/portal/production" className="text-xs font-bold text-indigo-600 hover:underline">
+                Otevřít produkci →
+              </Link>
+            </div>
+          );
+        }
+        if (productionSummary === null) {
+          return (
+            <div className="flex flex-col h-full justify-center">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-slate-200 rounded w-3/4 mx-auto" />
+                <div className="h-10 bg-slate-100 rounded w-1/2 mx-auto" />
+                <div className="h-3 bg-slate-100 rounded-full" />
+              </div>
+            </div>
+          );
+        }
+        if (totalCount === 0) {
+          return (
+            <div className="flex flex-col h-full justify-center">
+              <p className="text-sm py-3 text-slate-500">Žádná produkce za tento měsíc.</p>
+            </div>
+          );
+        }
         return (
           <div className="flex flex-col h-full justify-center">
             <div className="text-center mb-6">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Produkce tento měsíc</span>
-              <div className="text-3xl font-black text-slate-900">{current.toLocaleString("cs-CZ")} Kč</div>
-              <div className="text-xs font-bold text-slate-500 mt-1">Cíl: {target.toLocaleString("cs-CZ")} Kč</div>
-            </div>
-            <div className="mb-2 flex justify-between text-xs font-bold">
-              <span className="text-indigo-600">{pct}% splněno</span>
-            </div>
-            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-              <div className="h-full bg-indigo-500 border-r border-white/20 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-              <div className="h-full bg-emerald-500 border-r border-white/20" style={{ width: "0%" }} />
-              <div className="h-full bg-blue-500" style={{ width: "0%" }} />
-            </div>
-            <div className="flex justify-center gap-4 mt-4">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <div className="w-2 h-2 rounded-full bg-indigo-500" /> Život
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+                Produkce {periodLabel}
+              </span>
+              <div className="text-3xl font-black text-slate-900">{totalPremium.toLocaleString("cs-CZ")} Kč</div>
+              <div className="text-xs font-bold text-slate-500 mt-1">
+                Roční ekvivalent: {totalAnnual.toLocaleString("cs-CZ")} Kč · {totalCount} smluv
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Investice
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <div className="w-2 h-2 rounded-full bg-blue-500" /> Hypotéky
-              </div>
+              {target != null && target > 0 && (
+                <div className="text-xs font-bold text-slate-500 mt-0.5">Cíl: {target.toLocaleString("cs-CZ")} Kč</div>
+              )}
             </div>
-            <Link href="/portal/production" className="mt-6 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
-              Otevřít produkci <ChevronRight size={14} />
-            </Link>
+            {target != null && target > 0 && (
+              <>
+                <div className="mb-2 flex justify-between text-xs font-bold">
+                  <span className="text-indigo-600">{pct}% splněno</span>
+                </div>
+                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="h-full bg-indigo-500 border-r border-white/20 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+              </>
+            )}
           </div>
         );
       }
@@ -389,13 +375,10 @@ export function DashboardEditable({
                     <h4 className="font-bold text-sm text-slate-800">{c.partnerName ?? "—"}</h4>
                     <p className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle size={12} /> Výročí · {c.contactName} · {new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}</p>
                   </div>
-                  <Link href={`/portal/contacts/${c.id}`} className="p-2 bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg shadow-sm transition-colors shrink-0" aria-label="Zavolat"><Phone size={14} /></Link>
+                  <Link href={`/portal/contacts/${c.contactId}`} className="p-2 bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg shadow-sm transition-colors shrink-0" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
                 </div>
               ))}
             </div>
-            <Link href="/portal/contacts" className="mt-4 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
-              Servisní přehled <ChevronRight size={14} />
-            </Link>
           </div>
         );
       }
@@ -429,9 +412,6 @@ export function DashboardEditable({
                 </div>
               </Link>
             ))}
-            <Link href="/portal/analyses" className="inline-block mt-2 text-xs font-bold text-indigo-600 hover:underline">
-              Všechny analýzy <ChevronRight size={14} />
-            </Link>
           </div>
         );
       }
@@ -492,10 +472,28 @@ export function DashboardEditable({
               <Users size={18} /> Nový klient
             </Link>
             <Link
+              href="/portal/calendar?new=1"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <CalendarClock size={18} /> Nová schůzka
+            </Link>
+            <Link
               href="/portal/tasks"
               className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
             >
               <CheckSquare size={18} /> Nový úkol
+            </Link>
+            <Link
+              href="/portal/messages"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <MessageSquare size={18} /> Napsat zprávu
+            </Link>
+            <Link
+              href="/portal/calculators"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+            >
+              <BarChart3 size={18} /> Kalkulačky
             </Link>
             <Link
               href="/portal/analyses/financial"
@@ -533,7 +531,7 @@ export function DashboardEditable({
               id: "anniversary",
               title: "Dnes má výročí smlouvy",
               desc: `${first.partnerName ?? "Smlouva"} (${first.contactName})`,
-              href: "/portal/contacts",
+              href: `/portal/contacts/${first.contactId}`,
               className: "text-amber-600 bg-amber-50 border-amber-100",
               Icon: Star,
             });
@@ -635,12 +633,12 @@ export function DashboardEditable({
           );
         })()}
 
-        {/* V3 1:1: widget grid – hlavička s GripVertical, tělo p-6, min-h-[320px] */}
+        {/* Widget grid – DashboardCard + drag-and-drop, sections A–D order preserved by visibleOrder */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
           {visibleOrder.map((id) => {
-            const href = widgetHref[id];
             const WidgetIconComponent = WIDGET_ICONS[id];
-            const IconEl = WidgetIconComponent ? <WidgetIconComponent size={18} className="text-slate-400" /> : null;
+            const footerLink = WIDGET_HREF[id];
+            const footerLabel = id === "production" ? "Otevřít produkci" : id === "activeDeals" ? "Otevřít Board" : id === "myTasks" ? "Zobrazit všechny úkoly" : id === "clientCare" ? "Servisní přehled" : id === "financialAnalyses" ? "Všechny analýzy" : "Více";
             const body = renderWidgetContent(id);
             return (
               <div
@@ -650,26 +648,21 @@ export function DashboardEditable({
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, id)}
-                className={`flex flex-col rounded-[24px] border border-slate-100 bg-white shadow-sm min-h-[320px] hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`}
+                className={`hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`}
               >
-                <div className="px-6 py-5 flex items-center justify-between border-b border-slate-50/50 shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {IconEl}
-                    <h2 className="font-bold text-slate-900 text-sm truncate">{WIDGET_LABELS[id]}</h2>
-                  </div>
-                  <span className="p-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing rounded transition-colors touch-none shrink-0" aria-label="Chytit a přesunout">
-                    <GripVertical size={16} />
-                  </span>
-                </div>
-                <div className="p-6 flex-1 overflow-y-auto min-h-0">
-                  {href ? (
-                    <Link href={href} className="block -m-6 p-6 rounded-[24px] hover:bg-slate-50/80 transition-colors text-inherit no-underline" aria-label={`Přejít na ${WIDGET_LABELS[id]}`}>
-                      {body}
-                    </Link>
-                  ) : (
-                    body
-                  )}
-                </div>
+                <DashboardCard
+                  title={WIDGET_LABELS[id]}
+                  icon={WidgetIconComponent}
+                  footerLink={footerLink}
+                  footerLabel={footerLabel}
+                  rightElement={
+                    <span className="p-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing rounded transition-colors touch-none shrink-0" aria-label="Chytit a přesunout">
+                      <GripVertical size={16} />
+                    </span>
+                  }
+                >
+                  {body}
+                </DashboardCard>
               </div>
             );
           })}

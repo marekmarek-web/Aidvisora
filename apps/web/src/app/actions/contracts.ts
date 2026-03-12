@@ -87,6 +87,12 @@ export async function createContract(
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  const segment = form.segment?.trim();
+  if (!segment || !contractSegments.includes(segment as (typeof contractSegments)[number])) {
+    throw new Error("Neplatný segment smlouvy. Vyberte segment z nabídky.");
+  }
+
   let partnerName = form.partnerName?.trim() || null;
   let productName = form.productName?.trim() || null;
   if (form.partnerId && !partnerName) {
@@ -97,30 +103,42 @@ export async function createContract(
     const [pr] = await db.select({ name: products.name }).from(products).where(eq(products.id, form.productId)).limit(1);
     if (pr) productName = pr.name;
   }
-  const [row] = await db
-    .insert(contracts)
-    .values({
-      tenantId: auth.tenantId,
-      contactId,
-      advisorId: auth.userId,
-      segment: form.segment,
-      partnerId: form.partnerId || null,
-      productId: form.productId || null,
-      partnerName,
-      productName,
-      premiumAmount: form.premiumAmount || null,
-      premiumAnnual: form.premiumAnnual || null,
-      contractNumber: form.contractNumber?.trim() || null,
-      startDate: form.startDate || null,
-      anniversaryDate: form.anniversaryDate || null,
-      note: form.note?.trim() || null,
-    })
-    .returning({ id: contracts.id });
-  const newId = row?.id ?? null;
-  if (newId) {
-    try { await logActivity("contract", newId, "create", { segment: form.segment, contactId }); } catch {}
+
+  try {
+    const [row] = await db
+      .insert(contracts)
+      .values({
+        tenantId: auth.tenantId,
+        contactId,
+        advisorId: auth.userId,
+        segment,
+        partnerId: form.partnerId || null,
+        productId: form.productId || null,
+        partnerName,
+        productName,
+        premiumAmount: form.premiumAmount || null,
+        premiumAnnual: form.premiumAnnual || null,
+        contractNumber: form.contractNumber?.trim() || null,
+        startDate: form.startDate || null,
+        anniversaryDate: form.anniversaryDate || null,
+        note: form.note?.trim() || null,
+      })
+      .returning({ id: contracts.id });
+    const newId = row?.id ?? null;
+    if (newId) {
+      try {
+        await logActivity("contract", newId, "create", { segment, contactId });
+      } catch {}
+    }
+    return newId;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("foreign key") || msg.includes("violates foreign key")) {
+      throw new Error("Kontakt nebo vybraný partner/produkt neexistuje. Zkontrolujte údaje.");
+    }
+    if (msg.includes("Unauthorized") || msg.includes("Forbidden")) throw err;
+    throw new Error(msg || "Smlouvu se nepodařilo uložit. Zkuste to znovu.");
   }
-  return newId;
 }
 
 export async function updateContract(
