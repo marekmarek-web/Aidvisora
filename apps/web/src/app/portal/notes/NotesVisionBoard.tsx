@@ -198,6 +198,7 @@ export function NotesVisionBoard({
   );
 
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
+    if ((e.target as HTMLElement).closest?.("button, a, [role=\"button\"]")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });

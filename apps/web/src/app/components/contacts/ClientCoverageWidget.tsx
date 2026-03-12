@@ -2,7 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { BarChart2 } from "lucide-react";
+import {
+  BarChart2,
+  Car,
+  Home,
+  ShieldCheck,
+  ShieldAlert,
+  Heart,
+  CreditCard,
+  TrendingUp,
+  PiggyBank,
+  CheckCircle2,
+  Clock,
+  Circle,
+} from "lucide-react";
 import {
   getCoverageForContact,
   setCoverageStatus,
@@ -12,6 +25,39 @@ import {
 import type { ResolvedCoverageItem, CoverageSummary } from "@/app/lib/coverage/types";
 import type { CoverageStatus } from "@/app/lib/coverage/types";
 
+/** Zobrazené názvy kategorií podle spec „pokryti produktu.txt“. */
+const DISPLAY_CATEGORY_NAMES: Record<string, string> = {
+  "Pojištění auta": "Pojištění auta",
+  Majetek: "Pojištění majetku",
+  "Pojištění odpovědnosti": "Odpovědnost",
+  "Pojištění zaměstnanecké odpovědnosti": "Poj. zaměstnance",
+  "Životní pojištění": "Životní pojištění",
+  Úvěry: "Úvěry & Bydlení",
+  Investice: "Investice",
+  DPS: "DPS",
+};
+
+/** Pořadí kategorií podle spec (8 kategorií). */
+const CATEGORY_ORDER = [
+  "Pojištění auta",
+  "Majetek",
+  "Pojištění odpovědnosti",
+  "Pojištění zaměstnanecké odpovědnosti",
+  "Životní pojištění",
+  "Úvěry",
+  "Investice",
+  "DPS",
+];
+
+/** Spec: rotace none -> pending -> active -> none; backend stavy: none, in_progress, done. */
+const SPEC_CYCLE: CoverageStatus[] = ["none", "in_progress", "done"];
+
+function nextStatus(s: CoverageStatus): CoverageStatus {
+  const normalized = s === "opportunity" ? "in_progress" : s === "not_relevant" ? "none" : s;
+  const i = SPEC_CYCLE.indexOf(normalized);
+  return SPEC_CYCLE[(i + 1) % SPEC_CYCLE.length];
+}
+
 const STATUS_LABELS: Record<CoverageStatus, string> = {
   done: "Hotovo",
   in_progress: "Řeší se",
@@ -19,13 +65,6 @@ const STATUS_LABELS: Record<CoverageStatus, string> = {
   not_relevant: "Nerelevantní",
   opportunity: "Příležitost",
 };
-
-const STATUS_CYCLE: CoverageStatus[] = ["none", "in_progress", "done", "opportunity", "not_relevant"];
-
-function nextStatus(s: CoverageStatus): CoverageStatus {
-  const i = STATUS_CYCLE.indexOf(s);
-  return STATUS_CYCLE[(i + 1) % STATUS_CYCLE.length];
-}
 
 function StatusIcon({ status }: { status: CoverageStatus }) {
   const size = 16;
@@ -231,19 +270,24 @@ function CoverageActionsMenu({
   );
 }
 
-/** Jedna položka v oblasti. */
+/** Jedna položka – spec: tlačítko s ikonou stavu (Hotovo/Řeší se/Nastavit), cyklus none->pending->active->none. */
 function CoverageItemRow({
   contactId,
   item,
   onStatusChange,
   onRefresh,
+  single,
 }: {
   contactId: string;
   item: ResolvedCoverageItem;
   onStatusChange: () => void;
   onRefresh: () => void;
+  single?: boolean;
 }) {
   const [updating, setUpdating] = useState(false);
+  const isDone = item.status === "done";
+  const isPending = item.status === "in_progress" || item.status === "opportunity";
+  const isNone = !isDone && !isPending;
 
   async function handleCycleStatus() {
     setUpdating(true);
@@ -257,72 +301,84 @@ function CoverageItemRow({
     }
   }
 
-  const bgClass =
-    item.status === "done"
-      ? "bg-green-50 border-green-200"
-      : item.status === "in_progress" || item.status === "opportunity"
-        ? "bg-amber-50 border-amber-200"
-        : item.status === "not_relevant"
-          ? "bg-slate-50 border-slate-200"
-          : "bg-white border-slate-200";
+  const btnClass =
+    isDone
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm"
+      : isPending
+        ? "bg-amber-50 text-amber-700 border-amber-200 shadow-sm"
+        : "bg-slate-50/50 text-slate-500 border-slate-200 hover:bg-white hover:shadow-md";
+
+  const label = single && isDone ? "Hotovo" : single && isPending ? "Řeší se" : item.label;
 
   return (
-    <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-[var(--wp-radius-sm)] border ${bgClass} min-h-[44px]`}
-    >
-      <CoverageStatusSelector
-        status={item.status}
-        onSelect={handleCycleStatus}
+    <div className="flex items-center gap-2 w-full">
+      <button
+        type="button"
+        onClick={handleCycleStatus}
         disabled={updating}
-      />
-      <span className="flex-1 text-sm font-medium text-slate-800 truncate">{item.label}</span>
-      <CoverageActionsMenu
-        contactId={contactId}
-        item={item}
-        onOpportunityCreated={onRefresh}
-        onTaskCreated={onRefresh}
-      />
+        className={`group/btn flex items-center gap-3 text-[13px] font-bold px-3 py-2.5 rounded-xl w-full border transition-all duration-300 transform active:scale-95 min-h-[44px] touch-manipulation ${single ? "justify-center" : "text-left"} ${btnClass}`}
+        title="Klikni na položku pro změnu stavu"
+      >
+        {isDone && <CheckCircle2 size={16} className="text-emerald-500 shrink-0" aria-hidden />}
+        {isPending && <Clock size={16} className="text-amber-500 shrink-0" aria-hidden />}
+        {isNone && <Circle size={16} className="text-slate-300 shrink-0 group-hover/btn:text-indigo-400 transition-colors" aria-hidden />}
+        <span>{label}</span>
+      </button>
+      {!single && (
+        <CoverageActionsMenu
+          contactId={contactId}
+          item={item}
+          onOpportunityCreated={onRefresh}
+          onTaskCreated={onRefresh}
+        />
+      )}
     </div>
   );
 }
 
-/** Barvy karet podle kategorie (spec klienti dash v2). */
-const CATEGORY_COLORS: Record<string, { bg: string; border: string; icon: string }> = {
-  "Pojištění auta": { bg: "bg-indigo-50", border: "border-indigo-100", icon: "text-indigo-400" },
-  "Pojištění majetku": { bg: "bg-yellow-50", border: "border-yellow-100", icon: "text-yellow-500" },
-  "Pojištění odpovědnosti": { bg: "bg-emerald-50", border: "border-emerald-100", icon: "text-emerald-500" },
-  "Pojištění zaměstnanecké odpovědnosti": { bg: "bg-emerald-50", border: "border-emerald-100", icon: "text-emerald-500" },
-  "Životní pojištění": { bg: "bg-rose-50", border: "border-rose-100", icon: "text-rose-400" },
-  "Úvěry": { bg: "bg-amber-50", border: "border-amber-100", icon: "text-blue-500" },
-  "Investice": { bg: "bg-purple-50", border: "border-purple-100", icon: "text-purple-400" },
-  "DPS": { bg: "bg-blue-50", border: "border-blue-100", icon: "text-slate-500" },
+/** Ikony a barvy kategorií podle spec „pokryti produktu.txt“. */
+const CATEGORY_SPEC: Record<string, { icon: typeof Car; from: string; to: string; iconColor: string; shadowColor: string }> = {
+  "Pojištění auta": { icon: Car, from: "from-indigo-500/5", to: "to-blue-500/5", iconColor: "text-indigo-500", shadowColor: "shadow-indigo-500" },
+  Majetek: { icon: Home, from: "from-amber-500/5", to: "to-orange-500/5", iconColor: "text-amber-500", shadowColor: "shadow-amber-500" },
+  "Pojištění odpovědnosti": { icon: ShieldCheck, from: "from-emerald-500/5", to: "to-teal-500/5", iconColor: "text-emerald-500", shadowColor: "shadow-emerald-500" },
+  "Pojištění zaměstnanecké odpovědnosti": { icon: ShieldAlert, from: "from-emerald-500/5", to: "to-teal-500/5", iconColor: "text-emerald-500", shadowColor: "shadow-emerald-500" },
+  "Životní pojištění": { icon: Heart, from: "from-rose-500/5", to: "to-pink-500/5", iconColor: "text-rose-500", shadowColor: "shadow-rose-500" },
+  Úvěry: { icon: CreditCard, from: "from-cyan-500/5", to: "to-blue-500/5", iconColor: "text-cyan-500", shadowColor: "shadow-cyan-500" },
+  Investice: { icon: TrendingUp, from: "from-purple-500/5", to: "to-fuchsia-500/5", iconColor: "text-purple-500", shadowColor: "shadow-purple-500" },
+  DPS: { icon: PiggyBank, from: "from-slate-500/5", to: "to-gray-500/5", iconColor: "text-slate-500", shadowColor: "shadow-slate-500" },
 };
 
-function getCategoryStyle(category: string) {
-  return CATEGORY_COLORS[category] ?? { bg: "bg-slate-50", border: "border-slate-100", icon: "text-slate-500" };
+function getCategorySpec(category: string) {
+  return CATEGORY_SPEC[category] ?? { icon: BarChart2, from: "from-slate-500/5", to: "to-slate-500/5", iconColor: "text-slate-500", shadowColor: "shadow-slate-500" };
 }
 
-/** Karta jedné kategorie (oblasti). */
+/** Karta jedné kategorie (glass-card, ikona, spec „pokryti produktu.txt“). */
 function CoverageAreaCard({
   category,
+  displayName,
   items,
   contactId,
   onRefresh,
 }: {
   category: string;
+  displayName: string;
   items: ResolvedCoverageItem[];
   contactId: string;
   onRefresh: () => void;
 }) {
-  const style = getCategoryStyle(category);
-  const initial = category.charAt(0).toUpperCase();
+  const spec = getCategorySpec(category);
+  const Icon = spec.icon;
+  const single = items.length === 1;
   return (
-    <div className={`flex flex-col p-5 rounded-2xl border ${style.bg} ${style.border}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`text-lg font-black ${style.icon}`} aria-hidden>{initial}</span>
-        <h3 className="font-bold text-sm text-slate-800">{category}</h3>
+    <div className={`relative rounded-[28px] p-5 flex flex-col group hover:bg-white/80 transition-all duration-500 overflow-hidden border border-white/60 bg-white/40 backdrop-blur-[12px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]`}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${spec.from} ${spec.to} opacity-50 group-hover:opacity-100 transition-opacity duration-500 z-0`} aria-hidden />
+      <div className="relative z-10 flex flex-col items-center justify-center mb-6 text-center pt-2">
+        <div className={`w-14 h-14 bg-white rounded-2xl shadow-md ${spec.shadowColor}/20 mb-4 flex items-center justify-center ${spec.iconColor} group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500`}>
+          <Icon size={24} strokeWidth={2.5} aria-hidden />
+        </div>
+        <h4 className="font-black text-slate-800 text-[15px] tracking-tight leading-tight">{displayName}</h4>
       </div>
-      <div className="space-y-1.5">
+      <div className={`relative z-10 flex flex-col gap-2 mt-auto ${single ? "items-center justify-center" : ""}`}>
         {items.map((item) => (
           <CoverageItemRow
             key={item.itemKey}
@@ -330,6 +386,7 @@ function CoverageAreaCard({
             item={item}
             onStatusChange={onRefresh}
             onRefresh={onRefresh}
+            single={single}
           />
         ))}
       </div>
@@ -371,11 +428,17 @@ export function useClientCoverage(contactId: string) {
   };
 }
 
-/** Hlavní widget – použití na záložce Přehled. */
+/** Položky podle spec: bez „Americké hypotéky“. */
+function filterSpecItems(items: ResolvedCoverageItem[]): ResolvedCoverageItem[] {
+  return items.filter((item) => item.label !== "Americké hypotéky");
+}
+
+/** Hlavní widget – použití na záložce Přehled (spec „pokryti produktu.txt“). */
 export function ClientCoverageWidget({ contactId }: { contactId: string }) {
   const { items, summary, loading, error, refetch } = useClientCoverage(contactId);
 
-  const byCategory = items.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
+  const filtered = filterSpecItems(items);
+  const byCategory = filtered.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
@@ -397,18 +460,47 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
     );
   }
 
+  const activeCount = summary?.done ?? 0;
+  const pendingCount = (summary?.inProgress ?? 0) + (summary?.opportunity ?? 0);
+  const totalCount = summary?.total ?? 0;
+  const activePct = totalCount > 0 ? (activeCount / totalCount) * 100 : 0;
+  const pendingPct = totalCount > 0 ? (pendingCount / totalCount) * 100 : 0;
+
   return (
     <div className="space-y-6">
-      {/* Samostatný blok Celkové pokrytí portfolia (nad kartou) */}
-      {summary && summary.total > 0 && <CoverageSummaryBar summary={summary} />}
-
-      {/* Karta Pokrytí produktů */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <BarChart2 size={20} className="text-indigo-500" aria-hidden />
-            Pokrytí produktů
-          </h2>
+      {/* Glass panel podle spec „pokryti produktu.txt“ */}
+      <div className="w-full rounded-[32px] p-6 sm:p-8 border border-white/50 bg-white/85 backdrop-blur-[20px] shadow-[0_8px_32px_rgba(31,38,135,0.05)]">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+              <BarChart2 size={28} strokeWidth={2.5} aria-hidden />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pokrytí produktů</h2>
+              <p className="text-sm font-bold text-slate-400 mt-1">Interaktivní mapa klientova portfolia</p>
+            </div>
+          </div>
+          <div className="flex-1 max-w-sm w-full bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stav pokrytí</span>
+              <div className="flex gap-3 text-xs font-bold">
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden />{activeCount}
+                </span>
+                <span className="text-amber-500 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" aria-hidden />{pendingCount}
+                </span>
+              </div>
+            </div>
+            <div className="h-2.5 w-full bg-white rounded-full overflow-hidden flex shadow-inner border border-slate-200/60">
+              <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-700 ease-out" style={{ width: `${activePct}%` }} />
+              <div className="h-full bg-gradient-to-r from-amber-300 to-amber-400 transition-all duration-700 ease-out" style={{ width: `${pendingPct}%` }} />
+            </div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-3 text-center">Klikni na položku pro změnu stavu.</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-bold text-slate-500" />
           <Link
             href={`/portal/contacts/${contactId}#obchody`}
             className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 min-h-[44px]"
@@ -416,34 +508,17 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
             Obchody <span aria-hidden>→</span>
           </Link>
         </div>
-        <div className="p-6">
-          {summary && (
-            <div className="max-w-md mx-auto mb-8 text-center">
-              <div className="flex justify-center gap-2 text-sm font-bold mb-2">
-                <span className="text-emerald-600">{summary.done} hotovo</span>
-                <span className="text-slate-300">,</span>
-                <span className="text-amber-500">{summary.inProgress} řeší se</span>
-                <span className="text-slate-300">,</span>
-                <span className="text-slate-500">{summary.none} nic</span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${summary.total ? (summary.done / summary.total) * 100 : 0}%` }} />
-                <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${summary.total ? (summary.inProgress / summary.total) * 100 : 0}%` }} />
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">Klikni na položku pro změnu stavu.</p>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(byCategory).map(([category, categoryItems]) => (
-              <CoverageAreaCard
-                key={category}
-                category={category}
-                items={categoryItems}
-                contactId={contactId}
-                onRefresh={refetch}
-              />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {CATEGORY_ORDER.filter((cat) => byCategory[cat]?.length).map((category) => (
+            <CoverageAreaCard
+              key={category}
+              category={category}
+              displayName={DISPLAY_CATEGORY_NAMES[category] ?? category}
+              items={byCategory[category]}
+              contactId={contactId}
+              onRefresh={refetch}
+            />
+          ))}
         </div>
       </div>
     </div>

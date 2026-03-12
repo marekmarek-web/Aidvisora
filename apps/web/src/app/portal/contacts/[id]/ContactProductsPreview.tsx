@@ -11,11 +11,16 @@ const PREVIEW_COUNT = 4;
 export function ContactProductsPreview({ contactId }: { contactId: string }) {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoadError(null);
     getContractsByContact(contactId)
       .then((list) => setContracts(list.slice(0, PREVIEW_COUNT)))
-      .catch(() => setContracts([]))
+      .catch(() => {
+        setContracts([]);
+        setLoadError("Nepodařilo se načíst smlouvy.");
+      })
       .finally(() => setLoading(false));
   }, [contactId]);
 
@@ -40,6 +45,8 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
       <div className="p-4 space-y-3">
         {loading ? (
           <p className="text-sm text-slate-400">Načítám…</p>
+        ) : loadError ? (
+          <p className="text-sm text-red-600">{loadError}</p>
         ) : contracts.length === 0 ? (
           <p className="text-sm text-slate-500">Žádné smlouvy.</p>
         ) : (
@@ -74,6 +81,11 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
         <Link
           href="#smlouvy&add=1"
           className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2 min-h-[44px]"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.hash = "smlouvy&add=1";
+            window.dispatchEvent(new CustomEvent("contact-open-add-contract"));
+          }}
         >
           <span className="text-base">+</span> Přidat produkt
         </Link>

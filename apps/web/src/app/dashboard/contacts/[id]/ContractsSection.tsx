@@ -20,6 +20,7 @@ import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 export function ContractsSection({ contactId }: { contactId: string }) {
   const [list, setList] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [segments, setSegments] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -43,12 +44,17 @@ export function ContractsSection({ contactId }: { contactId: string }) {
 
   function load() {
     setLoading(true);
+    setLoadError(null);
     Promise.all([
       getContractsByContact(contactId),
       getContractSegments().then(setSegments),
     ])
       .then(([contracts]) => {
         setList(contracts);
+      })
+      .catch((err) => {
+        setList([]);
+        setLoadError(err instanceof Error ? err.message : "Nepodařilo se načíst smlouvy.");
       })
       .finally(() => setLoading(false));
   }
@@ -58,14 +64,17 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
-    if (hash.includes("add=1")) {
-      setAdding(true);
-    }
+    if (hash.includes("add=1")) setAdding(true);
     const onHashChange = () => {
       if (window.location.hash.includes("add=1")) setAdding(true);
     };
+    const onOpenAdd = () => setAdding(true);
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("contact-open-add-contract", onOpenAdd);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("contact-open-add-contract", onOpenAdd);
+    };
   }, []);
 
 
@@ -157,6 +166,16 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   }
 
   if (loading) return <p className="text-slate-500 text-sm">Načítám smlouvy…</p>;
+  if (loadError) {
+    return (
+      <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
+        <p className="text-red-600 text-sm mb-3">{loadError}</p>
+        <button type="button" onClick={() => load()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
+          Zkusit znovu
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">

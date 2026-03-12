@@ -26,6 +26,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
+import { getAdvisorAvatarUrl, uploadAdvisorAvatar } from "@/app/actions/preferences";
 
 const VALID_TABS = ["osobni", "rezervace", "integrace", "notifikace", "fakturace"] as const;
 type TabId = (typeof VALID_TABS)[number];
@@ -118,6 +119,31 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [advisorAvatarUrl, setAdvisorAvatarUrl] = useState<string | null>(null);
+  const [advisorAvatarUploading, setAdvisorAvatarUploading] = useState(false);
+  const [advisorAvatarError, setAdvisorAvatarError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
+  }, []);
+
+  const onAdvisorAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAdvisorAvatarError(null);
+    setAdvisorAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const url = await uploadAdvisorAvatar(fd);
+      if (url) setAdvisorAvatarUrl(url);
+    } catch (err) {
+      setAdvisorAvatarError(err instanceof Error ? err.message : "Nahrání se nezdařilo");
+    } finally {
+      setAdvisorAvatarUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
   const bookingLink = "weplan.cz/rezervace"; // placeholder
@@ -229,18 +255,35 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
         {/* Hlavička profilu */}
         <div className="bg-white rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 z-10 text-center md:text-left">
-            <div className="relative group cursor-pointer">
+            <div className="relative group">
+              <label className="block cursor-pointer">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-[28px] bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-xl shadow-indigo-200 border-4 border-white transition-transform group-hover:scale-105 overflow-hidden">
+                  {advisorAvatarUrl ? (
+                    <img src={advisorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                <div className="absolute inset-0 bg-slate-900/40 rounded-2xl sm:rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <Camera size={24} className="text-white mb-0.5" aria-hidden />
+                  <span className="text-[9px] font-black uppercase text-white">Nahrát fotku</span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={onAdvisorAvatarChange}
+                  disabled={advisorAvatarUploading}
+                />
+              </label>
+              {advisorAvatarUploading && (
+                <p className="text-xs text-slate-500 mt-1 text-center">Nahrávám…</p>
+              )}
+              {advisorAvatarError && (
+                <p className="text-xs text-red-600 mt-1 text-center max-w-[100px]">{advisorAvatarError}</p>
+              )}
               <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-[28px] bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-xl shadow-indigo-200 border-4 border-white transition-transform group-hover:scale-105"
-                aria-hidden
-              >
-                {initials}
-              </div>
-              <div className="absolute inset-0 bg-slate-900/40 rounded-2xl sm:rounded-[28px] border-4 border-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <Camera size={24} className="text-white" aria-hidden />
-              </div>
-              <div
-                className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm"
+                className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm pointer-events-none"
                 title="Účet je aktivní"
               >
                 <ShieldCheck size={16} aria-hidden />

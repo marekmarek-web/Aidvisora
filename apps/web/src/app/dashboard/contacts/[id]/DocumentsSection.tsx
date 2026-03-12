@@ -15,6 +15,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
   const [list, setList] = useState<DocumentRow[]>([]);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [visibleToClient, setVisibleToClient] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
@@ -22,6 +23,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
 
   function load() {
     setLoading(true);
+    setLoadError(null);
     Promise.all([getDocumentsForContact(contactId), getContractsByContact(contactId)])
       .then(([docs, cts]) => {
         setList(docs);
@@ -29,6 +31,11 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
         setVisibleToClient(
           docs.reduce((acc, d) => ({ ...acc, [d.id]: !!d.visibleToClient }), {} as Record<string, boolean>)
         );
+      })
+      .catch((err) => {
+        setList([]);
+        setContracts([]);
+        setLoadError(err instanceof Error ? err.message : "Nepodařilo se načíst dokumenty.");
       })
       .finally(() => setLoading(false));
   }
@@ -78,6 +85,16 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
   }
 
   if (loading) return <p className="text-slate-500 text-sm">Načítám dokumenty…</p>;
+  if (loadError) {
+    return (
+      <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
+        <p className="text-red-600 text-sm mb-3">{loadError}</p>
+        <button type="button" onClick={() => load()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
+          Zkusit znovu
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">

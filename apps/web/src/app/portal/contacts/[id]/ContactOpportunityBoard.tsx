@@ -17,19 +17,28 @@ export function ContactOpportunityBoard({ contactId }: { contactId: string }) {
   const router = useRouter();
   const [stages, setStages] = useState<StageWithOpportunities[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     getPipelineByContact(contactId)
       .then((data) => {
         if (!cancelled) setStages(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setStages([]);
+          setLoadError(err instanceof Error ? err.message : "Nepodařilo se načíst obchody.");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [contactId]);
+  }, [contactId, retry]);
 
   async function moveTo(opportunityId: string, stageId: string) {
     await updateOpportunityStage(opportunityId, stageId);
@@ -42,6 +51,20 @@ export function ContactOpportunityBoard({ contactId }: { contactId: string }) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-500">
         Načítám obchody…
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
+        <p className="text-red-600 text-sm mb-3">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => setRetry((r) => r + 1)}
+          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]"
+        >
+          Zkusit znovu
+        </button>
       </div>
     );
   }

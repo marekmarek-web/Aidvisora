@@ -11,6 +11,7 @@ export const advisorPreferences = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
     quickActions: jsonb("quick_actions").$type<{ order: string[]; visible: Record<string, boolean> }>(),
+    avatarUrl: text("avatar_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

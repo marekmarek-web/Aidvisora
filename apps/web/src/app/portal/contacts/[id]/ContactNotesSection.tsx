@@ -9,18 +9,40 @@ import { EmptyState } from "@/app/components/EmptyState";
 export function ContactNotesSection({ contactId }: { contactId: string }) {
   const [notes, setNotes] = useState<MeetingNoteRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    setLoadError(null);
     getMeetingNotesList(contactId)
-      .then(setNotes)
-      .catch(() => setNotes([]))
+      .then((data) => {
+        setNotes(data);
+      })
+      .catch(() => {
+        setNotes([]);
+        setLoadError("Nepodařilo se načíst zápisky.");
+      })
       .finally(() => setLoading(false));
-  }, [contactId]);
+  }, [contactId, retry]);
 
   if (loading) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm text-slate-500">Načítám zápisky…</p>
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
+        <p className="text-red-600 text-sm mb-3">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => setRetry((r) => r + 1)}
+          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]"
+        >
+          Zkusit znovu
+        </button>
       </div>
     );
   }

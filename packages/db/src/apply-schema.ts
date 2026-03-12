@@ -40,6 +40,7 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS zip text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tags text[];
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lifecycle_stage text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS avatar_url text;
 ALTER TABLE board_views ADD COLUMN IF NOT EXISTS groups_config jsonb;
 ALTER TABLE households ADD COLUMN IF NOT EXISTS icon text;
 ALTER TABLE mindmap_maps ADD COLUMN IF NOT EXISTS name text;

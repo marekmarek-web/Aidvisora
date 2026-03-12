@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
 import { seedDemoData } from "@/app/actions/seed-demo";
-import { getQuickActionsConfig, setQuickActionsConfig } from "@/app/actions/preferences";
+import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar } from "@/app/actions/preferences";
 import { listTenantMembers } from "@/app/actions/team";
 import {
   QUICK_ACTIONS_CATALOG,
@@ -171,6 +171,33 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [advisorAvatarUrl, setAdvisorAvatarUrl] = useState<string | null>(null);
+  const [advisorAvatarUploading, setAdvisorAvatarUploading] = useState(false);
+  const [advisorAvatarError, setAdvisorAvatarError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTab === "profil") {
+      getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
+    }
+  }, [activeTab]);
+
+  const onAdvisorAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAdvisorAvatarError(null);
+    setAdvisorAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const url = await uploadAdvisorAvatar(fd);
+      if (url) setAdvisorAvatarUrl(url);
+    } catch (err) {
+      setAdvisorAvatarError(err instanceof Error ? err.message : "Nahrání se nezdařilo");
+    } finally {
+      setAdvisorAvatarUploading(false);
+      e.target.value = "";
+    }
+  }, []);
 
   const personalDirty = useMemo(() => {
     const full = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
@@ -551,12 +578,32 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 sm:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
                   <div className="relative group flex-shrink-0 mx-auto md:mx-0">
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-xl border-4 border-white">
-                      {initials}
-                    </div>
-                    <div className="absolute inset-0 bg-slate-900/40 rounded-[28px] border-4 border-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <Camera size={28} className="text-white" />
-                    </div>
+                    <label className="block cursor-pointer">
+                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-xl border-4 border-white overflow-hidden">
+                        {advisorAvatarUrl ? (
+                          <img src={advisorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-slate-900/40 rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <Camera size={28} className="text-white mb-1" />
+                        <span className="text-[10px] font-black uppercase text-white">Nahrát fotku</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="sr-only"
+                        onChange={onAdvisorAvatarChange}
+                        disabled={advisorAvatarUploading}
+                      />
+                    </label>
+                    {advisorAvatarUploading && (
+                      <p className="text-xs text-slate-500 mt-2 text-center">Nahrávám…</p>
+                    )}
+                    {advisorAvatarError && (
+                      <p className="text-xs text-red-600 mt-2 text-center max-w-[140px]">{advisorAvatarError}</p>
+                    )}
                   </div>
                   <div className="flex-1 w-full space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
