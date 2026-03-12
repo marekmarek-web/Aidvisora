@@ -45,7 +45,8 @@ const CALCULATORS: CalculatorDefinition[] = [
     description: "Potřebné krytí pro zajištění rodiny a příjmů.",
     icon: "heart-pulse",
     route: "/portal/calculators/life",
-    status: "coming_soon",
+    status: "active",
+    engineRef: "life",
     modes: ["standalone"],
   },
 ];
