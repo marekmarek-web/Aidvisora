@@ -22,7 +22,8 @@ const CALCULATORS: CalculatorDefinition[] = [
     description: "Měsíční splátka a náklady hypotéky.",
     icon: "calculator",
     route: "/portal/calculators/mortgage",
-    status: "coming_soon",
+    status: "active",
+    engineRef: "mortgage",
     modes: ["standalone"],
   },
   {

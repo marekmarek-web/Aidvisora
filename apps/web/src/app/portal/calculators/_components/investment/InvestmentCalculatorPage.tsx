@@ -4,6 +4,9 @@ import { useMemo, useState, useCallback } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorHero } from "../core/CalculatorHero";
 import { CalculatorChartCard } from "../core/CalculatorChartCard";
+import { CalculatorInfoCard } from "../core/CalculatorInfoCard";
+import { CalculatorInputSection } from "../core/CalculatorInputSection";
+import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
 import { InvestmentStrategySwitcher } from "./InvestmentStrategySwitcher";
 import { InvestmentInputPanel } from "./InvestmentInputPanel";
 import { InvestmentResultsPanel } from "./InvestmentResultsPanel";
@@ -109,14 +112,15 @@ export function InvestmentCalculatorPage() {
           </CalculatorHero>
 
           <div className="mt-8 mb-10 max-w-7xl mx-auto px-4">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-              <h3 className="text-base font-bold text-[#0a0f29] mb-3 flex items-center gap-2">
+            <CalculatorInfoCard
+              title="Informace ke kalkulaci"
+              icon={
                 <svg className="w-4 h-4 text-[#fbbf24]" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
-                Informace ke kalkulaci
-              </h3>
-              <div className="text-slate-600 space-y-2 leading-relaxed text-xs md:text-sm">
+              }
+            >
+              <>
                 <p>
                   Tato kalkulačka slouží k orientačnímu výpočtu, jak se může vyvíjet hodnota vaší investice v čase při pravidelném investování.
                   Zohledňuje výši počátečního vklad, měsíční investici, investiční horizont a zvolenou strategii.
@@ -131,12 +135,12 @@ export function InvestmentCalculatorPage() {
                 <p>
                   Slouží jako podklad pro pochopení rozdílů mezi jednotlivými strategiemi a pro další rozhodování.
                 </p>
-              </div>
-            </div>
+              </>
+            </CalculatorInfoCard>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
-            <div className="lg:col-span-7">
+            <CalculatorInputSection>
               <InvestmentInputPanel
                 initial={initial}
                 monthly={monthly}
@@ -147,8 +151,8 @@ export function InvestmentCalculatorPage() {
                 profileTitle={profile.name}
                 profileDescription={profile.description}
               />
-            </div>
-            <div className="lg:col-span-5">
+            </CalculatorInputSection>
+            <CalculatorResultsSection>
               <InvestmentResultsPanel
                 totalBalance={projection.totalBalance}
                 totalInvested={projection.totalInvested}
@@ -156,7 +160,7 @@ export function InvestmentCalculatorPage() {
                 totalGainPercent={projection.totalGainPercent}
                 onCtaClick={onCtaClick}
               />
-            </div>
+            </CalculatorResultsSection>
           </div>
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Calculator, PiggyBank, HeartPulse } from "lucide-react";
+import { CalculatorCtaBlock } from "../core/CalculatorCtaBlock";
 
 export interface InvestmentCtaSectionProps {
   onPrimaryCta: () => void;
@@ -31,17 +32,10 @@ const CALC_CARDS = [
 export function InvestmentCtaSection({ onPrimaryCta }: InvestmentCtaSectionProps) {
   return (
     <>
-      <div className="mt-12">
-        <div className="bg-gradient-to-r from-[#0a0f29] to-[#1e3a6e] rounded-3xl p-8 md:p-12 text-white shadow-2xl relative overflow-hidden text-center">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-[#fbbf24] opacity-10 rounded-full blur-2xl -mr-10 -mt-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#fbbf24] opacity-10 rounded-full blur-xl -ml-10 -mb-10" />
-
-          <h2 className="text-3xl font-extrabold text-white mb-4 relative z-10">
-            Chcete investiční plán přizpůsobený vaší situaci?
-          </h2>
-          <p className="text-lg text-blue-100 max-w-3xl mx-auto mb-8 relative z-10">
-            Výsledek z kalkulačky může sloužit jako základ pro sestavení konkrétní investiční strategie podle vašich cílů, příjmů a časového horizontu.
-          </p>
+      <CalculatorCtaBlock
+        title="Chcete investiční plán přizpůsobený vaší situaci?"
+        description="Výsledek z kalkulačky může sloužit jako základ pro sestavení konkrétní investiční strategie podle vašich cílů, příjmů a časového horizontu."
+        cta={
           <button
             type="button"
             onClick={onPrimaryCta}
@@ -55,8 +49,8 @@ export function InvestmentCtaSection({ onPrimaryCta }: InvestmentCtaSectionProps
               </svg>
             </div>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-7xl mx-auto mt-20 mb-20 pt-10 border-t border-[#D6E6FF]/50">
         <h3 className="text-2xl font-bold text-[#0a0f29] mb-8 text-center">

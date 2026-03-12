@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { Pin, GripHorizontal, Plus, FileText } from "lucide-react";
+import { Pin, GripVertical, Plus, FileText } from "lucide-react";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 
 const STORAGE_POSITIONS_KEY = "weplan_dashboard_mini_notes_positions";
@@ -168,7 +168,7 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
             <FileText size={18} className="text-indigo-600" /> Zápisky
           </h3>
-          <p className="text-xs font-bold text-slate-500 mt-0.5">Rychlé poznámky a nápady</p>
+          <p className="text-xs font-bold text-slate-500 mt-0.5">Rychlé poznámky a nápady. Chytněte kartu a přetáhněte.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/portal/notes" className="text-xs font-semibold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center">Všechny zápisky</Link>
@@ -211,7 +211,9 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
               `}
             >
               <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100">
-                <GripHorizontal size={12} className="text-slate-300 shrink-0" />
+                <span className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-grab active:cursor-grabbing touch-none shrink-0" aria-label="Chytit a přesunout">
+                  <GripVertical size={16} />
+                </span>
                 <button
                   type="button"
                   onClick={(e) => togglePin(note.id, e)}

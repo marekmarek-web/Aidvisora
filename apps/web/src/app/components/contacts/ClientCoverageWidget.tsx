@@ -24,6 +24,7 @@ import {
 } from "@/app/actions/coverage";
 import type { ResolvedCoverageItem, CoverageSummary } from "@/app/lib/coverage/types";
 import type { CoverageStatus } from "@/app/lib/coverage/types";
+import { getAllCoverageItemKeys } from "@/app/lib/coverage/item-keys";
 
 /** Zobrazené názvy kategorií podle spec „pokryti produktu.txt“. */
 const DISPLAY_CATEGORY_NAMES: Record<string, string> = {
@@ -48,6 +49,22 @@ const CATEGORY_ORDER = [
   "Investice",
   "DPS",
 ];
+
+/** Výchozí položky pro zobrazení mřížky když API vrátí prázdný seznam. */
+function getDefaultCoverageItems(): ResolvedCoverageItem[] {
+  return getAllCoverageItemKeys().map(({ itemKey, segmentCode, category, label }) => ({
+    itemKey,
+    segmentCode,
+    category,
+    label,
+    status: "none" as const,
+    linkedContractId: null,
+    linkedOpportunityId: null,
+    source: "default" as const,
+    isRelevant: true,
+    notes: null,
+  }));
+}
 
 /** Spec: rotace none -> pending -> active -> none; backend stavy: none, in_progress, done. */
 const SPEC_CYCLE: CoverageStatus[] = ["none", "in_progress", "done"];
@@ -433,7 +450,8 @@ export function useClientCoverage(contactId: string) {
 export function ClientCoverageWidget({ contactId }: { contactId: string }) {
   const { items, summary, loading, error, refetch } = useClientCoverage(contactId);
 
-  const byCategory = items.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
+  const itemsForGrid = items.length > 0 ? items : getDefaultCoverageItems();
+  const byCategory = itemsForGrid.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
