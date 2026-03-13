@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense } from "react";
+import { Sparkles } from "lucide-react";
 import { PortalSidebar, PORTAL_SIDEBAR_COLLAPSED_PX } from "./PortalSidebar";
 import { PortalHeaderSearch, type PortalHeaderSearchHandle } from "./PortalHeaderSearch";
 import { QuickNewMenu } from "./QuickNewMenu";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "@/app/components/UserMenu";
 import { ToastProvider } from "@/app/components/Toast";
+import { AiAssistantDrawerProvider, useAiAssistantDrawer } from "./AiAssistantDrawerContext";
+import { AiAssistantDrawer } from "./AiAssistantDrawer";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -92,8 +95,42 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
-      <div className="wp-app-container monday-board-wrap flex min-h-screen">
-        <PortalSidebar
+      <AiAssistantDrawerProvider>
+        <PortalShellInner headerSearchRef={headerSearchRef} mainMarginPx={mainMarginPx} sidebarDrawerOpen={sidebarDrawerOpen} setSidebarDrawerOpen={setSidebarDrawerOpen} initSidebarState={initSidebarState} sidebarWidth={sidebarWidth} sidebarCollapsed={sidebarCollapsed} handleSidebarResize={handleSidebarResize} handleSidebarCollapsed={handleSidebarCollapsed}>
+          {children}
+        </PortalShellInner>
+      </AiAssistantDrawerProvider>
+    </ToastProvider>
+  );
+}
+
+function PortalShellInner({
+  headerSearchRef,
+  mainMarginPx,
+  sidebarDrawerOpen,
+  setSidebarDrawerOpen,
+  initSidebarState,
+  sidebarWidth,
+  sidebarCollapsed,
+  handleSidebarResize,
+  handleSidebarCollapsed,
+  children,
+}: {
+  headerSearchRef: React.RefObject<PortalHeaderSearchHandle | null>;
+  mainMarginPx: number;
+  sidebarDrawerOpen: boolean;
+  setSidebarDrawerOpen: (v: boolean) => void;
+  initSidebarState: () => void;
+  sidebarWidth: number;
+  sidebarCollapsed: boolean;
+  handleSidebarResize: (w: number) => void;
+  handleSidebarCollapsed: (v: boolean) => void;
+  children: React.ReactNode;
+}) {
+  const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
+  return (
+    <div className="wp-app-container monday-board-wrap flex min-h-screen">
+      <PortalSidebar
           width={sidebarWidth}
           collapsed={sidebarCollapsed}
           onResize={handleSidebarResize}
@@ -131,7 +168,19 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
+
+        {/* Floating AI assistant button */}
+        <button
+          type="button"
+          onClick={() => setAiDrawerOpen(true)}
+          title="AI asistent"
+          className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-[60] min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
+          aria-label="AI asistent"
+        >
+          <Sparkles size={24} />
+        </button>
+
+        <AiAssistantDrawer />
       </div>
-    </ToastProvider>
   );
 }

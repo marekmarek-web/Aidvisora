@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowRight, Send, Loader2, AlertCircle } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
+import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
 import type { UrgentItem, SuggestedAction, DashboardSummary } from "@/lib/ai/dashboard-types";
 
 function getHref(action: SuggestedAction): string | null {
@@ -23,16 +24,10 @@ function getHref(action: SuggestedAction): string | null {
 export function DashboardAiAssistant() {
   const router = useRouter();
   const toast = useToast();
+  const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [chatMessage, setChatMessage] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatResponse, setChatResponse] = useState<{
-    message: string;
-    suggestedActions: SuggestedAction[];
-    warnings: string[];
-  } | null>(null);
 
   const loadSummary = useCallback(async () => {
     setLoading(true);
@@ -52,35 +47,6 @@ export function DashboardAiAssistant() {
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
-
-  const handleSendChat = async () => {
-    const msg = chatMessage.trim();
-    if (!msg || chatLoading) return;
-    setChatLoading(true);
-    setChatResponse(null);
-    try {
-      const res = await fetch("/api/ai/assistant/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.showToast(data.error ?? "Odeslání selhalo.", "error");
-        return;
-      }
-      setChatResponse({
-        message: data.message ?? "",
-        suggestedActions: data.suggestedActions ?? [],
-        warnings: data.warnings ?? [],
-      });
-      setChatMessage("");
-    } catch {
-      toast.showToast("Odeslání zprávy selhalo.", "error");
-    } finally {
-      setChatLoading(false);
-    }
-  };
 
   const handleDraftEmail = async (clientId: string) => {
     try {
@@ -120,7 +86,10 @@ export function DashboardAiAssistant() {
   if (loading && !summary) {
     return (
       <div className="bg-gradient-to-br from-[#1a1c2e] to-indigo-950 p-6 rounded-[24px] text-white min-h-[240px] flex items-center justify-center">
-        <Loader2 className="animate-spin w-8 h-8 text-indigo-300" />
+        <div className="animate-pulse flex flex-col items-center gap-2">
+          <Sparkles size={28} className="text-indigo-300" />
+          <span className="text-sm text-indigo-200">Načítám…</span>
+        </div>
       </div>
     );
   }
@@ -199,75 +168,16 @@ export function DashboardAiAssistant() {
         )}
 
         <div className="mt-auto pt-3 border-t border-white/10">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
-              placeholder="Zeptejte se asistenta…"
-              className="flex-1 min-w-0 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-indigo-200/70 outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleSendChat}
-              disabled={chatLoading}
-              className="shrink-0 p-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50"
-              aria-label="Odeslat"
-            >
-              {chatLoading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Send size={18} />
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setAiDrawerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors min-h-[44px]"
+          >
+            <Sparkles size={18} />
+            Otevřít asistenta
+          </button>
         </div>
       </div>
-
-      {chatResponse && (
-        <div
-          className="absolute inset-0 z-20 bg-[#1a1c2e]/95 rounded-[24px] p-6 overflow-y-auto flex flex-col"
-          style={{ border: "1px solid rgba(255,255,255,0.1)" }}
-        >
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="text-xs font-bold uppercase text-indigo-200">Odpověď</h4>
-            <button
-              type="button"
-              onClick={() => setChatResponse(null)}
-              className="text-indigo-300 hover:text-white text-sm"
-            >
-              Zavřít
-            </button>
-          </div>
-          {chatResponse.warnings.length > 0 && (
-            <div className="flex items-center gap-2 mb-2 text-amber-300 text-xs">
-              <AlertCircle size={14} />
-              {chatResponse.warnings.join(" ")}
-            </div>
-          )}
-          <p className="text-sm text-indigo-50 whitespace-pre-wrap flex-1 mb-4">
-            {chatResponse.message}
-          </p>
-          {chatResponse.suggestedActions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {chatResponse.suggestedActions.map((a, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    handleAction(a);
-                    setChatResponse(null);
-                  }}
-                  className="text-xs px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-indigo-100"
-                >
-                  {a.label.length > 30 ? a.label.slice(0, 28) + "…" : a.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

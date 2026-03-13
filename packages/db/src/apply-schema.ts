@@ -99,6 +99,32 @@ CREATE TABLE IF NOT EXISTS advisor_preferences (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(tenant_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS companies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  ico text,
+  name text NOT NULL,
+  industry text,
+  employees integer,
+  cat3 integer,
+  avg_wage integer,
+  top_client integer,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS company_person_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  role_type text NOT NULL,
+  ownership_percent integer,
+  salary_from_company_monthly integer,
+  dividend_relation text,
+  guarantees_company_liabilities boolean DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 CREATE TABLE IF NOT EXISTS contact_coverage (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,

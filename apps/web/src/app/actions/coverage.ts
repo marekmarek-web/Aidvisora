@@ -66,6 +66,12 @@ export async function getCoverageForContact(contactId: string): Promise<GetCover
     if (process.env.NODE_ENV === "development") {
       console.error("[getCoverageForContact]", contactId, err);
     }
+    const message = err instanceof Error ? err.message : String(err);
+    if (/contact_coverage.*does not exist|relation "contact_coverage" does not exist/i.test(message)) {
+      throw new Error(
+        "Tabulka contact_coverage v této databázi chybí. Spusťte v terminálu: pnpm run db:apply-schema (nebo v Supabase SQL Editoru spusťte obsah souboru packages/db/migrations/add-contact-coverage.sql)."
+      );
+    }
     throw err instanceof Error ? err : new Error("Nepodařilo se načíst pokrytí produktů");
   }
 }

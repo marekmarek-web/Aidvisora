@@ -74,7 +74,7 @@ const SECTIONS: { section: string; items: NavItem[] }[] = [
   {
     section: "Nástroje",
     items: [
-      { href: "/portal/contracts/review", label: "AI asistent", Icon: Sparkles },
+      { href: "/portal/contracts/review", label: "Review smluv", Icon: Sparkles },
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3 },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network },

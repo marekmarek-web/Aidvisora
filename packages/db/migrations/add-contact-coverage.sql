@@ -17,3 +17,7 @@ CREATE TABLE IF NOT EXISTS contact_coverage (
   updated_by text,
   UNIQUE(tenant_id, contact_id, item_key)
 );
+
+-- Pokud aplikace stále hlásí chybu načítání: v Supabase je u nových tabulek často zapnuté RLS.
+-- Přístup k tabulce má jen backend (server actions), takže RLS pro tento tabulku vypněte:
+ALTER TABLE contact_coverage DISABLE ROW LEVEL SECURITY;

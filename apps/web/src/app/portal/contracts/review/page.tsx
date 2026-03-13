@@ -1,8 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { FileText, Search, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  FileText,
+  Search,
+  Filter,
+  UploadCloud,
+  RefreshCw,
+  ShieldAlert,
+  CheckCircle2,
+  FileCheck,
+  AlertCircle,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
+import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
 
 type ProcessingStatus = "uploaded" | "processing" | "extracted" | "review_required" | "failed";
 type ReviewStatus = "pending" | "approved" | "rejected" | "applied";
@@ -17,11 +31,13 @@ type ReviewItem = {
   extractedPayload?: {
     institutionName?: string;
     contractNumber?: string;
+    productName?: string;
     client?: { fullName?: string; firstName?: string; lastName?: string };
+    paymentDetails?: { amount?: unknown; currency?: string };
   };
 };
 
-const PROCESSING_LABELS: Record<string, string> = {
+const PROCESSING_LABELS: Record<ProcessingStatus, string> = {
   uploaded: "Nahráno",
   processing: "Zpracovává se",
   extracted: "Extrahováno",
@@ -29,7 +45,7 @@ const PROCESSING_LABELS: Record<string, string> = {
   failed: "Chyba",
 };
 
-const REVIEW_LABELS: Record<string, string> = {
+const REVIEW_LABELS: Record<ReviewStatus, string> = {
   pending: "Čeká",
   approved: "Schváleno",
   rejected: "Zamítnuto",
@@ -43,13 +59,79 @@ function fullName(p: ReviewItem["extractedPayload"]): string {
   return [c.firstName, c.lastName].filter(Boolean).join(" ") || "—";
 }
 
+function buildInsightChips(payload: ReviewItem["extractedPayload"]): { label: string; value: string; alert?: boolean }[] {
+  if (!payload) return [];
+  const chips: { label: string; value: string; alert?: boolean }[] = [];
+  if (payload.institutionName) chips.push({ label: "Instituce", value: payload.institutionName });
+  if (payload.contractNumber) chips.push({ label: "Č. smlouvy", value: payload.contractNumber });
+  if (payload.productName) chips.push({ label: "Produkt", value: payload.productName });
+  const name = fullName(payload);
+  if (name !== "—") chips.push({ label: "Klient", value: name });
+  const pay = payload.paymentDetails;
+  if (pay?.amount != null || pay?.currency) {
+    const val = [pay.amount != null ? String(pay.amount) : "", pay.currency ?? ""].filter(Boolean).join(" ");
+    if (val) chips.push({ label: "Platba", value: val });
+  }
+  return chips;
+}
+
+function getStatusConfig(
+  processingStatus: ProcessingStatus,
+  reviewStatus: ReviewStatus | null
+): { icon: React.ReactNode; text: string; color: string; dot: string } {
+  if (processingStatus === "failed") {
+    return {
+      icon: <AlertCircle size={16} />,
+      text: "Chyba čtení",
+      color: "text-rose-700 bg-rose-50 border-rose-200",
+      dot: "bg-rose-500",
+    };
+  }
+  if (reviewStatus === "applied") {
+    return {
+      icon: <CheckCircle2 size={16} />,
+      text: "Aplikováno v CRM",
+      color: "text-emerald-700 bg-emerald-50 border-emerald-200",
+      dot: "bg-emerald-500",
+    };
+  }
+  if (processingStatus === "processing" || processingStatus === "uploaded") {
+    return {
+      icon: <RefreshCw size={16} className="animate-spin" />,
+      text: "Zpracovává se",
+      color: "text-blue-600 bg-blue-50 border-blue-200",
+      dot: "bg-blue-500 animate-pulse",
+    };
+  }
+  return {
+    icon: <ShieldAlert size={16} />,
+    text: "Vyžaduje revizi",
+    color: "text-amber-700 bg-amber-50 border-amber-200",
+    dot: "bg-amber-500",
+  };
+}
+
+function formatUploadDate(createdAt: string): string {
+  const d = new Date(createdAt);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = today.getTime() - d.getTime();
+  if (diff < 0) return "Dnes, " + d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+  if (diff < 86400000) return "Včera";
+  return d.toLocaleDateString("cs-CZ");
+}
+
 export default function ContractReviewListPage() {
+  const router = useRouter();
+  const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<ReviewStatus | "">("");
   const [processingFilter, setProcessingFilter] = useState<ProcessingStatus | "">("");
   const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,159 +156,314 @@ export default function ContractReviewListPage() {
     load();
   }, [load]);
 
+  const uploadFile = useCallback(async (file: File) => {
+    if (!file?.size || file.type !== "application/pdf") return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      const res = await fetch("/api/contracts/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Nahrání selhalo.");
+        return;
+      }
+      const reviewId = data.id as string;
+      router.push(`/portal/contracts/review/${reviewId}`);
+    } catch {
+      setError("Nahrání souboru selhalo.");
+    } finally {
+      setUploading(false);
+    }
+  }, [router]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) uploadFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type === "application/pdf") uploadFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const isProcessing = (row: ReviewItem) =>
+    row.processingStatus === "uploaded" || row.processingStatus === "processing";
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: "var(--wp-text)" }}>
-          AI asistent – Review smluv
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--wp-text-muted)" }}>
-          Seznam nahraných a zpracovaných smluv. Otevřete položku pro kontrolu a aplikaci do CRM.
-        </p>
-      </div>
+    <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc]">
+      <div className="max-w-[1200px] mx-auto w-full p-6 md:p-8 space-y-6">
+        {/* Header - reference style */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 flex-shrink-0">
+              <Sparkles size={28} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-1">Review smluv</h1>
+              <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
+                Seznam nahraných a zpracovaných smluv. Otevřete položku pro kontrolu a aplikaci do CRM.
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <div
-        className="rounded-xl border p-4 mb-4 flex flex-col sm:flex-row gap-3 flex-wrap"
-        style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}
-      >
-        <div className="flex-1 min-w-[200px] flex items-center gap-2 rounded-lg border px-3 py-2" style={{ borderColor: "var(--wp-border)" }}>
-          <Search size={18} style={{ color: "var(--wp-text-muted)" }} />
+        {/* Upload zone - reference */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-[32px] p-8 md:p-10 bg-white text-center cursor-pointer transition-all ${
+            uploading ? "border-slate-200 bg-slate-50/50 cursor-wait" : "border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/20"
+          }`}
+        >
           <input
-            type="search"
-            placeholder="Klient, číslo smlouvy, instituce…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent text-sm outline-none"
-            style={{ color: "var(--wp-text)" }}
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleUpload}
           />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter size={18} style={{ color: "var(--wp-text-muted)" }} />
-          <select
-            value={reviewFilter}
-            onChange={(e) => setReviewFilter((e.target.value || "") as ReviewStatus | "")}
-            className="rounded-lg border px-3 py-2 text-sm"
-            style={{ borderColor: "var(--wp-border)", color: "var(--wp-text)", background: "var(--wp-bg)" }}
-          >
-            <option value="">Všechny stavy review</option>
-            {(["pending", "approved", "rejected", "applied"] as const).map((s) => (
-              <option key={s} value={s}>{REVIEW_LABELS[s]}</option>
-            ))}
-          </select>
-          <select
-            value={processingFilter}
-            onChange={(e) => setProcessingFilter((e.target.value || "") as ProcessingStatus | "")}
-            className="rounded-lg border px-3 py-2 text-sm"
-            style={{ borderColor: "var(--wp-border)", color: "var(--wp-text)", background: "var(--wp-bg)" }}
-          >
-            <option value="">Všechny stavy zpracování</option>
-            {(["uploaded", "processing", "extracted", "review_required", "failed"] as const).map((s) => (
-              <option key={s} value={s}>{PROCESSING_LABELS[s]}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3 mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <div
-        className="rounded-2xl border overflow-hidden flex-1 min-h-0 flex flex-col"
-        style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}
-      >
-        <div className="px-4 md:px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--wp-border)" }}>
-          <h2 className="text-lg font-semibold" style={{ color: "var(--wp-text)" }}>
-            Položky ({items.length})
-          </h2>
-          <button
-            type="button"
-            onClick={() => load()}
-            disabled={loading}
-            className="text-sm px-3 py-1.5 rounded-lg border"
-            style={{ borderColor: "var(--wp-border)", color: "var(--wp-text)" }}
-          >
-            {loading ? "Načítám…" : "Obnovit"}
-          </button>
-        </div>
-        <div className="flex-1 overflow-auto">
-          {loading && items.length === 0 ? (
-            <div className="p-8 text-center text-sm" style={{ color: "var(--wp-text-muted)" }}>
-              Načítám…
-            </div>
-          ) : items.length === 0 ? (
-            <div className="p-8 text-center text-sm" style={{ color: "var(--wp-text-muted)" }}>
-              Žádné položky. Nahrajte smlouvu přes upload.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: "var(--wp-border)" }}>
-                    <th className="px-4 md:px-6 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Datum</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Soubor</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Instituce</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Klient</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Č. smlouvy</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Zpracování</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Review</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>Confidence</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b hover:bg-black/5 transition-colors"
-                      style={{ borderColor: "var(--wp-border)" }}
-                    >
-                      <td className="px-4 md:px-6 py-3 text-sm whitespace-nowrap" style={{ color: "var(--wp-text-muted)" }}>
-                        {new Date(row.createdAt).toLocaleDateString("cs-CZ")}
-                      </td>
-                      <td className="px-4 py-3 text-sm flex items-center gap-2">
-                        <FileText size={16} style={{ color: "var(--wp-text-muted)" }} />
-                        <span style={{ color: "var(--wp-text)" }}>{row.fileName}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: "var(--wp-text)" }}>
-                        {row.extractedPayload?.institutionName ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: "var(--wp-text)" }}>
-                        {fullName(row.extractedPayload)}
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: "var(--wp-text)" }}>
-                        {row.extractedPayload?.contractNumber ?? "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-medium px-2 py-1 rounded" style={{ background: "var(--wp-bg)", color: "var(--wp-text)" }}>
-                          {PROCESSING_LABELS[row.processingStatus] ?? row.processingStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-medium px-2 py-1 rounded" style={{ background: "var(--wp-bg)", color: "var(--wp-text)" }}>
-                          {row.reviewStatus ? REVIEW_LABELS[row.reviewStatus] : "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: "var(--wp-text-muted)" }}>
-                        {row.confidence != null ? `${Math.round(row.confidence * 100)} %` : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/portal/contracts/review/${row.id}`}
-                          className="text-sm font-medium"
-                          style={{ color: "var(--wp-accent, #4f46e5)" }}
-                        >
-                          Otevřít
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mx-auto mb-4">
+            {uploading ? (
+              <RefreshCw size={32} className="animate-spin" strokeWidth={1.5} />
+            ) : (
+              <UploadCloud size={32} strokeWidth={1.5} />
+            )}
+          </div>
+          <h3 className="text-lg font-black text-slate-800 mb-2">
+            {uploading ? "Nahrávám…" : "Přetáhněte smlouvy sem"}
+          </h3>
+          <p className="text-sm text-slate-500 font-medium mb-6">
+            {uploading
+              ? "Zpracovávám dokument."
+              : "nebo klikněte pro výběr souborů (PDF). Můžete také otevřít AI asistenta vpravo dole."}
+          </p>
+          {!uploading && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setAiDrawerOpen(true); }}
+              className="text-xs font-bold text-indigo-600 hover:underline"
+            >
+              Otevřít AI asistenta
+            </button>
           )}
+        </div>
+
+        {/* Error state - reference */}
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 text-rose-700">
+              <AlertCircle size={20} className="shrink-0" />
+              <span className="font-bold text-sm">
+                Načtení seznamu selhalo. Zkontrolujte připojení nebo akci opakujte.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setError(null); load(); }}
+              className="px-4 py-2 rounded-xl bg-white border border-rose-200 text-rose-700 text-sm font-bold hover:bg-rose-50 transition-colors shrink-0"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        )}
+
+        {/* Filters - reference panel */}
+        <div className="bg-white p-3 md:p-4 rounded-[24px] border border-slate-100 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="relative flex-1 w-full max-w-md">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              placeholder="Klient, číslo smlouvy, instituce…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-400 transition-colors"
+            />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <select
+                value={reviewFilter}
+                onChange={(e) => setReviewFilter((e.target.value || "") as ReviewStatus | "")}
+                className="pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none appearance-none cursor-pointer hover:bg-slate-50"
+              >
+                <option value="">Všechny stavy review</option>
+                {(["pending", "approved", "rejected", "applied"] as const).map((s) => (
+                  <option key={s} value={s}>
+                    {s === "pending" ? "K revizi" : s === "applied" ? "Dokončeno" : REVIEW_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+              <Filter size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+            <select
+              value={processingFilter}
+              onChange={(e) => setProcessingFilter((e.target.value || "") as ProcessingStatus | "")}
+              className="pl-4 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none cursor-pointer hover:bg-slate-50"
+            >
+              <option value="">Všechny stavy zpracování</option>
+              {(["uploaded", "processing", "extracted", "review_required", "failed"] as const).map((s) => (
+                <option key={s} value={s}>{PROCESSING_LABELS[s]}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin text-indigo-600" : ""} />
+              Obnovit
+            </button>
+          </div>
+        </div>
+
+        {/* List - cards */}
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+            <h2 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              Položky{" "}
+              <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-xs font-bold">
+                {items.length}
+              </span>
+            </h2>
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            {loading && items.length === 0 ? (
+              <div className="p-16 flex flex-col items-center justify-center text-center">
+                <RefreshCw size={32} className="animate-spin text-indigo-500 mb-4" />
+                <p className="text-slate-500 font-medium">Načítám…</p>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="p-16 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-4">
+                  <FileText size={32} />
+                </div>
+                <p className="text-slate-500 font-medium mb-4">
+                  Žádné položky. Nahrajte smlouvu v AI asistentovi nebo výše.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setAiDrawerOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
+                >
+                  Otevřít AI asistenta
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {items.map((row) => {
+                  const statusConfig = getStatusConfig(row.processingStatus, row.reviewStatus);
+                  const insights = buildInsightChips(row.extractedPayload);
+                  const isDone = row.reviewStatus === "applied";
+                  return (
+                    <div
+                      key={row.id}
+                      className="p-6 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors flex flex-col xl:flex-row xl:items-start gap-6"
+                    >
+                      <div className="flex items-start gap-4 xl:w-[40%] min-w-0">
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-sm ${
+                            isDone ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-white border-slate-200 text-indigo-500"
+                          }`}
+                        >
+                          {isDone ? <FileCheck size={24} /> : <FileText size={24} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-slate-900 text-[15px] truncate mb-1">
+                            {row.fileName}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
+                            <span className="text-slate-700">{fullName(row.extractedPayload)}</span>
+                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                            <span>{row.extractedPayload?.institutionName ?? "—"}</span>
+                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                            <span className="text-slate-400 font-medium">{formatUploadDate(row.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 xl:px-6 xl:border-l border-slate-100 min-w-0">
+                        {isProcessing(row) ? (
+                          <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
+                            <div className="flex gap-1">
+                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </div>
+                            AI čte dokument a extrahuje data…
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1">
+                                <Sparkles size={12} /> Extrahovaná data
+                              </span>
+                              {row.confidence != null && (
+                                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">
+                                  Jistota {Math.round(row.confidence * 100)}%
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {insights.map((chip, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-2 ${
+                                    chip.alert ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-white border-slate-200 text-slate-700"
+                                  }`}
+                                >
+                                  <span className="text-slate-400 font-medium">{chip.label}:</span>
+                                  <span>{chip.value}</span>
+                                  {chip.alert && <AlertCircle size={14} className="text-amber-500" />}
+                                </div>
+                              ))}
+                              {insights.length === 0 && (
+                                <span className="text-xs text-slate-400">Žádná extrahovaná data</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex xl:flex-col items-center xl:items-end justify-between xl:w-[200px] gap-4 shrink-0">
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border shadow-sm ${statusConfig.color}`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
+                          {statusConfig.text}
+                        </div>
+                        {row.reviewStatus !== "applied" && (
+                          <Link
+                            href={`/portal/contracts/review/${row.id}`}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:bg-[#2a2d4a] transition-all active:scale-95"
+                          >
+                            Provést revizi <ArrowRight size={14} />
+                          </Link>
+                        )}
+                        {row.reviewStatus === "applied" && (
+                          <Link
+                            href={`/portal/contracts/review/${row.id}`}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                          >
+                            Otevřít v CRM <ArrowRight size={14} />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
