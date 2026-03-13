@@ -26,19 +26,19 @@ export function ListPageHeader({
         : "";
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 flex-wrap">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+      <div className="min-w-0">
+        <h1 className="text-xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2 md:gap-3 flex-wrap">
           {title}
           {showBadge && (
-            <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg border border-slate-200">
+            <span className="px-2 py-0.5 md:px-2.5 bg-slate-100 text-slate-600 text-xs md:text-sm font-semibold rounded-lg border border-slate-200">
               {badgeLabel}
             </span>
           )}
         </h1>
-        {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-xs md:text-sm text-slate-500 mt-0.5 md:mt-1">{subtitle}</p>}
       </div>
-      {actions != null && <div className="flex items-center gap-3">{actions}</div>}
+      {actions != null && <div className="flex items-center gap-2 md:gap-3 shrink-0">{actions}</div>}
     </div>
   );
 }

@@ -22,6 +22,20 @@ function maskForLog(value: unknown): string {
 
 export async function POST(request: Request) {
   const start = Date.now();
+  // #region agent log
+  fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+    body: JSON.stringify({
+      sessionId: "6af004",
+      hypothesisId: "H3",
+      location: "api/contracts/upload/route.ts:POST:entry",
+      message: "upload POST entered",
+      data: {},
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   try {
     const supabase = await createClient();
     const {
@@ -34,6 +48,20 @@ export async function POST(request: Request) {
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H3",
+        location: "api/contracts/upload/route.ts:after_auth",
+        message: "upload auth ok",
+        data: { tenantId: membership.tenantId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -107,6 +135,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H1_H2_H5",
+        location: "api/contracts/upload/route.ts:before_extraction",
+        message: "before extractContractFromFile",
+        data: { reviewId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     const extraction = await extractContractFromFile(fileUrl);
 
     if (!extraction.ok) {
@@ -165,6 +207,21 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed.";
+    const errName = err instanceof Error ? err.name : "";
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H1_H2_H3_H5",
+        location: "api/contracts/upload/route.ts:catch",
+        message: "upload route catch",
+        data: { message, errName, hasStack: err instanceof Error && !!err.stack },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json(
       { error: "Nahrání smlouvy selhalo." },
       { status: 500 }

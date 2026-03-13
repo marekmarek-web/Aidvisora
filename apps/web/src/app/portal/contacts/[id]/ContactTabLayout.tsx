@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type ContactTabId = "prehled" | "smlouvy" | "dokumenty" | "zapisky" | "aktivita" | "ukoly" | "obchody";
 
 const TAB_IDS: ContactTabId[] = ["prehled", "smlouvy", "dokumenty", "zapisky", "aktivita", "ukoly", "obchody"];
+
+export const ContactTabContext = createContext<ContactTabId>("prehled");
+
+export function useContactTab(): ContactTabId {
+  return useContext(ContactTabContext);
+}
 
 export function ContactTabLayout({
   tabs,
@@ -34,8 +40,9 @@ export function ContactTabLayout({
   }, []);
 
   return (
-    <div className="wp-contact-v2-tabs">
-      <nav
+    <ContactTabContext.Provider value={activeId}>
+      <div className="wp-contact-v2-tabs">
+        <nav
         className="flex items-center gap-6 md:gap-8 border-b border-slate-200 px-2 overflow-x-auto hide-scrollbar min-h-[48px]"
         aria-label="Záložky"
       >
@@ -63,5 +70,6 @@ export function ContactTabLayout({
         ))}
       </div>
     </div>
+    </ContactTabContext.Provider>
   );
 }

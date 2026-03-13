@@ -140,23 +140,23 @@ function PortalShellInner({
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
         <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-4 sm:px-6 md:px-8 py-4">
+          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-3 sm:px-6 md:px-8 py-3 md:py-4">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}
-              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
               aria-label="Otevřít menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" viewBox="0 0 24 24">
                 <path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
               </svg>
             </button>
-            <div className="flex-1 min-w-0 max-w-md md:max-w-2xl">
+            <div className="flex-1 min-w-0 min-h-[40px] flex items-center max-w-md md:max-w-2xl">
               <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded animate-pulse" aria-hidden />}>
                 <PortalHeaderSearch ref={headerSearchRef} />
               </Suspense>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <QuickNewMenu />
               <NotificationBell />
               <UserMenu />

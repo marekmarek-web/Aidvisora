@@ -470,7 +470,7 @@ export function DashboardEditable({
           <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Rychlé vstupy</h3>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/portal/contacts/new"
+              href="/portal/contacts?newClient=1"
               className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
             >
               <Users size={18} /> Nový klient

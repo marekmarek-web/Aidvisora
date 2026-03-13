@@ -28,7 +28,7 @@ export type QuickActionItem = {
 export const QUICK_ACTIONS_CATALOG: QuickActionItem[] = [
   { id: "new_task", label: "Nový úkol", href: "/portal/tasks#new-task-form", iconName: "CheckSquare", iconColor: "text-emerald-500" },
   { id: "new_meeting", label: "Naplánovat schůzku", href: "/portal/calendar?new=1", iconName: "CalendarPlus", iconColor: "text-indigo-500" },
-  { id: "new_contact", label: "Nový klient", href: "/portal/contacts/new", iconName: "UserPlus", iconColor: "text-blue-500" },
+  { id: "new_contact", label: "Nový klient", href: "/portal/contacts?newClient=1", iconName: "UserPlus", iconColor: "text-blue-500" },
   { id: "new_deal", label: "Nový obchod", href: "/portal/pipeline", iconName: "Briefcase", iconColor: "text-amber-500" },
   { id: "calendar", label: "Kalendář", href: "/portal/calendar", iconName: "Calendar", iconColor: "text-slate-500" },
   { id: "mindmap", label: "Strategická mapa", href: "/portal/mindmap", iconName: "Network", iconColor: "text-slate-500" },

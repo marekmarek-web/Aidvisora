@@ -19,7 +19,7 @@ import { ChatThread } from "@/app/components/ChatThread";
 import { ClientFinancialSummary } from "@/app/components/contacts/ClientFinancialSummary";
 import { ContactTabLayout } from "./ContactTabLayout";
 import { ContactTasksAndEvents } from "./ContactTasksAndEvents";
-import { ContactOpportunityBoard } from "./ContactOpportunityBoard";
+import { ContactOpportunityBoardLazy } from "./ContactOpportunityBoard";
 import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactOpenTasksPreview } from "./ContactOpenTasksPreview";
 import { ContactNotesSection } from "./ContactNotesSection";
@@ -45,13 +45,15 @@ export default async function ContactDetailPage({
 
   const overviewContent = (
     <div className="space-y-8">
-      {/* První blok: Pokrytí produktů na celou šířku */}
+      {/* První blok: KPI úplně nahoru */}
+      <ContactOverviewKpi contactId={id} />
+
+      {/* Pokrytí produktů na celou šířku */}
       <ClientCoverageWidget contactId={id} />
 
-      {/* Druhý blok: KPI, poznámky, produkty, finanční analýzy + Domácnost */}
+      {/* Třetí blok: poznámky, produkty, finanční analýzy + Domácnost */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
-          <ContactOverviewKpi contactId={id} />
           <ContactLastNotePreview contactId={id} />
           <ContactProductsPreview contactId={id} />
           <ContactFinancialAnalysesSection contactId={id} />
@@ -117,7 +119,7 @@ export default async function ContactDetailPage({
     { id: "zapisky" as const, label: "Zápisky", content: zapiskyContent },
     { id: "aktivita" as const, label: "Aktivita", content: aktivitaContent },
     { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
-    { id: "obchody" as const, label: "Obchody", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Obchody</h2></div><div className="p-6"><ContactOpportunityBoard contactId={id} /></div></div> },
+    { id: "obchody" as const, label: "Obchody", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Obchody</h2></div><div className="p-6"><ContactOpportunityBoardLazy contactId={id} /></div></div> },
   ];
 
   const initials = [contact.firstName, contact.lastName].map((s) => s?.charAt(0) ?? "").join("").toUpperCase() || "?";

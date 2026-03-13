@@ -52,13 +52,17 @@ export function BaseModal({
   useEffect(() => {
     if (!open || !ref.current) return;
     const el = ref.current;
-    const focusables = el.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    const focusables = Array.from(
+      el.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
     );
+    const closeBtn = el.querySelector<HTMLElement>('[aria-label="Zavřít"]');
+    const firstInContent = focusables.find((node) => node !== closeBtn) ?? focusables[0];
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-    // Focus first only when focus is outside the modal (e.g. opening), never steal from active input
-    if (!el.contains(document.activeElement)) first?.focus();
+    // Focus first input/content element when opening, not the close button (avoids stealing focus when typing in wizard)
+    if (!el.contains(document.activeElement)) firstInContent?.focus();
 
     function trap(e: KeyboardEvent) {
       if (e.key !== "Tab") return;

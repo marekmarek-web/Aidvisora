@@ -86,6 +86,84 @@ CREATE TABLE IF NOT EXISTS notification_log (
 ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS closed_as text;
 ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS custom_fields jsonb;
 ALTER TABLE households ADD COLUMN IF NOT EXISTS icon text;
+CREATE TABLE IF NOT EXISTS companies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  ico text,
+  name text NOT NULL,
+  industry text,
+  employees integer,
+  cat3 integer,
+  avg_wage integer,
+  top_client integer,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS company_person_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  role_type text NOT NULL,
+  ownership_percent integer,
+  salary_from_company_monthly integer,
+  dividend_relation text,
+  guarantees_company_liabilities boolean DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS contact_coverage (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  contact_id uuid NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  item_key text NOT NULL,
+  segment_code text NOT NULL,
+  status text NOT NULL,
+  linked_contract_id uuid REFERENCES contracts(id) ON DELETE SET NULL,
+  linked_opportunity_id uuid REFERENCES opportunities(id) ON DELETE SET NULL,
+  notes text,
+  is_relevant boolean DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by text,
+  UNIQUE(tenant_id, contact_id, item_key)
+);
+CREATE TABLE IF NOT EXISTS financial_analyses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  household_id uuid REFERENCES households(id) ON DELETE SET NULL,
+  company_id uuid REFERENCES companies(id) ON DELETE SET NULL,
+  primary_contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  type text NOT NULL DEFAULT 'financial',
+  status text NOT NULL DEFAULT 'draft',
+  source_type text NOT NULL DEFAULT 'native',
+  version integer NOT NULL DEFAULT 1,
+  payload jsonb NOT NULL,
+  created_by text,
+  updated_by text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  last_exported_at timestamptz,
+  linked_company_id uuid REFERENCES companies(id) ON DELETE SET NULL,
+  last_refreshed_from_shared_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS financial_shared_facts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  contact_id uuid REFERENCES contacts(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
+  company_person_link_id uuid REFERENCES company_person_links(id) ON DELETE SET NULL,
+  fact_type text NOT NULL,
+  value jsonb NOT NULL,
+  source text NOT NULL DEFAULT 'manual',
+  source_analysis_id uuid REFERENCES financial_analyses(id) ON DELETE SET NULL,
+  source_payload_path text,
+  valid_from timestamptz,
+  valid_to timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  created_by text
+);
 `;
 
 // Globální partneři (tenant_id NULL) – vidí je každý tenant v dropdownu (po jednom, aby nepadl multi-statement)

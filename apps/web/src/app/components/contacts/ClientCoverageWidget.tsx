@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   BarChart2,
@@ -26,6 +27,7 @@ import type { ResolvedCoverageItem, CoverageSummary } from "@/app/lib/coverage/t
 import type { CoverageStatus } from "@/app/lib/coverage/types";
 import { getAllCoverageItemKeys } from "@/app/lib/coverage/item-keys";
 import { useToast } from "@/app/components/Toast";
+import { useRouter } from "next/navigation";
 
 /** Zobrazené názvy kategorií podle spec „pokryti produktu.txt“. */
 const DISPLAY_CATEGORY_NAMES: Record<string, string> = {
@@ -184,7 +186,7 @@ function CoverageStatusSelector({
   );
 }
 
-/** Kontextové akce u položky. */
+/** Kontextové akce u položky. Dropdown vykreslen přes Portal, aby přesahoval mřížku. */
 function CoverageActionsMenu({
   contactId,
   item,
@@ -196,34 +198,131 @@ function CoverageActionsMenu({
   onOpportunityCreated: () => void;
   onTaskCreated: () => void;
 }) {
+  const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) {
+      setMenuPosition(null);
+      return;
+    }
+    const rect = triggerRef.current.getBoundingClientRect();
+    setMenuPosition({
+      bottom: window.innerHeight - rect.top + 4,
+      right: window.innerWidth - rect.right,
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
 
   async function handleCreateOpportunity() {
     setLoading(true);
+    setOpen(false);
     try {
-      await createOpportunityFromCoverageItem(contactId, item.itemKey);
+      const newId = await createOpportunityFromCoverageItem(contactId, item.itemKey);
       onOpportunityCreated();
+      toast.showToast("Obchod založen", "success");
+      if (newId) router.push(`/portal/pipeline/${newId}`);
+      else router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Obchod se nepodařilo vytvořit";
+      toast.showToast(msg, "error");
     } finally {
       setLoading(false);
-      setOpen(false);
     }
   }
 
   async function handleCreateTask() {
     setLoading(true);
+    setOpen(false);
     try {
-      await createTaskFromCoverageItem(contactId, item.itemKey);
+      const taskId = await createTaskFromCoverageItem(contactId, item.itemKey);
       onTaskCreated();
+      toast.showToast("Úkol vytvořen", "success");
+      router.push(`/portal/contacts/${contactId}#ukoly`);
+      if (!taskId) router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Úkol se nepodařilo vytvořit";
+      toast.showToast(msg, "error");
     } finally {
       setLoading(false);
-      setOpen(false);
     }
   }
+
+  const menuContent =
+    open && typeof document !== "undefined" ? (
+      <>
+        <div className="fixed inset-0 z-[100]" aria-hidden onClick={() => setOpen(false)} />
+        <div
+          className="fixed z-[101] min-w-[180px] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1"
+          style={
+            menuPosition
+              ? { bottom: menuPosition.bottom, right: menuPosition.right }
+              : { visibility: "hidden" as const }
+          }
+        >
+          {item.linkedContractId && (
+            <Link
+              href={`/portal/contacts/${contactId}#produkty`}
+              className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+              onClick={() => setOpen(false)}
+            >
+              Smlouva →
+            </Link>
+          )}
+          {item.linkedOpportunityId && (
+            <Link
+              href={`/portal/pipeline/${item.linkedOpportunityId}`}
+              className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+              onClick={() => setOpen(false)}
+            >
+              Obchod →
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={handleCreateOpportunity}
+            disabled={loading}
+            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
+          >
+            Založit obchod
+          </button>
+          <button
+            type="button"
+            onClick={handleCreateTask}
+            disabled={loading}
+            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
+          >
+            Vytvořit úkol
+          </button>
+          <Link
+            href={`/portal/contacts/${contactId}#ukoly`}
+            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+            onClick={() => setOpen(false)}
+          >
+            Úkoly →
+          </Link>
+        </div>
+      </>
+    ) : null;
 
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="min-h-[44px] min-w-[44px] p-2 rounded-[var(--wp-radius-sm)] hover:bg-slate-100 text-slate-500 touch-manipulation"
@@ -236,54 +335,7 @@ function CoverageActionsMenu({
           <circle cx="12" cy="19" r="1" />
         </svg>
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-1 z-20 min-w-[180px] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1">
-            {item.linkedContractId && (
-              <Link
-                href={`/portal/contacts/${contactId}#produkty`}
-                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
-                onClick={() => setOpen(false)}
-              >
-                Smlouva →
-              </Link>
-            )}
-            {item.linkedOpportunityId && (
-              <Link
-                href={`/portal/pipeline/${item.linkedOpportunityId}`}
-                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
-                onClick={() => setOpen(false)}
-              >
-                Obchod →
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={handleCreateOpportunity}
-              disabled={loading}
-              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
-            >
-              Založit obchod
-            </button>
-            <button
-              type="button"
-              onClick={handleCreateTask}
-              disabled={loading}
-              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
-            >
-              Vytvořit úkol
-            </button>
-            <Link
-              href={`/portal/contacts/${contactId}#ukoly`}
-              className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
-              onClick={() => setOpen(false)}
-            >
-              Úkoly →
-            </Link>
-          </div>
-        </>
-      )}
+      {menuContent && createPortal(menuContent, document.body)}
     </div>
   );
 }
@@ -298,7 +350,7 @@ function CoverageItemRow({
 }: {
   contactId: string;
   item: ResolvedCoverageItem;
-  onStatusChange: () => void;
+  onStatusChange: (silent?: boolean) => void;
   onRefresh: () => void;
   single?: boolean;
 }) {
@@ -309,18 +361,20 @@ function CoverageItemRow({
   const isNone = !isDone && !isPending;
 
   async function handleCycleStatus() {
+    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
     setUpdating(true);
     try {
       await setCoverageStatus(contactId, item.itemKey, {
         status: nextStatus(item.status),
       });
-      onStatusChange();
+      onStatusChange(true);
       toast.showToast("Stav pokrytí uložen", "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Změna stavu se nepovedla";
       toast.showToast(message, "error");
     } finally {
       setUpdating(false);
+      if (typeof window !== "undefined") window.scrollTo(0, scrollY);
     }
   }
 
@@ -425,8 +479,8 @@ export function useClientCoverage(contactId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const refetch = useCallback(async () => {
-    setLoading(true);
+  const refetch = useCallback(async (silent?: boolean) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const result = await getCoverageForContact(contactId);
@@ -435,7 +489,7 @@ export function useClientCoverage(contactId: string) {
     } catch (e) {
       setError(e instanceof Error ? e : new Error("Failed to load coverage"));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [contactId]);
 

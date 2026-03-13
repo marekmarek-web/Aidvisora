@@ -71,7 +71,7 @@ export function MessengerPreview({ embedded }: { embedded?: boolean }) {
           {conversations.map((c) => (
             <Link
               key={c.contactId}
-              href={`/portal/contacts/${c.contactId}?tab=chat`}
+              href={`/portal/contacts/${c.contactId}#aktivita`}
               className="p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition-all cursor-pointer flex gap-4 text-inherit no-underline"
             >
               <span

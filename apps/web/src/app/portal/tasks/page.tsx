@@ -32,12 +32,12 @@ import {
 
 type Filter = "all" | "today" | "week" | "overdue" | "completed";
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "Vše" },
-  { key: "today", label: "Dnes" },
-  { key: "week", label: "Tento týden" },
-  { key: "overdue", label: "Po termínu" },
-  { key: "completed", label: "Dokončené" },
+const FILTERS: { key: Filter; label: string; shortLabel: string }[] = [
+  { key: "all", label: "Vše", shortLabel: "Vše" },
+  { key: "today", label: "Dnes", shortLabel: "Dnes" },
+  { key: "week", label: "Tento týden", shortLabel: "Týden" },
+  { key: "overdue", label: "Po termínu", shortLabel: "Po termínu" },
+  { key: "completed", label: "Dokončené", shortLabel: "Hotovo" },
 ];
 
 function formatDate(d: string | null) {
@@ -77,6 +77,7 @@ export default function TasksPage() {
   const [newDueDate, setNewDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const newTaskFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -96,11 +97,13 @@ export default function TasksPage() {
   const reload = useCallback(
     async (f?: Filter) => {
       setLoading(true);
+      setLoadError(false);
       try {
         const rows = await getTasksList(f ?? filter);
         setTasks(rows);
       } catch {
-        /* auth redirect */
+        setLoadError(true);
+        setTasks([]);
       } finally {
         setLoading(false);
       }
@@ -389,7 +392,7 @@ export default function TasksPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-[max(3rem,calc(1rem+env(safe-area-inset-bottom)))]" style={{ color: "var(--wp-text)" }}>
-      <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-8 grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
+      <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-8 grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-8">
         {/* --- Hlavní panel --- */}
         <div className="xl:col-span-8 space-y-4 md:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
@@ -421,60 +424,65 @@ export default function TasksPage() {
             </div>
           </div>
 
-          {/* Smart input pro nový úkol: na mobilu plně stacked */}
-          <form
-            ref={newTaskFormRef}
-            id="new-task-form"
-            onSubmit={handleCreate}
-            className="bg-white p-4 md:p-3 rounded-[var(--wp-radius-sm)] border border-indigo-100 shadow-lg shadow-indigo-900/5 flex flex-col gap-3 md:gap-3 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all"
-          >
-            {createError && (
-              <p
-                className="text-sm font-medium text-rose-600 col-span-full"
-                role="alert"
-              >
-                {createError}
-              </p>
-            )}
-            <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
-              <div className="flex-1 flex items-center gap-3 w-full px-0 md:px-2">
-                <Plus size={20} className="text-indigo-500 shrink-0 hidden md:block" />
-                <input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Co potřebujete udělat? (např. Zavolat panu Novákovi)"
-                  className="flex-1 min-w-0 py-3 md:py-3 px-3 md:px-0 bg-slate-50 md:bg-transparent border border-slate-200 md:border-none rounded-xl md:rounded-none text-slate-800 font-medium placeholder:text-slate-400 outline-none text-base md:text-sm"
-                />
-              </div>
-              <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-2">
-                <div className="w-full md:w-auto min-w-0">
-                  <ContactSearchInput
-                    value={newContactId}
-                    contacts={contacts}
-                    onChange={setNewContactId}
-                    placeholder="Klient"
-                    className="min-h-[44px] py-3 md:py-2.5"
+          {/* Nový úkol – na mobilu single column, plná šířka, odděleno od listu */}
+          <div className="rounded-[var(--wp-radius-sm)] border-2 border-indigo-100 bg-white shadow-lg shadow-indigo-900/5 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all">
+            <h2 className="pt-3 px-4 pb-1 text-xs font-bold uppercase tracking-wider text-indigo-600">
+              Nový úkol
+            </h2>
+            <form
+              ref={newTaskFormRef}
+              id="new-task-form"
+              onSubmit={handleCreate}
+              className="p-4 md:p-3 flex flex-col gap-3"
+            >
+              {createError && (
+                <p
+                  className="text-sm font-medium text-rose-600"
+                  role="alert"
+                >
+                  {createError}
+                </p>
+              )}
+              <div className="flex flex-col md:flex-row md:items-center gap-3 w-full min-w-0">
+                <div className="flex-1 flex items-center gap-3 w-full min-w-0 md:px-2">
+                  <Plus size={20} className="text-indigo-500 shrink-0 hidden md:block" />
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Co potřebujete udělat? (např. Zavolat panu Novákovi)"
+                    className="w-full min-w-0 py-3 px-3 md:py-2.5 md:px-0 bg-slate-50 md:bg-transparent border border-slate-200 md:border-none rounded-xl md:rounded-none text-slate-800 font-medium placeholder:text-slate-400 outline-none text-base md:text-sm min-h-[44px]"
                   />
                 </div>
-                <input
-                  type="date"
-                  value={newDueDate}
-                  onChange={(e) => setNewDueDate(e.target.value)}
-                  className="w-full md:w-auto flex items-center gap-1.5 px-3 py-3 md:py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-sm md:text-xs font-medium hover:bg-slate-100 transition-colors min-h-[44px]"
-                />
-                <button
-                  type="submit"
-                  disabled={submitting || !newTitle.trim()}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-base md:text-sm font-bold shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                >
-                  {submitting ? "…" : "Vytvořit"}
-                </button>
+                <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 w-full min-w-0">
+                  <div className="w-full min-w-0">
+                    <ContactSearchInput
+                      value={newContactId}
+                      contacts={contacts}
+                      onChange={setNewContactId}
+                      placeholder="Klient"
+                      className="w-full min-w-0 min-h-[44px] py-3 md:py-2.5"
+                    />
+                  </div>
+                  <input
+                    type="date"
+                    value={newDueDate}
+                    onChange={(e) => setNewDueDate(e.target.value)}
+                    className="w-full min-w-0 min-h-[44px] px-3 py-3 md:py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-sm md:text-xs font-medium hover:bg-slate-100 transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting || !newTitle.trim()}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-base md:text-sm font-bold shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-400 min-h-[44px]"
+                  >
+                    {submitting ? "…" : "Vytvořit"}
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
 
-          {/* Vyhledávání */}
+          {/* Vyhledávání – oddělený blok */}
           {tasks.length > 0 && (
             <div className="relative">
               <Search
@@ -491,20 +499,21 @@ export default function TasksPage() {
             </div>
           )}
 
-          {/* Taby: scrollovatelné na mobilu, touch-friendly */}
-          <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto snap-x snap-mandatory scrollbar-thin -mx-4 px-4 md:mx-0 md:px-0">
+          {/* Taby: na mobilu kratší štítky, scroll, touch-friendly */}
+          <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto snap-x snap-mandatory scrollbar-thin -mx-4 px-4 md:mx-0 md:px-0 pb-px">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => handleFilterChange(f.key)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap min-h-[44px] snap-start ${
+                className={`flex items-center gap-2 px-3 md:px-4 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap min-h-[44px] snap-start ${
                   filter === f.key
                     ? "border-indigo-600 text-indigo-600"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 } ${f.key === "overdue" && filter !== f.key ? "text-rose-500" : ""}`}
               >
-                {f.label}
+                <span className="md:hidden">{f.shortLabel}</span>
+                <span className="hidden md:inline">{f.label}</span>
                 {!loading && (
                   <span
                     className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
@@ -519,6 +528,19 @@ export default function TasksPage() {
               </button>
             ))}
           </div>
+
+          {loadError && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3" role="alert">
+              <p className="text-sm font-medium text-amber-800">Nepodařilo se načíst úkoly.</p>
+              <button
+                type="button"
+                onClick={() => reload()}
+                className="shrink-0 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold rounded-lg transition-colors"
+              >
+                Zkusit znovu
+              </button>
+            </div>
+          )}
 
           {/* Seznam úkolů */}
           {loading ? (
@@ -600,8 +622,8 @@ export default function TasksPage() {
           )}
         </div>
 
-        {/* --- Pravý panel (reálná data) --- */}
-        <div className="xl:col-span-4 space-y-6">
+        {/* --- Pravý panel (reálná data) – na mobilu skrytý --- */}
+        <div className="hidden xl:block xl:col-span-4 space-y-6">
           <div className="bg-[#1a1c2e] rounded-[var(--wp-radius-sm)] p-8 text-white shadow-xl relative overflow-hidden">
             <Target className="absolute -top-4 -right-4 w-32 h-32 text-white/5" />
             <h3 className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 mb-4">

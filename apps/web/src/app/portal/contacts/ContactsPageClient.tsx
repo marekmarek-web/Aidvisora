@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Download, Phone, Mail, CheckSquare, ArrowRight, MessageSquare } from "lucide-react";
 import { NewClientWizard } from "@/app/components/weplan/NewClientWizard";
 import { useToast } from "@/app/components/Toast";
@@ -70,6 +70,8 @@ function lifecycleBadge(stage: string | null | undefined): { label: string; clas
 }
 
 export function ContactsPageClient({ list }: { list: ContactRow[] }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [lifecycleFilter, setLifecycleFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
@@ -81,8 +83,14 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
   const [bulkPending, setBulkPending] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
   const tableLoadingTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const router = useRouter();
   const toast = useToast();
+
+  useEffect(() => {
+    if (searchParams.get("newClient") === "1") {
+      setWizardOpen(true);
+      router.replace("/portal/contacts", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const triggerTableLoading = useCallback(() => {
     setTableLoading(true);
@@ -203,15 +211,15 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                 type="button"
                 onClick={handleExportCsv}
                 disabled={exporting || list.length === 0}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:shadow-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:shadow-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] md:min-h-0"
               >
                 <Download size={16} />
-                Exportovat CSV
+                <span className="hidden sm:inline">Exportovat CSV</span>
               </button>
               <button
                 type="button"
                 onClick={() => setWizardOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                className="flex items-center gap-1.5 md:gap-2 px-4 md:px-5 py-2 md:py-2.5 bg-[#1a1c2e] text-white rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-md hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 disabled:opacity-50 min-h-[44px] md:min-h-0"
               >
                 <Plus size={16} />
                 Nový klient
@@ -240,7 +248,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                       key={tab.value || "all"}
                       type="button"
                       onClick={() => { setLifecycleFilter(tab.value); triggerTableLoading(); }}
-                      className={`px-4 py-2 rounded-[var(--wp-radius-xs)] text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
+                      className={`px-3 py-1.5 md:px-4 md:py-2 rounded-[var(--wp-radius-xs)] text-xs md:text-sm font-bold transition-all whitespace-nowrap shrink-0 min-h-[44px] md:min-h-0 flex items-center ${
                         lifecycleFilter === tab.value ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                       }`}
                     >
@@ -329,14 +337,14 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
               </div>
             )}
 
-            {/* --- Mobile: card list --- */}
-            <div className="md:hidden space-y-3">
+            {/* --- Mobile: card list – kompaktní, CTA Detail primární --- */}
+            <div className="md:hidden space-y-2">
               {tableLoading && (
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="bg-white rounded-[var(--wp-radius-sm)] border border-slate-200 p-4 animate-pulse">
-                      <div className="flex gap-3">
-                        <SkeletonLine className="h-12 w-12 rounded-full shrink-0" />
+                    <div key={i} className="bg-white rounded-[var(--wp-radius-sm)] border border-slate-200 p-3 animate-pulse">
+                      <div className="flex gap-2">
+                        <SkeletonLine className="h-10 w-10 rounded-full shrink-0" />
                         <div className="flex-1 space-y-2">
                           <SkeletonLine className="h-4 w-32" />
                           <SkeletonLine className="h-3 w-48" />
@@ -358,8 +366,8 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                         isSelected ? "border-indigo-300 ring-1 ring-indigo-200" : "border-slate-200"
                       }`}
                     >
-                      <div className="p-4 flex gap-3">
-                        <div className="shrink-0 flex items-center">
+                      <div className="p-3 flex gap-2">
+                        <div className="shrink-0 flex items-center self-start pt-1">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -369,7 +377,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                             aria-label={`Vybrat ${c.firstName} ${c.lastName}`}
                           />
                         </div>
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow-sm shrink-0 ${colorClass}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border border-white shadow-sm shrink-0 ${colorClass}`}>
                           {getInitials(c)}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -379,53 +387,55 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                           >
                             {c.firstName} {c.lastName}
                           </Link>
-                          <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md border ${badge.className}`}>
+                          <span className={`inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${badge.className}`}>
                             {badge.label}
                           </span>
-                          <div className="mt-2 flex flex-col gap-0.5 text-[13px] text-slate-600">
+                          <div className="mt-1.5 flex flex-col gap-0.5 text-[12px] text-slate-600">
                             {c.email && (
-                              <a href={`mailto:${c.email}`} className="flex items-center gap-2 truncate">
+                              <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 truncate">
                                 <Mail size={12} className="text-slate-400 shrink-0" />
                                 <span className="truncate">{c.email}</span>
                               </a>
                             )}
                             {c.phone && (
-                              <a href={`tel:${c.phone.replace(/\s/g, "")}`} className="flex items-center gap-2">
+                              <a href={`tel:${c.phone.replace(/\s/g, "")}`} className="flex items-center gap-1.5">
                                 <Phone size={12} className="text-slate-400 shrink-0" />
                                 {c.phone}
                               </a>
                             )}
                           </div>
                           {c.tags && c.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <div className="flex flex-wrap gap-1 mt-1.5">
                               {c.tags.slice(0, 3).map((t) => (
-                                <span key={t} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded border border-slate-200">
+                                <span key={t} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded border border-slate-200">
                                   {t}
                                 </span>
                               ))}
-                              {c.tags.length > 3 && <span className="text-[11px] text-slate-400">+{c.tags.length - 3}</span>}
+                              {c.tags.length > 3 && <span className="text-[10px] text-slate-400">+{c.tags.length - 3}</span>}
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="px-4 pb-4 flex items-center justify-end gap-2 flex-wrap">
-                        {c.phone && (
-                          <a href={`tel:${c.phone.replace(/\s/g, "")}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-[var(--wp-radius-sm)]" aria-label="Zavolat">
-                            <Phone size={20} />
-                          </a>
-                        )}
-                        {c.email && (
-                          <a href={`mailto:${c.email}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-[var(--wp-radius-sm)]" aria-label="E-mail">
-                            <Mail size={20} />
-                          </a>
-                        )}
-                        <Link href={`/portal/tasks?contactId=${c.id}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-[var(--wp-radius-sm)]" aria-label="Přidat úkol">
-                          <CheckSquare size={20} />
-                        </Link>
-                        <Link href={`/portal/messages?contact=${c.id}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-[var(--wp-radius-sm)]" aria-label="Napsat zprávu">
-                          <MessageSquare size={20} />
-                        </Link>
-                        <Link href={`/portal/contacts/${c.id}`} className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-semibold rounded-[var(--wp-radius-sm)] hover:bg-slate-200">
+                      <div className="px-3 pb-3 pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                        <div className="flex items-center gap-0.5">
+                          {c.phone && (
+                            <a href={`tel:${c.phone.replace(/\s/g, "")}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-[var(--wp-radius-sm)]" aria-label="Zavolat">
+                              <Phone size={18} />
+                            </a>
+                          )}
+                          {c.email && (
+                            <a href={`mailto:${c.email}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-[var(--wp-radius-sm)]" aria-label="E-mail">
+                              <Mail size={18} />
+                            </a>
+                          )}
+                          <Link href={`/portal/tasks?contactId=${c.id}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-[var(--wp-radius-sm)]" aria-label="Přidat úkol">
+                            <CheckSquare size={18} />
+                          </Link>
+                          <Link href={`/portal/messages?contact=${c.id}`} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-[var(--wp-radius-sm)]" aria-label="Napsat zprávu">
+                            <MessageSquare size={18} />
+                          </Link>
+                        </div>
+                        <Link href={`/portal/contacts/${c.id}`} className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-[var(--wp-radius-sm)] hover:bg-indigo-700 shadow-sm">
                           Detail <ArrowRight size={16} />
                         </Link>
                       </div>

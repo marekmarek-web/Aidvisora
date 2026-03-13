@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getPipelineByContact } from "@/app/actions/pipeline";
+import { useContactTab } from "./ContactTabLayout";
 import { updateOpportunityStage } from "@/app/actions/pipeline";
 import type { StageWithOpportunities, OpportunityCard } from "@/app/actions/pipeline";
 
@@ -165,4 +166,11 @@ function OpportunityCardBlock({
       </div>
     </div>
   );
+}
+
+/** Lazy wrapper: mountuje board až při aktivní záložce Obchody, takže data se načtou až po kliknutí a při každém přepnutí se znovu načtou. */
+export function ContactOpportunityBoardLazy({ contactId }: { contactId: string }) {
+  const activeTabId = useContactTab();
+  if (activeTabId !== "obchody") return null;
+  return <ContactOpportunityBoard contactId={contactId} />;
 }

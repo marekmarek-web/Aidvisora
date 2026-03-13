@@ -86,9 +86,9 @@ export function WeekDayGrid({
 
   return (
     <div className="wp-cal-week-day-grid flex-1 flex flex-col overflow-hidden min-h-0">
-      {/* Sticky header – kalendar.txt style: PO/ÚT + date, today = indigo circle */}
-      <div className="flex border-b border-slate-100 bg-white/95 backdrop-blur-sm z-30 shrink-0 pr-2">
-        <div className="w-[60px] flex-shrink-0 border-r border-slate-50" aria-hidden />
+      {/* Sticky header – na mobilu kompaktnější */}
+      <div className="flex border-b border-slate-100 bg-white/95 backdrop-blur-sm z-30 shrink-0 pr-1 sm:pr-2">
+        <div className="flex-shrink-0 border-r border-slate-50" style={{ width: timeColWidth }} aria-hidden />
         {weekDays.map((day) => {
           const ds = formatDateLocal(day);
           const isToday = ds === todayStr;
@@ -97,17 +97,17 @@ export function WeekDayGrid({
           return (
             <div
               key={ds}
-              className="flex-1 flex flex-col items-center py-3 border-r border-slate-50 last:border-0 relative"
+              className={`flex-1 flex flex-col items-center border-r border-slate-50 last:border-0 relative ${isMobile ? "py-1.5" : "py-3"}`}
             >
               <span
-                className={`text-[10px] font-black tracking-widest uppercase mb-1 ${isToday ? "text-indigo-600" : "text-slate-400"}`}
+                className={`font-black uppercase mb-0.5 ${isMobile ? "text-[9px] tracking-wider" : "text-[10px] tracking-widest"} ${isToday ? "text-indigo-600" : "text-slate-400"}`}
               >
                 {dayNames[dayIdx]}
               </span>
               <button
                 type="button"
                 onClick={() => onDaySelect?.(ds)}
-                className={`text-xl font-medium ${isToday ? "bg-indigo-600 text-white w-9 h-9 flex items-center justify-center rounded-full shadow-md" : "text-slate-800"}`}
+                className={`font-medium flex items-center justify-center rounded-full ${isMobile ? "text-base w-7 h-7" : "text-xl w-9 h-9"} ${isToday ? "bg-indigo-600 text-white shadow-md" : "text-slate-800"}`}
               >
                 {day.getDate()}
               </button>
@@ -125,15 +125,15 @@ export function WeekDayGrid({
             minHeight: totalHeight,
           }}
         >
-          {/* Time column – 60px, labels at top-right of each hour */}
+          {/* Time column – width from timeColWidth */}
           <div
-            className="w-[60px] flex-shrink-0 border-r border-slate-50 bg-white relative z-10"
-            style={{ height: totalHeight }}
+            className="flex-shrink-0 border-r border-slate-50 bg-white relative z-10"
+            style={{ width: timeColWidth, height: totalHeight }}
           >
             {hours.map((h) => (
               <div
                 key={h}
-                className="absolute right-2 text-[10px] font-bold text-slate-400"
+                className={`absolute right-1 sm:right-2 font-bold text-slate-400 ${isMobile ? "text-[9px]" : "text-[10px]"}`}
                 style={{ top: (h - startHour) * pixelsPerHour - 10, height: pixelsPerHour }}
               >
                 {h}:00

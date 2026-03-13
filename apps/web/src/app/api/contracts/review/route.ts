@@ -24,6 +24,20 @@ function matchSearch(row: { extractedPayload?: unknown }, q: string): boolean {
 }
 
 export async function GET(request: Request) {
+  // #region agent log
+  fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+    body: JSON.stringify({
+      sessionId: "6af004",
+      hypothesisId: "H3_H4",
+      location: "api/contracts/review/route.ts:GET:entry",
+      message: "review list GET entered",
+      data: {},
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   try {
     const supabase = await createClient();
     const {
@@ -36,6 +50,20 @@ export async function GET(request: Request) {
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H3",
+        location: "api/contracts/review/route.ts:after_auth",
+        message: "review list auth ok",
+        data: { tenantId: membership.tenantId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     const { searchParams } = new URL(request.url);
     const reviewStatus = searchParams.get("reviewStatus") as ContractReviewStatus | null;
@@ -54,8 +82,37 @@ export async function GET(request: Request) {
       rows = rows.filter((r) => matchSearch(r, search));
     }
 
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H4",
+        location: "api/contracts/review/route.ts:after_list",
+        message: "review list listContractReviews ok",
+        data: { count: rows.length },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json({ items: rows });
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H3_H4",
+        location: "api/contracts/review/route.ts:catch",
+        message: "review list catch",
+        data: { message },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json(
       { error: "Načtení seznamu selhalo." },
       { status: 500 }

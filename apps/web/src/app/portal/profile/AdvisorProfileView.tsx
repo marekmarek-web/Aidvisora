@@ -93,8 +93,22 @@ const MOCK_INTEGRATIONS = [
   { id: "microsoft", name: "Microsoft 365", status: "disconnected" as const },
 ];
 
-export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial }) {
-  const parsed = parseFullName(initial.fullName);
+export function AdvisorProfileView({
+  initial,
+  isFallback = false,
+}: {
+  initial: AdvisorProfileInitial;
+  isFallback?: boolean;
+}) {
+  if (!initial) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[280px] px-4 text-center">
+        <p className="text-slate-600 font-medium">Profil není k dispozici.</p>
+        <p className="text-sm text-slate-500 mt-1">Zkuste obnovit stránku nebo se vrátit později.</p>
+      </div>
+    );
+  }
+  const parsed = parseFullName(initial.fullName ?? null);
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -283,6 +297,11 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
       </header>
 
       <main className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-6">
+        {isFallback && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+            Část údajů se nepodařilo načíst. Můžete upravit a uložit základní údaje.
+          </div>
+        )}
         {/* Hlavička profilu */}
         <div className="bg-white rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 z-10 text-center md:text-left">

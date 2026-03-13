@@ -4,48 +4,85 @@ import { db, tenants, advisorPreferences } from "db";
 import { eq, and } from "db";
 import { AdvisorProfileView } from "./AdvisorProfileView";
 
+function isRedirectError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
+}
+
+const FALLBACK_INITIAL = {
+  email: "",
+  fullName: null as string | null,
+  roleName: "—",
+  tenantName: "—",
+  phone: "",
+  website: "",
+  reportLogoUrl: null as string | null,
+};
+
 export default async function ProfilePage() {
-  const auth = await requireAuth();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const email = user?.email ?? "";
-  const fullName = (user?.user_metadata?.full_name as string | undefined) ?? null;
+  let auth: Awaited<ReturnType<typeof requireAuth>>;
+  try {
+    auth = await requireAuth();
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    return (
+      <AdvisorProfileView initial={FALLBACK_INITIAL} isFallback />
+    );
+  }
 
-  const [tenantRow] = await db
-    .select({ name: tenants.name })
-    .from(tenants)
-    .where(eq(tenants.id, auth.tenantId))
-    .limit(1);
-  const tenantName = tenantRow?.name ?? "—";
+  let initial = {
+    ...FALLBACK_INITIAL,
+    roleName: auth.roleName,
+  };
+  let isFallback = false;
 
-  const [prefsRow] = await db
-    .select({
-      phone: advisorPreferences.phone,
-      website: advisorPreferences.website,
-      reportLogoUrl: advisorPreferences.reportLogoUrl,
-    })
-    .from(advisorPreferences)
-    .where(
-      and(
-        eq(advisorPreferences.tenantId, auth.tenantId),
-        eq(advisorPreferences.userId, auth.userId)
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const email = user?.email ?? "";
+    const fullName = (user?.user_metadata?.full_name as string | undefined) ?? null;
+
+    const [tenantRow] = await db
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, auth.tenantId))
+      .limit(1);
+    const tenantName = tenantRow?.name ?? "—";
+
+    const [prefsRow] = await db
+      .select({
+        phone: advisorPreferences.phone,
+        website: advisorPreferences.website,
+        reportLogoUrl: advisorPreferences.reportLogoUrl,
+      })
+      .from(advisorPreferences)
+      .where(
+        and(
+          eq(advisorPreferences.tenantId, auth.tenantId),
+          eq(advisorPreferences.userId, auth.userId)
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
+
+    initial = {
+      email,
+      fullName,
+      roleName: auth.roleName,
+      tenantName,
+      phone: prefsRow?.phone ?? "",
+      website: prefsRow?.website ?? "",
+      reportLogoUrl: prefsRow?.reportLogoUrl ?? null,
+    };
+  } catch {
+    isFallback = true;
+    initial = { ...initial, roleName: auth.roleName };
+  }
 
   return (
     <AdvisorProfileView
-      initial={{
-        email,
-        fullName,
-        roleName: auth.roleName,
-        tenantName,
-        phone: prefsRow?.phone ?? "",
-        website: prefsRow?.website ?? "",
-        reportLogoUrl: prefsRow?.reportLogoUrl ?? null,
-      }}
+      initial={initial}
+      isFallback={isFallback}
     />
   );
 }

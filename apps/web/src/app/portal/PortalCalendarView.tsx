@@ -549,9 +549,14 @@ export function PortalCalendarView() {
     return new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
   }, [mode, currentDate, rangeStart, selectedDate]);
 
+  const [calendarLoadError, setCalendarLoadError] = useState(false);
   const loadEvents = useCallback(() => {
     setLoading(true);
-    listEvents({ start: rangeStart.toISOString(), end: rangeEnd.toISOString() }).then(setEvents).catch(() => setEvents([])).finally(() => setLoading(false));
+    setCalendarLoadError(false);
+    listEvents({ start: rangeStart.toISOString(), end: rangeEnd.toISOString() })
+      .then((data) => { setEvents(data); setCalendarLoadError(false); })
+      .catch(() => { setEvents([]); setCalendarLoadError(true); })
+      .finally(() => setLoading(false));
   }, [rangeStart, rangeEnd]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
@@ -750,7 +755,7 @@ export function PortalCalendarView() {
         className={`wp-cal-container wp-cal-container--today-${settings.todayStyle} wp-cal-container--font-${settings.fontSize} flex flex-col flex-1 min-h-0`}
         style={cssVarsFromSettings(settings)}
       >
-        <div className="flex-1 flex overflow-hidden p-4 gap-4 min-h-0">
+        <div className="flex-1 flex overflow-hidden p-2 sm:p-4 gap-2 sm:gap-4 min-h-0">
           <CalendarLeftPanel
             baseDate={currentDate}
             selectedDate={selectedDate}
@@ -766,17 +771,17 @@ export function PortalCalendarView() {
             }}
           />
 
-          <main className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative min-w-0">
-            <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between bg-white z-20 flex-wrap gap-2">
-              <div className="flex items-center gap-4">
+          <main className="flex-1 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative min-w-0">
+            <div className={`px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between bg-white z-20 flex-wrap gap-2 ${isMobile ? "gap-y-2" : ""}`}>
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <button
                   type="button"
                   onClick={() => { const today = new Date(); setCurrentDate(today); setSelectedDate(formatDate(today)); }}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors min-h-[44px] sm:min-h-0"
+                  className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors min-h-[44px] sm:min-h-0"
                 >
                   Dnes
                 </button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1">
                   <button type="button" onClick={() => navigate(-1)} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center" aria-label="Předchozí">
                     <ChevronLeft size={18} />
                   </button>
@@ -784,28 +789,34 @@ export function PortalCalendarView() {
                     <ChevronRight size={18} />
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black text-slate-900">{toolbarMonthYear}</h2>
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">{toolbarMonthYear}</h2>
                   {toolbarWeekNum != null && (
-                    <span className="bg-slate-100 text-slate-700 rounded-md px-2 py-0.5 text-sm font-medium">
+                    <span className="bg-slate-100 text-slate-700 rounded-md px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm font-medium shrink-0">
                       {toolbarWeekNum}. týden
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-100 p-1 rounded-lg flex items-center">
-                  {(["workweek", "week", "month"] as const).map((m) => (
-                    <button key={m} type="button" onClick={() => setMode(m)} className={`px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
-                      {m === "workweek" ? "Pracovní" : m === "week" ? "Týden" : "Měsíc"}
-                    </button>
-                  ))}
+              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                <div className="bg-slate-100 p-0.5 sm:p-1 rounded-lg flex items-center">
+                  {isMobile
+                    ? (viewModesMobile as const).map((m) => (
+                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                          {m === "day" ? "Den" : m === "week" ? "Týden" : "Měsíc"}
+                        </button>
+                      ))
+                    : (["workweek", "week", "month"] as const).map((m) => (
+                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                          {m === "workweek" ? "Pracovní" : m === "week" ? "Týden" : "Měsíc"}
+                        </button>
+                      ))}
                 </div>
                 <div className="w-px h-5 bg-slate-200 hidden sm:block" />
                 <button type="button" onClick={() => setContextPanelCollapsed((c) => !c)} className={`p-1.5 rounded-lg transition-colors hidden sm:flex ${!contextPanelCollapsed ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:bg-slate-100"}`} title="Přepnout postranní panel">
                   {!contextPanelCollapsed ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
                 </button>
-                <button type="button" onClick={() => openNew(todayStr)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95 min-h-[44px] sm:min-h-0">
+                <button type="button" onClick={() => openNew(todayStr)} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs sm:text-sm font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95 min-h-[44px] sm:min-h-0">
                   <Plus size={16} /> Vytvořit
                 </button>
                 <button type="button" onClick={() => setSettingsOpen(true)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 sm:block hidden" aria-label="Nastavení">
@@ -818,11 +829,22 @@ export function PortalCalendarView() {
               <div className="flex-1 flex items-center justify-center">
                 <p className="text-slate-500 text-sm">Načítám kalendář…</p>
               </div>
+            ) : calendarLoadError ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
+                <p className="text-sm font-medium text-amber-800">Nepodařilo se načíst události.</p>
+                <button
+                  type="button"
+                  onClick={() => loadEvents()}
+                  className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
             ) : mode === "month" ? (
               <div className="flex-1 flex flex-col bg-white overflow-auto min-h-0">
-                <div className="grid grid-cols-7 border-b border-slate-200 bg-white z-20 flex-shrink-0">
+                <div className={`grid grid-cols-7 border-b border-slate-200 bg-white z-20 flex-shrink-0 ${isMobile ? "py-2" : "py-3"}`}>
                   {["PO", "ÚT", "ST", "ČT", "PÁ", "SO", "NE"].map((d, i) => (
-                    <div key={i} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-r border-slate-100 last:border-r-0">{d}</div>
+                    <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-r border-slate-100 last:border-r-0">{d}</div>
                   ))}
                 </div>
                 <div className="flex-1 grid grid-cols-7 grid-rows-5 bg-slate-100 gap-[1px] min-h-0">
@@ -836,10 +858,10 @@ export function PortalCalendarView() {
                       <div
                         key={idx}
                         onClick={() => isCurrentMonth && openNew(ds)}
-                        className={`relative p-2 bg-white transition-colors group cursor-pointer min-h-[80px] ${!isCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 hover:bg-slate-50"} ${isPast && isCurrentMonth ? "wp-cal-striped-past opacity-80" : ""}`}
+                        className={`relative p-1.5 sm:p-2 bg-white transition-colors group cursor-pointer min-h-[64px] sm:min-h-[80px] ${!isCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 hover:bg-slate-50"} ${isPast && isCurrentMonth ? "wp-cal-striped-past opacity-80" : ""}`}
                       >
-                        <span className={`absolute top-2 right-2 text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? "bg-indigo-600 text-white shadow-md" : ""}`}>{day.getDate()}</span>
-                        <div className="mt-8 space-y-1">
+                        <span className={`absolute top-1 right-1 sm:top-2 sm:right-2 text-xs sm:text-sm font-bold w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full ${isToday ? "bg-indigo-600 text-white shadow-md" : ""}`}>{day.getDate()}</span>
+                        <div className="mt-6 sm:mt-8 space-y-0.5 sm:space-y-1">
                           {dayEvents.slice(0, 4).map((ev) => {
                             const typeInfo = getEventCategory(ev.eventType);
                             const customColor = settings.eventTypeColors?.[ev.eventType ?? ""];
@@ -848,7 +870,7 @@ export function PortalCalendarView() {
                               <div
                                 key={ev.id}
                                 onClick={(e) => { e.stopPropagation(); setDetailEvent(detailEvent?.id === ev.id ? null : ev); }}
-                                className={`px-1.5 py-0.5 text-[9px] font-bold rounded border truncate hover:shadow-sm transition-shadow ${useInlineColor ? "text-gray-800 border-gray-300" : typeInfo.tailwindClass}`}
+                                className={`px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold rounded border truncate hover:shadow-sm transition-shadow ${useInlineColor ? "text-gray-800 border-gray-300" : typeInfo.tailwindClass}`}
                                 style={useInlineColor ? { backgroundColor: customColor, borderColor: customColor } : undefined}
                               >
                                 {formatTime(new Date(ev.startAt))} {ev.title}
@@ -873,12 +895,15 @@ export function PortalCalendarView() {
                   todayStr={todayStr}
                   todayStyle={settings.todayStyle}
                   firstDayOfWeek={settings.firstDayOfWeek}
-                  timeColWidth={timeColWidth}
+                  timeColWidth={isMobile ? 48 : timeColWidth}
                   onSlotClick={(dateStr, hour) => openNew(dateStr, hour)}
                   onEventClick={(ev) => setDetailEvent(detailEvent?.id === ev.id ? null : ev)}
                   onDaySelect={setSelectedDate}
                   selectedEventId={detailEvent?.id ?? null}
                   isMobile={isMobile}
+                  startHour={isMobile ? 8 : undefined}
+                  endHour={isMobile ? 21 : undefined}
+                  pixelsPerHour={isMobile ? 52 : undefined}
                   currentTimeLineColor={settings.currentTimeLineColor}
                   currentTimeLineWidth={settings.currentTimeLineWidth}
                   eventTypeColors={settings.eventTypeColors}
