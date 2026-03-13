@@ -4,6 +4,7 @@
 
 import type { FinancialAnalysisData } from "@/lib/analyses/financial/types";
 import type { CompanyFaPayload } from "@/lib/analyses/company-fa/types";
+import type { PdfReportBranding } from "./buildPersonalReportPayload";
 import { buildPersonalReportPayload } from "./buildPersonalReportPayload";
 import { buildBusinessReportPayload } from "./buildBusinessReportPayload";
 import type { NormalizedReportPayload, SubjectContext } from "./types";
@@ -25,6 +26,8 @@ export interface BuildCombinedReportPayloadOptions {
   provenance?: ReportProvenance;
   /** Phase 7: name of linked company (for "Příjem z firmy X (sdílený údaj)"). */
   linkedCompanyName?: string | null;
+  /** PDF header/footer and cover logo from advisor profile */
+  branding?: PdfReportBranding;
 }
 
 export function buildCombinedReportPayload(
@@ -40,6 +43,7 @@ export function buildCombinedReportPayload(
         generatedBy: options?.generatedBy,
         provenance: options?.provenance,
         linkedCompanyName: options?.linkedCompanyName,
+        branding: options?.branding,
       })
     : null;
   const businessPayload = companyData

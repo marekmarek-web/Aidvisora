@@ -45,6 +45,9 @@ export type AdvisorProfileInitial = {
   fullName: string | null;
   roleName: string;
   tenantName: string;
+  phone?: string | null;
+  website?: string | null;
+  reportLogoUrl?: string | null;
 };
 
 function parseFullName(full: string | null): { firstName: string; lastName: string } {
