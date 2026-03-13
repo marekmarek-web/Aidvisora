@@ -1,0 +1,465 @@
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import { 
+  Calculator, Home, AlertCircle, ArrowRight, 
+  Download, CheckCircle2, ChevronRight, TrendingDown, Shield
+} from 'lucide-react';
+
+// --- MOCK DATA BANK ---
+const BASE_BANKS = [
+  { id: 'fio', name: 'Fio banka', baseRate: 4.19, loanRate: 5.9, color: 'bg-emerald-500 text-white', initials: 'Fio', tags: ['Nejlepší sazba'] },
+  { id: 'moneta', name: 'Moneta', baseRate: 4.19, loanRate: 6.0, color: 'bg-cyan-500 text-white', initials: 'MO', tags: [] },
+  { id: 'ucb', name: 'UniCredit', baseRate: 4.29, loanRate: 6.5, color: 'bg-rose-600 text-white', initials: 'UCB', tags: [] },
+  { id: 'rb', name: 'Raiffeisenbank', baseRate: 4.34, loanRate: 5.9, color: 'bg-yellow-400 text-black', initials: 'RB', tags: [] },
+  { id: 'air', name: 'Air Bank', baseRate: 4.39, loanRate: 6.2, color: 'bg-lime-500 text-white', initials: 'AIR', tags: [] },
+  { id: 'kb', name: 'Komerční banka', baseRate: 4.59, loanRate: 6.9, color: 'bg-slate-900 text-white', initials: 'KB', tags: [] },
+  { id: 'cs', name: 'Česká spořitelna', baseRate: 4.59, loanRate: 7.5, color: 'bg-blue-600 text-white', initials: 'ČS', tags: [] },
+  { id: 'csob', name: 'ČSOB', baseRate: 4.79, loanRate: 7.9, color: 'bg-blue-400 text-white', initials: 'ČSOB', tags: [] },
+];
+
+const formatCurrency = (num) => Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const parseCurrency = (str) => parseInt(str.toString().replace(/\s/g, ''), 10) || 0;
+
+export default function MortgageCalculatorWidget() {
+  // --- STAVY ---
+  const [activeTab, setActiveTab] = useState('mortgage'); // 'mortgage' | 'loan'
+  const [purpose, setPurpose] = useState('new'); // 'new' | 'refi'
+  const [mortgageType, setMortgageType] = useState('standard'); // 'standard' | 'investment' | 'american'
+  const [loanType, setLoanType] = useState('consumer'); // 'consumer' | 'auto' | 'consolidation'
+
+  // Hodnoty (Základní limity odpovídají původnímu HTML)
+  const [loanAmount, setLoanAmount] = useState(6000000);
+  const [ownResources, setOwnResources] = useState(600000);
+  const [extraMoney, setExtraMoney] = useState(0); // Pro konsolidaci
+  const [termYears, setTermYears] = useState(30);
+  const [fixation, setFixation] = useState(5);
+  const [ltvLock, setLtvLock] = useState(90); // Zamčená hodnota LTV pro tlačítka
+
+  // --- LIMITS & RANGES ---
+  const limits = {
+    mortgage: { min: 500000, max: 30000000, step: 100000 },
+    loan: { min: 20000, max: 2500000, step: 5000 }
+  };
+
+  const activeLimits = activeTab === 'mortgage' ? limits.mortgage : limits.loan;
+
+  // --- VÝPOČTY (Na základě původní logiky v HTML) ---
+  const getCalculatedLtv = () => {
+    if (activeTab === 'mortgage') {
+        const propertyValue = loanAmount + ownResources;
+        if (propertyValue > 0) return Math.round((loanAmount / propertyValue) * 100);
+        return 0;
+    } else if (activeTab === 'loan' && loanType === 'auto') {
+        if (loanAmount > 0) return Math.round((ownResources / loanAmount) * 100); 
+        return 0;
+    }
+    return 0;
+  };
+
+  const currentLtv = getCalculatedLtv();
+  const propertyValue = activeTab === 'mortgage' ? loanAmount + ownResources : Math.max(0, loanAmount - ownResources);
+
+  // Funkce pro nastavení LTV/Akontace
+  const applyLtv = (targetVal) => {
+    if ((mortgageType === 'investment' || mortgageType === 'american') && targetVal > 70) return;
+
+    setLtvLock(targetVal);
+    
+    if (activeTab === 'mortgage') {
+        // Vlastní zdroje z cílového LTV: Own = (100 - targetVal)% * Loan Amount
+        const ownPercent = (100 - targetVal) / 100;
+        setOwnResources(Math.round((loanAmount * ownPercent) / 1000) * 1000);
+    } else if (activeTab === 'loan' && loanType === 'auto') {
+        setOwnResources(Math.round((loanAmount * (targetVal / 100)) / 1000) * 1000);
+    }
+  };
+
+  // Kalkulace pro banky a splátky (Kompletní replika původní logiky)
+  const bankOffers = useMemo(() => {
+    return BASE_BANKS.map(bank => {
+      let finalRate = 0;
+      let borrowingAmount = loanAmount;
+
+      if (activeTab === 'mortgage') {
+          let penalty = 0.0;
+          if (currentLtv > 91) penalty += 1.5; 
+          if (mortgageType === 'american') penalty += 1.5; 
+          if (mortgageType === 'investment') penalty += 0.4; 
+          if (purpose === 'refi') penalty -= 0.2;
+
+          finalRate = bank.baseRate + penalty;
+          if (finalRate < 4.19) finalRate = 4.19;
+
+          if (fixation < 5) finalRate += 0.1;
+          else if (fixation > 7) {
+               let discounted = finalRate - 0.15;
+               finalRate = discounted < 4.19 ? 4.19 : discounted;
+          }
+      } else {
+          let typeMod = 0;
+          if (loanType === 'auto') typeMod = -1.0; 
+          if (loanType === 'consolidation') typeMod = -0.5;
+
+          finalRate = (bank.loanRate || 6.9) + typeMod;
+
+          if (loanType === 'auto') {
+              borrowingAmount = Math.max(0, loanAmount - ownResources); 
+          } else if (loanType === 'consolidation') {
+              borrowingAmount = loanAmount + extraMoney;
+          }
+      }
+
+      const r = (finalRate / 100) / 12;
+      const n = activeTab === 'mortgage' ? termYears * 12 : termYears * 12; // Zjednodušeno pro React verzi, ale udrží logiku
+      
+      let monthly = 0;
+      if (borrowingAmount > 0 && n > 0) {
+        monthly = (r > 0) ? (borrowingAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : borrowingAmount / n;
+      }
+
+      return {
+        ...bank,
+        finalRate,
+        monthly: Math.round(monthly),
+        totalPaid: Math.round(monthly * n)
+      };
+    }).sort((a, b) => a.monthly - b.monthly);
+  }, [loanAmount, ownResources, extraMoney, termYears, fixation, activeTab, purpose, mortgageType, loanType, currentLtv]);
+
+  const bestOffer = bankOffers[0];
+
+  // Handler pro změnu produktu (Reset limitů)
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'mortgage') {
+      setLoanAmount(6000000);
+      setOwnResources(600000); // 10% pro defaultní 90% LTV
+      setTermYears(30);
+      setLtvLock(90);
+    } else {
+      setLoanAmount(200000);
+      setOwnResources(0);
+      setTermYears(8);
+      setLtvLock(0);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto font-lato text-slate-800 animate-in fade-in duration-500 bg-white sm:bg-transparent">
+      
+      {/* --- CUSTOM STYLES --- */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+        
+        .ghost-input {
+          background: transparent; border: none; outline: none; width: 100%;
+          text-align: right; box-shadow: none !important; padding: 0; margin: 0;
+        }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 16px 0; }
+        input[type=range]::-webkit-slider-thumb { 
+          -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; 
+          background: #ffffff; border: 3px solid #4f46e5; cursor: pointer; 
+          margin-top: -10px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #e2e8f0; border-radius: 4px; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus::-webkit-slider-runnable-track { background: #cbd5e1; }
+      `}</style>
+
+      {/* --- WIDGET HEADER & TABY --- */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 p-6 sm:p-0">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 mb-2">
+            <Calculator className="text-indigo-500" size={28} strokeWidth={2.5} />
+            Modelace financování
+          </h2>
+          <p className="text-sm font-medium text-slate-500 max-w-xl">
+            Detailní výpočet hypotečních a spotřebitelských úvěrů s přímým srovnáním bank na trhu.
+          </p>
+        </div>
+
+        <div className="flex bg-slate-100/80 p-1.5 rounded-2xl shadow-inner w-fit border border-slate-200/50">
+          <button onClick={() => handleTabSwitch('mortgage')} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'mortgage' ? 'bg-white text-indigo-600 shadow-sm scale-100' : 'text-slate-500 hover:text-slate-700 scale-95'}`}>
+            Hypotéka
+          </button>
+          <button onClick={() => handleTabSwitch('loan')} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'loan' ? 'bg-white text-indigo-600 shadow-sm scale-100' : 'text-slate-500 hover:text-slate-700 scale-95'}`}>
+            Úvěry
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* ========================================================= */}
+        {/* LEVÝ PANEL (Vstupy) - 7 sloupců */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-7 bg-white sm:rounded-[32px] p-6 md:p-10 sm:border border-slate-100 sm:shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-10">
+          
+          {/* Sub-Taby (Dle typu produktu) */}
+          <div className="flex flex-wrap gap-2">
+            {activeTab === 'mortgage' ? (
+              <>
+                <button onClick={() => setPurpose('new')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${purpose === 'new' ? 'bg-indigo-50 text-indigo-700' : 'bg-transparent text-slate-400 hover:bg-slate-50'}`}>Koupě nemovitosti</button>
+                <button onClick={() => setPurpose('refi')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${purpose === 'refi' ? 'bg-indigo-50 text-indigo-700' : 'bg-transparent text-slate-400 hover:bg-slate-50'}`}>Refinancování</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setLoanType('consumer')} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loanType === 'consumer' ? 'bg-indigo-50 text-indigo-700' : 'bg-transparent text-slate-400 hover:bg-slate-50'}`}>Spotřebitelský</button>
+                <button onClick={() => setLoanType('auto')} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loanType === 'auto' ? 'bg-indigo-50 text-indigo-700' : 'bg-transparent text-slate-400 hover:bg-slate-50'}`}>Auto / Leasing</button>
+                <button onClick={() => setLoanType('consolidation')} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loanType === 'consolidation' ? 'bg-indigo-50 text-indigo-700' : 'bg-transparent text-slate-400 hover:bg-slate-50'}`}>Konsolidace</button>
+              </>
+            )}
+          </div>
+
+          {/* 1. Hlavní částka (Půjčka) */}
+          <div className="group">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-2 gap-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500 transition-colors">
+                {activeTab === 'mortgage' ? 'Výše úvěru' : (loanType === 'auto' ? 'Cena vozu' : (loanType === 'consolidation' ? 'Stávající závazky' : 'Kolik si chcete půjčit'))}
+              </label>
+              <div className="flex items-baseline gap-2 border-b-2 border-slate-100 group-hover:border-indigo-500 transition-colors pb-1 justify-end">
+                <input 
+                  type="text" 
+                  value={formatCurrency(loanAmount)}
+                  onChange={(e) => {
+                    const val = parseCurrency(e.target.value);
+                    setLoanAmount(Math.min(Math.max(val, activeLimits.min), activeLimits.max));
+                  }}
+                  className="ghost-input text-4xl font-black text-slate-900 w-48 sm:w-64" 
+                />
+                <span className="text-xl font-bold text-slate-400">Kč</span>
+              </div>
+            </div>
+            <input type="range" min={activeLimits.min} max={activeLimits.max} step={activeLimits.step} value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} />
+          </div>
+
+          {/* Peníze navíc (Jen Konsolidace) */}
+          {activeTab === 'loan' && loanType === 'consolidation' && (
+            <div className="group animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-2 gap-2">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500 transition-colors">Peníze navíc</label>
+                <div className="flex items-baseline gap-2 border-b-2 border-slate-100 group-hover:border-indigo-500 transition-colors pb-1 justify-end">
+                  <input type="text" value={formatCurrency(extraMoney)} onChange={(e) => setExtraMoney(parseCurrency(e.target.value))} className="ghost-input text-3xl font-black text-slate-900 w-40 sm:w-48" />
+                  <span className="text-lg font-bold text-slate-400">Kč</span>
+                </div>
+              </div>
+              <input type="range" min="0" max="1000000" step="10000" value={extraMoney} onChange={(e) => setExtraMoney(Number(e.target.value))} />
+            </div>
+          )}
+
+          {/* 2. Vlastní zdroje / Akontace */}
+          {(activeTab === 'mortgage' || (activeTab === 'loan' && loanType === 'auto')) && (
+            <div className="group animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-2 gap-2">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500 transition-colors">Vlastní zdroje</label>
+                <div className="flex items-baseline gap-2 border-b-2 border-slate-100 group-hover:border-indigo-500 transition-colors pb-1 justify-end">
+                  <input 
+                    type="text" 
+                    value={formatCurrency(ownResources)}
+                    onChange={(e) => {
+                      setOwnResources(parseCurrency(e.target.value));
+                      setLtvLock(null); // Zrušíme lock tlačítek při ručním zápisu
+                    }}
+                    className="ghost-input text-3xl font-black text-slate-900 w-40 sm:w-48" 
+                  />
+                  <span className="text-lg font-bold text-slate-400">Kč</span>
+                </div>
+              </div>
+              <input type="range" min="0" max={activeTab === 'mortgage' ? 20000000 : loanAmount} step={activeTab==='mortgage'?50000:10000} value={ownResources} onChange={(e) => { setOwnResources(Number(e.target.value)); setLtvLock(null); }} />
+              
+              {/* LTV Tlačítka */}
+              <div className="flex items-center gap-3 mt-4 pt-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">{activeTab === 'mortgage' ? 'LTV:' : 'Akontace:'}</span>
+                {(activeTab === 'mortgage' ? [90, 80, 70, 60] : [0, 10, 20, 30]).map(val => {
+                  const isActive = ltvLock === val;
+                  const disabled = activeTab === 'mortgage' && (mortgageType === 'investment' || mortgageType === 'american') && val > 70;
+                  return (
+                    <button 
+                      key={val} onClick={() => { if(!disabled) applyLtv(val); }}
+                      disabled={disabled}
+                      className={`w-12 h-10 rounded-xl text-xs font-black transition-all ${isActive ? 'bg-indigo-600 text-white shadow-md scale-110' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {val}%
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Hodnota nemovitosti Info Box */}
+          {activeTab === 'mortgage' && (
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Odhadovaná hodnota nemovitosti</span>
+                <span className="text-xl font-black text-slate-800">{formatCurrency(propertyValue)} Kč</span>
+              </div>
+              <Home size={28} className="text-indigo-200" />
+            </div>
+          )}
+
+          {/* 3. Doba splácení */}
+          <div className="group">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500 transition-colors">Doba splácení</label>
+              <div className="bg-slate-50 px-4 py-2 rounded-xl text-xl font-black text-slate-900 border border-slate-100">
+                {termYears} let
+              </div>
+            </div>
+            <input type="range" min={activeTab === 'mortgage' ? 5 : 1} max={activeTab === 'mortgage' ? 35 : (loanType === 'auto' ? 10 : 12)} step="1" value={termYears} onChange={(e) => setTermYears(Number(e.target.value))} />
+          </div>
+
+          {/* 4. Fixace a Typ (Jen pro hypotéky) */}
+          {activeTab === 'mortgage' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-100 animate-in fade-in">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Fixace úroku</label>
+                <div className="relative">
+                  <select value={fixation} onChange={(e) => setFixation(Number(e.target.value))} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 appearance-none cursor-pointer">
+                    <option value={1}>1 rok</option><option value={3}>3 roky</option><option value={5}>5 let</option><option value={7}>7 let</option><option value={10}>10 let</option>
+                  </select>
+                  <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Účel nemovitosti</label>
+                <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                  <button onClick={() => setMortgageType('standard')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mortgageType === 'standard' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Bydlení</button>
+                  <button onClick={() => setMortgageType('investment')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mortgageType === 'investment' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Investice</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ========================================================= */}
+        {/* PRAVÝ PANEL (Výsledek) - 5 sloupců */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          <div className="sticky top-28 space-y-6">
+            
+            {/* Hlavní prémiová karta výsledku */}
+            <div className="bg-[#0b1120] sm:rounded-[32px] p-8 text-white shadow-2xl relative overflow-hidden border-y sm:border border-slate-800 -mx-6 sm:mx-0">
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-600 opacity-30 rounded-full blur-[80px] pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-400"></div>
+
+              <div className="relative z-10">
+                <p className="text-indigo-300 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Odhadovaná splátka od</p>
+                <div className="text-5xl lg:text-6xl font-black mb-2 tracking-tight flex items-baseline gap-2">
+                  {formatCurrency(bestOffer.monthly)} <span className="text-xl font-bold text-slate-400">Kč</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-8 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg border border-emerald-500/30">
+                  Nejlepší sazba od {bestOffer.finalRate.toFixed(2).replace('.', ',')} % p.a.
+                </div>
+                
+                {/* Metriky */}
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {activeTab === 'mortgage' && (
+                    <>
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                        <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hodnota nemovitosti</span>
+                        <span className="text-lg font-black text-white">{formatCurrency(propertyValue)} Kč</span>
+                      </div>
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                        <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">LTV (Zajištění)</span>
+                        <span className={`text-lg font-black ${currentLtv > 90 ? 'text-rose-400' : 'text-emerald-400'}`}>{currentLtv.toFixed(1)} %</span>
+                      </div>
+                    </>
+                  )}
+                  <div className={`${activeTab === 'mortgage' ? 'col-span-2' : 'col-span-2'} bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm flex items-center justify-between`}>
+                    <span className="text-xs font-bold text-slate-300">Celkem zaplatíte bance</span>
+                    <span className="text-lg font-black text-white">{formatCurrency(bestOffer.totalPaid)} Kč</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ČNB Alert */}
+              {activeTab === 'mortgage' && currentLtv > 90 && (
+                <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-start gap-2 relative z-10">
+                  <AlertCircle size={16} className="text-rose-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] font-medium text-rose-200/90 leading-relaxed">
+                    LTV je vyšší než doporučených 90 %. Bude nutné zvýšit vlastní zdroje, nebo dozajistit jinou nemovitostí.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Tlačítko akce v CRM kontextu */}
+            <button className="hidden sm:flex w-full group bg-white border border-slate-200 hover:border-indigo-300 rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all items-center justify-between">
+              <div className="text-left flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Download size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-sm mb-0.5">Exportovat kalkulaci do PDF</h3>
+                  <p className="text-xs font-medium text-slate-500">Stáhnout dokument k prezentaci pro klienta</p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" />
+            </button>
+            
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* SPODNÍ ČÁST (Tržní nabídky) */}
+      {/* ========================================================= */}
+      <div className="mt-12 pt-8 sm:border-t border-slate-200 p-6 sm:p-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <TrendingDown size={20} className="text-emerald-500" /> Srovnání nabídek trhu
+          </h3>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+            Seřazeno od nejnižší splátky
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {bankOffers.map((bank, index) => (
+            <div 
+              key={bank.id} 
+              className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group flex flex-col cursor-pointer relative overflow-hidden"
+            >
+              {index === 0 && (
+                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10 shadow-sm flex items-center gap-1">
+                  <CheckCircle2 size={10} /> Top volba
+                </div>
+              )}
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${bank.color}`}>
+                  {bank.initials}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm leading-tight">{bank.name}</h4>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs font-black text-indigo-600">{bank.finalRate.toFixed(2).replace('.', ',')} % p.a.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-3 border-t border-slate-50 flex items-end justify-between">
+                <div>
+                  <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Splátka</span>
+                  <span className="font-black text-base text-slate-900">{formatCurrency(bank.monthly)} Kč</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}

@@ -343,3 +343,22 @@ export async function addTagToContacts(ids: string[], tag: string): Promise<void
       .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, r.id)));
   }
 }
+
+/** Nastaví štítky kontaktu (pouze sloupec tags). Pro použití na kartě klienta. */
+export async function setContactTags(contactId: string, tags: string[]): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  const existing = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+    .limit(1);
+  if (existing.length === 0) throw new Error("Kontakt nenalezen");
+  const normalized = Array.from(
+    new Set(tags.map((t) => t.trim()).filter(Boolean))
+  );
+  await db
+    .update(contacts)
+    .set({ tags: normalized.length ? normalized : null, updatedAt: new Date() })
+    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
+}

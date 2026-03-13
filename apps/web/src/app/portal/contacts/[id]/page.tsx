@@ -28,6 +28,7 @@ import { ContactLastNotePreview } from "./ContactLastNotePreview";
 import { ContactProductsPreview } from "./ContactProductsPreview";
 import { ContactAiAnalysisCard } from "./ContactAiAnalysisCard";
 import { ClientCoverageWidget } from "@/app/components/contacts/ClientCoverageWidget";
+import { ContactTagsEditor } from "@/app/components/contacts/ContactTagsEditor";
 import { ContactFinancialAnalysesSection } from "@/app/dashboard/contacts/[id]/ContactFinancialAnalysesSection";
 
 export default async function ContactDetailPage({
@@ -176,15 +177,7 @@ export default async function ContactDetailPage({
                   <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                     {contact.firstName} {contact.lastName}
                   </h1>
-                  {contact.tags && contact.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {contact.tags.map((tag) => (
-                        <span key={tag} className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-slate-200">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <ContactTagsEditor contactId={id} initialTags={contact.tags ?? []} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-slate-500">
                   {contact.email && (
