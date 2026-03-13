@@ -370,6 +370,12 @@ export interface PersistedState {
   timestamp?: string;
 }
 
+/** Holding weight entry (name + weight in percent, e.g. 5.47 for 5.47 %) */
+export interface HoldingWeight {
+  name: string;
+  weight: number;
+}
+
 /** Fund detail for report / product cards */
 export interface FundDetail {
   name: string;
@@ -383,6 +389,21 @@ export interface FundDetail {
   why: string;
   /** Výchozí roční zhodnocení (např. 0.06 = 6 %); pro dropdown průměr ±1 % */
   defaultRate?: number;
+  /** Investiční strategie (dlouhý popis) */
+  strategy?: string;
+  /** Klíčové výhody (odrážky) */
+  benefits?: string[];
+  /** Základní parametry (měna, min. investice, …) */
+  parameters?: Record<string, string>;
+  /** Top 10 držených titulů (váha v %) */
+  topHoldings?: HoldingWeight[];
+  /** Celková váha top 10 v %; počet všech holdingu */
+  top10WeightPercent?: number;
+  totalHoldingsCount?: number;
+  /** Země (váha v %) */
+  countries?: HoldingWeight[];
+  /** Sektory (váha v %) */
+  sectors?: HoldingWeight[];
 }
 
 /** Liability provider group */

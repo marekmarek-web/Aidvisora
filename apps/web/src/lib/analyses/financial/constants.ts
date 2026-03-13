@@ -53,6 +53,46 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     suitable: 'Všichni investoři (základ portfolia)',
     why: 'Maximální diverzifikace za minimální poplatek.',
     defaultRate: 0.12,
+    strategy: 'iShares Core MSCI World UCITS ETF USD (Acc) je pasivně řízený fond kopírující index MSCI World. Index zahrnuje akcie velkých a středních firem z 23 vyspělých trhů.',
+    benefits: [
+      'Nízké náklady (TER)',
+      'Široká diverzifikace napříč sektory a zeměmi',
+      'Denní obchodovatelnost na burze',
+      'Akumulační podíl – dividendy se automaticky reinvestují',
+    ],
+    parameters: {
+      'Měna': 'USD',
+      'Min. investice': '1 podíl',
+      'Typické zastoupení': 'Akcie vyspělých trhů',
+    },
+    top10WeightPercent: 26.46,
+    totalHoldingsCount: 1317,
+    topHoldings: [
+      { name: 'NVIDIA Corp.', weight: 5.47 },
+      { name: 'Apple', weight: 4.48 },
+      { name: 'Microsoft', weight: 3.58 },
+      { name: 'Amazon.com, Inc.', weight: 2.71 },
+      { name: 'Alphabet, Inc. A', weight: 2.3 },
+      { name: 'Alphabet, Inc. C', weight: 1.94 },
+      { name: 'Meta Platforms', weight: 1.87 },
+      { name: 'Broadcom Inc.', weight: 1.74 },
+      { name: 'Tesla', weight: 1.38 },
+      { name: 'JPMorgan Chase & Co.', weight: 0.99 },
+    ],
+    countries: [
+      { name: 'USA', weight: 67.33 },
+      { name: 'Japonsko', weight: 5.59 },
+      { name: 'Velká Británie', weight: 3.37 },
+      { name: 'Kanada', weight: 3.05 },
+      { name: 'Ostatní', weight: 20.66 },
+    ],
+    sectors: [
+      { name: 'Technology', weight: 27.25 },
+      { name: 'Financials', weight: 14.51 },
+      { name: 'Industrials', weight: 10.65 },
+      { name: 'Consumer Discretionary', weight: 9.88 },
+      { name: 'Ostatní', weight: 37.71 },
+    ],
   },
   alternative: {
     name: 'Alternativní investice',
@@ -261,6 +301,19 @@ export const BENEFIT_OPTIMIZATION = {
   /** Daňová úspora majitelů při benefitu (21 %). */
   ownerTaxSavingsPercent: 21,
 } as const;
+
+/** Logo cesty pro pojišťovny (název pojišťovny → cesta v public). Složka např. public/logos/insurers/. */
+export const INSURANCE_LOGOS: Record<string, string> = {
+  'ČSOB Pojišťovna': '/logos/insurers/csob.png',
+  'Allianz pojišťovna': '/logos/insurers/allianz.png',
+  'Generali Pojišťovna': '/logos/insurers/generali.png',
+  'Kooperativa': '/logos/insurers/kooperativa.png',
+  'Slavia pojišťovna': '/logos/insurers/slavia.png',
+  'NN pojišťovna': '/logos/insurers/nn.png',
+  'UNIQA': '/logos/insurers/uniqa.png',
+  'AXA': '/logos/insurers/axa.png',
+  'MetLife': '/logos/insurers/metlife.png',
+};
 
 /** České pojišťovny pro dropdown. */
 export const INSURANCE_COMPANIES_CS: string[] = [

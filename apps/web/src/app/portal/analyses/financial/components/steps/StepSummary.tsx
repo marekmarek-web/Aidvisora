@@ -101,11 +101,12 @@ export function StepSummary() {
         }
         if (allocationCanvas) {
           const { labels, values } = getAllocationChartData(data);
+          const ALLOCATION_PALETTE = ["#1e40af", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2", "#64748b"];
           chartRefs.current.allocation = new Chart(allocationCanvas, {
             type: "doughnut",
             data: {
               labels,
-              datasets: [{ data: values, backgroundColor: ["#0f172a", "#1e40af", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2"] }],
+              datasets: [{ data: values, backgroundColor: labels.map((_, i) => ALLOCATION_PALETTE[i % ALLOCATION_PALETTE.length]) }],
             },
             options: {
               responsive: true,

@@ -18,7 +18,7 @@ const RISK_TYPES: InsuredRiskType[] = [
 const RISK_LABELS: Record<InsuredRiskType, string> = {
   death: 'Smrt',
   invalidity: 'Invalidita',
-  sickness: 'PN',
+  sickness: 'Pracovní neschopnost',
   tn: 'Trvalé následky',
   daily_compensation: 'Denní odškodné',
   critical_illness: 'Závažná onemocnění',

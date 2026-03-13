@@ -55,7 +55,7 @@ export const PRODUCT_NAMES: Record<string, string> = {
   creif: 'CREIF',
   atris: 'ATRIS',
   penta: 'PENTA',
-  ishares: 'ETF World',
+  ishares: 'iShares MSCI World ETF',
   alternative: 'Alternativní investice',
   fidelity2040: 'Fidelity 2040',
   conseq: 'Conseq Globální',

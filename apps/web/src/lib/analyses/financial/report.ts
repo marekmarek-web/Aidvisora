@@ -3,8 +3,8 @@
  * Extracted from financni-analyza.html (Phase 1). Preserves behavior 1:1.
  */
 
-import type { FinancialAnalysisData, CompanyRisks } from './types';
-import { CREDIT_WISH_BANKS, FUND_DETAILS } from './constants';
+import type { FinancialAnalysisData, CompanyRisks, FundDetail } from './types';
+import { CREDIT_WISH_BANKS, FUND_DETAILS, FUND_LOGOS, INSURANCE_LOGOS } from './constants';
 import {
   totalIncome,
   totalExpense,
@@ -16,13 +16,14 @@ import {
   companyRunway,
 } from './calculations';
 import { formatCzk, getProductName, getStrategyDesc, getStrategyProfileLabel } from './formatters';
-import { getAgeFromBirthDate } from './incomeProtection';
+import { getAgeFromBirthDate, getRiskLabel } from './incomeProtection';
 
+/* Aidvisor / WePlan theme: --wp-text #1f1c2e, --wp-text-muted #4a4a4a, --wp-border #e9ebf0, --wp-accent #0073ea, --wp-bg #f3f6fd, --wp-font Source Sans 3 */
 export const PDF_STYLES = `
 @page { size: A4; margin: 10mm; }
 .pdf {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
-  color: #0b1220;
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  color: #1f1c2e;
   background: #ffffff;
 }
 .pdf-page {
@@ -52,14 +53,14 @@ export const PDF_STYLES = `
   -webkit-column-break-inside: avoid;
 }
 .force-break { page-break-before: always; }
-.h1 { font-size: 22pt; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; margin-bottom: 5mm; }
+.h1 { font-size: 22pt; font-weight: 800; letter-spacing: -0.02em; color: #1f1c2e; margin-bottom: 5mm; }
 .h2 {
   font-size: 14pt;
   font-weight: 800;
   margin-top: 6mm;
   margin-bottom: 5mm;
-  color: #0B3A7A;
-  border-left: 4px solid #ffcc00;
+  color: #0073ea;
+  border-left: 4px solid #0073ea;
   padding-left: 4mm;
   line-height: 1;
   display: flex;
@@ -67,8 +68,8 @@ export const PDF_STYLES = `
   min-height: 18px;
   page-break-after: avoid;
 }
-.muted { color: #52607a; font-size: 9pt; }
-.badge { border: 1px solid #e6e9f2; border-radius: 999px; padding: 1mm 3mm; font-size: 8pt; display: inline-block; white-space: nowrap; }
+.muted { color: #4a4a4a; font-size: 9pt; }
+.badge { border: 1px solid #e9ebf0; border-radius: 999px; padding: 1mm 3mm; font-size: 8pt; display: inline-block; white-space: nowrap; }
 .inv-badge {
   display: inline-flex;
   align-items: center;
@@ -86,9 +87,9 @@ export const PDF_STYLES = `
   box-sizing: border-box;
   vertical-align: middle;
 }
-.inv-badge-lump { background: #dbeafe; color: #1e40af; }
-.inv-badge-monthly { background: #d1fae5; color: #065f46; }
-.inv-badge-pension { background: #fef3c7; color: #92400e; }
+.inv-badge-lump { background: #e8edf7; color: #0073ea; }
+.inv-badge-monthly { background: #e0f2e8; color: #00c875; }
+.inv-badge-pension { background: #fef0db; color: #fdab3d; }
 .yield-pill {
   display: inline-flex;
   align-items: center;
@@ -96,8 +97,8 @@ export const PDF_STYLES = `
   font-size: 8pt;
   padding: 1.6mm 2.5mm;
   border-radius: 2mm;
-  background: #f0fdf4;
-  color: #166534;
+  background: #e0f2e8;
+  color: #00c875;
   font-weight: 600;
   min-width: 10mm;
   min-height: 5mm;
@@ -105,8 +106,8 @@ export const PDF_STYLES = `
   line-height: 1;
 }
 .table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; page-break-inside: avoid; table-layout: fixed; }
-.table th { text-align: left; font-size: 9pt; color: #52607a; border-bottom: 2px solid #e6e9f2; padding: 2.5mm 2mm; font-weight: 700; }
-.table td { font-size: 10pt; border-bottom: 1px solid #f1f3f8; padding: 2.5mm 2mm; color: #0f172a; vertical-align: middle; }
+.table th { text-align: left; font-size: 9pt; color: #4a4a4a; border-bottom: 2px solid #e9ebf0; padding: 2.5mm 2mm; font-weight: 700; }
+.table td { font-size: 10pt; border-bottom: 1px solid #e9ebf0; padding: 2.5mm 2mm; color: #1f1c2e; vertical-align: middle; }
 .table th:nth-child(2), .table th:nth-child(4), .table td:nth-child(2), .table td:nth-child(4) { text-align: center; }
 .table tr { page-break-inside: avoid; }
 .table tr:last-child td { border-bottom: none; }
@@ -116,50 +117,50 @@ export const PDF_STYLES = `
 .table-5col th:nth-child(2), .table-5col td:nth-child(2) { width: 15%; text-align: center; }
 .table-5col th:nth-child(3), .table-5col td:nth-child(3) { width: 17%; text-align: right; font-variant-numeric: tabular-nums; }
 .table-5col th:nth-child(4), .table-5col td:nth-child(4) { width: 12%; text-align: center; }
-.table-5col th:nth-child(5), .table-5col td:nth-child(5) { width: 28%; text-align: right; font-weight: 700; color: #0B3A7A; font-variant-numeric: tabular-nums; }
+.table-5col th:nth-child(5), .table-5col td:nth-child(5) { width: 28%; text-align: right; font-weight: 700; color: #0073ea; font-variant-numeric: tabular-nums; }
 .table-5col .fund-name {
   font-weight: 700;
   line-height: 1.15;
-  color: #0f172a;
+  color: #1f1c2e;
 }
 .total-summary-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 4mm;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: #f3f6fd;
   padding: 3mm 4mm;
   border-radius: 3mm;
-  border: 1px solid #bae6fd;
+  border: 1px solid #e9ebf0;
 }
 .total-chip {
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9ebf0;
   border-radius: 2mm;
   padding: 2mm 3mm;
   font-size: 8pt;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.total-chip-label { color: #64748b; font-weight: 500; }
-.total-chip-value { color: #0f172a; font-weight: 700; margin-left: 1.5mm; }
-.total-fv { font-size: 13pt; font-weight: 800; color: #0B3A7A; white-space: nowrap; }
+.total-chip-label { color: #4a4a4a; font-weight: 500; }
+.total-chip-value { color: #1f1c2e; font-weight: 700; margin-left: 1.5mm; }
+.total-fv { font-size: 13pt; font-weight: 800; color: #0073ea; white-space: nowrap; }
 .kpi { display: flex; gap: 4mm; margin-bottom: 8mm; }
-.kpi .box { flex: 1; border: 1px solid #e6e9f2; border-radius: 4mm; padding: 4mm; text-align: center; }
-.kpi .val { font-size: 14pt; font-weight: 800; color: #0f172a; }
-.kpi .lbl { font-size: 8pt; color: #52607a; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 1mm; display: block; }
-.interpretation { background-color: #f8fafc; padding: 4mm; border-radius: 2mm; margin-bottom: 8mm; border-left: 3px solid #64748b; font-size: 9pt; color: #475569; }
-.interpretation strong { color: #334155; }
-.fund-card { margin-bottom: 5mm; padding: 4mm; border: 1px solid #e2e8f0; border-radius: 3mm; page-break-inside: avoid; background: #fff; }
-.fund-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2mm; border-bottom: 1px dashed #f1f3f8; padding-bottom: 2mm; }
-.fund-title { font-weight: 800; font-size: 11pt; color: #0B3A7A; }
+.kpi .box { flex: 1; border: 1px solid #e9ebf0; border-radius: 4mm; padding: 4mm; text-align: center; }
+.kpi .val { font-size: 14pt; font-weight: 800; color: #1f1c2e; }
+.kpi .lbl { font-size: 8pt; color: #4a4a4a; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 1mm; display: block; }
+.interpretation { background-color: #f3f6fd; padding: 4mm; border-radius: 2mm; margin-bottom: 8mm; border-left: 3px solid #0073ea; font-size: 9pt; color: #4a4a4a; }
+.interpretation strong { color: #1f1c2e; }
+.fund-card { margin-bottom: 5mm; padding: 4mm; border: 1px solid #e9ebf0; border-radius: 3mm; page-break-inside: avoid; background: #fff; }
+.fund-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2mm; border-bottom: 1px dashed #e9ebf0; padding-bottom: 2mm; }
+.fund-title { font-weight: 800; font-size: 11pt; color: #0073ea; }
 .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; font-size: 9pt; }
-.fund-label { font-size: 8pt; color: #64748b; font-weight: 600; text-transform: uppercase; }
-.fund-text { color: #334155; line-height: 1.4; }
+.fund-label { font-size: 8pt; color: #4a4a4a; font-weight: 600; text-transform: uppercase; }
+.fund-text { color: #1f1c2e; line-height: 1.4; }
 .product-tags { display: flex; gap: 2mm; margin-top: 1mm; }
 .tag { font-size: 7pt; padding: 0.5mm 2mm; border-radius: 2px; background: #f1f5f9; color: #475569; }
 .assumptions-box { background: #fefce8; border: 1px solid #fef08a; padding: 4mm; border-radius: 2mm; font-size: 9pt; color: #854d0e; margin-top: 5mm; }
-.footer { position: absolute; bottom: 10mm; left: 15mm; right: 15mm; font-size: 7pt; color: #7a869e; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 2mm; }
+.footer { position: absolute; bottom: 10mm; left: 15mm; right: 15mm; font-size: 7pt; color: #7a869e; display: flex; justify-content: space-between; border-top: 1px solid #e9ebf0; padding-top: 2mm; }
 .pdf-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffcc00; padding-bottom: 2mm; margin-bottom: 6mm; font-size: 9pt; }
 .pdf-title-page { display: flex; flex-direction: column; justify-content: center; height: 260mm; }
 `;
@@ -514,7 +515,7 @@ function renderGoalsRows(goals: FinancialAnalysisData['goals']): string {
   return goals
     .map(
       (g) =>
-        `<tr><td><span style="display: inline-block; background: #f1f5f9; color: #334155; padding: 1.5mm 4mm; border-radius: 2mm; font-weight: 600; font-size: 9pt;">${escapeHtml(g.name)}</span></td><td style="text-align:center">${g.years ?? 0} let</td><td style="text-align:right">${formatCzk(Math.round(g.computed?.fvTarget ?? 0))}</td><td style="text-align:right; font-weight:bold; color:#ffcc00;">${formatCzk(Math.round(g.computed?.pmt ?? 0))}</td></tr>`
+        `<tr><td><span style="display: inline-block; background: #f1f5f9; color: #1f1c2e; padding: 1.5mm 4mm; border-radius: 2mm; font-weight: 600; font-size: 9pt;">${escapeHtml(g.name)}</span></td><td style="text-align:center">${g.years ?? 0} let</td><td style="text-align:right">${formatCzk(Math.round(g.computed?.fvTarget ?? 0))}</td><td style="text-align:right; font-weight:bold; color:#ffcc00;">${formatCzk(Math.round(g.computed?.pmt ?? 0))}</td></tr>`
     )
     .join('');
 }
@@ -533,7 +534,9 @@ function renderInvestmentsRows(data: FinancialAnalysisData): string {
     .map((i) => {
       const displayRate = Math.max(0, (i.annualRate || 0) - (conservative ? 0.02 : 0));
       const fv = i.computed?.fv ?? 0;
-      return `<tr><td><span class="fund-name">${getProductName(i.productKey)}</span></td><td><span class="${getBadgeClass(i.type)}">${getTypeName(i.type)}</span></td><td style="text-align:right; font-variant-numeric: tabular-nums;">${(i.amount ?? 0).toLocaleString('cs-CZ')} ${i.type === 'lump' ? 'Kč' : 'Kč/m'}</td><td><span class="yield-pill">${(displayRate * 100).toFixed(1)}%</span></td><td style="text-align:right; font-weight:700; color:#0B3A7A; font-variant-numeric: tabular-nums;">${formatCzk(Math.round(fv))}</td></tr>`;
+      const logoPath = FUND_LOGOS[i.productKey];
+      const logoHtml = logoPath ? `<img src="${escapeHtml(logoPath)}" alt="" style="width: 24px; height: 24px; object-fit: contain; vertical-align: middle; margin-right: 2mm;" />` : '';
+      return `<tr><td>${logoHtml}<span class="fund-name">${getProductName(i.productKey)}</span></td><td><span class="${getBadgeClass(i.type)}">${getTypeName(i.type)}</span></td><td style="text-align:right; font-variant-numeric: tabular-nums;">${(i.amount ?? 0).toLocaleString('cs-CZ')} ${i.type === 'lump' ? 'Kč' : 'Kč/m'}</td><td><span class="yield-pill">${(displayRate * 100).toFixed(1)}%</span></td><td style="text-align:right; font-weight:700; color:#0073ea; font-variant-numeric: tabular-nums;">${formatCzk(Math.round(fv))}</td></tr>`;
     })
     .join('');
 }
@@ -548,7 +551,7 @@ function renderInvestmentsTotal(data: FinancialAnalysisData): string {
     else totalMonthly += i.amount ?? 0;
     totalFV += i.computed?.fv ?? 0;
   });
-  return `<tr><td colspan="5" style="padding: 3mm;"><div class="total-summary-bar"><strong style="font-size: 10pt; color: #0f172a;">CELKEM</strong><div style="display: flex; gap: 3mm;"><div class="total-chip"><span class="total-chip-label">Jednorázově:</span><span class="total-chip-value">${totalLump.toLocaleString('cs-CZ')} Kč</span></div><div class="total-chip"><span class="total-chip-label">Měsíčně:</span><span class="total-chip-value">${totalMonthly.toLocaleString('cs-CZ')} Kč/m</span></div></div><div class="total-fv">${formatCzk(Math.round(totalFV))}</div></div></td></tr>`;
+  return `<tr><td colspan="5" style="padding: 3mm;"><div class="total-summary-bar"><strong style="font-size: 10pt; color: #1f1c2e;">CELKEM</strong><div style="display: flex; gap: 3mm;"><div class="total-chip"><span class="total-chip-label">Jednorázově:</span><span class="total-chip-value">${totalLump.toLocaleString('cs-CZ')} Kč</span></div><div class="total-chip"><span class="total-chip-label">Měsíčně:</span><span class="total-chip-value">${totalMonthly.toLocaleString('cs-CZ')} Kč/m</span></div></div><div class="total-fv">${formatCzk(Math.round(totalFV))}</div></div></td></tr>`;
 }
 
 function renderCreditWishesPDF(list: FinancialAnalysisData['newCreditWishList']): string {
@@ -579,9 +582,45 @@ function renderCreditWishesPDF(list: FinancialAnalysisData['newCreditWishList'])
     if (item.product === 'mortgage' && item.ltvPercent != null) ltvAko = item.ltvPercent + ' %';
     else if (item.product === 'loan' && item.subType === 'auto' && item.akoPercent != null) ltvAko = item.akoPercent + ' %';
     const rate = (item.estimatedRate ?? item.customRate ?? 0).toFixed(2).replace('.', ',');
-    html += `<tr><td><strong>${productLabel}</strong> (${subTypeLabel})<br/><span style="font-size:8pt; color:#64748b;">${purposeLabel}</span><br/><span style="font-size:8pt; color:#94a3b8;">${bankName}</span></td><td style="text-align:right">${Math.round(item.amount).toLocaleString('cs-CZ')} Kč</td><td style="text-align:center">${ltvAko}</td><td style="text-align:center">${rate} %</td><td style="text-align:right"><strong>${formatCzk(Math.round(item.estimatedMonthly))}</strong></td><td style="text-align:right"><strong>${formatCzk(Math.round(item.estimatedTotal))}</strong></td></tr>`;
+    html += `<tr><td><strong>${productLabel}</strong> (${subTypeLabel})<br/><span style="font-size:8pt; color:#4a4a4a;">${purposeLabel}</span><br/><span style="font-size:8pt; color:#94a3b8;">${bankName}</span></td><td style="text-align:right">${Math.round(item.amount).toLocaleString('cs-CZ')} Kč</td><td style="text-align:center">${ltvAko}</td><td style="text-align:center">${rate} %</td><td style="text-align:right"><strong>${formatCzk(Math.round(item.estimatedMonthly))}</strong></td><td style="text-align:right"><strong>${formatCzk(Math.round(item.estimatedTotal))}</strong></td></tr>`;
   });
-  html += '</tbody></table><p style="margin-top: 4mm; font-size: 8pt; color: #64748b;">Poznámka: Úrokové sazby jsou orientační.</p></div>';
+  html += '</tbody></table><p style="margin-top: 4mm; font-size: 8pt; color: #4a4a4a;">Poznámka: Úrokové sazby jsou orientační.</p></div>';
+  return html;
+}
+
+/** Holdings block (Top 10, Countries, Sectors) for fund detail page. */
+function renderHoldingsBlock(detail: FundDetail): string {
+  const hasHoldings = (detail.topHoldings?.length ?? 0) > 0 || (detail.countries?.length ?? 0) > 0 || (detail.sectors?.length ?? 0) > 0;
+  if (!hasHoldings) return '';
+  const maxWeight = Math.max(...[(detail.topHoldings ?? []).map((h) => h.weight), (detail.countries ?? []).map((c) => c.weight), (detail.sectors ?? []).map((s) => s.weight)].flat(), 1);
+  const bar = (w: number) => `<div style="width: ${(w / maxWeight) * 100}%; min-width: 2px; height: 6px; background: #0073ea; border-radius: 2px;"></div>`;
+  let html = '<div class="h2" style="margin-top: 4mm;">Holdings</div>';
+  html += '<p style="font-size: 9pt; color: #4a4a4a; margin: 0 0 3mm 0;">Níže najdete informace o složení fondu.</p>';
+  if ((detail.topHoldings?.length ?? 0) > 0) {
+    html += '<div style="margin-bottom: 4mm;"><div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; margin-bottom: 2mm;">Top 10 Holdings</div>';
+    if (detail.top10WeightPercent != null && detail.totalHoldingsCount != null) {
+      html += `<p style="font-size: 9pt; color: #4a4a4a; margin: 0 0 2mm 0;">Váha top 10: <strong>${detail.top10WeightPercent.toFixed(2).replace('.', ',')} %</strong> z ${detail.totalHoldingsCount.toLocaleString('cs-CZ')} holdingu.</p>`;
+    }
+    html += '<div style="display: flex; flex-direction: column; gap: 1.5mm;">';
+    detail.topHoldings!.forEach((h) => {
+      html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 120px;">${escapeHtml(h.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${h.weight.toFixed(2).replace('.', ',')} %</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(h.weight)}</div></div>`;
+    });
+    html += '</div></div>';
+  }
+  if ((detail.countries?.length ?? 0) > 0) {
+    html += '<div style="margin-bottom: 4mm;"><div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; margin-bottom: 2mm;">Země</div><div style="display: flex; flex-direction: column; gap: 1.5mm;">';
+    detail.countries.forEach((c) => {
+      html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 80px;">${escapeHtml(c.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${c.weight.toFixed(2).replace('.', ',')} %</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(c.weight)}</div></div>`;
+    });
+    html += '</div></div>';
+  }
+  if ((detail.sectors?.length ?? 0) > 0) {
+    html += '<div><div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; margin-bottom: 2mm;">Sektory</div><div style="display: flex; flex-direction: column; gap: 1.5mm;">';
+    detail.sectors.forEach((s) => {
+      html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 100px;">${escapeHtml(s.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${s.weight.toFixed(2).replace('.', ',')} %</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(s.weight)}</div></div>`;
+    });
+    html += '</div></div>';
+  }
   return html;
 }
 
@@ -600,53 +639,62 @@ function renderProductDetailPages(data: FinancialAnalysisData): string {
     const fv = inv.computed?.fv ?? 0;
     const displayRate = Math.max(0, (inv.annualRate ?? 0) - (conservative ? 0.02 : 0));
     const badgeClass = inv.type === 'lump' ? 'inv-badge inv-badge-lump' : inv.type === 'pension' ? 'inv-badge inv-badge-pension' : 'inv-badge inv-badge-monthly';
+    const logoPath = FUND_LOGOS[inv.productKey];
+    const productLogoHtml = logoPath ? `<img src="${escapeHtml(logoPath)}" alt="" style="width: 40px; height: 40px; object-fit: contain; margin-right: 3mm; flex-shrink: 0;" />` : '';
     html += `
     <section class="pdf-page">
       <div class="pdf-section">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6mm;">
-          <div>
-            <h2 class="h2" style="font-size: 18pt; font-weight: 700; color: #0f172a; margin: 0 0 2mm 0;">${escapeHtml(name)}</h2>
-            <span class="${badgeClass}" style="display: inline-block; padding: 1.5mm 4mm; border-radius: 2mm; font-size: 8pt; font-weight: 600;">${typeName}</span>
+          <div style="display: flex; align-items: flex-start; gap: 0;">
+            ${productLogoHtml}
+            <div>
+              <h2 class="h2" style="font-size: 18pt; font-weight: 700; color: #1f1c2e; margin: 0 0 2mm 0;">${escapeHtml(name)}</h2>
+              <span class="${badgeClass}" style="display: inline-block; padding: 1.5mm 4mm; border-radius: 2mm; font-size: 8pt; font-weight: 600;">${typeName}</span>
+            </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 9pt; color: #64748b;">Vaše investice</div>
-            <div style="font-size: 14pt; font-weight: 700; color: #0B3A7A;">${formatCzk(amount)} ${inv.type === 'lump' ? 'Kč' : 'Kč/měs'}</div>
+            <div style="font-size: 9pt; color: #4a4a4a;">Vaše investice</div>
+            <div style="font-size: 14pt; font-weight: 700; color: #0073ea;">${formatCzk(amount)} ${inv.type === 'lump' ? 'Kč' : 'Kč/měs'}</div>
           </div>
         </div>
-        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.why)}</p>
+        <p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.why)}</p>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-bottom: 6mm;">
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
-            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Riziko</div>
-            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${escapeHtml(detail.risks)}</div>
+            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Riziko</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${escapeHtml(detail.risks)}</div>
           </div>
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
-            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Likvidita</div>
-            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${escapeHtml(detail.liquidity)}</div>
+            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Likvidita</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${escapeHtml(detail.liquidity)}</div>
           </div>
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
-            <div style="font-size: 8pt; color: #64748b; margin-bottom: 1mm;">Výnos</div>
-            <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">${(displayRate * 100).toFixed(1)} % p.a.</div>
+            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Výnos</div>
+            <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${(displayRate * 100).toFixed(1)} % p.a.</div>
           </div>
         </div>
         <div class="h2">Investiční cíl</div>
-        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.goal)}</p>
+        <p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.goal)}</p>
         <div class="h2">Vhodné pro</div>
-        <p style="font-size: 10pt; color: #334155; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.suitable)}</p>
+        <p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.suitable)}</p>
+        ${detail.strategy ? `<div class="h2">Investiční strategie</div><p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.strategy)}</p>` : ''}
+        ${(detail.benefits?.length ?? 0) > 0 ? `<div class="h2">Klíčové výhody</div><ul style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin: 0 0 5mm 0; padding-left: 5mm;">${detail.benefits!.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : ''}
+        ${detail.parameters && Object.keys(detail.parameters).length > 0 ? `<div class="h2">Základní parametry</div><table class="table" style="margin-bottom: 5mm;"><tbody>${Object.entries(detail.parameters).map(([k, v]) => `<tr><td style="width: 40%; color: #4a4a4a;">${escapeHtml(k)}</td><td style="font-weight: 600;">${escapeHtml(v)}</td></tr>`).join('')}</tbody></table>` : ''}
         <table class="table" style="margin-bottom: 5mm;">
           <tbody>
-            <tr><td style="width: 40%; color: #64748b;">Aktiva</td><td style="font-weight: 600;">${escapeHtml(detail.assets)}</td></tr>
-            <tr><td style="color: #64748b;">Výnos</td><td style="font-weight: 600;">${escapeHtml(detail.yield)}</td></tr>
+            <tr><td style="width: 40%; color: #4a4a4a;">Aktiva</td><td style="font-weight: 600;">${escapeHtml(detail.assets)}</td></tr>
+            <tr><td style="color: #4a4a4a;">Výnos</td><td style="font-weight: 600;">${escapeHtml(detail.yield)}</td></tr>
           </tbody>
         </table>
+        ${renderHoldingsBlock(detail)}
         <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 4mm; border-radius: 3mm; border: 1px solid #bae6fd;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-size: 8pt; color: #64748b;">Očekávaná hodnota na konci horizontu</div>
-              <div style="font-size: 14pt; font-weight: 700; color: #0B3A7A;">${formatCzk(Math.round(fv))}</div>
+              <div style="font-size: 8pt; color: #4a4a4a;">Očekávaná hodnota na konci horizontu</div>
+              <div style="font-size: 14pt; font-weight: 700; color: #0073ea;">${formatCzk(Math.round(fv))}</div>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 8pt; color: #64748b;">Typ investice</div>
-              <div style="font-size: 11pt; font-weight: 600; color: #334155;">${typeName}</div>
+              <div style="font-size: 8pt; color: #4a4a4a;">Typ investice</div>
+              <div style="font-size: 11pt; font-weight: 600; color: #1f1c2e;">${typeName}</div>
             </div>
           </div>
         </div>
@@ -671,14 +719,14 @@ function renderRentaFormula(goals: FinancialAnalysisData['goals']): string {
   if (rentaGoals.length === 0) return '';
   const i = 0.03;
   let html =
-    '<div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-top: 12px; font-size: 10pt; color: #334155;"><div style="font-weight: 700; margin-bottom: 6px; color: #0f172a;">Výpočet cíle „Finanční nezávislost (Renta)“</div><p style="margin: 0 0 6px 0;">Budoucí hodnota měsíční renty s ohledem na inflaci (3 % p.a.):</p><p style="margin: 0 0 4px 0; font-family: monospace; font-size: 11pt;"><strong>FV = P × (1 + i)<sup>n</sup></strong></p><p style="margin: 0 0 8px 0; font-size: 9pt;">kde <strong>P</strong> = dnešní požadovaná měsíční renta (Kč), <strong>i</strong> = 0,03 (3 % inflace), <strong>n</strong> = počet let do cíle.</p><p style="margin: 0 0 6px 0;">Potřebný kapitál k zajištění budoucí renty (předpoklad 6% výnosu):</p><p style="margin: 0 0 8px 0; font-family: monospace; font-size: 10pt;"><strong>Potřebný kapitál = (budoucí renta × 12) / 0,06</strong></p>';
+    '<div style="background: #f1f5f9; border: 1px solid #e9ebf0; border-radius: 6px; padding: 10px 14px; margin-top: 12px; font-size: 10pt; color: #1f1c2e;"><div style="font-weight: 700; margin-bottom: 6px; color: #1f1c2e;">Výpočet cíle „Finanční nezávislost (Renta)“</div><p style="margin: 0 0 6px 0;">Budoucí hodnota měsíční renty s ohledem na inflaci (3 % p.a.):</p><p style="margin: 0 0 4px 0; font-family: monospace; font-size: 11pt;"><strong>FV = P × (1 + i)<sup>n</sup></strong></p><p style="margin: 0 0 8px 0; font-size: 9pt;">kde <strong>P</strong> = dnešní požadovaná měsíční renta (Kč), <strong>i</strong> = 0,03 (3 % inflace), <strong>n</strong> = počet let do cíle.</p><p style="margin: 0 0 6px 0;">Potřebný kapitál k zajištění budoucí renty (předpoklad 6% výnosu):</p><p style="margin: 0 0 8px 0; font-family: monospace; font-size: 10pt;"><strong>Potřebný kapitál = (budoucí renta × 12) / 0,06</strong></p>';
   rentaGoals.forEach((g, idx) => {
     const P = Number(g.amount) || 0;
     const n = Math.max(1, Number(g.years) || Number(g.horizon) || 1);
     if (P <= 0) return;
     const FV = P * Math.pow(1 + i, n);
     const capital = (FV * 12) / 0.06;
-    html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><strong>Příklad ${rentaGoals.length > 1 ? idx + 1 + ': ' : ''}</strong>P = ${Math.round(P).toLocaleString('cs-CZ')} Kč/měs, n = ${n} let → FV = ${Math.round(FV).toLocaleString('cs-CZ')} Kč/měs → potřebný kapitál <strong>${Math.round(capital).toLocaleString('cs-CZ')} Kč</strong>.</div>`;
+    html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9ebf0;"><strong>Příklad ${rentaGoals.length > 1 ? idx + 1 + ': ' : ''}</strong>P = ${Math.round(P).toLocaleString('cs-CZ')} Kč/měs, n = ${n} let → FV = ${Math.round(FV).toLocaleString('cs-CZ')} Kč/měs → potřebný kapitál <strong>${Math.round(capital).toLocaleString('cs-CZ')} Kč</strong>.</div>`;
   });
   html += '</div>';
   return html;
@@ -689,7 +737,7 @@ function pdfClientExtra(client: FinancialAnalysisData['client']): string {
   const occ = client.occupation ? 'Povolání: ' + client.occupation : '';
   const sport = client.sports ? 'Sporty: ' + client.sports : '';
   if (!occ && !sport) return '';
-  return '<p style="margin-bottom: 4px; color: #64748b; font-size: 11px;">' + (occ ? occ + (sport ? '<br/>' : '') : '') + (sport ? sport : '') + '</p>';
+  return '<p style="margin-bottom: 4px; color: #4a4a4a; font-size: 11px;">' + (occ ? occ + (sport ? '<br/>' : '') : '') + (sport ? sport : '') + '</p>';
 }
 
 function buildPages34(data: FinancialAnalysisData): string {
@@ -715,10 +763,10 @@ function buildPages34(data: FinancialAnalysisData): string {
             <div class="h2">Doporučené portfolio</div>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <p style="margin: 0 0 5px 0; font-size: 14px;"><strong>Strategie:</strong> ${profileLabel}</p>
-                <p style="margin: 0; font-size: 12px; color: #64748b;">${strategyDesc}</p>
+                <p style="margin: 0; font-size: 12px; color: #4a4a4a;">${strategyDesc}</p>
             </div>
             <table class="table table-5col">
-                <thead><tr><th>Produkt</th><th style="text-align: center;">Typ</th><th style="text-align: right;">Vklad</th><th style="text-align: center;">Výnos</th><th style="text-align: right; color:#0B3A7A;">Předpoklad FV</th></tr></thead>
+                <thead><tr><th>Produkt</th><th style="text-align: center;">Typ</th><th style="text-align: right;">Vklad</th><th style="text-align: center;">Výnos</th><th style="text-align: right; color:#0073ea;">Předpoklad FV</th></tr></thead>
                 <tbody>${renderInvestmentsRows(data)}</tbody>
                 <tfoot>${renderInvestmentsTotal(data)}</tfoot>
             </table>
@@ -727,10 +775,12 @@ function buildPages34(data: FinancialAnalysisData): string {
     ${renderProductDetailPages(data)}
     <section class="pdf-page">
         <div class="h2">Vývoj hodnoty majetku</div>
+        <p style="margin: 0 0 4mm 0; font-size: 10pt; color: #4a4a4a;">Vývoj hodnoty majetku zobrazuje projekci portfolia v čase podle zvolené strategie a investic.</p>
         <div style="height: 90mm; width: 100%;"><canvas id="pdf-chart-growth"></canvas></div>
         <div class="h2" style="margin-top:15px;">Rozložení aktiv</div>
+        <p style="margin: 0 0 4mm 0; font-size: 10pt; color: #4a4a4a;">Rozložení aktiv vychází z vaší investiční strategie.</p>
         <div style="height: 70mm; width: 100%;"><canvas id="pdf-chart-allocation"></canvas></div>
-        <div style="margin-top: 30px; font-size: 10px; color: #94a3b8; line-height: 1.4; border-top: 1px solid #e2e8f0; padding-top: 10px;"><strong>Upozornění:</strong> Minulé výnosy nejsou zárukou budoucích. Výpočty jsou modelové.</div>
+        <div style="margin-top: 30px; font-size: 10px; color: #94a3b8; line-height: 1.4; border-top: 1px solid #e9ebf0; padding-top: 10px;"><strong>Upozornění:</strong> Minulé výnosy nejsou zárukou budoucích. Výpočty jsou modelové.</div>
     </section>
   `;
 }
@@ -742,10 +792,10 @@ function renderInsurancePage(data: FinancialAnalysisData): string {
     return `<section class="pdf-page"><div class="pdf-section"><div class="h2">Životní pojištění</div><div class="interpretation"><p><strong>Upozornění:</strong> Pro výpočet doporučeného pojištění je nutné zadat měsíční příjem v sekci Cashflow.</p></div></div></section>`;
   }
   const clientName = data.client?.name || 'Klient';
-  let pages = `<section class="pdf-page"><div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(clientName)}</div><p style="font-size: 10pt; color: #64748b; margin-bottom: 4mm;">Příjem: <strong>${fmt(ins.netIncome)} Kč</strong> čistého měsíčně ${ins.isOSVC ? '<span style="background: #fef3c7; color: #92400e; padding: 1mm 2mm; border-radius: 2mm; font-size: 8pt;">OSVČ</span>' : ''}</p><table class="table" style="margin-bottom: 6mm;"><thead><tr><th style="width: 50%;">Rizika</th><th style="width: 50%; text-align: right;">Pojistná částka</th></tr></thead><tbody><tr><td>Invalidita 2.–3. stupeň</td><td style="text-align: right; font-weight: bold;">${fmt(ins.invalidity.capital)} Kč</td></tr><tr><td>Trvalé následky</td><td style="text-align: right; font-weight: bold;">${fmt(ins.tn.base)} Kč (progrese ${ins.tn.progress}×)</td></tr><tr><td>Pracovní neschopnost</td><td style="text-align: right; font-weight: bold;">${fmt(ins.sickness.dailyBenefit)} Kč / den</td></tr><tr><td>Smrt</td><td style="text-align: right; font-weight: bold;">${ins.death.individual ? 'INDIVIDUÁLNĚ' : fmt(ins.death.coverage) + ' Kč'}</td></tr></tbody></table></div></section>`;
+  let pages = `<section class="pdf-page"><div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(clientName)}</div><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 3mm;">Doporučené částky vycházejí z příjmu, výdajů a závazků.</p><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">Příjem: <strong>${fmt(ins.netIncome)} Kč</strong> čistého měsíčně ${ins.isOSVC ? '<span style="background: #fef3c7; color: #92400e; padding: 1mm 2mm; border-radius: 2mm; font-size: 8pt;">OSVČ</span>' : ''}</p><table class="table" style="margin-bottom: 6mm;"><thead><tr><th style="width: 50%;">Rizika</th><th style="width: 50%; text-align: right;">Pojistná částka</th></tr></thead><tbody><tr><td>Invalidita 2.–3. stupeň</td><td style="text-align: right; font-weight: bold;">${fmt(ins.invalidity.capital)} Kč</td></tr><tr><td>Trvalé následky</td><td style="text-align: right; font-weight: bold;">${fmt(ins.tn.base)} Kč (progrese ${ins.tn.progress}×)</td></tr><tr><td>Pracovní neschopnost</td><td style="text-align: right; font-weight: bold;">${fmt(ins.sickness.dailyBenefit)} Kč / den</td></tr><tr><td>Smrt</td><td style="text-align: right; font-weight: bold;">${ins.death.individual ? 'INDIVIDUÁLNĚ' : fmt(ins.death.coverage) + ' Kč'}</td></tr></tbody></table></div></section>`;
   if (ins.partnerInsurance) {
     const p = ins.partnerInsurance;
-    pages += `<section class="pdf-page"><div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(p.name)}</div><p style="font-size: 10pt; color: #64748b;">Příjem: <strong>${fmt(p.income)} Kč</strong></p><table class="table"><tbody><tr><td>Invalidita</td><td style="text-align: right;">${fmt(p.invalidity.capital)} Kč</td></tr><tr><td>PN</td><td style="text-align: right;">${fmt(p.sickness.dailyBenefit)} Kč/den</td></tr><tr><td>Smrt</td><td style="text-align: right;">${fmt(p.death.coverage)} Kč</td></tr></tbody></table></div></section>`;
+    pages += `<section class="pdf-page"><div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(p.name)}</div><p style="font-size: 10pt; color: #4a4a4a;">Příjem: <strong>${fmt(p.income)} Kč</strong></p><table class="table"><tbody><tr><td>Invalidita</td><td style="text-align: right;">${fmt(p.invalidity.capital)} Kč</td></tr><tr><td>PN</td><td style="text-align: right;">${fmt(p.sickness.dailyBenefit)} Kč/den</td></tr><tr><td>Smrt</td><td style="text-align: right;">${fmt(p.death.coverage)} Kč</td></tr></tbody></table></div></section>`;
   }
   if (ins.childInsurance.length > 0) {
     pages += '<section class="pdf-page"><div class="pdf-section"><div class="h2">Doporučení pro děti</div><p style="font-size: 10pt;">Invalidita 3–5 mil. Kč, Trvalé následky max 2 mil. Kč.</p></div></section>';
@@ -766,6 +816,7 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
     return r ? (labels[r] ?? r) : '–';
   };
   let html = '<section class="pdf-page"><div class="pdf-section"><div class="h2">Zajištění příjmů – navržené řešení</div>';
+  html += '<p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">V tabulce níže jsou uvedeny zadané pojistné plány. Celková měsíční cena je součtem všech řádků. Doporučené pojistné částky najdete na předchozích stránkách v sekci Životní pojištění.</p>';
   html += '<table class="table"><thead><tr><th>Osoba</th><th>Role</th><th>Pojišťovna</th><th>Rizika</th><th>Měsíční / roční</th><th>Zdroj úhrady</th><th>Poznámka</th></tr></thead><tbody>';
   let totalMonthly = 0;
   const fundingLabels: Record<string, string> = { company: 'Firma', personal: 'Osobně', osvc: 'OSVČ' };
@@ -773,10 +824,12 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
     (person.insurancePlans ?? []).forEach((plan) => {
       const monthly = plan.monthlyPremium ?? (plan.annualContribution ?? 0) / 12;
       totalMonthly += monthly;
-      const risks = (plan.insuredRisks ?? []).filter((r) => r.enabled).map((r) => r.riskType).join(', ') || '–';
+      const risks = (plan.insuredRisks ?? []).filter((r) => r.enabled).map((r) => getRiskLabel(r.riskType)).join(', ') || '–';
       const price = plan.monthlyPremium != null ? `${formatCzk(plan.monthlyPremium)}/měs` : plan.annualContribution != null ? `${formatCzk(plan.annualContribution)}/rok` : '–';
       const funding = plan.fundingSource ? fundingLabels[plan.fundingSource] ?? plan.fundingSource : '–';
-      html += `<tr><td>${escapeHtml(person.displayName ?? '')}</td><td>${escapeHtml(roleLabel(person.roleType))}</td><td>${escapeHtml(plan.provider ?? '')}</td><td>${escapeHtml(risks)}</td><td style="text-align:right">${price}</td><td>${escapeHtml(funding)}</td><td>${escapeHtml(plan.notes ?? '')}</td></tr>`;
+      const insurerLogoPath = plan.provider ? INSURANCE_LOGOS[plan.provider] : '';
+      const insurerLogoHtml = insurerLogoPath ? `<img src="${escapeHtml(insurerLogoPath)}" alt="" style="width: 20px; height: 20px; object-fit: contain; vertical-align: middle; margin-right: 1.5mm;" />` : '';
+      html += `<tr><td>${escapeHtml(person.displayName ?? '')}</td><td>${escapeHtml(roleLabel(person.roleType))}</td><td>${insurerLogoHtml}${escapeHtml(plan.provider ?? '')}</td><td>${escapeHtml(risks)}</td><td style="text-align:right">${price}</td><td>${escapeHtml(funding)}</td><td>${escapeHtml(plan.notes ?? '')}</td></tr>`;
     });
   });
   html += '</tbody></table>';
@@ -799,7 +852,7 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
       const personalOsvc = Math.max(0, totalPerson - companyFromPlans);
       const roleLabelMap: Record<string, string> = { client: 'Klient', partner: 'Partner', director: 'Jednatel/ka', owner: 'Majitel', partner_company: 'Společník' };
       const roleLabel = person.roleType ? roleLabelMap[person.roleType] ?? person.roleType : person.role;
-      html += `<div style="margin-bottom: 6mm;"><strong>${escapeHtml(person.displayName ?? '')}</strong> <span style="color:#64748b; font-size: 9pt;">(${escapeHtml(roleLabel ?? '')})</span>`;
+      html += `<div style="margin-bottom: 6mm;"><strong>${escapeHtml(person.displayName ?? '')}</strong> <span style="color:#4a4a4a; font-size: 9pt;">(${escapeHtml(roleLabel ?? '')})</span>`;
       html += '<table class="table" style="margin-top: 2mm;"><tbody>';
       const provLabel = reportOptions?.provenance?.["incomeProtection.persons"]
         ? (reportOptions.linkedCompanyName ? ` (sdílený údaj z firmy ${reportOptions.linkedCompanyName})` : " (sdílený údaj)")
@@ -823,7 +876,7 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
       }
       html += '</tbody></table>';
       if (comp?.explanation) {
-        html += `<p style="font-size: 9pt; color: #64748b; margin-top: 2mm;">${escapeHtml(comp.explanation)}</p>`;
+        html += `<p style="font-size: 9pt; color: #4a4a4a; margin-top: 2mm;">${escapeHtml(comp.explanation)}</p>`;
       }
       html += '</div>';
     });
@@ -843,7 +896,7 @@ function provenanceSuffix(path: string, opts?: BuildReportHTMLOptions): string {
   const label = opts.linkedCompanyName
     ? ` (příjem/závazek z firmy ${opts.linkedCompanyName} – sdílený údaj)`
     : " (sdílený údaj)";
-  return `<span style="font-size:9pt;color:#64748b;">${label}</span>`;
+  return `<span style="font-size:9pt;color:#4a4a4a;">${label}</span>`;
 }
 
 const COMPANY_RISK_LABELS: { key: keyof CompanyRisks; label: string }[] = [
@@ -877,12 +930,12 @@ function renderCompanyPDFSection(data: FinancialAnalysisData): string {
     <div style="text-align: center;">
       <div style="width: 80px; height: 80px; background: #92400e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">S</div>
       <h1 class="h1" style="font-size: 36px; margin-bottom: 10px;">FINANČNÍ ANALÝZA – FIRMA</h1>
-      <p style="font-size: 16px; color: #64748b; margin-bottom: 40px;">Společnost a jednatel</p>
+      <p style="font-size: 16px; color: #4a4a4a; margin-bottom: 40px;">Společnost a jednatel</p>
       <div style="display: inline-block; text-align: left; background: #fffbeb; padding: 24px; border-radius: 12px; border: 1px solid #fcd34d; min-width: 280px;">
-        <p style="margin-bottom: 8px; color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: bold;">Jednatel</p>
-        <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 16px 0;">${escapeHtml(clientName)}</h2>
-        <p style="margin-bottom: 8px; margin-top: 12px; color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: bold;">Datum vyhotovení</p>
-        <h3 style="font-size: 14px; color: #0f172a; margin: 0;">${today}</h3>
+        <p style="margin-bottom: 8px; color: #4a4a4a; font-size: 11px; text-transform: uppercase; font-weight: bold;">Jednatel</p>
+        <h2 style="font-size: 20px; color: #1f1c2e; margin: 0 0 16px 0;">${escapeHtml(clientName)}</h2>
+        <p style="margin-bottom: 8px; margin-top: 12px; color: #4a4a4a; font-size: 11px; text-transform: uppercase; font-weight: bold;">Datum vyhotovení</p>
+        <h3 style="font-size: 14px; color: #1f1c2e; margin: 0;">${today}</h3>
       </div>
     </div>
   </section>
@@ -890,10 +943,10 @@ function renderCompanyPDFSection(data: FinancialAnalysisData): string {
     <div class="pdf-section">
       <div class="h2">PŘEHLED SITUACE (firma)</div>
       <div class="kpi">
-        <div class="box"><span class="lbl">Roční tržby</span><div class="val" style="color: #0B3A7A;">${formatCzk(cf.revenue ?? 0)}</div></div>
-        <div class="box"><span class="lbl">Roční zisk</span><div class="val" style="color: #0f172a;">${formatCzk(cf.profit ?? 0)}</div></div>
+        <div class="box"><span class="lbl">Roční tržby</span><div class="val" style="color: #0073ea;">${formatCzk(cf.revenue ?? 0)}</div></div>
+        <div class="box"><span class="lbl">Roční zisk</span><div class="val" style="color: #1f1c2e;">${formatCzk(cf.profit ?? 0)}</div></div>
         <div class="box"><span class="lbl">Cash runway</span><div class="val" style="color: #ffcc00;">${runway != null ? `${runway.toFixed(1)} měs.` : '—'}</div></div>
-        <div class="box"><span class="lbl">Dluhová služba</span><div class="val" style="color: #0f172a;">${formatCzk(cf.loanPayment ?? 0)}</div></div>
+        <div class="box"><span class="lbl">Dluhová služba</span><div class="val" style="color: #1f1c2e;">${formatCzk(cf.loanPayment ?? 0)}</div></div>
       </div>
       <div class="interpretation">
         <p><strong>Doporučení:</strong> ${riskCount >= 4 ? 'Firma má dobré pokrytí rizik.' : riskCount >= 2 ? 'Doporučujeme doplnit další kategorie pojištění firmy.' : 'Zvažte rozšíření firemního pojištění (majetek, odpovědnost, přerušení provozu).'}</p>
@@ -901,7 +954,7 @@ function renderCompanyPDFSection(data: FinancialAnalysisData): string {
     </div>
     <div class="pdf-section" style="margin-top: 8mm;">
       <div class="h2">FIREMNÍ POJIŠTĚNÍ</div>
-      <p style="font-size: 10pt; color: #64748b; margin-bottom: 4mm;">Pokrytí rizik: <strong>${riskCount}/6</strong></p>
+      <p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">Pokrytí rizik: <strong>${riskCount}/6</strong></p>
       <table class="table" style="font-size: 9pt;">
         <thead><tr><th>Kategorie</th><th style="text-align: center;">Pokryto</th></tr></thead>
         <tbody>
@@ -909,7 +962,7 @@ function renderCompanyPDFSection(data: FinancialAnalysisData): string {
         </tbody>
       </table>
       ${(riskDetails.property?.limit != null || riskDetails.property?.contractYears != null || riskDetails.interruption?.limit != null || riskDetails.interruption?.contractYears != null || riskDetails.liability?.limit != null || riskDetails.liability?.contractYears != null) ? `
-      <p style="font-size: 8pt; color: #64748b; margin-top: 3mm;">Detail: ${[
+      <p style="font-size: 8pt; color: #4a4a4a; margin-top: 3mm;">Detail: ${[
         riskDetails.property && (riskDetails.property.limit != null || riskDetails.property.contractYears != null) ? `Majetek – limit ${formatCzk(riskDetails.property.limit ?? 0)} Kč, stáří ${riskDetails.property.contractYears ?? '—'} let` : null,
         riskDetails.interruption && (riskDetails.interruption.limit != null || riskDetails.interruption.contractYears != null) ? `Přerušení – limit ${formatCzk(riskDetails.interruption.limit ?? 0)} Kč` : null,
         riskDetails.liability && (riskDetails.liability.limit != null || riskDetails.liability.contractYears != null) ? `Odpovědnost – limit ${formatCzk(riskDetails.liability.limit ?? 0)} Kč` : null,
@@ -918,12 +971,12 @@ function renderCompanyPDFSection(data: FinancialAnalysisData): string {
     </div>
     <div class="pdf-section" style="margin-top: 8mm;">
       <div class="h2">Benefity</div>
-      <p style="font-size: 10pt; color: #334155;">${escapeHtml(benefitSummary)}</p>
-      ${(benefits.employeeCount ?? 0) > 0 ? `<p style="font-size: 9pt; color: #64748b; margin-top: 2mm;">Zaměstnanců: ${benefits.employeeCount}, příspěvek na osobu: ${formatCzk(benefits.amountPerPerson ?? 0)} Kč/měs.</p>` : ''}
+      <p style="font-size: 10pt; color: #1f1c2e;">${escapeHtml(benefitSummary)}</p>
+      ${(benefits.employeeCount ?? 0) > 0 ? `<p style="font-size: 9pt; color: #4a4a4a; margin-top: 2mm;">Zaměstnanců: ${benefits.employeeCount}, příspěvek na osobu: ${formatCzk(benefits.amountPerPerson ?? 0)} Kč/měs.</p>` : ''}
     </div>
     <div class="pdf-section" style="margin-top: 8mm;">
       <div class="h2">Zajištění příjmů (jednatel)</div>
-      <p style="font-size: 10pt; color: #334155;">Pro doporučení pojištění jednatele viz sekci „Zajištění příjmů“ v osobní části analýzy.</p>
+      <p style="font-size: 10pt; color: #1f1c2e;">Pro doporučení pojištění jednatele viz sekci „Zajištění příjmů“ v osobní části analýzy.</p>
     </div>
   </section>
   `;
@@ -989,13 +1042,13 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
     <div style="text-align: center;">
       <div style="width: 80px; height: 80px; background: #0a0f29; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">M</div>
       <h1 class="h1" style="font-size: 40px; margin-bottom: 10px;">FINANČNÍ PLÁN</h1>
-      <p style="font-size: 18px; color: #64748b; margin-bottom: 50px;">Komplexní strategie pro vaši budoucnost</p>
-      <div style="display: inline-block; text-align: left; background: #f8fafc; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; min-width: 300px;">
-        <p style="margin-bottom: 10px; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold;">Klient</p>
-        <h2 style="font-size: 24px; color: #0f172a; margin: 0 0 20px 0;">${escapeHtml(clientName)}</h2>
+      <p style="font-size: 18px; color: #4a4a4a; margin-bottom: 50px;">Komplexní strategie pro vaši budoucnost</p>
+      <div style="display: inline-block; text-align: left; background: #f8fafc; padding: 30px; border-radius: 12px; border: 1px solid #e9ebf0; min-width: 300px;">
+        <p style="margin-bottom: 10px; color: #4a4a4a; font-size: 12px; text-transform: uppercase; font-weight: bold;">Klient</p>
+        <h2 style="font-size: 24px; color: #1f1c2e; margin: 0 0 20px 0;">${escapeHtml(clientName)}</h2>
         ${pdfClientExtra(data.client)}
-        <p style="margin-bottom: 10px; margin-top: 12px; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold;">Datum vyhotovení</p>
-        <h3 style="font-size: 16px; color: #0f172a; margin: 0;">${today}</h3>
+        <p style="margin-bottom: 10px; margin-top: 12px; color: #4a4a4a; font-size: 12px; text-transform: uppercase; font-weight: bold;">Datum vyhotovení</p>
+        <h3 style="font-size: 16px; color: #1f1c2e; margin: 0;">${today}</h3>
       </div>
     </div>
   </section>
@@ -1003,9 +1056,9 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
     <div class="pdf-section">
       <div class="h2">Přehled situace</div>
       <div class="kpi">
-        <div class="box"><span class="lbl">Čisté jmění</span><div class="val" style="color: #0B3A7A;">${formatCzk(netWorthVal)}</div></div>
+        <div class="box"><span class="lbl">Čisté jmění</span><div class="val" style="color: #0073ea;">${formatCzk(netWorthVal)}</div></div>
         <div class="box"><span class="lbl">Měsíční bilance</span><div class="val" style="color: #ffcc00;">${formatCzk(surplusVal)}</div></div>
-        <div class="box"><span class="lbl">Rezerva</span><div class="val" style="color: #0f172a;">${formatCzk(reserveCash)}</div></div>
+        <div class="box"><span class="lbl">Rezerva</span><div class="val" style="color: #1f1c2e;">${formatCzk(reserveCash)}</div></div>
       </div>
       <div class="interpretation"><p><strong>Interpretace:</strong> ${netWorthText} ${reserveText}</p></div>
     </div>
@@ -1043,7 +1096,7 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
           <tr><td>Partner</td><td style="text-align:right">${formatCzk(inc.partner || 0)}</td><td>Spotřeba & Jídlo</td><td style="text-align:right">${formatCzk((exp.food || 0) + (exp.transport || 0))}</td></tr>
           <tr><td>Ostatní příjmy${(options?.provenance?.["cashflow.incomes.otherDetails"] ? provenanceSuffix("cashflow.incomes.otherDetails", options) : "")}</td><td style="text-align:right">${formatCzk(otherIncSum)}</td><td>Ostatní výdaje</td><td style="text-align:right">${formatCzk(otherExpSum + (exp.children || 0) + insuranceSum)}</td></tr>
           <tr style="font-weight:bold; background:#f8fafc"><td>CELKEM</td><td style="text-align:right">${formatCzk(totalInc)}</td><td>CELKEM</td><td style="text-align:right">${formatCzk(totalExp)}</td></tr>
-          <tr style="background:#e0f2fe; color:#0B3A7A; font-weight:800;"><td colspan="3">Volná kapacita na investice</td><td style="text-align:right">${formatCzk(surplusVal)}</td></tr>
+          <tr style="background:#e0f2fe; color:#0073ea; font-weight:800;"><td colspan="3">Volná kapacita na investice</td><td style="text-align:right">${formatCzk(surplusVal)}</td></tr>
         </tbody>
       </table>
     </div>
@@ -1055,7 +1108,7 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
   <section class="pdf-page">
     <div class="pdf-section">
       <div class="h2">Poznámky k analýze</div>
-      <div style="white-space: pre-wrap; font-size: 10pt; color: #334155;">${escapeHtml(String(data.notes).trim())}</div>
+      <div style="white-space: pre-wrap; font-size: 10pt; color: #1f1c2e;">${escapeHtml(String(data.notes).trim())}</div>
     </div>
   </section>
   ` : ''}
