@@ -238,7 +238,7 @@ export const useFinancialAnalysisStore = create<FinancialAnalysisStore>((set, ge
   },
 
   addChild: () => {
-    const child: ChildEntry = { id: Date.now(), name: "", birthDate: "", sports: "" };
+    const child: ChildEntry = { id: Date.now(), name: "", birthDate: "", sports: "", birthNumber: "" };
     set((s) => ({ data: { ...s.data, children: [...s.data.children, child] } }));
     get().saveToStorage();
     return child;

@@ -13,6 +13,40 @@ function ageFromBirthYear(birthDate: string): number | null {
   return new Date().getFullYear() - year;
 }
 
+/** Z řetězce číslic sestaví d.m.yyyy (den 1-31, měsíc 1-12, rok 1-4 číslice). Čistý rok 1900–2100 ponechá. */
+function formatBirthDateFromDigits(digits: string): string {
+  const d = digits.replace(/\D/g, "");
+  if (d.length <= 2) return d;
+  if (d.length === 3) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length === 4) {
+    const y = parseInt(d, 10);
+    if (y >= 1900 && y <= 2100) return d;
+    return `${d.slice(0, 2)}.${d.slice(2, 3)}.${d.slice(3)}`;
+  }
+  const day2 = d.length >= 2 ? parseInt(d.slice(0, 2), 10) : 0;
+  const dayLen = day2 >= 1 && day2 <= 31 ? 2 : 1;
+  const day = d.slice(0, dayLen);
+  let i = dayLen;
+  if (i >= d.length) return `${parseInt(day, 10)}`;
+  const month2 = d.length >= i + 2 ? parseInt(d.slice(i, i + 2), 10) : 0;
+  const monthLen = month2 >= 1 && month2 <= 12 ? 2 : 1;
+  const month = d.slice(i, i + monthLen);
+  i += monthLen;
+  const year = d.slice(i);
+  if (!year) return `${parseInt(day, 10)}.${parseInt(month, 10)}`;
+  return `${parseInt(day, 10)}.${parseInt(month, 10)}.${year}`;
+}
+
+function handleBirthDateChange(
+  raw: string,
+  setValue: (formatted: string) => void
+): string {
+  const digits = raw.replace(/\D/g, "");
+  const formatted = formatBirthDateFromDigits(digits);
+  setValue(formatted);
+  return formatted;
+}
+
 export function StepClientInfo() {
   const data = useFinancialAnalysisStore((s) => s.data);
   const setClient = useFinancialAnalysisStore((s) => s.setClient);
@@ -56,13 +90,13 @@ export function StepClientInfo() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Rok narození</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
               <input
-                type="number"
-                min={1920}
-                max={new Date().getFullYear()}
+                type="text"
+                inputMode="numeric"
                 value={client.birthDate || ""}
-                onChange={(e) => setClient({ birthDate: e.target.value })}
+                onChange={(e) => handleBirthDateChange(e.target.value, (v) => setClient({ birthDate: v }))}
+                placeholder="dd.mm.rrrr"
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
@@ -72,7 +106,17 @@ export function StepClientInfo() {
                 {age != null ? `${age} let` : "—"}
               </div>
             </div>
-            <div className="md:col-span-5">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Rodné číslo <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <input
+                type="text"
+                value={client.birthNumber ?? ""}
+                onChange={(e) => setClient({ birthNumber: e.target.value })}
+                placeholder="Rodné číslo"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+            <div className="md:col-span-3">
               <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
               <input
                 type="email"
@@ -149,13 +193,13 @@ export function StepClientInfo() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Rok narození</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
                 <input
-                  type="number"
-                  min={1920}
-                  max={new Date().getFullYear()}
+                  type="text"
+                  inputMode="numeric"
                   value={partner.birthDate || ""}
-                  onChange={(e) => setPartner({ birthDate: e.target.value })}
+                  onChange={(e) => handleBirthDateChange(e.target.value, (v) => setPartner({ birthDate: v }))}
+                  placeholder="dd.mm.rrrr"
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
@@ -165,7 +209,17 @@ export function StepClientInfo() {
                   {partnerAge != null ? `${partnerAge} let` : "—"}
                 </div>
               </div>
-              <div className="md:col-span-5">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Rodné číslo <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <input
+                  type="text"
+                  value={partner.birthNumber ?? ""}
+                  onChange={(e) => setPartner({ birthNumber: e.target.value })}
+                  placeholder="Rodné číslo"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div className="md:col-span-3">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
                 <input
                   type="email"
@@ -233,17 +287,23 @@ export function StepClientInfo() {
                     className="flex-1 px-3 py-2 border border-slate-200 rounded-lg"
                   />
                   <input
-                    type="number"
-                    min={1920}
-                    max={new Date().getFullYear()}
+                    type="text"
+                    inputMode="numeric"
                     value={child.birthDate || ""}
-                    onChange={(e) => updateChild(child.id, "birthDate", e.target.value)}
-                    placeholder="Rok narození"
-                    className="w-28 px-3 py-2 border border-slate-200 rounded-lg"
+                    onChange={(e) => handleBirthDateChange(e.target.value, (v) => updateChild(child.id, "birthDate", v))}
+                    placeholder="Datum narození"
+                    className="w-28 min-w-[100px] px-3 py-2 border border-slate-200 rounded-lg"
                   />
                   <div className="text-sm text-slate-500 flex items-center min-w-[60px]">
                     {ageFromBirthYear(child.birthDate) != null ? `${ageFromBirthYear(child.birthDate)} let` : ""}
                   </div>
+                  <input
+                    type="text"
+                    value={child.birthNumber ?? ""}
+                    onChange={(e) => updateChild(child.id, "birthNumber", e.target.value)}
+                    placeholder="Rodné číslo"
+                    className="w-28 min-w-[100px] px-3 py-2 border border-slate-200 rounded-lg"
+                  />
                   <input
                     type="text"
                     value={child.sports ?? ""}

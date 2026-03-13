@@ -464,9 +464,17 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
   }, {});
 
   if (error) {
+    const isGenericError =
+      /Server Components|production|digest|An error occurred/i.test(error.message) || error.message.length > 120;
+    const displayMessage = isGenericError
+      ? "Pokrytí produktů se nepodařilo načíst. Zkontrolujte, že je v databázi vytvořena tabulka pro pokrytí (v README: příkaz pnpm run db:apply-schema)."
+      : error.message;
+    if (process.env.NODE_ENV === "development") {
+      console.error("[ClientCoverageWidget] getCoverageForContact error:", error.message);
+    }
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm text-sm text-red-600">
-        Chyba při načítání pokrytí: {error.message}
+        Chyba při načítání pokrytí: {displayMessage}
       </div>
     );
   }

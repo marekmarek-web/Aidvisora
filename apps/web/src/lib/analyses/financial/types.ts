@@ -12,6 +12,7 @@ export interface ClientInfo {
   occupation: string;
   sports: string;
   hasPartner: boolean;
+  birthNumber?: string;
 }
 
 export interface PartnerInfo {
@@ -22,6 +23,7 @@ export interface PartnerInfo {
   phone?: string;
   occupation?: string;
   sports?: string;
+  birthNumber?: string;
 }
 
 export interface ChildEntry {
@@ -29,6 +31,7 @@ export interface ChildEntry {
   name: string;
   birthDate: string;
   sports?: string;
+  birthNumber?: string;
 }
 
 export interface OtherDetailItem {
