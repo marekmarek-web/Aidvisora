@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { db, tenants } from "db";
-import { eq } from "db";
+import { db, tenants, advisorPreferences } from "db";
+import { eq, and } from "db";
 import { AdvisorProfileView } from "./AdvisorProfileView";
 
 export default async function ProfilePage() {
@@ -20,6 +20,21 @@ export default async function ProfilePage() {
     .limit(1);
   const tenantName = tenantRow?.name ?? "—";
 
+  const [prefsRow] = await db
+    .select({
+      phone: advisorPreferences.phone,
+      website: advisorPreferences.website,
+      reportLogoUrl: advisorPreferences.reportLogoUrl,
+    })
+    .from(advisorPreferences)
+    .where(
+      and(
+        eq(advisorPreferences.tenantId, auth.tenantId),
+        eq(advisorPreferences.userId, auth.userId)
+      )
+    )
+    .limit(1);
+
   return (
     <AdvisorProfileView
       initial={{
@@ -27,6 +42,9 @@ export default async function ProfilePage() {
         fullName,
         roleName: auth.roleName,
         tenantName,
+        phone: prefsRow?.phone ?? "",
+        website: prefsRow?.website ?? "",
+        reportLogoUrl: prefsRow?.reportLogoUrl ?? null,
       }}
     />
   );

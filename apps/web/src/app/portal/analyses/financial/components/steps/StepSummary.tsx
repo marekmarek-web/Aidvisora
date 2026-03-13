@@ -8,6 +8,7 @@ import { getGrowthChartData, getAllocationChartData } from "@/lib/analyses/finan
 import { formatCzk, safeNameForFile } from "@/lib/analyses/financial/formatters";
 import { uploadDocument } from "@/app/actions/documents";
 import { setFinancialAnalysisLastExportedAt } from "@/app/actions/financial-analyses";
+import { getAdvisorReportBranding } from "@/app/actions/preferences";
 import { FileText, Printer, CloudUpload, StickyNote } from "lucide-react";
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler } from "chart.js";
 
@@ -32,13 +33,14 @@ export function StepSummary() {
     ? { provenance: (data as unknown as Record<string, unknown>)._provenance as Record<string, "linked" | "overridden">, linkedCompanyName: undefined as unknown as string | null }
     : undefined;
 
-  const handlePrintReport = () => {
+  const handlePrintReport = async () => {
     setPrintError(null);
     chartRefs.current.growth = null;
     chartRefs.current.allocation = null;
     setIsPreparingPrint(true);
     try {
-      const html = buildReportHTML(data, reportOptions);
+      const branding = await getAdvisorReportBranding();
+      const html = buildReportHTML(data, { ...reportOptions, branding });
       setPrintPayload({ html });
     } catch {
       setPrintError("Nepodařilo se připravit report k tisku. Zkuste to znovu.");
@@ -50,7 +52,8 @@ export function StepSummary() {
     if (!canSaveToDocuments) return;
     setSavingToDocs(true);
     try {
-      const html = buildReportHTML(data, reportOptions);
+      const branding = await getAdvisorReportBranding();
+      const html = buildReportHTML(data, { ...reportOptions, branding });
       const safe = safeNameForFile(clientName);
       const date = new Date().toISOString().split("T")[0];
       const filename = `financni-report-${safe}-${date}.html`;

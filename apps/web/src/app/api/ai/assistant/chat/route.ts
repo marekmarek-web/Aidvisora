@@ -1,0 +1,96 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
+import { createResponseSafe } from "@/lib/openai";
+import { logOpenAICall } from "@/lib/openai";
+import { buildAssistantContext } from "@/lib/ai/assistant-context";
+import {
+  computePriorityItems,
+  buildSuggestedActionsFromUrgent,
+} from "@/lib/ai/dashboard-priority";
+
+export const dynamic = "force-dynamic";
+
+function maskForLog(s: string, maxLen: number): string {
+  const t = s.trim();
+  if (t.length <= maxLen) return t;
+  return t.slice(0, maxLen) + "...";
+}
+
+export async function POST(request: Request) {
+  const start = Date.now();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const membership = await getMembership(user.id);
+    if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const message = typeof body.message === "string" ? body.message.trim() : "";
+    if (!message) {
+      return NextResponse.json({ error: "Chybí zpráva." }, { status: 400 });
+    }
+
+    const tenantId = membership.tenantId;
+    const context = await buildAssistantContext(tenantId);
+
+    const system =
+      "Jsi asistent poradce v CRM. Odpovídej stručně a v češtině. Můžeš navrhovat konkrétní kroky (otevřít review smlouvy, úkoly, klienty, návrh e-mailu). Nepiš dlouhé odstavce.";
+    const fullPrompt = `${system}\n\nKontext:\n${context}\n\nUživatel: ${message}\n\nAsistent:`;
+
+    const result = await createResponseSafe(fullPrompt);
+
+    if (result.ok) {
+      const text = result.text.trim();
+      const suggestedActions: Array<{ type: string; label: string; payload: Record<string, unknown> }> = [];
+      const refMatches = text.match(/\[(review|task|client):([a-f0-9-]+)\]/gi);
+      const referencedEntities = refMatches
+        ? refMatches.map((r) => {
+            const m = r.match(/\[(review|task|client):([a-f0-9-]+)\]/i);
+            return m ? { type: m[1], id: m[2] } : null;
+          }).filter((x): x is { type: string; id: string } => x != null)
+        : [];
+
+      logOpenAICall({
+        endpoint: "assistant/chat",
+        model: "—",
+        latencyMs: Date.now() - start,
+        success: true,
+      });
+
+      return NextResponse.json({
+        message: text.slice(0, 2000),
+        referencedEntities,
+        suggestedActions,
+        warnings: [],
+      });
+    }
+
+    const urgentItems = await computePriorityItems(tenantId);
+    const fallbackActions = buildSuggestedActionsFromUrgent(urgentItems);
+    logOpenAICall({
+      endpoint: "assistant/chat",
+      model: "—",
+      latencyMs: Date.now() - start,
+      success: false,
+      error: maskForLog((result as { error?: string }).error ?? "", 80),
+    });
+
+    return NextResponse.json({
+      message: "Odpověď není k dispozici. Zkuste to později nebo vyberte akci níže.",
+      referencedEntities: [],
+      suggestedActions: fallbackActions,
+      warnings: ["Služba AI dočasně nedostupná."],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Odeslání zprávy selhalo.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

@@ -34,6 +34,7 @@ import { CalendarWidget } from "@/app/components/calendar/CalendarWidget";
 import { MessengerPreview } from "@/app/components/dashboard/MessengerPreview";
 import { DashboardCard } from "@/app/components/dashboard/DashboardCard";
 import { DashboardMiniNotes } from "./DashboardMiniNotes";
+import { DashboardAiAssistant } from "./DashboardAiAssistant";
 import { WIDGET_IDS, WIDGET_LABELS, WIDGET_ICONS, WIDGET_HREF, type WidgetId } from "./dashboard-config";
 
 const STORAGE_KEY = "weplan_dashboard_widgets";
@@ -187,6 +188,8 @@ export function DashboardEditable({
 
   const renderWidgetContent = (id: WidgetId) => {
     switch (id) {
+      case "aiAssistant":
+        return <DashboardAiAssistant />;
       case "summaryDay": {
         const overdue = kpis.overdueTasks.length;
         const dueToday = kpis.tasksDueToday?.length ?? 0;

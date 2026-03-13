@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 export const WIDGET_IDS = [
+  "aiAssistant",
   "summaryDay",
   "myTasks",
   "messages",
@@ -26,6 +27,7 @@ export const WIDGET_IDS = [
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 export const WIDGET_LABELS: Record<WidgetId, string> = {
+  aiAssistant: "AI asistent",
   summaryDay: "Shrnutí dne",
   myTasks: "Moje úkoly",
   messages: "Zprávy od klientů",
@@ -36,6 +38,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
 };
 
 export const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
+  aiAssistant: Sparkles,
   summaryDay: Sparkles,
   myTasks: CheckSquare,
   messages: MessageSquare,
@@ -49,6 +52,7 @@ export const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
 export type DashboardSection = "A" | "B" | "C" | "D";
 
 export const WIDGET_SECTION: Record<WidgetId, DashboardSection> = {
+  aiAssistant: "A",
   summaryDay: "A",
   myTasks: "A",
   messages: "A",
@@ -59,6 +63,7 @@ export const WIDGET_SECTION: Record<WidgetId, DashboardSection> = {
 };
 
 export const WIDGET_HREF: Partial<Record<WidgetId, string>> = {
+  aiAssistant: "/portal/contracts/review",
   summaryDay: "/portal/calendar",
   myTasks: "/portal/tasks",
   messages: "/portal/contacts",

@@ -9,6 +9,13 @@ import { normalizeReportMeta } from "./normalizeReportMeta";
 
 export type ReportProvenance = Record<string, "linked" | "overridden">;
 
+/** Branding for PDF report header, footer and cover logo (from advisor profile). */
+export type PdfReportBranding = {
+  authorName: string;
+  footerLine: string;
+  logoUrl?: string | null;
+};
+
 export interface BuildPersonalReportPayloadOptions {
   contactId?: string | null;
   householdId?: string | null;
@@ -18,6 +25,8 @@ export interface BuildPersonalReportPayloadOptions {
   /** Phase 7: provenance for report labels (e.g. "sdílený údaj") */
   provenance?: ReportProvenance;
   linkedCompanyName?: string | null;
+  /** PDF header/footer and cover logo from advisor profile */
+  branding?: PdfReportBranding;
 }
 
 export function buildPersonalReportPayload(
@@ -34,6 +43,7 @@ export function buildPersonalReportPayload(
   const html = buildReportHTML(data, {
     provenance: options?.provenance,
     linkedCompanyName: options?.linkedCompanyName,
+    branding: options?.branding,
   });
 
   const meta = normalizeReportMeta({

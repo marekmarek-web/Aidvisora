@@ -26,7 +26,12 @@ import {
   BarChart3,
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
-import { getAdvisorAvatarUrl, uploadAdvisorAvatar } from "@/app/actions/preferences";
+import {
+  getAdvisorAvatarUrl,
+  uploadAdvisorAvatar,
+  updateAdvisorReportBranding,
+  uploadReportLogo,
+} from "@/app/actions/preferences";
 
 const VALID_TABS = ["osobni", "rezervace", "integrace", "notifikace", "fakturace"] as const;
 type TabId = (typeof VALID_TABS)[number];
@@ -107,7 +112,8 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
   const [copied, setCopied] = useState(false);
   const [firstName, setFirstName] = useState(parsed.firstName);
   const [lastName, setLastName] = useState(parsed.lastName);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initial.phone ?? "");
+  const [website, setWebsite] = useState(initial.website ?? "");
   const [ico, setIco] = useState("");
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
@@ -122,6 +128,9 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
   const [advisorAvatarUrl, setAdvisorAvatarUrl] = useState<string | null>(null);
   const [advisorAvatarUploading, setAdvisorAvatarUploading] = useState(false);
   const [advisorAvatarError, setAdvisorAvatarError] = useState<string | null>(null);
+  const [reportLogoUrl, setReportLogoUrl] = useState<string | null>(initial.reportLogoUrl ?? null);
+  const [reportLogoUploading, setReportLogoUploading] = useState(false);
+  const [reportLogoError, setReportLogoError] = useState<string | null>(null);
 
   useEffect(() => {
     getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
@@ -145,6 +154,24 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
     }
   };
 
+  const onReportLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReportLogoError(null);
+    setReportLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const url = await uploadReportLogo(fd);
+      if (url) setReportLogoUrl(url);
+    } catch (err) {
+      setReportLogoError(err instanceof Error ? err.message : "Nahrání loga se nezdařilo");
+    } finally {
+      setReportLogoUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
   const bookingLink = "weplan.cz/rezervace"; // placeholder
 
@@ -162,6 +189,7 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
     setSaving(true);
     try {
       await updatePortalProfile(fullName ?? "");
+      await updateAdvisorReportBranding({ phone: phone.trim() || null, website: website.trim() || null });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Uložení selhalo.");
@@ -403,6 +431,25 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
                         onChange={(e) => setPhone(e.target.value)}
                         className={`${inputClass} pl-11`}
                         autoComplete="tel"
+                        placeholder="+420 123 456 789"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                      Web
+                    </label>
+                    <div className="relative">
+                      <Globe size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input
+                        type="url"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        className={`${inputClass} pl-11`}
+                        placeholder="https://www.example.cz"
+                        autoComplete="url"
                       />
                     </div>
                   </div>
@@ -526,6 +573,46 @@ export function AdvisorProfileView({ initial }: { initial: AdvisorProfileInitial
               >
                 Nastavit dostupnost <ChevronRight size={14} aria-hidden />
               </Link>
+            </div>
+
+            {/* Logo do reportu PDF */}
+            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-50 flex items-center gap-2">
+                <FileText size={18} className="text-slate-400 shrink-0" aria-hidden />
+                <h3 className="font-black text-slate-900">Pro report PDF</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600">
+                  Logo se zobrazí na titulní stránce finančního reportu. Telefon a web z této stránky se použijí v záhlaví a zápatí.
+                </p>
+                <label className="block cursor-pointer">
+                  <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors min-h-[44px]">
+                    {reportLogoUploading ? "Nahrávám…" : "Nahrát logo"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={onReportLogoChange}
+                    disabled={reportLogoUploading}
+                  />
+                </label>
+                {reportLogoError && (
+                  <p className="text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg border border-rose-200" role="alert">
+                    {reportLogoError}
+                  </p>
+                )}
+                {reportLogoUrl && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">Náhled</p>
+                    <img
+                      src={reportLogoUrl}
+                      alt=""
+                      className="max-h-20 w-auto object-contain rounded-lg border border-slate-200 bg-slate-50"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Licence */}

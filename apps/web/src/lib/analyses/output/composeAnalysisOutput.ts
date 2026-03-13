@@ -5,6 +5,7 @@
 import type { FinancialAnalysisData } from "@/lib/analyses/financial/types";
 import type { CompanyFaPayload } from "@/lib/analyses/company-fa/types";
 import type { NormalizedReportPayload, ExportMode } from "./types";
+import type { PdfReportBranding } from "./buildPersonalReportPayload";
 import { resolveOutputMode } from "./resolveOutputMode";
 import { buildPersonalReportPayload } from "./buildPersonalReportPayload";
 import { buildBusinessReportPayload } from "./buildBusinessReportPayload";
@@ -26,6 +27,8 @@ export interface ComposeAnalysisOutputOptions {
   /** Phase 7: provenance and linked company for report labels */
   provenance?: ReportProvenance;
   linkedCompanyName?: string | null;
+  /** PDF header/footer and cover logo from advisor profile (server: pass getAdvisorReportBranding()) */
+  branding?: PdfReportBranding;
 }
 
 /**
@@ -54,6 +57,7 @@ export function composeAnalysisOutput(
       title: options?.title,
       provenance: options?.provenance,
       linkedCompanyName: options?.linkedCompanyName,
+      branding: options?.branding,
     });
   }
 
@@ -78,8 +82,9 @@ export function composeAnalysisOutput(
       linksDescription: options?.linksDescription,
       provenance: options?.provenance,
       linkedCompanyName: options?.linkedCompanyName,
+      branding: options?.branding,
     });
   }
 
-  return buildPersonalReportPayload(personalData ?? ({} as FinancialAnalysisData), options);
+  return buildPersonalReportPayload(personalData ?? ({} as FinancialAnalysisData), { ...options, branding: options?.branding });
 }

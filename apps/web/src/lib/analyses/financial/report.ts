@@ -170,15 +170,20 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const PDF_REPORT_AUTHOR = 'Marek Marek';
-const PDF_REPORT_FOOTER_LINE = 'Marek Marek - Privátní finanční plánování | www.marek-marek.cz | +420 778 511 166';
+const PDF_REPORT_AUTHOR_FALLBACK = 'Marek Marek';
+const PDF_REPORT_FOOTER_FALLBACK = 'Marek Marek - Privátní finanční plánování | www.marek-marek.cz | +420 778 511 166';
 
-function renderPdfHeader(sectionTitle: string, clientName: string, dateStr: string): string {
-  return `<div class="pdf-header" style="border-bottom-color: #0073ea;"><span style="font-weight: 700; color: #1f1c2e;">${escapeHtml(sectionTitle)}</span><span style="color: #4a4a4a;">Vypracoval: ${escapeHtml(PDF_REPORT_AUTHOR)} dne: ${escapeHtml(dateStr)} pro: ${escapeHtml(clientName)}</span></div>`;
+function renderPdfHeader(
+  sectionTitle: string,
+  clientName: string,
+  dateStr: string,
+  authorName: string
+): string {
+  return `<div class="pdf-header" style="border-bottom-color: #0073ea;"><span style="font-weight: 700; color: #1f1c2e;">${escapeHtml(sectionTitle)}</span><span style="color: #4a4a4a;">Vypracoval: ${escapeHtml(authorName)} dne: ${escapeHtml(dateStr)} pro: ${escapeHtml(clientName)}</span></div>`;
 }
 
-function renderPdfFooter(): string {
-  return `<div class="footer"><span>${escapeHtml(PDF_REPORT_FOOTER_LINE)}</span><span>Strana ${FOOTER_PAGE_PLACEHOLDER}</span></div>`;
+function renderPdfFooter(footerLine: string): string {
+  return `<div class="footer"><span>${escapeHtml(footerLine)}</span><span>Strana ${FOOTER_PAGE_PLACEHOLDER}</span></div>`;
 }
 
 const FOOTER_PAGE_PLACEHOLDER = '{{FOOTER_PAGE}}';
@@ -639,7 +644,13 @@ function renderHoldingsBlock(detail: FundDetail): string {
 }
 
 /** Jedna stránka PDF per vybraný produkt (amount > 0). Pořadí dle HTML: název, badge, investice, popis, riziko/horizont/likvidita, strategie, výhody, parametry, očekávaná FV. */
-function renderProductDetailPages(data: FinancialAnalysisData, clientName: string, today: string): string {
+function renderProductDetailPages(
+  data: FinancialAnalysisData,
+  clientName: string,
+  today: string,
+  authorName: string,
+  footerLine: string
+): string {
   const invs = (data.investments || []).filter((i) => (i.amount || 0) > 0);
   const conservative = data.strategy?.conservativeMode ?? false;
   const getTypeName = (type: string) => (type === 'lump' ? 'Jednorázová' : type === 'pension' ? 'Penzijní spoření' : 'Pravidelná');
@@ -657,7 +668,7 @@ function renderProductDetailPages(data: FinancialAnalysisData, clientName: strin
     const productLogoHtml = logoPath ? `<img src="${escapeHtml(logoPath)}" alt="" style="width: 40px; height: 40px; object-fit: contain; margin-right: 3mm; flex-shrink: 0;" />` : '';
     html += `
     <section class="pdf-page">
-      ${renderPdfHeader('DETAIL PRODUKTU', clientName, today)}
+      ${renderPdfHeader('DETAIL PRODUKTU', clientName, today, authorName)}
       <div class="pdf-section">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6mm;">
           <div style="display: flex; align-items: flex-start; gap: 0;">
@@ -714,7 +725,7 @@ function renderProductDetailPages(data: FinancialAnalysisData, clientName: strin
           </div>
         </div>
       </div>
-      ${renderPdfFooter()}
+      ${renderPdfFooter(footerLine)}
     </section>`;
   });
   return html;
@@ -756,7 +767,13 @@ function pdfClientExtra(client: FinancialAnalysisData['client']): string {
   return '<p style="margin-bottom: 4px; color: #4a4a4a; font-size: 11px;">' + (occ ? occ + (sport ? '<br/>' : '') : '') + (sport ? sport : '') + '</p>';
 }
 
-function buildPages34(data: FinancialAnalysisData, clientName: string, today: string): string {
+function buildPages34(
+  data: FinancialAnalysisData,
+  clientName: string,
+  today: string,
+  authorName: string,
+  footerLine: string
+): string {
   const profileLabel = getStrategyProfileLabel(data.strategy?.profile ?? 'balanced');
   const strategyDesc = getStrategyDesc(data.strategy?.profile ?? 'balanced');
   const growthData = getGrowthChartData(data);
@@ -767,7 +784,7 @@ function buildPages34(data: FinancialAnalysisData, clientName: string, today: st
 
   return `
     <section class="pdf-page">
-        ${renderPdfHeader('CÍLE A STRATEGIE', clientName, today)}
+        ${renderPdfHeader('CÍLE A STRATEGIE', clientName, today, authorName)}
         <div class="pdf-section">
             <div class="h2">Finanční cíle & Pokrytí</div>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size:12px;">${renderGoalCoverage(data)}</div>
@@ -790,11 +807,11 @@ function buildPages34(data: FinancialAnalysisData, clientName: string, today: st
                 <tfoot>${renderInvestmentsTotal(data)}</tfoot>
             </table>
         </div>
-        ${renderPdfFooter()}
+        ${renderPdfFooter(footerLine)}
     </section>
-    ${renderProductDetailPages(data, clientName, today)}
+    ${renderProductDetailPages(data, clientName, today, authorName, footerLine)}
     <section class="pdf-page">
-        ${renderPdfHeader('PROJEKCE', clientName, today)}
+        ${renderPdfHeader('PROJEKCE', clientName, today, authorName)}
         <div class="h2">Vývoj hodnoty majetku</div>
         <p style="margin: 0 0 4mm 0; font-size: 10pt; color: #4a4a4a;">Vývoj hodnoty majetku zobrazuje projekci portfolia v čase podle zvolené strategie a investic.</p>
         <div style="height: 90mm; width: 100%;"><canvas id="pdf-chart-growth"></canvas></div>
@@ -803,7 +820,7 @@ function buildPages34(data: FinancialAnalysisData, clientName: string, today: st
         <p style="margin: 0 0 4mm 0; font-size: 10pt; color: #4a4a4a;">Rozložení aktiv vychází z vaší investiční strategie.</p>
         <div style="height: 70mm; width: 100%;"><canvas id="pdf-chart-allocation"></canvas></div>
         <div style="margin-top: 30px; font-size: 10px; color: #94a3b8; line-height: 1.4; border-top: 1px solid #e9ebf0; padding-top: 10px;"><strong>Upozornění:</strong> Minulé výnosy nejsou zárukou budoucích. Výpočty jsou modelové.</div>
-        ${renderPdfFooter()}
+        ${renderPdfFooter(footerLine)}
     </section>
   `;
 }
@@ -847,26 +864,37 @@ function renderInsuranceGrids(ins: InsuranceResult): string {
   return grids.join('');
 }
 
-function renderInsurancePage(data: FinancialAnalysisData, clientName: string, today: string): string {
+function renderInsurancePage(
+  data: FinancialAnalysisData,
+  clientName: string,
+  today: string,
+  authorName: string,
+  footerLine: string
+): string {
   const ins = computeInsurance(data);
   const fmt = (n: number) => Math.round(n).toLocaleString('cs-CZ');
   if (ins.netIncome === 0) {
-    return `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Životní pojištění</div><div class="interpretation"><p><strong>Upozornění:</strong> Pro výpočet doporučeného pojištění je nutné zadat měsíční příjem v sekci Cashflow.</p></div></div>${renderPdfFooter()}</section>`;
+    return `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, authorName)}<div class="pdf-section"><div class="h2">Životní pojištění</div><div class="interpretation"><p><strong>Upozornění:</strong> Pro výpočet doporučeného pojištění je nutné zadat měsíční příjem v sekci Cashflow.</p></div></div>${renderPdfFooter(footerLine)}</section>`;
   }
   const gridsHtml = renderInsuranceGrids(ins);
-  let pages = `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(clientName)}</div><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 3mm;">Doporučené částky vycházejí z příjmu, výdajů a závazků.</p><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">Příjem: <strong>${fmt(ins.netIncome)} Kč</strong> čistého měsíčně ${ins.isOSVC ? '<span style="background: #fef3c7; color: #92400e; padding: 1mm 2mm; border-radius: 2mm; font-size: 8pt;">OSVČ</span>' : ''}</p><table class="table" style="margin-bottom: 6mm;"><thead><tr><th style="width: 50%;">Rizika</th><th style="width: 50%; text-align: right;">Pojistná částka</th></tr></thead><tbody><tr><td>Invalidita 2.–3. stupeň</td><td style="text-align: right; font-weight: bold;">${fmt(ins.invalidity.capital)} Kč</td></tr><tr><td>Trvalé následky</td><td style="text-align: right; font-weight: bold;">${fmt(ins.tn.base)} Kč (progrese ${ins.tn.progress}×)</td></tr><tr><td>Pracovní neschopnost</td><td style="text-align: right; font-weight: bold;">${fmt(ins.sickness.dailyBenefit)} Kč / den</td></tr><tr><td>Smrt</td><td style="text-align: right; font-weight: bold;">${ins.death.individual ? 'INDIVIDUÁLNĚ' : fmt(ins.death.coverage) + ' Kč'}</td></tr></tbody></table>${gridsHtml}</div>${renderPdfFooter()}</section>`;
+  let pages = `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, authorName)}<div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(clientName)}</div><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 3mm;">Doporučené částky vycházejí z příjmu, výdajů a závazků.</p><p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">Příjem: <strong>${fmt(ins.netIncome)} Kč</strong> čistého měsíčně ${ins.isOSVC ? '<span style="background: #fef3c7; color: #92400e; padding: 1mm 2mm; border-radius: 2mm; font-size: 8pt;">OSVČ</span>' : ''}</p><table class="table" style="margin-bottom: 6mm;"><thead><tr><th style="width: 50%;">Rizika</th><th style="width: 50%; text-align: right;">Pojistná částka</th></tr></thead><tbody><tr><td>Invalidita 2.–3. stupeň</td><td style="text-align: right; font-weight: bold;">${fmt(ins.invalidity.capital)} Kč</td></tr><tr><td>Trvalé následky</td><td style="text-align: right; font-weight: bold;">${fmt(ins.tn.base)} Kč (progrese ${ins.tn.progress}×)</td></tr><tr><td>Pracovní neschopnost</td><td style="text-align: right; font-weight: bold;">${fmt(ins.sickness.dailyBenefit)} Kč / den</td></tr><tr><td>Smrt</td><td style="text-align: right; font-weight: bold;">${ins.death.individual ? 'INDIVIDUÁLNĚ' : fmt(ins.death.coverage) + ' Kč'}</td></tr></tbody></table>${gridsHtml}</div>${renderPdfFooter(footerLine)}</section>`;
   if (ins.partnerInsurance) {
     const p = ins.partnerInsurance;
-    pages += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(p.name)}</div><p style="font-size: 10pt; color: #4a4a4a;">Příjem: <strong>${fmt(p.income)} Kč</strong></p><table class="table"><tbody><tr><td>Invalidita</td><td style="text-align: right;">${fmt(p.invalidity.capital)} Kč</td></tr><tr><td>PN</td><td style="text-align: right;">${fmt(p.sickness.dailyBenefit)} Kč/den</td></tr><tr><td>Smrt</td><td style="text-align: right;">${fmt(p.death.coverage)} Kč</td></tr></tbody></table></div>${renderPdfFooter()}</section>`;
+    pages += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, authorName)}<div class="pdf-section"><div class="h2">Životní pojištění – ${escapeHtml(p.name)}</div><p style="font-size: 10pt; color: #4a4a4a;">Příjem: <strong>${fmt(p.income)} Kč</strong></p><table class="table"><tbody><tr><td>Invalidita</td><td style="text-align: right;">${fmt(p.invalidity.capital)} Kč</td></tr><tr><td>PN</td><td style="text-align: right;">${fmt(p.sickness.dailyBenefit)} Kč/den</td></tr><tr><td>Smrt</td><td style="text-align: right;">${fmt(p.death.coverage)} Kč</td></tr></tbody></table></div>${renderPdfFooter(footerLine)}</section>`;
   }
   if (ins.childInsurance.length > 0) {
-    pages += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Doporučení pro děti</div><p style="font-size: 10pt;">Invalidita 3–5 mil. Kč, Trvalé následky max 2 mil. Kč.</p></div>${renderPdfFooter()}</section>`;
+    pages += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, authorName)}<div class="pdf-section"><div class="h2">Doporučení pro děti</div><p style="font-size: 10pt;">Invalidita 3–5 mil. Kč, Trvalé následky max 2 mil. Kč.</p></div>${renderPdfFooter(footerLine)}</section>`;
   }
   return pages;
 }
 
 /** Navržené řešení zajištění příjmů (grid) + optional optimalizace pro jednatele/majitele. */
-function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptions?: BuildReportHTMLOptions): string {
+function renderIncomeProtectionProposed(
+  data: FinancialAnalysisData,
+  reportOptions?: BuildReportHTMLOptions,
+  authorName?: string,
+  footerLine?: string
+): string {
   const persons = data.incomeProtection?.persons ?? [];
   if (persons.length === 0) return '';
 
@@ -875,11 +903,13 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
 
   const clientName = data.client?.name || 'Klient';
   const today = new Date().toLocaleDateString('cs-CZ');
+  const author = authorName ?? PDF_REPORT_AUTHOR_FALLBACK;
+  const footer = footerLine ?? PDF_REPORT_FOOTER_FALLBACK;
   const roleLabel = (r: string | undefined) => {
     const labels: Record<string, string> = { client: 'Klient', partner: 'Partner', child: 'Dítě', director: 'Jednatel/ka', owner: 'Majitel', partner_company: 'Společník' };
     return r ? (labels[r] ?? r) : '–';
   };
-  let html = `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Zajištění příjmů – navržené řešení</div>`;
+  let html = `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, author)}<div class="pdf-section"><div class="h2">Zajištění příjmů – navržené řešení</div>`;
   html += '<p style="font-size: 10pt; color: #4a4a4a; margin-bottom: 4mm;">V tabulce níže jsou uvedeny zadané pojistné plány. Celková měsíční cena je součtem všech řádků. Doporučené pojistné částky najdete na předchozích stránkách v sekci Životní pojištění.</p>';
   html += '<table class="table"><thead><tr><th>Osoba</th><th>Role</th><th>Pojišťovna</th><th>Rizika</th><th>Měsíční / roční</th><th>Zdroj úhrady</th><th>Poznámka</th></tr></thead><tbody>';
   let totalMonthly = 0;
@@ -898,13 +928,13 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
   });
   html += '</tbody></table>';
   html += `<p style="font-weight:bold; margin-top: 4mm;">Celková měsíční cena: ${formatCzk(totalMonthly)}</p>`;
-  html += `</div>${renderPdfFooter()}</section>`;
+  html += `</div>${renderPdfFooter(footer)}</section>`;
 
   const companyMonthlyForPerson = (p: typeof persons[0]) =>
     (p.insurancePlans ?? []).filter((pl) => pl.fundingSource === 'company').reduce((s, pl) => s + (pl.monthlyPremium ?? (pl.annualContribution ?? 0) / 12), 0);
   const anyOptimization = persons.some((p) => p.funding?.benefitOptimizationEnabled && ((p.funding?.companyContributionMonthly ?? 0) > 0 || companyMonthlyForPerson(p) > 0));
   if (anyOptimization) {
-    html += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today)}<div class="pdf-section"><div class="h2">Optimalizace zajištění příjmů</div>`;
+    html += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, author)}<div class="pdf-section"><div class="h2">Optimalizace zajištění příjmů</div>`;
     persons.forEach((person) => {
       const companyFromPlansVal = companyMonthlyForPerson(person);
       if (!person.funding?.benefitOptimizationEnabled || ((person.funding.companyContributionMonthly ?? 0) <= 0 && companyFromPlansVal <= 0)) return;
@@ -944,15 +974,22 @@ function renderIncomeProtectionProposed(data: FinancialAnalysisData, reportOptio
       }
       html += '</div>';
     });
-    html += `</div>${renderPdfFooter()}</section>`;
+    html += `</div>${renderPdfFooter(footer)}</section>`;
   }
   return html;
 }
 
-/** Phase 7: options for report labels (linked/overridden from company). */
+/** Phase 7: options for report labels (linked/overridden from company). Branding from advisor profile. */
+export interface PdfReportBranding {
+  authorName: string;
+  footerLine: string;
+  logoUrl?: string | null;
+}
+
 export interface BuildReportHTMLOptions {
   provenance?: Record<string, "linked" | "overridden">;
   linkedCompanyName?: string | null;
+  branding?: PdfReportBranding;
 }
 
 function provenanceSuffix(path: string, opts?: BuildReportHTMLOptions): string {
@@ -973,7 +1010,13 @@ const COMPANY_RISK_LABELS: { key: keyof CompanyRisks; label: string }[] = [
 ];
 
 /** Firemní část PDF – titulka, PŘEHLED SITUACE (KPI), FIREMNÍ POJIŠTĚNÍ (rizika X/6), Benefity, ZAJIŠTĚNÍ PŘÍJMŮ. */
-function renderCompanyPDFSection(data: FinancialAnalysisData, clientName: string, today: string): string {
+function renderCompanyPDFSection(
+  data: FinancialAnalysisData,
+  clientName: string,
+  today: string,
+  authorName: string,
+  footerLine: string
+): string {
   if (!data.includeCompany) return '';
   const cf = data.companyFinance ?? {};
   const runway = companyRunway(data.companyFinance);
@@ -989,7 +1032,7 @@ function renderCompanyPDFSection(data: FinancialAnalysisData, clientName: string
 
   let html = `
   <section class="pdf-page pdf-title-page">
-    ${renderPdfHeader('FINANČNÍ ANALÝZA – FIRMA', clientName, today)}
+    ${renderPdfHeader('FINANČNÍ ANALÝZA – FIRMA', clientName, today, authorName)}
     <div style="text-align: center;">
       <div style="width: 80px; height: 80px; background: #92400e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">S</div>
       <h1 class="h1" style="font-size: 36px; margin-bottom: 10px;">FINANČNÍ ANALÝZA – FIRMA</h1>
@@ -1001,10 +1044,10 @@ function renderCompanyPDFSection(data: FinancialAnalysisData, clientName: string
         <h3 style="font-size: 14px; color: #1f1c2e; margin: 0;">${today}</h3>
       </div>
     </div>
-    ${renderPdfFooter()}
+    ${renderPdfFooter(footerLine)}
   </section>
   <section class="pdf-page">
-    ${renderPdfHeader('PŘEHLED FIRMY', clientName, today)}
+    ${renderPdfHeader('PŘEHLED FIRMY', clientName, today, authorName)}
     <div class="pdf-section">
       <div class="h2">PŘEHLED SITUACE (firma)</div>
       <div class="kpi">
@@ -1043,7 +1086,7 @@ function renderCompanyPDFSection(data: FinancialAnalysisData, clientName: string
       <div class="h2">Zajištění příjmů (jednatel)</div>
       <p style="font-size: 10pt; color: #1f1c2e;">Pro doporučení pojištění jednatele viz sekci „Zajištění příjmů“ v osobní části analýzy.</p>
     </div>
-    ${renderPdfFooter()}
+    ${renderPdfFooter(footerLine)}
   </section>
   `;
   return html;
@@ -1055,6 +1098,9 @@ function renderCompanyPDFSection(data: FinancialAnalysisData, clientName: string
 export function buildReportHTML(data: FinancialAnalysisData, options?: BuildReportHTMLOptions): string {
   const today = new Date().toLocaleDateString('cs-CZ');
   const clientName = data.client?.name || 'Klient';
+  const authorName = options?.branding?.authorName ?? PDF_REPORT_AUTHOR_FALLBACK;
+  const footerLine = options?.branding?.footerLine ?? PDF_REPORT_FOOTER_FALLBACK;
+  const logoUrl = options?.branding?.logoUrl ?? null;
   const assets = data.assets || {};
   const liabilities = data.liabilities || {};
   const totalAssets = totalAssetsFromValues(assets);
@@ -1105,9 +1151,9 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
 <style>${PDF_STYLES}</style>
 <div class="pdf">
   <section class="pdf-page pdf-title-page">
-    ${renderPdfHeader('FINANČNÍ PLÁN', clientName, today)}
+    ${renderPdfHeader('FINANČNÍ PLÁN', clientName, today, authorName)}
     <div style="text-align: center;">
-      <div style="width: 80px; height: 80px; background: #0a0f29; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">M</div>
+      ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" style="max-height: 80px; width: auto; object-fit: contain; margin: 0 auto 20px; display: block;" />` : '<div style="width: 80px; height: 80px; background: #0a0f29; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 0 auto 20px;">M</div>'}
       <h1 class="h1" style="font-size: 40px; margin-bottom: 10px;">FINANČNÍ PLÁN</h1>
       <p style="font-size: 18px; color: #4a4a4a; margin-bottom: 50px;">Komplexní strategie pro vaši budoucnost</p>
       <div style="display: inline-block; text-align: left; background: #f8fafc; padding: 30px; border-radius: 12px; border: 1px solid #e9ebf0; min-width: 300px;">
@@ -1118,10 +1164,10 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
         <h3 style="font-size: 16px; color: #1f1c2e; margin: 0;">${today}</h3>
       </div>
     </div>
-    ${renderPdfFooter()}
+    ${renderPdfFooter(footerLine)}
   </section>
   <section class="pdf-page">
-    ${renderPdfHeader('SOUHRN & BILANCE', clientName, today)}
+    ${renderPdfHeader('SOUHRN & BILANCE', clientName, today, authorName)}
     <div class="pdf-section">
       <div class="h2">Přehled situace</div>
       <div class="kpi">
@@ -1169,22 +1215,22 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
         </tbody>
       </table>
     </div>
-    ${renderPdfFooter()}
+    ${renderPdfFooter(footerLine)}
   </section>
-  ${buildPages34(data, clientName, today)}
-  ${renderInsurancePage(data, clientName, today)}
-  ${renderIncomeProtectionProposed(data, options)}
+  ${buildPages34(data, clientName, today, authorName, footerLine)}
+  ${renderInsurancePage(data, clientName, today, authorName, footerLine)}
+  ${renderIncomeProtectionProposed(data, options, authorName, footerLine)}
   ${(data.notes != null && String(data.notes).trim() !== '') ? `
   <section class="pdf-page">
-    ${renderPdfHeader('POZNÁMKY', clientName, today)}
+    ${renderPdfHeader('POZNÁMKY', clientName, today, authorName)}
     <div class="pdf-section">
       <div class="h2">Poznámky k analýze</div>
       <div style="white-space: pre-wrap; font-size: 10pt; color: #1f1c2e;">${escapeHtml(String(data.notes).trim())}</div>
     </div>
-    ${renderPdfFooter()}
+    ${renderPdfFooter(footerLine)}
   </section>
   ` : ''}
-  ${renderCompanyPDFSection(data, clientName, today)}
+  ${renderCompanyPDFSection(data, clientName, today, authorName, footerLine)}
 </div>
   `.trim().replace(/\{\{FOOTER_PAGE\}\}/g, (() => { let n = 0; return () => String(++n); })());
 }
