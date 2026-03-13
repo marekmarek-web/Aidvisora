@@ -16,7 +16,7 @@ export interface ExtractedClientMatchCandidate {
   reason?: string;
 }
 
-export type DraftActionType = "create_client" | "create_task" | "create_payment" | "draft_email";
+export type DraftActionType = "create_client" | "create_contract" | "create_task" | "create_payment" | "draft_email";
 
 export interface DraftActionBase {
   type: DraftActionType;

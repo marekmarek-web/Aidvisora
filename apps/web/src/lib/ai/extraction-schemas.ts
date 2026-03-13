@@ -84,7 +84,7 @@ export function validateContactExtraction(raw: string): { ok: true; data: Extrac
       error: {
         code: "VALIDATION_FAILED",
         message: "Neplatný JSON v odpovědi modelu.",
-        issues: [{ path: [], message: e instanceof Error ? e.message : String(e) } as z.ZodIssue],
+        issues: [{ code: "custom", path: [], message: e instanceof Error ? e.message : String(e) }],
       },
     };
   }
@@ -123,7 +123,7 @@ export function validateContractExtraction(raw: string): { ok: true; data: Extra
       error: {
         code: "VALIDATION_FAILED",
         message: "Neplatný JSON v odpovědi modelu (smlouva).",
-        issues: [{ path: [], message: e instanceof Error ? e.message : String(e) } as z.ZodIssue],
+        issues: [{ code: "custom", path: [], message: e instanceof Error ? e.message : String(e) }],
       },
     };
   }

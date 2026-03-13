@@ -609,14 +609,14 @@ function renderHoldingsBlock(detail: FundDetail): string {
   }
   if ((detail.countries?.length ?? 0) > 0) {
     html += '<div style="margin-bottom: 4mm;"><div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; margin-bottom: 2mm;">Země</div><div style="display: flex; flex-direction: column; gap: 1.5mm;">';
-    detail.countries.forEach((c) => {
+    (detail.countries ?? []).forEach((c) => {
       html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 80px;">${escapeHtml(c.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${c.weight.toFixed(2).replace('.', ',')} %</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(c.weight)}</div></div>`;
     });
     html += '</div></div>';
   }
   if ((detail.sectors?.length ?? 0) > 0) {
     html += '<div><div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; margin-bottom: 2mm;">Sektory</div><div style="display: flex; flex-direction: column; gap: 1.5mm;">';
-    detail.sectors.forEach((s) => {
+    (detail.sectors ?? []).forEach((s) => {
       html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 100px;">${escapeHtml(s.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${s.weight.toFixed(2).replace('.', ',')} %</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(s.weight)}</div></div>`;
     });
     html += '</div></div>';

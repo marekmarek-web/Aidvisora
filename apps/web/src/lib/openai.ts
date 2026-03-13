@@ -148,6 +148,99 @@ export async function createResponseSafe(
   }
 }
 
+/**
+ * Create a response with a file (e.g. PDF) and optional text prompt.
+ * Uses input_file with file_url. Server-side only.
+ */
+export async function createResponseWithFile(
+  fileUrl: string,
+  textPrompt: string,
+  options?: { model?: string; store?: boolean }
+): Promise<string> {
+  const client = getClient();
+  if (!client) {
+    throw new Error(
+      "OPENAI_API_KEY není nastaven. Nastavte ho v Nastavení nebo v .env."
+    );
+  }
+
+  const primaryModel =
+    options?.model ??
+    process.env.OPENAI_MODEL ??
+    defaultModel;
+  const store = options?.store ?? false;
+  const start = Date.now();
+
+  const input = [
+    {
+      role: "user" as const,
+      content: [
+        { type: "input_file" as const, file_url: fileUrl },
+        { type: "input_text" as const, text: textPrompt },
+      ],
+    },
+  ];
+
+  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
+  let usedModel = primaryModel;
+  try {
+    response = await client.responses.create({
+      model: primaryModel,
+      input,
+      store,
+    });
+  } catch (err) {
+    if (isModelError(err) && primaryModel !== fallbackModel) {
+      response = await client.responses.create({
+        model: fallbackModel,
+        input,
+        store,
+      });
+      usedModel = fallbackModel;
+    } else {
+      const latencyMs = Date.now() - start;
+      const message = err instanceof Error ? err.message : String(err);
+      logOpenAICall({
+        endpoint: "responses.create_with_file",
+        model: primaryModel,
+        latencyMs,
+        success: false,
+        error: message,
+      });
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }
+
+  const latencyMs = Date.now() - start;
+  logOpenAICall({
+    endpoint: "responses.create_with_file",
+    model: usedModel,
+    latencyMs,
+    success: true,
+  });
+
+  const text = (response as { output_text?: string }).output_text;
+  if (typeof text === "string" && text.trim()) return text.trim();
+
+  const output = (response as { output?: unknown[] }).output;
+  if (Array.isArray(output)) {
+    const parts: string[] = [];
+    for (const item of output) {
+      const msg = item as { content?: Array<{ type?: string; text?: string }> };
+      if (Array.isArray(msg?.content)) {
+        for (const block of msg.content) {
+          if (block?.type === "output_text" && typeof block.text === "string") {
+            parts.push(block.text);
+          }
+        }
+      }
+    }
+    if (parts.length) return parts.join("\n").trim();
+  }
+
+  throw new Error("Prázdná odpověď od OpenAI.");
+}
+
 export function hasOpenAIKey(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
 }
