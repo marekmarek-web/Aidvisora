@@ -204,7 +204,7 @@ export function DashboardEditable({
           ? `Dnes máte ${parts.join(", ")}. Doporučuji nejdříve vyřešit ${overdue > 0 ? "zpožděné úkoly" : risk > 0 ? "obchody v ohrožení" : "dnešní agendu"}.`
           : "Dnes nemáte urgentní položky. Prohlédněte si kalendář nebo úkoly.";
         return (
-          <div className="bg-gradient-to-br from-[#1a1c2e] to-indigo-950 p-6 rounded-[24px] text-white shadow-xl shadow-indigo-900/10 relative overflow-hidden h-full flex flex-col justify-center min-h-[240px]">
+          <div className="bg-gradient-to-br from-[#1a1c2e] to-indigo-950 p-6 rounded-3xl text-white shadow-xl shadow-indigo-900/10 relative overflow-hidden h-full flex flex-col justify-center min-h-[240px]">
             <Sparkles className="absolute -top-6 -right-6 w-32 h-32 text-indigo-500/20" aria-hidden />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
@@ -428,9 +428,17 @@ export function DashboardEditable({
   const dateLabel = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-12 animate-[wp-fade-in_0.3s_ease] bg-[#f8fafc]">
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 lg:gap-12 animate-[wp-fade-in_0.3s_ease] bg-[#f8fafc] relative">
+      <style>{`
+        .dashboard-hub-bg {
+          background-image:
+            linear-gradient(to right, rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+          background-size: 40px 40px;
+        }
+      `}</style>
       {/* Left panel: main content */}
-      <div className="wp-projects-section flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8 lg:pr-4">
+      <div className="wp-projects-section dashboard-hub-bg flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8 lg:pr-4">
         {/* V3: Úvod – pozdrav a datum */}
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
@@ -448,13 +456,13 @@ export function DashboardEditable({
           </button>
         </div>
 
-        {/* V3 1:1: bílé KPI karty – malý label, velké číslo, podtitul */}
+        {/* V3 premium: KPI karty – větší hloubka, hover, kontrast */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           {KPI_CARDS_V3.map((card) => (
             <Link
               key={card.key}
               href={card.href}
-              className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm flex flex-col justify-center hover:shadow-md transition-shadow min-h-[100px] no-underline"
+              className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-md flex flex-col justify-center hover:shadow-lg hover:border-indigo-100 transition-all duration-200 min-h-[100px] no-underline"
             >
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">{card.label}</span>
               <div className="flex items-end gap-3 mb-1">
@@ -465,49 +473,49 @@ export function DashboardEditable({
           ))}
         </div>
 
-        {/* V3: Rychlé vstupy – karta ve stylu V3 */}
-        <div className="mb-6 rounded-[24px] border border-slate-100 bg-white shadow-sm p-4 sm:p-5">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Rychlé vstupy</h3>
+        {/* Rychlé vstupy – premium pills */}
+        <div className="mb-6 rounded-3xl border border-slate-100 bg-white shadow-md p-5 sm:p-6">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Rychlé vstupy</h3>
           <div className="flex flex-wrap gap-3">
             <Link
               href="/portal/contacts?newClient=1"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <Users size={18} /> Nový klient
             </Link>
             <Link
               href="/portal/calendar?new=1"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <CalendarClock size={18} /> Nová schůzka
             </Link>
             <Link
               href="/portal/tasks"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <CheckSquare size={18} /> Nový úkol
             </Link>
             <Link
               href="/portal/messages"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <MessageSquare size={18} /> Napsat zprávu
             </Link>
             <Link
               href="/portal/calculators"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <BarChart3 size={18} /> Kalkulačky
             </Link>
             <Link
               href="/portal/analyses/financial"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <Target size={18} /> Finanční analýza
             </Link>
             <Link
               href="/portal/calendar"
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
             >
               <Calendar size={18} /> Kalendář
             </Link>
@@ -561,7 +569,7 @@ export function DashboardEditable({
                     <Link
                       key={a.id}
                       href={a.href}
-                      className={`flex items-center gap-4 p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:shadow-md min-h-[72px] ${a.className}`}
+                      className={`flex items-center gap-4 p-4 rounded-3xl border border-slate-100 shadow-md transition-all hover:shadow-lg min-h-[72px] ${a.className}`}
                     >
                       <div className="bg-white/70 p-2.5 rounded-xl shadow-sm shrink-0">
                         <Icon size={20} />
@@ -586,7 +594,7 @@ export function DashboardEditable({
           return (
             <div className="mb-6">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Dnešní priority</h3>
-              <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+              <div className="rounded-3xl border border-slate-100 bg-white shadow-md overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                   {priorityTasks.length > 0 && (
                     <div className="p-4">
@@ -637,7 +645,7 @@ export function DashboardEditable({
           );
         })()}
 
-        {/* Widget grid – DashboardCard + drag-and-drop, sections A–D order preserved by visibleOrder */}
+        {/* Widget grid – premium cards, drag-and-drop */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
           {visibleOrder.map((id) => {
             const WidgetIconComponent = WIDGET_ICONS[id];
@@ -652,7 +660,7 @@ export function DashboardEditable({
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, id)}
-                className={`hover:shadow-md transition-shadow ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`}
+                className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`}
               >
                 <DashboardCard
                   title={WIDGET_LABELS[id]}

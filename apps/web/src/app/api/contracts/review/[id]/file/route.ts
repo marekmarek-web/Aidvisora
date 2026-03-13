@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { getContractReviewById } from "@/lib/ai/review-queue-repository";
@@ -7,23 +6,22 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-/** Short-lived signed URL to download original contract file. Tenant-isolated. */
+const USER_ID_HEADER = "x-user-id";
+
+/** Short-lived signed URL to download original contract file. Tenant-isolated. Auth only via x-user-id from middleware. */
 const SIGNED_URL_EXPIRES_SEC = 60;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = request.headers.get(USER_ID_HEADER);
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const membership = await getMembership(user.id);
+    const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

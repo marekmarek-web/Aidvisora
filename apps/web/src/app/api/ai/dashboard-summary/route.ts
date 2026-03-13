@@ -33,17 +33,23 @@ function buildFallbackSummary(
   return `Máte ${parts.join(", ")}. Doporučujeme nejdříve vyřešit ${overdueCount > 0 ? "zpožděné úkoly" : reviewCount > 0 ? "review smluv" : "dnešní agendu"}.`;
 }
 
-export async function GET() {
+const USER_ID_HEADER = "x-user-id";
+
+export async function GET(request: Request) {
   const start = Date.now();
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let userId: string | null = request.headers.get(USER_ID_HEADER);
+    if (!userId) {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
-    const membership = await getMembership(user.id);
+    const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

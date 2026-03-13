@@ -21,11 +21,14 @@ export interface ToastItem {
   duration?: number;
   actionLabel?: string;
   onAction?: () => void;
+  /** When set to "center", toast is rendered in the middle of the viewport (e.g. for undo). */
+  position?: "bottom-right" | "center";
 }
 
 export interface ShowToastOptions {
   actionLabel?: string;
   onAction?: () => void;
+  position?: "bottom-right" | "center";
 }
 
 interface ToastContextValue {
@@ -72,11 +75,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const id = nextId();
       const hasAction = options?.actionLabel != null && options?.onAction != null;
       const d = duration ?? (hasAction ? 6000 : variant === "loading" ? LOADING_DISMISS_MS : AUTO_DISMISS_MS);
+      const position = options?.position ?? (hasAction ? "center" : "bottom-right");
       const item: ToastItem = {
         id,
         message,
         variant,
         duration: d,
+        position,
         ...(hasAction && { actionLabel: options!.actionLabel, onAction: options!.onAction }),
       };
       setToasts((prev) => [...prev.slice(-4), item]);
@@ -93,14 +98,27 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => () => Object.values(timersRef.current).forEach(clearTimeout), []);
 
+  const centerToasts = toasts.filter((t) => t.position === "center");
+  const bottomRightToasts = toasts.filter((t) => t.position !== "center");
+
   return (
     <ToastContext.Provider value={{ showToast, toasts, dismissToast }}>
       {children}
       <Suspense fallback={null}>
         <ToastFromUrl showToast={showToast} />
       </Suspense>
+      {/* Centrované toasty (undo apod.) – nad AI floating button */}
+      {centerToasts.length > 0 && (
+        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4" aria-live="polite">
+          {centerToasts.map((t) => (
+            <div key={t.id} className="pointer-events-auto">
+              <ToastCard item={t} onDismiss={() => dismissToast(t.id)} />
+            </div>
+          ))}
+        </div>
+      )}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm" aria-live="polite">
-        {toasts.map((t) => (
+        {bottomRightToasts.map((t) => (
           <ToastCard key={t.id} item={t} onDismiss={() => dismissToast(t.id)} />
         ))}
       </div>

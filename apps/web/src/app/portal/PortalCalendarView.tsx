@@ -630,16 +630,30 @@ export function PortalCalendarView() {
     [events, handleDeleteEvent, loadEvents, toast],
   );
 
-  const handleFollowUp = useCallback(async (sourceId: string, type: "event" | "task") => {
-    const source = events.find((e) => e.id === sourceId);
-    const title = `Follow-up: ${source?.title ?? ""}`;
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(10, 0, 0, 0);
-    await createFollowUp(sourceId, type, { title, startAt: type === "event" ? tomorrow.toISOString() : undefined, dueDate: type === "task" ? formatDate(tomorrow) : undefined, contactId: source?.contactId || undefined });
-    setModal(null);
-    loadEvents();
-  }, [events, loadEvents]);
+  const handleFollowUp = useCallback(
+    async (sourceId: string, type: "event" | "task") => {
+      const source = events.find((e) => e.id === sourceId);
+      const title = `Follow-up: ${source?.title ?? ""}`;
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(10, 0, 0, 0);
+      try {
+        await createFollowUp(sourceId, type, {
+          title,
+          startAt: type === "event" ? tomorrow.toISOString() : undefined,
+          dueDate: type === "task" ? formatDate(tomorrow) : undefined,
+          contactId: source?.contactId || undefined,
+        });
+        setModal(null);
+        loadEvents();
+        if (type === "task") loadDayTasks(selectedDate);
+        toast.showToast("Návazný úkol byl vytvořen.", "success");
+      } catch (err) {
+        toast.showToast(err instanceof Error ? err.message : "Nepodařilo se vytvořit návazný úkol.", "error");
+      }
+    },
+    [events, loadEvents, loadDayTasks, selectedDate, toast]
+  );
 
   const handleMarkEventDone = useCallback(async (ev: EventRow) => {
     await updateEvent(ev.id, { status: "done" });
@@ -964,13 +978,17 @@ export function PortalCalendarView() {
         <NewTaskModal
           dueDate={newTaskModal.dueDate}
           onSave={async (title, dueDate) => {
-            const id = await createTask({ title, dueDate });
-            if (id != null) {
-              loadDayTasks(selectedDate);
-              setNewTaskModal(null);
-              toast.showToast("Úkol byl vytvořen.", "success");
-            } else {
-              toast.showToast("Úkol se nepodařilo vytvořit.", "error");
+            try {
+              const id = await createTask({ title, dueDate });
+              if (id != null) {
+                loadDayTasks(selectedDate);
+                setNewTaskModal(null);
+                toast.showToast("Úkol byl vytvořen.", "success");
+              } else {
+                toast.showToast("Úkol se nepodařilo vytvořit.", "error");
+              }
+            } catch (err) {
+              toast.showToast(err instanceof Error ? err.message : "Úkol se nepodařilo vytvořit.", "error");
             }
           }}
           onClose={() => setNewTaskModal(null)}

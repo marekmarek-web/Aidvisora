@@ -32,12 +32,71 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("register", "1");
     return NextResponse.redirect(url);
   }
+
+  const pathname = request.nextUrl.pathname;
+  const isContractsApi = pathname.startsWith("/api/contracts");
+  const isAiAssistantApi =
+    pathname.startsWith("/api/ai/assistant") || pathname === "/api/ai/dashboard-summary";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // /api/contracts/* a /api/ai/assistant/* (+ dashboard-summary): auth + dev bypass. Před skip auth.
+  if ((isContractsApi || isAiAssistantApi) && supabaseUrl && supabaseAnonKey) {
+    const method = request.method;
+    const response = NextResponse.next({ request });
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
+      },
+    });
+    const { data: { user } } = await supabase.auth.getUser();
+    const userFound = !!user;
+    const cookieCount = request.cookies.getAll().length;
+    const hasSupabaseAuthCookie = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+    // Diagnostický log: pathname, method, že contracts branch běžela, zda byl user, zda jsou cookies
+    // eslint-disable-next-line no-console
+    console.log("[middleware /api/contracts]", { pathname, method, contractsBranchRan: true, userFound, userIdMask: userFound ? `${user!.id.slice(0, 8)}…` : null, cookieCount, hasSupabaseAuthCookie });
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-debug-mw", "1");
+    requestHeaders.set("x-debug-path", pathname);
+    if (user) {
+      requestHeaders.set("x-user-id", user.id);
+    }
+
+    const isDebugAuth = pathname === "/api/contracts/debug-auth";
+    if (isDebugAuth) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+    if (!user) {
+      // --- DEV BYPASS: ODSTRANIT PŘED PRODUKCÍ ---
+      // NEXT_PUBLIC_ kvůli Edge runtime (middleware) – jinak env nemusí být dostupný
+      const isDev = process.env.NODE_ENV === "development";
+      const devUserId = process.env.NEXT_PUBLIC_DEV_CONTRACTS_USER_ID ?? process.env.DEV_CONTRACTS_USER_ID;
+      // eslint-disable-next-line no-console
+      console.log("[middleware /api/contracts bypass check]", { isDev, hasDevUserId: !!devUserId?.trim() });
+      if (isDev && devUserId?.trim()) {
+        requestHeaders.set("x-user-id", devUserId.trim());
+        return NextResponse.next({ request: { headers: requestHeaders } });
+      }
+      // --- KONEC DEV BYPASS ---
+      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   // Dočasně: povolit dashboard bez přihlášení (nastav SKIP_AUTH=true v .env.local)
   if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true") {
     return NextResponse.next();
   }
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.next();
   }
@@ -77,5 +136,16 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/client/:path*", "/board/:path*", "/portal/:path*", "/login", "/register"],
+  matcher: [
+    "/",
+    "/dashboard/:path*",
+    "/client/:path*",
+    "/board/:path*",
+    "/portal/:path*",
+    "/api/contracts/:path*",
+    "/api/ai/assistant/:path*",
+    "/api/ai/dashboard-summary",
+    "/login",
+    "/register",
+  ],
 };

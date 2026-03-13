@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createContractReview, updateContractReview } from "@/lib/ai/review-queue-repository";
@@ -13,6 +12,9 @@ export const dynamic = "force-dynamic";
 const ALLOWED_MIME = ["application/pdf"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
+/** Set by middleware; /api/contracts/* autorizujeme jen přes hlavičku (bez Supabase v route). */
+const USER_ID_HEADER = "x-user-id";
+
 function maskForLog(value: unknown): string {
   if (value == null) return "—";
   const s = String(value);
@@ -22,29 +24,20 @@ function maskForLog(value: unknown): string {
 
 export async function POST(request: Request) {
   const start = Date.now();
-  // #region agent log
-  fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
-    body: JSON.stringify({
-      sessionId: "6af004",
-      hypothesisId: "H3",
-      location: "api/contracts/upload/route.ts:POST:entry",
-      message: "upload POST entered",
-      data: {},
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+  const url = request.url;
+  const method = request.method;
+  const xDebugMw = request.headers.get("x-debug-mw");
+  const xDebugPath = request.headers.get("x-debug-path");
+  const userId = request.headers.get(USER_ID_HEADER);
+  // Diagnostický log: co route obdržela (bez citlivých dat)
+  // eslint-disable-next-line no-console
+  console.log("[route POST /api/contracts/upload]", { url, method, xDebugMw, xDebugPath, hasUserIdHeader: !!userId, userIdMask: userId ? `${userId.slice(0, 8)}…` : null });
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const membership = await getMembership(user.id);
+    const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -112,7 +105,7 @@ export async function POST(request: Request) {
       mimeType,
       sizeBytes: file.size,
       processingStatus: "uploaded",
-      uploadedBy: user.id,
+      uploadedBy: userId,
     });
 
     await updateContractReview(reviewId, tenantId, {
@@ -152,9 +145,13 @@ export async function POST(request: Request) {
     const extraction = await extractContractFromFile(fileUrl);
 
     if (!extraction.ok) {
+      const errDetail =
+        extraction.details != null
+          ? ` ${typeof extraction.details === "string" ? extraction.details : JSON.stringify(extraction.details).slice(0, 200)}`
+          : "";
       await updateContractReview(reviewId, tenantId, {
         processingStatus: "failed",
-        errorMessage: extraction.message,
+        errorMessage: extraction.message + errDetail,
       });
       logOpenAICall({
         endpoint: "contracts/upload_extraction",

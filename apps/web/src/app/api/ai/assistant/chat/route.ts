@@ -11,6 +11,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const USER_ID_HEADER = "x-user-id";
+
 function maskForLog(s: string, maxLen: number): string {
   const t = s.trim();
   if (t.length <= maxLen) return t;
@@ -20,14 +22,18 @@ function maskForLog(s: string, maxLen: number): string {
 export async function POST(request: Request) {
   const start = Date.now();
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let userId: string | null = request.headers.get(USER_ID_HEADER);
+    if (!userId) {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
-    const membership = await getMembership(user.id);
+    const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

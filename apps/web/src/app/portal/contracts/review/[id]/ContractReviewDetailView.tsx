@@ -17,6 +17,7 @@ type ReviewDetail = {
   id: string;
   fileName: string;
   processingStatus: string;
+  errorMessage?: string | null;
   reviewStatus?: string | null;
   appliedAt?: string | null;
   confidence?: number | null;
@@ -110,6 +111,19 @@ export function ContractReviewDetailView(props: Props) {
           {detail.appliedAt && ` · Aplikováno ${new Date(detail.appliedAt).toLocaleString("cs-CZ")}`}
         </p>
       </div>
+
+      {detail.processingStatus === "failed" && detail.errorMessage && (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-3 mb-4"
+          role="alert"
+        >
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">Extrakce ze smlouvy selhala</p>
+          <p className="text-sm mt-1 text-red-700 dark:text-red-300">{detail.errorMessage}</p>
+          <p className="text-xs mt-2 text-red-600 dark:text-red-400">
+            Možné příčiny: PDF je naskenované (obrázek) a model neumí text rozpoznat, dokument je poškozený, nebo došlo k chybě API. Zkuste jiný soubor nebo ověřte OPENAI_API_KEY.
+          </p>
+        </div>
+      )}
 
       {lowConfidence && (
         <div

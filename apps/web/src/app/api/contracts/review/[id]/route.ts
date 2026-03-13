@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { getContractReviewById } from "@/lib/ai/review-queue-repository";
 
 export const dynamic = "force-dynamic";
 
+const USER_ID_HEADER = "x-user-id";
+
 /**
  * GET /api/contracts/review/[id]
  * Returns contract review detail and payload for review queue UI.
- * Server-side only; no API key or raw document in response.
+ * Auth only via x-user-id from middleware (no Supabase in route).
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = request.headers.get(USER_ID_HEADER);
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const membership = await getMembership(user.id);
+    const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

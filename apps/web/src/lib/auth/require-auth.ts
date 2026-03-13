@@ -31,6 +31,21 @@ function getDemoAuthContext(): AuthContext {
 /** Use in Server Components and Server Actions. Gets session, then membership; redirects to /login if unauthenticated, throws if no tenant membership. */
 export async function requireAuth(): Promise<AuthContext> {
   if (isDemoMode()) {
+    const devUserId =
+      process.env.NEXT_PUBLIC_DEV_CONTRACTS_USER_ID ?? process.env.DEV_CONTRACTS_USER_ID;
+    if (process.env.NODE_ENV === "development" && devUserId?.trim()) {
+      const uid = devUserId.trim();
+      const m = await getMembership(uid);
+      if (m) {
+        return {
+          userId: uid,
+          tenantId: m.tenantId,
+          roleId: m.roleId,
+          roleName: m.roleName as RoleName,
+          contactId: m.contactId ?? null,
+        };
+      }
+    }
     return getDemoAuthContext();
   }
   const supabase = await createClient();
@@ -59,6 +74,21 @@ export async function requireAuth(): Promise<AuthContext> {
 /** For Server Actions: pass auth from form/action; in RSC use requireAuth() and pass tenantId to client. */
 export async function requireAuthInAction(): Promise<AuthContext> {
   if (isDemoMode()) {
+    const devUserId =
+      process.env.NEXT_PUBLIC_DEV_CONTRACTS_USER_ID ?? process.env.DEV_CONTRACTS_USER_ID;
+    if (process.env.NODE_ENV === "development" && devUserId?.trim()) {
+      const uid = devUserId.trim();
+      const m = await getMembership(uid);
+      if (m) {
+        return {
+          userId: uid,
+          tenantId: m.tenantId,
+          roleId: m.roleId,
+          roleName: m.roleName as RoleName,
+          contactId: m.contactId ?? null,
+        };
+      }
+    }
     return getDemoAuthContext();
   }
   const supabase = await createClient();

@@ -36,6 +36,20 @@ export type ContractExtractionResult = ContractExtractionSuccess | ContractExtra
  * Validates output against Zod schema. Returns controlled error object, no raw throw to UI.
  */
 export async function extractContractFromFile(fileUrl: string): Promise<ContractExtractionResult> {
+  // #region agent log
+  fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+    body: JSON.stringify({
+      sessionId: "6af004",
+      hypothesisId: "H1_H2",
+      location: "lib/ai/contract-extraction.ts:extractContractFromFile:entry",
+      message: "extractContractFromFile entered",
+      data: { fileUrlLen: fileUrl?.length ?? 0 },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   try {
     const raw = await createResponseWithFile(fileUrl, CONTRACT_EXTRACTION_PROMPT);
     const validated = validateContractExtraction(raw);
@@ -50,6 +64,20 @@ export async function extractContractFromFile(fileUrl: string): Promise<Contract
     return { ok: true, data: validated.data };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // #region agent log
+    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
+      body: JSON.stringify({
+        sessionId: "6af004",
+        hypothesisId: "H1_H2",
+        location: "lib/ai/contract-extraction.ts:extractContractFromFile:catch",
+        message: "extraction catch",
+        data: { message: message.slice(0, 200) },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return {
       ok: false,
       code: "OPENAI_ERROR",

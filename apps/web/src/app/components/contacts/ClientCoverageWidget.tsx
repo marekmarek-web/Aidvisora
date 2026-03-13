@@ -340,17 +340,19 @@ function CoverageActionsMenu({
   );
 }
 
-/** Jedna položka – spec: tlačítko s ikonou stavu (Hotovo/Řeší se/Nastavit), cyklus none->pending->active->none. */
+/** Jedna položka – spec: tlačítko s ikonou stavu (Hotovo/Řeší se/Nastavit), cyklus none->pending->active->none. Optimistic update: UI se změní hned, persistence na pozadí. */
 function CoverageItemRow({
   contactId,
   item,
   onStatusChange,
+  onOptimisticStatusChange,
   onRefresh,
   single,
 }: {
   contactId: string;
   item: ResolvedCoverageItem;
   onStatusChange: (silent?: boolean) => void;
+  onOptimisticStatusChange: (itemKey: string, status: CoverageStatus) => void;
   onRefresh: () => void;
   single?: boolean;
 }) {
@@ -361,20 +363,20 @@ function CoverageItemRow({
   const isNone = !isDone && !isPending;
 
   async function handleCycleStatus() {
-    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    const next = nextStatus(item.status);
+    const previousStatus = item.status;
+    onOptimisticStatusChange(item.itemKey, next);
     setUpdating(true);
     try {
-      await setCoverageStatus(contactId, item.itemKey, {
-        status: nextStatus(item.status),
-      });
+      await setCoverageStatus(contactId, item.itemKey, { status: next });
       onStatusChange(true);
       toast.showToast("Stav pokrytí uložen", "success");
     } catch (err) {
+      onOptimisticStatusChange(item.itemKey, previousStatus);
       const message = err instanceof Error ? err.message : "Změna stavu se nepovedla";
       toast.showToast(message, "error");
     } finally {
       setUpdating(false);
-      if (typeof window !== "undefined") window.scrollTo(0, scrollY);
     }
   }
 
@@ -437,12 +439,14 @@ function CoverageAreaCard({
   items,
   contactId,
   onRefresh,
+  onOptimisticStatusChange,
 }: {
   category: string;
   displayName: string;
   items: ResolvedCoverageItem[];
   contactId: string;
   onRefresh: () => void;
+  onOptimisticStatusChange: (itemKey: string, status: CoverageStatus) => void;
 }) {
   const spec = getCategorySpec(category);
   const Icon = spec.icon;
@@ -463,6 +467,7 @@ function CoverageAreaCard({
             contactId={contactId}
             item={item}
             onStatusChange={onRefresh}
+            onOptimisticStatusChange={onOptimisticStatusChange}
             onRefresh={onRefresh}
             single={single}
           />
@@ -472,7 +477,7 @@ function CoverageAreaCard({
   );
 }
 
-/** Hook: načte coverage a vrací refetch. */
+/** Hook: načte coverage, refetch a optimistic update. */
 export function useClientCoverage(contactId: string) {
   const [items, setItems] = useState<ResolvedCoverageItem[]>([]);
   const [summary, setSummary] = useState<CoverageSummary | null>(null);
@@ -493,6 +498,12 @@ export function useClientCoverage(contactId: string) {
     }
   }, [contactId]);
 
+  const applyOptimisticStatus = useCallback((itemKey: string, status: CoverageStatus) => {
+    setItems((prev) =>
+      prev.map((i) => (i.itemKey === itemKey ? { ...i, status } : i))
+    );
+  }, []);
+
   useEffect(() => {
     refetch();
   }, [refetch]);
@@ -503,12 +514,13 @@ export function useClientCoverage(contactId: string) {
     loading,
     error,
     refetch,
+    applyOptimisticStatus,
   };
 }
 
 /** Hlavní widget – použití na záložce Přehled (spec „pokryti produktu.txt“). */
 export function ClientCoverageWidget({ contactId }: { contactId: string }) {
-  const { items, summary, loading, error, refetch } = useClientCoverage(contactId);
+  const { items, summary, loading, error, refetch, applyOptimisticStatus } = useClientCoverage(contactId);
 
   const itemsForGrid = items.length > 0 ? items : getDefaultCoverageItems();
   const byCategory = itemsForGrid.reduce<Record<string, ResolvedCoverageItem[]>>((acc, item) => {
@@ -598,6 +610,7 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
               items={byCategory[category]}
               contactId={contactId}
               onRefresh={refetch}
+              onOptimisticStatusChange={applyOptimisticStatus}
             />
           ))}
         </div>

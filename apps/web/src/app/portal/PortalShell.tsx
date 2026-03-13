@@ -15,9 +15,9 @@ const MOBILE_BREAKPOINT = 768;
 
 const SIDEBAR_STORAGE_KEY = "portal-sidebar";
 const SIDEBAR_CONTENT_GAP_PX = 24;
-const SIDEBAR_WIDTH_MIN = 200;
-const SIDEBAR_WIDTH_MAX = 400;
-const SIDEBAR_WIDTH_DEFAULT = 260;
+const SIDEBAR_WIDTH_MIN = 240;
+const SIDEBAR_WIDTH_MAX = 320;
+const SIDEBAR_WIDTH_DEFAULT = 280;
 
 function getStoredSidebarState() {
   if (typeof window === "undefined") return { width: SIDEBAR_WIDTH_DEFAULT, collapsed: false };

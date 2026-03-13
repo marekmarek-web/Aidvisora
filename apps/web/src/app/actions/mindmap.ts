@@ -4,9 +4,30 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { mindmapMaps, mindmapNodes, mindmapEdges } from "db";
-import { eq, and, desc } from "db";
+import { eq, and, desc, or, sql, inArray } from "db";
 
 export type MindmapEntityType = "contact" | "household" | "standalone";
+
+/** List item for client/entity-linked maps (contact or household). */
+export type ClientMapItem = {
+  id: string;
+  entityType: "contact" | "household";
+  entityId: string;
+  entityName: string;
+  entityKind: "Klient" | "Domácnost" | "Klient (Podnikatel)";
+  nodeCount: number;
+  updatedAt: Date;
+  openRoute: string;
+};
+
+/** List item for standalone (free) maps. */
+export type FreeMapItem = {
+  id: string;
+  name: string;
+  nodeCount: number;
+  updatedAt: Date;
+  createdAt?: Date;
+};
 
 export type ViewportState = {
   pan: { x: number; y: number };
@@ -169,13 +190,110 @@ export async function getMindmapByMapId(mapId: string): Promise<MindmapState | n
   };
 }
 
-/** List standalone maps for the current tenant. */
-export async function listStandaloneMaps(): Promise<{ id: string; name: string; updatedAt: Date }[]> {
+/** List recently updated client/entity maps (contact + household) with node count and open route. */
+export async function listRecentClientMaps(): Promise<ClientMapItem[]> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+
+  const maps = await db
+    .select({
+      id: mindmapMaps.id,
+      entityType: mindmapMaps.entityType,
+      entityId: mindmapMaps.entityId,
+      updatedAt: mindmapMaps.updatedAt,
+    })
+    .from(mindmapMaps)
+    .where(
+      and(
+        eq(mindmapMaps.tenantId, auth.tenantId),
+        or(eq(mindmapMaps.entityType, "contact"), eq(mindmapMaps.entityType, "household"))
+      )
+    )
+    .orderBy(desc(mindmapMaps.updatedAt));
+
+  if (maps.length === 0) return [];
+
+  const mapIds = maps.map((m) => m.id);
+  const nodeCountRows = await db
+    .select({
+      mapId: mindmapNodes.mapId,
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(mindmapNodes)
+    .where(inArray(mindmapNodes.mapId, mapIds))
+    .groupBy(mindmapNodes.mapId);
+
+  const countByMapId = new Map<string, number>();
+  for (const row of nodeCountRows) {
+    countByMapId.set(row.mapId, Number(row.count));
+  }
+
+  const contactIds = [...new Set(maps.filter((m) => m.entityType === "contact").map((m) => m.entityId))];
+  const householdIds = [...new Set(maps.filter((m) => m.entityType === "household").map((m) => m.entityId))];
+
+  const { getContact } = await import("./contacts");
+  const { getHousehold } = await import("./households");
+
+  const contactNames = new Map<string, { name: string; isPodnikatel: boolean }>();
+  await Promise.all(
+    contactIds.map(async (id) => {
+      const c = await getContact(id);
+      const name = c ? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim() || "Kontakt" : "Kontakt";
+      const isPodnikatel = !!(c?.tags && Array.isArray(c.tags) && c.tags.includes("podnikatel"));
+      contactNames.set(id, { name, isPodnikatel });
+    })
+  );
+
+  const householdNames = new Map<string, string>();
+  await Promise.all(
+    householdIds.map(async (id) => {
+      const h = await getHousehold(id);
+      householdNames.set(id, h?.name ?? "Domácnost");
+    })
+  );
+
+  return maps.map((m) => {
+    const entityType = m.entityType as "contact" | "household";
+    const entityId = m.entityId;
+    let entityName = "";
+    let entityKind: ClientMapItem["entityKind"] = "Klient";
+    if (entityType === "contact") {
+      const info = contactNames.get(entityId);
+      entityName = info?.name ?? "Kontakt";
+      entityKind = info?.isPodnikatel ? "Klient (Podnikatel)" : "Klient";
+    } else {
+      entityName = householdNames.get(entityId) ?? "Domácnost";
+      entityKind = "Domácnost";
+    }
+    const openRoute =
+      entityType === "contact"
+        ? `/portal/mindmap?contactId=${encodeURIComponent(entityId)}`
+        : `/portal/mindmap?householdId=${encodeURIComponent(entityId)}`;
+    return {
+      id: m.id,
+      entityType,
+      entityId,
+      entityName,
+      entityKind,
+      nodeCount: countByMapId.get(m.id) ?? 0,
+      updatedAt: m.updatedAt,
+      openRoute,
+    };
+  });
+}
+
+/** List standalone maps for the current tenant, with node count. */
+export async function listStandaloneMaps(): Promise<FreeMapItem[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
 
   const rows = await db
-    .select({ id: mindmapMaps.id, name: mindmapMaps.name, updatedAt: mindmapMaps.updatedAt })
+    .select({
+      id: mindmapMaps.id,
+      name: mindmapMaps.name,
+      updatedAt: mindmapMaps.updatedAt,
+      createdAt: mindmapMaps.createdAt,
+    })
     .from(mindmapMaps)
     .where(
       and(
@@ -185,10 +303,29 @@ export async function listStandaloneMaps(): Promise<{ id: string; name: string; 
     )
     .orderBy(desc(mindmapMaps.updatedAt));
 
+  if (rows.length === 0) return [];
+
+  const rowIds = rows.map((r) => r.id);
+  const nodeCountRows = await db
+    .select({
+      mapId: mindmapNodes.mapId,
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(mindmapNodes)
+    .where(inArray(mindmapNodes.mapId, rowIds))
+    .groupBy(mindmapNodes.mapId);
+
+  const countByMapId = new Map<string, number>();
+  for (const row of nodeCountRows) {
+    countByMapId.set(row.mapId, Number(row.count));
+  }
+
   return rows.map((r) => ({
     id: r.id,
     name: r.name ?? "Bez názvu",
+    nodeCount: countByMapId.get(r.id) ?? 0,
     updatedAt: r.updatedAt,
+    createdAt: r.createdAt,
   }));
 }
 
@@ -208,6 +345,113 @@ export async function createStandaloneMap(name: string): Promise<{ mapId: string
     .returning({ id: mindmapMaps.id });
 
   if (!inserted) throw new Error("Failed to create mindmap");
+  return { mapId: inserted.id };
+}
+
+/** Rename a standalone map. */
+export async function renameStandaloneMap(mapId: string, name: string): Promise<{ ok: boolean }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  const [map] = await db
+    .select({ id: mindmapMaps.id })
+    .from(mindmapMaps)
+    .where(
+      and(
+        eq(mindmapMaps.id, mapId),
+        eq(mindmapMaps.tenantId, auth.tenantId),
+        eq(mindmapMaps.entityType, "standalone")
+      )
+    )
+    .limit(1);
+  if (!map) throw new Error("Map not found");
+
+  await db
+    .update(mindmapMaps)
+    .set({ name: name.trim() || "Bez názvu", updatedAt: new Date() })
+    .where(eq(mindmapMaps.id, mapId));
+  return { ok: true };
+}
+
+/** Delete a standalone map (and its nodes/edges via cascade). */
+export async function deleteStandaloneMap(mapId: string): Promise<{ ok: boolean }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  const [map] = await db
+    .select({ id: mindmapMaps.id })
+    .from(mindmapMaps)
+    .where(
+      and(
+        eq(mindmapMaps.id, mapId),
+        eq(mindmapMaps.tenantId, auth.tenantId),
+        eq(mindmapMaps.entityType, "standalone")
+      )
+    )
+    .limit(1);
+  if (!map) throw new Error("Map not found");
+
+  await db.delete(mindmapMaps).where(eq(mindmapMaps.id, mapId));
+  return { ok: true };
+}
+
+/** Duplicate a standalone map (new id, copy nodes and edges). Returns the new map id. */
+export async function duplicateStandaloneMap(mapId: string): Promise<{ mapId: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  const state = await getMindmapByMapId(mapId);
+  const tenantId = auth.tenantId;
+  if (!state) throw new Error("Map not found");
+
+  const newName = (state.entityName || "Bez názvu") + " (kopie)";
+  const [inserted] = await db
+    .insert(mindmapMaps)
+    .values({
+      tenantId,
+      entityType: "standalone",
+      entityId: crypto.randomUUID(),
+      name: newName,
+      viewport: state.viewport as unknown as Record<string, unknown>,
+    })
+    .returning({ id: mindmapMaps.id });
+  if (!inserted) throw new Error("Failed to duplicate map");
+
+  const oldToNewNodeId = new Map<string, string>();
+  for (const n of state.nodes) {
+    const newId = crypto.randomUUID();
+    oldToNewNodeId.set(n.id, newId);
+  }
+
+  for (const n of state.nodes) {
+    const newId = oldToNewNodeId.get(n.id)!;
+    await db.insert(mindmapNodes).values({
+      id: newId,
+      mapId: inserted.id,
+      type: n.type,
+      title: n.title,
+      subtitle: n.subtitle,
+      x: n.x,
+      y: n.y,
+      entityType: n.entityType,
+      entityId: n.entityId,
+      metadata: n.metadata as Record<string, unknown> | null,
+    });
+  }
+
+  for (const e of state.edges) {
+    const newSource = oldToNewNodeId.get(e.sourceId);
+    const newTarget = oldToNewNodeId.get(e.targetId);
+    if (newSource && newTarget) {
+      await db.insert(mindmapEdges).values({
+        mapId: inserted.id,
+        sourceNodeId: newSource,
+        targetNodeId: newTarget,
+        dashed: e.dashed,
+      });
+    }
+  }
+
   return { mapId: inserted.id };
 }
 

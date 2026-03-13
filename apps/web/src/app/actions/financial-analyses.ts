@@ -25,6 +25,8 @@ export type FinancialAnalysisRow = {
   lastRefreshedFromSharedAt: Date | null;
 };
 
+const FINANCIAL_WIZARD_TOTAL_STEPS = 8;
+
 export type FinancialAnalysisListItem = {
   id: string;
   status: string;
@@ -37,6 +39,10 @@ export type FinancialAnalysisListItem = {
   /** Phase 7: link to company and last refresh from shared facts */
   linkedCompanyId?: string | null;
   lastRefreshedFromSharedAt?: Date | null;
+  /** 0–100, derived from payload.currentStep for list display */
+  progress?: number;
+  /** Label for analysis type/focus (e.g. "Komplexní finanční analýza") */
+  analysisTypeLabel?: string | null;
 };
 
 export async function getFinancialAnalysis(id: string): Promise<FinancialAnalysisRow | null> {
@@ -62,13 +68,26 @@ export async function listFinancialAnalyses(): Promise<FinancialAnalysisListItem
       contactId: financialAnalyses.contactId,
       householdId: financialAnalyses.householdId,
       payload: financialAnalyses.payload,
+      linkedCompanyId: financialAnalyses.linkedCompanyId,
+      lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
     })
     .from(financialAnalyses)
     .where(eq(financialAnalyses.tenantId, auth.tenantId))
     .orderBy(desc(financialAnalyses.updatedAt));
   return rows.map((r) => {
-    const payload = r.payload as { data?: { client?: { name?: string } } } | null;
+    const payload = r.payload as {
+      data?: { client?: { name?: string }; [k: string]: unknown };
+      currentStep?: number;
+    } | null;
     const clientName = payload?.data?.client?.name ?? null;
+    const currentStep = payload?.currentStep ?? 0;
+    const progress =
+      r.status === "draft" || r.status === "archived"
+        ? Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100))
+        : r.status === "completed" || r.status === "exported"
+          ? 100
+          : Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100));
+    const analysisTypeLabel = "Komplexní finanční analýza";
     return {
       id: r.id,
       status: r.status,
@@ -78,6 +97,10 @@ export async function listFinancialAnalyses(): Promise<FinancialAnalysisListItem
       contactId: r.contactId,
       householdId: r.householdId,
       clientName: clientName ?? null,
+      linkedCompanyId: r.linkedCompanyId ?? null,
+      lastRefreshedFromSharedAt: r.lastRefreshedFromSharedAt ?? null,
+      progress,
+      analysisTypeLabel,
     } as FinancialAnalysisListItem;
   });
 }
