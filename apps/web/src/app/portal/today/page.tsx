@@ -18,6 +18,21 @@ function DashboardLoader() {
   );
 }
 
+const FALLBACK_KPIS = {
+  meetingsToday: 0,
+  tasksOpen: 0,
+  opportunitiesOpen: 0,
+  totalContacts: 0,
+  todayEvents: [],
+  overdueTasks: [],
+  upcomingAnniversaries: [],
+  serviceDueContacts: [],
+  pipelineAtRisk: [],
+  recentActivity: [],
+  tasksDueToday: [],
+  opportunitiesInStep3And4: [],
+} as Awaited<ReturnType<typeof getDashboardKpis>>;
+
 async function DashboardContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -25,7 +40,10 @@ async function DashboardContent() {
 
   let productionError: string | null = null;
   const [kpis, notes, analyses, production] = await Promise.all([
-    getDashboardKpis(),
+    getDashboardKpis().catch((e) => {
+      console.error("[DashboardContent] getDashboardKpis", e);
+      return FALLBACK_KPIS;
+    }),
     getMeetingNotesForBoard().catch(() => []),
     listFinancialAnalyses().catch(() => []),
     getProductionSummary("month").catch((e) => {

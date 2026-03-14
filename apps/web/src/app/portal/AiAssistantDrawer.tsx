@@ -12,10 +12,19 @@ import {
   AlertCircle,
   MessageCircle,
   Zap,
+  UserPlus,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
 import { useAiAssistantDrawer } from "./AiAssistantDrawerContext";
 import type { SuggestedAction } from "@/lib/ai/dashboard-types";
+import {
+  getCsvPreview,
+  getSpreadsheetPreview,
+  importContactsCsv,
+  importContactsFromSpreadsheet,
+  type CsvPreview,
+  type ColumnMapping,
+} from "@/app/actions/csv-import";
 
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
 type ClientCandidate = { clientId: string; displayName?: string };
@@ -83,9 +92,17 @@ export function AiAssistantDrawer() {
   const [uploadPhase, setUploadPhase] = useState<UploadPhase>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contactsImportFileRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadZoneRef = useRef<HTMLDivElement>(null);
+
+  const [importContactsStep, setImportContactsStep] = useState<"idle" | "mapping" | "preview" | "done">("idle");
+  const [importContactsFile, setImportContactsFile] = useState<File | null>(null);
+  const [importContactsPreview, setImportContactsPreview] = useState<CsvPreview | null>(null);
+  const [importContactsMapping, setImportContactsMapping] = useState<ColumnMapping>({ firstName: 0, lastName: 1, email: 2, phone: 3 });
+  const [importContactsResult, setImportContactsResult] = useState<{ imported: number; skipped: number; errors: { row: number; message: string }[] } | null>(null);
+  const [importContactsLoading, setImportContactsLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -278,6 +295,76 @@ export function AiAssistantDrawer() {
     if (file) handleFile(file);
   };
 
+  const handleImportContactsClick = () => {
+    setImportContactsResult(null);
+    contactsImportFileRef.current?.click();
+  };
+
+  const isExcelFile = (f: File) =>
+    f.name.toLowerCase().endsWith(".xlsx") ||
+    f.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+  const handleImportContactsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportContactsFile(file);
+    setImportContactsPreview(null);
+    setImportContactsResult(null);
+    setImportContactsStep("mapping");
+    setImportContactsLoading(true);
+    const fd = new FormData();
+    fd.set("file", file);
+    try {
+      const preview = isExcelFile(file)
+        ? await getSpreadsheetPreview(fd)
+        : await getCsvPreview(fd);
+      if (preview) {
+        setImportContactsPreview(preview);
+      } else {
+        toast.showToast("Nepodařilo se načíst náhled souboru.", "error");
+        setImportContactsStep("idle");
+        setImportContactsFile(null);
+      }
+    } catch {
+      toast.showToast("Načtení souboru selhalo.", "error");
+      setImportContactsStep("idle");
+      setImportContactsFile(null);
+    } finally {
+      setImportContactsLoading(false);
+    }
+  };
+
+  const handleImportContactsConfirm = async () => {
+    if (!importContactsFile || !importContactsPreview) return;
+    setImportContactsLoading(true);
+    setImportContactsResult(null);
+    const fd = new FormData();
+    fd.set("file", importContactsFile);
+    try {
+      const result = isExcelFile(importContactsFile)
+        ? await importContactsFromSpreadsheet(fd, importContactsMapping)
+        : await importContactsCsv(fd, importContactsMapping, importContactsPreview.hasHeader);
+      setImportContactsResult(result);
+      setImportContactsStep("done");
+      if (result.imported > 0) {
+        router.refresh();
+        toast.showToast(`Importováno ${result.imported} klientů.`);
+      }
+    } catch {
+      toast.showToast("Import selhal.", "error");
+    } finally {
+      setImportContactsLoading(false);
+    }
+  };
+
+  const handleImportContactsReset = () => {
+    setImportContactsFile(null);
+    setImportContactsPreview(null);
+    setImportContactsResult(null);
+    setImportContactsStep("idle");
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
@@ -355,6 +442,15 @@ export function AiAssistantDrawer() {
             <Zap size={18} className="text-indigo-500" />
             Co je dnes urgentní
           </button>
+          <button
+            type="button"
+            onClick={handleImportContactsClick}
+            disabled={importContactsLoading}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-slate-100 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            <UserPlus size={18} className="text-indigo-500" />
+            Import klientů
+          </button>
         </div>
         <input
           ref={fileInputRef}
@@ -362,6 +458,13 @@ export function AiAssistantDrawer() {
           accept="application/pdf"
           className="hidden"
           onChange={handleUploadInput}
+        />
+        <input
+          ref={contactsImportFileRef}
+          type="file"
+          accept=".csv,.txt,.xlsx"
+          className="hidden"
+          onChange={handleImportContactsFileChange}
         />
 
         {/* Upload block - reference dropzone */}
@@ -419,6 +522,123 @@ export function AiAssistantDrawer() {
             </div>
           )}
         </div>
+
+        {/* Import klientů block */}
+        {importContactsStep !== "idle" && (
+          <div className="shrink-0 px-4 pb-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-800 mb-3">Import klientů</h3>
+              {importContactsLoading && importContactsStep === "mapping" && (
+                <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Načítám náhled…
+                </div>
+              )}
+              {importContactsStep === "mapping" && importContactsPreview && !importContactsLoading && (
+                <>
+                  <p className="text-xs text-slate-500 mb-2">Soubor: {importContactsFile?.name}</p>
+                  <p className="text-xs text-slate-500 mb-2">Namapujte sloupce:</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {(["firstName", "lastName", "email", "phone"] as const).map((field) => (
+                      <div key={field} className="flex flex-col gap-0.5">
+                        <label className="text-xs font-medium text-slate-600">
+                          {field === "firstName" ? "Jméno" : field === "lastName" ? "Příjmení" : field === "email" ? "E-mail" : "Telefon"}
+                        </label>
+                        <select
+                          value={importContactsMapping[field]}
+                          onChange={(e) => setImportContactsMapping((m) => ({ ...m, [field]: Number(e.target.value) }))}
+                          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
+                        >
+                          {importContactsPreview.headers.map((h, i) => (
+                            <option key={i} value={i}>{i}: {h || "(prázdný)"}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleImportContactsReset}
+                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                    >
+                      Zrušit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportContactsStep("preview")}
+                      className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
+                    >
+                      Další: Náhled
+                    </button>
+                  </div>
+                </>
+              )}
+              {importContactsStep === "preview" && importContactsPreview && (
+                <>
+                  <p className="text-xs text-slate-500 mb-2">Náhled (max 10 řádků):</p>
+                  <div className="overflow-x-auto max-h-32 overflow-y-auto border border-slate-100 rounded-lg mb-3 text-xs">
+                    <table className="border-collapse w-full">
+                      <tbody>
+                        {importContactsPreview.rows.slice(0, 10).map((row, ri) => (
+                          <tr key={ri}>
+                            {row.map((cell, ci) => (
+                              <td key={ci} className="border border-slate-100 px-2 py-0.5">{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setImportContactsStep("mapping")}
+                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                    >
+                      Zpět
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportContactsConfirm}
+                      disabled={importContactsLoading}
+                      className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {importContactsLoading ? "Importuji…" : `Přidat ${importContactsPreview.totalRows ?? importContactsPreview.rows.length} klientů`}
+                    </button>
+                  </div>
+                </>
+              )}
+              {importContactsStep === "done" && importContactsResult && (
+                <>
+                  <div className="text-sm mb-3">
+                    <p className="text-green-700 font-medium">Importováno: {importContactsResult.imported}</p>
+                    {importContactsResult.skipped > 0 && <p className="text-amber-700">Přeskočeno (duplicity): {importContactsResult.skipped}</p>}
+                    {importContactsResult.errors.length > 0 && (
+                      <p className="text-amber-700">Chyby: {importContactsResult.errors.length} řádků</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleImportContactsReset}
+                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                    >
+                      Importovat znovu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); router.push("/portal/contacts"); }}
+                      className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
+                    >
+                      Přejít na Klienti
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Chat history */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

@@ -27,7 +27,7 @@ import {
   MoreVertical,
   AlertCircle,
   Target,
-  LayoutList,
+  Settings,
 } from "lucide-react";
 
 type Filter = "all" | "today" | "week" | "overdue" | "completed";
@@ -413,14 +413,13 @@ export default function TasksPage() {
               >
                 <Plus size={18} /> Vytvořit úkol
               </button>
-              <button
-                type="button"
-                disabled
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-400 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide w-fit min-h-[44px] cursor-not-allowed"
-                title="Připravujeme"
+              <Link
+                href="/portal/setup?tab=osobni#quick-actions"
+                className="group hidden sm:flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-semibold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-all min-h-[44px] min-w-[44px] justify-center"
+                title="Nastavení rychlých akcí"
               >
-                <LayoutList size={16} /> Šablony úkolů
-              </button>
+                <Settings size={18} className="transition-transform group-hover:rotate-90 duration-300" />
+              </Link>
             </div>
           </div>
 
@@ -444,15 +443,21 @@ export default function TasksPage() {
                 </p>
               )}
               <div className="flex flex-col md:flex-row md:items-center gap-3 w-full min-w-0">
-                <div className="flex-1 flex items-center gap-3 w-full min-w-0 md:px-2">
-                  <Plus size={20} className="text-indigo-500 shrink-0 hidden md:block" />
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="Co potřebujete udělat? (např. Zavolat panu Novákovi)"
-                    className="w-full min-w-0 py-3 px-3 md:py-2.5 md:px-0 bg-slate-50 md:bg-transparent border border-slate-200 md:border-none rounded-xl md:rounded-none text-slate-800 font-medium placeholder:text-slate-400 outline-none text-base md:text-sm min-h-[44px]"
-                  />
+                <div className="flex-1 flex flex-col gap-1 w-full min-w-0 md:px-2">
+                  <label htmlFor="new-task-title" className="text-xs font-bold uppercase tracking-wider text-slate-500 md:sr-only">
+                    Co je třeba udělat?
+                  </label>
+                  <div className="flex items-center gap-3 w-full min-w-0">
+                    <Plus size={20} className="text-indigo-500 shrink-0 hidden md:block" />
+                    <input
+                      id="new-task-title"
+                      type="text"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      placeholder="Co potřebujete udělat? (např. Zavolat panu Novákovi)"
+                      className="w-full min-w-0 py-3 px-3 md:py-2.5 md:px-0 bg-slate-50 md:bg-transparent border border-slate-200 md:border-none rounded-xl md:rounded-none text-slate-800 font-medium placeholder:text-slate-400 outline-none text-base md:text-sm min-h-[44px]"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 w-full min-w-0">
                   <div className="w-full min-w-0">

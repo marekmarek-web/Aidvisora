@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCsvPreview, importContactsCsv } from "@/app/actions/csv-import";
+import {
+  getCsvPreview,
+  getSpreadsheetPreview,
+  importContactsCsv,
+  importContactsFromSpreadsheet,
+} from "@/app/actions/csv-import";
 import type { CsvPreview, ColumnMapping } from "@/app/actions/csv-import";
 
 const WIZARD_STEPS = ["upload", "mapping", "preview", "done"] as const;
@@ -19,6 +24,10 @@ export function CsvImportForm() {
 
   const stepIndex = WIZARD_STEPS.indexOf(step);
 
+  const isExcelFile = (f: File) =>
+    f.name.toLowerCase().endsWith(".xlsx") ||
+    f.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -28,7 +37,9 @@ export function CsvImportForm() {
     const fd = new FormData();
     fd.set("file", f);
     try {
-      const p = await getCsvPreview(fd);
+      const p = isExcelFile(f)
+        ? await getSpreadsheetPreview(fd)
+        : await getCsvPreview(fd);
       setPreview(p);
       setStep(p ? "mapping" : "upload");
     } finally {
@@ -43,7 +54,9 @@ export function CsvImportForm() {
     const fd = new FormData();
     fd.set("file", file);
     try {
-      const r = await importContactsCsv(fd, mapping, preview.hasHeader);
+      const r = isExcelFile(file)
+        ? await importContactsFromSpreadsheet(fd, mapping)
+        : await importContactsCsv(fd, mapping, preview.hasHeader);
       setResult(r);
       setStep("done");
       if (r.imported > 0) router.refresh();
@@ -56,7 +69,7 @@ export function CsvImportForm() {
 
   return (
     <div className="rounded-xl border border-monday-border bg-white p-4 shadow-sm">
-      <h3 className="font-semibold text-slate-800 mb-2">Import z CSV / Excel (export do CSV)</h3>
+      <h3 className="font-semibold text-slate-800 mb-2">Import z CSV nebo Excel</h3>
       <div className="flex gap-2 mb-4 text-sm">
         {WIZARD_STEPS.slice(0, -1).map((s, i) => (
           <span
@@ -69,8 +82,8 @@ export function CsvImportForm() {
       </div>
       {step === "upload" && (
         <div>
-          <p className="text-sm text-slate-500 mb-3">Nahrajte soubor CSV. První řádek může být hlavička. Následně namapujete sloupce na pole.</p>
-          <input type="file" accept=".csv,.txt" className="text-sm" onChange={onFileChange} disabled={loading} />
+          <p className="text-sm text-slate-500 mb-3">Nahrajte soubor CSV nebo Excel (.xlsx). První řádek se bere jako hlavička. Následně namapujete sloupce na pole.</p>
+          <input type="file" accept=".csv,.txt,.xlsx" className="text-sm" onChange={onFileChange} disabled={loading} />
         </div>
       )}
       {step === "mapping" && preview && (

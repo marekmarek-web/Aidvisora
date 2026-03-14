@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
 import { seedDemoData } from "@/app/actions/seed-demo";
-import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar } from "@/app/actions/preferences";
+import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar, getAdvisorReportFields, updateAdvisorReportBranding } from "@/app/actions/preferences";
 import { listTenantMembers } from "@/app/actions/team";
 import {
   QUICK_ACTIONS_CATALOG,
@@ -186,10 +186,17 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [advisorAvatarUrl, setAdvisorAvatarUrl] = useState<string | null>(null);
   const [advisorAvatarUploading, setAdvisorAvatarUploading] = useState(false);
   const [advisorAvatarError, setAdvisorAvatarError] = useState<string | null>(null);
+  const [reportPhone, setReportPhone] = useState("");
+  const [reportWebsite, setReportWebsite] = useState("");
+  const [reportSaving, setReportSaving] = useState(false);
 
   useEffect(() => {
     if (activeTab === "profil") {
       getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
+      getAdvisorReportFields().then((f) => {
+        setReportPhone(f.phone ?? "");
+        setReportWebsite(f.website ?? "");
+      });
     }
   }, [activeTab]);
 
@@ -608,7 +615,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 </div>
                 <h3 className="font-bold text-lg mb-2">Dvoufázové ověření</h3>
                 <p className="text-sm font-medium text-slate-300 leading-relaxed mb-5">Zvyšte bezpečnost svého účtu pomocí aplikace Authenticator.</p>
-                <button type="button" onClick={() => toast.showToast("Funkce 2FA připravujeme.")} className="w-full bg-white text-slate-900 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full bg-white text-slate-900 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
                   Aktivovat 2FA
                 </button>
               </div>
@@ -702,9 +709,54 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       </div>
                     </div>
                   ))}
-                  <a href="https://www.cnb.cz/cs/dohledove-sluzby/registr-oznameni/" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
-                    Ověřit z registru
+                  <a href="https://www.cnb.cz/cs/dohled/" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
+                    Dohled ČNB
                   </a>
+                </div>
+              </div>
+              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden mt-6">
+                <div className="px-6 py-5 border-b border-slate-50">
+                  <h3 className="font-black text-slate-900">PDF report z finanční analýzy</h3>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Pro záhlaví a zápatí</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-xs text-slate-600 mb-3">Do záhlaví a zápatí PDF se použijí: jméno a příjmení z vašeho profilu, e-mail z přihlášení a níže vyplněné pole.</p>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-400">Jméno, příjmení</span>
+                      <span className="font-medium text-slate-700">{[firstName, lastName].filter(Boolean).join(" ") || "—"}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-400">E-mail</span>
+                      <span className="font-medium text-slate-700">{initial.email || "—"}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Telefon (do zápatí)</label>
+                    <input type="tel" value={reportPhone} onChange={(e) => setReportPhone(e.target.value)} className={inputClass} placeholder="+420 …" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Web (do zápatí)</label>
+                    <input type="url" value={reportWebsite} onChange={(e) => setReportWebsite(e.target.value)} className={inputClass} placeholder="https://…" />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={reportSaving}
+                    onClick={async () => {
+                      setReportSaving(true);
+                      try {
+                        await updateAdvisorReportBranding({ phone: reportPhone.trim() || null, website: reportWebsite.trim() || null });
+                        toast.showToast("Údaje pro PDF uloženy.");
+                      } catch {
+                        toast.showToast("Uložení se nezdařilo.", "error");
+                      } finally {
+                        setReportSaving(false);
+                      }
+                    }}
+                    className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]"
+                  >
+                    {reportSaving ? "Ukládám…" : "Uložit údaje pro PDF"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -719,7 +771,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <h2 className="text-xl font-black text-slate-900 mb-1">Správa Týmu</h2>
                 <p className="text-sm font-medium text-slate-500">Spolupracujte na klientech se svými asistenty nebo kolegy.</p>
               </div>
-              <button type="button" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
+              <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
                 <Users size={16} /> Pozvat člena
               </button>
             </div>
@@ -793,7 +845,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> AI Asistent</div>
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> Týmová spolupráce</div>
                 </div>
-                <button type="button" className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors min-h-[44px]">Změnit tarif</button>
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors min-h-[44px]">Změnit tarif</button>
               </div>
               <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6">
                 <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={18} className="text-slate-400" /> Platební metoda</h3>
@@ -853,7 +905,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <h4 className="font-bold text-slate-800 text-sm mb-1">Povolit upozornění v prohlížeči</h4>
                   <p className="text-xs font-medium text-slate-500">Pro okamžitá upozornění na obrazovce.</p>
                 </div>
-                <button type="button" className="px-4 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm min-h-[44px]">Požádat o oprávnění</button>
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm min-h-[44px]">Požádat o oprávnění</button>
               </div>
             </div>
           </div>

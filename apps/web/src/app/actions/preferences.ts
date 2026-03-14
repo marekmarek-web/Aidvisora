@@ -208,6 +208,29 @@ export async function getAdvisorReportBranding(): Promise<AdvisorReportBranding>
   }
 }
 
+/** Vrátí pole pro záhlaví/zápatí PDF reportu (telefon, web). */
+export async function getAdvisorReportFields(): Promise<{ phone: string | null; website: string | null }> {
+  try {
+    const auth = await requireAuthInAction();
+    const row = await db
+      .select({ phone: advisorPreferences.phone, website: advisorPreferences.website })
+      .from(advisorPreferences)
+      .where(
+        and(
+          eq(advisorPreferences.tenantId, auth.tenantId),
+          eq(advisorPreferences.userId, auth.userId)
+        )
+      )
+      .limit(1);
+    return {
+      phone: row[0]?.phone?.trim() || null,
+      website: row[0]?.website?.trim() || null,
+    };
+  } catch {
+    return { phone: null, website: null };
+  }
+}
+
 /** Aktualizuje telefon a web v advisor_preferences pro report. */
 export async function updateAdvisorReportBranding(update: {
   phone?: string | null;

@@ -98,16 +98,16 @@ export function QuickNewMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 ${
+        className={`group flex items-center justify-center gap-2 min-h-[44px] min-w-[44px] px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 ${
           open
-            ? "bg-blue-50 border border-blue-200 text-blue-700 shadow-inner"
-            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+            ? "bg-[#2a2d4a] text-white shadow-lg scale-[0.98]"
+            : "bg-[#1a1c2e] text-white hover:bg-[#2a2d4a] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
         }`}
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Nový – rychlé akce"
       >
-        <Plus size={16} strokeWidth={2.5} className={open ? "rotate-45" : ""} />
+        <Plus size={18} strokeWidth={2.5} className={`shrink-0 transition-transform duration-200 ${open ? "rotate-45" : "group-hover:scale-110"}`} />
         <span className="hidden sm:block">Nový</span>
       </button>
       {open && (

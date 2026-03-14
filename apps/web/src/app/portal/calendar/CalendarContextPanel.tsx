@@ -242,10 +242,10 @@ export function CalendarContextPanel({
         <div className="bg-gradient-to-b from-amber-50 to-orange-50/30 p-4 rounded-2xl border border-amber-100 shadow-sm mt-2">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">AI Připomínka</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">Jak na to</span>
           </div>
           <p className="text-xs font-medium text-amber-900/80 leading-relaxed mb-3">
-            Klikněte na událost v mřížce pro zobrazení detailu a rychlé úpravy.
+            Klikněte na libovolnou událost v mřížce vlevo – zde se zobrazí detail a můžete ji upravit, označit jako hotovou nebo vytvořit návazný úkol.
           </p>
         </div>
 

@@ -72,7 +72,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     id: "sec-databaze",
     section: "Klientská databáze",
     items: [
-      { href: "/portal/contacts", label: "Kontakty", Icon: Users, hoverAnim: "group-hover:scale-110" },
+      { href: "/portal/contacts", label: "Klienti", Icon: Users, hoverAnim: "group-hover:scale-110" },
       { href: "/portal/households", label: "Domácnosti", Icon: Building2, hoverAnim: "group-hover:-translate-y-1" },
     ],
   },

@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Download, Phone, Mail, CheckSquare, ArrowRight, MessageSquare } from "lucide-react";
+import { Plus, Download, Upload, Phone, Mail, CheckSquare, ArrowRight, MessageSquare } from "lucide-react";
 import { NewClientWizard } from "@/app/components/weplan/NewClientWizard";
 import { useToast } from "@/app/components/Toast";
 import {
@@ -207,6 +207,13 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
           subtitle="Centrální adresář klientů a leadů."
           actions={
             <>
+              <a
+                href="#import"
+                className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-white border border-slate-200 text-slate-700 rounded-[var(--wp-radius-sm)] text-xs font-bold uppercase tracking-wide shadow-sm hover:shadow-md hover:bg-slate-50 transition-all min-h-[44px] md:min-h-0"
+              >
+                <Upload size={16} />
+                <span className="hidden sm:inline">Import</span>
+              </a>
               <button
                 type="button"
                 onClick={handleExportCsv}

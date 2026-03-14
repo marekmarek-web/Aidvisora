@@ -22,6 +22,7 @@ export const WIDGET_IDS = [
   "production",
   "clientCare",
   "financialAnalyses",
+  "notes",
 ] as const;
 
 export type WidgetId = (typeof WIDGET_IDS)[number];
@@ -35,6 +36,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   production: "Produkce",
   clientCare: "Péče o klienty",
   financialAnalyses: "Finanční analýzy",
+  notes: "Zápisky",
 };
 
 export const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
@@ -46,6 +48,7 @@ export const WIDGET_ICONS: Record<WidgetId, LucideIcon> = {
   production: TrendingUp,
   clientCare: Wrench,
   financialAnalyses: FileText,
+  notes: FileText,
 };
 
 /** Section for content hierarchy: A = Dnes a teď, B = Obchod a výkon, C = Servis a klienti, D = Přehled a akce */
@@ -60,6 +63,7 @@ export const WIDGET_SECTION: Record<WidgetId, DashboardSection> = {
   production: "B",
   clientCare: "C",
   financialAnalyses: "D",
+  notes: "D",
 };
 
 export const WIDGET_HREF: Partial<Record<WidgetId, string>> = {
@@ -71,4 +75,5 @@ export const WIDGET_HREF: Partial<Record<WidgetId, string>> = {
   production: "/portal/production",
   clientCare: "/portal/contacts",
   financialAnalyses: "/portal/analyses",
+  notes: "/portal/notes",
 };

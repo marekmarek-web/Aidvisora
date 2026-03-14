@@ -246,33 +246,42 @@ export async function createFollowUp(
   type: "event" | "task",
   form: { title: string; startAt?: string; dueDate?: string; contactId?: string }
 ): Promise<string | null> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-  if (type === "event") {
+    if (type === "event") {
+      const startAt = form.startAt ? new Date(form.startAt) : new Date();
+      const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+      const [row] = await db
+        .insert(events)
+        .values({
+          tenantId: auth.tenantId,
+          title: form.title.trim(),
+          eventType: "followup",
+          startAt,
+          endAt,
+          contactId: form.contactId || null,
+          assignedTo: auth.userId,
+        })
+        .returning({ id: events.id });
+      return row?.id ?? null;
+    }
+
     const [row] = await db
-      .insert(events)
+      .insert(tasks)
       .values({
         tenantId: auth.tenantId,
         title: form.title.trim(),
-        startAt: form.startAt ? new Date(form.startAt) : new Date(),
+        dueDate: form.dueDate || null,
         contactId: form.contactId || null,
         assignedTo: auth.userId,
+        createdBy: auth.userId,
       })
-      .returning({ id: events.id });
+      .returning({ id: tasks.id });
     return row?.id ?? null;
+  } catch (e) {
+    console.error("[createFollowUp]", e);
+    return null;
   }
-
-  const [row] = await db
-    .insert(tasks)
-    .values({
-      tenantId: auth.tenantId,
-      title: form.title.trim(),
-      dueDate: form.dueDate || null,
-      contactId: form.contactId || null,
-      assignedTo: auth.userId,
-      createdBy: auth.userId,
-    })
-    .returning({ id: tasks.id });
-  return row?.id ?? null;
 }

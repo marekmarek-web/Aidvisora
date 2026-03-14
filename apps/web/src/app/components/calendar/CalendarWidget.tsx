@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Calendar as CalendarIcon, Plus, Users, Phone, CheckCircle2, Mail } from "lucide-react";
 import { listEvents, type EventRow } from "@/app/actions/events";
+import { loadCalendarSettings } from "@/app/portal/calendar/calendar-settings";
+import { getEventCategory } from "@/app/portal/calendar/event-categories";
+
+function hexToRgba(hex: string, alpha: number): string {
+  const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
+}
 
 function getRelativeTime(date: Date): string {
   const now = new Date();
@@ -43,6 +51,12 @@ function EventIcon({ eventType }: { eventType: string | null }) {
 export function CalendarWidget({ onNewActivity }: { onNewActivity?: () => void }) {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [eventTypeColors, setEventTypeColors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const settings = loadCalendarSettings();
+    setEventTypeColors(settings.eventTypeColors ?? {});
+  }, []);
 
   const load = useCallback(() => {
     const now = new Date();
@@ -67,12 +81,8 @@ export function CalendarWidget({ onNewActivity }: { onNewActivity?: () => void }
 
   return (
     <div className="space-y-8">
-      {/* Hlavička sidebaru – sidecalendar.txt */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-slate-900">Vítejte zpět!</h2>
-          <p className="text-sm font-bold text-slate-500">Váš přehled dne</p>
-        </div>
+      {/* Odkaz na kalendář */}
+      <div className="flex justify-end">
         <Link
           href="/portal/calendar"
           className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-slate-100 transition-colors border border-slate-200"
@@ -108,14 +118,20 @@ export function CalendarWidget({ onNewActivity }: { onNewActivity?: () => void }
           ) : (
             events.map((ev) => {
               const start = new Date(ev.startAt);
+              const typeId = ev.eventType ?? "schuzka";
+              const color = eventTypeColors[typeId] ?? getEventCategory(typeId).color;
+              const bgRgba = hexToRgba(color, 0.2);
               return (
                 <Link
                   key={ev.id}
                   href="/portal/calendar"
                   className="relative flex items-center justify-between pl-0 group"
                 >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 text-slate-500 shadow-sm z-10 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
-                    <EventIcon eventType={ev.eventType ?? "schuzka"} />
+                  <div
+                    className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-sm z-10 transition-colors shrink-0"
+                    style={{ backgroundColor: bgRgba, color, borderColor: color }}
+                  >
+                    <EventIcon eventType={typeId} />
                   </div>
                   <div className="w-[calc(100%-3rem)] ml-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
                     <div className="flex items-center justify-between mb-1">

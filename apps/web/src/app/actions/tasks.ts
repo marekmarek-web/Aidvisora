@@ -200,27 +200,32 @@ export async function createTask(data: {
   dueDate?: string;
   analysisId?: string;
 }): Promise<string | null> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-  const [row] = await db
-    .insert(tasks)
-    .values({
-      tenantId: auth.tenantId,
-      title: data.title.trim(),
-      description: data.description?.trim() || null,
-      contactId: data.contactId || null,
-      dueDate: data.dueDate || null,
-      analysisId: data.analysisId || null,
-      assignedTo: auth.userId,
-      createdBy: auth.userId,
-    })
-    .returning({ id: tasks.id });
-  const newId = row?.id ?? null;
-  if (newId) {
-    try { await logActivity("task", newId, "create", { title: data.title, contactId: data.contactId }); } catch {}
+    const [row] = await db
+      .insert(tasks)
+      .values({
+        tenantId: auth.tenantId,
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        contactId: data.contactId || null,
+        dueDate: data.dueDate || null,
+        analysisId: data.analysisId || null,
+        assignedTo: auth.userId,
+        createdBy: auth.userId,
+      })
+      .returning({ id: tasks.id });
+    const newId = row?.id ?? null;
+    if (newId) {
+      try { await logActivity("task", newId, "create", { title: data.title, contactId: data.contactId }); } catch {}
+    }
+    return newId;
+  } catch (e) {
+    console.error("[createTask]", e);
+    return null;
   }
-  return newId;
 }
 
 export async function updateTask(
