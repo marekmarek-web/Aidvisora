@@ -4,7 +4,7 @@ import { getCalculators } from "@/lib/calculators/core/registry";
 import type { CalculatorIconId } from "@/lib/calculators/core/types";
 import { ListPageShell, ListPageEmpty } from "@/app/components/list-page";
 
-const ICON_MAP: Record<CalculatorIconId, React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }>> = {
+const ICON_MAP: Record<CalculatorIconId, React.ComponentType<{ className?: string; size?: number | string; strokeWidth?: number }>> = {
   "trending-up": TrendingUp,
   calculator: Calculator,
   "piggy-bank": PiggyBank,
