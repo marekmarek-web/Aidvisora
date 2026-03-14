@@ -23,79 +23,29 @@ import {
 } from "lucide-react";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import { setFinancialAnalysisStatus } from "@/app/actions/financial-analyses";
+import { formatUpdated, TABS, matchesTab, isCompleted, type TabId } from "./analyses-page-utils";
 
-function formatUpdated(updatedAt: Date): string {
-  const d = new Date(updatedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  if (diffDays === 0) return `Dnes, ${d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diffDays === 1) return `Včera, ${d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diffDays < 7) return `Před ${diffDays} dny`;
-  return d.toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" });
-}
-
-type TabId = "all" | "draft" | "review" | "completed";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "all", label: "Všechny" },
-  { id: "draft", label: "Koncepty" },
-  { id: "review", label: "Ke schválení" },
-  { id: "completed", label: "Hotové" },
-];
-
-function getStatusDesign(status: string): {
-  label: string;
-  color: string;
-  icon: ReactNode;
-} {
-  switch (status) {
-    case "completed":
-    case "exported":
-      return {
-        label: "Hotovo",
-        color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-        icon: <CheckCircle2 size={12} />,
-      };
-    case "review":
-      return {
-        label: "Ke schválení",
-        color: "bg-amber-100 text-amber-700 border-amber-200",
-        icon: <Clock size={12} />,
-      };
-    case "draft":
-    case "archived":
-      return {
-        label: "Koncept",
-        color: "bg-slate-100 text-slate-600 border-slate-200",
-        icon: <FileEdit size={12} />,
-      };
-    default:
-      return {
-        label: status,
-        color: "bg-slate-100 text-slate-600 border-slate-200",
-        icon: <FileText size={12} />,
-      };
-}
-
-function matchesTab(a: FinancialAnalysisListItem, tab: TabId): boolean {
-  if (tab === "all") return true;
-  if (tab === "draft") return a.status === "draft" || a.status === "archived";
-  if (tab === "review") return a.status === "review";
-  if (tab === "completed") return a.status === "completed" || a.status === "exported";
-  return true;
-}
-
-function isCompleted(status: string): boolean {
-  return status === "completed" || status === "exported";
-}
-
-export function AnalysesPageClient({ analyses }: { analyses: FinancialAnalysisListItem[] }) {
+export default function AnalysesPageClient({ analyses }: { analyses: FinancialAnalysisListItem[] }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  function getStatusDesign(status: string): { label: string; color: string; icon: ReactNode } {
+    switch (status) {
+      case "completed":
+      case "exported":
+        return { label: "Hotovo", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: <CheckCircle2 size={12} /> };
+      case "review":
+        return { label: "Ke schválení", color: "bg-amber-100 text-amber-700 border-amber-200", icon: <Clock size={12} /> };
+      case "draft":
+      case "archived":
+        return { label: "Koncept", color: "bg-slate-100 text-slate-600 border-slate-200", icon: <FileEdit size={12} /> };
+      default:
+        return { label: status, color: "bg-slate-100 text-slate-600 border-slate-200", icon: <FileText size={12} /> };
+    }
+  }
 
   const filteredList = useMemo(() => {
     let list = analyses;
