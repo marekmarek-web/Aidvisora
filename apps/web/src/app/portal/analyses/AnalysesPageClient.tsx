@@ -90,7 +90,7 @@ function isCompleted(status: string): boolean {
   return status === "completed" || status === "exported";
 }
 
-function AnalysesPageClient({ analyses }: { analyses: FinancialAnalysisListItem[] }) {
+export function AnalysesPageClient({ analyses }: { analyses: FinancialAnalysisListItem[] }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("all");
@@ -386,5 +386,3 @@ function AnalysesPageClient({ analyses }: { analyses: FinancialAnalysisListItem[
     </div>
   );
 }
-
-export { AnalysesPageClient };
