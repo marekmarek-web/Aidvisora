@@ -22,6 +22,8 @@ type ClientMatchCandidate = {
   displayName?: string;
 };
 
+type ValidationWarningItem = { code?: string; message: string; field?: string };
+
 type ReviewDetail = {
   id: string;
   fileName: string;
@@ -46,6 +48,13 @@ type ReviewDetail = {
     createdContractId?: string;
     createdTaskId?: string;
   };
+  detectedDocumentType?: string | null;
+  inputMode?: string | null;
+  extractionMode?: string | null;
+  extractionTrace?: { failedStep?: string; warnings?: string[] } | null;
+  validationWarnings?: ValidationWarningItem[] | null;
+  fieldConfidenceMap?: Record<string, number> | null;
+  classificationReasons?: string[] | null;
 };
 
 export default function ContractReviewDetailPage() {

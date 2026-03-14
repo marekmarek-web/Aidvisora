@@ -13,6 +13,23 @@ export type ApplyResultPayload = {
   createdEmailDraftId?: string;
 };
 
+/** Extraction trace stored in DB (no document content). */
+export type ExtractionTrace = {
+  inputMode?: string;
+  documentType?: string;
+  classificationConfidence?: number;
+  extractionMode?: string;
+  warnings?: string[];
+  failedStep?: string;
+};
+
+/** Validation warning item. */
+export type ValidationWarning = {
+  code?: string;
+  message: string;
+  field?: string;
+};
+
 export type ContractReviewRow = {
   id: string;
   tenantId: string;
@@ -38,6 +55,19 @@ export type ContractReviewRow = {
   createNewClientConfirmed: string | null;
   applyResultPayload: ApplyResultPayload | null;
   reviewDecisionReason: string | null;
+  inputMode: string | null;
+  extractionMode: string | null;
+  detectedDocumentType: string | null;
+  extractionTrace: ExtractionTrace | null;
+  validationWarnings: ValidationWarning[] | null;
+  fieldConfidenceMap: Record<string, number> | null;
+  classificationReasons: string[] | null;
+  originalExtractedPayload: unknown;
+  correctedPayload: unknown;
+  correctedFields: string[] | null;
+  correctionReason: string | null;
+  correctedBy: string | null;
+  correctedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -137,6 +167,19 @@ export async function updateContractReview(
     createNewClientConfirmed?: string | null;
     applyResultPayload?: ApplyResultPayload | null;
     reviewDecisionReason?: string | null;
+    inputMode?: string | null;
+    extractionMode?: string | null;
+    detectedDocumentType?: string | null;
+    extractionTrace?: ExtractionTrace | null;
+    validationWarnings?: ValidationWarning[] | null;
+    fieldConfidenceMap?: Record<string, number> | null;
+    classificationReasons?: string[] | null;
+    originalExtractedPayload?: unknown;
+    correctedPayload?: unknown;
+    correctedFields?: string[] | null;
+    correctionReason?: string | null;
+    correctedBy?: string | null;
+    correctedAt?: Date | null;
   }
 ): Promise<void> {
   const createNewClientConfirmed =
@@ -154,4 +197,30 @@ export async function updateContractReview(
         eq(contractUploadReviews.tenantId, tenantId)
       )
     );
+}
+
+/**
+ * Save a human correction for eval / feedback loop.
+ * Stores original extracted payload, corrected payload, and metadata.
+ */
+export async function saveContractCorrection(
+  id: string,
+  tenantId: string,
+  params: {
+    correctedPayload: unknown;
+    correctedFields: string[];
+    correctionReason?: string | null;
+    correctedBy?: string | null;
+  }
+): Promise<void> {
+  const row = await getContractReviewById(id, tenantId);
+  if (!row) throw new Error("Contract review not found");
+  await updateContractReview(id, tenantId, {
+    originalExtractedPayload: row.extractedPayload,
+    correctedPayload: params.correctedPayload,
+    correctedFields: params.correctedFields,
+    correctionReason: params.correctionReason ?? null,
+    correctedBy: params.correctedBy ?? null,
+    correctedAt: new Date(),
+  });
 }

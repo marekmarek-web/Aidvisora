@@ -38,7 +38,11 @@ export function ListPageHeader({
         </h1>
         {subtitle && <p className="text-xs md:text-sm text-slate-500 mt-0.5 md:mt-1">{subtitle}</p>}
       </div>
-      {actions != null && <div className="flex items-center gap-2 md:gap-3 shrink-0">{actions}</div>}
+      {actions != null && (
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0 [&_button]:min-h-[44px] md:[&_button]:min-h-0 [&_a]:min-h-[44px] md:[&_a]:min-h-0">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

@@ -202,7 +202,7 @@ export function PortalSidebar({
   const dragOverRef = useRef<{ groupIdx: number; itemIdx: number } | null>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
+    const mq = window.matchMedia("(max-width: 767px)"); /* mobile: below md (768px) */
     const update = () => setIsMobileState(mq.matches);
     update();
     mq.addEventListener("change", update);
@@ -321,8 +321,7 @@ export function PortalSidebar({
 
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/40"
-          style={{ zIndex: "var(--z-drawer-overlay, 100)" }}
+          className="md:hidden fixed inset-0 z-drawer-overlay bg-black/40"
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
@@ -333,7 +332,7 @@ export function PortalSidebar({
           "fixed left-0 top-0 bottom-0 flex flex-col shrink-0 bg-white border-r border-slate-100 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]",
           "transition-[width,transform] duration-300 ease-in-out",
           "md:z-20 md:translate-x-0",
-          mobileOpen ? "translate-x-0 z-[101]" : "-translate-x-full z-[101]",
+          mobileOpen ? "translate-x-0 z-drawer-panel" : "-translate-x-full z-drawer-panel",
         ].join(" ")}
         style={{
           width: isMobileState ? "min(85vw, 280px)" : `${effectiveWidth}px`,

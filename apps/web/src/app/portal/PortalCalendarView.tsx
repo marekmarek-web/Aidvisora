@@ -187,7 +187,7 @@ function EventDetailPopup({
   })();
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 bg-slate-50/50">
           <h2 className="text-lg font-black text-slate-900 leading-tight truncate flex-1">{event.title}</h2>

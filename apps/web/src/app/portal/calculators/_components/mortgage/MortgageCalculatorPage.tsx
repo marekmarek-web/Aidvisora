@@ -99,7 +99,7 @@ export function MortgageCalculatorPage() {
       </CalculatorPageShell>
 
       {/* Mobile: floating result card at bottom (touch-friendly) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-3 pb-[env(safe-area-inset-bottom)] pointer-events-none">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-fixed-cta p-3 pb-[env(safe-area-inset-bottom)] pointer-events-none">
         <div className="max-w-[420px] mx-auto pointer-events-auto shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
           <MortgageResultsPanel result={result} />
         </div>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createContractReview, updateContractReview } from "@/lib/ai/review-queue-repository";
-import { extractContractFromFile } from "@/lib/ai/contract-extraction";
+import { runContractUnderstandingPipeline } from "@/lib/ai/contract-understanding-pipeline";
 import { findClientCandidates, buildAllDraftActions } from "@/lib/ai/draft-actions";
 import { isMatchingAmbiguous } from "@/lib/ai/client-matching";
 import { logOpenAICall } from "@/lib/openai";
@@ -135,30 +135,31 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         sessionId: "6af004",
         hypothesisId: "H1_H2_H5",
-        location: "api/contracts/upload/route.ts:before_extraction",
-        message: "before extractContractFromFile",
+        location: "api/contracts/upload/route.ts:before_pipeline",
+        message: "before runContractUnderstandingPipeline",
         data: { reviewId },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
     // #endregion
-    const extraction = await extractContractFromFile(fileUrl);
+    const pipelineResult = await runContractUnderstandingPipeline(fileUrl, mimeType);
 
-    if (!extraction.ok) {
+    if (!pipelineResult.ok) {
       const errDetail =
-        extraction.details != null
-          ? ` ${typeof extraction.details === "string" ? extraction.details : JSON.stringify(extraction.details).slice(0, 200)}`
+        pipelineResult.details != null
+          ? ` ${typeof pipelineResult.details === "string" ? pipelineResult.details : JSON.stringify(pipelineResult.details).slice(0, 200)}`
           : "";
       await updateContractReview(reviewId, tenantId, {
         processingStatus: "failed",
-        errorMessage: extraction.message + errDetail,
+        errorMessage: pipelineResult.errorMessage + errDetail,
+        extractionTrace: pipelineResult.extractionTrace ?? undefined,
       });
       logOpenAICall({
-        endpoint: "contracts/upload_extraction",
+        endpoint: "contracts/upload_pipeline",
         model: "—",
         latencyMs: Date.now() - start,
         success: false,
-        error: maskForLog(extraction.message),
+        error: maskForLog(pipelineResult.errorMessage),
       });
       return NextResponse.json(
         { error: "Extrakce ze smlouvy selhala.", id: reviewId },
@@ -166,31 +167,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = extraction.data;
-    const confidence = data.confidence ?? 0.5;
-    const needsHumanReview = data.needsHumanReview ?? confidence < 0.7;
-    const reasonsForReview: string[] = [];
-    if (data.needsHumanReview) reasonsForReview.push("model_flagged");
-    if (confidence < 0.7) reasonsForReview.push("low_confidence");
-    if (data.missingFields?.length) reasonsForReview.push("missing_fields");
-
+    const data = pipelineResult.extractedPayload;
     const draftActions = buildAllDraftActions(data);
     const clientMatchCandidates = await findClientCandidates(data, { tenantId });
+    const reasonsForReview = [...pipelineResult.reasonsForReview];
     if (isMatchingAmbiguous(clientMatchCandidates)) {
       reasonsForReview.push("ambiguous_client_match");
     }
 
     await updateContractReview(reviewId, tenantId, {
-      processingStatus: needsHumanReview ? "review_required" : "extracted",
+      processingStatus: pipelineResult.processingStatus,
       extractedPayload: data,
       draftActions,
       clientMatchCandidates,
-      confidence,
+      confidence: pipelineResult.confidence,
       reasonsForReview: reasonsForReview.length ? reasonsForReview : null,
+      inputMode: pipelineResult.inputMode,
+      extractionMode: pipelineResult.extractionMode,
+      detectedDocumentType: pipelineResult.detectedDocumentType,
+      extractionTrace: pipelineResult.extractionTrace,
+      validationWarnings: pipelineResult.validationWarnings.length ? pipelineResult.validationWarnings : null,
+      fieldConfidenceMap: pipelineResult.fieldConfidenceMap ?? undefined,
+      classificationReasons: pipelineResult.classificationReasons.length ? pipelineResult.classificationReasons : null,
     });
 
     logOpenAICall({
-      endpoint: "contracts/upload_extraction",
+      endpoint: "contracts/upload_pipeline",
       model: "—",
       latencyMs: Date.now() - start,
       success: true,
@@ -198,9 +200,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       id: reviewId,
-      processingStatus: needsHumanReview ? "review_required" : "extracted",
-      confidence,
-      needsHumanReview,
+      processingStatus: pipelineResult.processingStatus,
+      confidence: pipelineResult.confidence,
+      needsHumanReview: pipelineResult.processingStatus === "review_required",
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed.";

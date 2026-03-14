@@ -83,13 +83,35 @@
   --wp-fw-semibold: 600;
   --wp-fw-bold: 700;
 
-  /* ── Z-index (drawer above sticky/fixed content, AI widget below drawer) ── */
-  --z-drawer-overlay: 100;
-  --z-drawer-panel: 101;
+  /* ── Breakpoint (mobile = below this; align with Tailwind md) ── */
+  --wp-mobile: 768px;
+
+  /* ── Z-index layers (single source of truth) ── */
+  --z-base: 0;
+  --z-sticky: 10;
   --z-sticky-header: 50;
   --z-fixed-cta: 45;
-  --z-ai-widget: 40;
+  --z-dropdown: 100;
+  --z-overlay: 150;
+  --z-drawer-overlay: 200;
+  --z-drawer-panel: 201;
+  --z-modal: 250;
+  --z-toast: 300;
+  --z-floating-ai: 350;
 
+  /* ── Motion: respect prefer-reduced-motion (use in JS or utility classes) ── */
+  --wp-duration-drawer: 300ms;
+  --wp-duration-modal: 200ms;
+}
+
+@media (prefer-reduced-motion: reduce) {
+  :root {
+    --wp-duration-drawer: 0ms;
+    --wp-duration-modal: 0ms;
+  }
+}
+
+:root {
   /* ── Zpětná kompatibilita: monday-* → wp-* ── */
   --monday-bg: var(--wp-bg);
   --monday-surface: var(--wp-surface);

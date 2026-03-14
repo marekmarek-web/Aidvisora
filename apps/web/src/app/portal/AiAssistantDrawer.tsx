@@ -328,7 +328,7 @@ export function AiAssistantDrawer() {
         </div>
 
         {/* Quick actions */}
-        <div className="shrink-0 px-4 py-3 flex gap-2 overflow-x-auto">
+        <div className="shrink-0 px-4 py-3 flex flex-col gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -365,7 +365,7 @@ export function AiAssistantDrawer() {
         />
 
         {/* Upload block - reference dropzone */}
-        <div className="shrink-0 px-4 pb-3">
+        <div className="shrink-0 px-4 pt-4 pb-3">
           <div
             ref={uploadZoneRef}
             onDrop={handleDrop}

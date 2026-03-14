@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { FileText, ChevronLeft, UserPlus, Check, X, Send, AlertTriangle } from "lucide-react";
+import { FileText, ChevronLeft, UserPlus, Check, X, Send, AlertTriangle, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { StickyBottomCTA, STICKY_BOTTOM_CTA_PADDING_CLASS } from "@/app/components/StickyBottomCTA";
 
 type ClientMatchCandidate = {
   clientId: string;
@@ -12,6 +13,8 @@ type ClientMatchCandidate = {
   matchedFields: Record<string, boolean>;
   displayName?: string;
 };
+
+type ValidationWarningItem = { code?: string; message: string; field?: string };
 
 type ReviewDetail = {
   id: string;
@@ -33,7 +36,117 @@ type ReviewDetail = {
     createdTaskId?: string;
   };
   extractedPayload?: Record<string, unknown>;
+  detectedDocumentType?: string | null;
+  inputMode?: string | null;
+  extractionMode?: string | null;
+  extractionTrace?: { failedStep?: string; warnings?: string[] } | null;
+  validationWarnings?: ValidationWarningItem[] | null;
+  fieldConfidenceMap?: Record<string, number> | null;
+  classificationReasons?: string[] | null;
 };
+
+const SECTION_LABELS: Record<string, string> = {
+  contract: "Smlouva",
+  client: "Klient",
+  institution: "Instituce",
+  product: "Produkt",
+  paymentDetails: "Platby",
+  dates: "Datum",
+};
+
+function PipelineDiagnosticsSection({ detail }: { detail: ReviewDetail }) {
+  const [open, setOpen] = useState(false);
+  const hasContent =
+    detail.detectedDocumentType ||
+    detail.inputMode ||
+    detail.extractionMode ||
+    (detail.validationWarnings && detail.validationWarnings.length > 0) ||
+    (detail.fieldConfidenceMap && Object.keys(detail.fieldConfidenceMap ?? {}).length > 0) ||
+    (detail.classificationReasons && detail.classificationReasons.length > 0);
+  if (!hasContent) return null;
+  return (
+    <section
+      className="rounded-xl border mb-4 overflow-hidden"
+      style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between gap-2 p-4 text-left"
+        style={{ color: "var(--wp-text)" }}
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--wp-text-muted)" }}>
+          <Info size={16} /> Diagnostika extrakce
+        </span>
+        {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: "var(--wp-border)" }}>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-3">
+            {detail.detectedDocumentType && (
+              <>
+                <dt style={{ color: "var(--wp-text-muted)" }}>Typ dokumentu</dt>
+                <dd style={{ color: "var(--wp-text)" }}>{detail.detectedDocumentType}</dd>
+              </>
+            )}
+            {detail.inputMode && (
+              <>
+                <dt style={{ color: "var(--wp-text-muted)" }}>Režim vstupu</dt>
+                <dd style={{ color: "var(--wp-text)" }}>{detail.inputMode}</dd>
+              </>
+            )}
+            {detail.extractionMode && (
+              <>
+                <dt style={{ color: "var(--wp-text-muted)" }}>Režim extrakce</dt>
+                <dd style={{ color: "var(--wp-text)" }}>{detail.extractionMode}</dd>
+              </>
+            )}
+          </dl>
+          {detail.fieldConfidenceMap && Object.keys(detail.fieldConfidenceMap).length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: "var(--wp-text-muted)" }}>Jistota po sekcích</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(detail.fieldConfidenceMap).map(([key, val]) => (
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs"
+                    style={{
+                      background: (val as number) >= 0.7 ? "var(--wp-bg)" : "var(--wp-bg)",
+                      borderColor: "var(--wp-border)",
+                      color: (val as number) >= 0.7 ? "var(--wp-text)" : "var(--wp-text-muted)",
+                    }}
+                  >
+                    {SECTION_LABELS[key] ?? key}: {Math.round((val as number) * 100)} %
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {detail.validationWarnings && detail.validationWarnings.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: "var(--wp-text-muted)" }}>Validační upozornění</p>
+              <ul className="list-disc list-inside text-sm" style={{ color: "var(--wp-text)" }}>
+                {detail.validationWarnings.map((w, i) => (
+                  <li key={i}>{w.field ? `[${w.field}] ` : ""}{w.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {detail.classificationReasons && detail.classificationReasons.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: "var(--wp-text-muted)" }}>Důvody klasifikace</p>
+              <ul className="list-disc list-inside text-sm" style={{ color: "var(--wp-text)" }}>
+                {detail.classificationReasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
 type Props = {
   detail: ReviewDetail;
@@ -90,8 +203,9 @@ export function ContractReviewDetailView(props: Props) {
     onApply,
   } = props;
 
+  const showStickyActions = !props.isApplied && (props.canApproveReject || props.canApply);
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6 max-w-4xl mx-auto">
+    <div className={`flex flex-col flex-1 min-h-0 p-4 md:p-6 max-w-4xl mx-auto ${showStickyActions ? STICKY_BOTTOM_CTA_PADDING_CLASS : ""}`}>
       <div className="mb-6 flex items-center gap-4">
         <Link
           href="/portal/contracts/review"
@@ -164,6 +278,17 @@ export function ContractReviewDetailView(props: Props) {
           <FileText size={14} /> Otevřít originální PDF
         </button>
       </section>
+
+      {(
+        detail.detectedDocumentType ||
+        detail.inputMode ||
+        detail.extractionMode ||
+        (detail.validationWarnings && detail.validationWarnings.length > 0) ||
+        (detail.fieldConfidenceMap && Object.keys(detail.fieldConfidenceMap).length > 0) ||
+        (detail.classificationReasons && detail.classificationReasons.length > 0)
+      ) && (
+        <PipelineDiagnosticsSection detail={detail} />
+      )}
 
       {extracted && (
         <section className="rounded-xl border p-4 mb-4" style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}>
@@ -341,8 +466,45 @@ export function ContractReviewDetailView(props: Props) {
         </section>
       )}
 
+      {!isApplied && (canApproveReject || canApply) && (
+        <StickyBottomCTA showBelow="md">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {canApproveReject && (
+              <>
+                <button
+                  type="button"
+                  onClick={onApprove}
+                  disabled={!!actionLoading}
+                  className="min-h-[44px] px-4 py-2 rounded-lg font-medium flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Check size={18} /> Schválit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={!!actionLoading}
+                  className="min-h-[44px] px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <X size={18} /> Zamítnout
+                </button>
+              </>
+            )}
+            {canApply && (
+              <button
+                type="button"
+                onClick={() => setShowApplyConfirm(true)}
+                disabled={!!actionLoading}
+                className="min-h-[44px] px-4 py-2 rounded-lg font-medium flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <Send size={18} /> Aplikovat do CRM
+              </button>
+            )}
+          </div>
+        </StickyBottomCTA>
+      )}
+
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRejectModal(false)}>
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRejectModal(false)}>
           <div
             className="rounded-xl border p-6 max-w-md w-full shadow-lg"
             style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}
@@ -383,7 +545,7 @@ export function ContractReviewDetailView(props: Props) {
       )}
 
       {showApplyConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowApplyConfirm(false)}>
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50" onClick={() => setShowApplyConfirm(false)}>
           <div
             className="rounded-xl border p-6 max-w-md w-full shadow-lg"
             style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}

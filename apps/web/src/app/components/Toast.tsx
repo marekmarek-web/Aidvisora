@@ -109,7 +109,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       </Suspense>
       {/* Centrované toasty (undo apod.) – nad AI floating button */}
       {centerToasts.length > 0 && (
-        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4" aria-live="polite">
+        <div className="fixed inset-0 z-toast pointer-events-none flex items-center justify-center p-4" aria-live="polite">
           {centerToasts.map((t) => (
             <div key={t.id} className="pointer-events-auto">
               <ToastCard item={t} onDismiss={() => dismissToast(t.id)} />
@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           ))}
         </div>
       )}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm" aria-live="polite">
+      <div className="fixed left-4 right-4 bottom-20 md:bottom-4 md:left-auto md:right-4 z-toast flex flex-col gap-2 max-w-sm" aria-live="polite">
         {bottomRightToasts.map((t) => (
           <ToastCard key={t.id} item={t} onDismiss={() => dismissToast(t.id)} />
         ))}
@@ -166,7 +166,7 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
         <button
           type="button"
           onClick={onDismiss}
-          className={`shrink-0 p-0.5 rounded transition-colors ${closeBtnClass}`}
+          className={`shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded transition-colors ${closeBtnClass}`}
           aria-label="Zavřít"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

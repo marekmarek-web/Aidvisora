@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { MD_BREAKPOINT_PX } from "@/app/lib/breakpoints";
+
+export type BaseModalMobileVariant = "modal" | "sheet" | "fullScreen";
 
 export interface BaseModalProps {
   open: boolean;
@@ -11,6 +14,11 @@ export interface BaseModalProps {
   panelClassName?: string;
   /** Max width of panel. Default max-w-lg. */
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  /**
+   * On viewports below md (768px): "modal" = same centered box; "sheet" = bottom sheet; "fullScreen" = full-screen panel.
+   * Default "fullScreen" for better mobile UX.
+   */
+  mobileVariant?: BaseModalMobileVariant;
 }
 
 const maxWidthClass = {
@@ -21,6 +29,18 @@ const maxWidthClass = {
   "2xl": "max-w-2xl",
 };
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MD_BREAKPOINT_PX - 1}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
+
 export function BaseModal({
   open,
   onClose,
@@ -28,9 +48,11 @@ export function BaseModal({
   children,
   panelClassName = "",
   maxWidth = "lg",
+  mobileVariant = "fullScreen",
 }: BaseModalProps) {
   const ref = useRef<HTMLDivElement>(null);
   const previousActive = useRef<HTMLElement | null>(null);
+  const isMobile = useIsMobile();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -61,7 +83,6 @@ export function BaseModal({
     const firstInContent = focusables.find((node) => node !== closeBtn) ?? focusables[0];
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-    // Focus first input/content element when opening, not the close button (avoids stealing focus when typing in wizard)
     if (!el.contains(document.activeElement)) firstInContent?.focus();
 
     function trap(e: KeyboardEvent) {
@@ -96,29 +117,58 @@ export function BaseModal({
 
   if (!open) return null;
 
+  const useMobileLayout = isMobile && mobileVariant !== "modal";
+  const isFullScreen = useMobileLayout && mobileVariant === "fullScreen";
+  const isSheet = useMobileLayout && mobileVariant === "sheet";
+
+  const backdropClass = "fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/40";
+  const mobileBackdropClass = isFullScreen
+    ? "fixed inset-0 z-modal flex flex-col p-0 bg-white"
+    : isSheet
+      ? "fixed inset-0 z-modal flex items-end justify-center p-0 bg-black/40"
+      : backdropClass;
+
+  const panelBase =
+    "wp-modal-panel border border-slate-200 bg-white shadow-xl w-full overflow-hidden flex flex-col";
+  const panelDesktop = `rounded-xl max-h-[90vh] ${maxWidthClass[maxWidth]}`;
+  const panelMobile =
+    isFullScreen
+      ? "rounded-none min-h-full max-h-full"
+      : isSheet
+        ? "rounded-t-2xl max-h-[90vh] border-b-0"
+        : panelDesktop;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+      className={useMobileLayout ? mobileBackdropClass : backdropClass}
       onMouseDown={handleBackdropMouseDown}
       onMouseUp={handleBackdropMouseUp}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "base-modal-title" : undefined}
     >
+      {isSheet && (
+        <div
+          className="flex-1 min-h-0 overflow-hidden cursor-default"
+          role="presentation"
+          onClick={() => onClose()}
+          aria-hidden
+        />
+      )}
       <div
         ref={ref}
-        className={`wp-modal-panel rounded-xl border border-slate-200 bg-white shadow-xl w-full overflow-hidden flex flex-col max-h-[90vh] ${maxWidthClass[maxWidth]} ${panelClassName}`}
+        className={`${panelBase} ${useMobileLayout ? panelMobile : panelDesktop} ${panelClassName}`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0 min-h-[44px]">
             <h2 id="base-modal-title" className="font-semibold text-slate-800 text-sm">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               aria-label="Zavřít"
             >
               ×

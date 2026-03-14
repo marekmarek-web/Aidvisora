@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Search, MoreVertical } from "lucide-react";
 import { PortalSidebar, PORTAL_SIDEBAR_COLLAPSED_PX } from "./PortalSidebar";
 import { PortalHeaderSearch, type PortalHeaderSearchHandle } from "./PortalHeaderSearch";
 import { QuickNewMenu } from "./QuickNewMenu";
@@ -96,7 +96,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <AiAssistantDrawerProvider>
-        <PortalShellInner headerSearchRef={headerSearchRef} mainMarginPx={mainMarginPx} sidebarDrawerOpen={sidebarDrawerOpen} setSidebarDrawerOpen={setSidebarDrawerOpen} initSidebarState={initSidebarState} sidebarWidth={sidebarWidth} sidebarCollapsed={sidebarCollapsed} handleSidebarResize={handleSidebarResize} handleSidebarCollapsed={handleSidebarCollapsed}>
+        <PortalShellInner isDesktop={isDesktop} headerSearchRef={headerSearchRef} mainMarginPx={mainMarginPx} sidebarDrawerOpen={sidebarDrawerOpen} setSidebarDrawerOpen={setSidebarDrawerOpen} initSidebarState={initSidebarState} sidebarWidth={sidebarWidth} sidebarCollapsed={sidebarCollapsed} handleSidebarResize={handleSidebarResize} handleSidebarCollapsed={handleSidebarCollapsed}>
           {children}
         </PortalShellInner>
       </AiAssistantDrawerProvider>
@@ -105,6 +105,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 }
 
 function PortalShellInner({
+  isDesktop,
   headerSearchRef,
   mainMarginPx,
   sidebarDrawerOpen,
@@ -116,6 +117,7 @@ function PortalShellInner({
   handleSidebarCollapsed,
   children,
 }: {
+  isDesktop: boolean;
   headerSearchRef: React.RefObject<PortalHeaderSearchHandle | null>;
   mainMarginPx: number;
   sidebarDrawerOpen: boolean;
@@ -127,7 +129,30 @@ function PortalShellInner({
   handleSidebarCollapsed: (v: boolean) => void;
   children: React.ReactNode;
 }) {
+  const isMobile = !isDesktop;
   const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setMobileSearchOpen(true);
+        headerSearchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && mobileSearchOpen) {
+      const t = setTimeout(() => headerSearchRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [isMobile, mobileSearchOpen]);
+
   return (
     <div className="wp-app-container monday-board-wrap flex min-h-screen">
       <PortalSidebar
@@ -140,7 +165,7 @@ function PortalShellInner({
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
         <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-50 px-3 sm:px-6 md:px-8 py-3 md:py-4">
+          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-sticky-header px-3 sm:px-6 md:px-8 py-2 md:py-4">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}
@@ -151,15 +176,59 @@ function PortalShellInner({
                 <path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
               </svg>
             </button>
+            {/* Desktop: inline search. Mobile: icon → opens overlay with search */}
             <div className="flex-1 min-w-0 min-h-[40px] flex items-center max-w-md md:max-w-2xl">
-              <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded animate-pulse" aria-hidden />}>
-                <PortalHeaderSearch ref={headerSearchRef} />
-              </Suspense>
+              {isDesktop && (
+                <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded animate-pulse" aria-hidden />}>
+                  <PortalHeaderSearch ref={headerSearchRef} />
+                </Suspense>
+              )}
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchOpen(true)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 shrink-0"
+                  aria-label="Hledat"
+                >
+                  <Search size={22} />
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            {/* From sm: show all. Below sm: overflow menu */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               <QuickNewMenu />
               <NotificationBell />
               <UserMenu />
+            </div>
+            <div className="relative sm:hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => setOverflowOpen((o) => !o)}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                aria-label="Další akce"
+                aria-expanded={overflowOpen}
+              >
+                <MoreVertical size={22} />
+              </button>
+              {overflowOpen && (
+                <>
+                  <div className="fixed inset-0 z-overlay" aria-hidden onClick={() => setOverflowOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-dropdown w-56 py-1 bg-white border border-slate-200 rounded-xl shadow-xl">
+                    <div className="px-3 py-2 border-b border-slate-100">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Akce</span>
+                    </div>
+                    <div className="py-1" onClick={() => setOverflowOpen(false)}>
+                      <QuickNewMenu />
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        <NotificationBell />
+                      </div>
+                      <div className="px-2">
+                        <UserMenu />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </header>
           <div className="flex-1 flex min-h-0 wp-app-content">
@@ -169,12 +238,33 @@ function PortalShellInner({
           </div>
         </div>
 
-        {/* Floating AI assistant button */}
+        {/* Mobile search overlay: full-screen (search gets ref when open) */}
+        {isMobile && mobileSearchOpen && (
+          <div className="fixed inset-0 z-modal bg-white flex flex-col">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 shrink-0 min-h-[44px]">
+              <div className="flex-1 min-w-0">
+                <Suspense fallback={<div className="h-9 flex-1 bg-slate-100 rounded animate-pulse" />}>
+                  <PortalHeaderSearch ref={headerSearchRef} />
+                </Suspense>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                aria-label="Zavřít vyhledávání"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Floating AI assistant button – safe area, z-floating-ai */}
         <button
           type="button"
           onClick={() => setAiDrawerOpen(true)}
           title="AI asistent"
-          className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-[60] min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
+          className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-floating-ai min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 pb-[env(safe-area-inset-bottom,0)]"
           aria-label="AI asistent"
         >
           <Sparkles size={24} />

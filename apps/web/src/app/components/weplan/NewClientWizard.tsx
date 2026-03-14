@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createContact, getContactsList } from "@/app/actions/contacts";
 import { BaseModal } from "@/app/components/BaseModal";
+import { StickyBottomCTA, STICKY_BOTTOM_CTA_PADDING_CLASS } from "@/app/components/StickyBottomCTA";
 
 type Step = 0 | 1 | 2;
 
@@ -139,8 +140,47 @@ export function NewClientWizard({
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
   }
 
+  const footerButtons = (
+    <>
+      <button
+        type="button"
+        onClick={step > 0 ? () => setStep((s) => (s - 1) as Step) : handleClose}
+        className="min-h-[44px] px-4 py-2 text-sm font-medium text-slate-600 hover:bg-monday-row-hover rounded-[6px]"
+      >
+        {step > 0 ? "← Zpět" : "Zrušit"}
+      </button>
+      <div className="flex gap-2">
+        {step < 2 ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (step === 0 && (!form.firstName.trim() || !form.lastName.trim())) {
+                setError("Jméno a příjmení jsou povinné.");
+                return;
+              }
+              setError("");
+              setStep((s) => (s + 1) as Step);
+            }}
+            className="min-h-[44px] px-5 py-2 text-sm font-semibold text-white bg-monday-blue hover:opacity-90 rounded-[6px]"
+          >
+            Další →
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="min-h-[44px] px-5 py-2 text-sm font-semibold text-white bg-green-600 hover:opacity-90 rounded-[6px] disabled:opacity-50"
+          >
+            {saving ? "Ukládám…" : "Vytvořit klienta"}
+          </button>
+        )}
+      </div>
+    </>
+  );
+
   return (
-    <BaseModal open={open} onClose={handleClose} title="Nový klient" maxWidth="lg">
+    <BaseModal open={open} onClose={handleClose} title="Nový klient" maxWidth="lg" mobileVariant="fullScreen">
       {/* Steps indicator */}
       <div className="flex items-center gap-1 px-4 pt-2 pb-3 border-b border-slate-200">
         {steps.map((s, i) => (
@@ -162,11 +202,11 @@ export function NewClientWizard({
         ))}
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-5 space-y-4">
+      {/* Content – extra padding on mobile so sticky CTA does not cover */}
+      <div className={`px-4 py-5 space-y-4 ${STICKY_BOTTOM_CTA_PADDING_CLASS}`}>
           {step === 0 && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Jméno *</label>
                   <input value={form.firstName} onChange={set("firstName")} className={inputCls} autoComplete="given-name" />
@@ -196,7 +236,7 @@ export function NewClientWizard({
                 <label className="block text-xs font-medium text-slate-500 mb-1">Ulice</label>
                 <input value={form.street} onChange={set("street")} className={inputCls} autoFocus />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Město</label>
                   <input value={form.city} onChange={set("city")} className={inputCls} />
@@ -263,43 +303,15 @@ export function NewClientWizard({
           {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between shrink-0">
-        <button
-          type="button"
-          onClick={step > 0 ? () => setStep((s) => (s - 1) as Step) : handleClose}
-          className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-monday-row-hover rounded-[6px]"
-        >
-          {step > 0 ? "← Zpět" : "Zrušit"}
-        </button>
-        <div className="flex gap-2">
-          {step < 2 ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (step === 0 && (!form.firstName.trim() || !form.lastName.trim())) {
-                  setError("Jméno a příjmení jsou povinné.");
-                  return;
-                }
-                setError("");
-                setStep((s) => (s + 1) as Step);
-              }}
-              className="px-5 py-2 text-sm font-semibold text-white bg-monday-blue hover:opacity-90 rounded-[6px]"
-            >
-              Další →
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={saving}
-              className="px-5 py-2 text-sm font-semibold text-white bg-green-600 hover:opacity-90 rounded-[6px] disabled:opacity-50"
-            >
-              {saving ? "Ukládám…" : "Vytvořit klienta"}
-            </button>
-          )}
-        </div>
+      {/* Footer – desktop: in flow; mobile: sticky bottom via StickyBottomCTA */}
+      <div className="hidden md:flex px-4 py-3 border-t border-slate-200 items-center justify-between shrink-0">
+        {footerButtons}
       </div>
+      <StickyBottomCTA showBelow="md">
+        <div className="flex items-center justify-between gap-3">
+          {footerButtons}
+        </div>
+      </StickyBottomCTA>
     </BaseModal>
   );
 }

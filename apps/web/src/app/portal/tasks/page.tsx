@@ -650,7 +650,7 @@ export default function TasksPage() {
       {/* Mobilní editace úkolu: fullscreen overlay (jen na mobilu) */}
       {mobileEditId && (
         <div
-          className="fixed inset-0 z-50 md:hidden flex flex-col bg-white"
+          className="fixed inset-0 z-modal md:hidden flex flex-col bg-white"
           role="dialog"
           aria-modal="true"
           aria-labelledby="mobile-edit-title"

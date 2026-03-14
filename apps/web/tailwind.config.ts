@@ -50,6 +50,18 @@ export default {
       animation: {
         shimmer: "shimmer 2.5s infinite",
       },
+      zIndex: {
+        sticky: "var(--z-sticky)",
+        "sticky-header": "var(--z-sticky-header)",
+        "fixed-cta": "var(--z-fixed-cta)",
+        dropdown: "var(--z-dropdown)",
+        overlay: "var(--z-overlay)",
+        "drawer-overlay": "var(--z-drawer-overlay)",
+        "drawer-panel": "var(--z-drawer-panel)",
+        modal: "var(--z-modal)",
+        toast: "var(--z-toast)",
+        "floating-ai": "var(--z-floating-ai)",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
