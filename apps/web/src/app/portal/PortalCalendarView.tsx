@@ -815,7 +815,7 @@ export function PortalCalendarView() {
               <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <div className="bg-slate-100 p-0.5 sm:p-1 rounded-lg flex items-center">
                   {isMobile
-                    ? (viewModesMobile as const).map((m) => (
+                    ? viewModesMobile.map((m) => (
                         <button key={m} type="button" onClick={() => setMode(m)} className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
                           {m === "day" ? "Den" : m === "week" ? "Týden" : "Měsíc"}
                         </button>
