@@ -32,7 +32,7 @@ function getStoredSidebarState() {
   }
 }
 
-export function PortalShell({ children, roleName }: { children: React.ReactNode; roleName?: string }) {
+export function PortalShell({ children, showTeamOverview }: { children: React.ReactNode; showTeamOverview?: boolean }) {
   const headerSearchRef = useRef<PortalHeaderSearchHandle>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -96,7 +96,7 @@ export function PortalShell({ children, roleName }: { children: React.ReactNode;
   return (
     <ToastProvider>
       <AiAssistantDrawerProvider>
-        <PortalShellInner roleName={roleName} isDesktop={isDesktop} headerSearchRef={headerSearchRef} mainMarginPx={mainMarginPx} sidebarDrawerOpen={sidebarDrawerOpen} setSidebarDrawerOpen={setSidebarDrawerOpen} initSidebarState={initSidebarState} sidebarWidth={sidebarWidth} sidebarCollapsed={sidebarCollapsed} handleSidebarResize={handleSidebarResize} handleSidebarCollapsed={handleSidebarCollapsed}>
+        <PortalShellInner showTeamOverview={showTeamOverview} isDesktop={isDesktop} headerSearchRef={headerSearchRef} mainMarginPx={mainMarginPx} sidebarDrawerOpen={sidebarDrawerOpen} setSidebarDrawerOpen={setSidebarDrawerOpen} initSidebarState={initSidebarState} sidebarWidth={sidebarWidth} sidebarCollapsed={sidebarCollapsed} handleSidebarResize={handleSidebarResize} handleSidebarCollapsed={handleSidebarCollapsed}>
           {children}
         </PortalShellInner>
       </AiAssistantDrawerProvider>
@@ -105,7 +105,7 @@ export function PortalShell({ children, roleName }: { children: React.ReactNode;
 }
 
 function PortalShellInner({
-  roleName,
+  showTeamOverview,
   isDesktop,
   headerSearchRef,
   mainMarginPx,
@@ -118,7 +118,7 @@ function PortalShellInner({
   handleSidebarCollapsed,
   children,
 }: {
-  roleName?: string;
+  showTeamOverview?: boolean;
   isDesktop: boolean;
   headerSearchRef: React.RefObject<PortalHeaderSearchHandle | null>;
   mainMarginPx: number;
@@ -158,7 +158,7 @@ function PortalShellInner({
   return (
     <div className="wp-app-container monday-board-wrap flex min-h-screen">
       <PortalSidebar
-          roleName={roleName}
+          showTeamOverview={showTeamOverview}
           width={sidebarWidth}
           collapsed={sidebarCollapsed}
           onResize={handleSidebarResize}

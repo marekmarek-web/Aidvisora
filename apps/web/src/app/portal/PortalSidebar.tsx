@@ -31,7 +31,6 @@ import {
   FileText,
   type LucideIcon,
 } from "lucide-react";
-import { hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { createClient } from "@/lib/supabase/client";
 import { getOpenTasksCount } from "@/app/actions/tasks";
 import { getUnreadConversationsCount } from "@/app/actions/messages";
@@ -190,7 +189,7 @@ function isItemActive(pathname: string, href: string): boolean {
 }
 
 interface PortalSidebarProps {
-  roleName?: string;
+  showTeamOverview?: boolean;
   width?: number;
   collapsed?: boolean;
   onResize?: (width: number) => void;
@@ -200,18 +199,13 @@ interface PortalSidebarProps {
   onMobileDrawerClose?: () => void;
 }
 
-function filterSectionsByRole(sections: SectionConfig[], roleName: string | undefined): SectionConfig[] {
-  if (!roleName) return sections;
-  return sections
-    .map((sec) => {
-      if (sec.id === "sec-vedeni" && !hasPermission(roleName as RoleName, "team_overview:read")) return null;
-      return sec;
-    })
-    .filter((s): s is SectionConfig => s !== null);
+function filterSectionsByRole(sections: SectionConfig[], showTeamOverview: boolean | undefined): SectionConfig[] {
+  if (showTeamOverview === false) return sections.filter((sec) => sec.id !== "sec-vedeni");
+  return sections;
 }
 
 export function PortalSidebar({
-  roleName,
+  showTeamOverview,
   width = PORTAL_SIDEBAR_WIDTH_PX,
   collapsed = false,
   onResize,
@@ -222,7 +216,7 @@ export function PortalSidebar({
 }: PortalSidebarProps = {}) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
-  const baseSections = useMemo(() => filterSectionsByRole(DEFAULT_SECTIONS, roleName), [roleName]);
+  const baseSections = useMemo(() => filterSectionsByRole(DEFAULT_SECTIONS, showTeamOverview), [showTeamOverview]);
   const [menuSections, setMenuSections] = useState<SectionConfig[]>(baseSections);
   const [sidebarTheme, setSidebarTheme] = useState<SidebarTheme>("white");
 

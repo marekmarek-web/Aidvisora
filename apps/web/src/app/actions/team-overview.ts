@@ -85,74 +85,15 @@ export async function getTeamOverviewKpis(
   const prevStartStr = prev.start.toISOString().slice(0, 10);
   const prevEndStr = prev.end.toISOString().slice(0, 10);
 
+  const alertsPromise = getTeamAlerts(period).catch(() => [] as TeamAlert[]);
   const [memberRows, activeCountRows, contractsCurrent, contractsPrev, meetingsThisWeekRows, newcomerCountRows, alertsRows] = await Promise.all([
-    db
-      .select({ userId: memberships.userId })
-      .from(memberships)
-      .innerJoin(roles, eq(memberships.roleId, roles.id))
-      .where(and(eq(memberships.tenantId, auth.tenantId), inArray(roles.name, ["Admin", "Manager", "Advisor", "Viewer"]))),
-    db
-      .select({ userId: activityLog.userId })
-      .from(activityLog)
-      .where(
-        and(
-          eq(activityLog.tenantId, auth.tenantId),
-          gte(activityLog.createdAt, start),
-          lt(activityLog.createdAt, end)
-        )
-      )
-      .groupBy(activityLog.userId),
-    db
-      .select({
-        count: sql<number>`count(*)::int`,
-        totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
-        totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
-      })
-      .from(contracts)
-      .where(
-        and(
-          eq(contracts.tenantId, auth.tenantId),
-          gte(contracts.startDate, startStr),
-          lt(contracts.startDate, endStr)
-        )
-      ),
-    db
-      .select({
-        count: sql<number>`count(*)::int`,
-        totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
-        totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
-      })
-      .from(contracts)
-      .where(
-        and(
-          eq(contracts.tenantId, auth.tenantId),
-          gte(contracts.startDate, prevStartStr),
-          lt(contracts.startDate, prevEndStr)
-        )
-      ),
-    db
-      .select({ id: events.id })
-      .from(events)
-      .where(
-        and(
-          eq(events.tenantId, auth.tenantId),
-          eq(events.eventType, "schuzka"),
-          gte(events.startAt, weekStart),
-          lt(events.startAt, weekEnd)
-        )
-      ),
-    db
-      .select({ userId: memberships.userId })
-      .from(memberships)
-      .innerJoin(roles, eq(memberships.roleId, roles.id))
-      .where(
-        and(
-          eq(memberships.tenantId, auth.tenantId),
-          inArray(roles.name, ["Admin", "Manager", "Advisor", "Viewer"]),
-          gte(memberships.joinedAt, new Date(now.getTime() - NEWCOMER_DAYS * 24 * 60 * 60 * 1000))
-        )
-        ),
-    getTeamAlerts(period).catch((): TeamAlert[] => [])
+    db.select({ userId: memberships.userId }).from(memberships).innerJoin(roles, eq(memberships.roleId, roles.id)).where(and(eq(memberships.tenantId, auth.tenantId), inArray(roles.name, ["Admin", "Manager", "Advisor", "Viewer"]))),
+    db.select({ userId: activityLog.userId }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), gte(activityLog.createdAt, start), lt(activityLog.createdAt, end))).groupBy(activityLog.userId),
+    db.select({ count: sql<number>`count(*)::int`, totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`, totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)` }).from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), gte(contracts.startDate, startStr), lt(contracts.startDate, endStr))),
+    db.select({ count: sql<number>`count(*)::int`, totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`, totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)` }).from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), gte(contracts.startDate, prevStartStr), lt(contracts.startDate, prevEndStr))),
+    db.select({ id: events.id }).from(events).where(and(eq(events.tenantId, auth.tenantId), eq(events.eventType, "schuzka"), gte(events.startAt, weekStart), lt(events.startAt, weekEnd))),
+    db.select({ userId: memberships.userId }).from(memberships).innerJoin(roles, eq(memberships.roleId, roles.id)).where(and(eq(memberships.tenantId, auth.tenantId), inArray(roles.name, ["Admin", "Manager", "Advisor", "Viewer"]), gte(memberships.joinedAt, new Date(now.getTime() - NEWCOMER_DAYS * 24 * 60 * 60 * 1000)))),
+    alertsPromise,
   ]);
 
   const memberCount = memberRows.length;
@@ -261,97 +202,18 @@ export async function getTeamMemberMetrics(
   const result: TeamMemberMetrics[] = [];
 
   for (const mem of memberRows) {
-    const promises = [
-      db
-        .select({
-          count: sql<number>`count(*)::int`,
-          totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
-          totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
-        })
-        .from(contracts)
-        .where(
-          and(
-            eq(contracts.tenantId, auth.tenantId),
-            eq(contracts.advisorId, mem.userId),
-            gte(contracts.startDate, startStr),
-            lt(contracts.startDate, endStr)
-          )
-        ),
-      db
-        .select({
-          count: sql<number>`count(*)::int`,
-          totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
-          totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
-        })
-        .from(contracts)
-        .where(
-          and(
-            eq(contracts.tenantId, auth.tenantId),
-            eq(contracts.advisorId, mem.userId),
-            gte(contracts.startDate, prevStartStr),
-            lt(contracts.startDate, prevEndStr)
-          )
-        ),
-      db
-        .select({ id: events.id })
-        .from(events)
-        .where(
-          and(
-            eq(events.tenantId, auth.tenantId),
-            eq(events.assignedTo, mem.userId),
-            gte(events.startAt, start),
-            lt(events.startAt, end)
-          )
-        ),
-      db
-        .select({ id: activityLog.id })
-        .from(activityLog)
-        .where(
-          and(
-            eq(activityLog.tenantId, auth.tenantId),
-            eq(activityLog.userId, mem.userId),
-            gte(activityLog.createdAt, start),
-            lt(activityLog.createdAt, end)
-          )
-        ),
-      db
-        .select({ createdAt: activityLog.createdAt })
-        .from(activityLog)
-        .where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId))
-        .orderBy(desc(activityLog.createdAt))
-        .limit(1),
-      db
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(
-          and(
-            eq(tasks.tenantId, auth.tenantId),
-            eq(tasks.assignedTo, mem.userId),
-            isNull(tasks.completedAt)
-          )
-        ),
-      db
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(
-          and(
-            eq(tasks.tenantId, auth.tenantId),
-            eq(tasks.assignedTo, mem.userId),
-            isNotNull(tasks.completedAt)
-          )
-        ),
-      db
-        .select({ id: opportunities.id })
-        .from(opportunities)
-        .where(
-          and(
-            eq(opportunities.tenantId, auth.tenantId),
-            eq(opportunities.assignedTo, mem.userId),
-            isNull(opportunities.closedAt)
-          )
-        ),
-    ];
-    const [contractsCur, contractsPrevRow, eventsCount, activityCount, lastActivity, tasksOpen, tasksDone, oppsOpen] = await Promise.all(promises);
+    const [contractsCur, contractsPrevRow, eventsCount, activityCount] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int`, totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`, totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)` }).from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.advisorId, mem.userId), gte(contracts.startDate, startStr), lt(contracts.startDate, endStr))),
+      db.select({ count: sql<number>`count(*)::int`, totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`, totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)` }).from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.advisorId, mem.userId), gte(contracts.startDate, prevStartStr), lt(contracts.startDate, prevEndStr))),
+      db.select({ id: events.id }).from(events).where(and(eq(events.tenantId, auth.tenantId), eq(events.assignedTo, mem.userId), gte(events.startAt, start), lt(events.startAt, end))),
+      db.select({ id: activityLog.id }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId), gte(activityLog.createdAt, start), lt(activityLog.createdAt, end))),
+    ]);
+    const [lastActivity, tasksOpen, tasksDone, oppsOpen] = await Promise.all([
+      db.select({ createdAt: activityLog.createdAt }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId))).orderBy(desc(activityLog.createdAt)).limit(1),
+      db.select({ id: tasks.id }).from(tasks).where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.assignedTo, mem.userId), isNull(tasks.completedAt))),
+      db.select({ id: tasks.id }).from(tasks).where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.assignedTo, mem.userId), isNotNull(tasks.completedAt))),
+      db.select({ id: opportunities.id }).from(opportunities).where(and(eq(opportunities.tenantId, auth.tenantId), eq(opportunities.assignedTo, mem.userId), isNull(opportunities.closedAt))),
+    ]);
 
     const unitsThisPeriod = Number(contractsCur[0]?.count ?? 0);
     const productionThisPeriod = Number(contractsCur[0]?.totalAnnual ?? contractsCur[0]?.totalPremium ?? 0) || Number(contractsCur[0]?.totalPremium ?? 0);
@@ -413,34 +275,9 @@ export async function getTeamAlerts(period: TeamOverviewPeriod = "month"): Promi
 
   for (const mem of memberRows) {
     const [lastActivity, lastMeeting, activityCount] = await Promise.all([
-      db
-        .select({ createdAt: activityLog.createdAt })
-        .from(activityLog)
-        .where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId))
-        .orderBy(desc(activityLog.createdAt))
-        .limit(1),
-      db
-        .select({ startAt: events.startAt })
-        .from(events)
-        .where(
-          and(
-            eq(events.tenantId, auth.tenantId),
-            eq(events.assignedTo, mem.userId),
-            eq(events.eventType, "schuzka")
-          )
-        )
-        .orderBy(desc(events.startAt))
-        .limit(1),
-      db
-        .select({ id: activityLog.id })
-        .from(activityLog)
-        .where(
-          and(
-            eq(activityLog.tenantId, auth.tenantId),
-            eq(activityLog.userId, mem.userId),
-            gte(activityLog.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
-          )
-        )
+      db.select({ createdAt: activityLog.createdAt }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId))).orderBy(desc(activityLog.createdAt)).limit(1),
+      db.select({ startAt: events.startAt }).from(events).where(and(eq(events.tenantId, auth.tenantId), eq(events.assignedTo, mem.userId), eq(events.eventType, "schuzka"))).orderBy(desc(events.startAt)).limit(1),
+      db.select({ id: activityLog.id }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, mem.userId), gte(activityLog.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)))),
     ]);
 
     const lastActivityAt = lastActivity[0]?.createdAt;
@@ -555,46 +392,12 @@ export async function getNewcomerAdaptation(): Promise<NewcomerAdaptation[]> {
     const daysInTeam = Math.floor((Date.now() - joinedAt.getTime()) / (24 * 60 * 60 * 1000));
 
     const [firstActivity, lastActivityRow, firstMeeting, firstAnalysis, firstContract, recentActivity] = await Promise.all([
-      db
-        .select({ createdAt: activityLog.createdAt })
-        .from(activityLog)
-        .where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, row.userId))
-        .orderBy(asc(activityLog.createdAt))
-        .limit(1),
-      db
-        .select({ createdAt: activityLog.createdAt })
-        .from(activityLog)
-        .where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, row.userId))
-        .orderBy(desc(activityLog.createdAt))
-        .limit(1),
-      db
-        .select({ startAt: events.startAt })
-        .from(events)
-        .where(and(eq(events.tenantId, auth.tenantId), eq(events.assignedTo, row.userId))
-        .orderBy(events.startAt)
-        .limit(1),
-      db
-        .select({ createdAt: financialAnalyses.createdAt })
-        .from(financialAnalyses)
-        .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.createdBy, row.userId))
-        .orderBy(financialAnalyses.createdAt)
-        .limit(1),
-      db
-        .select({ startDate: contracts.startDate })
-        .from(contracts)
-        .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.advisorId, row.userId))
-        .orderBy(contracts.startDate)
-        .limit(1),
-      db
-        .select({ id: activityLog.id })
-        .from(activityLog)
-        .where(
-          and(
-            eq(activityLog.tenantId, auth.tenantId),
-            eq(activityLog.userId, row.userId),
-            gte(activityLog.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-          )
-        )
+      db.select({ createdAt: activityLog.createdAt }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, row.userId))).orderBy(asc(activityLog.createdAt)).limit(1),
+      db.select({ createdAt: activityLog.createdAt }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, row.userId))).orderBy(desc(activityLog.createdAt)).limit(1),
+      db.select({ startAt: events.startAt }).from(events).where(and(eq(events.tenantId, auth.tenantId), eq(events.assignedTo, row.userId))).orderBy(asc(events.startAt)).limit(1),
+      db.select({ createdAt: financialAnalyses.createdAt }).from(financialAnalyses).where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.createdBy, row.userId))).orderBy(asc(financialAnalyses.createdAt)).limit(1),
+      db.select({ startDate: contracts.startDate }).from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.advisorId, row.userId))).orderBy(contracts.startDate).limit(1),
+      db.select({ id: activityLog.id }).from(activityLog).where(and(eq(activityLog.tenantId, auth.tenantId), eq(activityLog.userId, row.userId), gte(activityLog.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))),
     ]);
 
     const checklist: AdaptationStep[] = [
