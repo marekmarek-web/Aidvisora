@@ -7,7 +7,7 @@ export function WizardTipBlock({
   icon: Icon = Sparkles,
 }: {
   children: React.ReactNode;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  icon?: React.ComponentType<{ size?: number | string; className?: string }>;
 }) {
   return (
     <div className="mt-6 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">

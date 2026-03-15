@@ -11,7 +11,7 @@ export function WizardReview({
   title?: string;
   subtitle?: string;
   rows: WizardReviewRow[];
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  icon?: React.ComponentType<{ size?: number | string; className?: string }>;
 }) {
   return (
     <div className="flex flex-col">
