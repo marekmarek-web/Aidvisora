@@ -3,10 +3,12 @@
  * Run from repo root: node packages/db/src/apply-schema.mjs
  * Or: cd packages/db && node --env-file=../apps/web/.env.local src/apply-schema.mjs (Node 20+)
  */
-import postgres from "postgres";
 import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const postgres = require("postgres");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
