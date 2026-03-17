@@ -548,8 +548,8 @@ export default function PremiumLandingPage() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav py-4 shadow-2xl shadow-black/50" : "bg-transparent py-6"}`}>
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[12px] flex items-center justify-center text-white font-jakarta font-bold text-xl shadow-[0_0_20px_rgba(99,102,241,0.4)] border border-white/20 group-hover:scale-105 transition-transform">A</div>
-            <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
+            <img src="/aidvisora-logo.png" alt="Aidvisora" className="h-10 w-auto max-w-[180px] object-contain group-hover:scale-105 transition-transform" width={180} height={40} />
+            <span className="font-jakarta font-bold text-2xl tracking-tight text-white hidden sm:inline">Aidvisora</span>
           </Link>
 
           <div className="hidden lg:flex items-center gap-8 font-inter font-medium text-sm text-slate-400">
@@ -1616,7 +1616,7 @@ export default function PremiumLandingPage() {
             
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-jakarta font-bold text-lg">A</div>
+                <img src="/aidvisora-logo.png" alt="Aidvisora" className="h-10 w-auto max-w-[180px] object-contain" width={180} height={40} />
                 <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
               </Link>
               <p className="text-sm max-w-sm leading-relaxed mb-6">Prémiová webová aplikace postavená na míru moderním finančním poradcům v České republice.</p>
