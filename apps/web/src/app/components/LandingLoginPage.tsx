@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Sun, Moon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { acceptClientInvitation } from "@/app/actions/auth";
+import { LandingHeader } from "./LandingHeader";
+import { LandingFooter } from "./LandingFooter";
 
 type ThemeId = "original" | "darkElegance";
 
@@ -179,7 +181,9 @@ export function LandingLoginPage() {
         @media (max-width: 768px) {
           .landing-waves { height: 60px; min-height: 60px; }
         }
-      `}</style>
+      `}      </style>
+
+      <LandingHeader activeTheme={activeTheme} />
 
       {/* Přepínač motivu: sluníčko (Barevný) / měsíček (Tmavý) – vpravo nahoře */}
       <div className="absolute top-6 right-6 z-50">
@@ -209,7 +213,7 @@ export function LandingLoginPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex justify-center items-center z-10 px-4 pt-16">
+      <section id="login" className="flex-1 flex justify-center items-center z-10 px-4 pt-16 scroll-mt-20">
         <div className={`w-full max-w-md p-10 rounded-[32px] border transition-colors duration-700 ${current.cardStyle}`}>
           <div className="flex flex-col items-center mb-10">
             <img
@@ -331,7 +335,9 @@ export function LandingLoginPage() {
             </div>
           </form>
         </div>
-      </div>
+      </section>
+
+      <LandingFooter activeTheme={activeTheme} />
 
       <div className="relative mt-auto w-full">
         <svg
