@@ -208,7 +208,8 @@ const InteractiveMindmap = () => {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, id: string) => {
     // Ignorovat, pokud uživatel kliká do inputu (aby mohl přejmenovat uzly)
-    if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button') {
+    const target = e.target as HTMLElement;
+    if (target.tagName?.toLowerCase() === 'input' || target.tagName?.toLowerCase() === 'button') {
       return;
     }
     
