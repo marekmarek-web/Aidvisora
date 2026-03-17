@@ -16,7 +16,15 @@ import {
 } from 'lucide-react';
 
 // --- CUSTOM HOOK & KOMPONENTA PRO SCROLL ANIMACE (REVEAL) ---
-const ScrollReveal = ({ children, className = "", delay = 0, direction = "up", immediate = false }) => {
+interface ScrollRevealProps {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  direction?: "up" | "down" | "left" | "right";
+  immediate?: boolean;
+}
+const ScrollReveal = (props: ScrollRevealProps) => {
+  const { children, className = "", delay = 0, direction = "up", immediate = false } = props;
   const [isVisible, setIsVisible] = useState(immediate);
   const ref = useRef(null);
 
@@ -59,12 +67,12 @@ const ScrollReveal = ({ children, className = "", delay = 0, direction = "up", i
 };
 
 // --- CUSTOM HOOK & KOMPONENTA PRO 2026 SPOTLIGHT EFEKT ---
-const SpotlightCard = ({ children, className = "" }) => {
-  const divRef = useRef(null);
+const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
+  const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!divRef.current) return;
     const rect = divRef.current.getBoundingClientRect();
     setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });

@@ -103,7 +103,7 @@ export async function applyContractReview(
       if (!effectiveContactId && createNewConfirmed) {
         const createClientAction = draftActions.find((a) => a.type === "create_client");
         if (createClientAction) {
-          const existing = await findExistingContactId(tenantId, createClientAction.payload, tx);
+          const existing = await findExistingContactId(tenantId, createClientAction.payload, tx as typeof db);
           if (existing) {
             effectiveContactId = existing;
             resultPayload.linkedClientId = existing;
@@ -147,7 +147,7 @@ export async function applyContractReview(
             effectiveContactId,
             contractNumber,
             institutionName,
-            tx
+            tx as typeof db
           );
           if (existingContractId) {
             resultPayload.createdContractId = existingContractId;
