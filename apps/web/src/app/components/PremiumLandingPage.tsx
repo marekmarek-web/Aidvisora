@@ -193,7 +193,7 @@ const AiSandbox = () => {
 
 // --- INTERAKTIVNÍ MINI-MINDMAP KOMPONENTA (Světlé pozadí s možností úprav a přidávání) ---
 const InteractiveMindmap = () => {
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState([
     { id: 'core', x: 40, y: 140, label: 'Nová mapa', subtitle: 'Libovolná mapa', type: 'core' },
     { id: 'n1', x: 300, y: 60, label: 'Nová kategorie', type: 'category' },

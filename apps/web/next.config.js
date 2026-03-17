@@ -42,6 +42,8 @@ module.exports = (phase, _context) => {
       base.compress = false;
       c.optimization = c.optimization ?? {};
       c.optimization.minimize = false;
+      // Snižuje výskyt "__webpack_modules__[moduleId] is not a function" při zaručeném načtení modulů
+      c.cache = false;
     }
     return c;
   };
