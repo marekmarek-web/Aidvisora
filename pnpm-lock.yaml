@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  drizzle-orm: 0.36.4
+
 importers:
 
   .:
@@ -57,7 +60,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
-        specifier: ^0.36.0
+        specifier: 0.36.4
         version: 0.36.4(@types/react@19.2.14)(postgres@3.4.8)(react@19.2.4)
       lucide-react:
         specifier: ^0.454.0
@@ -154,7 +157,7 @@ importers:
   packages/db:
     dependencies:
       drizzle-orm:
-        specifier: ^0.36.0
+        specifier: 0.36.4
         version: 0.36.4(@types/react@19.2.14)(postgres@3.4.8)(react@19.2.4)
       postgres:
         specifier: ^3.4.4

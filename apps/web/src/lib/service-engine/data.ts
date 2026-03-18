@@ -13,7 +13,7 @@ import {
   opportunities,
   financialAnalyses,
 } from "db";
-import { eq, and, isNull, desc, gte } from "drizzle-orm";
+import { eq, and, isNull, desc, gte } from "db";
 
 export type ServiceInputContact = {
   id: string;

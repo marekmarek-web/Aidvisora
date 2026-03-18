@@ -7,7 +7,7 @@ import {
   opportunityStages,
   contractUploadReviews,
 } from "db";
-import { eq, and, isNull, sql, asc, desc } from "drizzle-orm";
+import { eq, and, isNull, sql, asc, desc } from "db";
 import type {
   UrgentItem,
   UrgentItemSeverity,

@@ -11,7 +11,7 @@ import {
   tasks,
   meetingNotes,
 } from "db";
-import { eq, and, gte, lt, isNull, isNotNull, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, lt, isNull, isNotNull, sql, inArray } from "db";
 import type { BusinessPlanMetricType } from "./types";
 
 export type MetricsActuals = Partial<Record<BusinessPlanMetricType, number>>;

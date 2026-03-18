@@ -37,23 +37,23 @@ export async function ensureMembership(): Promise<EnsureMembershipResult> {
       email.replace(/@.*/, "").replace(/[^a-z0-9]/gi, "-").toLowerCase().slice(0, 20) ||
       "workspace";
     const [tenant] = await db
-      .insert(tenants)
+      .insert(tenants as any)
       .values({
         name: "Můj workspace",
         slug: slug + "-" + Math.random().toString(36).slice(2, 8),
       })
-      .returning({ id: tenants.id, slug: tenants.slug });
+      .returning({ id: tenants.id, slug: tenants.slug } as any);
     if (!tenant) return { ok: false, error: "Nepodařilo se vytvořit workspace." };
     const [adminRole] = await db
-      .insert(roles)
+      .insert(roles as any)
       .values({ tenantId: tenant.id, name: "Admin" })
-      .returning({ id: roles.id });
-    await db.insert(roles).values({ tenantId: tenant.id, name: "Advisor" }).returning({ id: roles.id });
-    await db.insert(roles).values({ tenantId: tenant.id, name: "Manager" }).returning({ id: roles.id });
-    await db.insert(roles).values({ tenantId: tenant.id, name: "Viewer" }).returning({ id: roles.id });
-    await db.insert(roles).values({ tenantId: tenant.id, name: "Client" }).returning({ id: roles.id });
+      .returning({ id: roles.id } as any);
+    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Advisor" }).returning({ id: roles.id } as any);
+    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Manager" }).returning({ id: roles.id } as any);
+    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Viewer" }).returning({ id: roles.id } as any);
+    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Client" }).returning({ id: roles.id } as any);
     if (!adminRole) return { ok: false, error: "Nepodařilo se vytvořit roli." };
-    await db.insert(memberships).values({
+    await db.insert(memberships as any).values({
       tenantId: tenant.id,
       userId: user.id,
       roleId: adminRole.id,
@@ -111,16 +111,16 @@ export async function sendClientZoneInvitation(contactId: string): Promise<{ ok:
   const membership = await getMembership(user.id);
   if (!membership || membership.roleName === "Client") return { ok: false, error: "Forbidden" };
   const [contact] = await db
-    .select({ id: contacts.id, email: contacts.email, tenantId: contacts.tenantId })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, membership.tenantId), eq(contacts.id, contactId)))
+    .select({ id: contacts.id, email: contacts.email, tenantId: contacts.tenantId } as any)
+    .from(contacts as any)
+    .where(and(eq(contacts.tenantId, membership.tenantId), eq(contacts.id, contactId)) as any)
     .limit(1);
   if (!contact) return { ok: false, error: "Kontakt nenalezen" };
   if (!contact.email) return { ok: false, error: "U kontaktu chybí e-mail" };
   const token = crypto.randomUUID().replace(/-/g, "");
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
-  await db.insert(clientInvitations).values({
+  await db.insert(clientInvitations as any).values({
     tenantId: contact.tenantId,
     contactId: contact.id,
     email: contact.email,
@@ -141,38 +141,38 @@ export async function acceptClientInvitation(token: string, gdprConsent?: boolea
   if (!user) return { ok: false, error: "Nejprve se přihlaste nebo zaregistrujte" };
   const [inv] = await db
     .select()
-    .from(clientInvitations)
-    .where(and(eq(clientInvitations.token, token), gt(clientInvitations.expiresAt, new Date())))
+    .from(clientInvitations as any)
+    .where(and(eq(clientInvitations.token, token), gt(clientInvitations.expiresAt, new Date())) as any)
     .limit(1);
   if (!inv) return { ok: false, error: "Pozvánka neexistuje nebo vypršela" };
   if (inv.acceptedAt) return { ok: false, error: "Pozvánka již byla využita" };
   const email = user.email?.toLowerCase();
   if (email !== inv.email.toLowerCase()) return { ok: false, error: "E-mail se neshoduje s pozvánkou" };
   const [clientRole] = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(and(eq(roles.tenantId, inv.tenantId), eq(roles.name, "Client")))
+    .select({ id: roles.id } as any)
+    .from(roles as any)
+    .where(and(eq(roles.tenantId, inv.tenantId), eq(roles.name, "Client")) as any)
     .limit(1);
   if (!clientRole) return { ok: false, error: "Role Client v tenantu chybí" };
-  await db.insert(memberships).values({
+  await db.insert(memberships as any).values({
     tenantId: inv.tenantId,
     userId: user.id,
     roleId: clientRole.id,
   });
-  await db.insert(clientContacts).values({
+  await db.insert(clientContacts as any).values({
     tenantId: inv.tenantId,
     userId: user.id,
     contactId: inv.contactId,
   });
   await db
-    .update(clientInvitations)
+    .update(clientInvitations as any)
     .set({ acceptedAt: new Date() })
-    .where(eq(clientInvitations.id, inv.id));
+    .where(eq(clientInvitations.id, inv.id) as any);
   if (gdprConsent) {
     await db
-      .update(contacts)
+      .update(contacts as any)
       .set({ gdprConsentAt: new Date(), updatedAt: new Date() })
-      .where(eq(contacts.id, inv.contactId));
+      .where(eq(contacts.id, inv.contactId) as any);
   }
   return { ok: true };
 }
@@ -190,7 +190,7 @@ export async function updatePortalProfile(fullName: string): Promise<void> {
   } = await supabase.auth.getUser();
   const email = user?.email ?? null;
   await db
-    .insert(userProfiles)
+    .insert(userProfiles as any)
     .values({
       userId: auth.userId,
       fullName: fullName.trim() || null,
@@ -198,7 +198,7 @@ export async function updatePortalProfile(fullName: string): Promise<void> {
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
-      target: userProfiles.userId,
+      target: userProfiles.userId as any,
       set: { fullName: fullName.trim() || null, email, updatedAt: new Date() },
     });
 }

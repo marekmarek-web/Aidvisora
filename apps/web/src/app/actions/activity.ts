@@ -3,6 +3,9 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { db, activityLog, eq, and, desc } from "db";
 
+// Monorepo: schema from db package can type-conflict with db client's drizzle instance at type-check
+const _activityLog = activityLog as any;
+
 export type ActivityRow = {
   id: string;
   entityType: string;
@@ -19,13 +22,13 @@ export async function logActivity(
   meta?: Record<string, unknown>,
 ) {
   const auth = await requireAuthInAction();
-  await db.insert(activityLog).values({
+  await db.insert(_activityLog).values({
     tenantId: auth.tenantId,
     userId: auth.userId,
     entityType,
     entityId,
     action,
-    meta: (meta ?? null) as any,
+    meta: (meta ?? null) as Record<string, unknown>,
   });
 }
 
@@ -36,22 +39,22 @@ export async function getActivityForEntity(
   const auth = await requireAuthInAction();
   const rows = await db
     .select({
-      id: activityLog.id,
-      entityType: activityLog.entityType,
-      entityId: activityLog.entityId,
-      action: activityLog.action,
-      meta: activityLog.meta,
-      createdAt: activityLog.createdAt,
+      id: _activityLog.id,
+      entityType: _activityLog.entityType,
+      entityId: _activityLog.entityId,
+      action: _activityLog.action,
+      meta: _activityLog.meta,
+      createdAt: _activityLog.createdAt,
     })
-    .from(activityLog)
+    .from(_activityLog)
     .where(
       and(
-        eq(activityLog.tenantId, auth.tenantId),
-        eq(activityLog.entityType, entityType),
-        eq(activityLog.entityId, entityId),
-      ),
+        eq(_activityLog.tenantId, auth.tenantId),
+        eq(_activityLog.entityType, entityType),
+        eq(_activityLog.entityId, entityId),
+      ) as any,
     )
-    .orderBy(desc(activityLog.createdAt))
+    .orderBy(desc(_activityLog.createdAt) as any)
     .limit(50);
   return rows as ActivityRow[];
 }
@@ -62,22 +65,22 @@ export async function getActivityForContact(
   const auth = await requireAuthInAction();
   const rows = await db
     .select({
-      id: activityLog.id,
-      entityType: activityLog.entityType,
-      entityId: activityLog.entityId,
-      action: activityLog.action,
-      meta: activityLog.meta,
-      createdAt: activityLog.createdAt,
+      id: _activityLog.id,
+      entityType: _activityLog.entityType,
+      entityId: _activityLog.entityId,
+      action: _activityLog.action,
+      meta: _activityLog.meta,
+      createdAt: _activityLog.createdAt,
     })
-    .from(activityLog)
+    .from(_activityLog)
     .where(
       and(
-        eq(activityLog.tenantId, auth.tenantId),
-        eq(activityLog.entityType, "contact"),
-        eq(activityLog.entityId, contactId),
-      ),
+        eq(_activityLog.tenantId, auth.tenantId),
+        eq(_activityLog.entityType, "contact"),
+        eq(_activityLog.entityId, contactId),
+      ) as any,
     )
-    .orderBy(desc(activityLog.createdAt))
+    .orderBy(desc(_activityLog.createdAt) as any)
     .limit(50);
   return rows as ActivityRow[];
 }
@@ -88,16 +91,16 @@ export async function getRecentActivity(
   const auth = await requireAuthInAction();
   const rows = await db
     .select({
-      id: activityLog.id,
-      entityType: activityLog.entityType,
-      entityId: activityLog.entityId,
-      action: activityLog.action,
-      meta: activityLog.meta,
-      createdAt: activityLog.createdAt,
+      id: _activityLog.id,
+      entityType: _activityLog.entityType,
+      entityId: _activityLog.entityId,
+      action: _activityLog.action,
+      meta: _activityLog.meta,
+      createdAt: _activityLog.createdAt,
     })
-    .from(activityLog)
-    .where(eq(activityLog.tenantId, auth.tenantId))
-    .orderBy(desc(activityLog.createdAt))
+    .from(_activityLog)
+    .where(eq(_activityLog.tenantId, auth.tenantId) as any)
+    .orderBy(desc(_activityLog.createdAt) as any)
     .limit(limit);
   return rows as ActivityRow[];
 }

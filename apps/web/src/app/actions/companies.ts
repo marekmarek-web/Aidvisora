@@ -84,6 +84,6 @@ export async function updateCompany(id: string, data: Partial<CompanyInsert>): P
   if (data.topClient !== undefined) update.topClient = data.topClient;
   await db
     .update(companies)
-    .set(update as typeof companies.$inferInsert)
+    .set(update)
     .where(and(eq(companies.tenantId, auth.tenantId), eq(companies.id, id)));
 }

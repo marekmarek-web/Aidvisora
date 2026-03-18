@@ -11,7 +11,7 @@ import {
 import type { ServiceRecommendation, ServiceStatus } from "@/lib/service-engine/types";
 import { db } from "db";
 import { contacts, contracts, tasks } from "db";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq, and, isNull, sql } from "db";
 
 /**
  * Get service recommendations and status for one contact. Tenant-scoped; requires contacts:read.

@@ -1,7 +1,6 @@
 import "server-only";
 import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import * as schema from "../../../../packages/db/src/schema/index";
+import { createDb } from "../../../../packages/db/src/create-db";
 
 const connectionString = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
 
@@ -23,4 +22,4 @@ const client = postgres(connectionString, {
   ...(isSupabase && !hasSslParam ? { ssl: "require" as const } : {}),
 });
 
-export const db = drizzle(client, { schema });
+export const db = createDb(client);

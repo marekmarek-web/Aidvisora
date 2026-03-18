@@ -1,6 +1,6 @@
 import { db } from "db";
 import { contacts, contracts, tasks, auditLog } from "db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "db";
 
 export type ApplyDraftActionsInput = {
   tenantId: string;

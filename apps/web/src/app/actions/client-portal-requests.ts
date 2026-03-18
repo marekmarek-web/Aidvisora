@@ -56,8 +56,7 @@ export async function getClientRequests(): Promise<ClientRequestItem[]> {
       and(
         eq(opportunities.tenantId, auth.tenantId),
         eq(opportunities.contactId, auth.contactId)
-      )
-    )
+      )    )
     .orderBy(asc(opportunityStages.sortOrder));
 
   return rows.map((r) => {

@@ -1,6 +1,6 @@
 import { db } from "db";
 import { contacts } from "db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "db";
 import { getContractReviewById } from "./review-queue-repository";
 import { listContractReviews } from "./review-queue-repository";
 import { getTasksDueAndOverdue } from "./dashboard-priority";

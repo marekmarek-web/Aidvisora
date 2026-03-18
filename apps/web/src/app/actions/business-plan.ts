@@ -99,8 +99,7 @@ export async function listBusinessPlans(): Promise<PlanListItem[]> {
       and(
         eq(advisorBusinessPlans.tenantId, auth.tenantId),
         eq(advisorBusinessPlans.userId, auth.userId)
-      )
-    )
+      )    )
     .orderBy(asc(advisorBusinessPlans.year), asc(advisorBusinessPlans.periodNumber));
   const periodType = (p: string) => p as PeriodType;
   return rows.map((r) => {
@@ -142,8 +141,7 @@ export async function getActivePlan(
         eq(advisorBusinessPlans.year, y),
         eq(advisorBusinessPlans.periodNumber, periodNumber),
         eq(advisorBusinessPlans.status, "active")
-      )
-    )
+      )    )
     .limit(1);
   if (!planRow) return null;
   const period = getPlanPeriod(
@@ -191,8 +189,7 @@ export async function getPlanWithTargets(
         eq(advisorBusinessPlans.id, planId),
         eq(advisorBusinessPlans.tenantId, auth.tenantId),
         eq(advisorBusinessPlans.userId, auth.userId)
-      )
-    )
+      )    )
     .limit(1);
   if (!planRow) return null;
   const period = getPlanPeriod(
@@ -298,8 +295,7 @@ export async function updateBusinessPlan(
         eq(advisorBusinessPlans.id, planId),
         eq(advisorBusinessPlans.tenantId, auth.tenantId),
         eq(advisorBusinessPlans.userId, auth.userId)
-      )
-    );
+      )    );
 }
 
 /** Delete plan (cascades to targets). */
@@ -312,8 +308,7 @@ export async function deleteBusinessPlan(planId: string): Promise<void> {
         eq(advisorBusinessPlans.id, planId),
         eq(advisorBusinessPlans.tenantId, auth.tenantId),
         eq(advisorBusinessPlans.userId, auth.userId)
-      )
-    );
+      )    );
 }
 
 /** Set targets for a plan (replaces existing). */
@@ -330,8 +325,7 @@ export async function setPlanTargets(
         eq(advisorBusinessPlans.id, planId),
         eq(advisorBusinessPlans.tenantId, auth.tenantId),
         eq(advisorBusinessPlans.userId, auth.userId)
-      )
-    )
+      )    )
     .limit(1);
   if (!plan) throw new Error("Plan not found");
   await db

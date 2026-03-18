@@ -1,6 +1,6 @@
 import { db } from "db";
 import { contractUploadReviews } from "db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc } from "db";
 import type { ContractProcessingStatus, ContractReviewStatus } from "db";
 import { logAudit } from "@/lib/audit";
 

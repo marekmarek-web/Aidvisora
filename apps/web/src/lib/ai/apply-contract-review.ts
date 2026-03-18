@@ -1,6 +1,6 @@
 import { db } from "db";
 import { contacts, contracts, tasks, auditLog } from "db";
-import { eq, and } from "drizzle-orm";
+import { eq, and } from "db";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
 

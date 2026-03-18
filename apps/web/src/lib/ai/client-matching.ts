@@ -1,6 +1,6 @@
 import { db } from "db";
 import { contacts, companies, companyPersonLinks } from "db";
-import { eq, and, or, sql } from "drizzle-orm";
+import { eq, and, or, sql } from "db";
 import type { ExtractedContractSchema } from "./extraction-schemas";
 import type { ClientMatchCandidate, MatchConfidence } from "./review-queue";
 import {
