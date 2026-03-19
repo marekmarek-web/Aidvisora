@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { DocumentPreviewToggle } from "./DocumentPreviewToggle";
+import { ClientDocumentUpload } from "../ClientDocumentUpload";
+import { Download, File } from "lucide-react";
 
 export default async function ClientDocumentsPage() {
   const auth = await requireAuth();
@@ -10,65 +12,85 @@ export default async function ClientDocumentsPage() {
   const documentsList = await getDocumentsForClient(auth.contactId);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <h1 className="text-xl font-semibold text-monday-text">Dokumenty</h1>
+    <div className="space-y-6 client-fade-in">
+      <div>
+        <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight">
+          Trezor dokumentů
+        </h2>
+        <p className="text-sm font-medium text-slate-500 mt-2">
+          Bezpečné sdílení dokumentů mezi vámi a poradcem.
+        </p>
+      </div>
 
-      {documentsList.length === 0 ? (
-        <div className="rounded-xl border border-monday-border bg-monday-surface p-6 text-center">
-          <p className="text-monday-text-muted text-sm">
-            Žádné dokumenty ke stažení.
-          </p>
-          <p className="mt-2 text-sm text-monday-text-muted">
-            Máte dotaz?{" "}
-            <Link href="/client/messages" className="text-monday-blue font-medium hover:underline">
-              Napište poradci
-            </Link>
-            .
-          </p>
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30 rounded-t-[32px]">
+          <h3 className="text-xl font-black text-slate-900">Správce souborů</h3>
+          <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+            {documentsList.length} dokumentů
+          </span>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {documentsList.map((d) => {
-            const isPdf = d.mimeType === "application/pdf";
-            return (
-              <div
-                key={d.id}
-                className="rounded-xl border border-monday-border bg-monday-surface p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-monday-text">{d.name}</span>
-                    <span className="text-monday-text-muted text-xs ml-2">
-                      {new Date(d.createdAt).toLocaleDateString("cs-CZ")}
-                    </span>
-                    {d.tags && d.tags.length > 0 && (
-                      <div className="flex gap-1 mt-1">
-                        {d.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-block rounded-lg bg-monday-blue/10 px-2 py-0.5 text-[11px] font-medium text-monday-blue"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
+
+        <div className="p-6 sm:p-8 space-y-6">
+          <ClientDocumentUpload />
+
+          {documentsList.length === 0 ? (
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
+              <p className="text-slate-500 text-sm">
+                Zatím zde nejsou žádné dokumenty ke stažení.
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Máte dotaz?{" "}
+                <Link href="/client/messages" className="text-indigo-600 font-bold hover:underline">
+                  Napište poradci
+                </Link>
+                .
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {documentsList.map((document) => {
+                const isPdf = document.mimeType === "application/pdf";
+                return (
+                  <div
+                    key={document.id}
+                    className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="p-3 bg-rose-50 text-rose-500 rounded-xl">
+                      <File size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm text-slate-800 truncate">{document.name}</h4>
+                      <p className="text-xs font-bold text-slate-400">
+                        {new Date(document.createdAt).toLocaleDateString("cs-CZ")}
+                      </p>
+                      {document.tags && document.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {document.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-block rounded-lg bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {isPdf && <DocumentPreviewToggle documentId={document.id} />}
+                    </div>
                     <a
-                      href={`/api/documents/${d.id}/download`}
-                      className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-white bg-monday-blue hover:opacity-90"
+                      href={`/api/documents/${document.id}/download`}
+                      className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+                      aria-label={`Stáhnout ${document.name}`}
                     >
-                      Stáhnout
+                      <Download size={20} />
                     </a>
                   </div>
-                </div>
-                {isPdf && <DocumentPreviewToggle documentId={d.id} />}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

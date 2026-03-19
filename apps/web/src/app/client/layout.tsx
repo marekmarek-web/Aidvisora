@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { ClientSidebar } from "./ClientSidebar";
 import { getPortalNotificationsUnreadCount } from "@/app/actions/portal-notifications";
-import "@/styles/weplan-monday.css";
+import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
+import { db, contacts, and, eq } from "db";
+import { ClientPortalShell } from "./ClientPortalShell";
+import "./client-portal.css";
 
 export default async function ClientZoneLayout({
   children,
@@ -14,14 +16,33 @@ export default async function ClientZoneLayout({
     redirect("/portal");
   }
 
-  const unreadNotificationsCount = await getPortalNotificationsUnreadCount();
+  const [unreadNotificationsCount, contact, advisor] = await Promise.all([
+    getPortalNotificationsUnreadCount(),
+    auth.contactId
+      ? db
+          .select({
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+          })
+          .from(contacts)
+          .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId)))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    auth.contactId ? getAssignedAdvisorForClient(auth.contactId).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  const fullName = contact
+    ? `${contact.firstName} ${contact.lastName}`.trim()
+    : "Klient";
 
   return (
-    <div className="flex min-h-screen bg-monday-bg">
-      <ClientSidebar unreadNotificationsCount={unreadNotificationsCount} />
-      <div className="flex flex-col flex-1 min-w-0 ml-12 md:ml-[200px]">
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    <ClientPortalShell
+      unreadNotificationsCount={unreadNotificationsCount}
+      fullName={fullName}
+      advisor={advisor}
+    >
+      {children}
+    </ClientPortalShell>
   );
 }

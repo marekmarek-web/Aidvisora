@@ -1,0 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap");
+
+.font-display {
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.client-portal-root {
+  font-family: "Lato", sans-serif;
+}
+
+.client-dot-grid {
+  background-image: radial-gradient(#cbd5e1 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+.client-hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.client-custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.client-custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.client-custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 999px;
+}
+
+.client-fade-in {
+  animation: clientFadeIn 0.25s ease-out forwards;
+}
+
+.client-scale-in {
+  animation: clientScaleIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes clientFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes clientScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

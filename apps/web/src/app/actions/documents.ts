@@ -8,6 +8,7 @@ import { eq, and } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logActivity } from "./activity";
 import { logAudit } from "@/lib/audit";
+import { createPortalNotification } from "./portal-notifications";
 
 export type DocumentRow = {
   id: string;
@@ -195,4 +196,38 @@ export async function logDocumentDownload(documentId: string) {
     entityType: "document",
     entityId: documentId,
   });
+}
+
+export async function clientUploadDocument(formData: FormData) {
+  const auth = await requireAuthInAction();
+  if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
+
+  const name = (formData.get("name") as string | null)?.trim() || null;
+  const tagsRaw = (formData.get("tags") as string | null)?.trim() || null;
+  const tags = tagsRaw
+    ? tagsRaw
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    : [];
+
+  const documentId = await uploadDocument(auth.contactId, formData, {
+    visibleToClient: true,
+    tags,
+    uploadSource: "web",
+  });
+
+  if (documentId) {
+    await createPortalNotification({
+      tenantId: auth.tenantId,
+      contactId: auth.contactId,
+      type: "new_document",
+      title: "Klient nahrál nový dokument",
+      body: name ? `Nový dokument: ${name}` : "Klient přidal nový dokument do trezoru.",
+      relatedEntityType: "document",
+      relatedEntityId: documentId,
+    }).catch(() => {});
+  }
+
+  return { success: true as const, id: documentId };
 }

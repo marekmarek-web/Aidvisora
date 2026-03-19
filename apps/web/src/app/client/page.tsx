@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { db } from "db";
 import { contacts } from "db";
@@ -7,6 +6,8 @@ import { getContractsByContact } from "@/app/actions/contracts";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { getPaymentInstructionsForContact } from "@/app/actions/payment-pdf";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
+import { getPortalNotificationsForClient } from "@/app/actions/portal-notifications";
+import { getClientDashboardMetrics } from "@/app/actions/client-dashboard";
 import { ClientDashboardLayout } from "./ClientDashboardLayout";
 
 export default async function ClientZonePage() {
@@ -26,34 +27,37 @@ export default async function ClientZonePage() {
 
   const isUnsubscribed = !!contact?.notificationUnsubscribedAt;
 
-  const [contractsList, documentsList, paymentInstructions, requestsList] =
+  const [contractsList, documentsList, paymentInstructions, requestsList, quickStats, notifications] =
     await Promise.all([
       getContractsByContact(auth.contactId),
       getDocumentsForClient(auth.contactId),
       getPaymentInstructionsForContact(auth.contactId),
       getClientRequests(),
+      getClientDashboardMetrics(auth.contactId),
+      getPortalNotificationsForClient(),
     ]);
 
   const openRequests = requestsList.filter((r) => r.statusKey !== "done");
-  const hasAnyRequests = requestsList.length > 0;
-
-  const banner = (
-    <p className="rounded-xl border border-monday-blue/30 bg-monday-blue/5 px-4 py-3 text-sm text-monday-text">
-      Zde uvidíte smlouvy, dokumenty, platební instrukce a požadavky. Vše na jednom místě. Máte-li dotaz, napište poradci nebo zadejte nový požadavek.
-    </p>
-  );
+  const latestNotification = notifications[0] ?? null;
 
   return (
     <ClientDashboardLayout
-      banner={banner}
       contact={contact ?? undefined}
       isUnsubscribed={isUnsubscribed}
       authContactId={auth.contactId}
-      contractsList={contractsList}
-      documentsList={documentsList}
-      paymentInstructions={paymentInstructions}
+      quickStats={quickStats}
       openRequests={openRequests}
-      hasAnyRequests={hasAnyRequests}
+      contractsCount={contractsList.length}
+      paymentInstructionsCount={paymentInstructions.length}
+      documentsCount={documentsList.length}
+      latestNotification={
+        latestNotification
+          ? {
+              title: latestNotification.title,
+              body: latestNotification.body,
+            }
+          : null
+      }
     />
   );
 }

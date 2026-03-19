@@ -16,6 +16,9 @@ export type PaymentInstruction = {
   accountNumber: string;
   bank: string | null;
   note: string | null;
+  amount: string | null;
+  frequency: string | null;
+  variableSymbol: string | null;
 };
 
 export async function getPaymentInstructionsForContact(contactId: string): Promise<PaymentInstruction[]> {
@@ -40,6 +43,9 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
         accountNumber: acc.accountNumber,
         bank: acc.bank,
         note: acc.note,
+        amount: c.premiumAmount,
+        frequency: c.premiumAmount ? "měsíčně" : null,
+        variableSymbol: c.contractNumber,
       });
     }
   }

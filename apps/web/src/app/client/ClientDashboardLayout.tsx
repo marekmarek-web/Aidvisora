@@ -1,201 +1,243 @@
-import Link from "next/link";
-import { segmentLabel } from "@/app/lib/segment-labels";
-import { ClientZoneExportButton } from "./ClientZoneExportButton";
+"use client";
 
-export type ClientDashboardLayoutProps = {
-  banner: React.ReactNode;
+import Link from "next/link";
+import { useState } from "react";
+import {
+  Bell,
+  Briefcase,
+  Calculator,
+  CreditCard,
+  FolderOpen,
+  PieChart,
+  Plus,
+  Shield,
+  TrendingUp,
+} from "lucide-react";
+import type { ClientRequestItem } from "@/app/lib/client-portal/request-types";
+import { ClientZoneExportButton } from "./ClientZoneExportButton";
+import { NewRequestModal } from "./NewRequestModal";
+import { AiSupportButton } from "./AiSupportButton";
+
+type QuickStats = {
+  assetsUnderManagement: number;
+  monthlyInvestments: number;
+  riskCoveragePercent: number;
+};
+
+type ClientDashboardLayoutProps = {
   contact: { firstName: string; lastName: string; email: string | null } | undefined;
   isUnsubscribed: boolean;
   authContactId: string;
-  contractsList: { id: string; segment: string; partnerName: string | null; productName: string | null; premiumAmount: string | null; contractNumber: string | null; startDate: string | null; anniversaryDate: string | null }[];
-  documentsList: { id: string; name: string; createdAt: Date; mimeType: string | null; tags: string[] | null }[];
-  paymentInstructions: { segment: string; partnerName: string; productName: string | null; contractNumber: string | null; accountNumber: string; bank: string | null; note: string | null }[];
-  openRequests: { id: string; title: string; statusLabel: string }[];
-  hasAnyRequests: boolean;
+  quickStats: QuickStats;
+  openRequests: ClientRequestItem[];
+  contractsCount: number;
+  paymentInstructionsCount: number;
+  documentsCount: number;
+  latestNotification: { title: string; body: string | null } | null;
 };
 
-export function ClientDashboardLayout(props: ClientDashboardLayoutProps) {
-  const { banner, contact, isUnsubscribed, authContactId, contractsList, documentsList, paymentInstructions, openRequests, hasAnyRequests } = props;
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {banner}
-      <h1 className="text-xl font-semibold text-monday-text">
-        Vítejte v klientském portálu
-      </h1>
-      {contact && (
-        <p className="text-monday-text-muted">
-          Přihlášen jako {contact.firstName} {contact.lastName}
-          {contact.email ? ` (${contact.email})` : ""}.
-        </p>
-      )}
+function formatMoney(value: number): string {
+  return `${value.toLocaleString("cs-CZ")} Kč`;
+}
 
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/client/requests/new"
-          className="inline-flex items-center justify-center rounded-[var(--wp-radius-sm)] bg-monday-blue px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity min-h-[44px] min-w-[44px]"
+export function ClientDashboardLayout({
+  contact,
+  isUnsubscribed,
+  authContactId,
+  quickStats,
+  openRequests,
+  contractsCount,
+  paymentInstructionsCount,
+  documentsCount,
+  latestNotification,
+}: ClientDashboardLayoutProps) {
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+
+  const firstName = contact?.firstName || "Kliente";
+  const highlightedRequest = openRequests[0] ?? null;
+
+  return (
+    <div className="space-y-8 client-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div>
+          <h2 className="text-3xl md:text-4xl font-display font-black text-slate-900 tracking-tight mb-2">
+            Dobrý den, {firstName}
+          </h2>
+          <p className="text-slate-500 font-medium">
+            Vítejte ve svém osobním finančním portálu.
+          </p>
+        </div>
+        <button
+          onClick={() => setRequestModalOpen(true)}
+          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
         >
-          Mám nový požadavek
-        </Link>
-        <Link
-          href="/client/messages"
-          className="inline-flex items-center justify-center rounded-[var(--wp-radius-sm)] border border-monday-border bg-monday-surface px-4 py-2.5 text-sm font-medium text-monday-text hover:bg-monday-row-hover transition-colors min-h-[44px] min-w-[44px]"
-        >
-          Napsat zprávu poradci
-        </Link>
+          <Plus size={18} />
+          Nový požadavek
+        </button>
       </div>
 
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-monday-text">Moje smlouvy</h2>
-          <Link href="/client/contracts" className="text-sm text-monday-blue font-medium hover:underline">
-            Zobrazit vše →
-          </Link>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+          <div className="flex items-center gap-2 mb-2 text-indigo-600">
+            <PieChart size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Spravovaný majetek
+            </span>
+          </div>
+          <div className="text-3xl font-display font-black text-slate-900">
+            {formatMoney(quickStats.assetsUnderManagement)}
+          </div>
         </div>
-        {contractsList.length === 0 ? (
-          <>
-            <p className="text-monday-text-muted text-sm">
-              Zatím nemáte evidované smlouvy. Vše doplní váš poradce.
+        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all">
+          <div className="flex items-center gap-2 mb-2 text-emerald-600">
+            <TrendingUp size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Měsíční investice
+            </span>
+          </div>
+          <div className="text-3xl font-display font-black text-slate-900">
+            {formatMoney(quickStats.monthlyInvestments)}
+          </div>
+        </div>
+        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
+          <div className="flex items-center gap-2 mb-2 text-amber-500">
+            <Shield size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Krytí rizik
+            </span>
+          </div>
+          <div className="flex items-end gap-3">
+            <div className="text-3xl font-display font-black text-slate-900">
+              {quickStats.riskCoveragePercent}%
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
+              <div
+                className="h-full bg-amber-400"
+                style={{ width: `${quickStats.riskCoveragePercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-gradient-to-br from-[#1a1c2e] to-[#0f172a] rounded-[32px] p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-indigo-300 backdrop-blur-sm border border-white/10">
+                <Bell size={20} />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">
+                Aktuálně k řešení
+              </h3>
+            </div>
+            <p className="text-2xl font-display font-bold text-white mb-6 leading-tight max-w-xl">
+              {latestNotification?.title ??
+                highlightedRequest?.title ??
+                "Vše je aktuálně v pořádku. Pokud něco potřebujete, pošlete nový požadavek."}
             </p>
-            <Link href="/client/messages" className="mt-2 inline-block text-sm text-monday-blue font-medium hover:underline">
-              Napsat poradci →
-            </Link>
-          </>
-        ) : (
-          <p className="text-sm text-monday-text-muted">
-            Celkem {contractsList.length} {contractsList.length === 1 ? "smlouva" : contractsList.length < 5 ? "smlouvy" : "smluv"}.
-          </p>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-monday-text">Platební instrukce</h2>
-          <Link href="/client/payments" className="text-sm text-monday-blue font-medium hover:underline">
-            Zobrazit vše →
-          </Link>
-        </div>
-        {paymentInstructions.length === 0 ? (
-          <>
-            <p className="text-monday-text-muted text-sm">
-              Platební údaje připravujeme. Pro detail kontaktujte poradce.
-            </p>
-            <Link href="/client/messages" className="mt-2 inline-block text-sm text-monday-blue font-medium hover:underline">
-              Napsat poradci →
-            </Link>
-          </>
-        ) : (
-          <ul className="space-y-2 text-sm">
-            {paymentInstructions.slice(0, 3).map((i, idx) => (
-              <li key={idx} className="border-l-2 border-monday-border pl-2">
-                {segmentLabel(i.segment)} – {i.partnerName}
-                <br />
-                <span className="text-monday-text-muted">
-                  Účet: {i.accountNumber}
-                  {i.bank ? `, ${i.bank}` : ""}
-                  {i.contractNumber && <> · č. smlouvy: {i.contractNumber}</>}
-                </span>
-              </li>
-            ))}
-            {paymentInstructions.length > 3 && (
-              <li className="text-monday-text-muted text-sm">
-                … a dalších {paymentInstructions.length - 3} položek
-              </li>
+            {(latestNotification?.body || highlightedRequest?.description) && (
+              <p className="text-indigo-100 text-sm mb-6">
+                {latestNotification?.body ?? highlightedRequest?.description}
+              </p>
             )}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-monday-text">Dokumenty</h2>
-          <Link href="/client/documents" className="text-sm text-monday-blue font-medium hover:underline">
-            Zobrazit vše →
-          </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/client/requests"
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide shadow-lg shadow-indigo-500/30"
+              >
+                Otevřít požadavky
+              </Link>
+              <Link
+                href="/client/messages"
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-xl text-sm font-bold tracking-wide backdrop-blur-sm border border-white/10"
+              >
+                Napsat zprávu
+              </Link>
+            </div>
+          </div>
         </div>
-        {documentsList.length === 0 ? (
-          <p className="text-monday-text-muted text-sm">Žádné dokumenty ke stažení.</p>
-        ) : (
-          <p className="text-sm text-monday-text-muted">
-            {documentsList.length} {documentsList.length === 1 ? "dokument" : documentsList.length < 5 ? "dokumenty" : "dokumentů"} ke stažení.
-          </p>
-        )}
-      </section>
 
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-monday-text">Moje požadavky</h2>
-          <Link href="/client/requests" className="text-sm text-monday-blue font-medium hover:underline">
-            Zobrazit vše →
-          </Link>
-        </div>
-        {!hasAnyRequests ? (
-          <>
-            <p className="text-monday-text-muted text-sm">Nemáte žádné aktivní požadavky.</p>
-            <Link href="/client/requests/new" className="mt-2 inline-block text-sm text-monday-blue font-medium hover:underline">
-              Mám nový požadavek →
+        <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm grid grid-cols-2 gap-4">
+          {[
+            {
+              href: "/client/portfolio",
+              label: "Moje portfolio",
+              icon: Briefcase,
+              color: "text-indigo-600 bg-indigo-50",
+              value: `${contractsCount} položek`,
+            },
+            {
+              href: "/client/payments",
+              label: "Platby a QR",
+              icon: CreditCard,
+              color: "text-emerald-600 bg-emerald-50",
+              value: `${paymentInstructionsCount} instrukcí`,
+            },
+            {
+              href: "/client/documents",
+              label: "Trezor dokumentů",
+              icon: FolderOpen,
+              color: "text-amber-600 bg-amber-50",
+              value: `${documentsCount} dokumentů`,
+            },
+            {
+              href: "/client/calculators",
+              label: "Kalkulačky",
+              icon: Calculator,
+              color: "text-blue-600 bg-blue-50",
+              value: "2 nástroje",
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="p-5 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all flex flex-col items-center justify-center text-center gap-2 group min-h-[132px]"
+            >
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}
+              >
+                <item.icon size={24} />
+              </div>
+              <span className="font-bold text-sm text-slate-700">{item.label}</span>
+              <span className="text-xs text-slate-400 font-bold">{item.value}</span>
             </Link>
-          </>
-        ) : openRequests.length === 0 ? (
-          <p className="text-sm text-monday-text-muted">Všechny vaše požadavky jsou dokončené.</p>
-        ) : (
-          <ul className="space-y-2 text-sm">
-            {openRequests.slice(0, 3).map((r) => (
-              <li key={r.id} className="flex justify-between gap-2">
-                <span className="text-monday-text truncate">{r.title}</span>
-                <span className="shrink-0 rounded bg-monday-blue/10 px-2 py-0.5 text-xs text-monday-blue">
-                  {r.statusLabel}
-                </span>
-              </li>
-            ))}
-            {openRequests.length > 3 && (
-              <li className="text-monday-text-muted text-sm">
-                … a dalších {openRequests.length - 3} požadavků
-              </li>
-            )}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-semibold text-monday-text">Zprávy</h2>
-          <Link href="/client/messages" className="text-sm text-monday-blue font-medium hover:underline">
-            Otevřít →
-          </Link>
+          ))}
         </div>
-        <p className="text-sm text-monday-text-muted">
-          Komunikujte se svým poradcem bezpečně. Napište zprávu nebo si přečtěte historii.
-        </p>
-      </section>
+      </div>
 
-      <section className="rounded-xl border border-monday-border bg-monday-surface p-4">
-        <h2 className="font-semibold text-monday-text mb-2">E-mailová oznámení</h2>
-        <p className="text-sm text-monday-text-muted mb-2">
+      <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm">
+        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">
+          E-mailová oznámení
+        </h3>
+        <p className="text-sm text-slate-600 mb-2">
           {isUnsubscribed
-            ? "Odeslali jste žádost o odhlášení z e-mailových notifikací. Nebudete dostávat žádná upozornění."
-            : "Dostáváte e-mailová upozornění o servisních připomínkách, nových dokumentech a platebních instrukcích."}
+            ? "E-mailové notifikace jsou aktuálně vypnuté."
+            : "Dostáváte servisní upozornění, nové dokumenty a změny ve vašich požadavcích."}
         </p>
         {!isUnsubscribed && (
           <Link
             href={`/client/unsubscribe?contactId=${authContactId}`}
-            className="text-sm text-red-600 font-medium hover:underline"
+            className="text-sm text-rose-600 font-bold hover:underline"
           >
             Odhlásit se z notifikací
           </Link>
         )}
-        {isUnsubscribed && (
-          <p className="text-xs text-monday-text-muted">
-            Pro obnovení notifikací kontaktujte svého poradce.
-          </p>
-        )}
-      </section>
+      </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 items-center">
         <ClientZoneExportButton />
-        <Link href="/gdpr" className="text-sm text-monday-blue font-medium">
+        <Link href="/gdpr" className="text-sm text-indigo-600 font-bold hover:underline">
           Ochrana osobních údajů (GDPR)
         </Link>
       </div>
+
+      <AiSupportButton />
+      <NewRequestModal
+        open={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+      />
     </div>
   );
 }

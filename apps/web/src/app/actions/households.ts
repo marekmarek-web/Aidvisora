@@ -3,6 +3,8 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db, households, householdMembers, contacts, eq, and, asc } from "db";
+import { createPortalNotification } from "./portal-notifications";
+import { logActivity } from "./activity";
 
 export type HouseholdRow = { id: string; name: string; memberCount: number };
 
@@ -70,6 +72,23 @@ export type HouseholdForContact = {
   memberCount: number;
 };
 
+export type ClientHouseholdMember = {
+  id: string;
+  contactId: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  role: string | null;
+};
+
+export type ClientHouseholdDetail = {
+  id: string;
+  name: string;
+  role: string | null;
+  memberCount: number;
+  members: ClientHouseholdMember[];
+};
+
 /** Household (if any) that this contact belongs to; for profile sidebar/card. */
 export async function getHouseholdForContact(contactId: string): Promise<HouseholdForContact | null> {
   const auth = await requireAuthInAction();
@@ -92,6 +111,49 @@ export async function getHouseholdForContact(contactId: string): Promise<Househo
     name: member.name,
     role: member.role,
     memberCount: count.length,
+  };
+}
+
+export async function getClientHouseholdForContact(
+  contactId: string
+): Promise<ClientHouseholdDetail | null> {
+  const auth = await requireAuthInAction();
+  const isClientPortal = auth.roleName === "Client" && auth.contactId === contactId;
+  if (!isClientPortal && !hasPermission(auth.roleName, "households:read")) return null;
+
+  const [member] = await db
+    .select({
+      householdId: householdMembers.householdId,
+      role: householdMembers.role,
+      name: households.name,
+    })
+    .from(householdMembers)
+    .innerJoin(households, eq(householdMembers.householdId, households.id))
+    .where(and(eq(householdMembers.contactId, contactId), eq(households.tenantId, auth.tenantId)))
+    .limit(1);
+
+  if (!member) return null;
+
+  const members = await db
+    .select({
+      id: householdMembers.id,
+      contactId: householdMembers.contactId,
+      role: householdMembers.role,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      birthDate: contacts.birthDate,
+    })
+    .from(householdMembers)
+    .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
+    .where(eq(householdMembers.householdId, member.householdId))
+    .orderBy(asc(contacts.firstName), asc(contacts.lastName));
+
+  return {
+    id: member.householdId,
+    name: member.name,
+    role: member.role,
+    memberCount: members.length,
+    members,
   };
 }
 
@@ -185,4 +247,83 @@ export async function setContactHousehold(contactId: string, householdId: string
     if (!h) throw new Error("Domácnost nenalezena");
     await db.insert(householdMembers).values({ householdId, contactId, role: null });
   }
+}
+
+export async function addHouseholdMemberFromClient(params: {
+  role: string;
+  fullName: string;
+  birthDate?: string | null;
+}) {
+  const auth = await requireAuthInAction();
+  if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
+
+  const fullName = params.fullName.trim();
+  if (!fullName) throw new Error("Jméno člena domácnosti je povinné.");
+
+  const nameParts = fullName.split(/\s+/);
+  const firstName = nameParts.shift() || "Člen";
+  const lastName = nameParts.join(" ") || "Domácnosti";
+
+  let householdId: string | null = null;
+
+  const currentHousehold = await getHouseholdForContact(auth.contactId);
+  if (currentHousehold) {
+    householdId = currentHousehold.id;
+  } else {
+    const [createdHousehold] = await db
+      .insert(households)
+      .values({
+        tenantId: auth.tenantId,
+        name: `${firstName} domácnost`,
+      })
+      .returning({ id: households.id });
+    householdId = createdHousehold?.id ?? null;
+    if (householdId) {
+      await db.insert(householdMembers).values({
+        householdId,
+        contactId: auth.contactId,
+        role: "primary",
+      });
+    }
+  }
+
+  if (!householdId) throw new Error("Domácnost se nepodařilo připravit.");
+
+  const [newContact] = await db
+    .insert(contacts)
+    .values({
+      tenantId: auth.tenantId,
+      firstName,
+      lastName,
+      birthDate: params.birthDate || null,
+      lifecycleStage: "active",
+      leadSource: "client_portal_household",
+    })
+    .returning({ id: contacts.id });
+
+  if (!newContact?.id) throw new Error("Nepodařilo se vytvořit člena domácnosti.");
+  const roleLabel = params.role?.trim() || "member";
+  await db.insert(householdMembers).values({
+    householdId,
+    contactId: newContact.id,
+    role: roleLabel,
+  });
+
+  await logActivity("contact", auth.contactId, "client_household_member_add", {
+    memberContactId: newContact.id,
+    role: roleLabel,
+    via: "client_portal",
+  }).catch(() => {});
+
+  await createPortalNotification({
+    tenantId: auth.tenantId,
+    contactId: auth.contactId,
+    type: "important_date",
+    title: "Klient upravil domácnost",
+    body: `${fullName} byl přidán do domácnosti.`,
+    relatedEntityType: "contact",
+    relatedEntityId: newContact.id,
+  }).catch(() => {});
+
+  return { success: true as const, contactId: newContact.id };
 }
