@@ -1,0 +1,501 @@
+"use client";
+
+import React, { useState } from 'react';
+import { 
+  Users, Calendar, CheckSquare, RefreshCw, BarChart2, 
+  Sparkles, AlertTriangle, UserPlus, TrendingUp, 
+  TrendingDown, Clock, ArrowRight, X, User, CheckCircle2,
+  Mail, Phone, Target, Zap
+} from 'lucide-react';
+
+// --- MOCK DATA ---
+const TEAM_MEMBERS = [
+  { id: '1', name: 'Martin Dvořák', role: 'Senior Poradce', email: 'martin.d@aidvisora.cz', initials: 'MD', color: 'bg-indigo-100 text-indigo-700', production: '1 250 000 Kč', meetings: 24, activity: 95, trend: 'up', status: 'online' },
+  { id: '2', name: 'Lucie Černá', role: 'Poradce', email: 'lucie.c@aidvisora.cz', initials: 'LČ', color: 'bg-emerald-100 text-emerald-700', production: '850 000 Kč', meetings: 18, activity: 82, trend: 'up', status: 'offline' },
+  { id: '3', name: 'Petr Nový', role: 'Junior Poradce', email: 'petr.n@aidvisora.cz', initials: 'PN', color: 'bg-blue-100 text-blue-700', production: '320 000 Kč', meetings: 12, activity: 65, trend: 'down', status: 'online', alert: true },
+  { id: '4', name: 'Jana Malá', role: 'Poradce', email: 'jana.m@aidvisora.cz', initials: 'JM', color: 'bg-rose-100 text-rose-700', production: '940 000 Kč', meetings: 21, activity: 88, trend: 'up', status: 'online' },
+  { id: '5', name: 'Karel Svoboda', role: 'Poradce', email: 'karel.s@aidvisora.cz', initials: 'KS', color: 'bg-amber-100 text-amber-700', production: '410 000 Kč', meetings: 8, activity: 45, trend: 'down', status: 'offline', alert: true },
+];
+
+const PERFORMANCE_DATA = [
+  { month: 'Říjen 2025', value: 65, label: '2.1M' },
+  { month: 'Listopad 2025', value: 80, label: '2.8M' },
+  { month: 'Prosinec 2025', value: 95, label: '3.4M' },
+  { month: 'Leden 2026', value: 45, label: '1.5M' },
+  { month: 'Únor 2026', value: 70, label: '2.4M' },
+  { month: 'Březen 2026', value: 85, label: '3.1M', isCurrent: true },
+];
+
+const ALERTS = [
+  { id: 1, type: 'danger', message: 'Karel Svoboda má tento týden pokles schůzek o 60 % pod svůj průměr.' },
+  { id: 2, type: 'warning', message: 'Petr Nový nedosáhl na minimální KPI v počtu volaných kontaktů (pouze 45/100).' },
+];
+
+const ONBOARDING = [
+  { id: 1, name: 'David Kříž', step: 'Certifikace ČNB', progress: 75, daysLeft: 12 },
+  { id: 2, name: 'Tereza Veselá', step: 'Zácvik produktů', progress: 30, daysLeft: 24 },
+];
+
+export default function TeamOverviewView() {
+  const [period, setPeriod] = useState('mesic'); // 'mesic' | 'kvartal' | 'rok'
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState(null);
+  
+  // Stavy pro modály
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // Funkce pro generování AI shrnutí
+  const handleGenerateSummary = () => {
+    setIsAiLoading(true);
+    setTimeout(() => {
+      setAiSummary({
+        title: "Tým je na dobré cestě k překonání kvartálního cíle.",
+        content: "Produkce v březnu roste (aktuálně 3.1M Kč). Hlavním tahounem je Martin Dvořák a Jana Malá. Doporučuji zaměřit pozornost na Karla Svobodu, jehož aktivita v posledních 14 dnech strmě klesá. Nováčci se adaptují podle plánu.",
+        recommendation: "Navrhuji naplánovat 1-on-1 schůzku s Karlem a Petrem pro zjištění případných blokátorů."
+      });
+      setIsAiLoading(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="w-full h-full min-h-screen bg-transparent font-sans text-slate-800 flex flex-col relative pb-20">
+      
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
+        .font-sans { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      {/* --- HLAVNÍ KONTEJNER MODULU --- */}
+      <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 md:p-8 flex flex-col relative z-10">
+        
+        {/* --- HLAVIČKA A OVLÁDÁNÍ --- */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-display font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Týmový přehled
+            </h1>
+            <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-2">
+              <Users size={16} className="text-indigo-400" />
+              Výkon týmu, aktivita a adaptace nováčků na jednom místě.
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold uppercase tracking-widest ml-2 border border-slate-200">
+                {TEAM_MEMBERS.length + ONBOARDING.length} členů celkem
+              </span>
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <button 
+              onClick={() => setIsEventModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors"
+            >
+              <Calendar size={16} className="text-indigo-500" /> Týmová událost
+            </button>
+            <button 
+              onClick={() => setIsTaskModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors"
+            >
+              <CheckSquare size={16} className="text-emerald-500" /> Týmový úkol
+            </button>
+            
+            <div className="flex items-center gap-2 ml-2">
+              <select 
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer shadow-sm"
+              >
+                <option value="mesic">Měsíc</option>
+                <option value="kvartal">Kvartál</option>
+                <option value="rok">Rok</option>
+              </select>
+              <button className="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl shadow-sm hover:bg-slate-50 transition-colors" title="Obnovit data">
+                <RefreshCw size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* --- RYCHLÉ METRIKY (Enrichment oproti prázdnému screenshotu) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Produkce týmu</span>
+            <div className="text-2xl font-display font-black text-slate-900">3 770 000 Kč</div>
+            <span className="text-xs font-bold text-emerald-500 flex items-center gap-1 mt-1"><TrendingUp size={12} /> +12% vs minulý {period}</span>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Schůzky celkem</span>
+            <div className="text-2xl font-display font-black text-slate-900">85</div>
+            <span className="text-xs font-bold text-rose-500 flex items-center gap-1 mt-1"><TrendingDown size={12} /> -5% vs minulý {period}</span>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Top Performer</span>
+            <div className="text-lg font-bold text-slate-900 truncate">Martin Dvořák</div>
+            <span className="text-xs font-bold text-indigo-500 mt-1">1.25M Kč produkce</span>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Průměrná aktivita</span>
+            <div className="text-2xl font-display font-black text-slate-900 flex items-baseline gap-1">74 <span className="text-sm text-slate-400 font-bold">/ 100</span></div>
+            <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{width: '74%'}}></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEVÝ SLOUPEC (Graf a Členové) */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* VÝKON V ČASE (Graf) */}
+            <div className="bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <BarChart2 size={20} className="text-indigo-500" /> Výkon v čase
+                </h2>
+              </div>
+              
+              {/* Čistý CSS Graf namísto šedých bloků */}
+              <div className="h-[200px] flex items-end justify-between gap-2 md:gap-4 relative pt-6">
+                {/* Vodicí linky pozadí */}
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
+                  <div className="w-full h-px bg-slate-100"></div>
+                  <div className="w-full h-px bg-slate-100"></div>
+                  <div className="w-full h-px bg-slate-100"></div>
+                  <div className="w-full h-px bg-slate-200"></div>
+                </div>
+
+                {PERFORMANCE_DATA.map((data, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-3 z-10 group">
+                    <div className="w-full max-w-[60px] relative h-full flex items-end">
+                      {/* Tooltip na hover */}
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {data.label} Kč
+                      </div>
+                      {/* Sloupec grafu */}
+                      <div 
+                        className={`w-full rounded-t-lg transition-all duration-500 ${data.isCurrent ? 'bg-indigo-500 shadow-lg shadow-indigo-500/20' : 'bg-slate-200 group-hover:bg-indigo-300'}`}
+                        style={{ height: `${data.value}%` }}
+                      ></div>
+                    </div>
+                    <span className={`text-[10px] font-bold text-center ${data.isCurrent ? 'text-indigo-600' : 'text-slate-400'}`}>
+                      {data.month.split(' ')[0]}<br className="sm:hidden"/> {data.month.split(' ')[1]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ČLENOVÉ TÝMU (Tabulka) */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Users size={20} className="text-indigo-500" /> Členové týmu
+                </h2>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Člen</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Produkce (Jednotky)</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Schůzky</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Aktivita</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Stav</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TEAM_MEMBERS.map((member) => (
+                      <tr key={member.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                        
+                        {/* 1. Člen (Avatar + Jméno) */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm border border-white ${member.color}`}>
+                              {member.initials}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                {member.name}
+                                {member.alert && <AlertTriangle size={12} className="text-rose-500" title="Vyžaduje pozornost" />}
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-500">{member.role}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Produkce */}
+                        <td className="px-6 py-4">
+                          <div className="font-black text-slate-800 text-sm">{member.production}</div>
+                        </td>
+
+                        {/* 3. Schůzky */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-700 text-sm">{member.meetings}</span>
+                            {member.trend === 'up' ? (
+                              <TrendingUp size={14} className="text-emerald-500" />
+                            ) : (
+                              <TrendingDown size={14} className="text-rose-500" />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 4. Aktivita (Progress bar) */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 w-32">
+                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${member.activity >= 80 ? 'bg-emerald-500' : member.activity >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`}
+                                style={{ width: `${member.activity}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-500 w-8">{member.activity}%</span>
+                          </div>
+                        </td>
+
+                        {/* 5. Stav */}
+                        <td className="px-6 py-4 text-right">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border
+                            ${member.status === 'online' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}
+                          `}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${member.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                            {member.status}
+                          </span>
+                        </td>
+
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          {/* PRAVÝ SLOUPEC (AI, Rizika, Adaptace) */}
+          <div className="lg:col-span-1 space-y-8">
+            
+            {/* AI SHRNUTÍ TÝMU */}
+            <div className={`rounded-[24px] p-6 md:p-8 border shadow-sm transition-all duration-500 relative overflow-hidden
+              ${aiSummary ? 'bg-[#1a1c2e] border-indigo-900 text-white shadow-xl shadow-indigo-900/20' : 'bg-white border-slate-100'}
+            `}>
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <h2 className={`text-lg font-bold flex items-center gap-2 ${aiSummary ? 'text-white' : 'text-slate-900'}`}>
+                  <Sparkles size={20} className={aiSummary ? "text-amber-400" : "text-indigo-500"} /> AI shrnutí týmu
+                </h2>
+                {!aiSummary && !isAiLoading && (
+                  <button 
+                    onClick={handleGenerateSummary}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow-md"
+                  >
+                    Generovat
+                  </button>
+                )}
+              </div>
+
+              <div className="relative z-10">
+                {!aiSummary && !isAiLoading && (
+                  <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                    Klikněte na „Generovat“, aby AI na základě metrik a upozornění vytvořilo manažerské shrnutí situace v týmu.
+                  </p>
+                )}
+
+                {isAiLoading && (
+                  <div className="py-8 flex flex-col items-center justify-center gap-4">
+                    <div className="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Analyzuji data týmu...</p>
+                  </div>
+                )}
+
+                {aiSummary && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4">
+                    <h3 className="font-bold text-lg mb-3 text-indigo-100 leading-tight">{aiSummary.title}</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed mb-4">{aiSummary.content}</p>
+                    <div className="bg-white/10 border border-white/20 rounded-xl p-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1 block">Doporučená akce</span>
+                      <p className="text-xs font-medium text-white">{aiSummary.recommendation}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Dekorační glow pro AI */}
+              {aiSummary && <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-indigo-500/30 rounded-full blur-3xl pointer-events-none"></div>}
+            </div>
+
+            {/* RIZIKA A UPOZORNĚNÍ */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-rose-500" /> Rizika a upozornění
+                </h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {ALERTS.map(alert => (
+                  <div key={alert.id} className={`p-4 rounded-xl border flex items-start gap-3
+                    ${alert.type === 'danger' ? 'bg-rose-50 border-rose-100' : 'bg-amber-50 border-amber-100'}
+                  `}>
+                    <div className={`mt-0.5 shrink-0 ${alert.type === 'danger' ? 'text-rose-500' : 'text-amber-500'}`}>
+                      <AlertTriangle size={16} />
+                    </div>
+                    <p className={`text-sm font-medium leading-snug ${alert.type === 'danger' ? 'text-rose-800' : 'text-amber-800'}`}>
+                      {alert.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ADAPTACE NOVÁČKŮ */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <UserPlus size={18} className="text-blue-500" /> Adaptace nováčků
+                </h2>
+              </div>
+              <div className="p-6 space-y-6">
+                {ONBOARDING.map(person => (
+                  <div key={person.id}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-sm text-slate-800">{person.name}</span>
+                      <span className="text-xs font-bold text-slate-500">{person.progress}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
+                      <div className="h-full bg-blue-500 rounded-full" style={{width: `${person.progress}%`}}></div>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <span>{person.step}</span>
+                      <span>Zbývá {person.daysLeft} dní</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+
+      {/* ================================================================= */}
+      {/* MODAL: NOVÁ TÝMOVÁ UDÁLOST (Dle screenshotu image_6b6ce1.png) */}
+      {/* ================================================================= */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-bold text-slate-900">Nová týmová událost</h2>
+              <button onClick={() => setIsEventModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-md hover:bg-slate-200">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Název *</label>
+                <input type="text" placeholder="Porada, briefing..." className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Začátek</label>
+                  <input type="datetime-local" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors text-slate-600" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Konec</label>
+                  <input type="datetime-local" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors text-slate-600" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Místo</label>
+                <input type="text" placeholder="Místnost, odkaz..." className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Poznámka</label>
+                <textarea rows={3} placeholder="Volitelný popis" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors resize-none"></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Příjemci</label>
+                <div className="p-3 border border-slate-200 rounded-xl bg-white flex items-center gap-3">
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <span className="text-sm font-bold text-slate-700">Celý tým</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
+              <button onClick={() => setIsEventModalOpen(false)} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors shadow-sm">
+                Zrušit
+              </button>
+              <button onClick={() => setIsEventModalOpen(false)} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md transition-colors">
+                Vytvořit událost
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODAL: NOVÝ TÝMOVÝ ÚKOL (Dle screenshotu image_6b6cdc.png) */}
+      {/* ================================================================= */}
+      {isTaskModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-bold text-slate-900">Nový týmový úkol</h2>
+              <button onClick={() => setIsTaskModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-md hover:bg-slate-200">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Název *</label>
+                <input type="text" placeholder="Úkol pro tým..." className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Popis</label>
+                <textarea rows={4} placeholder="Volitelný popis úkolu" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors resize-none"></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Termín</label>
+                <input type="date" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors text-slate-600" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Příjemci</label>
+                <div className="p-3 border border-slate-200 rounded-xl bg-white flex items-center gap-3">
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <span className="text-sm font-bold text-slate-700">Celý tým</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
+              <button onClick={() => setIsTaskModalOpen(false)} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors shadow-sm">
+                Zrušit
+              </button>
+              <button onClick={() => setIsTaskModalOpen(false)} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md transition-colors">
+                Vytvořit úkol
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

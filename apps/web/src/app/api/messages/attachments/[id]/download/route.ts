@@ -5,6 +5,8 @@ import { getMembership } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { messageAttachments, messages } from "db";
 import { eq } from "db";
+import { createSignedStorageUrl } from "@/lib/storage/signed-url";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(
   _request: Request,
@@ -51,11 +53,22 @@ export async function GET(
   }
 
   const admin = createAdminClient();
-  const { data: signed } = await admin.storage
-    .from("documents")
-    .createSignedUrl(att.storagePath, 60);
-  if (!signed?.signedUrl) {
+  const signed = await createSignedStorageUrl({
+    adminClient: admin,
+    bucket: "documents",
+    path: att.storagePath,
+    purpose: "download",
+  });
+  if (!signed.signedUrl) {
     return NextResponse.json({ error: "Storage URL failed" }, { status: 500 });
   }
+  await logAudit({
+    tenantId: membership.tenantId,
+    userId: user.id,
+    action: "download",
+    entityType: "message_attachment",
+    entityId: att.id,
+    request: _request,
+  }).catch(() => {});
   return NextResponse.redirect(signed.signedUrl);
 }

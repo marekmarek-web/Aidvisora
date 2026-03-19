@@ -2,19 +2,12 @@ import { NextResponse } from "next/server";
 import { and, db, eq, userDevices } from "db";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { pushDeviceBodySchema, revokePushDeviceBodySchema } from "@/lib/security/validation";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
-
-type RegisterBody = {
-  pushToken?: string;
-  platform?: string;
-  deviceName?: string;
-  appVersion?: string;
-};
-
-function isValidPlatform(value: string): value is "ios" | "android" {
-  return value === "ios" || value === "android";
-}
 
 async function getAuthContext() {
   const supabase = await createClient();
@@ -37,16 +30,22 @@ export async function POST(request: Request) {
     const auth = await getAuthContext();
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = (await request.json().catch(() => ({}))) as RegisterBody;
-    const pushToken = typeof body.pushToken === "string" ? body.pushToken.trim() : "";
-    const platform = typeof body.platform === "string" ? body.platform.trim().toLowerCase() : "";
-    const deviceName = typeof body.deviceName === "string" ? body.deviceName.trim() : "";
-    const appVersion = typeof body.appVersion === "string" ? body.appVersion.trim() : "";
-
-    if (!pushToken) return NextResponse.json({ error: "Push token is required." }, { status: 400 });
-    if (!isValidPlatform(platform)) {
-      return NextResponse.json({ error: "Unsupported platform." }, { status: 400 });
+    const limiter = checkRateLimit(request, "push-devices-post", `${auth.tenantId}:${auth.userId}`, {
+      windowMs: 60_000,
+      maxRequests: 40,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Too many requests. Please retry later." },
+        { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } }
+      );
     }
+
+    const parsed = pushDeviceBodySchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+    }
+    const { pushToken, platform, deviceName, appVersion } = parsed.data;
 
     await db
       .insert(userDevices)
@@ -75,6 +74,15 @@ export async function POST(request: Request) {
         },
       });
 
+    await logAudit({
+      tenantId: auth.tenantId,
+      userId: auth.userId,
+      action: "push_device_registered",
+      entityType: "user_device",
+      request,
+      meta: { platform },
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Failed to register push device." }, { status: 500 });
@@ -86,9 +94,51 @@ export async function DELETE(request: Request) {
     const auth = await getAuthContext();
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = (await request.json().catch(() => ({}))) as { pushToken?: string };
-    const pushToken = typeof body.pushToken === "string" ? body.pushToken.trim() : "";
-    if (!pushToken) return NextResponse.json({ error: "Push token is required." }, { status: 400 });
+    const limiter = checkRateLimit(request, "push-devices-delete", `${auth.tenantId}:${auth.userId}`, {
+      windowMs: 60_000,
+      maxRequests: 40,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Too many requests. Please retry later." },
+        { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } }
+      );
+    }
+
+    const parsed = z
+      .object({
+        pushToken: revokePushDeviceBodySchema.shape.pushToken.optional(),
+        allDevices: z.boolean().optional(),
+      })
+      .safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+    }
+    const { pushToken, allDevices } = parsed.data;
+
+    if (allDevices) {
+      await db
+        .update(userDevices)
+        .set({
+          pushEnabled: false,
+          revokedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId)));
+
+      await logAudit({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        action: "push_device_revoked_all",
+        entityType: "user_device",
+        request,
+      }).catch(() => {});
+
+      return NextResponse.json({ ok: true });
+    }
+    if (!pushToken) {
+      return NextResponse.json({ error: "Push token is required." }, { status: 400 });
+    }
 
     await db
       .update(userDevices)
@@ -98,6 +148,14 @@ export async function DELETE(request: Request) {
         updatedAt: new Date(),
       })
       .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId), eq(userDevices.pushToken, pushToken)));
+
+    await logAudit({
+      tenantId: auth.tenantId,
+      userId: auth.userId,
+      action: "push_device_revoked",
+      entityType: "user_device",
+      request,
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch {

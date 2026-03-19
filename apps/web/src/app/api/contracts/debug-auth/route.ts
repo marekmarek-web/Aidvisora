@@ -8,6 +8,11 @@ export const dynamic = "force-dynamic";
  * GET /api/contracts/debug-auth
  */
 export async function GET(request: Request) {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+  if (isProduction) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const url = request.url;
   const path = new URL(url).pathname;
   const method = request.method;

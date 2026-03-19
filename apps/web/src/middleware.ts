@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PRODUCTION_DOMAIN = "https://www.aidvisora.cz";
 
 export async function middleware(request: NextRequest) {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
   // Přesměrovat starou Vercel URL na produkční doménu (aby Google login neposílal na advisorcrm-web.vercel.app)
   // Výjimka: /auth/callback s parametrem code NESMÍ být přesměrován – PKCE code_verifier je v cookie na této doméně,
   // po redirectu na jinou doménu by callback selhal s "PKCE code verifier not found in storage".
@@ -53,7 +54,6 @@ export async function middleware(request: NextRequest) {
 
   // /api/contracts/*, /api/ai/*, /api/calendar/*, /api/integrations/*: auth + dev bypass. Před skip auth.
   if ((isContractsApi || isAiAssistantApi || isCalendarApi || isIntegrationsApi) && supabaseUrl && supabaseAnonKey) {
-    const method = request.method;
     const response = NextResponse.next({ request });
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
@@ -66,16 +66,7 @@ export async function middleware(request: NextRequest) {
       },
     });
     const { data: { user } } = await supabase.auth.getUser();
-    const userFound = !!user;
-    const cookieCount = request.cookies.getAll().length;
-    const hasSupabaseAuthCookie = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
-    // Diagnostický log: pathname, method, že contracts branch běžela, zda byl user, zda jsou cookies
-    // eslint-disable-next-line no-console
-    console.log("[middleware /api/contracts]", { pathname, method, contractsBranchRan: true, userFound, userIdMask: userFound ? `${user!.id.slice(0, 8)}…` : null, cookieCount, hasSupabaseAuthCookie });
-
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-debug-mw", "1");
-    requestHeaders.set("x-debug-path", pathname);
     if (user) {
       requestHeaders.set("x-user-id", user.id);
     }
@@ -85,17 +76,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
     if (!user) {
-      // --- DEV BYPASS: ODSTRANIT PŘED PRODUKCÍ ---
-      // NEXT_PUBLIC_ kvůli Edge runtime (middleware) – jinak env nemusí být dostupný
       const isDev = process.env.NODE_ENV === "development";
       const devUserId = process.env.NEXT_PUBLIC_DEV_CONTRACTS_USER_ID ?? process.env.DEV_CONTRACTS_USER_ID;
-      // eslint-disable-next-line no-console
-      console.log("[middleware /api/contracts bypass check]", { isDev, hasDevUserId: !!devUserId?.trim() });
-      if (isDev && devUserId?.trim()) {
+      if (!isProduction && isDev && devUserId?.trim()) {
         requestHeaders.set("x-user-id", devUserId.trim());
         return NextResponse.next({ request: { headers: requestHeaders } });
       }
-      // --- KONEC DEV BYPASS ---
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -105,7 +91,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Dočasně: povolit dashboard bez přihlášení (nastav SKIP_AUTH=true v .env.local)
-  if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true") {
+  if (!isProduction && process.env.NEXT_PUBLIC_SKIP_AUTH === "true") {
     const requestHeaders = new Headers(request.headers);
     if (pathname.startsWith("/client")) {
       requestHeaders.set("x-demo-client-zone", "1");

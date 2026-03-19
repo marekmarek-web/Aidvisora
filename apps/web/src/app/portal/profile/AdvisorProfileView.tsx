@@ -152,6 +152,7 @@ export function AdvisorProfileView({
   const [reportLogoUrl, setReportLogoUrl] = useState<string | null>(initial.reportLogoUrl ?? null);
   const [reportLogoUploading, setReportLogoUploading] = useState(false);
   const [reportLogoError, setReportLogoError] = useState<string | null>(null);
+  const [continuingEducationDueAt, setContinuingEducationDueAt] = useState("");
 
   useEffect(() => {
     getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
@@ -693,13 +694,24 @@ export function AdvisorProfileView({
                   </div>
                 ))}
                 <a
-                  href="https://www.cnb.cz/cs/dohledove-sluzby/registr-oznameni/"
+                  href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                 >
-                  Aktualizovat z registru ČNB
+                  Vyhledat v registru ČNB
                 </a>
+                <div className="mt-4 p-3 rounded-xl border border-slate-100 bg-slate-50">
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Následné vzdělávání (termín)
+                  </label>
+                  <input
+                    type="date"
+                    value={continuingEducationDueAt}
+                    onChange={(e) => setContinuingEducationDueAt(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
 
@@ -834,12 +846,12 @@ export function AdvisorProfileView({
                     </div>
                   ))}
                   <a
-                    href="https://www.cnb.cz/cs/dohledove-sluzby/registr-oznameni/"
+                    href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                   >
-                    Aktualizovat z registru ČNB
+                    Vyhledat v registru ČNB
                   </a>
                 </div>
               </div>

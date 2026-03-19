@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { revokeStoredPushToken } from "@/lib/push/usePushNotifications";
+import { revokeAllStoredPushTokens, revokeStoredPushToken } from "@/lib/push/usePushNotifications";
 
 function getInitials(email: string | undefined): string {
   if (!email) return "?";
@@ -54,6 +54,14 @@ export function UserMenu() {
     router.refresh();
   }
 
+  async function signOutAllDevices() {
+    const supabase = createClient();
+    await revokeAllStoredPushTokens();
+    await supabase.auth.signOut({ scope: "global" });
+    router.push("/");
+    router.refresh();
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -91,6 +99,16 @@ export function UserMenu() {
             className="block w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
           >
             Odhlásit se
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              signOutAllDevices();
+            }}
+            className="block w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+          >
+            Odhlásit všechna zařízení
           </button>
         </div>
       )}

@@ -16,7 +16,11 @@
     "cap:sync": "npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
-    "cap:dev": "cross-env CAPACITOR_SERVER_URL=http://localhost:3000 npx cap sync"
+    "cap:dev": "cross-env CAPACITOR_SERVER_URL=http://localhost:3000 npx cap sync",
+    "cap:dev:android": "cross-env CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap sync",
+    "cap:dev:remote": "node scripts/cap-dev-remote.js",
+    "cap:dev:ngrok": "node scripts/cap-dev-ngrok.js",
+    "emulator:android": "node scripts/start-android-emulator.js"
   },
   "dependencies": {
     "@capacitor/camera": "^8.0.2",

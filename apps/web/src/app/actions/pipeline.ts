@@ -60,6 +60,28 @@ export type StageWithOpportunities = {
   opportunities: OpportunityCard[];
 };
 
+async function ensureStageBelongsToTenant(tenantId: string, stageId: string): Promise<void> {
+  const [stage] = await db
+    .select({ id: opportunityStages.id })
+    .from(opportunityStages)
+    .where(and(eq(opportunityStages.tenantId, tenantId), eq(opportunityStages.id, stageId)))
+    .limit(1);
+  if (!stage) {
+    throw new Error("Vybraný stupeň pipeline neexistuje.");
+  }
+}
+
+async function ensureContactBelongsToTenant(tenantId: string, contactId: string): Promise<void> {
+  const [row] = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+    .limit(1);
+  if (!row) {
+    throw new Error("Vybraný kontakt neexistuje.");
+  }
+}
+
 export async function getPipeline(): Promise<StageWithOpportunities[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "opportunities:read")) throw new Error("Forbidden");
@@ -204,7 +226,8 @@ export async function updateOpportunityStage(
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "opportunities:write")) throw new Error("Forbidden");
-  await db
+  await ensureStageBelongsToTenant(auth.tenantId, stageId);
+  const updated = await db
     .update(opportunities)
     .set({ stageId, updatedAt: new Date() })
     .where(
@@ -212,7 +235,11 @@ export async function updateOpportunityStage(
         eq(opportunities.tenantId, auth.tenantId),
         eq(opportunities.id, opportunityId)
       )
-    );
+    )
+    .returning({ id: opportunities.id });
+  if (updated.length === 0) {
+    throw new Error("Příležitost nebyla nalezena.");
+  }
   try { await logActivity("opportunity", opportunityId, "status_change", { stageId }); } catch {}
 }
 
@@ -411,11 +438,19 @@ export async function createOpportunity(data: {
 }) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "opportunities:write")) throw new Error("Forbidden");
+  const title = data.title.trim();
+  if (!title) {
+    throw new Error("Název případu je povinný.");
+  }
+  await ensureStageBelongsToTenant(auth.tenantId, data.stageId);
+  if (data.contactId) {
+    await ensureContactBelongsToTenant(auth.tenantId, data.contactId);
+  }
   const [row] = await db
     .insert(opportunities)
     .values({
       tenantId: auth.tenantId,
-      title: data.title.trim(),
+      title,
       caseType: data.caseType,
       contactId: data.contactId || null,
       stageId: data.stageId,
@@ -446,7 +481,16 @@ export async function updateOpportunity(
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "opportunities:write")) throw new Error("Forbidden");
-  await db
+  if (data.stageId != null) {
+    await ensureStageBelongsToTenant(auth.tenantId, data.stageId);
+  }
+  if (data.contactId) {
+    await ensureContactBelongsToTenant(auth.tenantId, data.contactId);
+  }
+  if (data.title != null && !data.title.trim()) {
+    throw new Error("Název případu je povinný.");
+  }
+  const updated = await db
     .update(opportunities)
     .set({
       ...(data.title != null && { title: data.title.trim() }),
@@ -465,7 +509,11 @@ export async function updateOpportunity(
         eq(opportunities.tenantId, auth.tenantId),
         eq(opportunities.id, id)
       )
-    );
+    )
+    .returning({ id: opportunities.id });
+  if (updated.length === 0) {
+    throw new Error("Příležitost nebyla nalezena.");
+  }
   try { await logActivity("opportunity", id, "update", { fields: Object.keys(data) }); } catch {}
 }
 

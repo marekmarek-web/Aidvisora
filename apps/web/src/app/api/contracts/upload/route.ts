@@ -7,6 +7,10 @@ import { findClientCandidates, buildAllDraftActions } from "@/lib/ai/draft-actio
 import { isMatchingAmbiguous } from "@/lib/ai/client-matching";
 import { logOpenAICall } from "@/lib/openai";
 import { logAudit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { detectMagicMimeType, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
+import { tryBeginIdempotencyWindow } from "@/lib/security/idempotency";
+import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +29,7 @@ function maskForLog(value: unknown): string {
 
 export async function POST(request: Request) {
   const start = Date.now();
-  const url = request.url;
-  const method = request.method;
-  const xDebugMw = request.headers.get("x-debug-mw");
-  const xDebugPath = request.headers.get("x-debug-path");
   const userId = request.headers.get(USER_ID_HEADER);
-  // Diagnostický log: co route obdržela (bez citlivých dat)
-  // eslint-disable-next-line no-console
-  console.log("[route POST /api/contracts/upload]", { url, method, xDebugMw, xDebugPath, hasUserIdHeader: !!userId, userIdMask: userId ? `${userId.slice(0, 8)}…` : null });
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,21 +39,16 @@ export async function POST(request: Request) {
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    // #region agent log
-    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
-      body: JSON.stringify({
-        sessionId: "6af004",
-        hypothesisId: "H3",
-        location: "api/contracts/upload/route.ts:after_auth",
-        message: "upload auth ok",
-        data: { tenantId: membership.tenantId },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
+    const limiter = checkRateLimit(request, "contracts-upload", `${membership.tenantId}:${userId}`, {
+      windowMs: 60_000,
+      maxRequests: 10,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Too many upload attempts. Please retry later." },
+        { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } }
+      );
+    }
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     if (!file?.size) {
@@ -78,6 +70,19 @@ export async function POST(request: Request) {
         { error: "Soubor je příliš velký (max 20 MB)." },
         { status: 400 }
       );
+    }
+    const detectedMime = await detectMagicMimeType(file);
+    if (!mimeMatchesAllowedSignature(mimeType, detectedMime)) {
+      return NextResponse.json({ error: "Obsah souboru neodpovídá deklarovanému typu." }, { status: 400 });
+    }
+
+    const idempotencyKey = request.headers.get("idempotency-key")?.trim() || "";
+    if (idempotencyKey) {
+      const scopedKey = `contracts:${membership.tenantId}:${userId}:${idempotencyKey}`;
+      const accepted = tryBeginIdempotencyWindow(scopedKey, 5 * 60_000);
+      if (!accepted) {
+        return NextResponse.json({ error: "Duplicate upload request." }, { status: 409 });
+      }
     }
 
     const tenantId = membership.tenantId;
@@ -118,12 +123,16 @@ export async function POST(request: Request) {
       action: "extraction_started",
       entityType: "contract_review",
       entityId: reviewId,
+      request,
     }).catch(() => {});
 
-    const { data: signed } = await admin.storage
-      .from("documents")
-      .createSignedUrl(storagePath, 3600);
-    const fileUrl = signed?.signedUrl ?? null;
+    const signed = await createSignedStorageUrl({
+      adminClient: admin,
+      bucket: "documents",
+      path: storagePath,
+      purpose: "internal_processing",
+    });
+    const fileUrl = signed.signedUrl;
 
     if (!fileUrl) {
       await updateContractReview(reviewId, tenantId, {
@@ -136,6 +145,7 @@ export async function POST(request: Request) {
         action: "extraction_failed",
         entityType: "contract_review",
         entityId: reviewId,
+        request,
         meta: { reason: "no_signed_url" },
       }).catch(() => {});
       return NextResponse.json(
@@ -144,20 +154,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // #region agent log
-    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
-      body: JSON.stringify({
-        sessionId: "6af004",
-        hypothesisId: "H1_H2_H5",
-        location: "api/contracts/upload/route.ts:before_pipeline",
-        message: "before runContractUnderstandingPipeline",
-        data: { reviewId },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const pipelineResult = await runContractUnderstandingPipeline(fileUrl, mimeType);
 
     if (!pipelineResult.ok) {
@@ -176,6 +172,7 @@ export async function POST(request: Request) {
         action: "extraction_failed",
         entityType: "contract_review",
         entityId: reviewId,
+        request,
         meta: { step: pipelineResult.extractionTrace?.failedStep },
       }).catch(() => {});
       logOpenAICall({
@@ -220,6 +217,7 @@ export async function POST(request: Request) {
       action: "extraction_completed",
       entityType: "contract_review",
       entityId: reviewId,
+      request,
       meta: { processingStatus: pipelineResult.processingStatus },
     }).catch(() => {});
 
@@ -237,22 +235,6 @@ export async function POST(request: Request) {
       needsHumanReview: pipelineResult.processingStatus === "review_required",
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Upload failed.";
-    const errName = err instanceof Error ? err.name : "";
-    // #region agent log
-    fetch("http://127.0.0.1:7387/ingest/30869546-c4c0-4805-9fd6-2bc75f3b0175", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6af004" },
-      body: JSON.stringify({
-        sessionId: "6af004",
-        hypothesisId: "H1_H2_H3_H5",
-        location: "api/contracts/upload/route.ts:catch",
-        message: "upload route catch",
-        data: { message, errName, hasStack: err instanceof Error && !!err.stack },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return NextResponse.json(
       { error: "Nahrání smlouvy selhalo." },
       { status: 500 }

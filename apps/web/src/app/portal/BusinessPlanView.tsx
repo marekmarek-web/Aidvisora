@@ -32,7 +32,9 @@ import {
 } from "@/lib/business-plan/types";
 import {
   getActivePlan,
+  getPlanWithTargets,
   getPlanProgress,
+  listBusinessPlans,
   createBusinessPlan,
   setPlanTargets,
   getVisionGoals,
@@ -104,10 +106,21 @@ export function BusinessPlanView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const active = await getActivePlan(periodType);
-      setPlan(active);
-      if (active?.planId) {
-        const result = await getPlanProgress(active.planId);
+      let resolvedPlan = await getActivePlan(periodType);
+      if (!resolvedPlan) {
+        const list = await listBusinessPlans();
+        const { year, month, quarter } = getCurrentPeriodNumbers();
+        const periodNumber = periodType === "month" ? month : periodType === "quarter" ? quarter : 0;
+        const fallback = list.find(
+          (item) => item.periodType === periodType && item.year === year && item.periodNumber === periodNumber
+        );
+        if (fallback) {
+          resolvedPlan = await getPlanWithTargets(fallback.id);
+        }
+      }
+      setPlan(resolvedPlan);
+      if (resolvedPlan?.planId) {
+        const result = await getPlanProgress(resolvedPlan.planId);
         setProgressResult(result);
       } else {
         setProgressResult(null);
@@ -371,8 +384,7 @@ export function BusinessPlanView() {
               Vaše osobní vize, cíle a přesná cesta k jejich dosažení.
             </p>
           </div>
-          {isConfigured && (
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
               <div className="bg-slate-100/80 p-1 rounded-xl flex items-center border border-slate-200/60 shadow-inner w-fit">
                 {[
                   { id: "my" as const, label: "Můj plán", Icon: Target },
@@ -409,7 +421,6 @@ export function BusinessPlanView() {
                 ))}
               </div>
             </div>
-          )}
         </div>
 
         {showEmptyState && (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { Plus, CheckCircle2, LayoutList } from "lucide-react";
 import { getPipelineByContact } from "@/app/actions/pipeline";
 import { useContactTab } from "./ContactTabLayout";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
@@ -9,6 +10,9 @@ import { PipelineBoard } from "@/app/dashboard/pipeline/PipelineBoard";
 import { PipelineBoardSkeleton } from "@/app/dashboard/pipeline/PipelineBoardSkeleton";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
+
+const btnPrimaryClass =
+  "inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-[var(--wp-radius-sm)] font-bold bg-[#1a1c2e] text-white hover:bg-[#2a2d4a] shadow-lg shadow-indigo-900/20 transition-all min-h-[44px] disabled:opacity-70 disabled:pointer-events-none";
 
 export function ContactOpportunityBoard({
   contactId,
@@ -27,6 +31,7 @@ export function ContactOpportunityBoard({
 
   useEffect(() => {
     let cancelled = false;
+    const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
     setLoading(true);
     setLoadError(null);
     getPipelineByContact(contactId)
@@ -40,7 +45,13 @@ export function ContactOpportunityBoard({
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
+          if (process.env.NODE_ENV !== "production") {
+            console.info("[perf] contact-pipeline-load-ms", Math.round(t1 - t0), { contactId });
+          }
+        }
       });
     return () => {
       cancelled = true;
@@ -51,58 +62,97 @@ export function ContactOpportunityBoard({
     { id: contactId, firstName: contactFirstName ?? "", lastName: contactLastName ?? "" },
   ];
 
-  if (loading) {
-    return <PipelineBoardSkeleton />;
-  }
-
-  if (loadError) {
-    return (
-      <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-slate-50/50 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]">
-        <p className="text-slate-700 text-sm mb-4">{loadError}</p>
-        <button
-          type="button"
-          onClick={() => setRetry((r) => r + 1)}
-          className="px-6 py-2.5 rounded-[var(--wp-radius-sm)] font-bold bg-[#1a1c2e] text-white hover:bg-[#2a2d4a] shadow-lg shadow-indigo-900/20 transition-all min-h-[44px]"
-        >
-          Zkusit znovu
-        </button>
-      </div>
-    );
-  }
-
+  const firstStageId = stages[0]?.id ?? null;
   const totalOpportunities = stages.reduce((sum, s) => sum + s.opportunities.length, 0);
   const isEmpty = totalOpportunities === 0 && stages.length > 0;
-  const firstStageId = stages[0]?.id ?? null;
+  const noStages = stages.length === 0;
+
+  const header = (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 py-4 shrink-0">
+      <div>
+        <h1 className="text-xl font-bold" style={{ color: "var(--wp-text)" }}>
+          Obchody
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--wp-text-muted)" }}>
+          Případy a obchody navázané na tohoto klienta.
+        </p>
+      </div>
+      {!noStages && (
+        <button
+          type="button"
+          onClick={() => firstStageId && setOpenCreateStageId(firstStageId)}
+          disabled={!firstStageId || loading}
+          className={btnPrimaryClass}
+        >
+          <Plus size={18} /> Nový obchod
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {isEmpty && (
-        <div className="flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-200 rounded-[var(--wp-radius-sm)] bg-white/50 p-8 min-h-[160px]">
-          <CheckCircle2 size={40} className="text-slate-300 mb-3" />
-          <p className="text-sm font-medium text-center text-slate-600">Klient zatím nemá žádný obchod</p>
-          <p className="text-xs text-center mt-1 text-slate-400">Vytvořte první obchod a přiřaďte ho do příslušného stupně.</p>
-          <button
-            type="button"
-            onClick={() => firstStageId && setOpenCreateStageId(firstStageId)}
-            className="mt-4 flex items-center justify-center gap-2 px-5 py-2.5 rounded-[var(--wp-radius-sm)] font-bold bg-[#1a1c2e] text-white hover:bg-[#2a2d4a] shadow-lg shadow-indigo-900/20 transition-all min-h-[44px] disabled:opacity-70 disabled:pointer-events-none"
-            disabled={!firstStageId}
-          >
-            <Plus size={18} /> Vytvořit první obchod
-          </button>
-        </div>
-      )}
-      {stages.length === 0 ? (
-        <p className="text-sm text-slate-500 py-4">Žádné stupně pipeline. Nastavte pipeline v globálních Obchodech.</p>
-      ) : (
-        <PipelineBoard
-          stages={stages}
-          contacts={contactsForCreate}
-          contactContext={{ contactId }}
-          onMutationComplete={() => getPipelineByContact(contactId).then(setStages)}
-          initialOpenCreateStageId={openCreateStageId}
-          onOpenCreateConsumed={() => setOpenCreateStageId(null)}
-        />
-      )}
+    <div className="flex flex-col flex-1 min-h-0 w-full">
+      {header}
+      <div className="flex-1 min-h-0 px-4 pb-4 w-full">
+        {loading && <PipelineBoardSkeleton />}
+
+        {!loading && loadError && (
+          <div className="rounded-[var(--wp-radius-sm)] border-2 border-slate-200 bg-slate-50/50 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]">
+            <p className="text-slate-700 text-sm mb-4">{loadError}</p>
+            <button type="button" onClick={() => setRetry((r) => r + 1)} className={btnPrimaryClass}>
+              Zkusit znovu
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && noStages && (
+          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 min-h-[200px]">
+            <LayoutList size={40} className="text-slate-300 mb-3" />
+            <h2 className="text-lg font-bold text-slate-800 mb-1">Pipeline není nastavená</h2>
+            <p className="text-sm text-slate-500 text-center mb-4">
+              Nastavte stupně pipeline v modulu Obchody.
+            </p>
+            <Link
+              href="/portal/pipeline"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-[var(--wp-radius-sm)] font-bold bg-[#1a1c2e] text-white hover:bg-[#2a2d4a] shadow-lg shadow-indigo-900/20 transition-all min-h-[44px]"
+            >
+              Přejít do Obchodů
+            </Link>
+          </div>
+        )}
+
+        {!loading && !loadError && !noStages && isEmpty && !openCreateStageId && (
+          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-slate-200 bg-white/50 p-8 min-h-[200px]">
+            <CheckCircle2 size={40} className="text-slate-300 mb-3" />
+            <h2 className="text-lg font-bold text-slate-800 mb-1">Tento klient zatím nemá žádný obchod</h2>
+            <p className="text-sm text-slate-500 text-center mb-4">
+              Vytvořte první obchod a přiřaďte ho do příslušného stupně.
+            </p>
+            <button
+              type="button"
+              onClick={() => firstStageId && setOpenCreateStageId(firstStageId)}
+              disabled={!firstStageId}
+              className={btnPrimaryClass}
+            >
+              <Plus size={18} /> Vytvořit první obchod
+            </button>
+            <p className="text-xs text-slate-400 mt-4 text-center">
+              Později zde budete moci založit obchod z AI příležitosti.
+            </p>
+          </div>
+        )}
+
+        {!loading && !loadError && !noStages && (!isEmpty || openCreateStageId) && (
+          <PipelineBoard
+            stages={stages}
+            contacts={contactsForCreate}
+            contactContext={{ contactId }}
+            onMutationComplete={() => getPipelineByContact(contactId).then(setStages)}
+            initialOpenCreateStageId={openCreateStageId}
+            onOpenCreateConsumed={() => setOpenCreateStageId(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

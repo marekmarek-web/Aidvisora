@@ -3,13 +3,12 @@ import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { getContractReviewById } from "@/lib/ai/review-queue-repository";
 import { createAdminClient } from "@/lib/supabase/server";
+import { createSignedStorageUrl } from "@/lib/storage/signed-url";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 const USER_ID_HEADER = "x-user-id";
-
-/** Short-lived signed URL to download original contract file. Tenant-isolated. Auth only via x-user-id from middleware. */
-const SIGNED_URL_EXPIRES_SEC = 60;
 
 export async function GET(
   request: Request,
@@ -32,18 +31,29 @@ export async function GET(
     }
 
     const admin = createAdminClient();
-    const { data: signed } = await admin.storage
-      .from("documents")
-      .createSignedUrl(row.storagePath, SIGNED_URL_EXPIRES_SEC);
+    const signed = await createSignedStorageUrl({
+      adminClient: admin,
+      bucket: "documents",
+      path: row.storagePath,
+      purpose: "download",
+    });
 
-    if (!signed?.signedUrl) {
+    if (!signed.signedUrl) {
       return NextResponse.json(
         { error: "Odkaz na soubor není k dispozici." },
         { status: 500 }
       );
     }
+    await logAudit({
+      tenantId: membership.tenantId,
+      userId,
+      action: "download",
+      entityType: "contract_review",
+      entityId: id,
+      request,
+    }).catch(() => {});
 
-    return NextResponse.json({ url: signed.signedUrl, expiresIn: SIGNED_URL_EXPIRES_SEC });
+    return NextResponse.json({ url: signed.signedUrl, expiresIn: signed.expiresIn });
   } catch {
     return NextResponse.json(
       { error: "Načtení souboru selhalo." },

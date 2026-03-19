@@ -29,6 +29,7 @@ import {
   Mail,
   MoreHorizontal,
 } from "lucide-react";
+import { useToast } from "@/app/components/Toast";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
 
@@ -139,6 +140,7 @@ function CreateForm({
   const [expectedValue, setExpectedValue] = useState("");
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
   const [selectedStage, setSelectedStage] = useState(stageId);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const effectiveContactId = hideContactSelector ? defaultContactId ?? contactId : contactId;
 
@@ -146,17 +148,22 @@ function CreateForm({
     e.preventDefault();
     if (!title.trim()) return;
     startTransition(async () => {
-      await createOpportunity({
-        title,
-        caseType,
-        contactId: effectiveContactId || undefined,
-        stageId: selectedStage,
-        expectedValue: expectedValue || undefined,
-        expectedCloseDate: expectedCloseDate || undefined,
-      });
-      router.refresh();
-      onMutationComplete?.();
-      onDone();
+      setFormError(null);
+      try {
+        await createOpportunity({
+          title,
+          caseType,
+          contactId: effectiveContactId || undefined,
+          stageId: selectedStage,
+          expectedValue: expectedValue || undefined,
+          expectedCloseDate: expectedCloseDate || undefined,
+        });
+        router.refresh();
+        onMutationComplete?.();
+        onDone();
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : "Uložení se nepodařilo.");
+      }
     });
   }
 
@@ -226,6 +233,11 @@ function CreateForm({
           <input type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} className={inputClass} />
         </div>
       </div>
+      {formError && (
+        <p className="rounded-[var(--wp-radius-sm)] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {formError}
+        </p>
+      )}
       <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
         <button type="button" onClick={onDone} className="px-5 py-2.5 rounded-[var(--wp-radius-sm)] font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
           Zrušit
@@ -262,21 +274,27 @@ function EditForm({
   const [contactId, setContactId] = useState(opp.contactId ?? "");
   const [expectedValue, setExpectedValue] = useState(opp.expectedValue ?? "");
   const [expectedCloseDate, setExpectedCloseDate] = useState(opp.expectedCloseDate ?? "");
+  const [formError, setFormError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
     startTransition(async () => {
-      await updateOpportunity(opp.id, {
-        title,
-        caseType,
-        contactId: contactId || null,
-        expectedValue: expectedValue || null,
-        expectedCloseDate: expectedCloseDate || null,
-      });
-      router.refresh();
-      onMutationComplete?.();
-      onDone();
+      setFormError(null);
+      try {
+        await updateOpportunity(opp.id, {
+          title,
+          caseType,
+          contactId: contactId || null,
+          expectedValue: expectedValue || null,
+          expectedCloseDate: expectedCloseDate || null,
+        });
+        router.refresh();
+        onMutationComplete?.();
+        onDone();
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : "Uložení se nepodařilo.");
+      }
     });
   }
 
@@ -320,6 +338,11 @@ function EditForm({
           <input type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} className={inputClass} />
         </div>
       </div>
+      {formError && (
+        <p className="rounded-[var(--wp-radius-sm)] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {formError}
+        </p>
+      )}
       <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
         <button type="button" onClick={onDone} className="px-5 py-2.5 rounded-[var(--wp-radius-sm)] font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
           Zrušit
@@ -358,8 +381,14 @@ export function PipelineBoard({
   onOpenCreateConsumed?: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [, startTransition] = useTransition();
+  const [localStages, setLocalStages] = useState<StageWithOpportunities[]>(stages);
   const [createStageId, setCreateStageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalStages(stages);
+  }, [stages]);
 
   useEffect(() => {
     if (initialOpenCreateStageId) {
@@ -378,13 +407,41 @@ export function PipelineBoard({
 
   const moveTo = useCallback(
     (opportunityId: string, stageId: string) => {
+      setLocalStages((prev) => {
+        let moved: OpportunityCard | null = null;
+        const stripped = prev.map((stage) => {
+          const remaining = stage.opportunities.filter((opp) => {
+            if (opp.id === opportunityId) {
+              moved = opp;
+              return false;
+            }
+            return true;
+          });
+          return { ...stage, opportunities: remaining };
+        });
+        if (!moved) return prev;
+        return stripped.map((stage) =>
+          stage.id === stageId ? { ...stage, opportunities: [...stage.opportunities, moved as OpportunityCard] } : stage
+        );
+      });
       startTransition(async () => {
-        await updateOpportunityStage(opportunityId, stageId);
-        router.refresh();
-        onMutationComplete?.();
+        const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+        try {
+          await updateOpportunityStage(opportunityId, stageId);
+          router.refresh();
+          onMutationComplete?.();
+          if (process.env.NODE_ENV !== "production") {
+            const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
+            console.info("[perf] pipeline-move-ms", Math.round(t1 - t0), { opportunityId, stageId });
+          }
+        } catch (error) {
+          toast.showToast(error instanceof Error ? error.message : "Přesun se nepodařil.", "error");
+          router.refresh();
+          onMutationComplete?.();
+        }
       });
     },
-    [router, startTransition, onMutationComplete]
+    [router, startTransition, onMutationComplete, toast]
   );
 
   async function doDelete(id: string) {
@@ -469,7 +526,7 @@ export function PipelineBoard({
       />
 
       <div className="pipeline-board-grid pb-8 pt-2">
-        {stages.map((stage, stageIdx) => {
+        {localStages.map((stage, stageIdx) => {
           const theme = COLUMN_THEMES[stageIdx % COLUMN_THEMES.length];
           const isCollapsed = collapsedStages.has(stage.id);
           const isDropTarget = dropTargetStageId === stage.id;
@@ -554,7 +611,7 @@ export function PipelineBoard({
                                 <h3 className="font-bold text-slate-800 text-[17px] leading-tight group-hover:text-blue-600 transition-colors truncate">
                                   {opp.title}
                                 </h3>
-                                <div className="flex gap-1.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1.5 shrink-0 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity">
                                   {opp.contactId && (
                                     <>
                                       <Link
@@ -653,7 +710,7 @@ export function PipelineBoard({
         {createStageId && (
           <CreateForm
             stageId={createStageId}
-            stages={stages}
+            stages={localStages}
             contacts={contacts}
             onDone={() => setCreateStageId(null)}
             defaultContactId={contactContext?.contactId}
@@ -667,7 +724,7 @@ export function PipelineBoard({
         {editOpp && (
           <EditForm
             opp={editOpp}
-            stages={stages}
+            stages={localStages}
             contacts={contacts}
             onDone={() => setEditOpp(null)}
             onMutationComplete={onMutationComplete}

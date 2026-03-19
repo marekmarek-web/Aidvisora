@@ -147,17 +147,7 @@ export default async function ContactDetailPage({
     { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
     { id: "obchody" as const, label: "Obchody", content: (
       <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="flex items-center justify-between px-4 py-4 shrink-0">
-          <div>
-            <h2 className="text-xl font-bold" style={{ color: "var(--wp-text)" }}>Obchody</h2>
-            <p className="text-sm mt-0.5" style={{ color: "var(--wp-text-muted)" }}>
-              Případy tohoto klienta.
-            </p>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 px-4 pb-4 w-full">
-          <ContactOpportunityBoardLazy contactId={id} contactFirstName={contact.firstName ?? undefined} contactLastName={contact.lastName ?? undefined} />
-        </div>
+        <ContactOpportunityBoardLazy contactId={id} contactFirstName={contact.firstName ?? undefined} contactLastName={contact.lastName ?? undefined} />
       </div>
     ) },
     { id: "briefing" as const, label: "Briefing", content: (

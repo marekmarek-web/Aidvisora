@@ -31,7 +31,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
-import { seedDemoData } from "@/app/actions/seed-demo";
 import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar, getAdvisorReportFields, updateAdvisorReportBranding } from "@/app/actions/preferences";
 import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
 import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
@@ -347,10 +346,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     }
   }, [quickOrder, quickVisible, toast]);
 
-  // --- Demo data
-  const [seedingDemo, setSeedingDemo] = useState(false);
-  const [seedMsg, setSeedMsg] = useState("");
-
   // --- Integrations
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
@@ -363,6 +358,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [calendarStatusLoading, setCalendarStatusLoading] = useState(false);
   const [calendarStatusError, setCalendarStatusError] = useState<string | null>(null);
   const [calendarDisconnecting, setCalendarDisconnecting] = useState(false);
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
   const handleSaveIntegration = useCallback((integrationId: string) => {
     toast.showToast("Konfigurace uložena");
   }, [toast]);
@@ -413,6 +409,33 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       setCalendarDisconnecting(false);
     }
   }, [fetchCalendarStatus, toast]);
+
+  const handleCalendarSync = useCallback(async () => {
+    setCalendarSyncing(true);
+    setCalendarStatusError(null);
+    try {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 7);
+      const end = new Date(now);
+      end.setDate(now.getDate() + 30);
+      const res = await fetch("/api/calendar/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeMin: start.toISOString(), timeMax: end.toISOString() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; created?: number; updated?: number };
+      if (!res.ok) {
+        toast.showToast(data.error ?? "Synchronizace kalendáře se nepovedla.", "error");
+        return;
+      }
+      toast.showToast(`Synchronizace hotová: +${data.created ?? 0} nových, ${data.updated ?? 0} upravených.`, "success");
+    } catch {
+      toast.showToast("Synchronizace kalendáře se nepovedla.", "error");
+    } finally {
+      setCalendarSyncing(false);
+    }
+  }, [toast]);
 
   const fetchAiHealth = useCallback(async () => {
     try {
@@ -577,31 +600,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 </div>
               </div>
 
-              {/* Ukázková data */}
-              <div className="bg-white rounded-[24px] border border-amber-200 shadow-sm overflow-hidden p-6">
-                <h3 className="font-semibold text-amber-800 text-sm flex items-center gap-1.5 mb-2">Ukázková data</h3>
-                <p className="text-xs text-amber-600 mb-4">Vložte ukázková data (kontakty, smlouvy, schůzky, úkoly, pipeline) pro testování.</p>
-                <button
-                  type="button"
-                  disabled={seedingDemo}
-                  onClick={async () => {
-                    setSeedingDemo(true);
-                    setSeedMsg("");
-                    try {
-                      const result = await seedDemoData();
-                      setSeedMsg(result.message);
-                    } catch (e) {
-                      setSeedMsg(e instanceof Error ? e.message : "Chyba");
-                    } finally {
-                      setSeedingDemo(false);
-                    }
-                  }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-amber-800 bg-amber-200 hover:bg-amber-300 disabled:opacity-50 min-h-[44px]"
-                >
-                  {seedingDemo ? "Vkládám…" : "Vložit demo data"}
-                </button>
-                {seedMsg && <p className="text-xs text-amber-700 mt-2 bg-amber-100 rounded-lg px-3 py-2">{seedMsg}</p>}
-              </div>
+              {/* Demo data action intentionally removed from production setup */}
 
               {/* Rychlé tlačítko + Nový – nastavení v sidebaru (Nastavení), tlačítko v headeru beze změny */}
               <div id="quick-actions" className="scroll-mt-4 w-full max-w-[700px]">
@@ -860,8 +859,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       </div>
                     </div>
                   ))}
-                  <a href="https://www.cnb.cz/cs/dohled/" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
-                    Dohled ČNB
+                  <a href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
+                    Vyhledat v registru ČNB
                   </a>
                 </div>
               </div>
@@ -922,9 +921,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <h2 className="text-xl font-black text-slate-900 mb-1">Správa Týmu</h2>
                 <p className="text-sm font-medium text-slate-500">Spolupracujte na klientech se svými asistenty nebo kolegy.</p>
               </div>
-              <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
-                <Users size={16} /> Pozvat člena
-              </button>
+              <Link href="/portal/team-overview" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
+                <Users size={16} /> Otevřít správu týmu
+              </Link>
             </div>
             <div className="overflow-x-auto">
               {teamMembers.length === 0 ? (
@@ -997,6 +996,14 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> Týmová spolupráce</div>
                 </div>
                 <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors min-h-[44px]">Změnit tarif</button>
+                <a
+                  href="https://www.aidvisora.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mt-3 py-3 bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors min-h-[44px] inline-flex items-center justify-center"
+                >
+                  Porovnat tarify na webu
+                </a>
               </div>
               <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6">
                 <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={18} className="text-slate-400" /> Platební metoda</h3>
@@ -1137,6 +1144,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                     <Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {calendarStatus.email}
                                   </p>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={handleCalendarSync}
+                                  disabled={calendarSyncing}
+                                  className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold hover:bg-indigo-100 disabled:opacity-60 flex items-center gap-2"
+                                  aria-busy={calendarSyncing}
+                                >
+                                  {calendarSyncing ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
+                                  {calendarSyncing ? "Synchronizuji…" : "Synchronizovat teď"}
+                                </button>
                                 <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
                                   {calendarDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {calendarDisconnecting ? "Odpojuji…" : "Odpojit Google Kalendář"}

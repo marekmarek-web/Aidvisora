@@ -3,6 +3,7 @@
 import { Capacitor } from "@capacitor/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PushNotifications, type Token, type PushNotificationSchema, type ActionPerformed } from "@capacitor/push-notifications";
+import { retryFetch } from "@/lib/network/retry";
 
 const PUSH_PROMPT_STORAGE_KEY = "aidvisor.push.soft-prompt.seen";
 const PUSH_TOKEN_STORAGE_KEY = "aidvisor.push.token";
@@ -15,7 +16,7 @@ export type UsePushNotificationsOptions = {
 };
 
 async function registerTokenOnBackend(token: string, platform: "ios" | "android") {
-  await fetch("/api/push/devices", {
+  await retryFetch("/api/push/devices", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -26,10 +27,18 @@ async function registerTokenOnBackend(token: string, platform: "ios" | "android"
 }
 
 async function revokeTokenOnBackend(token: string) {
-  await fetch("/api/push/devices", {
+  await retryFetch("/api/push/devices", {
     method: "DELETE",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ pushToken: token }),
+  }).catch(() => {});
+}
+
+async function revokeAllTokensOnBackend() {
+  await retryFetch("/api/push/devices", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ allDevices: true }),
   }).catch(() => {});
 }
 
@@ -38,6 +47,12 @@ export async function revokeStoredPushToken() {
   const token = localStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
   if (!token) return;
   await revokeTokenOnBackend(token);
+  localStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+}
+
+export async function revokeAllStoredPushTokens() {
+  if (typeof window === "undefined") return;
+  await revokeAllTokensOnBackend();
   localStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
 }
 

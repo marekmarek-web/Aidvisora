@@ -3,6 +3,10 @@ import { db, documents, activityLog } from "db";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { logAudit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { executeIdempotent } from "@/lib/security/idempotency";
+import { detectMagicMimeType, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
+import { isUuid, sanitizeStorageSegment, toTrimmedString } from "@/lib/security/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +23,7 @@ const ALLOWED_MIME_TYPES = new Set([
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
 type UploadSource = "web" | "mobile_camera" | "mobile_gallery" | "mobile_file" | "mobile_share" | "mobile_scan";
+type UploadResponseBody = { error: string } | { id: string; name: string; mimeType: string | null; sizeBytes: number | null };
 
 function parseUploadSource(value: FormDataEntryValue | null): UploadSource {
   const raw = typeof value === "string" ? value : "";
@@ -53,6 +58,16 @@ export async function POST(request: Request) {
     if (!membership || !hasPermission(membership.roleName as RoleName, "documents:write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const limiter = checkRateLimit(request, "documents-upload", `${membership.tenantId}:${user.id}`, {
+      windowMs: 60_000,
+      maxRequests: 20,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Too many upload attempts. Please retry later." },
+        { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } }
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -71,6 +86,10 @@ export async function POST(request: Request) {
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json({ error: "Soubor je příliš velký (max 20 MB)." }, { status: 400 });
     }
+    const detectedMime = await detectMagicMimeType(file);
+    if (!mimeMatchesAllowedSignature(mimeType, detectedMime)) {
+      return NextResponse.json({ error: "Obsah souboru neodpovídá deklarovanému typu." }, { status: 400 });
+    }
 
     const contactIdRaw = formData.get("contactId");
     const opportunityIdRaw = formData.get("opportunityId");
@@ -80,84 +99,107 @@ export async function POST(request: Request) {
     const visibleToClient = parseBoolean(formData.get("visibleToClient"));
     const tags = parseTags(formData.get("tags"));
 
-    const contactId = typeof contactIdRaw === "string" && contactIdRaw.trim() ? contactIdRaw.trim() : null;
-    const opportunityId = typeof opportunityIdRaw === "string" && opportunityIdRaw.trim() ? opportunityIdRaw.trim() : null;
-    const contractId = typeof contractIdRaw === "string" && contractIdRaw.trim() ? contractIdRaw.trim() : null;
-    const name = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : file.name;
+    const contactIdValue = toTrimmedString(contactIdRaw);
+    const opportunityIdValue = toTrimmedString(opportunityIdRaw);
+    const contractIdValue = toTrimmedString(contractIdRaw);
+    const contactId = contactIdValue ? contactIdValue : null;
+    const opportunityId = opportunityIdValue ? opportunityIdValue : null;
+    const contractId = contractIdValue ? contractIdValue : null;
+    const name = toTrimmedString(nameRaw) || file.name;
 
+    if ((contactId && !isUuid(contactId)) || (opportunityId && !isUuid(opportunityId)) || (contractId && !isUuid(contractId))) {
+      return NextResponse.json({ error: "Invalid entity identifier." }, { status: 400 });
+    }
+
+    const idempotencyKeyHeader = request.headers.get("idempotency-key")?.trim() || "";
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const pathPrefix = contactId || opportunityId || "misc";
+    const pathPrefix = sanitizeStorageSegment(contactId || opportunityId, "misc");
     const storagePath = `${membership.tenantId}/${pathPrefix}/${Date.now()}-${safeName}`;
 
-    const admin = createAdminClient();
-    const { error: uploadError } = await admin.storage.from("documents").upload(storagePath, file, { upsert: false });
-    if (uploadError) {
-      const message =
-        uploadError.message?.toLowerCase().includes("bucket") || uploadError.message?.toLowerCase().includes("not found")
-          ? "Úložiště dokumentů není nastavené."
-          : "Nahrání souboru selhalo.";
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
+    const performUpload = async (): Promise<{ status: number; body: UploadResponseBody }> => {
+      const admin = createAdminClient();
+      const { error: uploadError } = await admin.storage.from("documents").upload(storagePath, file, { upsert: false });
+      if (uploadError) {
+        const message =
+          uploadError.message?.toLowerCase().includes("bucket") || uploadError.message?.toLowerCase().includes("not found")
+            ? "Úložiště dokumentů není nastavené."
+            : "Nahrání souboru selhalo.";
+        return { status: 500, body: { error: message } };
+      }
 
-    const [inserted] = await db
-      .insert(documents)
-      .values({
-        tenantId: membership.tenantId,
-        contactId,
-        opportunityId,
-        contractId,
-        name,
-        storagePath,
-        mimeType: mimeType || null,
-        sizeBytes: file.size,
-        tags,
-        visibleToClient,
-        uploadSource,
-        uploadedBy: user.id,
-      })
-      .returning({
-        id: documents.id,
-        name: documents.name,
-        mimeType: documents.mimeType,
-        sizeBytes: documents.sizeBytes,
-      });
+      const [inserted] = await db
+        .insert(documents)
+        .values({
+          tenantId: membership.tenantId,
+          contactId,
+          opportunityId,
+          contractId,
+          name,
+          storagePath,
+          mimeType: mimeType || null,
+          sizeBytes: file.size,
+          tags,
+          visibleToClient,
+          uploadSource,
+          uploadedBy: user.id,
+        })
+        .returning({
+          id: documents.id,
+          name: documents.name,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+        });
 
-    if (!inserted?.id) {
-      return NextResponse.json({ error: "Nepodařilo se uložit metadata dokumentu." }, { status: 500 });
-    }
+      if (!inserted?.id) {
+        return { status: 500, body: { error: "Nepodařilo se uložit metadata dokumentu." } };
+      }
 
-    await db
-      .insert(activityLog)
-      .values({
+      await db
+        .insert(activityLog)
+        .values({
+          tenantId: membership.tenantId,
+          userId: user.id,
+          entityType: "document",
+          entityId: inserted.id,
+          action: "upload",
+          meta: {
+            contactId: contactId ?? undefined,
+            opportunityId: opportunityId ?? undefined,
+            uploadSource,
+            name,
+          },
+        })
+        .catch(() => {});
+
+      await logAudit({
         tenantId: membership.tenantId,
         userId: user.id,
+        action: "upload",
         entityType: "document",
         entityId: inserted.id,
-        action: "upload",
+        request,
         meta: {
           contactId: contactId ?? undefined,
           opportunityId: opportunityId ?? undefined,
           uploadSource,
           name,
         },
-      })
-      .catch(() => {});
+      }).catch(() => {});
 
-    await logAudit({
-      tenantId: membership.tenantId,
-      userId: user.id,
-      action: "upload",
-      entityType: "document",
-      entityId: inserted.id,
-      meta: {
-        contactId: contactId ?? undefined,
-        opportunityId: opportunityId ?? undefined,
-        uploadSource,
-        name,
-      },
-    }).catch(() => {});
+      return { status: 200, body: inserted };
+    };
 
-    return NextResponse.json(inserted);
+    if (idempotencyKeyHeader) {
+      const scopedKey = `documents:${membership.tenantId}:${user.id}:${idempotencyKeyHeader}`;
+      const replay = await executeIdempotent<UploadResponseBody>(scopedKey, 5 * 60_000, performUpload);
+      return NextResponse.json(replay.result.body, {
+        status: replay.result.status,
+        headers: replay.replayed ? { "x-idempotent-replay": "1" } : undefined,
+      });
+    }
+
+    const result = await performUpload();
+    return NextResponse.json(result.body, { status: result.status });
   } catch {
     return NextResponse.json({ error: "Nahrání dokumentu selhalo." }, { status: 500 });
   }

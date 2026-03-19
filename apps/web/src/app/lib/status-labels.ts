@@ -22,7 +22,17 @@ export function getStatusLabels(): StatusLabel[] {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [...DEFAULT_STATUS_OPTIONS];
     const parsed = JSON.parse(raw) as StatusLabel[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_STATUS_OPTIONS];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [...DEFAULT_STATUS_OPTIONS];
+    const normalized = parsed
+      .map((item, idx) => {
+        if (!item || typeof item !== "object") return null;
+        const id = typeof item.id === "string" && item.id.trim() ? item.id.trim() : `label_${idx}`;
+        const label = typeof item.label === "string" && item.label.trim() ? item.label.trim() : `Štítek ${idx + 1}`;
+        const color = typeof item.color === "string" && item.color.trim() ? item.color.trim() : "#579bfc";
+        return { id, label, color } satisfies StatusLabel;
+      })
+      .filter((item): item is StatusLabel => item !== null);
+    return normalized.length > 0 ? normalized : [...DEFAULT_STATUS_OPTIONS];
   } catch {
     return [...DEFAULT_STATUS_OPTIONS];
   }
@@ -31,7 +41,15 @@ export function getStatusLabels(): StatusLabel[] {
 export function setStatusLabels(labels: StatusLabel[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+    const sanitized = labels
+      .map((label, idx) => ({
+        id: label.id?.trim() || `label_${idx}`,
+        label: label.label?.trim() || `Štítek ${idx + 1}`,
+        color: label.color?.trim() || "#579bfc",
+      }))
+      .slice(0, 50);
+    if (sanitized.length === 0) return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
     window.dispatchEvent(new CustomEvent("weplan_labels_updated"));
   } catch {
     // ignore

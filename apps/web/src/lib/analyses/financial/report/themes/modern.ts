@@ -267,6 +267,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .opp-num{width:24px;height:24px;background:var(--brand);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--ff-ui);font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
 .opp-name{font-family:var(--ff-ui);font-size:13px;font-weight:600;color:var(--ink);flex:1}
 .opp-val{font-family:var(--ff-ui);font-size:14px;font-weight:800;color:var(--pos);white-space:nowrap}
+.money,.currency,.kpi-value,.product-invest-amt,.foot-val,.ins-amt,.ins-line-val,.goal-amt-val{white-space:nowrap}
 
 /* DVZ */
 .dvz-note{padding:11px 16px;background:var(--surface-2);border-radius:var(--r2);border:1px solid var(--surface-3);font-size:11px;color:var(--ink-4);text-align:center;margin-top:16px;font-family:var(--ff-data)}
@@ -300,7 +301,8 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 @media print{
   .sidebar{display:none!important}
   .main{margin-left:0!important}
-  .page{min-height:auto;page-break-inside:auto;page-break-after:auto}
+  .page{min-height:auto;page-break-inside:auto;page-break-after:auto;background:#fff!important}
+  .page:nth-child(even),.page:nth-child(odd){background:#fff!important}
   .page.hero,.page.company-hero{page-break-after:always}
   .sec-header{page-break-after:avoid}
   .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row{page-break-inside:avoid}

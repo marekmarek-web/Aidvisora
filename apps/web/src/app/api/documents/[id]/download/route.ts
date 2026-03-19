@@ -6,6 +6,7 @@ import { db } from "db";
 import { documents } from "db";
 import { eq, and } from "db";
 import { logAudit } from "@/lib/audit";
+import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 
 export async function GET(
   _request: Request,
@@ -36,6 +37,7 @@ export async function GET(
     action: "download",
     entityType: "document",
     entityId: id,
+    request: _request,
   });
   if (doc.sensitive) {
     await logAudit({
@@ -44,11 +46,17 @@ export async function GET(
       action: "sensitive_document_view",
       entityType: "document",
       entityId: id,
+      request: _request,
     }).catch(() => {});
   }
   const admin = createAdminClient();
-  const { data: signed } = await admin.storage.from("documents").createSignedUrl(doc.storagePath, 60);
-  if (!signed?.signedUrl) {
+  const signed = await createSignedStorageUrl({
+    adminClient: admin,
+    bucket: "documents",
+    path: doc.storagePath,
+    purpose: "download",
+  });
+  if (!signed.signedUrl) {
     return NextResponse.json({ error: "Storage URL failed" }, { status: 500 });
   }
   return NextResponse.redirect(signed.signedUrl);

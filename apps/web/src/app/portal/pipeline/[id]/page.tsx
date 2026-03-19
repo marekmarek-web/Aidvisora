@@ -118,11 +118,13 @@ export default async function OpportunityDetailPage({
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col xl:flex-row gap-6">
         <div className="flex-1 min-w-0">
           <OpportunityTabLayout tabs={tabs} defaultTab="casova_osa" />
         </div>
-        <OpportunitySidebar opportunity={opportunity} />
+        <div className="w-full xl:w-auto">
+          <OpportunitySidebar opportunity={opportunity} />
+        </div>
       </div>
 
     </div>

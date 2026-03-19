@@ -5,7 +5,7 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { getMembership } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { tenants, roles, memberships, clientContacts, clientInvitations, contacts, userProfiles } from "db";
-import { eq, and, gt, inArray, sql } from "db";
+import { eq, and, ne, gt, inArray } from "db";
 
 export type EnsureMembershipResult =
   | { ok: true; redirectTo: string }
@@ -283,8 +283,7 @@ export async function listSupervisorOptions(): Promise<SupervisorOption[]> {
       and(
         eq(memberships.tenantId, auth.tenantId),
         inArray(roles.name as any, allowedRoles as any),
-        // avoid self assignment
-        sql`${memberships.userId} <> ${auth.userId}` as any
+        ne(memberships.userId, auth.userId)
       ) as any
     );
 

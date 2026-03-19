@@ -7,6 +7,7 @@ import { BaseModal } from "@/app/components/BaseModal";
 import { useToast } from "@/app/components/Toast";
 import { getContactsList, type ContactRow } from "@/app/actions/contacts";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
+import { retryFetchWithTimeout } from "@/lib/network/retry";
 
 export type CalendarEventItem = {
   id: string;
@@ -93,12 +94,21 @@ export function GoogleCalendarUpcomingEvents() {
   const [editLoading, setEditLoading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const buildIdempotencyKey = useCallback((prefix: string) => {
+    return `${prefix}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+  }, []);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/calendar/events");
+      const res = await retryFetchWithTimeout(
+        "/api/calendar/events",
+        { method: "GET" },
+        { timeoutMs: 10_000, maxAttempts: 2 }
+      );
       const data = (await res.json()) as { events?: CalendarEventItem[]; error?: string; detail?: string };
       if (!res.ok) {
         setError(data.error ?? data.detail ?? "Načtení událostí se nepovedlo.");
@@ -193,17 +203,24 @@ export function GoogleCalendarUpcomingEvents() {
     }
     setEditSaving(true);
     try {
-      const res = await fetch(`/api/calendar/events/${encodeURIComponent(editingEventId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          start: startIso,
-          end: endIso,
-          description: editForm.description.trim() || undefined,
-          location: editForm.location.trim() || undefined,
-        }),
-      });
+      const res = await retryFetchWithTimeout(
+        `/api/calendar/events/${encodeURIComponent(editingEventId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": buildIdempotencyKey("calendar-event-patch"),
+          },
+          body: JSON.stringify({
+            title,
+            start: startIso,
+            end: endIso,
+            description: editForm.description.trim() || undefined,
+            location: editForm.location.trim() || undefined,
+          }),
+        },
+        { timeoutMs: 12_000, maxAttempts: 2 }
+      );
       const data = (await res.json()) as { error?: string; detail?: string };
       if (!res.ok) {
         toast.showToast(data.error ?? data.detail ?? "Uložení změn se nepovedlo.", "error");
@@ -225,7 +242,14 @@ export function GoogleCalendarUpcomingEvents() {
       if (!window.confirm("Opravdu chcete smazat tuto událost z Google Kalendáře?")) return;
       setDeletingId(ev.id);
       try {
-        const res = await fetch(`/api/calendar/events/${encodeURIComponent(ev.id)}`, { method: "DELETE" });
+        const res = await retryFetchWithTimeout(
+          `/api/calendar/events/${encodeURIComponent(ev.id)}`,
+          {
+            method: "DELETE",
+            headers: { "Idempotency-Key": buildIdempotencyKey("calendar-event-delete") },
+          },
+          { timeoutMs: 12_000, maxAttempts: 2 }
+        );
         if (!res.ok) {
           const data = (await res.json().catch(() => ({}))) as { error?: string };
           toast.showToast(data.error ?? "Smazání události se nepovedlo.", "error");
@@ -239,7 +263,7 @@ export function GoogleCalendarUpcomingEvents() {
         setDeletingId(null);
       }
     },
-    [fetchEvents, toast]
+    [buildIdempotencyKey, fetchEvents, toast]
   );
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -257,19 +281,26 @@ export function GoogleCalendarUpcomingEvents() {
     }
     setCreateSaving(true);
     try {
-      const res = await fetch("/api/calendar/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          start: startIso,
-          end: endIso,
-          description: createForm.description.trim() || undefined,
-          location: createForm.location.trim() || undefined,
-          contactId: createForm.contactId.trim() || undefined,
-          opportunityId: createForm.opportunityId.trim() || undefined,
-        }),
-      });
+      const res = await retryFetchWithTimeout(
+        "/api/calendar/events",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": buildIdempotencyKey("calendar-event-post"),
+          },
+          body: JSON.stringify({
+            title,
+            start: startIso,
+            end: endIso,
+            description: createForm.description.trim() || undefined,
+            location: createForm.location.trim() || undefined,
+            contactId: createForm.contactId.trim() || undefined,
+            opportunityId: createForm.opportunityId.trim() || undefined,
+          }),
+        },
+        { timeoutMs: 12_000, maxAttempts: 2 }
+      );
       const data = (await res.json()) as { id?: string; error?: string; detail?: string };
       if (!res.ok) {
         toast.showToast(data.error ?? data.detail ?? "Vytvoření události se nepovedlo.", "error");
@@ -286,6 +317,40 @@ export function GoogleCalendarUpcomingEvents() {
     }
   };
 
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 7);
+      const end = new Date(now);
+      end.setDate(now.getDate() + 30);
+      const res = await retryFetchWithTimeout(
+        "/api/calendar/sync",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": buildIdempotencyKey("calendar-sync"),
+          },
+          body: JSON.stringify({ timeMin: start.toISOString(), timeMax: end.toISOString() }),
+        },
+        { timeoutMs: 15_000, maxAttempts: 2 }
+      );
+      const data = (await res.json().catch(() => ({}))) as { error?: string; created?: number; updated?: number };
+      if (!res.ok) {
+        toast.showToast(data.error ?? "Synchronizace kalendáře se nepovedla.", "error");
+        return;
+      }
+      toast.showToast(`Synchronizace hotová: +${data.created ?? 0} nových, ${data.updated ?? 0} upravených.`, "success");
+      fetchEvents();
+    } catch {
+      toast.showToast("Synchronizace kalendáře se nepovedla.", "error");
+    } finally {
+      setSyncing(false);
+    }
+  }, [buildIdempotencyKey, fetchEvents, toast]);
+
   const labelClass = "block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1";
   const inputClass =
     "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 min-h-[44px]";
@@ -295,6 +360,14 @@ export function GoogleCalendarUpcomingEvents() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
         <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Nadcházející události</h4>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncing}
+            className="min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {syncing ? "Synchronizuji…" : "Synchronizovat"}
+          </button>
           <label htmlFor="gcal-filter-contact" className="sr-only">Filtrovat podle klienta</label>
           <select
             id="gcal-filter-contact"
