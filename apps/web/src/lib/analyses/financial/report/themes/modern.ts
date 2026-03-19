@@ -216,7 +216,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .ins-sub{font-size:11px;color:var(--ink-4);margin-top:2px}
 .ins-amt{font-family:var(--ff-ui);font-size:16px;font-weight:800;color:var(--gold);text-align:right;white-space:nowrap}
 .ins-amt.bad{color:var(--neg)}
-.ins-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.ins-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;page-break-inside:avoid}
 .ins-detail-card{background:var(--surface-2);border:1px solid var(--surface-3);border-radius:var(--r3);padding:16px}
 .ins-detail-title{font-family:var(--ff-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-4);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--surface-3)}
 .ins-line{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12px;border-bottom:1px solid var(--surface-3)}
@@ -304,11 +304,13 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .main{margin-left:0!important}
   .page{min-height:auto;page-break-inside:auto;page-break-after:auto;background:#fff!important}
   .page:nth-child(even),.page:nth-child(odd){background:#fff!important}
-  .page.hero,.page.company-hero{page-break-after:always}
+  .page.hero{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always}
+  .page.company-hero{background:var(--navy-2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always}
+  .hero-title,.hero-subtitle,.hero-eyebrow,.hero-meta-val,.hero-meta-label,.hero-meta-sub,.hero-wordmark,.hero-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .sec-header{page-break-after:avoid}
-  .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area{page-break-inside:avoid}
+  .tbl-wrap,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area{page-break-inside:avoid}
   .ins-row,.gap-row,.opp-row,.cf-item{page-break-inside:avoid}
-  .product-card{page-break-inside:avoid;margin-bottom:16px}
+  .product-card{page-break-before:always;page-break-inside:avoid;margin-bottom:16px}
   .product-desc{max-height:none;-webkit-line-clamp:unset}
   .page-inner>*{animation:none!important}
   body{background:white}
