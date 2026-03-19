@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface DashboardCardProps {
@@ -9,17 +10,13 @@ export interface DashboardCardProps {
   children: React.ReactNode;
   footerLink?: string;
   footerLabel?: string;
-  /** Optional right-side content in header (e.g. drag handle) */
   rightElement?: React.ReactNode;
-  /** Optional background class (e.g. light tint by section) */
   backgroundClass?: string;
   className?: string;
+  /** Optional icon color class for the header icon */
+  iconColorClass?: string;
 }
 
-/**
- * Shared dashboard widget card: rounded-[24px], border, shadow,
- * header with icon + title, body with min-height, optional footer "Více →".
- */
 export function DashboardCard({
   title,
   icon: Icon,
@@ -29,26 +26,27 @@ export function DashboardCard({
   rightElement,
   backgroundClass,
   className = "",
+  iconColorClass,
 }: DashboardCardProps) {
   return (
     <div
-      className={`flex flex-col rounded-3xl border border-slate-100 shadow-sm min-h-[240px] md:min-h-[320px] overflow-hidden ${backgroundClass ?? "bg-white"} ${className}`}
+      className={`flex flex-col rounded-[32px] border border-slate-100 shadow-sm min-h-[240px] max-h-[500px] overflow-hidden ${backgroundClass ?? "bg-white"} ${className}`}
     >
-      <div className="px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <Icon size={18} className="text-slate-400 shrink-0" />
-          <h2 className="font-bold text-slate-900 text-sm truncate">{title}</h2>
-        </div>
+      <div className="px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between shrink-0">
+        <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+          <Icon size={18} className={iconColorClass ?? "text-slate-400"} />
+          {title}
+        </h2>
         {rightElement != null ? rightElement : null}
       </div>
-      <div className="p-4 sm:p-6 flex-1 overflow-y-auto min-h-0 flex flex-col">
+      <div className="px-6 sm:px-8 pb-6 sm:pb-8 flex-1 overflow-y-auto min-h-0 flex flex-col">
         {children}
         {footerLink && (
           <Link
             href={footerLink}
-            className="mt-4 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 shrink-0"
+            className="mt-auto pt-4 text-xs font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 shrink-0"
           >
-            {footerLabel} <span aria-hidden>→</span>
+            {footerLabel} <ChevronRight size={14} />
           </Link>
         )}
       </div>
