@@ -231,7 +231,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     setProfileSaving(true);
     try {
       const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || "";
-      await updatePortalProfile(fullName);
+      await updatePortalProfile(fullName, { phone, ico, company: address });
       setProfileSaved(true);
       toast.showToast("Údaje uloženy");
     } catch (e) {
@@ -239,7 +239,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     } finally {
       setProfileSaving(false);
     }
-  }, [firstName, lastName, toast]);
+  }, [firstName, lastName, phone, ico, address, toast]);
 
   const handleUpdatePassword = useCallback(
     async (e: React.FormEvent) => {

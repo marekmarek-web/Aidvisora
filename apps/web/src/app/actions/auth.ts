@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { getMembership } from "@/lib/auth/get-membership";
 import { db } from "db";
-import { tenants, roles, memberships, clientContacts, clientInvitations, contacts, userProfiles } from "db";
+import { tenants, roles, memberships, clientContacts, clientInvitations, contacts, userProfiles, advisorPreferences } from "db";
 import { eq, and, ne, gt, inArray } from "db";
 
 export type EnsureMembershipResult =
@@ -178,13 +178,21 @@ export async function acceptClientInvitation(token: string, gdprConsent?: boolea
   return { ok: true };
 }
 
-/** Aktualizuje jméno přihlášeného uživatele v Supabase Auth (user_metadata.full_name) a v user_profiles. */
-export async function updatePortalProfile(fullName: string, supervisorUserId?: string | null): Promise<void> {
+/** Aktualizuje jméno přihlášeného uživatele v Supabase Auth (user_metadata.full_name) a v user_profiles.
+ *  Extra fields (phone, ico, company, bio) are stored in user_metadata and advisor_preferences. */
+export async function updatePortalProfile(
+  fullName: string,
+  extra?: { phone?: string; ico?: string; company?: string; bio?: string; publicRole?: string },
+  supervisorUserId?: string | null,
+): Promise<void> {
   const auth = await requireAuthInAction();
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({
-    data: { full_name: fullName.trim() || null },
-  });
+  const metaUpdate: Record<string, unknown> = { full_name: fullName.trim() || null };
+  if (extra?.ico !== undefined) metaUpdate.ico = extra.ico.trim() || null;
+  if (extra?.company !== undefined) metaUpdate.company = extra.company.trim() || null;
+  if (extra?.bio !== undefined) metaUpdate.bio = extra.bio.trim() || null;
+  if (extra?.publicRole !== undefined) metaUpdate.public_role = extra.publicRole.trim() || null;
+  const { error } = await supabase.auth.updateUser({ data: metaUpdate });
   if (error) throw new Error(error.message);
   const {
     data: { user },
@@ -202,6 +210,18 @@ export async function updatePortalProfile(fullName: string, supervisorUserId?: s
       target: userProfiles.userId as any,
       set: { fullName: fullName.trim() || null, email, updatedAt: new Date() },
     });
+  if (extra?.phone !== undefined) {
+    const existing = await db
+      .select({ id: advisorPreferences.id })
+      .from(advisorPreferences)
+      .where(and(eq(advisorPreferences.tenantId, auth.tenantId), eq(advisorPreferences.userId, auth.userId)))
+      .limit(1);
+    if (existing.length > 0) {
+      await db.update(advisorPreferences).set({ phone: extra.phone.trim() || null, updatedAt: new Date() }).where(eq(advisorPreferences.id, existing[0].id));
+    } else {
+      await db.insert(advisorPreferences).values({ userId: auth.userId, tenantId: auth.tenantId, phone: extra.phone.trim() || null });
+    }
+  }
 
   if (supervisorUserId !== undefined) {
     const selfMembership = await db
