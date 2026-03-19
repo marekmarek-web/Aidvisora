@@ -116,8 +116,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
     startTransition(async () => {
       let contactId = memberContactId;
       if (addMode === "new") {
-        const created = await createContact({ firstName: newFirstName.trim(), lastName: newLastName.trim() });
-        contactId = created.id;
+        const createdId = await createContact({ firstName: newFirstName.trim(), lastName: newLastName.trim() });
+        if (!createdId) throw new Error("Nepodařilo se vytvořit kontakt.");
+        contactId = createdId;
       }
       await addHouseholdMember(household.id, contactId, memberRole);
       setMemberContactId("");
