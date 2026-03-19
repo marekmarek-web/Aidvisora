@@ -12,6 +12,7 @@ import {
 import type { HouseholdDetail } from "@/app/actions/households";
 import type { OpportunityByHouseholdRow } from "@/app/actions/pipeline";
 import { getFinancialAnalysesForHousehold } from "@/app/actions/financial-analyses";
+import { createContact } from "@/app/actions/contacts";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 import { HouseholdIconDisplay, HouseholdIconPicker } from "./HouseholdIconPicker";
@@ -54,6 +55,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
   const [addingMember, setAddingMember] = useState(false);
   const [memberContactId, setMemberContactId] = useState("");
   const [memberRole, setMemberRole] = useState("member");
+  const [addMode, setAddMode] = useState<"select" | "new">("select");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -107,11 +111,20 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
 
   function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
-    if (!memberContactId) return;
+    if (addMode === "select" && !memberContactId) return;
+    if (addMode === "new" && (!newFirstName.trim() || !newLastName.trim())) return;
     startTransition(async () => {
-      await addHouseholdMember(household.id, memberContactId, memberRole);
+      let contactId = memberContactId;
+      if (addMode === "new") {
+        const created = await createContact({ firstName: newFirstName.trim(), lastName: newLastName.trim() });
+        contactId = created.id;
+      }
+      await addHouseholdMember(household.id, contactId, memberRole);
       setMemberContactId("");
       setMemberRole("member");
+      setNewFirstName("");
+      setNewLastName("");
+      setAddMode("select");
       setAddingMember(false);
       router.refresh();
     });
@@ -287,37 +300,68 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 </div>
 
                 {addingMember && (
-                  <form onSubmit={handleAddMember} className="flex flex-wrap items-center gap-2 p-4 sm:p-6 bg-slate-50 border-b border-slate-100">
-                    <select
-                      value={memberContactId}
-                      onChange={(e) => setMemberContactId(e.target.value)}
-                      className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[160px] min-h-[44px]"
-                      required
-                    >
-                      <option value="">Vyberte kontakt…</option>
-                      {availableContacts.map((c) => (
-                        <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={memberRole}
-                      onChange={(e) => setMemberRole(e.target.value)}
-                      className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm w-auto min-h-[44px]"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
-                      ))}
-                    </select>
-                    <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
-                      {pending ? "…" : "Přidat"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setAddingMember(false); setMemberContactId(""); }}
-                      className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 min-h-[44px]"
-                    >
-                      Zrušit
-                    </button>
+                  <form onSubmit={handleAddMember} className="p-4 sm:p-6 bg-slate-50 border-b border-slate-100 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setAddMode("select")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "select" ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                        Vybrat existující
+                      </button>
+                      <button type="button" onClick={() => setAddMode("new")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "new" ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                        Vytvořit nový kontakt
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {addMode === "select" ? (
+                        <select
+                          value={memberContactId}
+                          onChange={(e) => setMemberContactId(e.target.value)}
+                          className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[160px] min-h-[44px]"
+                          required
+                        >
+                          <option value="">Vyberte kontakt…</option>
+                          {availableContacts.map((c) => (
+                            <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Jméno"
+                            value={newFirstName}
+                            onChange={(e) => setNewFirstName(e.target.value)}
+                            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
+                            required
+                          />
+                          <input
+                            type="text"
+                            placeholder="Příjmení"
+                            value={newLastName}
+                            onChange={(e) => setNewLastName(e.target.value)}
+                            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
+                            required
+                          />
+                        </>
+                      )}
+                      <select
+                        value={memberRole}
+                        onChange={(e) => setMemberRole(e.target.value)}
+                        className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm w-auto min-h-[44px]"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                      <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
+                        {pending ? "…" : "Přidat"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAddingMember(false); setMemberContactId(""); setNewFirstName(""); setNewLastName(""); setAddMode("select"); }}
+                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 min-h-[44px]"
+                      >
+                        Zrušit
+                      </button>
+                    </div>
                   </form>
                 )}
 

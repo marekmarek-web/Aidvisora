@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Paperclip, User } from "lucide-react";
+import { ArrowLeft, Paperclip, User, Plus, Search, X } from "lucide-react";
 import {
   getConversationsList,
   getMessages,
@@ -15,7 +15,7 @@ import {
   type ConversationListItem,
   type MessageAttachmentRow,
 } from "@/app/actions/messages";
-import { getContact } from "@/app/actions/contacts";
+import { getContact, getContactsList, type ContactRow } from "@/app/actions/contacts";
 
 const POLL_INTERVAL = 10_000;
 
@@ -193,6 +193,27 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     router.replace(`/portal/messages?contact=${contactId}`, { scroll: false });
   }
 
+  const [newMsgOpen, setNewMsgOpen] = useState(false);
+  const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
+  const [contactSearch, setContactSearch] = useState("");
+
+  const openNewMessage = useCallback(async () => {
+    setNewMsgOpen(true);
+    setContactSearch("");
+    try {
+      const list = await getContactsList();
+      setAllContacts(list);
+    } catch {
+      setAllContacts([]);
+    }
+  }, []);
+
+  const filteredContacts = allContacts.filter((c) => {
+    const name = [c.firstName, c.lastName].filter(Boolean).join(" ").toLowerCase();
+    const q = contactSearch.toLowerCase();
+    return name.includes(q) || (c.email?.toLowerCase().includes(q) ?? false);
+  });
+
   const showList = !selectedContactId;
   const showChat = !!selectedContactId;
 
@@ -206,16 +227,69 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           ${showList ? "flex md:flex" : "hidden md:flex"}
         `}
       >
-        <div className="p-3 border-b border-slate-200 shrink-0">
-          <input
-            type="text"
-            placeholder="Hledat v konverzacích…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
-            aria-label="Hledat v konverzacích"
-          />
+        <div className="p-3 border-b border-slate-200 shrink-0 space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Hledat v konverzacích…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+              aria-label="Hledat v konverzacích"
+            />
+            <button
+              type="button"
+              onClick={openNewMessage}
+              className="shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+              title="Napsat zprávu"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
         </div>
+
+        {newMsgOpen && (
+          <div className="border-b border-slate-200 bg-white p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Nová zpráva – vyberte klienta</p>
+              <button type="button" onClick={() => setNewMsgOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Hledat klienta…"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-0.5">
+              {filteredContacts.length === 0 && (
+                <p className="text-xs text-slate-500 py-2 text-center">Žádní klienti</p>
+              )}
+              {filteredContacts.slice(0, 20).map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    selectConversation(c.id);
+                    setNewMsgOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-indigo-50 text-sm font-medium text-slate-800 min-h-[44px] flex items-center gap-2 transition-colors"
+                >
+                  <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {[c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"}
+                  </span>
+                  <span className="truncate">{[c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Kontakt"}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
             <p className="p-4 text-sm text-slate-500 text-center">

@@ -103,6 +103,16 @@ export function CalendarContextPanel({
   );
   const openTasks = dayTasks.filter((t) => !t.completedAt);
 
+  const wrapMobile = (children: React.ReactNode) => {
+    if (!isMobile) return children;
+    return (
+      <>
+        <div className="wp-cal-context-panel--mobile-backdrop" onClick={onToggleCollapsed} />
+        <div className="wp-cal-context-panel--mobile-sheet">{children}</div>
+      </>
+    );
+  };
+
   if (selectedEvent) {
     const start = new Date(selectedEvent.startAt);
     const end = selectedEvent.endAt ? new Date(selectedEvent.endAt) : null;
@@ -113,9 +123,10 @@ export function CalendarContextPanel({
     return (
       <aside
         className={`wp-cal-context-panel bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
-          isMobile ? "wp-cal-context-panel--mobile rounded-xl" : ""
+          isMobile ? "wp-cal-context-panel--mobile" : ""
         }`}
       >
+        {wrapMobile(
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
             <div>
@@ -240,6 +251,7 @@ export function CalendarContextPanel({
             </button>
           </div>
         </div>
+        )}
       </aside>
     );
   }
@@ -247,9 +259,11 @@ export function CalendarContextPanel({
   return (
     <aside
       className={`wp-cal-context-panel bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
-        isMobile ? "wp-cal-context-panel--mobile rounded-xl" : ""
+        isMobile ? "wp-cal-context-panel--mobile" : ""
       }`}
     >
+      {wrapMobile(
+      <>
       <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between">
         <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
           Agenda • {formatMonthYear(selectedDate)}
@@ -367,6 +381,8 @@ export function CalendarContextPanel({
           </Link>
         )}
       </div>
+      </>
+      )}
     </aside>
   );
 }

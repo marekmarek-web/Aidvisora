@@ -623,8 +623,8 @@ export function NotesVisionBoard({
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-slate-50/50">
               <div>
                 <h2 className="font-bold text-xl text-slate-800">

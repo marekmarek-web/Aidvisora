@@ -261,6 +261,7 @@ export function PortalSidebar({
   const [openTasksCount, setOpenTasksCount] = useState<number | null>(null);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => { onMount?.(); }, [onMount]);
   useEffect(() => {
@@ -286,6 +287,9 @@ export function PortalSidebar({
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserEmail(user?.email ?? null);
+      const meta = user?.user_metadata;
+      const fullName = meta?.full_name || meta?.name || [meta?.first_name, meta?.last_name].filter(Boolean).join(" ");
+      if (fullName) setUserName(fullName);
     });
   }, []);
 
@@ -527,7 +531,7 @@ export function PortalSidebar({
                             />
                           </div>
                           {!collapsed && (
-                            <span className={`ml-3 flex-1 text-left text-[13px] font-black tracking-wide ${isActive ? "text-white" : sidebarTheme === "gradient" ? "text-white" : "text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-indigo-600"}`}>
+                            <span className={`ml-3 flex-1 text-left text-sm font-black tracking-wide ${isActive ? "text-white" : sidebarTheme === "gradient" ? "text-white" : "text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-indigo-600"}`}>
                               {item.label}
                             </span>
                           )}
@@ -576,7 +580,7 @@ export function PortalSidebar({
                           />
                         </div>
                         {!collapsed && (
-                          <span className={`ml-3 flex-1 text-left text-[13px] whitespace-nowrap tracking-wide ${
+                          <span className={`ml-3 flex-1 text-left text-sm whitespace-nowrap tracking-wide ${
                             isActive ? "text-white font-bold" : sidebarTheme === "gradient" ? "text-white font-semibold" : item.isHighlighted ? "font-bold text-slate-800" : "font-semibold"
                           }`}>
                             {item.label}
@@ -613,15 +617,15 @@ export function PortalSidebar({
             <Link
               href="/portal/setup?tab=profil"
               className={`flex items-center group cursor-pointer p-2 -m-2 rounded-xl transition-colors w-full max-w-full ${collapsed ? "justify-center" : "justify-between"} ${sidebarTheme === "gradient" ? "hover:bg-white/10" : "hover:bg-white"}`}
-              title={collapsed ? (userEmail ?? "Profil") : undefined}
+              title={collapsed ? (userName ?? userEmail ?? "Profil") : undefined}
             >
               <div className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-inner">
-                  {getInitials(userEmail ?? undefined)}
+                  {getInitials(userName ?? userEmail ?? undefined)}
                 </div>
                 {!collapsed && (
                   <div className="min-w-0">
-                    <p className={`text-sm font-black truncate ${sidebarTheme === "gradient" ? "text-white" : "text-slate-900"}`}>{userEmail ?? "Profil"}</p>
+                    <p className={`text-sm font-black truncate ${sidebarTheme === "gradient" ? "text-white" : "text-slate-900"}`}>{userName ?? userEmail ?? "Profil"}</p>
                     <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${sidebarTheme === "gradient" ? "text-white" : "text-slate-400"}`}>AIDVISORA CRM V2.0</p>
                   </div>
                 )}

@@ -32,7 +32,7 @@ export function DashboardCard({
 }: DashboardCardProps) {
   return (
     <div
-      className={`flex flex-col rounded-3xl border border-slate-100 shadow-md min-h-[240px] md:min-h-[320px] overflow-hidden ${backgroundClass ?? "bg-white"} ${className}`}
+      className={`flex flex-col rounded-3xl border border-slate-100 shadow-sm min-h-[240px] md:min-h-[320px] overflow-hidden ${backgroundClass ?? "bg-white"} ${className}`}
     >
       <div className="px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-3 min-w-0">

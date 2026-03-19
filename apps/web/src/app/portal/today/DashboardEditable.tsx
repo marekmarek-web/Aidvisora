@@ -125,6 +125,7 @@ export function DashboardEditable({
   const router = useRouter();
   const [config, setConfig] = useState<DashboardConfig>({ order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] });
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [calendarAsideOpen, setCalendarAsideOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<WidgetId[]>([]);
   const [editHidden, setEditHidden] = useState<Set<WidgetId>>(new Set());
   const [editWidgetColors, setEditWidgetColors] = useState<Partial<Record<WidgetId, WidgetColorId>>>({});
@@ -463,8 +464,8 @@ export function DashboardEditable({
         }
         if (hasRecs) {
           return (
-            <div className="flex flex-col h-full">
-              <div className="space-y-3 flex-1">
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="space-y-3 flex-1 overflow-y-auto">
                 {recs.map((r) => {
                   const cta = getServiceCtaHref(r, r.contactId);
                   const name = [r.contactFirstName, r.contactLastName].filter(Boolean).join(" ") || "Klient";
@@ -850,9 +851,18 @@ export function DashboardEditable({
 
       </div>
 
-      {/* Right panel: side calendar – vizuálně oddělená plocha */}
+      {/* Mobile: toggle for calendar aside */}
+      <button
+        type="button"
+        onClick={() => setCalendarAsideOpen((v) => !v)}
+        className="lg:hidden w-full flex items-center justify-center gap-2 py-3 bg-white border-t border-slate-200 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors mt-4"
+      >
+        <Calendar size={16} /> {calendarAsideOpen ? "Skrýt kalendář" : "Zobrazit kalendář"}
+      </button>
+
+      {/* Right panel: side calendar */}
       <aside
-        className="w-full lg:w-[380px] mt-10 lg:mt-0 flex-shrink-0 flex flex-col border-t border-slate-200 lg:border lg:border-slate-100 lg:rounded-[24px] lg:shadow-sm bg-slate-50/50 lg:bg-white sticky top-[var(--dashboard-sticky-offset)] h-[calc(100vh-var(--dashboard-sticky-offset))] overflow-hidden lg:ml-2"
+        className={`w-full lg:w-[380px] mt-2 lg:mt-0 flex-shrink-0 flex flex-col border-t border-slate-200 lg:border lg:border-slate-100 lg:rounded-[24px] lg:shadow-sm bg-slate-50/50 lg:bg-white sticky top-[var(--dashboard-sticky-offset)] h-[calc(100vh-var(--dashboard-sticky-offset))] overflow-hidden lg:ml-2 ${calendarAsideOpen ? "block" : "hidden lg:flex"}`}
         style={{ "--dashboard-sticky-offset": "calc(var(--safe-area-top) + 73px)" } as CSSProperties}
       >
         <div className="flex-1 overflow-y-auto p-5 lg:p-6 space-y-6 bg-white lg:bg-white">

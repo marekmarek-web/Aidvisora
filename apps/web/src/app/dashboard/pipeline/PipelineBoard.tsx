@@ -28,6 +28,9 @@ import {
   Phone,
   Mail,
   MoreHorizontal,
+  Search,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
 
@@ -396,6 +399,8 @@ export function PipelineBoard({
       onOpenCreateConsumed?.();
     }
   }, [initialOpenCreateStageId, onOpenCreateConsumed]);
+  const [pipelineSearch, setPipelineSearch] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
   const [editOpp, setEditOpp] = useState<OpportunityCard | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
@@ -505,6 +510,16 @@ export function PipelineBoard({
     setDragSourceStageId(null);
   }
 
+  const filteredStages = localStages.map((stage) => {
+    const opps = stage.opportunities.filter((opp) => {
+      const q = pipelineSearch.toLowerCase();
+      const matchSearch = !q || opp.title.toLowerCase().includes(q) || (opp.contactName?.toLowerCase().includes(q) ?? false);
+      const matchType = filterType === "all" || (opp.caseType?.toLowerCase() ?? "") === filterType;
+      return matchSearch && matchType;
+    });
+    return { ...stage, opportunities: opps };
+  });
+
   return (
     <>
       <style>{`
@@ -525,8 +540,52 @@ export function PipelineBoard({
         loading={deletePending}
       />
 
+      {/* Pipeline Header: search, filters, stats, AI */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 pt-1">
+        <div className="flex items-center gap-3 flex-1 min-w-0 w-full sm:w-auto">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Hledat obchod…"
+              value={pipelineSearch}
+              onChange={(e) => setPipelineSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            {[{ v: "all", l: "Vše" }, ...CASE_TYPES.map((t) => ({ v: t.value, l: t.label }))].map((f) => (
+              <button
+                key={f.v}
+                type="button"
+                onClick={() => setFilterType(f.v)}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all min-h-[36px] ${filterType === f.v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                {f.l}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-right mr-2 hidden md:block">
+            <p className="text-xs text-slate-500 font-medium">Potenciál</p>
+            <p className="text-sm font-bold text-slate-900">{new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 }).format(filteredStages.reduce((sum, s) => sum + s.opportunities.reduce((a, o) => a + Number(o.expectedValue || 0), 0), 0))}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => toast.showToast("AI analýza pipeline bude brzy k dispozici.")}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-[#1a1c2e] to-indigo-900 text-white rounded-xl text-xs font-bold shadow-sm hover:scale-105 transition-transform min-h-[44px]"
+          >
+            <Sparkles size={14} className="text-amber-400" /> AI Analýza
+          </button>
+          <button type="button" onClick={() => setCreateStageId(localStages[0]?.id ?? null)} className="flex items-center gap-1.5 px-3 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-sm min-h-[44px]">
+            <Plus size={16} /> Nový obchod
+          </button>
+        </div>
+      </div>
+
       <div className="pipeline-board-grid pb-8 pt-2">
-        {localStages.map((stage, stageIdx) => {
+        {filteredStages.map((stage, stageIdx) => {
           const theme = COLUMN_THEMES[stageIdx % COLUMN_THEMES.length];
           const isCollapsed = collapsedStages.has(stage.id);
           const isDropTarget = dropTargetStageId === stage.id;

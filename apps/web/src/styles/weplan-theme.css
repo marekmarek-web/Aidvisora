@@ -28,8 +28,8 @@
   --wp-button-bg: #1f1c24;
 
   /* Calendar-specific (Calendar widget.txt) */
-  --wp-cal-accent: #485fed;
-  --wp-cal-accent-light: rgba(72, 95, 237, 0.12);
+  --wp-cal-accent: #0073ea;
+  --wp-cal-accent-light: rgba(0, 115, 234, 0.12);
   --wp-cal-hot: #ee6b51;
   --wp-cal-done: #999999;
   --wp-cal-active: #43ff28;

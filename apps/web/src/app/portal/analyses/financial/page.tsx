@@ -7,6 +7,13 @@ import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { FinancialAnalysisLayout } from "./components/FinancialAnalysisLayout";
 import { getFinancialAnalysis } from "@/app/actions/financial-analyses";
 
+function withTimeout<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms)),
+  ]);
+}
+
 const PERSONAL_FA_IMPORT_KEY = "financial_analysis_import";
 
 export default function FinancialAnalysisPage() {
@@ -18,14 +25,14 @@ export default function FinancialAnalysisPage() {
   const setLinkMetadata = useFinancialAnalysisStore((s) => s.setLinkMetadata);
   const loadFromFile = useFinancialAnalysisStore((s) => s.loadFromFile);
 
-  const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error" | "timeout">("idle");
 
   useEffect(() => {
     const id = searchParams.get("id");
     const fromImport = searchParams.get("fromImport");
     if (id) {
       setLoadState("loading");
-      getFinancialAnalysis(id)
+      withTimeout(getFinancialAnalysis(id))
         .then((row) => {
           if (row) {
             try {
@@ -44,7 +51,7 @@ export default function FinancialAnalysisPage() {
             setLoadState("error");
           }
         })
-        .catch(() => setLoadState("error"));
+        .catch((err) => setLoadState(err?.message === "Timeout" ? "timeout" : "error"));
       return;
     }
     if (fromImport === "1" && typeof window !== "undefined") {
@@ -73,6 +80,22 @@ export default function FinancialAnalysisPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4">
         <p className="text-slate-600">Načítání analýzy…</p>
+      </div>
+    );
+  }
+
+  if (loadState === "timeout") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 text-center">
+        <p className="text-slate-700 font-medium mb-2">Načítání trvá příliš dlouho.</p>
+        <p className="text-slate-500 text-sm mb-4">Zkontrolujte připojení k internetu a zkuste to znovu.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="min-h-[44px] px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl"
+        >
+          Zkusit znovu
+        </button>
       </div>
     );
   }

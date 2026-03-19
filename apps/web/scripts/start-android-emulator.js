@@ -1,7 +1,7 @@
 /**
- * Spustí Android emulátor BEZ hypervisoru (-no-accel).
- * Použij když ti Android Studio hází "hypervisor driver is not installed".
- * Po spuštění emulátoru v Android Studiu zvol toto zařízení a klikni Run.
+ * Spustí Android emulátor (preferuje Pixel / API 34–35).
+ * S akcelerací (rychlejší). Pro vypnutí: set CAP_EMU_NO_ACCEL=1 (nebo použij -no-accel při problémech).
+ * Po spuštění v Android Studiu zvol toto zařízení a klikni Run.
  */
 const { execSync, spawn } = require("child_process");
 const path = require("path");
@@ -38,14 +38,25 @@ if (avds.length === 0) {
   process.exit(1);
 }
 
-// Preferuj API 34 (stabilnější), jinak první
-const preferred = avds.find((a) => a.includes("34") || a.toLowerCase().includes("api 34"));
-const avd = preferred || avds[0];
-
-console.log("Spouštím emulátor (bez akcelerace, může být pomalejší):", avd);
+// Vynech API 36 (Baklava – vyžaduje VulkanVirtualQueue, často problémy). Preferuj 34, pak 35.
+const no36 = (name) => !/36|API_36|Baklava/i.test(name);
+const avdsStable = avds.filter(no36);
+const list = avdsStable.length ? avdsStable : avds;
+const pixel34 = list.find((a) => /pixel/i.test(a) && (/34|API_34/i.test(a)));
+const any34 = list.find((a) => /34|API_34/i.test(a));
+const any35 = list.find((a) => /35|API_35/i.test(a));
+const avd = pixel34 || any34 || any35 || list[0];
+const useAccel = process.env.CAP_EMU_ACCEL === "1" || process.env.CAP_EMU_ACCEL === "true";
+const args = ["-avd", avd];
+if (!useAccel) {
+  args.push("-no-accel");
+  console.log("Spouštím emulátor (bez CPU akcelerace, může být pomalejší):", avd);
+} else {
+  console.log("Spouštím emulátor (s akcelerací):", avd);
+}
 console.log("Až se spustí, v Android Studiu zvol toto zařízení a klikni Run.\n");
 
-const child = spawn(emulatorPath, ["-avd", avd, "-no-accel"], {
+const child = spawn(emulatorPath, args, {
   stdio: "inherit",
   detached: true,
   windowsHide: false,

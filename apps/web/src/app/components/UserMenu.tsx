@@ -67,7 +67,7 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-[var(--wp-radius-sm)] bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+        className="flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-full bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Profil a nastavení"

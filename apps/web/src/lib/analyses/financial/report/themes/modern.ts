@@ -73,7 +73,8 @@ body{font-family:var(--ff-data);background:var(--surface-2);color:var(--ink-2);l
 
 /* PAGE SHELL */
 .page{min-height:100vh;border-bottom:1px solid var(--surface-3);display:flex;flex-direction:column;position:relative}
-.page:nth-child(odd){background:var(--surface)}.page:nth-child(even){background:var(--surface-2)}
+.page:nth-child(odd){background:var(--surface)}.page:nth-child(even){background:var(--surface)}
+.page+.page{page-break-before:always}
 .page.hero{background:var(--navy)!important;min-height:100vh}
 .page.company-hero{background:var(--navy-2)!important;min-height:100vh}
 .page-bar{height:2.5px;background:var(--brand);flex-shrink:0}
@@ -174,7 +175,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .product-invest-label{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-4);margin-bottom:4px}
 .product-invest-amt{font-family:var(--ff-ui);font-size:22px;font-weight:800;color:var(--brand);letter-spacing:-0.5px;white-space:nowrap}
 .product-card-body{padding:20px 28px}
-.product-desc{font-size:13px;line-height:1.75;color:var(--ink-3);margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--surface-2)}
+.product-desc{font-size:13px;line-height:1.75;color:var(--ink-3);margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--surface-2);max-height:10em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--surface-3);border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;margin-bottom:20px}
 .stat-cell{background:var(--surface);padding:12px 14px}
 .stat-lbl{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-4);margin-bottom:3px}
@@ -243,12 +244,12 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .formula-desc{font-size:12px;color:var(--brand-2);line-height:1.7}
 
 /* RISK GRID */
-.risk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-.risk-item{background:var(--surface);border:1px solid var(--surface-3);border-radius:var(--r3);padding:14px 16px;display:flex;align-items:center;gap:10px}
+.risk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;page-break-inside:avoid}
+.risk-item{background:var(--surface);border:1px solid var(--surface-3);border-radius:var(--r3);padding:16px 18px;display:flex;align-items:center;gap:12px;min-height:52px}
 .risk-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .risk-dot.ok{background:var(--pos)}.risk-dot.bad{background:var(--neg)}
-.risk-name{font-family:var(--ff-ui);font-size:12.5px;font-weight:600;color:var(--ink);flex:1}
-.risk-status{font-size:11px;font-weight:700}
+.risk-name{font-family:var(--ff-ui);font-size:12.5px;font-weight:600;color:var(--ink);flex:1;line-height:1.3}
+.risk-status{font-size:11px;font-weight:700;text-align:right;flex-shrink:0;white-space:nowrap}
 .risk-status.ok{color:var(--pos)}.risk-status.bad{color:var(--neg)}
 
 /* GAP ROWS */
@@ -267,7 +268,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .opp-num{width:24px;height:24px;background:var(--brand);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--ff-ui);font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
 .opp-name{font-family:var(--ff-ui);font-size:13px;font-weight:600;color:var(--ink);flex:1}
 .opp-val{font-family:var(--ff-ui);font-size:14px;font-weight:800;color:var(--pos);white-space:nowrap}
-.money,.currency,.kpi-value,.product-invest-amt,.foot-val,.ins-amt,.ins-line-val,.goal-amt-val{white-space:nowrap}
+.money,.currency,.kpi-value,.product-invest-amt,.foot-val,.ins-amt,.ins-line-val,.goal-amt-val,.cf-amt,.gap-recommended,.gap-current,.stat-val,.opp-val{white-space:nowrap}
 
 /* DVZ */
 .dvz-note{padding:11px 16px;background:var(--surface-2);border-radius:var(--r2);border:1px solid var(--surface-3);font-size:11px;color:var(--ink-4);text-align:center;margin-top:16px;font-family:var(--ff-data)}
@@ -305,9 +306,15 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .page:nth-child(even),.page:nth-child(odd){background:#fff!important}
   .page.hero,.page.company-hero{page-break-after:always}
   .sec-header{page-break-after:avoid}
-  .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row{page-break-inside:avoid}
+  .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area{page-break-inside:avoid}
+  .ins-row,.gap-row,.opp-row,.cf-item{page-break-inside:avoid}
+  .product-card{page-break-inside:avoid;margin-bottom:16px}
+  .product-desc{max-height:none;-webkit-line-clamp:unset}
   .page-inner>*{animation:none!important}
   body{background:white}
+  .tbl-cap,.product-card-foot,.ins-detail-card{background:#fff!important}
+  table.dt thead tr{background:#f8f9fa!important}
+  table.dt tbody tr.total td{background:#f8f9fa!important}
   @page{size:A4;margin:12mm 10mm}
 }
 `;

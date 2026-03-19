@@ -329,15 +329,21 @@ function EventFormModal({
 }) {
   const [form, setForm] = useState<EventFormData>(initial);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { keyboardInset } = useKeyboardAware();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim() || !form.startAt) return;
     setSaving(true);
-    await onSave(form, initial.id);
-    setSaving(false);
-    onClose();
+    try {
+      await onSave(form, initial.id);
+      onClose();
+    } catch {
+      setSaveError("Nepodařilo se uložit. Zkuste to znovu.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -452,7 +458,9 @@ function EventFormModal({
           )}
         </div>
 
-        <div className="flex items-center gap-3 px-5 py-3 shrink-0" style={{ borderTop: "1px solid var(--wp-border)", background: "var(--wp-bg)" }}>
+        <div className="flex flex-col gap-2 px-5 py-3 shrink-0" style={{ borderTop: "1px solid var(--wp-border)", background: "var(--wp-bg)" }}>
+          {saveError && <p className="text-sm text-red-600 font-medium">{saveError}</p>}
+          <div className="flex items-center gap-3">
           <button type="submit" disabled={saving || !form.title.trim() || !form.startAt} className="wp-btn wp-btn-primary" style={{ background: "var(--wp-cal-accent)", borderColor: "var(--wp-cal-accent)" }}>
             {saving ? "Ukládám…" : initial.id ? "Uložit" : "Vytvořit"}
           </button>
@@ -467,6 +475,7 @@ function EventFormModal({
           )}
           <div className="flex-1" />
           <button type="button" onClick={onClose} className="wp-btn wp-btn-ghost">Zavřít</button>
+          </div>
         </div>
       </form>
     </BaseModal>

@@ -189,7 +189,7 @@ function PortalShellInner({
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
         <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-sticky-header px-3 sm:px-6 md:px-8 pb-2 md:pb-4 pt-[calc(var(--safe-area-top)+0.5rem)] md:pt-[calc(var(--safe-area-top)+1rem)]">
+          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm sticky top-0 z-sticky-header px-3 sm:px-6 md:px-8 pb-1.5 md:pb-4 pt-[calc(var(--safe-area-top)+0.25rem)] sm:pt-[calc(var(--safe-area-top)+0.5rem)] md:pt-[calc(var(--safe-area-top)+1rem)]">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, Suspense } from "react";
 
 export type ContactTabId = "prehled" | "timeline" | "smlouvy" | "dokumenty" | "zapisky" | "aktivita" | "ukoly" | "obchody" | "briefing";
 
@@ -10,6 +10,17 @@ export const ContactTabContext = createContext<ContactTabId>("prehled");
 
 export function useContactTab(): ContactTabId {
   return useContext(ContactTabContext);
+}
+
+function TabSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-6 w-48 bg-slate-200 rounded" />
+      <div className="h-4 w-full bg-slate-100 rounded" />
+      <div className="h-4 w-3/4 bg-slate-100 rounded" />
+      <div className="h-32 w-full bg-slate-100 rounded-xl" />
+    </div>
+  );
 }
 
 export function ContactTabLayout({
@@ -63,11 +74,14 @@ export function ContactTabLayout({
         ))}
       </nav>
       <div className="pt-6 pb-8">
-        {tabs.map((tab) => (
-          <div key={tab.id} className={activeId === tab.id ? "block" : "hidden"}>
-            {tab.content}
-          </div>
-        ))}
+        {tabs.map((tab) => {
+          if (tab.id !== activeId) return null;
+          return (
+            <Suspense key={tab.id} fallback={<TabSkeleton />}>
+              {tab.content}
+            </Suspense>
+          );
+        })}
       </div>
     </div>
     </ContactTabContext.Provider>

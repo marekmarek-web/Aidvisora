@@ -869,11 +869,42 @@
 }
 
 .wp-cal-context-panel--mobile {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
   width: 100%;
   min-width: 0;
-  max-height: 45vh;
+  max-height: none;
   border-left: 0;
-  border-top: 1px solid rgba(166, 168, 179, 0.12);
+  border-top: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.wp-cal-context-panel--mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(2px);
+}
+.wp-cal-context-panel--mobile-sheet {
+  position: relative;
+  z-index: 1;
+  background: var(--wp-surface, #fff);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  max-height: 75vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0,0,0,.12);
+  animation: wp-cal-sheet-up .25s ease-out;
+}
+@keyframes wp-cal-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 .wp-cal-context-panel--collapsed .wp-cal-context-panel-body {

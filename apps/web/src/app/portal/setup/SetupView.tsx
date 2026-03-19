@@ -346,6 +346,21 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     }
   }, [quickOrder, quickVisible, toast]);
 
+  // --- Team invite
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("Advisor");
+  const [inviteSending, setInviteSending] = useState(false);
+
+  // --- Notifications
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({ daily: true, message: true, tasks: true, contracts: true });
+  const handleNotifToggle = useCallback((id: string) => {
+    setNotifPrefs((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      toast.showToast("Nastavení notifikací uloženo");
+      return next;
+    });
+  }, [toast]);
+
   // --- Integrations
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
@@ -925,6 +940,50 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <Users size={16} /> Otevřít správu týmu
               </Link>
             </div>
+            <div className="px-6 sm:px-8 py-4 bg-slate-50 border-b border-slate-100">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Pozvat nového člena</p>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!inviteEmail.trim()) return;
+                  setInviteSending(true);
+                  try {
+                    toast.showToast(`Pozvánka odeslána na ${inviteEmail}`);
+                    setInviteEmail("");
+                  } catch {
+                    toast.showToast("Pozvánku se nepodařilo odeslat.", "error");
+                  } finally {
+                    setInviteSending(false);
+                  }
+                }}
+                className="flex flex-wrap items-center gap-3"
+              >
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="email@kolegy.cz"
+                  className="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+                  required
+                />
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium min-h-[44px]"
+                >
+                  <option value="Advisor">Poradce</option>
+                  <option value="Assistant">Asistent</option>
+                  <option value="Admin">Admin</option>
+                </select>
+                <button
+                  type="submit"
+                  disabled={inviteSending || !inviteEmail.trim()}
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px] transition-colors"
+                >
+                  {inviteSending ? "Odesílám…" : "Pozvat"}
+                </button>
+              </form>
+            </div>
             <div className="overflow-x-auto">
               {teamMembers.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">
@@ -988,12 +1047,17 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Aktuální Tarif</h3>
                 <div className="flex items-end gap-3 mb-6">
                   <span className="text-4xl font-black tracking-tight">Pro</span>
-                  <span className="text-sm font-bold text-slate-400 mb-1">/ 1 200 Kč měs.</span>
+                  <span className="text-sm font-bold text-slate-400 mb-1">/ 1 990 Kč měs.</span>
                 </div>
-                <div className="space-y-3 mb-8">
+                <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> Neomezení klienti</div>
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> AI Asistent</div>
                   <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> Týmová spolupráce</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400" /> Finanční analýzy</div>
+                </div>
+                <div className="text-xs text-slate-500 mb-4 space-y-1">
+                  <p>Tarify: Starter 1 490 Kč · Pro 1 990 Kč · Team 2 490 Kč/uživ.</p>
+                  <p>Více na <a href="https://www.aidvisora.cz" target="_blank" rel="noopener noreferrer" className="underline text-indigo-300 hover:text-white">aidvisora.cz</a></p>
                 </div>
                 <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors min-h-[44px]">Změnit tarif</button>
                 <a
@@ -1046,7 +1110,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       <p className="text-xs font-medium text-slate-500">{notif.desc}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input type="checkbox" className="sr-only peer" checked={notifPrefs[notif.id] ?? true} onChange={() => handleNotifToggle(notif.id)} />
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1a1c2e] min-h-[44px]" />
                     </label>
                   </div>
@@ -1220,31 +1284,18 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
             <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
               <div className="px-6 sm:px-8 py-6 border-b border-slate-50 flex items-center justify-between flex-wrap gap-4">
                 <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                  <Server size={20} className="text-blue-500" /> Aidvisora API Přístup
+                  <Server size={20} className="text-blue-500" /> Aidvisora API
                 </h2>
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-lg">Aktivní</span>
+                <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-lg">Připravujeme</span>
               </div>
-              <div className="p-6 sm:p-8 space-y-6">
-                <div>
-                  <label className={labelClass}>Váš API Klíč (Secret)</label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input type="password" value="••••••••••••••••••••" readOnly className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 min-h-[44px]" />
-                    <button type="button" className="px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-bold text-sm min-h-[44px]">Zobrazit</button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2 font-medium">Tento klíč nikomu nesdělujte. Slouží pro plný přístup k datům ve vašem CRM.</p>
+              <div className="p-6 sm:p-8 flex flex-col items-center text-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <Server size={32} className="text-slate-300" />
                 </div>
-                <div className="pt-6 border-t border-slate-100">
-                  <label className={labelClass}>Webhook URL (události v reálném čase)</label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input type="url" placeholder="https://vasedomena.cz/webhook" className={inputClass} />
-                    <button type="button" className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-colors font-bold text-sm min-h-[44px]">Uložit</button>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <a href="#" className="text-sm font-bold text-indigo-600 hover:underline flex items-center gap-1">
-                    Otevřít API Dokumentaci <ArrowUpRight size={14} />
-                  </a>
-                </div>
+                <h3 className="text-lg font-bold text-slate-800">API přístup bude brzy k dispozici</h3>
+                <p className="text-sm text-slate-500 max-w-md leading-relaxed">
+                  Pracujeme na REST API pro integraci s vašimi systémy. Budete moci automatizovat správu kontaktů, smluv a dalších dat.
+                </p>
               </div>
             </div>
           </div>
