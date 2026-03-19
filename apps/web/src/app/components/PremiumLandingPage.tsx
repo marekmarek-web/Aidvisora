@@ -12,7 +12,7 @@ import {
   PieChart, Play, Quote, Search, Server, Share2, Shield, ShieldCheck, 
   Smartphone, Sparkles, Star, Sun, Sunrise, Sunset, Tags, UploadCloud, 
   User, Users, Zap, Link as LinkIcon, ChevronDown, HelpCircle, Mail,
-  Globe, XCircle, CheckCircle, Headset, Timer, LineChart, BookOpen, Database, Plus
+  Globe, XCircle, CheckCircle, Headset, Timer, LineChart, BookOpen, Database, Plus, X
 } from 'lucide-react';
 
 // --- CUSTOM HOOK & KOMPONENTA PRO SCROLL ANIMACE (REVEAL) ---
@@ -373,6 +373,7 @@ const FAQS = [
 
 export default function PremiumLandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [activeSecurityFeature, setActiveSecurityFeature] = useState('none');
   const [isAnnualPricing, setIsAnnualPricing] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -557,7 +558,7 @@ export default function PremiumLandingPage() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav py-4 shadow-2xl shadow-black/50" : "bg-transparent py-6"}`}>
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-            <span className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/30 bg-white/10 text-xl font-bold text-white shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-transform group-hover:scale-105 shrink-0" aria-hidden>A</span>
+            <img src="/Aidvisora logo A.png" alt="" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
             <span className="font-jakarta font-bold text-2xl tracking-tight text-white hidden sm:inline">Aidvisora</span>
           </Link>
 
@@ -565,7 +566,9 @@ export default function PremiumLandingPage() {
             <a href="#aplikace" className="hover:text-white transition-colors">Aplikace</a>
             <a href="#workflow" className="hover:text-white transition-colors">Typický den</a>
             <a href="#pro-koho" className="hover:text-white transition-colors">Pro koho to je</a>
-            <Link href="/klientska-zona" className="hover:text-white transition-colors">Pro klienty</Link>
+            <button type="button" onClick={() => setLoginModalOpen(true)} className="hover:text-white transition-colors min-h-[44px] flex items-center">
+              Přihlášení
+            </button>
             <a href="#cenik" className="hover:text-white transition-colors">Ceník</a>
           </div>
 
@@ -577,6 +580,50 @@ export default function PremiumLandingPage() {
           </div>
         </div>
       </nav>
+
+      {/* Přihlašovací okno: Klient / Poradce */}
+      {loginModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setLoginModalOpen(false)}>
+          <div className="bg-[#0f1424] border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+              <h2 className="font-jakarta text-xl font-bold text-white">Přihlášení</h2>
+              <button type="button" onClick={() => setLoginModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Zavřít">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <Link
+                href="/prihlaseni?next=/client"
+                onClick={() => setLoginModalOpen(false)}
+                className="flex items-center gap-4 w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
+                  <User size={24} className="text-indigo-300" />
+                </div>
+                <div>
+                  <p className="font-bold text-white group-hover:text-white">Klient</p>
+                  <p className="text-sm text-slate-400">Přihlásit se do klientské zóny – smlouvy, dokumenty, zprávy s poradcem.</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-500 ml-auto shrink-0" />
+              </Link>
+              <Link
+                href="/prihlaseni"
+                onClick={() => setLoginModalOpen(false)}
+                className="flex items-center gap-4 w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <Briefcase size={24} className="text-emerald-300" />
+                </div>
+                <div>
+                  <p className="font-bold text-white group-hover:text-white">Poradce</p>
+                  <p className="text-sm text-slate-400">Přihlásit se do portálu poradce – CRM, kalendář, pipeline.</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-500 ml-auto shrink-0" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- HERO SEKCE --- */}
       <section className="relative pt-36 pb-20 md:pt-48 md:pb-24 px-6 overflow-hidden min-h-[90vh] flex flex-col items-center justify-center">
@@ -1630,7 +1677,7 @@ export default function PremiumLandingPage() {
             
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-xl font-bold text-white shrink-0" aria-hidden>A</span>
+                <img src="/Aidvisora logo A.png" alt="" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
                 <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
               </Link>
               <p className="text-sm max-w-sm leading-relaxed mb-6">Pracovní systém pro finanční poradce a týmy. CRM, klientská zóna a workflow na jednom místě.</p>
@@ -1644,7 +1691,7 @@ export default function PremiumLandingPage() {
               <ul className="space-y-4 text-sm">
                 <li><a href="#aplikace" className="hover:text-white transition-colors">Vlastnosti CRM</a></li>
                 <li><a href="#klientska-zona" className="hover:text-white transition-colors">Klientská zóna</a></li>
-                <li><Link href="/klientska-zona" className="hover:text-white transition-colors">Pro klienty (přihlásit)</Link></li>
+                <li><button type="button" onClick={() => setLoginModalOpen(true)} className="hover:text-white transition-colors text-left">Přihlášení</button></li>
                 <li><a href="#ai-asistent" className="hover:text-white transition-colors">AI Asistent</a></li>
                 <li><a href="#cenik" className="hover:text-white transition-colors">Ceník a tarify</a></li>
                 <li><a href="#integrace" className="hover:text-white transition-colors">Integrace</a></li>
