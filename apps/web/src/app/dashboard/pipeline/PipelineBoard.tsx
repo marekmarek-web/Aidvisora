@@ -604,26 +604,26 @@ export function PipelineBoard({
               <button
                 type="button"
                 onClick={() => toggleStageCollapsed(stage.id)}
-                className={`sticky top-0 z-10 flex items-center justify-between w-full p-5 rounded-t-2xl border-b text-left transition-colors ${theme.color} ${theme.borderColor} ${isDropTarget ? "ring-2 ring-blue-400 ring-offset-2" : ""}`}
+                className={`sticky top-0 z-10 flex items-center justify-between w-full px-5 py-4 border-b text-left transition-colors ${theme.color} ${theme.borderColor} ${isDropTarget ? "ring-2 ring-indigo-400 ring-offset-2 ring-4 ring-indigo-50" : ""}`}
               >
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="shrink-0 text-slate-500">
-                      {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
-                    </span>
-                    <span className={`text-sm font-bold uppercase tracking-wider truncate ${theme.textColor}`}>
-                      {stageIdx + 1}. {stage.name}
-                    </span>
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center text-[13px] font-black text-white shadow-sm ${theme.color.replace("/50", "").replace("bg-", "bg-")} ${theme.textColor.replace("text-", "bg-").replace("-700", "-500")}`}>
+                    {stageIdx + 1}
                   </div>
-                  {subtitle && !isCollapsed && (
-                    <span className={`text-[11px] font-semibold opacity-80 pl-7 ${theme.textColor}`}>
-                      {subtitle}
-                    </span>
-                  )}
+                  <div className="flex flex-col">
+                    <h3 className={`font-bold text-[14px] uppercase tracking-wide ${theme.textColor}`}>
+                      {stage.name}
+                    </h3>
+                    {subtitle && !isCollapsed && (
+                      <p className={`text-[10px] font-bold uppercase tracking-widest opacity-80 mt-0.5`}>
+                        {subtitle}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <span className="flex items-center justify-center min-w-[32px] h-8 px-2.5 rounded-full bg-white/70 font-bold text-sm text-slate-700 shadow-sm shrink-0">
+                <div className={`px-3 py-1 rounded-lg bg-white/80 text-[13px] font-black shadow-sm border border-white ${theme.textColor}`}>
                   {stage.opportunities.length}
-                </span>
+                </div>
               </button>
 
               {!isCollapsed && (
