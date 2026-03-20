@@ -394,13 +394,13 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     setCalendarStatusError(null);
     try {
       const res = await fetch("/api/calendar/status");
+      const data = (await res.json().catch(() => ({}))) as { connected?: boolean; email?: string; error?: string };
       if (!res.ok) {
-        setCalendarStatusError("Stav se nepodařilo načíst.");
+        setCalendarStatusError(data.error || "Stav se nepodařilo načíst.");
         setCalendarStatus(null);
         return null;
       }
-      const data = (await res.json()) as { connected: boolean; email?: string };
-      setCalendarStatus(data);
+      setCalendarStatus({ connected: !!data.connected, email: data.email });
       setCalendarStatusError(null);
       return data;
     } catch {

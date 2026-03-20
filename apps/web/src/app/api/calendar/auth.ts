@@ -9,8 +9,13 @@ export type CalendarAuth = { userId: string; tenantId: string };
 /**
  * Get authenticated user for calendar API routes (middleware sets x-user-id or we use Supabase).
  * Returns 401/403 response or the auth context.
+ * @param request - Request object
+ * @param options.requireWrite - If false, allows roles with only events:read (e.g. status endpoint). Default true (events:*).
  */
-export async function getCalendarAuth(request: Request): Promise<{ ok: true; auth: CalendarAuth } | { ok: false; response: Response }> {
+export async function getCalendarAuth(
+  request: Request,
+  options?: { requireWrite?: boolean }
+): Promise<{ ok: true; auth: CalendarAuth } | { ok: false; response: Response }> {
   let userId: string | null = request.headers.get(USER_ID_HEADER);
   if (!userId) {
     const supabase = await createClient();
@@ -21,7 +26,13 @@ export async function getCalendarAuth(request: Request): Promise<{ ok: true; aut
     userId = user.id;
   }
   const membership = await getMembership(userId);
-  if (!membership || !hasPermission(membership.roleName as RoleName, "events:*")) {
+  if (!membership) {
+    return { ok: false, response: new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } }) };
+  }
+  const canAccess = options?.requireWrite === false
+    ? hasPermission(membership.roleName as RoleName, "events:read") || hasPermission(membership.roleName as RoleName, "events:*")
+    : hasPermission(membership.roleName as RoleName, "events:*");
+  if (!canAccess) {
     return { ok: false, response: new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } }) };
   }
   return { ok: true, auth: { userId, tenantId: membership.tenantId } };

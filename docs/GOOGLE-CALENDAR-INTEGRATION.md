@@ -2,7 +2,7 @@
 
 ## Přehled
 
-Poradci mohou v Nastavení → Integrace propojit svůj Google účet. Události z Google Kalendáře se synchronizují do Aidvisora (kalendář v portálu). Sync se spouští ručně tlačítkem „Sync s Google“ v kalendáři nebo po připojení účtu.
+Poradci mohou v Nastavení → Integrace propojit svůj Google účet. Události z Google Kalendáře se synchronizují do Aidvisora (kalendář v portálu). Sync se spouští ručně tlačítkem „Sync s Google“ v kalendáři nebo v Nastavení. Hlavní kalendář (den/týden/měsíc) zobrazuje události z databáze; při připojeném Google účtu se nové/upravené/smazané události z hlavního kalendáře zároveň odesílají do Google (obousměrná vazba po syncu).
 
 ## Konfigurace
 
@@ -42,6 +42,18 @@ Spusťte migrace:
 3. Uživatel se přihlásí u Google a povolí scope `calendar.events`.
 4. Google přesměruje na `GET /api/integrations/google-calendar/callback?code=...&state=...`. Backend ověří CSRF, shodu session s state, vymění code za tokeny, uloží je (šifrované) do `user_google_calendar_integrations` a přesměruje na Nastavení s `?calendar=connected`.
 5. V Kalendáři může uživatel kliknout na „Sync s Google“ – načtou se události z Google Calendar a vytvoří/aktualizují se záznamy v tabulce `events` (s `google_event_id`).
+
+## Zobrazení a zápis událostí
+
+- **Hlavní kalendář** (Portal Kalendář) načítá události ze server action `listEvents` z tabulky `events` (včetně událostí stažených ze syncu).
+- **Vytvoření události** v hlavním kalendáři: pokud je Google Calendar připojen, událost se vytvoří i v Google a do `events` se uloží s `google_event_id` a `google_calendar_id`. Pokud není připojen, uloží se jen do DB.
+- **Úprava / smazání** události, která má `google_event_id`: změna se provede i v Google Calendar (pokud je integrace aktivní).
+- **Stav integrace** (Připojeno/Odpojeno) na stránce Nastavení → Integrace načítá `GET /api/calendar/status`; k načtení stavu stačí oprávnění `events:read` (např. role Viewer).
+
+## OAuth cesty
+
+- **Používejte:** `GET /api/integrations/google-calendar/connect` (a callback `/api/integrations/google-calendar/callback`). Na tyto cesty odkazuje UI.
+- **Legacy:** `GET /api/calendar/oauth/start` přesměruje na `/api/integrations/google-calendar/connect`. Callback `/api/calendar/oauth/callback` zůstává funkční pro staré redirect URI.
 
 ## Bezpečnost
 

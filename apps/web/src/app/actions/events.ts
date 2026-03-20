@@ -2,6 +2,8 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission, getMembership } from "@/lib/auth/get-membership";
+import { getValidAccessToken } from "@/lib/integrations/google-calendar-integration-service";
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/lib/integrations/google-calendar";
 import { db } from "db";
 import { events, contacts, tasks } from "db";
 import { eq, and, gte, lt, asc, desc, sql } from "db";
@@ -228,14 +230,42 @@ export async function createEvent(form: {
     if (!member || member.tenantId !== auth.tenantId) throw new Error("Forbidden");
     assignee = form.assignedTo;
   }
+  const startAt = new Date(form.startAt);
+  const endAt = form.endAt ? new Date(form.endAt) : new Date(startAt.getTime() + 60 * 60 * 1000);
+  let googleEventId: string | null = null;
+  let googleCalendarId: string | null = null;
+  try {
+    const valid = await getValidAccessToken(auth.userId, auth.tenantId);
+    const allDay = form.allDay ?? false;
+    const startIso = startAt.toISOString();
+    const endIso = endAt.toISOString();
+    const googleEvent = await createCalendarEvent(valid.accessToken, valid.calendarId, {
+      summary: form.title.trim(),
+      description: form.notes?.trim() || undefined,
+      location: form.location?.trim() || undefined,
+      ...(allDay
+        ? {
+            start: { date: startIso.slice(0, 10) },
+            end: { date: endIso.slice(0, 10) },
+          }
+        : {
+            start: { dateTime: startIso },
+            end: { dateTime: endIso },
+          }),
+    });
+    googleEventId = googleEvent.id ?? null;
+    googleCalendarId = valid.calendarId;
+  } catch {
+    // Google not connected or API error – event will be stored only in DB
+  }
   const [row] = await db
     .insert(events)
     .values({
       tenantId: auth.tenantId,
       title: form.title.trim(),
       eventType: form.eventType || "schuzka",
-      startAt: new Date(form.startAt),
-      endAt: form.endAt ? new Date(form.endAt) : null,
+      startAt,
+      endAt,
       allDay: form.allDay ?? false,
       location: form.location?.trim() || null,
       reminderAt: form.reminderAt ? new Date(form.reminderAt) : null,
@@ -246,6 +276,8 @@ export async function createEvent(form: {
       meetingLink: form.meetingLink?.trim() || null,
       taskId: form.taskId || null,
       assignedTo: assignee,
+      googleEventId,
+      googleCalendarId,
     })
     .returning({ id: events.id });
   const newId = row?.id ?? null;
@@ -275,6 +307,40 @@ export async function updateEvent(
 ): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  const [existing] = await db
+    .select({ googleEventId: events.googleEventId, googleCalendarId: events.googleCalendarId })
+    .from(events)
+    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
+    .limit(1);
+  if (existing?.googleEventId) {
+    try {
+      const valid = await getValidAccessToken(auth.userId, auth.tenantId);
+      const calendarId = existing.googleCalendarId ?? valid.calendarId;
+      const patch: { summary?: string; start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string }; description?: string; location?: string } = {};
+      if (form.title != null) patch.summary = form.title.trim();
+      if (form.notes != null) patch.description = form.notes.trim() || undefined;
+      if (form.location != null) patch.location = form.location.trim() || undefined;
+      if (form.startAt != null || form.endAt != null || form.allDay != null) {
+        const startAt = form.startAt ? new Date(form.startAt) : null;
+        const endAt = form.endAt ? new Date(form.endAt) : startAt ? new Date(startAt.getTime() + 60 * 60 * 1000) : null;
+        const allDay = form.allDay ?? false;
+        if (startAt && endAt) {
+          if (allDay) {
+            patch.start = { date: startAt.toISOString().slice(0, 10) };
+            patch.end = { date: endAt.toISOString().slice(0, 10) };
+          } else {
+            patch.start = { dateTime: startAt.toISOString() };
+            patch.end = { dateTime: endAt.toISOString() };
+          }
+        }
+      }
+      if (Object.keys(patch).length > 0) {
+        await updateCalendarEvent(valid.accessToken, calendarId, existing.googleEventId, patch);
+      }
+    } catch {
+      // Google not connected or API error – DB update still proceeds
+    }
+  }
   await db
     .update(events)
     .set({
@@ -300,6 +366,20 @@ export async function updateEvent(
 export async function deleteEvent(id: string): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+  const [existing] = await db
+    .select({ googleEventId: events.googleEventId, googleCalendarId: events.googleCalendarId })
+    .from(events)
+    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
+    .limit(1);
+  if (existing?.googleEventId) {
+    try {
+      const valid = await getValidAccessToken(auth.userId, auth.tenantId);
+      const calendarId = existing.googleCalendarId ?? valid.calendarId;
+      await deleteCalendarEvent(valid.accessToken, calendarId, existing.googleEventId);
+    } catch {
+      // Google not connected or API error – still delete from DB
+    }
+  }
   await db
     .delete(events)
     .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)));

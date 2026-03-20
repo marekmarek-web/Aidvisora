@@ -6,7 +6,7 @@ import { getCalendarAuth } from "../auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const authResult = await getCalendarAuth(request);
+  const authResult = await getCalendarAuth(request, { requireWrite: false });
   if (!authResult.ok) return authResult.response;
   const { userId, tenantId } = authResult.auth;
 
