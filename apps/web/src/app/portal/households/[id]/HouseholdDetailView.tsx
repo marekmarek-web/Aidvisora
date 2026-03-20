@@ -17,7 +17,7 @@ import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 import { HouseholdIconDisplay, HouseholdIconPicker } from "./HouseholdIconPicker";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
-import { User, UserCog } from "lucide-react";
+import { User, UserCog, Share2, MapPin, Activity, Baby, Mail, Phone, Target, Briefcase, Plus, Trash2, ChevronRight } from "lucide-react";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
 
@@ -44,6 +44,16 @@ function initials(firstName: string | null, lastName: string | null): string {
   const b = (lastName ?? "").trim().slice(0, 1);
   if (a || b) return (a + b).toUpperCase();
   return "?";
+}
+
+function isChildMember(member: { role: string | null; birthDate?: string | null }): boolean {
+  if (member.role === "child") return true;
+  if (!member.birthDate) return false;
+  const birthDate = new Date(member.birthDate);
+  if (Number.isNaN(birthDate.getTime())) return false;
+  const ageMs = Date.now() - birthDate.getTime();
+  const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+  return ageYears < 18;
 }
 
 export function HouseholdDetailView({ household, contacts, opportunities }: HouseholdDetailViewProps) {
@@ -214,72 +224,90 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
         </header>
 
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
-          {/* Hero card: compact on mobile */}
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-6 md:p-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 md:gap-6">
-                <div className="flex flex-col sm:flex-row items-start gap-3 md:gap-6 min-w-0">
-                  <div className="relative shrink-0">
-                    <HouseholdIconDisplay iconId={household.icon} />
-                    <button
-                      type="button"
-                      onClick={() => setIconPickerOpen((o) => !o)}
-                      disabled={pending}
-                      className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600 hover:bg-slate-300 text-xs disabled:opacity-50 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
-                      aria-label="Změnit ikonu"
-                    >
-                      &#9998;
-                    </button>
-                  </div>
-                  <div className="min-w-0">
-                    {renaming ? (
-                      <form onSubmit={handleRename} className="flex flex-wrap items-center gap-2">
-                        <input
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          className="rounded-xl border border-slate-200 px-3 py-2 font-semibold text-base md:text-lg max-w-full w-full sm:w-auto min-w-[160px] md:min-w-[200px]"
-                          autoFocus
-                          required
-                        />
-                        <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
-                          {pending ? "…" : "Uložit"}
-                        </button>
-                        <button type="button" onClick={() => { setRenaming(false); setNewName(household.name); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">
-                          Zrušit
-                        </button>
-                      </form>
-                    ) : (
-                      <>
-                        <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight truncate">{household.name}</h1>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {household.members.length} {household.members.length === 1 ? "člen" : household.members.length >= 2 && household.members.length <= 4 ? "členové" : "členů"}
-                        </p>
-                        <button type="button" onClick={() => setRenaming(true)} className="text-sm font-medium mt-2 text-indigo-600 hover:underline min-h-[44px] md:min-h-0 flex items-center">
-                          Přejmenovat
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center shrink-0">
-                  <Link
-                    href={`/portal/analyses/financial?householdId=${household.id}`}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors min-h-[44px]"
+          <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+              <div className="flex items-center gap-6 min-w-0">
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIconPickerOpen((o) => !o)}
+                    disabled={pending}
+                    className="w-20 h-20 rounded-[24px] bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center text-slate-400 shadow-inner hover:text-indigo-600 transition-colors disabled:opacity-50"
+                    aria-label="Změnit ikonu domácnosti"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    <span className="hidden sm:inline">Přehled finančních analýz</span>
-                    <span className="sm:hidden">Analýzy</span>
-                  </Link>
+                    {household.icon ? <HouseholdIconDisplay iconId={household.icon} /> : <Share2 size={30} />}
+                  </button>
+                </div>
+                <div className="min-w-0">
+                  {renaming ? (
+                    <form onSubmit={handleRename} className="flex flex-wrap items-center gap-2">
+                      <input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="rounded-xl border border-slate-200 px-3 py-2 font-semibold text-base md:text-lg max-w-full w-full sm:w-auto min-w-[180px] md:min-w-[220px]"
+                        autoFocus
+                        required
+                      />
+                      <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
+                        {pending ? "…" : "Uložit"}
+                      </button>
+                      <button type="button" onClick={() => { setRenaming(false); setNewName(household.name); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">
+                        Zrušit
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight truncate">{household.name}</h1>
+                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-amber-200">Domácnost</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
+                        <span className="flex items-center gap-1.5"><MapPin size={14} /> Detail domácnosti</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <span>
+                          {household.members.length} {household.members.length === 1 ? "člen" : household.members.length >= 2 && household.members.length <= 4 ? "členové" : "členů"}
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => setRenaming(true)} className="text-sm font-medium mt-2 text-indigo-600 hover:underline min-h-[44px] md:min-h-0 flex items-center">
+                        Přejmenovat
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {iconPickerOpen && (
-                <div className="mt-6 pt-6 border-t border-slate-200">
-                  <p className="text-sm font-medium text-slate-700 mb-2">Ikona domácnosti</p>
-                  <HouseholdIconPicker value={household.icon} onChange={(id) => handleIconChange(id)} disabled={pending} />
+              <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <Link
+                  href={`/portal/mindmap?householdId=${household.id}`}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:scale-[1.02] transition-all active:scale-95 min-h-[44px]"
+                >
+                  Strategická mapa
+                </Link>
+                <div className="flex items-center gap-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Společný majetek (AUM)</span>
+                    <span className="text-2xl font-black text-indigo-600">—</span>
+                  </div>
+                  <div className="w-px h-10 bg-slate-200" />
+                  <div>
+                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                      Health Score <Activity size={10} />
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-black text-emerald-500">—</span>
+                      <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden" />
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
+
+            {iconPickerOpen && (
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <p className="text-sm font-medium text-slate-700 mb-2">Ikona domácnosti</p>
+                <HouseholdIconPicker value={household.icon} onChange={(id) => handleIconChange(id)} disabled={pending} />
+              </div>
+            )}
           </div>
 
           {/* Main grid */}
@@ -289,14 +317,14 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               {/* Members */}
               <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-bold text-slate-900">Členové domácnosti</h2>
+                  <h2 className="text-xl font-black text-slate-900">Členové domácnosti</h2>
                   {!addingMember && (
                     <button
                       type="button"
                       onClick={() => setAddingMember(true)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-indigo-700 transition-colors min-h-[44px]"
+                      className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 px-3 py-2 rounded-lg min-h-[44px]"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <Plus size={16} />
                       Přidat člena
                     </button>
                   )}
@@ -368,55 +396,75 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {household.members.map((m) => (
-                        <div
-                          key={m.id}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col"
-                        >
+                        <div key={m.id} className="bg-white p-5 rounded-[24px] border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col group">
                           <div className="flex items-start justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-12 h-12 rounded-full bg-slate-700 text-white flex items-center justify-center text-sm font-bold shrink-0" aria-hidden>
-                                {initials(m.firstName, m.lastName)}
+                              <div
+                                className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-sm border-2 border-white shadow-sm shrink-0 ${
+                                  isChildMember({ role: m.role, birthDate: (m as { birthDate?: string | null }).birthDate })
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-slate-800 text-white"
+                                }`}
+                                aria-hidden
+                              >
+                                {isChildMember({ role: m.role, birthDate: (m as { birthDate?: string | null }).birthDate }) ? (
+                                  <Baby size={20} />
+                                ) : (
+                                  initials(m.firstName, m.lastName)
+                                )}
                               </div>
                               <div className="min-w-0">
-                                <span className="inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100 mb-1">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest mb-1 ${
+                                    m.role === "primary"
+                                      ? "bg-indigo-50 text-indigo-700"
+                                      : m.role === "child"
+                                      ? "bg-amber-100 text-amber-700"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
                                   {roleLabel(m.role)}
                                 </span>
-                                <h3 className="font-bold text-slate-900 truncate">{m.firstName} {m.lastName}</h3>
+                                <h3 className="font-bold text-lg text-slate-900 leading-none truncate">{m.firstName} {m.lastName}</h3>
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(m.id)}
                               disabled={pending}
-                              className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              className="text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-2 rounded-lg disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                               title="Odebrat z domácnosti"
                               aria-label="Odebrat z domácnosti"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                              <Trash2 size={16} />
                             </button>
                           </div>
-                          <div className="space-y-1.5 mb-4 text-sm text-slate-600">
+                          <div className="space-y-1.5 mb-5">
                             {m.email && (
-                              <div className="flex items-center gap-2 truncate">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0" aria-hidden><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 truncate">
+                                <Mail size={14} className="text-slate-400 shrink-0" aria-hidden />
                                 <span className="truncate">{m.email}</span>
                               </div>
                             )}
                             {m.phone && (
-                              <div className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0" aria-hidden><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                <Phone size={14} className="text-slate-400 shrink-0" aria-hidden />
                                 <span>{m.phone}</span>
                               </div>
                             )}
-                            {!m.email && !m.phone && <span className="text-slate-400">—</span>}
+                            {!m.email && !m.phone && <span className="text-xs font-bold text-slate-400">—</span>}
                           </div>
-                          <div className="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
+                          <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <div>
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Osobní AUM</span>
+                              <span className="text-sm font-black text-slate-800">—</span>
+                            </div>
                             <Link
                               href={`/portal/contacts/${m.contactId}`}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 px-4 py-2.5 text-sm font-bold uppercase tracking-wide transition-colors border border-slate-200 hover:border-indigo-200 min-h-[44px]"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-black uppercase tracking-widest rounded-xl transition-colors border border-slate-200 hover:border-indigo-200 min-h-[44px]"
                             >
                               Profil 360°
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                              <ChevronRight size={14} />
                             </Link>
                           </div>
                         </div>
@@ -457,13 +505,16 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
             <div className="xl:col-span-1 space-y-6">
               {/* Společné cíle – empty state */}
               <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500" aria-hidden><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <Target size={18} className="text-amber-500" />
                     Společné cíle
                   </h3>
+                  <button type="button" className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+                    <Plus size={16} />
+                  </button>
                 </div>
-                <div className="p-4 sm:p-6">
+                <div className="p-6">
                   <p className="text-sm text-slate-500 mb-2">Žádné cíle.</p>
                   <p className="text-xs text-slate-400">Cíle domácnosti budou dostupné v budoucí verzi.</p>
                 </div>
@@ -471,9 +522,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
 
               {/* Aktuální obchody */}
               <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-500" aria-hidden><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    <Briefcase size={18} className="text-indigo-500" />
                     Aktuální obchody
                   </h3>
                 </div>
@@ -492,12 +543,26 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                         <Link
                           key={o.id}
                           href={`/portal/pipeline/${o.id}`}
-                          className="block p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-indigo-100 transition-all group"
+                          className="block p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-indigo-100 transition-all group"
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
                               {o.stageName ?? "—"}
                             </span>
+                            <div className="flex -space-x-2">
+                              {((o.contactName ?? "??")
+                                .split(/\s+/)
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map((part) => part[0]?.toUpperCase())
+                                .join("") || "??")
+                                .split("")
+                                .map((initialChar, idx) => (
+                                  <div key={`${o.id}-${idx}`} className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[8px] font-black border border-white">
+                                    {initialChar}
+                                  </div>
+                                ))}
+                            </div>
                           </div>
                           <h4 className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">{o.title}</h4>
                           <p className="text-xs text-slate-500 mt-1">{o.contactName}</p>
@@ -514,9 +579,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                   )}
                   <Link
                     href="/portal/pipeline"
-                    className="flex items-center justify-center gap-2 w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold uppercase tracking-wider text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors min-h-[44px]"
+                    className="flex items-center justify-center gap-2 w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors min-h-[44px]"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <Plus size={14} />
                     Nový obchod pro rodinu
                   </Link>
                 </div>
@@ -557,21 +622,24 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 </div>
               </div>
 
-              {/* Smazat domácnost – in sidebar on desktop */}
-              <div className="pt-2 xl:block hidden">
-                <button
-                  type="button"
-                  onClick={handleDeleteHousehold}
-                  disabled={pending}
-                  className="w-full rounded-2xl border border-rose-200 bg-white text-rose-600 px-4 py-3 text-sm font-bold uppercase tracking-wider hover:bg-rose-50 transition-colors disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  Smazat domácnost
-                </button>
-              </div>
+              {/* Desktop mazání řeší fixed floating tlačítko dole vlevo */}
             </div>
           </div>
         </main>
+
+        {!isMobile && (
+          <div className="fixed bottom-8 left-8 hidden xl:flex gap-3 z-50">
+            <button
+              type="button"
+              onClick={handleDeleteHousehold}
+              disabled={pending}
+              className="px-6 py-3 bg-white text-rose-600 border border-rose-100 rounded-2xl shadow-lg shadow-rose-900/5 font-black text-xs uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-2 min-h-[44px] disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+              Smazat domácnost
+            </button>
+          </div>
+        )}
 
       </div>
 

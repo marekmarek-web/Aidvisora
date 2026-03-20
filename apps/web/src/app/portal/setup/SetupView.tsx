@@ -1372,7 +1372,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2">
                                   <AlertCircle size={16} className="shrink-0" aria-hidden /> {calendarStatusError}
                                 </p>
-                                <button type="button" onClick={() => fetchCalendarStatus()} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">
+                                <button type="button" onClick={() => fetchCalendarStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">
                                   Zkusit znovu
                                 </button>
                               </div>
