@@ -70,17 +70,14 @@ function parseFullName(full: string | null): { firstName: string; lastName: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
-// --- Integrations (from original setup page)
-type IntegrationStatus = "connected" | "disconnected" | "coming_soon";
-interface Integration {
-  id: string;
+type IntegrationCategory = "calendar" | "communication" | "ai";
+type IntegrationCard = {
+  id: "google-calendar" | "google-drive" | "gmail" | "resend" | "openai-gpt";
   name: string;
   description: string;
-  icon: string;
-  status: IntegrationStatus;
-  category: "calendar" | "ai" | "email" | "other";
-  configFields?: { key: string; label: string; type: "text" | "password"; placeholder: string }[];
-}
+  category: IntegrationCategory;
+  icon: React.ComponentType;
+};
 
 /** Response shape from GET /api/ai/health */
 interface AIIntegrationHealth {
@@ -93,22 +90,36 @@ interface AIIntegrationHealth {
   error?: string;
 }
 
-const INTEGRATIONS: Integration[] = [
-  { id: "google-calendar", name: "Google Calendar", description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Propojte svůj Google účet – přihlášení proběhne v novém okně.", icon: "📅", status: "disconnected", category: "calendar" },
-  { id: "google-drive", name: "Google Drive", description: "Ukládejte a spravujte dokumenty klientů přímo na Google Drive. Propojte svůj účet pro nahrávání, procházení a sdílení souborů.", icon: "📁", status: "disconnected", category: "other" },
-  { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet. Propojte účet pro plnou e-mailovou komunikaci s klienty.", icon: "📧", status: "disconnected", category: "email" },
-  { id: "google-maps", name: "Google Maps", description: "Automatické doplňování adres při zadávání kontaktů. Využívá Google Places API pro přesné a rychlé vyhledávání.", icon: "📍", status: "disconnected", category: "other" },
-  { id: "openai-gpt", name: "OpenAI GPT Mini", description: "AI asistent pro sumarizaci schůzek, generování e-mailů a analýzu finančních dat klientů. API klíč se nastavuje v proměnných prostředí na serveru.", icon: "🤖", status: "disconnected", category: "ai" },
-  { id: "resend", name: "Resend (E-mail)", description: "Odesílání transakčních a notifikačních e-mailů klientům.", icon: "✉️", status: "disconnected", category: "email", configFields: [{ key: "apiKey", label: "API Key", type: "password", placeholder: "re_..." }, { key: "fromEmail", label: "Odesílatel", type: "text", placeholder: "info@aidvisora.cz" }] },
-  { id: "smart-emailing", name: "SmartEmailing", description: "Hromadné e-mailové kampaně a newslettery.", icon: "📧", status: "coming_soon", category: "email" },
-  { id: "google-sheets", name: "Google Sheets Export", description: "Automatický export dat do Google Sheets.", icon: "📊", status: "coming_soon", category: "other" },
-];
+const GoogleIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+  </svg>
+);
 
-const STATUS_BADGES: Record<IntegrationStatus, { label: string; cls: string }> = {
-  connected: { label: "Připojeno", cls: "bg-green-100 text-green-700" },
-  disconnected: { label: "Odpojeno", cls: "bg-slate-100 text-slate-500" },
-  coming_soon: { label: "Připravujeme", cls: "bg-blue-50 text-blue-500" },
-};
+const OpenAIIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#10a37f">
+    <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.073zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.5973 8.3829v-2.3324a.0804.0804 0 0 1 .0332-.0615l3.852-2.2238a4.4992 4.4992 0 0 1 5.4083 6.9458l-.1419-.0805-4.783-2.7582a.7712.7712 0 0 0-.7805 0l-1.0408.6zM8.4526 4.6592a4.4755 4.4755 0 0 1 2.8764 1.0408l-.1419.0805-4.7783 2.7582a.7948.7948 0 0 0-.3927.6813v6.7369l-2.02-1.1686a.071.071 0 0 1-.038-.052V9.153a4.504 4.504 0 0 1 4.4945-4.4938zm9.5891 4.1254a4.4708 4.4708 0 0 1 .5346 3.0137l-.142-.0852-4.783-2.7582a.7712.7712 0 0 0-.7806 0L7.028 12.3235v-2.3324a.0804.0804 0 0 1 .0332-.0615l3.852-2.2238a4.4992 4.4992 0 0 1 6.1408 1.6464z" />
+  </svg>
+);
+
+const ResendIcon = () => (
+  <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+    </svg>
+  </div>
+);
+
+const INTEGRATIONS: IntegrationCard[] = [
+  { id: "google-calendar", name: "Google Calendar", description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Obousměrná synchronizace událostí.", category: "calendar", icon: GoogleIcon },
+  { id: "google-drive", name: "Google Disk", description: "Ukládejte a spravujte dokumenty klientů přímo na Google Disku.", category: "calendar", icon: GoogleIcon },
+  { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet.", category: "calendar", icon: GoogleIcon },
+  { id: "resend", name: "Resend (E-mail)", description: "Bleskové odesílání transakčních a notifikačních e-mailů klientům.", category: "communication", icon: ResendIcon },
+  { id: "openai-gpt", name: "OpenAI GPT Mini", description: "AI asistent pro sumarizaci schůzek, generování e-mailů a extrakci dat.", category: "ai", icon: OpenAIIcon },
+];
 
 // Placeholder licenses (UI only)
 const MOCK_LICENSES = [
@@ -377,8 +388,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
 
   // --- Integrations
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-  const [configs, setConfigs] = useState<Record<string, Record<string, string>>>({});
   const [integrationsCategory, setIntegrationsCategory] = useState<string>("all");
   const [aiHealth, setAiHealth] = useState<AIIntegrationHealth | null>(null);
   const [aiHealthLoading, setAiHealthLoading] = useState(false);
@@ -398,11 +407,10 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [gmailStatusLoading, setGmailStatusLoading] = useState(false);
   const [gmailStatusError, setGmailStatusError] = useState<string | null>(null);
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
-  // Google Maps
-  const mapsApiKeyPresent = typeof process !== "undefined" && !!process.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
-  const handleSaveIntegration = useCallback((integrationId: string) => {
-    toast.showToast("Konfigurace uložena");
-  }, [toast]);
+  // Resend
+  const [resendStatus, setResendStatus] = useState<{ connected: boolean; fromEmail: string | null } | null>(null);
+  const [resendStatusLoading, setResendStatusLoading] = useState(false);
+  const [resendStatusError, setResendStatusError] = useState<string | null>(null);
 
   const fetchCalendarStatus = useCallback(async () => {
     setCalendarStatusLoading(true);
@@ -538,6 +546,26 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     }
   }, []);
 
+  const fetchResendStatus = useCallback(async () => {
+    setResendStatusLoading(true);
+    setResendStatusError(null);
+    try {
+      const res = await fetch("/api/resend/status");
+      const data = (await res.json().catch(() => ({}))) as { connected?: boolean; fromEmail?: string | null; error?: string };
+      if (!res.ok) {
+        setResendStatusError(data.error ?? "Stav Resendu se nepodařilo načíst.");
+        setResendStatus(null);
+        return;
+      }
+      setResendStatus({ connected: !!data.connected, fromEmail: data.fromEmail ?? null });
+    } catch {
+      setResendStatusError("Stav Resendu se nepodařilo načíst.");
+      setResendStatus(null);
+    } finally {
+      setResendStatusLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === "integrace") {
       setAiHealthLoading(true);
@@ -545,8 +573,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       fetchCalendarStatus();
       fetchDriveStatus();
       fetchGmailStatus();
+      fetchResendStatus();
     }
-  }, [activeTab, fetchAiHealth, fetchCalendarStatus, fetchDriveStatus, fetchGmailStatus]);
+  }, [activeTab, fetchAiHealth, fetchCalendarStatus, fetchDriveStatus, fetchGmailStatus, fetchResendStatus]);
 
   useEffect(() => {
     const calendar = searchParams.get("calendar");
@@ -1185,19 +1214,19 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               </div>
               <div className="p-6 space-y-4">
                 {[
-                  { title: "Denní souhrn (Agenda)", desc: "Každé ráno přehled schůzek a úkolů na daný den.", id: "daily" },
-                  { title: "Nová zpráva od klienta", desc: "Okamžité upozornění na vzkaz v portálu.", id: "message" },
-                  { title: "Zpožděné úkoly", desc: "Upozornění na úkoly více než 24 h po termínu.", id: "tasks" },
-                  { title: "Expirace smluv", desc: "Týdenní souhrn smluv blížících se k výročí.", id: "contracts" },
+                  { title: "Denní souhrn (Agenda)", desc: "Každé ráno v 8:00 zašleme přehled schůzek a úkolů na daný den.", id: "daily" },
+                  { title: "Nová zpráva od klienta", desc: "Okamžité upozornění, pokud vám klient zanechá vzkaz v portálu.", id: "message" },
+                  { title: "Zpožděné úkoly", desc: "Upozornění na úkoly, které jsou více než 24 hodin po termínu.", id: "tasks" },
+                  { title: "Expirace smluv", desc: "Týdenní souhrn smluv, kterým se blíží konec fixace nebo výročí.", id: "contracts" },
                 ].map((notif) => (
-                  <div key={notif.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors min-h-[44px]">
+                  <div key={notif.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors min-h-[44px] gap-3">
                     <div>
                       <h4 className="font-bold text-slate-800 text-sm mb-1">{notif.title}</h4>
                       <p className="text-xs font-medium text-slate-500">{notif.desc}</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0">
+                    <label className="relative inline-flex items-center cursor-pointer ml-2 shrink-0">
                       <input type="checkbox" className="sr-only peer" checked={notifPrefs[notif.id] ?? true} onChange={() => handleNotifToggle(notif.id)} />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1a1c2e] min-h-[44px]" />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1a1c2e]" />
                     </label>
                   </div>
                 ))}
@@ -1211,9 +1240,11 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm mb-1">Povolit upozornění v prohlížeči</h4>
-                  <p className="text-xs font-medium text-slate-500">Pro okamžitá upozornění na obrazovce.</p>
+                  <p className="text-xs font-medium text-slate-500">Pro okamžitá upozornění na obrazovce, i když nemáte Aidvisoru otevřenou.</p>
                 </div>
-                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm min-h-[44px]">Požádat o oprávnění</button>
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm min-h-[44px]">
+                  Požádat o oprávnění
+                </button>
               </div>
             </div>
           </div>
@@ -1222,78 +1253,116 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {/* Tab: Integrace */}
         {activeTab === "integrace" && (
           <div className="animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-8 border-b border-slate-200">
               <div>
                 <h2 className="text-xl font-black text-slate-900 mb-1">Integrace a propojené aplikace</h2>
-                <p className="text-sm font-medium text-slate-500">Propojte Aidvisoru s kalendáři, e-maily a AI nástroji.</p>
+                <p className="text-sm font-medium text-slate-500">Zrychlete svou práci a propojte Aidvisoru s nástroji, které používáte každý den.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:bg-slate-50 transition-all min-h-[44px]">
+                  <Server size={16} /> Filtry
+                </button>
+                <button type="button" onClick={() => toast.showToast("Díky, návrhy integrací sbíráme průběžně.")} className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 active:scale-95 min-h-[44px]">
+                  <Check size={16} /> Navrhnout integraci
+                </button>
               </div>
             </div>
-            <div className="mb-6">
-              <button type="button" onClick={() => setHowItWorksOpen((o) => !o)} className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-colors rounded-xl border border-slate-100" aria-expanded={howItWorksOpen}>
-                <span className="font-semibold text-slate-700">Jak to funguje</span>
-                <ChevronRight size={20} className={`text-slate-400 transition-transform shrink-0 ${howItWorksOpen ? "rotate-90" : ""}`} />
-              </button>
-              {howItWorksOpen && (
-                <div className="border-t border-slate-100 px-5 py-4 bg-slate-50/50 text-sm text-slate-600 space-y-2 rounded-b-xl border-x border-b border-slate-100">
-                  <p>Integrace propojují Aidvisora s kalendáři, e-maily a AI nástroji. Po vyplnění údajů (API klíče, OAuth) a uložení je služba připojena. Konfigurace se ukládá šifrovaně na serveru.</p>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col lg:flex-row items-start gap-8">
-              <div className="w-full lg:w-56 flex-shrink-0 flex flex-wrap lg:flex-col gap-1">
-                {[{ id: "all", label: "Zobrazit všechny" }, { id: "calendar", label: "Kalendář" }, { id: "ai", label: "AI" }, { id: "email", label: "E-mail" }, { id: "other", label: "Ostatní" }].map((cat) => (
-                  <button key={cat.id} type="button" onClick={() => setIntegrationsCategory(cat.id)} className={`flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all text-left min-h-[44px] ${integrationsCategory === cat.id ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}>{cat.label}</button>
+            <div className="flex flex-col lg:flex-row items-start gap-12">
+              <div className="w-full lg:w-64 flex-shrink-0 flex flex-wrap lg:flex-col gap-1">
+                {[
+                  { id: "all", label: "Zobrazit všechny" },
+                  { id: "calendar", label: "Kalendář a E-mail" },
+                  { id: "communication", label: "Komunikace" },
+                  { id: "ai", label: "Nástroje AI" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setIntegrationsCategory(cat.id)}
+                    className={`flex items-center px-5 py-3 rounded-xl text-sm font-bold transition-all text-left min-h-[44px] ${integrationsCategory === cat.id ? "bg-indigo-50 text-indigo-700" : "bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
+                  >
+                    {cat.label}
+                  </button>
                 ))}
               </div>
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
-                {INTEGRATIONS.filter((i) => integrationsCategory === "all" || i.category === integrationsCategory).map((integration) => {
+                {INTEGRATIONS.filter((i) => {
+                  if (integrationsCategory === "all") return true;
+                  if (integrationsCategory === "calendar") {
+                    return i.id === "google-calendar" || i.id === "google-drive" || i.id === "gmail";
+                  }
+                  return i.category === integrationsCategory;
+                }).map((integration) => {
                   const expanded = expandedId === integration.id;
                   const isOpenAI = integration.id === "openai-gpt";
                   const isGoogleCalendar = integration.id === "google-calendar";
                   const isGoogleDrive = integration.id === "google-drive";
                   const isGmail = integration.id === "gmail";
-                  const isGoogleMaps = integration.id === "google-maps";
-                  const openAIStatus: IntegrationStatus = aiHealthLoading ? "disconnected" : aiHealth?.ok ? "connected" : "disconnected";
-                  const googleCalendarStatus: IntegrationStatus = calendarStatusLoading ? "disconnected" : calendarStatus?.connected ? "connected" : "disconnected";
-                  const googleDriveStatus: IntegrationStatus = driveStatusLoading ? "disconnected" : driveStatus?.connected ? "connected" : "disconnected";
-                  const gmailIntStatus: IntegrationStatus = gmailStatusLoading ? "disconnected" : gmailStatus?.connected ? "connected" : "disconnected";
-                  const googleMapsStatus: IntegrationStatus = mapsApiKeyPresent ? "connected" : "disconnected";
-                  const resolvedStatus =
-                    isOpenAI ? openAIStatus
-                    : isGoogleCalendar ? googleCalendarStatus
-                    : isGoogleDrive ? googleDriveStatus
-                    : isGmail ? gmailIntStatus
-                    : isGoogleMaps ? googleMapsStatus
-                    : integration.status;
-                  const badge = STATUS_BADGES[resolvedStatus];
-                  const config = configs[integration.id] ?? {};
-                  const isGoogleOAuth = isGoogleCalendar || isGoogleDrive || isGmail;
-                  const expandLabel = expanded ? "Zavřít"
-                    : isOpenAI ? "Stav připojení"
-                    : isGoogleMaps ? "Stav"
-                    : isGoogleOAuth ? "Propojit účet"
-                    : "Konfigurovat";
+                  const isResend = integration.id === "resend";
+                  const isConnected =
+                    isGoogleCalendar ? !!calendarStatus?.connected
+                    : isGoogleDrive ? !!driveStatus?.connected
+                    : isGmail ? !!gmailStatus?.connected
+                    : isResend ? !!resendStatus?.connected
+                    : !!aiHealth?.ok;
+                  const Icon = integration.icon;
+                  const toggleDisabled = isResend || isOpenAI || (isGoogleCalendar && calendarStatusLoading) || (isGoogleDrive && driveStatusLoading) || (isGmail && gmailStatusLoading);
+                  const handleToggleClick = () => {
+                    if (isGoogleCalendar) {
+                      if (calendarStatus?.connected) handleCalendarDisconnect();
+                      else handleCalendarConnect();
+                      return;
+                    }
+                    if (isGoogleDrive) {
+                      if (driveStatus?.connected) handleDriveDisconnect();
+                      else handleDriveConnect();
+                      return;
+                    }
+                    if (isGmail) {
+                      if (gmailStatus?.connected) handleGmailDisconnect();
+                      else handleGmailConnect();
+                      return;
+                    }
+                  };
                   return (
-                    <div key={integration.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+                    <div
+                      key={integration.id}
+                      className={`bg-white rounded-[24px] border transition-all duration-300 flex flex-col group ${isConnected ? "border-indigo-200 shadow-md" : "border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200"}`}
+                    >
                       <div className="p-6 flex items-start justify-between">
                         <div className="flex items-center gap-4">
-                          <span className="text-2xl">{integration.icon}</span>
-                          <div>
-                            <h3 className="font-bold text-lg text-slate-900">{integration.name}</h3>
-                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${badge.cls}`}>{badge.label}</span>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-colors ${isConnected ? "bg-white border-indigo-100" : "bg-slate-50 border-slate-100 grayscale-[0.5]"}`}>
+                            <Icon />
                           </div>
+                          <h3 className="font-bold text-lg text-slate-900">{integration.name}</h3>
                         </div>
+                        <label className={`relative inline-flex items-center mt-2 ${toggleDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={isConnected}
+                            onChange={handleToggleClick}
+                            disabled={toggleDisabled}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1a1c2e]" />
+                        </label>
                       </div>
-                      <div className="px-6 pb-4 flex-1">
-                        <p className="text-sm font-medium text-slate-600 leading-relaxed">{integration.description}</p>
+                      <div className="px-6 pb-6 flex-1">
+                        <p className={`text-sm font-medium leading-relaxed transition-colors ${isConnected ? "text-slate-600" : "text-slate-500"}`}>{integration.description}</p>
                       </div>
-                      <div className="px-6 py-4 border-t border-slate-50">
-                        <button type="button" onClick={() => setExpandedId(expanded ? null : integration.id)} className="w-full flex items-center justify-between text-sm font-bold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
-                          {expandLabel} <ChevronRight size={14} className={expanded ? "rotate-90" : ""} />
+                      <div className={`px-6 py-4 bg-slate-50/80 border-t flex items-center justify-between rounded-b-[24px] transition-all ${isConnected ? "border-indigo-50" : "border-slate-50"}`}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(expanded ? null : integration.id)}
+                          className={`text-sm font-bold flex items-center gap-1 transition-colors ${isConnected ? "text-indigo-600 hover:text-indigo-800" : "text-slate-500 hover:text-slate-800"}`}
+                        >
+                          {isConnected ? "Spravovat nastavení" : "Zobrazit detaily"} <ChevronRight size={14} className={expanded ? "rotate-90" : ""} />
                         </button>
-                        {/* Google Calendar */}
+                      </div>
+                      {expanded && (
+                        <div className="px-6 pb-6 space-y-3 border-t border-slate-100 pt-4">
                         {expanded && isGoogleCalendar && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                          <div className="space-y-3">
                             {calendarStatusLoading && calendarStatus === null && !calendarStatusError ? (
                               <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status">
                                 <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…
@@ -1314,11 +1383,11 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                     <Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {calendarStatus.email}
                                   </p>
                                 )}
-                                <button type="button" onClick={handleCalendarSync} disabled={calendarSyncing} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold hover:bg-indigo-100 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarSyncing}>
+                                <button type="button" onClick={handleCalendarSync} disabled={calendarSyncing} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold hover:bg-indigo-100 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarSyncing}>
                                   {calendarSyncing ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {calendarSyncing ? "Synchronizuji…" : "Synchronizovat teď"}
                                 </button>
-                                <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
+                                <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
                                   {calendarDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {calendarDisconnecting ? "Odpojuji…" : "Odpojit Google Kalendář"}
                                 </button>
@@ -1326,79 +1395,66 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 <GoogleCalendarAvailability />
                               </>
                             ) : (
-                              <button type="button" onClick={handleCalendarConnect} className="wp-btn wp-btn-primary mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                              <button type="button" onClick={handleCalendarConnect} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
                                 Připojit Google účet
                               </button>
                             )}
                           </div>
                         )}
-                        {/* Google Drive */}
                         {expanded && isGoogleDrive && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                          <div className="space-y-3">
                             {driveStatusLoading && driveStatus === null && !driveStatusError ? (
                               <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
                             ) : driveStatusError ? (
                               <div className="space-y-2">
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" aria-hidden /> {driveStatusError}</p>
-                                <button type="button" onClick={() => fetchDriveStatus()} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
+                                <button type="button" onClick={() => fetchDriveStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
                               </div>
                             ) : driveStatus?.connected ? (
                               <>
                                 {driveStatus.email && (
                                   <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {driveStatus.email}</p>
                                 )}
-                                <button type="button" onClick={handleDriveDisconnect} disabled={driveDisconnecting} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={driveDisconnecting}>
+                                <button type="button" onClick={handleDriveDisconnect} disabled={driveDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={driveDisconnecting}>
                                   {driveDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {driveDisconnecting ? "Odpojuji…" : "Odpojit Google Drive"}
                                 </button>
                               </>
                             ) : (
-                              <button type="button" onClick={handleDriveConnect} className="wp-btn wp-btn-primary mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                              <button type="button" onClick={handleDriveConnect} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
                                 Připojit Google Drive
                               </button>
                             )}
                           </div>
                         )}
-                        {/* Gmail */}
                         {expanded && isGmail && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                          <div className="space-y-3">
                             {gmailStatusLoading && gmailStatus === null && !gmailStatusError ? (
                               <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
                             ) : gmailStatusError ? (
                               <div className="space-y-2">
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" aria-hidden /> {gmailStatusError}</p>
-                                <button type="button" onClick={() => fetchGmailStatus()} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
+                                <button type="button" onClick={() => fetchGmailStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
                               </div>
                             ) : gmailStatus?.connected ? (
                               <>
                                 {gmailStatus.email && (
                                   <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {gmailStatus.email}</p>
                                 )}
-                                <button type="button" onClick={handleGmailDisconnect} disabled={gmailDisconnecting} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={gmailDisconnecting}>
+                                <button type="button" onClick={handleGmailDisconnect} disabled={gmailDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={gmailDisconnecting}>
                                   {gmailDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {gmailDisconnecting ? "Odpojuji…" : "Odpojit Gmail"}
                                 </button>
                               </>
                             ) : (
-                              <button type="button" onClick={handleGmailConnect} className="wp-btn wp-btn-primary mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                              <button type="button" onClick={handleGmailConnect} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
                                 Připojit Gmail
                               </button>
                             )}
                           </div>
                         )}
-                        {/* Google Maps */}
-                        {expanded && isGoogleMaps && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                            {mapsApiKeyPresent ? (
-                              <p className="text-sm text-green-700 font-medium flex items-center gap-2">API klíč je nastaven. Automatické doplňování adres funguje ve formulářích kontaktů.</p>
-                            ) : (
-                              <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" aria-hidden /> API klíč není nastaven. Nastavte NEXT_PUBLIC_GOOGLE_MAPS_API_KEY v proměnných prostředí.</p>
-                            )}
-                          </div>
-                        )}
-                        {/* OpenAI */}
                         {expanded && isOpenAI && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                          <div className="space-y-3">
                             {aiHealthLoading && !aiHealth ? (
                               <p className="text-sm text-slate-500 font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
                             ) : (
@@ -1413,29 +1469,48 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 {aiHealth?.error && !aiHealth.ok && (
                                   <p className="text-sm text-red-600 font-medium">{aiHealth.error === "missing_api_key" ? "API klíč není nastaven (OPENAI_API_KEY v .env)." : aiHealth.error}</p>
                                 )}
-                                <button type="button" onClick={handleTestAIConnection} disabled={aiHealthTesting} className="wp-btn mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2">
+                                <button type="button" onClick={handleTestAIConnection} disabled={aiHealthTesting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2">
                                   {aiHealthTesting ? <Loader2 size={16} className="animate-spin" /> : null} Otestovat připojení
                                 </button>
                               </>
                             )}
                           </div>
                         )}
-                        {/* Config fields */}
-                        {expanded && integration.configFields && !isGoogleOAuth && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                            {integration.configFields.map((field) => (
-                              <div key={field.key}>
-                                <label className={labelClass}>{field.label}</label>
-                                <input type={field.type} placeholder={field.placeholder} value={config[field.key] ?? ""} onChange={(e) => setConfigs((prev) => ({ ...prev, [integration.id]: { ...prev[integration.id], [field.key]: e.target.value } }))} className={inputClass} />
-                              </div>
-                            ))}
-                            <button type="button" onClick={() => handleSaveIntegration(integration.id)} className="wp-btn wp-btn-primary mt-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">Uložit konfiguraci</button>
+                        {expanded && isResend && (
+                          <div className="space-y-3">
+                            {resendStatusLoading && resendStatus === null && !resendStatusError ? (
+                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
+                            ) : resendStatusError ? (
+                              <>
+                                <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" /> {resendStatusError}</p>
+                                <button type="button" onClick={fetchResendStatus} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200">
+                                  Zkusit znovu
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <p className={`text-sm font-medium ${resendStatus?.connected ? "text-emerald-700" : "text-amber-700"}`}>
+                                  {resendStatus?.connected ? "Resend je nakonfigurovaný." : "Resend zatím není nakonfigurovaný (chybí RESEND_API_KEY)."}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  Odesílatel: <span className="font-bold text-slate-700">{resendStatus?.fromEmail ?? "—"}</span>
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await fetchResendStatus();
+                                    toast.showToast("Konfigurace Resendu ověřena.");
+                                  }}
+                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200"
+                                >
+                                  Ověřit konfiguraci
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
-                        {expanded && integration.status === "coming_soon" && (
-                          <p className="mt-4 text-sm text-blue-500 font-medium">Tato integrace bude dostupná v příští verzi.</p>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
