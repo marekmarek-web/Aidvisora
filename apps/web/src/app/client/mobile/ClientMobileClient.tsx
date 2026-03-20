@@ -59,6 +59,7 @@ import {
   SearchBar,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import { AiSupportButton } from "@/app/client/AiSupportButton";
 import type { ClientMobileInitialData } from "./ClientMobileApp";
 
 type TabId = "home" | "messages" | "documents" | "requests" | "menu";
