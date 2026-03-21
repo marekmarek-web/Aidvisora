@@ -10,7 +10,8 @@ export type IntegrationAuth = { userId: string; tenantId: string };
  * Vyžaduje oprávnění events:* (kalendář).
  */
 export async function getIntegrationAuth(
-  request: Request
+  request: Request,
+  options?: { requireCalendarPermission?: boolean }
 ): Promise<{ ok: true; auth: IntegrationAuth } | { ok: false; response: Response }> {
   let userId: string | null = request.headers.get(USER_ID_HEADER);
   if (!userId) {
@@ -28,7 +29,10 @@ export async function getIntegrationAuth(
     userId = user.id;
   }
   const membership = await getMembership(userId);
-  if (!membership || !hasPermission(membership.roleName as RoleName, "events:*")) {
+  const needsCalendarPermission = options?.requireCalendarPermission === true;
+  const hasCalendarPermission =
+    membership && hasPermission(membership.roleName as RoleName, "events:*");
+  if (!membership || (needsCalendarPermission && !hasCalendarPermission)) {
     return {
       ok: false,
       response: new Response(JSON.stringify({ error: "Forbidden" }), {

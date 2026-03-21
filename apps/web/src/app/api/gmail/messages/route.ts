@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
-import { getCalendarAuth } from "../../calendar/auth";
+import { getIntegrationApiAuth } from "../../integrations/auth";
 import { getValidGmailAccessToken } from "@/lib/integrations/google-gmail-integration-service";
 import { listGmailMessages, getGmailMessage, extractHeader } from "@/lib/integrations/google-gmail";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const authResult = await getCalendarAuth(request, { requireWrite: false });
+  const authResult = await getIntegrationApiAuth(request);
   if (!authResult.ok) return authResult.response;
   const { userId, tenantId } = authResult.auth;
 
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? undefined;
+  const labelId = url.searchParams.get("labelId") ?? undefined;
   const pageToken = url.searchParams.get("pageToken") ?? undefined;
   const maxResults = Number(url.searchParams.get("maxResults")) || 20;
+  const finalQuery = labelId ? `${query ? `(${query}) ` : ""}label:${labelId}` : query;
 
   let accessToken: string;
   try {
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const list = await listGmailMessages(accessToken, { query, maxResults, pageToken });
+    const list = await listGmailMessages(accessToken, { query: finalQuery, maxResults, pageToken });
     const messages = await Promise.all(
       (list.messages ?? []).slice(0, maxResults).map(async (m) => {
         const msg = await getGmailMessage(accessToken, m.id, "metadata");
@@ -33,6 +35,8 @@ export async function GET(request: Request) {
           id: msg.id,
           threadId: msg.threadId,
           snippet: msg.snippet,
+          labelIds: msg.labelIds ?? [],
+          isUnread: (msg.labelIds ?? []).includes("UNREAD"),
           date: extractHeader(msg, "Date"),
           from: extractHeader(msg, "From"),
           to: extractHeader(msg, "To"),

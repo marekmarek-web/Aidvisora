@@ -1,12 +1,34 @@
 import { NextResponse } from "next/server";
-import { getCalendarAuth } from "../../calendar/auth";
+import { getIntegrationApiAuth } from "../../integrations/auth";
 import { getValidDriveAccessToken } from "@/lib/integrations/google-drive-integration-service";
-import { listDriveFiles } from "@/lib/integrations/google-drive";
+import {
+  createDriveFolder,
+  listDriveFiles,
+  uploadDriveFile,
+} from "@/lib/integrations/google-drive";
 
 export const dynamic = "force-dynamic";
 
+async function getAccessToken(userId: string, tenantId: string) {
+  try {
+    return await getValidDriveAccessToken(userId, tenantId);
+  } catch (e) {
+    const code = (e as Error & { code?: string }).code;
+    if (code === "not_connected") {
+      throw new Response(JSON.stringify({ error: "Google Drive není připojen" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    throw new Response(JSON.stringify({ error: "Chyba přístupu k Drive" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
 export async function GET(request: Request) {
-  const authResult = await getCalendarAuth(request, { requireWrite: false });
+  const authResult = await getIntegrationApiAuth(request);
   if (!authResult.ok) return authResult.response;
   const { userId, tenantId } = authResult.auth;
 
@@ -15,19 +37,52 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q") ?? undefined;
   const pageToken = url.searchParams.get("pageToken") ?? undefined;
 
-  let accessToken: string;
   try {
-    accessToken = await getValidDriveAccessToken(userId, tenantId);
-  } catch (e) {
-    const code = (e as Error & { code?: string }).code;
-    if (code === "not_connected") return NextResponse.json({ error: "Google Drive není připojen" }, { status: 400 });
-    return NextResponse.json({ error: "Chyba přístupu k Drive" }, { status: 500 });
-  }
-
-  try {
+    const accessToken = await getAccessToken(userId, tenantId);
     const result = await listDriveFiles(accessToken, { folderId, query, pageToken, pageSize: 50 });
     return NextResponse.json(result);
   } catch (e) {
+    if (e instanceof Response) return e;
+    return NextResponse.json({ error: (e as Error).message }, { status: 502 });
+  }
+}
+
+export async function POST(request: Request) {
+  const authResult = await getIntegrationApiAuth(request);
+  if (!authResult.ok) return authResult.response;
+  const { userId, tenantId } = authResult.auth;
+  try {
+    const accessToken = await getAccessToken(userId, tenantId);
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file");
+      const folderId = String(form.get("folderId") ?? "") || undefined;
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: "Soubor je povinný" }, { status: 400 });
+      }
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const uploaded = await uploadDriveFile(accessToken, {
+        name: file.name || "upload.bin",
+        mimeType: file.type || "application/octet-stream",
+        content: fileBuffer,
+        folderId,
+      });
+      return NextResponse.json({ file: uploaded });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as {
+      type?: "folder";
+      name?: string;
+      folderId?: string;
+    };
+    if (body.type !== "folder" || !body.name?.trim()) {
+      return NextResponse.json({ error: "Pro vytvoření složky chybí název." }, { status: 400 });
+    }
+    const folder = await createDriveFolder(accessToken, body.name.trim(), body.folderId);
+    return NextResponse.json({ file: folder });
+  } catch (e) {
+    if (e instanceof Response) return e;
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });
   }
 }

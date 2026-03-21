@@ -96,11 +96,12 @@ type IntegrationState = {
 type IntegrationCard = {
   id: IntegrationKey;
   name: string;
+  href: string;
 };
 
 const PROFILE_INTEGRATIONS: IntegrationCard[] = [
-  { id: "google-drive", name: "Google Disk" },
-  { id: "gmail", name: "Gmail" },
+  { id: "google-drive", name: "Google Disk", href: "/portal/tools/drive" },
+  { id: "gmail", name: "Gmail", href: "/portal/tools/gmail" },
 ];
 
 export function AdvisorProfileView({
@@ -812,7 +813,7 @@ export function AdvisorProfileView({
                   return (
                   <Link
                     key={integration.id}
-                    href="/portal/setup?tab=integrace"
+                    href={integration.href}
                     className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -910,7 +911,7 @@ export function AdvisorProfileView({
                     return (
                     <Link
                       key={integration.id}
-                      href="/portal/setup?tab=integrace"
+                      href={integration.href}
                       className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">

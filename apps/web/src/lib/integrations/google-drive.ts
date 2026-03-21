@@ -22,11 +22,20 @@ export type DriveFileList = {
   nextPageToken?: string;
 };
 
+export type DrivePermission = {
+  id: string;
+  type: "user" | "group" | "domain" | "anyone";
+  role: "owner" | "organizer" | "fileOrganizer" | "writer" | "commenter" | "reader";
+  emailAddress?: string;
+  domain?: string;
+  allowFileDiscovery?: boolean;
+};
+
 async function driveRequest<T>(
   accessToken: string,
   method: string,
   path: string,
-  body?: object | FormData,
+  body?: object | FormData | BodyInit,
   extraHeaders?: Record<string, string>
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${DRIVE_API}${path}`;
@@ -35,7 +44,16 @@ async function driveRequest<T>(
     ...extraHeaders,
   };
   const opts: RequestInit = { method, headers };
-  if (body && !(body instanceof FormData)) {
+  if (body instanceof FormData) {
+    opts.body = body;
+  } else if (
+    body instanceof Uint8Array ||
+    body instanceof ArrayBuffer ||
+    typeof body === "string" ||
+    (typeof Blob !== "undefined" && body instanceof Blob)
+  ) {
+    opts.body = body as BodyInit;
+  } else if (body) {
     headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
@@ -79,20 +97,27 @@ export async function createDriveFolder(
 
 export async function uploadDriveFile(
   accessToken: string,
-  opts: { name: string; mimeType: string; content: Buffer | string; folderId?: string }
+  opts: { name: string; mimeType: string; content: Buffer | Uint8Array | string; folderId?: string }
 ): Promise<DriveFile> {
   const metadata: Record<string, unknown> = { name: opts.name };
   if (opts.folderId) metadata.parents = [opts.folderId];
 
-  const boundary = "----DriveUploadBoundary";
+  const boundary = `----DriveUploadBoundary${Date.now()}`;
   const metaPart = JSON.stringify(metadata);
-  const body =
+  const fileBuffer =
+    typeof opts.content === "string"
+      ? Buffer.from(opts.content, "utf-8")
+      : Buffer.from(opts.content);
+  const prefix = Buffer.from(
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaPart}\r\n` +
-    `--${boundary}\r\nContent-Type: ${opts.mimeType}\r\n\r\n${typeof opts.content === "string" ? opts.content : opts.content.toString("base64")}\r\n` +
-    `--${boundary}--`;
+      `--${boundary}\r\nContent-Type: ${opts.mimeType}\r\n\r\n`,
+    "utf-8"
+  );
+  const suffix = Buffer.from(`\r\n--${boundary}--`, "utf-8");
+  const body = Buffer.concat([prefix, fileBuffer, suffix]);
 
   const res = await fetch(
-    `${UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,webViewLink`,
+    `${UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,parents`,
     {
       method: "POST",
       headers: {
@@ -125,4 +150,65 @@ export async function getDriveFile(
     "GET",
     `/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,parents`
   );
+}
+
+export async function updateDriveFile(
+  accessToken: string,
+  fileId: string,
+  opts: { name?: string; addParents?: string[]; removeParents?: string[] }
+): Promise<DriveFile> {
+  const params = new URLSearchParams({
+    fields: "id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,parents",
+  });
+  if (opts.addParents?.length) params.set("addParents", opts.addParents.join(","));
+  if (opts.removeParents?.length) params.set("removeParents", opts.removeParents.join(","));
+  const body: Record<string, string> = {};
+  if (opts.name) body.name = opts.name;
+  return driveRequest<DriveFile>(
+    accessToken,
+    "PATCH",
+    `/files/${encodeURIComponent(fileId)}?${params.toString()}`,
+    Object.keys(body).length ? body : {}
+  );
+}
+
+export async function createDrivePermission(
+  accessToken: string,
+  fileId: string,
+  permission: {
+    type: "user" | "group" | "domain" | "anyone";
+    role: "reader" | "commenter" | "writer";
+    emailAddress?: string;
+    domain?: string;
+    allowFileDiscovery?: boolean;
+  }
+): Promise<DrivePermission> {
+  return driveRequest<DrivePermission>(
+    accessToken,
+    "POST",
+    `/files/${encodeURIComponent(fileId)}/permissions?sendNotificationEmail=false`,
+    permission
+  );
+}
+
+export async function downloadDriveFile(
+  accessToken: string,
+  fileId: string
+): Promise<{ data: Buffer; contentType: string | null }> {
+  const res = await fetch(
+    `${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Drive download failed: ${res.status} ${err}`);
+  }
+  const arr = await res.arrayBuffer();
+  return {
+    data: Buffer.from(arr),
+    contentType: res.headers.get("content-type"),
+  };
 }

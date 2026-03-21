@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db, userGoogleDriveIntegrations } from "db";
 import { eq, and } from "db";
-import { getCalendarAuth } from "../../calendar/auth";
+import { getIntegrationApiAuth } from "../../integrations/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const authResult = await getCalendarAuth(request, { requireWrite: false });
+  const authResult = await getIntegrationApiAuth(request);
   if (!authResult.ok) {
     return NextResponse.json({ connected: false });
   }

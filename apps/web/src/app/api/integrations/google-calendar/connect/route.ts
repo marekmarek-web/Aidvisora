@@ -13,7 +13,7 @@ const CSRF_COOKIE_MAX_AGE = 600; // 10 min
 const GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
 
 export async function GET(request: Request) {
-  const authResult = await getIntegrationAuth(request);
+  const authResult = await getIntegrationAuth(request, { requireCalendarPermission: true });
   if (!authResult.ok) {
     logIntegration("Connect: unauthenticated or forbidden");
     return authResult.response;

@@ -9,6 +9,8 @@ const CSRF_COOKIE = "google_gmail_oauth_csrf";
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.modify",
+  "https://www.googleapis.com/auth/gmail.compose",
 ];
 
 export async function GET(request: Request) {

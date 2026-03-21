@@ -71,27 +71,37 @@ interface SectionConfig {
 
 function GoogleDriveLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
   return (
-    <img
-      src="/logos/Google_Drive-Logo.wine.png"
-      alt="Google Disk"
-      width={size}
-      height={size}
-      className={className}
-      style={{ objectFit: "contain" }}
-    />
+    <span className={className} style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      <img
+        src="/logos/google-drive.png"
+        alt="Google Disk"
+        style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }}
+      />
+    </span>
+  );
+}
+
+function GoogleCalendarLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
+  return (
+    <span className={className} style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      <img
+        src="/logos/google-calendar.png"
+        alt="Google Kalendář"
+        style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }}
+      />
+    </span>
   );
 }
 
 function GmailLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
   return (
-    <img
-      src="/logos/Gmail_icon_(2020).svg.png"
-      alt="Gmail"
-      width={size}
-      height={size}
-      className={className}
-      style={{ objectFit: "contain" }}
-    />
+    <span className={className} style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      <img
+        src="/logos/gmail.png"
+        alt="Gmail"
+        style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }}
+      />
+    </span>
   );
 }
 
@@ -134,6 +144,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network, hoverAnim: "group-hover:-translate-y-1" },
+      { href: "/portal/setup?tab=integrace&provider=google-calendar", label: "Google Kalendář", Icon: GoogleCalendarLogo, hoverAnim: "group-hover:scale-110" },
       { href: "/portal/tools/drive", label: "Google Disk", Icon: GoogleDriveLogo, hoverAnim: "group-hover:scale-110" },
       { href: "/portal/tools/gmail", label: "Gmail", Icon: GmailLogo, hoverAnim: "group-hover:scale-110" },
     ],
@@ -431,7 +442,7 @@ export function PortalSidebar({
             {collapsed ? (
               <img
                 key="logo-a"
-                src="/aidvisora-logo-a.png"
+                src="/Aidvisora logo A.png"
                 alt="Aidvisora"
                 className="h-10 w-10 object-contain object-center flex-shrink-0"
                 style={sidebarTheme === "gradient" ? { filter: "brightness(0) invert(1)" } : undefined}
@@ -439,7 +450,7 @@ export function PortalSidebar({
             ) : (
               <img
                 key="logo-big"
-                src="/aidvisora-logo-big.png"
+                src="/Aidvisora logo.png"
                 alt="Aidvisora"
                 className="h-16 max-h-16 w-auto max-w-full object-contain object-left flex-shrink-0"
                 style={sidebarTheme === "gradient" ? { filter: "brightness(0) invert(1)" } : undefined}

@@ -109,24 +109,50 @@ export async function createContractReview(insert: {
   reasonsForReview?: string[] | null;
   uploadedBy?: string | null;
 }): Promise<string> {
-  const [row] = await db
-    .insert(contractUploadReviews)
-    .values({
-      tenantId: insert.tenantId,
-      fileName: insert.fileName,
-      storagePath: insert.storagePath,
-      mimeType: insert.mimeType ?? null,
-      sizeBytes: insert.sizeBytes ?? null,
-      processingStatus: insert.processingStatus,
-      errorMessage: insert.errorMessage ?? null,
-      extractedPayload: insert.extractedPayload ?? null,
-      clientMatchCandidates: insert.clientMatchCandidates ?? null,
-      draftActions: insert.draftActions ?? null,
-      confidence: insert.confidence ?? null,
-      reasonsForReview: insert.reasonsForReview ?? null,
-      uploadedBy: insert.uploadedBy ?? null,
-    })
-    .returning({ id: contractUploadReviews.id });
+  const primaryValues = {
+    tenantId: insert.tenantId,
+    fileName: insert.fileName,
+    storagePath: insert.storagePath,
+    mimeType: insert.mimeType ?? null,
+    sizeBytes: insert.sizeBytes ?? null,
+    processingStatus: insert.processingStatus,
+    errorMessage: insert.errorMessage ?? null,
+    extractedPayload: insert.extractedPayload ?? null,
+    clientMatchCandidates: insert.clientMatchCandidates ?? null,
+    draftActions: insert.draftActions ?? null,
+    confidence: insert.confidence ?? null,
+    reasonsForReview: insert.reasonsForReview ?? null,
+    uploadedBy: insert.uploadedBy ?? null,
+  };
+
+  let row: { id: string } | undefined;
+  try {
+    [row] = await db
+      .insert(contractUploadReviews)
+      .values(primaryValues)
+      .returning({ id: contractUploadReviews.id });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const pgCode = (err as { code?: string })?.code;
+
+    // Backward-compatible fallback: some production DBs still miss newer optional columns.
+    // Retry with the minimal subset required by earliest migration.
+    const isMissingColumn =
+      pgCode === "42703" ||
+      message.includes("column") && message.includes("does not exist");
+
+    if (!isMissingColumn) throw err;
+
+    [row] = await db
+      .insert(contractUploadReviews)
+      .values({
+        tenantId: insert.tenantId,
+        fileName: insert.fileName,
+        storagePath: insert.storagePath,
+        processingStatus: insert.processingStatus,
+      })
+      .returning({ id: contractUploadReviews.id });
+  }
   if (!row?.id) throw new Error("Failed to create contract review row");
   return row.id;
 }

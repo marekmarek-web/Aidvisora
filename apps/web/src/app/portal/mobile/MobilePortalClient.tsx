@@ -84,6 +84,7 @@ function toTaskFilter(pathname: string): TabId {
   if (pathname.startsWith("/portal/profile")) return "menu";
   if (pathname.startsWith("/portal/notifications")) return "menu";
   if (pathname.startsWith("/portal/calendar")) return "menu";
+  if (pathname.startsWith("/portal/tools")) return "menu";
   if (pathname.startsWith("/portal/today")) return "home";
   return "menu";
 }
@@ -186,6 +187,7 @@ export function MobilePortalClient({
   const onSetupRoute = pathname.startsWith("/portal/setup") || pathname.startsWith("/portal/profile");
   const onNotificationsRoute = pathname.startsWith("/portal/notifications");
   const onCalendarRoute = pathname.startsWith("/portal/calendar");
+  const onToolsRoute = pathname.startsWith("/portal/tools");
 
   useEffect(() => {
     notifyWebviewReady();
@@ -283,6 +285,7 @@ export function MobilePortalClient({
         onTeamOverviewRoute ||
         onSetupRoute ||
         onNotificationsRoute
+      || onToolsRoute
     );
   }
 
@@ -303,6 +306,7 @@ export function MobilePortalClient({
       onTeamOverviewRoute ||
       onSetupRoute ||
       onNotificationsRoute ||
+      onToolsRoute ||
       onCalendarRoute
     ) {
       router.push("/portal/setup");
@@ -496,6 +500,8 @@ export function MobilePortalClient({
                     ? "Inbox a log notifikací"
                     : onCalendarRoute
                       ? "Schůzky a události"
+                      : onToolsRoute
+                        ? "Gmail a Google Drive"
             : `Advisor • ${advisorName}`;
 
   return (
@@ -751,6 +757,7 @@ export function MobilePortalClient({
         !onSetupRoute &&
         !onNotificationsRoute &&
         !onCalendarRoute &&
+        !onToolsRoute &&
         tab === "menu" ? (
           <MobileSection title="Nástroje">
             <div className="grid grid-cols-2 gap-2">
@@ -762,7 +769,8 @@ export function MobilePortalClient({
                 { label: "Domácnosti", href: "/portal/households" },
                 { label: "Můj plán", href: "/portal/business-plan" },
                 { label: "Můj tým", href: "/portal/team-overview" },
-                { label: "Připojení", href: "/portal/setup?tab=integrace" },
+                { label: "Google Disk", href: "/portal/tools/drive" },
+                { label: "Gmail", href: "/portal/tools/gmail" },
                 { label: "Nastavení", href: "/portal/setup" },
                 { label: "Notifikace", href: "/portal/notifications" },
               ].map((item) => (
@@ -847,6 +855,39 @@ export function MobilePortalClient({
         ) : null}
 
         {onCalendarRoute ? <CalendarMobileScreen contacts={contacts} /> : null}
+
+        {onToolsRoute ? (
+          <MobileSection title="Nástroje Google">
+            <div className="grid grid-cols-1 gap-2">
+              <MobileCard>
+                <p className="text-sm font-bold text-slate-900">Gmail Workspace</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Na mobilu otevřete Gmail integraci přes Nastavení &gt; Integrace nebo desktop režim.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/portal/setup?tab=integrace&provider=gmail")}
+                  className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-700"
+                >
+                  Otevřít Gmail integraci
+                </button>
+              </MobileCard>
+              <MobileCard>
+                <p className="text-sm font-bold text-slate-900">Google Drive Workspace</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Na mobilu otevřete Drive integraci přes Nastavení &gt; Integrace nebo desktop režim.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/portal/setup?tab=integrace&provider=google-drive")}
+                  className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-700"
+                >
+                  Otevřít Drive integraci
+                </button>
+              </MobileCard>
+            </div>
+          </MobileSection>
+        ) : null}
       </MobileScreen>
 
       {!isWaveSubviewActive() && tab === "tasks" ? (

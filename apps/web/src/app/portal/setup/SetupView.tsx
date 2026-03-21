@@ -78,6 +78,7 @@ type IntegrationCard = {
   category: IntegrationCategory;
   icon: React.ComponentType;
 };
+type IntegrationProviderParam = "google-calendar" | "google-drive" | "gmail";
 
 /** Response shape from GET /api/ai/health */
 interface AIIntegrationHealth {
@@ -90,13 +91,28 @@ interface AIIntegrationHealth {
   error?: string;
 }
 
-const GoogleIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-  </svg>
+const GoogleCalendarLogo = () => (
+  <img
+    src="/logos/google-calendar.png"
+    alt="Google Kalendář"
+    className="w-6 h-6 object-contain"
+  />
+);
+
+const GoogleDriveLogo = () => (
+  <img
+    src="/logos/google-drive.png"
+    alt="Google Disk"
+    className="w-6 h-6 object-contain"
+  />
+);
+
+const GmailLogo = () => (
+  <img
+    src="/logos/gmail.png"
+    alt="Gmail"
+    className="w-6 h-6 object-contain"
+  />
 );
 
 const OpenAIIcon = () => (
@@ -114,9 +130,9 @@ const ResendIcon = () => (
 );
 
 const INTEGRATIONS: IntegrationCard[] = [
-  { id: "google-calendar", name: "Google Calendar", description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Obousměrná synchronizace událostí.", category: "calendar", icon: GoogleIcon },
-  { id: "google-drive", name: "Google Disk", description: "Ukládejte a spravujte dokumenty klientů přímo na Google Disku.", category: "calendar", icon: GoogleIcon },
-  { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet.", category: "calendar", icon: GoogleIcon },
+  { id: "google-calendar", name: "Google Calendar", description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Obousměrná synchronizace událostí.", category: "calendar", icon: GoogleCalendarLogo },
+  { id: "google-drive", name: "Google Disk", description: "Ukládejte a spravujte dokumenty klientů přímo na Google Disku.", category: "calendar", icon: GoogleDriveLogo },
+  { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet.", category: "calendar", icon: GmailLogo },
   { id: "resend", name: "Resend (E-mail)", description: "Bleskové odesílání transakčních a notifikačních e-mailů klientům.", category: "communication", icon: ResendIcon },
   { id: "openai-gpt", name: "OpenAI GPT Mini", description: "AI asistent pro sumarizaci schůzek, generování e-mailů a extrakci dat.", category: "ai", icon: OpenAIIcon },
 ];
@@ -138,6 +154,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const pathname = usePathname();
   const toast = useToast();
   const tabParam = searchParams.get("tab");
+  const providerParam = searchParams.get("provider");
   const [activeTab, setActiveTabState] = useState<TabId>(() => {
     const t = TABS.find((tab) => tab.id === tabParam);
     return (t?.id ?? "osobni") as TabId;
@@ -412,6 +429,15 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [resendStatusLoading, setResendStatusLoading] = useState(false);
   const [resendStatusError, setResendStatusError] = useState<string | null>(null);
 
+  const providerToIntegrationId: Record<IntegrationProviderParam, IntegrationCard["id"]> = useMemo(
+    () => ({
+      "google-calendar": "google-calendar",
+      "google-drive": "google-drive",
+      gmail: "gmail",
+    }),
+    []
+  );
+
   const fetchCalendarStatus = useCallback(async () => {
     setCalendarStatusLoading(true);
     setCalendarStatusError(null);
@@ -586,6 +612,21 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     if (gmail === "connected") toast.showToast("Gmail byl úspěšně propojen.", "success");
     if (gmailError) toast.showToast(gmailError === "access_denied" ? "Připojení bylo zrušeno." : "Připojení Gmailu se nepovedlo.", "error");
   }, [searchParams, toast]);
+
+  useEffect(() => {
+    if (activeTab !== "integrace") return;
+    if (!providerParam) return;
+    if (!(providerParam in providerToIntegrationId)) return;
+
+    const integrationId = providerToIntegrationId[providerParam as IntegrationProviderParam];
+    setIntegrationsCategory("calendar");
+    setExpandedId(integrationId);
+
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`integration-card-${integrationId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [activeTab, providerParam, providerToIntegrationId]);
 
   const handleTestAIConnection = useCallback(async () => {
     setAiHealthTesting(true);
@@ -1322,6 +1363,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   return (
                     <div
                       key={integration.id}
+                      id={`integration-card-${integration.id}`}
                       className={`bg-white rounded-[24px] border transition-all duration-300 flex flex-col group ${isConnected ? "border-indigo-200 shadow-md" : "border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200"}`}
                     >
                       <div className="p-6 flex items-start justify-between">
@@ -1410,6 +1452,12 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 {driveStatus.email && (
                                   <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {driveStatus.email}</p>
                                 )}
+                                <Link
+                                  href="/portal/tools/drive"
+                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 inline-flex items-center justify-center"
+                                >
+                                  Otevřít Google Drive workspace
+                                </Link>
                                 <button type="button" onClick={handleDriveDisconnect} disabled={driveDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={driveDisconnecting}>
                                   {driveDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {driveDisconnecting ? "Odpojuji…" : "Odpojit Google Drive"}
@@ -1436,6 +1484,12 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 {gmailStatus.email && (
                                   <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {gmailStatus.email}</p>
                                 )}
+                                <Link
+                                  href="/portal/tools/gmail"
+                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 inline-flex items-center justify-center"
+                                >
+                                  Otevřít Gmail workspace
+                                </Link>
                                 <button type="button" onClick={handleGmailDisconnect} disabled={gmailDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={gmailDisconnecting}>
                                   {gmailDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {gmailDisconnecting ? "Odpojuji…" : "Odpojit Gmail"}

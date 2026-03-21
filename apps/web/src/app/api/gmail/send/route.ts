@@ -1,27 +1,59 @@
 import { NextResponse } from "next/server";
-import { getCalendarAuth } from "../../calendar/auth";
+import { getIntegrationApiAuth } from "../../integrations/auth";
 import { getValidGmailAccessToken } from "@/lib/integrations/google-gmail-integration-service";
-import { sendGmailMessage } from "@/lib/integrations/google-gmail";
+import { sendGmailMessage, type GmailAttachment } from "@/lib/integrations/google-gmail";
 
 export const dynamic = "force-dynamic";
 
+type SendPayload = {
+  to: string;
+  subject?: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
+  replyToMessageId?: string;
+  threadId?: string;
+  attachments?: GmailAttachment[];
+};
+
+async function parsePayload(request: Request): Promise<SendPayload> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("multipart/form-data")) {
+    return (await request.json()) as SendPayload;
+  }
+  const form = await request.formData();
+  const files = form.getAll("attachments").filter((f): f is File => f instanceof File);
+  const attachments: GmailAttachment[] = await Promise.all(
+    files.map(async (file) => {
+      const arr = await file.arrayBuffer();
+      return {
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        dataBase64: Buffer.from(arr).toString("base64"),
+      };
+    })
+  );
+  return {
+    to: String(form.get("to") ?? ""),
+    subject: String(form.get("subject") ?? ""),
+    body: String(form.get("body") ?? ""),
+    cc: String(form.get("cc") ?? "") || undefined,
+    bcc: String(form.get("bcc") ?? "") || undefined,
+    replyToMessageId: String(form.get("replyToMessageId") ?? "") || undefined,
+    threadId: String(form.get("threadId") ?? "") || undefined,
+    attachments,
+  };
+}
+
 export async function POST(request: Request) {
-  const authResult = await getCalendarAuth(request, { requireWrite: false });
+  const authResult = await getIntegrationApiAuth(request);
   if (!authResult.ok) return authResult.response;
   const { userId, tenantId } = authResult.auth;
 
-  const body = (await request.json()) as {
-    to: string;
-    subject: string;
-    body: string;
-    cc?: string;
-    bcc?: string;
-    replyToMessageId?: string;
-    threadId?: string;
-  };
+  const body = await parsePayload(request);
 
-  if (!body.to || !body.subject || !body.body) {
-    return NextResponse.json({ error: "Chybí povinná pole (to, subject, body)" }, { status: 400 });
+  if (!body.to || !body.body) {
+    return NextResponse.json({ error: "Chybí povinná pole (to, body)" }, { status: 400 });
   }
 
   let accessToken: string;
@@ -34,7 +66,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const sent = await sendGmailMessage(accessToken, body);
+    const sent = await sendGmailMessage(accessToken, {
+      ...body,
+      subject: body.subject ?? "",
+    });
     return NextResponse.json({ id: sent.id, threadId: sent.threadId });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });

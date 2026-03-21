@@ -30,6 +30,20 @@ export type GmailThread = {
   messages?: GmailMessage[];
 };
 
+export type GmailLabel = {
+  id: string;
+  name: string;
+  type?: "system" | "user";
+  messageListVisibility?: string;
+  labelListVisibility?: string;
+};
+
+export type GmailAttachment = {
+  filename: string;
+  mimeType: string;
+  dataBase64: string;
+};
+
 export type GmailMessageList = {
   messages?: { id: string; threadId: string }[];
   nextPageToken?: string;
@@ -110,6 +124,7 @@ function buildRfc2822Message(opts: {
   cc?: string;
   bcc?: string;
   replyToMessageId?: string;
+  attachments?: GmailAttachment[];
 }): string {
   const lines: string[] = [];
   lines.push(`To: ${opts.to}`);
@@ -127,6 +142,68 @@ function buildRfc2822Message(opts: {
   return lines.join("\r\n");
 }
 
+function toBase64Url(raw: Buffer): string {
+  return raw
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+function normalizeAttachmentBase64(value: string): string {
+  const normalized = value.includes(",") ? value.split(",").pop() ?? value : value;
+  return normalized.replace(/\s/g, "");
+}
+
+function buildMimeWithAttachments(opts: {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
+  replyToMessageId?: string;
+  attachments: GmailAttachment[];
+}): Buffer {
+  const boundary = `----AidvisoraBoundary${Date.now()}`;
+  const headers: string[] = [
+    `To: ${opts.to}`,
+  ];
+  if (opts.cc) headers.push(`Cc: ${opts.cc}`);
+  if (opts.bcc) headers.push(`Bcc: ${opts.bcc}`);
+  headers.push(`Subject: =?UTF-8?B?${Buffer.from(opts.subject).toString("base64")}?=`);
+  headers.push("MIME-Version: 1.0");
+  headers.push(`Content-Type: multipart/mixed; boundary=\"${boundary}\"`);
+  if (opts.replyToMessageId) {
+    headers.push(`In-Reply-To: ${opts.replyToMessageId}`);
+    headers.push(`References: ${opts.replyToMessageId}`);
+  }
+  headers.push("");
+  headers.push(`--${boundary}`);
+  headers.push("Content-Type: text/html; charset=UTF-8");
+  headers.push("Content-Transfer-Encoding: 7bit");
+  headers.push("");
+  headers.push(opts.body);
+
+  const chunks: Buffer[] = [Buffer.from(headers.join("\r\n") + "\r\n", "utf-8")];
+  for (const attachment of opts.attachments) {
+    const filename = attachment.filename || "attachment";
+    const mimeType = attachment.mimeType || "application/octet-stream";
+    const data = Buffer.from(normalizeAttachmentBase64(attachment.dataBase64), "base64");
+    const partHeaders = [
+      `--${boundary}`,
+      `Content-Type: ${mimeType}; name=\"${filename}\"`,
+      `Content-Disposition: attachment; filename=\"${filename}\"`,
+      "Content-Transfer-Encoding: base64",
+      "",
+      data.toString("base64"),
+      "",
+    ].join("\r\n");
+    chunks.push(Buffer.from(partHeaders, "utf-8"));
+  }
+  chunks.push(Buffer.from(`--${boundary}--`, "utf-8"));
+  return Buffer.concat(chunks);
+}
+
 export async function sendGmailMessage(
   accessToken: string,
   opts: {
@@ -137,17 +214,80 @@ export async function sendGmailMessage(
     bcc?: string;
     replyToMessageId?: string;
     threadId?: string;
+    attachments?: GmailAttachment[];
   }
 ): Promise<GmailMessage> {
-  const raw = buildRfc2822Message(opts);
-  const encoded = Buffer.from(raw)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const hasAttachments = (opts.attachments?.length ?? 0) > 0;
+  const rawBuffer = hasAttachments
+    ? buildMimeWithAttachments({
+        to: opts.to,
+        subject: opts.subject,
+        body: opts.body,
+        cc: opts.cc,
+        bcc: opts.bcc,
+        replyToMessageId: opts.replyToMessageId,
+        attachments: opts.attachments ?? [],
+      })
+    : Buffer.from(buildRfc2822Message(opts), "utf-8");
+  const encoded = toBase64Url(rawBuffer);
   const payload: Record<string, string> = { raw: encoded };
   if (opts.threadId) payload.threadId = opts.threadId;
   return gmailRequest<GmailMessage>(accessToken, "POST", "/messages/send", payload);
+}
+
+export async function listGmailLabels(accessToken: string): Promise<GmailLabel[]> {
+  const result = await gmailRequest<{ labels?: GmailLabel[] }>(accessToken, "GET", "/labels");
+  return result.labels ?? [];
+}
+
+export async function modifyGmailMessage(
+  accessToken: string,
+  messageId: string,
+  opts: { addLabelIds?: string[]; removeLabelIds?: string[] }
+): Promise<GmailMessage> {
+  return gmailRequest<GmailMessage>(
+    accessToken,
+    "POST",
+    `/messages/${encodeURIComponent(messageId)}/modify`,
+    {
+      addLabelIds: opts.addLabelIds ?? [],
+      removeLabelIds: opts.removeLabelIds ?? [],
+    }
+  );
+}
+
+export async function trashGmailMessage(
+  accessToken: string,
+  messageId: string
+): Promise<GmailMessage> {
+  return gmailRequest<GmailMessage>(
+    accessToken,
+    "POST",
+    `/messages/${encodeURIComponent(messageId)}/trash`
+  );
+}
+
+export async function deleteGmailMessage(
+  accessToken: string,
+  messageId: string
+): Promise<void> {
+  await gmailRequest<void>(
+    accessToken,
+    "DELETE",
+    `/messages/${encodeURIComponent(messageId)}`
+  );
+}
+
+export async function getGmailAttachment(
+  accessToken: string,
+  messageId: string,
+  attachmentId: string
+): Promise<{ data: string; size: number }> {
+  return gmailRequest<{ data: string; size: number }>(
+    accessToken,
+    "GET",
+    `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`
+  );
 }
 
 export function extractHeader(
