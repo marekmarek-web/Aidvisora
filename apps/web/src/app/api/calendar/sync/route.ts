@@ -92,55 +92,72 @@ export async function POST(request: Request) {
   let updated = 0;
   const now = new Date();
 
-  for (const ev of items) {
-    const googleEventId = ev.id;
-    if (!googleEventId || ev.status === "cancelled") continue;
+  try {
+    for (const ev of items) {
+      const googleEventId = ev.id;
+      if (!googleEventId || ev.status === "cancelled") continue;
 
-    const { startAt, endAt, allDay } = parseGoogleEventTime(ev);
-    const title = ev.summary?.trim() || "(Bez názvu)";
+      const { startAt, endAt, allDay } = parseGoogleEventTime(ev);
+      const title = ev.summary?.trim() || "(Bez názvu)";
 
-    const existing = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(
-        and(
-          eq(events.tenantId, tenantId),
-          eq(events.googleEventId, googleEventId)
+      const existing = await db
+        .select({ id: events.id })
+        .from(events)
+        .where(
+          and(
+            eq(events.tenantId, tenantId),
+            eq(events.googleEventId, googleEventId)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (existing.length > 0) {
-      await db
-        .update(events)
-        .set({
+      if (existing.length > 0) {
+        await db
+          .update(events)
+          .set({
+            title,
+            startAt,
+            endAt,
+            allDay,
+            location: ev.location?.trim() || null,
+            notes: ev.description?.trim() || null,
+            updatedAt: now,
+          })
+          .where(eq(events.id, existing[0].id));
+        updated++;
+      } else {
+        await db.insert(events).values({
+          tenantId,
+          assignedTo: userId,
           title,
+          eventType: "schuzka",
           startAt,
           endAt,
           allDay,
           location: ev.location?.trim() || null,
           notes: ev.description?.trim() || null,
+          googleEventId,
+          googleCalendarId: calendarId,
           updatedAt: now,
-        })
-        .where(eq(events.id, existing[0].id));
-      updated++;
-    } else {
-      await db.insert(events).values({
-        tenantId,
-        assignedTo: userId,
-        title,
-        eventType: "schuzka",
-        startAt,
-        endAt,
-        allDay,
-        location: ev.location?.trim() || null,
-        notes: ev.description?.trim() || null,
-        googleEventId,
-        googleCalendarId: calendarId,
-        updatedAt: now,
-      });
-      created++;
+        });
+        created++;
+      }
     }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const isMissingColumn =
+      /column .* does not exist/i.test(msg) ||
+      /google_event_id|google_calendar_id/i.test(msg);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: isMissingColumn
+          ? "V databázi chybí sloupce pro Google sync. Spusťte migraci add_events_google_calendar_fields.sql v Supabase."
+          : "Uložení událostí do databáze selhalo.",
+        detail: process.env.NODE_ENV === "development" ? msg : undefined,
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true, created, updated, total: items.length });

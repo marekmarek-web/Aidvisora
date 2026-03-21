@@ -31,6 +31,7 @@ import {
   FileText,
   Target,
   User,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -109,6 +110,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network, hoverAnim: "group-hover:-translate-y-1" },
+      { href: "/portal/setup?tab=integrace", label: "Připojení", Icon: Link2, hoverAnim: "group-hover:scale-110" },
     ],
   },
   {

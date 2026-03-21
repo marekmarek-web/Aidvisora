@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getIntegrationAuth } from "../auth";
 import { logIntegration, logIntegrationError } from "@/lib/integrations/google-calendar-integration-service";
+import { buildGoogleOAuthUrl, getGoogleClientConfig } from "@/lib/integrations/google-oauth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,11 @@ export async function GET(request: Request) {
   }
   const { userId, tenantId } = authResult.auth;
 
-  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
-  if (!clientId) {
-    logIntegrationError("Connect: GOOGLE_CALENDAR_CLIENT_ID not set");
+  let clientId: string;
+  try {
+    ({ clientId } = getGoogleClientConfig());
+  } catch {
+    logIntegrationError("Connect: missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET");
     return NextResponse.json(
       { error: "Google Calendar is not configured" },
       { status: 500 }
@@ -33,19 +36,16 @@ export async function GET(request: Request) {
   const nonce = randomBytes(16).toString("hex");
   const state = Buffer.from(JSON.stringify({ userId, tenantId, nonce }), "utf8").toString("base64url");
 
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: GOOGLE_CALENDAR_SCOPES.join(" "),
-    access_type: "offline",
-    prompt: "consent",
+  const oauthUrl = buildGoogleOAuthUrl({
+    clientId,
+    redirectUri,
+    scopes: GOOGLE_CALENDAR_SCOPES,
     state,
   });
 
   logIntegration("Connect: redirecting to Google", { userId: userId.slice(0, 8) });
 
-  const redirect = NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  const redirect = NextResponse.redirect(oauthUrl);
   redirect.cookies.set(CSRF_COOKIE_NAME, nonce, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

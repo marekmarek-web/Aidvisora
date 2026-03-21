@@ -31,7 +31,13 @@ CREATE INDEX IF NOT EXISTS idx_user_google_calendar_integrations_user_active
   WHERE is_active = true;
 
 -- RLS: uživatel vidí a mění jen své vlastní napojení (auth.uid() = user_id).
+-- Sloupce tabulky events pro sync: samostatný soubor add_events_google_calendar_fields.sql (nepřimíchávej sem).
 ALTER TABLE user_google_calendar_integrations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS user_google_calendar_integrations_select_own ON user_google_calendar_integrations;
+DROP POLICY IF EXISTS user_google_calendar_integrations_insert_own ON user_google_calendar_integrations;
+DROP POLICY IF EXISTS user_google_calendar_integrations_update_own ON user_google_calendar_integrations;
+DROP POLICY IF EXISTS user_google_calendar_integrations_delete_own ON user_google_calendar_integrations;
 
 CREATE POLICY user_google_calendar_integrations_select_own
   ON user_google_calendar_integrations

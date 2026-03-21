@@ -72,12 +72,6 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const MicrosoftIcon = () => (
-  <svg viewBox="0 0 23 23" fill="currentColor" className="w-5 h-5 text-[#00a1f1]">
-    <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z" />
-  </svg>
-);
-
 const TABS = [
   { id: "osobni", label: "Osobní údaje" },
   { id: "rezervace", label: "Rezervační systém" },
@@ -92,10 +86,21 @@ const MOCK_LICENSES = [
   { name: "Vázaný zástupce – Úvěry", status: "valid" as const, expiry: "08. 11. 2026" },
   { name: "Vázaný zástupce – Investice", status: "expiring" as const, expiry: "15. 04. 2026" },
 ];
+type IntegrationKey = "google-drive" | "gmail";
+type IntegrationState = {
+  connected: boolean;
+  email: string | null;
+  loading: boolean;
+  error: string | null;
+};
+type IntegrationCard = {
+  id: IntegrationKey;
+  name: string;
+};
 
-const MOCK_INTEGRATIONS = [
-  { id: "google", name: "Google Workspace", status: "connected" as const, email: "priklad@gmail.com" },
-  { id: "microsoft", name: "Microsoft 365", status: "disconnected" as const },
+const PROFILE_INTEGRATIONS: IntegrationCard[] = [
+  { id: "google-drive", name: "Google Disk" },
+  { id: "gmail", name: "Gmail" },
 ];
 
 export function AdvisorProfileView({
@@ -155,9 +160,70 @@ export function AdvisorProfileView({
   const [reportLogoUploading, setReportLogoUploading] = useState(false);
   const [reportLogoError, setReportLogoError] = useState<string | null>(null);
   const [continuingEducationDueAt, setContinuingEducationDueAt] = useState("");
+  const [integrations, setIntegrations] = useState<Record<IntegrationKey, IntegrationState>>({
+    "google-drive": { connected: false, email: null, loading: true, error: null },
+    gmail: { connected: false, email: null, loading: true, error: null },
+  });
 
   useEffect(() => {
     getAdvisorAvatarUrl().then(setAdvisorAvatarUrl);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadStatus = async (id: IntegrationKey, endpoint: string) => {
+      try {
+        const res = await fetch(endpoint);
+        const data = (await res.json().catch(() => ({}))) as {
+          connected?: boolean;
+          email?: string;
+          error?: string;
+        };
+        if (!active) return;
+        if (!res.ok) {
+          setIntegrations((prev) => ({
+            ...prev,
+            [id]: {
+              connected: false,
+              email: null,
+              loading: false,
+              error: data.error ?? "Stav se nepodařilo načíst.",
+            },
+          }));
+          return;
+        }
+        setIntegrations((prev) => ({
+          ...prev,
+          [id]: {
+            connected: !!data.connected,
+            email: data.email ?? null,
+            loading: false,
+            error: null,
+          },
+        }));
+      } catch {
+        if (!active) return;
+        setIntegrations((prev) => ({
+          ...prev,
+          [id]: {
+            connected: false,
+            email: null,
+            loading: false,
+            error: "Stav se nepodařilo načíst.",
+          },
+        }));
+      }
+    };
+
+    void Promise.all([
+      loadStatus("google-drive", "/api/drive/status"),
+      loadStatus("gmail", "/api/gmail/status"),
+    ]);
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const onAdvisorAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -724,26 +790,41 @@ export function AdvisorProfileView({
                 <h3 className="font-black text-slate-900">Připojené účty</h3>
               </div>
               <div className="p-4 space-y-3">
-                {MOCK_INTEGRATIONS.map((int) => (
+                {PROFILE_INTEGRATIONS.map((integration) => {
+                  const status = integrations[integration.id];
+                  const statusLabel = status.loading
+                    ? "Načítám stav…"
+                    : status.error
+                      ? status.error
+                      : status.connected
+                        ? status.email
+                          ? `Připojeno (${status.email})`
+                          : "Připojeno"
+                        : "Nepřipojeno";
+                  const statusClass = status.loading
+                    ? "text-slate-400"
+                    : status.error
+                      ? "text-amber-600"
+                      : status.connected
+                        ? "text-emerald-600"
+                        : "text-slate-400";
+
+                  return (
                   <Link
-                    key={int.id}
-                    href="/portal/setup"
+                    key={integration.id}
+                    href="/portal/setup?tab=integrace"
                     className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                        {int.id === "google" ? <GoogleIcon /> : <MicrosoftIcon />}
+                        <GoogleIcon />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-slate-800">{int.name}</h4>
-                        <p
-                          className={`text-xs font-medium ${int.status === "connected" ? "text-emerald-600" : "text-slate-400"}`}
-                        >
-                          {int.status === "connected" ? "Připojeno" : "Nepřipojeno"}
-                        </p>
+                        <h4 className="text-sm font-bold text-slate-800">{integration.name}</h4>
+                        <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
                       </div>
                     </div>
-                    {int.status === "connected" ? (
+                    {status.connected ? (
                       <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
                     ) : (
                       <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 min-h-[44px] inline-flex items-center">
@@ -751,7 +832,8 @@ export function AdvisorProfileView({
                       </span>
                     )}
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -806,26 +888,44 @@ export function AdvisorProfileView({
                   </Link>
                 </div>
                 <div className="p-4 space-y-3">
-                  {MOCK_INTEGRATIONS.map((int) => (
+                  {PROFILE_INTEGRATIONS.map((integration) => {
+                    const status = integrations[integration.id];
+                    const statusLabel = status.loading
+                      ? "Načítám stav…"
+                      : status.error
+                        ? status.error
+                        : status.connected
+                          ? status.email
+                            ? `Připojeno (${status.email})`
+                            : "Připojeno"
+                          : "Nepřipojeno";
+                    const statusClass = status.loading
+                      ? "text-slate-400"
+                      : status.error
+                        ? "text-amber-600"
+                        : status.connected
+                          ? "text-emerald-600"
+                          : "text-slate-400";
+
+                    return (
                     <Link
-                      key={int.id}
-                      href="/portal/setup"
+                      key={integration.id}
+                      href="/portal/setup?tab=integrace"
                       className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                          {int.id === "google" ? <GoogleIcon /> : <MicrosoftIcon />}
+                          <GoogleIcon />
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-slate-800">{int.name}</h4>
-                          <p className={`text-xs font-medium ${int.status === "connected" ? "text-emerald-600" : "text-slate-400"}`}>
-                            {int.status === "connected" ? "Připojeno" : "Nepřipojeno"}
-                          </p>
+                          <h4 className="text-sm font-bold text-slate-800">{integration.name}</h4>
+                          <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
                     </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

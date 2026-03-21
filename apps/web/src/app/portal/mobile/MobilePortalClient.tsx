@@ -762,6 +762,7 @@ export function MobilePortalClient({
                 { label: "Domácnosti", href: "/portal/households" },
                 { label: "Můj plán", href: "/portal/business-plan" },
                 { label: "Můj tým", href: "/portal/team-overview" },
+                { label: "Připojení", href: "/portal/setup?tab=integrace" },
                 { label: "Nastavení", href: "/portal/setup" },
                 { label: "Notifikace", href: "/portal/notifications" },
               ].map((item) => (
