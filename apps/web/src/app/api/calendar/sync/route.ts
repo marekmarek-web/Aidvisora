@@ -7,6 +7,15 @@ import { listCalendarEvents, type GoogleCalendarEvent } from "@/lib/integrations
 
 export const dynamic = "force-dynamic";
 
+const DETAIL_MAX = 450;
+
+function safeErrorDetail(e: unknown): string | undefined {
+  const msg = e instanceof Error ? e.message : String(e);
+  const t = msg.replace(/\s+/g, " ").trim();
+  if (!t) return undefined;
+  return t.length > DETAIL_MAX ? `${t.slice(0, DETAIL_MAX)}…` : t;
+}
+
 function parseGoogleEventTime(ev: GoogleCalendarEvent): { startAt: Date; endAt: Date | null; allDay: boolean } {
   const start = ev.start;
   const end = ev.end;
@@ -25,6 +34,22 @@ function parseGoogleEventTime(ev: GoogleCalendarEvent): { startAt: Date; endAt: 
 }
 
 export async function POST(request: Request) {
+  try {
+    return await handleCalendarSyncPost(request);
+  } catch (e) {
+    console.error("[calendar/sync] unhandled", e);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Synchronizace selhala (neočekávaná chyba serveru).",
+        detail: safeErrorDetail(e),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleCalendarSyncPost(request: Request): Promise<Response> {
   const authResult = await getCalendarAuth(request);
   if (!authResult.ok) return authResult.response;
   const { userId, tenantId } = authResult.auth;
@@ -144,6 +169,7 @@ export async function POST(request: Request) {
       }
     }
   } catch (e) {
+    console.error("[calendar/sync] DB write failed", e);
     const msg = e instanceof Error ? e.message : String(e);
     const isMissingColumn =
       /column .* does not exist/i.test(msg) ||
@@ -154,7 +180,7 @@ export async function POST(request: Request) {
         error: isMissingColumn
           ? "V databázi chybí sloupce pro Google sync. Spusťte migraci add_events_google_calendar_fields.sql v Supabase."
           : "Uložení událostí do databáze selhalo.",
-        detail: process.env.NODE_ENV === "development" ? msg : undefined,
+        detail: safeErrorDetail(e),
       },
       { status: 500 }
     );

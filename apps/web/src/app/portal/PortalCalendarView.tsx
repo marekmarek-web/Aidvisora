@@ -874,8 +874,15 @@ export function PortalCalendarView() {
           timeMax: rangeEnd.toISOString(),
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; created?: number; updated?: number };
-      if (data.ok) {
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        detail?: string;
+        created?: number;
+        updated?: number;
+      };
+      const syncOk = res.ok && data.ok === true;
+      if (syncOk) {
         loadEvents();
         toast.showToast(
           data.created !== undefined || data.updated !== undefined
@@ -883,7 +890,8 @@ export function PortalCalendarView() {
             : "Kalendář byl synchronizován s Google."
         );
       } else {
-        toast.showToast(data.error ?? "Synchronizace se nepovedla.", "error");
+        const hint = data.detail ? ` ${data.detail}` : "";
+        toast.showToast(`${data.error ?? "Synchronizace se nepovedla."}${hint}`.trim(), "error", 12000);
       }
     } catch {
       toast.showToast("Synchronizace se nepovedla.", "error");
