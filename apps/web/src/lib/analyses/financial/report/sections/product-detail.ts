@@ -38,6 +38,11 @@ function renderBenefits(benefits: string[]): string {
   return `<ul class="check-list">${benefits.map((b) => `<li>${b}</li>`).join('')}</ul>`;
 }
 
+function renderGallery(images: string[]): string {
+  if (!images || images.length === 0) return '';
+  return `<div class="product-gallery">${images.map((img) => `<div class="product-gallery-item"><img src="${esc(img)}" alt="Ilustrační obrázek fondu" class="product-gallery-image" onerror="this.parentElement&&this.parentElement.remove()"></div>`).join('')}</div>`;
+}
+
 function computeFV(inv: InvestmentEntry): number {
   const rate = inv.annualRate ?? 0.08;
   const years = inv.years ?? 20;
@@ -96,6 +101,7 @@ export function renderProductDetails(ctx: SectionCtx): string {
       <div class="product-card-body">
         ${detail.description ? `<div class="product-desc">${detail.description}</div>` : ''}
         ${detail.heroImage ? `<div class="product-hero-image-wrap"><img src="${esc(detail.heroImage)}" alt="${esc(name)}" class="product-hero-image" onerror="this.parentElement&&this.parentElement.remove()"></div>` : ''}
+        ${detail.galleryImages ? renderGallery(detail.galleryImages) : ''}
         ${renderStatGrid(detail)}
         ${detail.countries ? renderBars(detail.countries, 'Zastoupení', theme) : ''}
         ${detail.sectors ? renderBars(detail.sectors, 'Sektory', theme) : ''}

@@ -44,7 +44,7 @@ body{font-family:var(--ff-data);background:var(--surface-2);color:var(--ink-2);l
 .sb-brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:2}
 .sb-logo{display:flex;align-items:center;gap:9px;margin-bottom:14px}
 .sb-logo-mark{width:30px;height:30px;background:var(--brand);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-family:var(--ff-ui);font-weight:800;font-size:14px;color:#fff;flex-shrink:0;letter-spacing:-0.5px;box-shadow:none}
-.sb-logo-img{display:block;max-width:22px;max-height:22px;object-fit:contain}
+.sb-logo-img{display:block;max-width:22px;max-height:22px;object-fit:contain;filter:brightness(0) invert(1) contrast(1.1)}
 .sb-logo-fallback{font-family:var(--ff-ui);font-weight:800;font-size:14px;line-height:1}
 .sb-logo-name{font-family:var(--ff-ui);font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);letter-spacing:-0.3px}
 .sb-client-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r2);padding:9px 11px}
@@ -183,6 +183,9 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .product-desc{font-size:13px;line-height:1.75;color:var(--ink-3);margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--surface-2);max-height:10em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
 .product-hero-image-wrap{margin:0 0 16px;border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;background:var(--surface-2)}
 .product-hero-image{width:100%;max-height:200px;object-fit:cover;display:block}
+.product-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.product-gallery-item{border:1px solid var(--surface-3);border-radius:var(--r2);overflow:hidden;background:var(--surface-2)}
+.product-gallery-image{width:100%;height:84px;object-fit:cover;display:block}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--surface-3);border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;margin-bottom:20px}
 .stat-cell{background:var(--surface);padding:12px 14px}
 .stat-lbl{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-4);margin-bottom:3px}
@@ -343,6 +346,8 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .product-invest-amt{font-size:17px}
   .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px;max-height:5.8em;-webkit-line-clamp:4}
   .product-hero-image{max-height:90px}
+  .product-gallery{gap:6px;margin-bottom:10px}
+  .product-gallery-image{height:58px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
   .stat-val{font-size:11px}

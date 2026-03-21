@@ -424,6 +424,8 @@ export interface FundDetail {
   category?: string;
   /** Optional visual for product detail header/body */
   heroImage?: string;
+  /** Optional gallery visuals shown under the hero image */
+  galleryImages?: string[];
 }
 
 /** Liability provider group */

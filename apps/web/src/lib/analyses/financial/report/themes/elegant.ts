@@ -35,7 +35,7 @@ body{font-family:var(--ff-sans);background:var(--stone-100);color:var(--stone-70
 .sb-brand{padding:var(--s8) var(--s6) var(--s6);border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:2}
 .sb-logo{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
 .sb-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--gold-500) 0%,var(--gold-300) 100%);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-family:var(--ff-serif);font-size:16px;color:var(--navy-900);flex-shrink:0;box-shadow:0 2px 8px rgba(201,168,76,0.3)}
-.sb-logo-img{display:block;max-width:24px;max-height:24px;object-fit:contain}
+.sb-logo-img{display:block;max-width:24px;max-height:24px;object-fit:contain;filter:brightness(0) invert(1) contrast(1.1)}
 .sb-logo-fallback{font-family:var(--ff-serif);font-size:16px;line-height:1}
 .sb-logo-name{font-size:16px;font-weight:700;color:var(--white);letter-spacing:-0.3px}
 .sb-client-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r-md);padding:var(--s3) var(--s4)}
@@ -175,6 +175,9 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .product-desc{font-size:13.5px;line-height:1.75;color:var(--stone-600);margin-bottom:var(--s6);padding-bottom:var(--s6);border-bottom:1px solid var(--stone-100)}
 .product-hero-image-wrap{margin:0 0 var(--s5);border:1px solid var(--stone-200);border-radius:var(--r-md);overflow:hidden;background:var(--stone-50)}
 .product-hero-image{width:100%;max-height:200px;object-fit:cover;display:block}
+.product-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 var(--s5)}
+.product-gallery-item{border:1px solid var(--stone-200);border-radius:var(--r-sm);overflow:hidden;background:var(--stone-50)}
+.product-gallery-image{width:100%;height:84px;object-fit:cover;display:block}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--stone-100);border:1px solid var(--stone-100);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--s6)}
 .stat-cell{background:var(--white);padding:var(--s4) var(--s5)}
 .stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--stone-400);margin-bottom:4px}
@@ -330,6 +333,8 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
   .product-invest-amt{font-size:18px}
   .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px}
   .product-hero-image{max-height:90px}
+  .product-gallery{gap:6px;margin-bottom:10px}
+  .product-gallery-image{height:58px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
   .stat-val{font-size:11px}

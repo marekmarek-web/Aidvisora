@@ -13,6 +13,7 @@ export function renderHero(ctx: SectionCtx): string {
   const { data, branding } = ctx;
   const clientName = data.client?.name ?? 'Klient';
   const partnerName = data.partner?.name;
+  const planYear = new Date().getFullYear();
 
   const totalAssets =
     (data.assets?.cash ?? 0) +
@@ -38,7 +39,7 @@ export function renderHero(ctx: SectionCtx): string {
   <div class="page-inner" style="position:relative;z-index:2">
     <div class="hero-top">
       <div class="hero-wordmark">AIDVISORA</div>
-      <div class="hero-badge">Finanční plán 2025</div>
+      <div class="hero-badge">Finanční plán ${planYear}</div>
     </div>
     <div class="hero-center">
       <div class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Finanční analýza</div>

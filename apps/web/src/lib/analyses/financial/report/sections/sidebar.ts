@@ -73,7 +73,7 @@ export function renderSidebar(ctx: SectionCtx): string {
   <div class="sb-brand">
     <div class="sb-logo">
       <div class="sb-logo-mark">
-        <img src="/aidvisora-logo.png" alt="Aidvisora logo" class="sb-logo-img" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='inline'">
+        <img src="/Aidvisora%20logo.png" alt="Aidvisora logo" class="sb-logo-img" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='inline'">
         <span class="sb-logo-fallback" style="display:none">A</span>
       </div>
       <div class="sb-logo-name">Aidvisora</div>
