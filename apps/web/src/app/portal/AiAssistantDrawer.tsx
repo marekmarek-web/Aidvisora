@@ -27,6 +27,7 @@ import {
 } from "@/app/actions/csv-import";
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
 type ClientCandidate = { clientId: string; displayName?: string };
@@ -232,7 +233,7 @@ export function AiAssistantDrawer() {
 
   const handleFile = async (file: File) => {
     if (!file?.size) return;
-    if (file.type !== "application/pdf") {
+    if (!isLikelyPdfUpload(file)) {
       toast.showToast("Povolený formát je pouze PDF.", "error");
       return;
     }
@@ -245,7 +246,11 @@ export function AiAssistantDrawer() {
       const res = await fetch("/api/contracts/upload", { method: "POST", body: formData });
       const uploadData = await res.json();
       if (!res.ok) {
-        setUploadError(uploadData.error ?? "Nahrání selhalo.");
+        const hint =
+          typeof uploadData.code === "string"
+            ? ` (${uploadData.code})`
+            : "";
+        setUploadError((uploadData.error ?? "Nahrání selhalo.") + hint);
         setMessages((prev) => prev.slice(0, -1));
         setUploadPhase("idle");
         return;

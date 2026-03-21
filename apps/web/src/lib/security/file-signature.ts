@@ -41,6 +41,19 @@ export async function detectMagicMimeType(file: File): Promise<string | null> {
   return detectMagicMimeTypeFromBytes(new Uint8Array(buffer.slice(0, Math.min(64, buffer.byteLength))));
 }
 
+/**
+ * Client-side hint before upload (iOS/Safari often sends empty type or octet-stream for real PDFs).
+ * Server still validates PDF magic bytes.
+ */
+export function isLikelyPdfUpload(file: Pick<File, "type" | "name">): boolean {
+  const t = (file.type || "").toLowerCase().trim();
+  if (t === "application/pdf") return true;
+  if (t === "" || t === "application/octet-stream" || t === "binary/octet-stream") {
+    return file.name.toLowerCase().trim().endsWith(".pdf");
+  }
+  return false;
+}
+
 export function mimeMatchesAllowedSignature(expectedMime: string, detectedMime: string | null) {
   if (!detectedMime) return false;
   if (expectedMime === detectedMime) return true;

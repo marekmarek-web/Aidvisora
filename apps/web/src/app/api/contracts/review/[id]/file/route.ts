@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getMembership } from "@/lib/auth/get-membership";
-import { hasPermission, type RoleName } from "@/lib/auth/get-membership";
 import { getContractReviewById } from "@/lib/ai/review-queue-repository";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
@@ -21,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const membership = await getMembership(userId);
-    if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
+    if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

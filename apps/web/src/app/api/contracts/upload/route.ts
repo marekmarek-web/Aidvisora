@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
+import { getMembership } from "@/lib/auth/get-membership";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createContractReview, updateContractReview } from "@/lib/ai/review-queue-repository";
 import { runContractUnderstandingPipeline } from "@/lib/ai/contract-understanding-pipeline";
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
   }
   try {
     const membership = await getMembership(userId);
-    if (!membership || !hasPermission(membership.roleName as RoleName, "documents:write")) {
+    // Stejně jako AI asistent: stačí člen workspace; placená / role omezení později.
+    if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const limiter = checkRateLimit(request, "contracts-upload", `${membership.tenantId}:${userId}`, {
@@ -98,29 +99,57 @@ export async function POST(request: Request) {
     const storagePath = `contracts/${tenantId}/${id}/${Date.now()}-${safeName}`;
 
     const admin = createAdminClient();
-    const { error: uploadError } = await admin.storage.from("documents").upload(storagePath, fileBytes, {
-      contentType: mimeType,
-      upsert: false,
-    });
+    // Supabase JS na Node/Vercel spolehlivěji přijímá Buffer než čistý Uint8Array.
+    const uploadBuffer = Buffer.from(fileBytes);
+
+    let uploadError: { message?: string } | null = null;
+    try {
+      const up = await admin.storage.from("documents").upload(storagePath, uploadBuffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+      uploadError = up.error;
+    } catch (storageErr) {
+      console.error("[contracts/upload] storage.upload threw", storageErr);
+      return NextResponse.json(
+        { error: "Nahrání souboru selhalo.", code: "STORAGE_EXCEPTION" },
+        { status: 500 }
+      );
+    }
 
     if (uploadError) {
+      console.error("[contracts/upload] storage error", uploadError.message ?? uploadError);
       const safeMsg =
         uploadError.message?.toLowerCase().includes("bucket") ||
         uploadError.message?.toLowerCase().includes("not found")
           ? "Úložiště není dostupné."
           : "Nahrání souboru selhalo.";
-      return NextResponse.json({ error: safeMsg }, { status: 500 });
+      return NextResponse.json({ error: safeMsg, code: "STORAGE_REJECTED" }, { status: 500 });
     }
 
-    const reviewId = await createContractReview({
-      tenantId,
-      fileName: file.name,
-      storagePath,
-      mimeType,
-      sizeBytes: fileBytes.byteLength,
-      processingStatus: "uploaded",
-      uploadedBy: userId,
-    });
+    let reviewId: string;
+    try {
+      reviewId = await createContractReview({
+        tenantId,
+        fileName: file.name,
+        storagePath,
+        mimeType,
+        sizeBytes: fileBytes.byteLength,
+        processingStatus: "uploaded",
+        uploadedBy: userId,
+      });
+    } catch (dbErr) {
+      console.error("[contracts/upload] createContractReview failed", dbErr);
+      await admin.storage.from("documents").remove([storagePath]).catch(() => {});
+      return NextResponse.json(
+        {
+          error:
+            "Nepodařilo se uložit smlouvu do databáze. Zkontroluj migrace (tabulka contract_upload_reviews) a DATABASE_URL.",
+          code: "DB_INSERT_REVIEW",
+        },
+        { status: 500 }
+      );
+    }
 
     await updateContractReview(reviewId, tenantId, {
       processingStatus: "processing",
@@ -252,7 +281,7 @@ export async function POST(request: Request) {
       err instanceof Error ? err.stack : ""
     );
     return NextResponse.json(
-      { error: "Nahrání smlouvy selhalo." },
+      { error: "Nahrání smlouvy selhalo.", code: "CONTRACT_UPLOAD_UNHANDLED" },
       { status: 500 }
     );
   }

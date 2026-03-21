@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 
 type ProcessingStatus = "uploaded" | "processing" | "extracted" | "review_required" | "failed";
 type ReviewStatus = "pending" | "approved" | "rejected" | "applied";
@@ -158,7 +159,7 @@ export default function ContractReviewListPage() {
   }, [load]);
 
   const uploadFile = useCallback(async (file: File) => {
-    if (!file?.size || file.type !== "application/pdf") return;
+    if (!file?.size || !isLikelyPdfUpload(file)) return;
     setUploading(true);
     try {
       const formData = new FormData();
@@ -187,7 +188,7 @@ export default function ContractReviewListPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type === "application/pdf") uploadFile(file);
+    if (file && isLikelyPdfUpload(file)) uploadFile(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {

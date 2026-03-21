@@ -51,7 +51,8 @@ Endpoint: **`POST /api/ai/assistant/chat`**
    - Ty jsou pro **konkrétní funkce** (shrnutí klienta, tým, …), **ne** pro základní chat v postranním panelu.  
    - Chat používá **Responses API** s textovým promptem + kontext z DB.
 
-5. **Upload smluv** je jiný endpoint (`/api/contracts/upload`) – Storage + DB + pipeline (nezávislé na tomto chatu).
+5. **Review smluv (upload + seznam)** – endpointy pod `/api/contracts/*` vyžadují jen **členství ve workspace** (stejně jako asistent), ne zvlášť `documents:read` / `documents:write`.  
+   Při chybě uploadu může odpověď obsahovat pole **`code`** (`STORAGE_*`, `DB_INSERT_REVIEW`, `CONTRACT_UPLOAD_UNHANDLED`) – v UI se zobrazí za textem chyby pro rychlejší diagnostiku.
 
 ---
 
