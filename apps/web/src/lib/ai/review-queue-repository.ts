@@ -1,5 +1,6 @@
 import { db } from "db";
 import { contractUploadReviews } from "db";
+import { contractReviewCorrections } from "db";
 import { eq, and, desc } from "db";
 import type { ContractProcessingStatus, ContractReviewStatus } from "db";
 import { logAudit } from "@/lib/audit";
@@ -65,13 +66,24 @@ export type ContractReviewRow = {
   inputMode: string | null;
   extractionMode: string | null;
   detectedDocumentType: string | null;
+  detectedDocumentSubtype: string | null;
+  lifecycleStatus: string | null;
   extractionTrace: ExtractionTrace | null;
   validationWarnings: ValidationWarning[] | null;
   fieldConfidenceMap: Record<string, number> | null;
   classificationReasons: string[] | null;
+  dataCompleteness: unknown;
+  sensitivityProfile: string | null;
   originalExtractedPayload: unknown;
   correctedPayload: unknown;
   correctedFields: string[] | null;
+  correctedDocumentType: string | null;
+  correctedLifecycleStatus: string | null;
+  fieldMarkedNotApplicable: string[] | null;
+  linkedClientOverride: string | null;
+  linkedDealOverride: string | null;
+  confidenceOverride: number | null;
+  ignoredWarnings: string[] | null;
   correctionReason: string | null;
   correctedBy: string | null;
   correctedAt: Date | null;
@@ -198,13 +210,24 @@ export async function updateContractReview(
     inputMode?: string | null;
     extractionMode?: string | null;
     detectedDocumentType?: string | null;
+    detectedDocumentSubtype?: string | null;
+    lifecycleStatus?: string | null;
     extractionTrace?: ExtractionTrace | null;
     validationWarnings?: ValidationWarning[] | null;
     fieldConfidenceMap?: Record<string, number> | null;
     classificationReasons?: string[] | null;
+    dataCompleteness?: unknown;
+    sensitivityProfile?: string | null;
     originalExtractedPayload?: unknown;
     correctedPayload?: unknown;
     correctedFields?: string[] | null;
+    correctedDocumentType?: string | null;
+    correctedLifecycleStatus?: string | null;
+    fieldMarkedNotApplicable?: string[] | null;
+    linkedClientOverride?: string | null;
+    linkedDealOverride?: string | null;
+    confidenceOverride?: number | null;
+    ignoredWarnings?: string[] | null;
     correctionReason?: string | null;
     correctedBy?: string | null;
     correctedAt?: Date | null;
@@ -237,6 +260,13 @@ export async function saveContractCorrection(
   params: {
     correctedPayload: unknown;
     correctedFields: string[];
+    correctedDocumentType?: string | null;
+    correctedLifecycleStatus?: string | null;
+    fieldMarkedNotApplicable?: string[];
+    linkedClientOverride?: string | null;
+    linkedDealOverride?: string | null;
+    confidenceOverride?: number | null;
+    ignoredWarnings?: string[];
     correctionReason?: string | null;
     correctedBy?: string | null;
   }
@@ -247,10 +277,33 @@ export async function saveContractCorrection(
     originalExtractedPayload: row.extractedPayload,
     correctedPayload: params.correctedPayload,
     correctedFields: params.correctedFields,
+    correctedDocumentType: params.correctedDocumentType ?? null,
+    correctedLifecycleStatus: params.correctedLifecycleStatus ?? null,
+    fieldMarkedNotApplicable: params.fieldMarkedNotApplicable ?? null,
+    linkedClientOverride: params.linkedClientOverride ?? null,
+    linkedDealOverride: params.linkedDealOverride ?? null,
+    confidenceOverride: params.confidenceOverride ?? null,
+    ignoredWarnings: params.ignoredWarnings ?? null,
     correctionReason: params.correctionReason ?? null,
     correctedBy: params.correctedBy ?? null,
     correctedAt: new Date(),
   });
+  await db
+    .insert(contractReviewCorrections)
+    .values({
+      tenantId,
+      contractReviewId: id,
+      correctedDocumentType: params.correctedDocumentType ?? null,
+      correctedLifecycleStatus: params.correctedLifecycleStatus ?? null,
+      correctedFieldValues: params.correctedPayload,
+      fieldMarkedNotApplicable: params.fieldMarkedNotApplicable ?? null,
+      linkedClientOverride: params.linkedClientOverride ?? null,
+      linkedDealOverride: params.linkedDealOverride ?? null,
+      confidenceOverride: params.confidenceOverride ?? null,
+      ignoredWarnings: params.ignoredWarnings ?? null,
+      correctedBy: params.correctedBy ?? null,
+    })
+    .catch(() => {});
   await logAudit({
     tenantId,
     userId: params.correctedBy ?? null,

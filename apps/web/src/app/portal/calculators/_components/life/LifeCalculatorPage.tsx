@@ -5,7 +5,6 @@ import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorInputSection } from "../core/CalculatorInputSection";
 import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
-import { CalculatorChartCard } from "../core/CalculatorChartCard";
 import { LifeInputPanel } from "./LifeInputPanel";
 import { LifeResultsPanel } from "./LifeResultsPanel";
 import { LifeRiskChart } from "./LifeRiskChart";
@@ -20,34 +19,42 @@ export function LifeCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorPageHeader
-          title="Kalkulačka životního pojištění"
-          subtitle="Orientační výpočet potřebného krytí podle příjmů, výdajů a závazků."
-        />
+        <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
+          <CalculatorPageHeader
+            title="Kalkulačka životního pojištění"
+            subtitle="Orientační výpočet potřebného krytí podle příjmů, výdajů a závazků."
+          />
+          <p className="mt-3 max-w-3xl rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
+            Výsledky jsou modelové doporučení minimálního krytí. Finální nastavení
+            vždy závisí na konkrétní smlouvě, zdravotním stavu a rodinné situaci.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
           <CalculatorInputSection>
             <LifeInputPanel state={state} onStateChange={setState} />
           </CalculatorInputSection>
           <CalculatorResultsSection>
-            <div className="hidden lg:block sticky top-24">
+            <div className="hidden lg:sticky lg:top-6 lg:block">
               <LifeResultsPanel state={state} result={result} />
             </div>
           </CalculatorResultsSection>
         </div>
 
         <div className="hidden md:block">
-          <CalculatorChartCard
-            title="Analýza rizika (Měsíční bilance)"
-            icon={
-              <span className="text-indigo-500 text-sm font-bold uppercase">
-                Graf
-              </span>
-            }
-            caption="Graf znázorňuje propad příjmů v případě nemoci nebo invalidity a částku, kterou je třeba dokrýt. Oranžová část představuje finanční mezeru."
-          >
+          <section className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+            <header className="mb-4 space-y-1">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <span className="text-indigo-500">📊</span>
+                Analýza rizika (měsíční bilance)
+              </h3>
+              <p className="text-sm text-slate-500">
+                Graf znázorňuje propad příjmů v případě nemoci nebo invalidity a částku,
+                kterou je třeba dokrýt. Oranžová část představuje finanční mezeru.
+              </p>
+            </header>
             <LifeRiskChart chartData={result.chartData} />
-          </CalculatorChartCard>
+          </section>
         </div>
       </CalculatorPageShell>
 

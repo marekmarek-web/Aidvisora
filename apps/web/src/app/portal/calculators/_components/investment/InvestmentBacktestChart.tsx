@@ -165,41 +165,44 @@ export function InvestmentBacktestChart({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-4">
-        <div>
-          <h3 className="text-2xl md:text-3xl font-bold text-[#0a0f29] flex items-center gap-3">
-            <svg className="w-8 h-8 text-indigo-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-            </svg>
-            Simulace historického vývoje
-          </h3>
-          <p className="text-slate-600 mt-2 text-lg">
-            Jak by dopadla vaše investice{" "}
-            <span className="font-bold text-[#0B3A7A]">{monthlyFormatted}</span>{" "}
-            měsíčně, kdybyste začali v roce{" "}
-            <span className="font-bold text-[#0B3A7A]">{startYear}</span>?
-          </p>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div>
+            <h3 className="flex items-center gap-3 text-xl font-bold text-[#0a0f29] md:text-2xl">
+              <svg className="w-7 h-7 text-indigo-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              Simulace historického vývoje
+            </h3>
+            <p className="mt-2 text-sm text-slate-600 sm:text-base">
+              Jak by dopadla vaše investice{" "}
+              <span className="font-bold text-[#0B3A7A]">{monthlyFormatted}</span>{" "}
+              měsíčně, kdybyste začali v roce{" "}
+              <span className="font-bold text-[#0B3A7A]">{startYear}</span>?
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-green-100 bg-green-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-green-700">
+            <span className="h-2 w-2 rounded-full bg-green-500" />
+            Reálná tržní data 1995–2024
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-100">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          Reálná tržní data 1995–2024
+        <p className="text-sm leading-relaxed text-slate-500">
+          Historická simulace ukazuje, jak by se investice vyvíjela při zachování dlouhodobé strategie i v obdobích krizí a poklesů trhu.
+        </p>
+      </div>
+
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 sm:p-3">
+        <div className="h-[360px] w-full sm:h-[440px] lg:h-[500px]">
+          <ReactApexChart options={options} series={apexSeries} type="area" height="100%" />
         </div>
       </div>
 
-      <p className="text-sm text-slate-500 leading-relaxed max-w-3xl">
-        Historická simulace ukazuje, jak by se investice vyvíjela při zachování dlouhodobé strategie i v obdobích krizí a poklesů trhu.
-      </p>
-
-      <div className="w-full h-[500px]">
-        <ReactApexChart options={options} series={apexSeries} type="area" height={500} />
-      </div>
-
-      <div className="mt-10 bg-slate-50 rounded-2xl p-6 border border-slate-100">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Posunout v čase (Start investice)
           </span>
-          <span className="text-lg font-bold text-[#0a0f29] bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+          <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-bold text-[#0a0f29]">
             Rok {startYear}
           </span>
         </div>
@@ -210,23 +213,61 @@ export function InvestmentBacktestChart({
           step={1}
           value={startYear}
           onChange={(e) => onStartYearChange(parseInt(e.target.value, 10))}
-          className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer min-h-[44px] touch-manipulation"
+          className="investment-backtest-slider min-h-[44px] w-full touch-manipulation"
+          style={{
+            background: `linear-gradient(90deg, #4f46e5 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%, #e2e8f0 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%)`,
+          }}
+          aria-label="Startovní rok backtestu"
         />
-        <div className="flex justify-between text-xs font-bold text-slate-400 mt-3 uppercase tracking-wide">
-          <span className="flex flex-col items-center gap-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" /></svg>
-            1995 (Dot-com)
-          </span>
-          <span className="flex flex-col items-center gap-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" /></svg>
-            2008 (Krize)
-          </span>
-          <span className="flex flex-col items-center gap-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" /></svg>
-            2019 (Covid)
-          </span>
+        <div className="mt-3 flex justify-between text-[11px] font-bold uppercase tracking-wide text-slate-400">
+          <span>1995</span>
+          <span>2008</span>
+          <span>2019</span>
         </div>
       </div>
+
+      <style jsx>{`
+        .investment-backtest-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 8px;
+          border-radius: 9999px;
+          cursor: pointer;
+        }
+        .investment-backtest-slider::-webkit-slider-runnable-track {
+          height: 8px;
+          border-radius: 9999px;
+          background: transparent;
+        }
+        .investment-backtest-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          margin-top: -6px;
+          border-radius: 9999px;
+          border: 3px solid #fff;
+          background: #4f46e5;
+          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+        }
+        .investment-backtest-slider::-moz-range-track {
+          height: 8px;
+          border-radius: 9999px;
+          background: transparent;
+        }
+        .investment-backtest-slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border: 3px solid #fff;
+          border-radius: 9999px;
+          background: #4f46e5;
+          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+        }
+        .investment-backtest-slider:focus-visible {
+          outline: 2px solid #6366f1;
+          outline-offset: 4px;
+        }
+      `}</style>
     </div>
   );
 }

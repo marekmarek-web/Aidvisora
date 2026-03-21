@@ -80,7 +80,7 @@ export function renderCompanyHero(ctx: SectionCtx): string {
   <div class="page-inner" style="position:relative;z-index:2">
     <div class="hero-top">
       <div class="hero-wordmark">AIDVISORA — FIREMNÍ ČÁST</div>
-      <div class="hero-badge" style="background:rgba(217,119,6,.12);border-color:rgba(217,119,6,.25);color:var(--gold-400,#d97706)">BUSINESS</div>
+      <div class="hero-badge" style="background:rgba(217,119,6,.12);border-color:rgba(217,119,6,.25);color:var(--gold-400,#d97706)">FIRMA</div>
     </div>
     <div class="hero-center">
       <div class="hero-eyebrow" style="color:var(--gold-400,#d97706)"><span class="hero-eyebrow-line" style="background:var(--gold-400,#d97706)"></span>Firemní analýza</div>

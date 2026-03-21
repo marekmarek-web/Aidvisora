@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Finanční plán - Ivan Havdan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==========================================================================
+           RESET & ZÁKLADNÍ TYPOGRAFIE PRO TISK
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            background-color: #cbd5e1; /* Šedé pozadí pro webový náhled */
+            font-family: 'Inter', sans-serif;
+            color: #334155;
+            font-size: 9.5pt;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        h1, h2, h3, h4, h5 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        /* ==========================================================================
+           STRÁNKA A FORMÁT A4
+           ========================================================================== */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content {
+            padding: 25mm 20mm 25mm 20mm;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media print {
+            body { background-color: transparent; padding: 0; gap: 0; display: block; }
+            .page { box-shadow: none; margin: 0; page-break-after: always; min-height: 297mm; height: 297mm; overflow: hidden; }
+            @page { size: A4 portrait; margin: 0; }
+        }
+
+        .avoid-break { page-break-inside: avoid; }
+        .page-break-before { page-break-before: always; }
+
+        /* ==========================================================================
+           KOMPONENTY (HLAVIČKY, PATIČKY, KARTY)
+           ========================================================================== */
+        .header {
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 8pt;
+            margin-bottom: 20pt;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+        .header-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14pt; font-weight: 800; color: #4f46e5; }
+        .header-title { font-size: 8pt; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+
+        .footer {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 10mm 20mm;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
+            color: #94a3b8;
+            background: white;
+            z-index: 10;
+        }
+
+        .section-title { font-size: 18pt; font-weight: 800; margin-bottom: 6pt; color: #1e1b4b; }
+        .section-desc { font-size: 9pt; color: #64748b; margin-bottom: 20pt; max-width: 80%; }
+        
+        .sub-title { font-size: 12pt; font-weight: 700; margin-bottom: 10pt; color: #334155; border-left: 3px solid #4f46e5; padding-left: 8pt; margin-top: 15pt; }
+
+        /* Utility classes */
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .gap-2 { gap: 8pt; }
+        .gap-4 { gap: 16pt; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15pt; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15pt; }
+        
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 700; }
+        .text-primary { color: #4f46e5; }
+        .text-success { color: #10b981; }
+        .text-danger { color: #e11d48; }
+        .text-warning { color: #f59e0b; }
+        .text-muted { color: #64748b; }
+
+        .bg-gray { background-color: #f8fafc; }
+        .rounded { border-radius: 8pt; }
+        .p-4 { padding: 12pt; }
+        .mb-4 { margin-bottom: 15pt; }
+        .mt-6 { margin-top: 25pt; }
+
+        /* KPI Karty */
+        .kpi-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8pt;
+            padding: 12pt;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+        .kpi-card.dark { background: #1e1b4b; border: none; color: white; }
+        .kpi-card.dark .kpi-label { color: #c7d2fe; }
+        .kpi-card.dark .kpi-value { color: white; }
+        
+        .kpi-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 4pt; }
+        .kpi-value { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16pt; font-weight: 800; color: #0f172a; margin-top: auto; }
+
+        /* Tabulky */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15pt;
+        }
+        .data-table th {
+            text-align: left;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            padding: 8pt;
+            border-bottom: 2px solid #cbd5e1;
+            background: #f8fafc;
+        }
+        .data-table td {
+            padding: 8pt;
+            font-size: 9.5pt;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+            color: #334155;
+        }
+        .data-table tr:last-child td { border-bottom: 1px solid #cbd5e1; }
+        
+        .data-table.total-row tr:last-child td {
+            font-weight: 800;
+            background: #f8fafc;
+            border-bottom: 2px solid #94a3b8;
+            color: #0f172a;
+        }
+
+        .data-table .col-amount { text-align: right; font-weight: 600; white-space: nowrap; width: 100pt; }
+        
+        /* Zvýrazňovací boxy */
+        .alert-box {
+            padding: 10pt 12pt;
+            border-radius: 8pt;
+            margin-bottom: 12pt;
+            font-size: 9pt;
+            display: flex;
+            gap: 8pt;
+            align-items: flex-start;
+        }
+        .alert-info { background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; }
+        .alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+        .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+        /* ==========================================================================
+           TITULNÍ STRANA
+           ========================================================================== */
+        .cover-page {
+            background-color: #0a0f29;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            padding: 25mm 20mm;
+        }
+        
+        .cover-accent {
+            position: absolute;
+            top: -100mm;
+            right: -50mm;
+            width: 200mm;
+            height: 200mm;
+            background: radial-gradient(circle, rgba(79,70,229,0.3) 0%, rgba(10,15,41,0) 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .cover-content {
+            position: relative;
+            z-index: 2;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cover-logo-box {
+            width: 60pt;
+            height: 60pt;
+            background: #ffffff;
+            border-radius: 12pt;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24pt;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            color: #0a0f29;
+            margin-bottom: 60pt;
+        }
+
+        .cover-title {
+            font-size: 46pt;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1.1;
+            margin-bottom: 12pt;
+            letter-spacing: -1px;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            color: #818cf8;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .cover-meta {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20pt;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .meta-block p:first-child {
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 4pt;
+            font-weight: 700;
+        }
+        .meta-block p:last-child {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- =======================================================================
+         STRANA 1: TITULNÍ STRANA
+         ======================================================================= -->
+    <div class="page cover-page">
+        <div class="cover-accent"></div>
+        <div class="cover-content">
+            <div class="cover-logo-box">A</div>
+            
+            <div>
+                <div class="cover-subtitle">Komplexní finanční audit</div>
+                <h1 class="cover-title">Finanční plán<br>a strategie</h1>
+            </div>
+
+            <div class="cover-meta">
+                <div class="meta-block">
+                    <p>Zpracováno pro</p>
+                    <p>Rodina Havdanova</p>
+                </div>
+                <div class="meta-block">
+                    <p>Datum vyhotovení</p>
+                    <p>Březen 2026</p>
+                </div>
+                <div class="meta-block">
+                    <p>Osobní poradce</p>
+                    <p>Bc. Martin Dvořák</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 2: KLIENT A RODINA
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Základní údaje a rodina</div>
+            </div>
+
+            <h2 class="section-title">Profil klienta a domácnosti</h2>
+            <p class="section-desc">Základní informace, ze kterých vychází celá finanční analýza a navržená strategie.</p>
+
+            <h3 class="sub-title">Dospělé osoby v domácnosti</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Jméno a příjmení</th>
+                        <th>Věk</th>
+                        <th>Datum narození</th>
+                        <th>Povolání / Typ příjmu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-bold">Ivan Havdan</td>
+                        <td>48 let</td>
+                        <td>01. 01. 1978</td>
+                        <td>Zaměstnanec (Hlavní klient)</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Hanna Havdan</td>
+                        <td>42 let</td>
+                        <td>01. 01. 1984</td>
+                        <td>Zaměstnanec (Partnerka)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 class="sub-title">Děti a závislé osoby</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Jméno</th>
+                        <th>Věk</th>
+                        <th>Datum narození</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-bold">Ivan Havdan ml.</td>
+                        <td>17 let</td>
+                        <td>17. 10. 2009</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Oleksander Havdan</td>
+                        <td>13 let</td>
+                        <td>07. 10. 2013</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Hanna Havdan</td>
+                        <td>6 let</td>
+                        <td>18. 01. 2020</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Mykola Havdan</td>
+                        <td>20 let</td>
+                        <td>24. 01. 2006</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert-box alert-info mt-6">
+                <div>
+                    <strong>Kontext plánu:</strong> Domácnost čítá celkem 6 členů (2 dospělí, 4 děti). Finanční plán musí zohledňovat vysoké nároky na budoucí start dětí do života a studium, stejně jako ochranu hlavních příjmů rodiny pro případ nenadálých událostí. Součástí analýzy je také firma (s.r.o.).
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Zpracoval: Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 2</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 3: CASHFLOW A REZERVA
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Analýza Cashflow a Rezervy</div>
+            </div>
+
+            <h2 class="section-title">Měsíční bilance domácnosti</h2>
+            <p class="section-desc">Přehled pravidelných čistých příjmů a mandatorních výdajů. Výsledné volné cashflow je klíčové pro realizaci cílů.</p>
+
+            <div class="grid-3 mb-4">
+                <div class="kpi-card">
+                    <div class="kpi-label">Příjmy celkem</div>
+                    <div class="kpi-value text-success">76 502 Kč</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Výdaje celkem</div>
+                    <div class="kpi-value text-danger">- 33 478 Kč</div>
+                </div>
+                <div class="kpi-card dark">
+                    <div class="kpi-label">Volné cashflow (Surplus)</div>
+                    <div class="kpi-value text-success" style="color: #34d399 !important;">43 024 Kč</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Příjmy -->
+                <div>
+                    <h3 class="sub-title">Příjmy (Měsíčně)</h3>
+                    <table class="data-table total-row">
+                        <tbody>
+                            <tr>
+                                <td>Čistá mzda (Ivan)</td>
+                                <td class="col-amount text-success">60 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Čistá mzda (Hanna)</td>
+                                <td class="col-amount text-success">16 502 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM PŘÍJMY</td>
+                                <td class="col-amount text-success">76 502 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Výdaje -->
+                <div>
+                    <h3 class="sub-title">Výdaje (Měsíčně)</h3>
+                    <table class="data-table total-row">
+                        <tbody>
+                            <tr>
+                                <td>Bydlení (nájem, hypotéka)</td>
+                                <td class="col-amount text-danger">18 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Děti (školka, kroužky)</td>
+                                <td class="col-amount text-danger">4 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Pojištění osob a majetku</td>
+                                <td class="col-amount text-danger">4 477 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Ostatní (Spoření, investice)</td>
+                                <td class="col-amount text-danger">7 001 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM VÝDAJE</td>
+                                <td class="col-amount text-danger">33 478 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="section-title mt-6">Finanční rezerva</h2>
+            <div class="avoid-break bg-gray rounded p-4 border" style="border-color: #e2e8f0;">
+                <div class="grid-3">
+                    <div>
+                        <div class="kpi-label">Aktuální hotovost (Účty)</div>
+                        <div class="kpi-value" style="font-size: 14pt;">500 000 Kč</div>
+                    </div>
+                    <div>
+                        <div class="kpi-label">Cíl rezervy (6 měs. výdajů)</div>
+                        <div class="kpi-value text-muted" style="font-size: 14pt;">200 868 Kč</div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: flex-end;">
+                        <span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 6pt 12pt; border-radius: 6pt; font-weight: 800; font-size: 10pt;">
+                            Rezerva splněna
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 3</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 4: BILANCE MAJETKU (NET WORTH) & FIRMA
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Majetek, Závazky a Finance firmy</div>
+            </div>
+
+            <h2 class="section-title">Majetková bilance (Net Worth)</h2>
+            <p class="section-desc">Součet všech aktiv (toho, co vlastníte) a pasiv (toho, co dlužíte).</p>
+
+            <div class="grid-3 mb-4">
+                <div class="kpi-card">
+                    <div class="kpi-label">Aktiva celkem</div>
+                    <div class="kpi-value text-success">36 500 Kč</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Pasiva celkem</div>
+                    <div class="kpi-value text-danger">- 2 000 000 Kč</div>
+                </div>
+                <div class="kpi-card dark">
+                    <div class="kpi-label">Čisté jmění</div>
+                    <div class="kpi-value text-danger" style="color: #fda4af !important;">- 1 963 500 Kč</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3 class="sub-title">Aktiva domácnosti</h3>
+                    <table class="data-table">
+                        <tbody>
+                            <tr>
+                                <td>Investice (Akcie, Fondy, ETF)</td>
+                                <td class="col-amount">6 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Penzijní produkty (PP, DPS)</td>
+                                <td class="col-amount">30 500 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3 class="sub-title">Pasiva (Závazky)</h3>
+                    <table class="data-table">
+                        <tbody>
+                            <tr>
+                                <td>Hypotéka (ČSOB) - Bydlení</td>
+                                <td class="col-amount text-danger">2 000 000 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size: 8.5pt; color: #64748b; margin-top: -10pt;">Detail: Měsíční splátka 18 000 Kč.</p>
+                </div>
+            </div>
+
+            <div class="alert-box alert-warning mt-4 mb-6">
+                <div>
+                    <strong>Interpretace:</strong> Záporné čisté jmění v této fázi je zcela běžné a je způsobeno probíhající hypotékou na bydlení. Důležité je, že dluh se průběžně umořuje a hodnota nemovitosti v čase zpravidla roste.
+                </div>
+            </div>
+
+            <!-- FINANCE FIRMY -->
+            <div class="avoid-break mt-6">
+                <h2 class="section-title">Finance firmy (s.r.o.)</h2>
+                <div class="bg-gray rounded p-4 border" style="border-color: #fde68a; background: #fffbeb;">
+                    <div class="grid-4">
+                        <div>
+                            <div class="kpi-label" style="color: #b45309;">Roční tržby</div>
+                            <div class="kpi-value" style="font-size: 14pt;">17 000 000 Kč</div>
+                        </div>
+                        <div>
+                            <div class="kpi-label" style="color: #b45309;">Roční zisk (EBITDA)</div>
+                            <div class="kpi-value" style="font-size: 14pt;">3 000 000 Kč</div>
+                        </div>
+                        <div>
+                            <div class="kpi-label" style="color: #b45309;">Cash Runway</div>
+                            <div class="kpi-value" style="font-size: 14pt;">20.0 měs.</div>
+                        </div>
+                        <div>
+                            <div class="kpi-label" style="color: #b45309;">Dluhová služba</div>
+                            <div class="kpi-value" style="font-size: 14pt;">0 Kč</div>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size: 9pt; color: #64748b; margin-top: 8pt;">Poznámka: Aktuální hotovostní rezerva firmy činí 5 000 000 Kč. Firma je zdravá a bez dluhů, což umožňuje efektivní využití daňově uznatelných benefitů pro jednatele.</p>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 4</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 5: ŘEŠENÍ ÚVĚRŮ A FINANČNÍ CÍLE
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Úvěry a Finanční Cíle</div>
+            </div>
+
+            <h2 class="section-title">Úvěry k vyřízení</h2>
+            <p class="section-desc">Přehled plánovaných nebo refinancovaných úvěrů a predikce měsíční splátky.</p>
+
+            <div class="avoid-break mb-6">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Účel / Produkt</th>
+                            <th>Banka</th>
+                            <th class="col-amount">Částka (Kč)</th>
+                            <th class="col-narrow text-center">Doba</th>
+                            <th class="col-narrow text-center">Odhad úroku</th>
+                            <th class="col-amount text-primary">Měsíční splátka</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">Bydlení – koupě (Hypotéka)</td>
+                            <td>UniCredit Bank</td>
+                            <td class="col-amount">2 000 000 Kč</td>
+                            <td class="text-center">25 let</td>
+                            <td class="text-center">4.19 %</td>
+                            <td class="col-amount font-bold text-primary" style="font-size: 12pt;">11 105 Kč</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="section-title mt-6">Plánování finančních cílů a Renty</h2>
+            <div class="grid-2 mb-4">
+                <div class="kpi-card" style="background: #f8fafc;">
+                    <div class="kpi-label">Celkový cílový kapitál</div>
+                    <div class="kpi-value text-primary">11 068 890 Kč</div>
+                </div>
+                <div class="kpi-card" style="background: #eef2ff; border-color: #c7d2fe;">
+                    <div class="kpi-label text-primary">Potřeba měsíčně investovat</div>
+                    <div class="kpi-value text-primary">11 299 Kč</div>
+                </div>
+            </div>
+
+            <p class="section-desc">Modelace dosažení vašich cílů při zapojení volného cashflow. Výpočty zohledňují průměrnou roční inflaci 2,5 % pro zachování reálné kupní síly peněz.</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Název cíle</th>
+                        <th class="col-narrow">Horizont</th>
+                        <th class="col-amount">Cílová částka (Dnes)</th>
+                        <th class="col-amount text-primary">Potřeba měsíčně*</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-bold">Oleksander (Studium / Start)</td>
+                        <td>7 let</td>
+                        <td class="col-amount">200 000 Kč</td>
+                        <td class="col-amount font-bold text-primary">1 089 Kč</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Ivan Havdan ml. (Studium)</td>
+                        <td>3 roky</td>
+                        <td class="col-amount">200 000 Kč</td>
+                        <td class="col-amount font-bold text-primary">4 237 Kč</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold">Hanna (Studium / Start)</td>
+                        <td>14 let</td>
+                        <td class="col-amount">200 000 Kč</td>
+                        <td class="col-amount font-bold text-primary">401 Kč</td>
+                    </tr>
+                    <tr style="background: #f8fafc; border-top: 1px solid #cbd5e1;">
+                        <td class="font-bold text-success">Finanční nezávislost (Renta)</td>
+                        <td class="font-bold text-success">25 let</td>
+                        <td class="col-amount font-bold text-success">10 468 890 Kč</td>
+                        <td class="col-amount font-bold text-success" style="font-size: 12pt;">5 572 Kč</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert-box alert-success mt-4">
+                <i class="fa-solid fa-check-circle mt-1"></i>
+                <div>
+                    <strong>Plná realizovatelnost:</strong> Všechny vaše cíle vyžadují celkovou měsíční investici ve výši <strong>11 299 Kč</strong>. Vaše volné cashflow po odečtení nové hypotéky je plně dostačující. Plán je bezpečný a realizovatelný.
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 5</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 6: INVESTIČNÍ STRATEGIE
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Investiční strategie a Portfolio</div>
+            </div>
+
+            <div class="grid-2 items-center mb-6">
+                <div>
+                    <h2 class="section-title">Investiční strategie</h2>
+                    <p class="section-desc mb-0">Zvolený profil rizika a alokace do produktů.</p>
+                </div>
+                <div class="text-right">
+                    <span style="display: inline-block; padding: 6pt 12pt; background: #4f46e5; color: white; font-weight: 800; border-radius: 6pt; font-size: 11pt;">
+                        Profil: DYNAMICKÝ (9 % p.a.)
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid-3 mb-6">
+                <!-- Investiční Boxy -->
+                <div class="data-box" style="border-top: 4px solid #10b981;">
+                    <div class="data-label">Jednorázová investice</div>
+                    <div class="font-bold text-primary" style="font-size: 12pt; margin-bottom: 4pt;">ATRIS (Private Equity)</div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Vklad:</span><span class="font-bold">3 500 000 Kč</span></div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Zhodnocení:</span><span class="font-bold">5 % p.a.</span></div>
+                    <div class="flex justify-between text-sm pt-2 border-t border-slate-200 mt-2"><span class="text-muted">Projekce:</span><span class="font-bold text-success">3 675 000 Kč</span></div>
+                </div>
+
+                <div class="data-box" style="border-top: 4px solid #f59e0b;">
+                    <div class="data-label">Pravidelná investice</div>
+                    <div class="font-bold text-primary" style="font-size: 12pt; margin-bottom: 4pt;">iShares MSCI World ETF</div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Vklad:</span><span class="font-bold">5 500 Kč / m.</span></div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Zhodnocení:</span><span class="font-bold">12 % p.a.</span></div>
+                    <div class="flex justify-between text-sm pt-2 border-t border-slate-200 mt-2"><span class="text-muted">Projekce:</span><span class="font-bold text-success">10 333 656 Kč</span></div>
+                </div>
+
+                <div class="data-box" style="border-top: 4px solid #f59e0b;">
+                    <div class="data-label">Pravidelná investice</div>
+                    <div class="font-bold text-primary" style="font-size: 12pt; margin-bottom: 4pt;">ATRIS</div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Vklad:</span><span class="font-bold">3 000 Kč / m.</span></div>
+                    <div class="flex justify-between text-sm mb-2"><span class="text-muted">Zhodnocení:</span><span class="font-bold">6 % p.a.</span></div>
+                    <div class="flex justify-between text-sm pt-2 border-t border-slate-200 mt-2"><span class="text-muted">Projekce:</span><span class="font-bold text-success">312 222 Kč</span></div>
+                </div>
+            </div>
+
+            <div class="grid-2 align-center mt-6">
+                <!-- SOUHRN PORTFOLIA -->
+                <div class="kpi-card bg-primary-light" style="border-color: #c7d2fe;">
+                    <h3 class="sub-title" style="margin-top: 0;">Shrnutí portfolia</h3>
+                    <table style="margin-bottom: 0;">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted py-2">Jednorázově vloženo</td>
+                                <td class="amount font-bold">3 500 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted py-2">Měsíční vklady (součet)</td>
+                                <td class="amount font-bold">9 500 Kč / m.</td>
+                            </tr>
+                            <tr style="border-top: 1px solid #cbd5e1;">
+                                <td class="font-bold py-2">Celkem investováno</td>
+                                <td class="amount font-bold">5 702 000 Kč</td>
+                            </tr>
+                            <tr style="background: #e0e7ff;">
+                                <td class="font-bold text-primary py-3" style="font-size: 11pt;">Celková budoucí hodnota (Projekce)</td>
+                                <td class="amount font-bold text-primary" style="font-size: 14pt;">15 013 872 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- GRAF -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <h3 style="font-size: 10pt; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15pt;">Složení investic</h3>
+                    <!-- Čisté SVG pro PDF Donut graf -->
+                    <svg width="200" height="200" viewBox="0 0 100 100">
+                        <!-- iShares MSCI (cca 50%) -->
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="125.6" transform="rotate(-90 50 50)"></circle>
+                        <!-- ATRIS Jednoráz (cca 40%) -->
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="150.7" transform="rotate(90 50 50)"></circle>
+                        <!-- Ostatní (10%) -->
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="226" transform="rotate(234 50 50)"></circle>
+                    </svg>
+                    <div style="display: flex; gap: 15pt; margin-top: 15pt; font-size: 8pt; font-weight: 700; color: #64748b;">
+                        <span style="display: flex; align-items: center; gap: 4pt;"><div style="width: 8pt; height: 8pt; background: #f59e0b; border-radius: 2pt;"></div> Akcie (ETF)</span>
+                        <span style="display: flex; align-items: center; gap: 4pt;"><div style="width: 8pt; height: 8pt; background: #10b981; border-radius: 2pt;"></div> Private Equity</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 6</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 7: ZAJIŠTĚNÍ OSOB (Životní pojištění)
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Osobní zabezpečení a pojištění</div>
+            </div>
+
+            <h2 class="section-title">Zajištění příjmů a ochrana rodiny</h2>
+            <p class="section-desc">Doporučené krytí a navržené řešení pojištění pro hlavního živitele a členy analýzy.</p>
+
+            <div class="avoid-break mb-6">
+                <h3 class="sub-title">Klient 1: Ivan Havdan</h3>
+                
+                <div class="data-box" style="border-left: 4px solid #4f46e5; background: white;">
+                    <h4 style="font-size: 10pt; color: #64748b; text-transform: uppercase; margin-bottom: 10pt; letter-spacing: 1px;">Doporučené krytí (Potřeba)</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+                        <tbody>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Smrt (Zajištění rodiny a závazků)</td><td class="text-right font-bold" style="color: #0f172a;">9 200 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Invalidita (Výpadek příjmu)</td><td class="text-right font-bold" style="color: #0f172a;">10 200 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Trvalé následky úrazu (s progresí 8x)</td><td class="text-right font-bold" style="color: #0f172a;">2 000 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Pracovní neschopnost (PN)</td><td class="text-right font-bold" style="color: #0f172a;">700 Kč / den</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="avoid-break mb-6">
+                <h3 class="sub-title">Klient 2: Hanna Havdan (Partner)</h3>
+                <div class="data-box" style="border-left: 4px solid #e11d48; background: white;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+                        <tbody>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Smrt</td><td class="text-right font-bold" style="color: #0f172a;">1 000 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Invalidita (2. a 3. stupeň)</td><td class="text-right font-bold" style="color: #0f172a;">4 500 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155;">Pracovní neschopnost (PN)</td><td class="text-right font-bold" style="color: #0f172a;">350 Kč / den</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="avoid-break">
+                <h3 class="sub-title">Zajištění dětí (Oleksander, Ivan, Hanna, Mykola)</h3>
+                <p style="font-size: 10pt; color: #334155; margin-bottom: 10pt;">
+                    Pro všechny děti doporučujeme nastavit jednotnou ochranu proti vážným událostem s celoživotním dopadem na rodinný rozpočet.
+                </p>
+                <div class="data-box" style="background: #f8fafc;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+                        <tbody>
+                            <tr><td style="padding: 4pt 0; color: #334155; font-weight: 600;">Závažná onemocnění a invalidita (děti)</td><td class="text-right font-bold text-primary">3 000 000 - 5 000 000 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #334155; font-weight: 600;">Trvalé následky úrazu</td><td class="text-right font-bold text-primary">max 2 000 000 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 7</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 8: DAŇOVÁ OPTIMALIZACE A BENEFITY
+         ======================================================================= -->
+    <div class="page">
+        <div class="content">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Daňová optimalizace a Benefity</div>
+            </div>
+
+            <h2 class="section-title">Optimalizace příspěvku do zajištění</h2>
+            <p class="section-desc">Využití firmy (s.r.o.) k úhradě soukromého životního pojištění (IŽP) a penzijního spoření (DPS / DIP) generuje významné daňové úspory díky absenci odvodů na sociální a zdravotní pojištění.</p>
+
+            <div class="grid-2 mt-6">
+                <!-- Levá kalkulace: Mzda -->
+                <div class="data-box" style="background: white; border: 1px solid #e2e8f0;">
+                    <h4 style="font-size: 10pt; color: #64748b; text-transform: uppercase; margin-bottom: 10pt;">Varianta A: Navýšení mzdy</h4>
+                    <table style="width: 100%; font-size: 10pt;">
+                        <tbody>
+                            <tr><td style="padding: 4pt 0;">Hrubá mzda navíc:</td><td class="text-right font-bold">6 218 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #e11d48;">Odvody státu (33,8 %):</td><td class="text-right font-bold text-danger">2 102 Kč</td></tr>
+                            <tr style="border-top: 1px solid #cbd5e1;"><td style="padding: 4pt 0; font-weight: 700;">Celkový náklad firmy:</td><td class="text-right font-bold" style="font-size: 12pt;">8 320 Kč / m.</td></tr>
+                            <tr><td style="padding: 4pt 0;">Zaměstnanec (čistého):</td><td class="text-right font-bold text-primary">4 166 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pravá kalkulace: Benefit -->
+                <div class="data-box highlight" style="background: #1e1b4b; color: white;">
+                    <h4 style="font-size: 10pt; color: #c7d2fe; text-transform: uppercase; margin-bottom: 10pt;">★ Varianta B: Firemní benefit</h4>
+                    <table style="width: 100%; font-size: 10pt; color: white;">
+                        <tbody>
+                            <tr><td style="padding: 4pt 0; color: white;">Příspěvek firmy:</td><td class="text-right font-bold" style="color: white;">4 166 Kč</td></tr>
+                            <tr><td style="padding: 4pt 0; color: #34d399;">Odvody státu:</td><td class="text-right font-bold text-success" style="color: #34d399;">0 Kč</td></tr>
+                            <tr style="border-top: 1px solid #4f46e5;"><td style="padding: 4pt 0; font-weight: 700; color: white;">Celkový náklad firmy:</td><td class="text-right font-bold" style="font-size: 12pt; color: white;">4 166 Kč / m.</td></tr>
+                            <tr><td style="padding: 4pt 0; color: white;">Do pojištění jde:</td><td class="text-right font-bold" style="color: #34d399;">4 166 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid-2 mt-6">
+                <div class="data-box" style="background: #ecfdf5; border-color: #a7f3d0;">
+                    <div style="font-size: 10pt; color: #065f46; text-transform: uppercase; font-weight: 700; margin-bottom: 4pt;">Úspora firmy ročně:</div>
+                    <div style="font-size: 18pt; font-weight: 900; color: #047857;">49 843 Kč</div>
+                </div>
+                <div class="data-box" style="background: #fffbeb; border-color: #fde68a;">
+                    <div style="font-size: 10pt; color: #b45309; text-transform: uppercase; font-weight: 700; margin-bottom: 4pt;">Daňová úspora majitelů (ročně):</div>
+                    <div style="font-size: 18pt; font-weight: 900; color: #d97706;">7 346 Kč</div>
+                    <div style="font-size: 8pt; color: #d97706; margin-top: 4pt;">Efektivní vytažení zisku (DIP/IŽP)</div>
+                </div>
+            </div>
+
+            <div class="alert-box alert-info mt-6" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #334155;">
+                <div>
+                    <strong>Co se stane s 1 000 Kč nákladu firmy?</strong> Při navýšení mzdy jde část na odvody státu a část dostane zaměstnanec v čistém (cca 550 Kč). Při využití firemního příspěvku (benefitu) jde celých 100 % částky přímo na účet pojištění či investice klienta bez jakýchkoliv odvodů.
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+            <span>Strana 8</span>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 9: SHRNUTÍ A PODPISY
+         ======================================================================= -->
+    <div class="page">
+        <div class="content" style="display: flex; flex-direction: column;">
+            <div class="header">
+                <div class="header-logo">Aidvisora</div>
+                <div class="header-title">Závěrečné shrnutí a Akční kroky</div>
+            </div>
+
+            <h2 class="section-title">Akční plán realizace</h2>
+            <p class="section-desc">Seznam kroků nutných k úspěšné implementaci této finanční strategie do reality.</p>
+
+            <div style="border-left: 4px solid #10b981; padding-left: 20pt; margin-bottom: 40pt; margin-top: 20pt;">
+                <ol style="color: #334155; font-size: 11pt; line-height: 2; padding-left: 15pt;">
+                    <li><strong>Úvěry:</strong> Podpis žádosti a dodání příjmů pro schválení nové hypotéky 2 000 000 Kč u UniCredit Bank.</li>
+                    <li><strong>Zajištění příjmů:</strong> Sjednání nových rizikových smluv pro Ivana (krytí invalidity 10.2M) a Hannu.</li>
+                    <li><strong>Daňová optimalizace a Firma:</strong> Nastavení firemního příspěvku na IŽP ve výši 4 166 Kč/m. pro efektivní vytažení prostředků z firmy bez odvodů.</li>
+                    <li><strong>Investice:</strong> Otevření účtů u ATRIS (jednorázový vklad 3.5M) a založení majetkového účtu pro nákup iShares S&P 500 ETF (pravidelně 5 500 Kč měsíčně).</li>
+                </ol>
+            </div>
+
+            <div class="alert-box alert-info">
+                <div style="font-size: 14pt; margin-right: 10pt; color: #4f46e5;">ℹ️</div>
+                <div style="font-size: 10pt;">
+                    <strong>Co se stane teď?</strong> Po odsouhlasení tohoto plánu zašlu konkrétní návrhy smluv do vašeho Klientského portálu, kde si je budete moci v klidu prostudovat a následně biometricky podepsat. Tím se spustí samotná realizace plánu.
+                </div>
+            </div>
+
+            <!-- Podpisová doložka na konci stránky -->
+            <div class="grid-2" style="margin-top: auto; padding-top: 50pt;">
+                <div class="text-center">
+                    <div style="border-bottom: 1px solid #94a3b8; width: 80%; margin: 0 auto 10pt auto; height: 40pt;"></div>
+                    <p style="font-weight: 700; font-size: 11pt; color: #1e1b4b;">Podpis klientů</p>
+                    <p class="text-muted" style="font-size: 10pt;">Ivan Havdan, Hanna Havdan</p>
+                </div>
+                <div class="text-center">
+                    <div style="border-bottom: 1px solid #94a3b8; width: 80%; margin: 0 auto 10pt auto; height: 40pt;"></div>
+                    <p style="font-weight: 700; font-size: 11pt; color: #1e1b4b;">Podpis poradce</p>
+                    <p class="text-muted" style="font-size: 10pt;">Bc. Martin Dvořák</p>
+                </div>
+            </div>
+
+        </div>
+        <div class="footer">
+            <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz | +420 777 888 999</span>
+            <span>Strana 9</span>
+        </div>
+    </div>
+
+</body>
+</html>

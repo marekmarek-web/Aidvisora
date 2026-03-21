@@ -55,24 +55,24 @@ export function LifeResultsPanel({
   ];
 
   return (
-    <div className="bg-[#0a0f29] text-white rounded-2xl shadow-2xl shadow-[#0a0f29]/30 border border-slate-800 p-6 md:p-8 relative overflow-hidden">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0f29] p-6 text-white shadow-2xl shadow-[#0a0f29]/30 md:p-8">
       <div className="absolute top-0 right-0 w-48 h-48 bg-[#0B3A7A] opacity-20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none" />
 
-      <h3 className="text-slate-400 font-medium mb-6 relative z-10 text-sm uppercase tracking-wider flex items-center justify-between flex-wrap gap-2">
+      <h3 className="relative z-10 mb-6 flex flex-wrap items-center justify-between gap-2 text-sm font-medium uppercase tracking-wider text-slate-400">
         Doporučené min. pojistné částky
-        <span className="text-indigo-500 text-xs normal-case bg-indigo-500/10 px-2 py-1 rounded font-bold">
+        <span className="rounded bg-indigo-500/10 px-2 py-1 text-xs font-bold normal-case text-indigo-400">
           Klesající do 65 let
         </span>
       </h3>
 
-      <div className="space-y-0 relative z-10">
+      <div className="relative z-10 space-y-0 rounded-xl border border-white/10 bg-white/5 p-1.5">
         {rows.map((row) => {
           const Icon = row.icon;
           return (
             <div
               key={row.label}
-              className={`flex justify-between items-center py-3 border-b border-white/10 ${row.highlight ? "bg-white/5 -mx-4 px-4 rounded-lg border-none my-1" : ""}`}
+              className={`flex items-center justify-between rounded-lg border-b border-white/10 px-3 py-3 ${row.highlight ? "my-1 border-none bg-white/10" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div
@@ -91,7 +91,7 @@ export function LifeResultsPanel({
                   <div className="text-xs text-slate-500">{row.subtext}</div>
                 </div>
               </div>
-              <div className="text-right">
+                <div className="text-right pl-2">
                 <div
                   className={`text-xl md:text-2xl font-bold tracking-tight ${row.highlight ? "text-emerald-400" : "text-white"}`}
                 >
@@ -105,7 +105,7 @@ export function LifeResultsPanel({
           );
         })}
 
-        <div className="pt-4 border-t border-white/10 mt-2">
+        <div className="mt-4 border-t border-white/10 pt-4">
           <div className="flex justify-between items-center mb-1">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/5 rounded-lg">
@@ -162,7 +162,7 @@ export function LifeResultsPanel({
             <button
               type="button"
               onClick={onCtaPrimary}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-5 px-6 rounded-xl shadow-lg transition-all min-h-[48px] flex items-center justify-center gap-3"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-5 font-extrabold text-white shadow-lg transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
             >
               <span className="text-lg">Chci řešení na míru</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ export function LifeResultsPanel({
             <button
               type="button"
               onClick={onCtaCheck}
-              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-sm min-h-[44px]"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
             >
               <svg
                 className="w-4 h-4 text-slate-400"

@@ -35,6 +35,8 @@ body{font-family:var(--ff-sans);background:var(--stone-100);color:var(--stone-70
 .sb-brand{padding:var(--s8) var(--s6) var(--s6);border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:2}
 .sb-logo{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
 .sb-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--gold-500) 0%,var(--gold-300) 100%);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-family:var(--ff-serif);font-size:16px;color:var(--navy-900);flex-shrink:0;box-shadow:0 2px 8px rgba(201,168,76,0.3)}
+.sb-logo-img{display:block;max-width:24px;max-height:24px;object-fit:contain}
+.sb-logo-fallback{font-family:var(--ff-serif);font-size:16px;line-height:1}
 .sb-logo-name{font-size:16px;font-weight:700;color:var(--white);letter-spacing:-0.3px}
 .sb-client-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r-md);padding:var(--s3) var(--s4)}
 .sb-client-label{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,0.25);margin-bottom:3px}
@@ -164,10 +166,15 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .product-name{font-family:var(--ff-serif);font-size:30px;font-weight:400;color:var(--stone-900);letter-spacing:-0.5px;line-height:1.2}
 .product-meta{font-size:12.5px;color:var(--stone-400);margin-top:4px}
 .product-invest{text-align:right;flex-shrink:0;padding-left:var(--s6)}
+.product-logo-wrap{margin-bottom:8px;display:flex;justify-content:flex-end}
+.product-logo{height:28px;max-width:148px;object-fit:contain;display:block}
+.product-logo-fallback{min-height:28px;padding:4px 8px;border:1px solid var(--stone-200);border-radius:var(--r-sm);font-size:10px;font-weight:700;line-height:1.1;color:var(--stone-500);text-transform:uppercase;letter-spacing:.6px;background:var(--stone-50);display:inline-flex;align-items:center;justify-content:center;text-align:center}
 .product-invest-label{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--stone-400);margin-bottom:4px}
 .product-invest-amt{font-family:var(--ff-serif);font-size:26px;color:var(--navy-800);letter-spacing:-0.5px;white-space:nowrap}
 .product-card-body{padding:var(--s6) var(--s8)}
 .product-desc{font-size:13.5px;line-height:1.75;color:var(--stone-600);margin-bottom:var(--s6);padding-bottom:var(--s6);border-bottom:1px solid var(--stone-100)}
+.product-hero-image-wrap{margin:0 0 var(--s5);border:1px solid var(--stone-200);border-radius:var(--r-md);overflow:hidden;background:var(--stone-50)}
+.product-hero-image{width:100%;max-height:200px;object-fit:cover;display:block}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--stone-100);border:1px solid var(--stone-100);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--s6)}
 .stat-cell{background:var(--white);padding:var(--s4) var(--s5)}
 .stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--stone-400);margin-bottom:4px}
@@ -292,12 +299,80 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 @media print{
   .sidebar{display:none!important}
   .main{margin-left:0!important}
-  .page{min-height:auto;page-break-inside:auto;page-break-after:auto}
+  .page{min-height:auto;page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;overflow:hidden}
+  .page:last-child{page-break-after:auto;break-after:auto}
   .page.hero,.page.company-hero{page-break-after:always}
-  .sec-header{page-break-after:avoid}
-  .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row{page-break-inside:avoid}
+  .page-bar{height:1.6mm}
+  .page-inner{padding:8mm 7mm}
+  .hero-lines{display:none!important}
+  .sec-header{margin-bottom:12px;page-break-after:avoid}
+  .sec-title{font-size:28px;line-height:1.2;margin-bottom:4px}
+  .sec-desc{font-size:11px;line-height:1.45}
+  .sec-number{font-size:9px}
+  .kpi-row{margin-bottom:10px}
+  .kpi-cell{padding:10px 11px}
+  .kpi-label{font-size:8px}
+  .kpi-value{font-size:20px}
+  .kpi-sub{font-size:9px}
+  .tbl-wrap,.product-card,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area{page-break-inside:avoid;break-inside:avoid}
+  .tbl-cap{padding:7px 10px}
+  table.dt thead th{padding:6px 8px;font-size:8px}
+  table.dt td{padding:6px 8px;font-size:10px}
+  .cf-item,.ins-row,.gap-row,.opp-row{padding:6px 8px}
+  .cf-name,.ins-sub{font-size:10px}
+  .cf-amt,.ins-amt,.opp-val{font-size:11px}
+  .callout{padding:7px 10px;font-size:10px;margin:8px 0}
+  .product-card{margin-bottom:10px}
+  .product-card-head{padding:10px 12px 8px}
+  .product-card-body{padding:8px 12px}
+  .product-card-foot{padding:7px 12px}
+  .product-name{font-size:22px}
+  .product-invest-amt{font-size:18px}
+  .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px}
+  .product-hero-image{max-height:90px}
+  .stat-cell{padding:7px 8px}
+  .stat-lbl{font-size:7.5px}
+  .stat-val{font-size:11px}
+  .bar-section{margin-bottom:8px}
+  .bar-section-title{font-size:8px;margin-bottom:4px}
+  .bar-row{gap:7px;margin-bottom:4px}
+  .bar-row-name{flex:0 0 98px;font-size:9px}
+  .bar-pct{font-size:9px;flex-basis:30px}
+  .check-list{gap:4px}
+  .check-list li{font-size:9px;line-height:1.35}
+  .chart-wrap{padding:8px}
+  .chart-title{font-size:8px;margin-bottom:8px}
+  .chart-title-right{font-size:14px}
+  .alloc-section{gap:12px}
+  .alloc-legend{gap:4px}
+  .legend-row{font-size:10px}
+  .legend-pct{font-size:12px}
+  .goal-row{padding:8px 10px;margin-bottom:8px}
+  .goal-name{font-size:11px}
+  .goal-amt-val{font-size:15px}
+  .goal-monthly,.goal-meta{font-size:9px}
+  .ins-person-header{padding:8px 10px;margin-bottom:8px}
+  .ins-person-icon{width:28px;height:28px;font-size:13px}
+  .ins-person-income{font-size:15px}
+  .ins-name{font-size:11px}
+  .ins-detail-grid{gap:8px}
+  .ins-detail-card{padding:8px}
+  .ins-detail-title{font-size:8px;margin-bottom:6px;padding-bottom:4px}
+  .ins-line{font-size:9px;padding:3px 0}
+  .risk-grid{gap:8px;margin-bottom:10px}
+  .risk-item{padding:8px 10px;min-height:42px}
+  .risk-name{font-size:10px}
+  .risk-status{font-size:9px}
+  .formula-box{padding:8px 10px}
+  .formula-title{font-size:8px;margin-bottom:5px}
+  .formula-expr{font-size:13px;margin-bottom:4px}
+  .formula-desc{font-size:9px;line-height:1.4}
+  .sig-area{margin-top:16px;padding-top:10px;gap:20px}
+  .sig-name{font-size:11px}
+  .sig-role{font-size:9px}
+  .legal{font-size:8px;line-height:1.35;margin-top:10px;padding-top:8px}
   .page-inner>*{animation:none!important}
   body{background:white}
-  @page{size:A4;margin:12mm 10mm}
+  @page{size:A4;margin:8mm}
 }
 `;

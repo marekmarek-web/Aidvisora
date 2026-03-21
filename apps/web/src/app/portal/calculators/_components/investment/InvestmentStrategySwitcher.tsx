@@ -17,11 +17,11 @@ export function InvestmentStrategySwitcher({
   onSelect,
 }: InvestmentStrategySwitcherProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <label className="text-xs font-bold text-blue-200 uppercase tracking-widest">
+    <div className="space-y-3">
+      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
         Vyberte strategii
-      </label>
-      <div className="inline-flex bg-slate-900/50 p-1.5 rounded-xl backdrop-blur-md border border-white/10 w-full sm:w-fit flex-wrap gap-2 sm:gap-1">
+      </p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {profiles.map((profile, index) => {
           const Icon = PROFILE_ICONS[index] ?? Shield;
           const isActive = index === activeIndex;
@@ -30,17 +30,22 @@ export function InvestmentStrategySwitcher({
               key={profile.id}
               type="button"
               onClick={() => onSelect(index)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-bold transition-all duration-200 min-h-[44px] touch-manipulation ${
+              className={`group flex min-h-[48px] touch-manipulation items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 ${
                 isActive
-                  ? "bg-indigo-600 text-white shadow-md"
-                  : "text-slate-300 hover:text-white hover:bg-white/10"
+                  ? "border-indigo-200 bg-indigo-50 text-indigo-700 shadow-sm"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
               }`}
               data-profile={index}
+              aria-pressed={isActive}
             >
-              <Icon className="w-4 h-4 shrink-0" />
-              {index === 0 && "Konzervativní"}
-              {index === 1 && "Vyvážená"}
-              {index === 2 && "Dynamická"}
+              <span
+                className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                  isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+              </span>
+              <span className="truncate">{profile.name}</span>
             </button>
           );
         })}

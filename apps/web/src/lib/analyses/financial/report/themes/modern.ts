@@ -44,6 +44,8 @@ body{font-family:var(--ff-data);background:var(--surface-2);color:var(--ink-2);l
 .sb-brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:2}
 .sb-logo{display:flex;align-items:center;gap:9px;margin-bottom:14px}
 .sb-logo-mark{width:30px;height:30px;background:var(--brand);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-family:var(--ff-ui);font-weight:800;font-size:14px;color:#fff;flex-shrink:0;letter-spacing:-0.5px;box-shadow:none}
+.sb-logo-img{display:block;max-width:22px;max-height:22px;object-fit:contain}
+.sb-logo-fallback{font-family:var(--ff-ui);font-weight:800;font-size:14px;line-height:1}
 .sb-logo-name{font-family:var(--ff-ui);font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);letter-spacing:-0.3px}
 .sb-client-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r2);padding:9px 11px}
 .sb-client-label{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:rgba(255,255,255,0.28);margin-bottom:3px}
@@ -172,10 +174,15 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .product-name{font-family:var(--ff-ui);font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-0.8px;line-height:1.2}
 .product-meta{font-size:12px;color:var(--ink-4);margin-top:3px}
 .product-invest{text-align:right;flex-shrink:0;padding-left:20px}
+.product-logo-wrap{margin-bottom:8px;display:flex;justify-content:flex-end}
+.product-logo{height:28px;max-width:148px;object-fit:contain;display:block}
+.product-logo-fallback{min-height:28px;padding:4px 8px;border:1px solid var(--surface-3);border-radius:var(--r2);font-size:10px;font-weight:700;line-height:1.1;color:var(--ink-4);text-transform:uppercase;letter-spacing:.6px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;text-align:center}
 .product-invest-label{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-4);margin-bottom:4px}
 .product-invest-amt{font-family:var(--ff-ui);font-size:22px;font-weight:800;color:var(--brand);letter-spacing:-0.5px;white-space:nowrap}
 .product-card-body{padding:20px 28px}
 .product-desc{font-size:13px;line-height:1.75;color:var(--ink-3);margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--surface-2);max-height:10em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
+.product-hero-image-wrap{margin:0 0 16px;border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;background:var(--surface-2)}
+.product-hero-image{width:100%;max-height:200px;object-fit:cover;display:block}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--surface-3);border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;margin-bottom:20px}
 .stat-cell{background:var(--surface);padding:12px 14px}
 .stat-lbl{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-4);margin-bottom:3px}
@@ -302,21 +309,86 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 @media print{
   .sidebar{display:none!important}
   .main{margin-left:0!important}
-  .page{min-height:auto;page-break-inside:auto;page-break-after:auto;background:#fff!important}
+  .page{min-height:auto;page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;overflow:hidden;background:#fff!important}
+  .page:last-child{page-break-after:auto;break-after:auto}
   .page:nth-child(even),.page:nth-child(odd){background:#fff!important}
-  .page.hero{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always}
-  .page.company-hero{background:var(--navy-2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-after:always}
+  .page.hero{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page.company-hero{background:var(--navy-2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page-bar{height:1.5mm}
+  .page-inner{padding:8mm 7mm}
+  .hero-lines{display:none!important}
   .hero-title,.hero-subtitle,.hero-eyebrow,.hero-meta-val,.hero-meta-label,.hero-meta-sub,.hero-wordmark,.hero-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .sec-header{page-break-after:avoid}
-  .tbl-wrap,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area{page-break-inside:avoid}
-  .ins-row,.gap-row,.opp-row,.cf-item{page-break-inside:avoid}
-  .product-card{page-break-before:always;page-break-inside:avoid;margin-bottom:16px}
-  .product-desc{max-height:none;-webkit-line-clamp:unset}
+  .sec-header{margin-bottom:12px;page-break-after:avoid}
+  .sec-title{font-size:24px;line-height:1.2;margin-bottom:4px}
+  .sec-desc{font-size:11px;line-height:1.45}
+  .sec-number{font-size:9px}
+  .kpi-row{margin-bottom:10px}
+  .kpi-cell{padding:10px 11px}
+  .kpi-label{font-size:8px}
+  .kpi-value{font-size:18px}
+  .kpi-sub{font-size:9px}
+  .tbl-wrap,.chart-wrap,.callout,.kpi-row,.risk-grid,.goal-row,.ins-person-header,.formula-box,.sig-area,.product-card{page-break-inside:avoid;break-inside:avoid}
+  .tbl-cap{padding:7px 10px}
+  table.dt thead th{padding:6px 8px;font-size:8px}
+  table.dt td{padding:6px 8px;font-size:10px}
+  .cf-item,.ins-row,.gap-row,.opp-row{padding:6px 8px}
+  .cf-name,.ins-sub{font-size:10px}
+  .cf-amt,.ins-amt,.opp-val{font-size:11px}
+  .callout{padding:7px 10px;font-size:10px;margin:8px 0}
+  .product-card{margin-bottom:10px}
+  .product-card-head{padding:10px 12px 8px}
+  .product-card-body{padding:8px 12px}
+  .product-card-foot{padding:7px 12px}
+  .product-name{font-size:20px}
+  .product-invest-amt{font-size:17px}
+  .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px;max-height:5.8em;-webkit-line-clamp:4}
+  .product-hero-image{max-height:90px}
+  .stat-cell{padding:7px 8px}
+  .stat-lbl{font-size:7.5px}
+  .stat-val{font-size:11px}
+  .bar-section{margin-bottom:8px}
+  .bar-section-title{font-size:8px;margin-bottom:4px}
+  .bar-row{gap:7px;margin-bottom:4px}
+  .bar-row-name{flex:0 0 98px;font-size:9px}
+  .bar-pct{font-size:9px;flex-basis:30px}
+  .check-list{gap:4px}
+  .check-list li{font-size:9px;line-height:1.35}
+  .chart-wrap{padding:8px}
+  .chart-title{font-size:8px;margin-bottom:8px}
+  .chart-title-right{font-size:14px}
+  .alloc-section{gap:12px}
+  .alloc-legend{gap:4px}
+  .legend-row{font-size:10px}
+  .legend-pct{font-size:12px}
+  .goal-row{padding:8px 10px;margin-bottom:8px}
+  .goal-name{font-size:11px}
+  .goal-amt-val{font-size:14px}
+  .goal-monthly,.goal-meta{font-size:9px}
+  .ins-person-header{padding:8px 10px;margin-bottom:8px}
+  .ins-person-icon{width:28px;height:28px;font-size:13px}
+  .ins-person-income{font-size:14px}
+  .ins-name{font-size:11px}
+  .ins-detail-grid{gap:8px}
+  .ins-detail-card{padding:8px}
+  .ins-detail-title{font-size:8px;margin-bottom:6px;padding-bottom:4px}
+  .ins-line{font-size:9px;padding:3px 0}
+  .risk-grid{gap:8px;margin-bottom:10px}
+  .risk-item{padding:8px 10px;min-height:42px}
+  .risk-name{font-size:10px}
+  .risk-status{font-size:9px}
+  .formula-box{padding:8px 10px}
+  .formula-title{font-size:8px;margin-bottom:5px}
+  .formula-expr{font-size:13px;margin-bottom:4px}
+  .formula-desc{font-size:9px;line-height:1.4}
+  .sig-area{margin-top:16px;padding-top:10px;gap:20px}
+  .sig-name{font-size:11px}
+  .sig-role{font-size:9px}
+  .legal{font-size:8px;line-height:1.35;margin-top:10px;padding-top:8px}
   .page-inner>*{animation:none!important}
   body{background:white}
   .tbl-cap,.product-card-foot,.ins-detail-card{background:#fff!important}
   table.dt thead tr{background:#f8f9fa!important}
   table.dt tbody tr.total td{background:#f8f9fa!important}
-  @page{size:A4;margin:12mm 10mm}
+  @page{size:A4;margin:8mm}
 }
 `;

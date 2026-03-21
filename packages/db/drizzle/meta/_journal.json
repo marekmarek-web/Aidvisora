@@ -92,6 +92,13 @@
       "when": 1774500000000,
       "tag": "0013_advisor_vision_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1774600000000,
+      "tag": "0014_document_review_redesign",
+      "breakpoints": true
     }
   ]
 }

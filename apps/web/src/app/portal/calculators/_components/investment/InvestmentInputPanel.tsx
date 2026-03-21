@@ -40,96 +40,135 @@ export function InvestmentInputPanel({
       Math.max(INVESTMENT_DEFAULTS.yearsMin, v),
     );
 
+  const getSliderBackground = (value: number, min: number, max: number) => {
+    const ratio = ((value - min) / (max - min)) * 100;
+    return `linear-gradient(90deg, #4f46e5 ${ratio}%, #e2e8f0 ${ratio}%)`;
+  };
+
   return (
-    <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-[#D6E6FF]/60">
-      <div className="mb-8">
-        <div className="flex justify-between items-end mb-4">
-          <label className="text-sm font-bold text-slate-600 tracking-wide">
-            <span className="uppercase">Počáteční vklad</span>{" "}
-            <span className="text-slate-400 font-normal normal-case">(v Kč)</span>
-          </label>
-          <input
-            type="text"
-            value={formatCurrency(initial)}
-            onChange={(e) =>
-              onInitialChange(clampInitial(parseCurrency(e.target.value)))
-            }
-            className="text-right font-extrabold text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-56 bg-transparent transition-colors p-1"
-          />
-        </div>
-        <input
-          type="range"
-          min={INVESTMENT_DEFAULTS.initialMin}
-          max={INVESTMENT_DEFAULTS.initialMax}
-          step={INVESTMENT_DEFAULTS.initialStep}
-          value={initial}
-          onChange={(e) =>
-            onInitialChange(clampInitial(parseInt(e.target.value, 10)))}
-          className="w-full min-h-[28px] touch-manipulation"
-        />
-        <div className="flex justify-between text-xs font-medium text-slate-400 mt-2">
-          <span>0 Kč</span>
-          <span>2 mil.</span>
-        </div>
-      </div>
-
-      <div className="mb-8">
-        <div className="flex justify-between items-end mb-4">
-          <label className="text-sm font-bold text-slate-600 tracking-wide">
-            <span className="uppercase">Měsíční investice</span>{" "}
-            <span className="text-slate-400 font-normal normal-case">(v Kč)</span>
-          </label>
-          <input
-            type="text"
-            value={formatCurrency(monthly)}
-            onChange={(e) =>
-              onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))
-            }
-            className="text-right font-extrabold text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-indigo-500 outline-none w-56 bg-transparent transition-colors p-1"
-          />
-        </div>
-        <input
-          type="range"
-          min={INVESTMENT_DEFAULTS.monthlyMin}
-          max={INVESTMENT_DEFAULTS.monthlyMax}
-          step={INVESTMENT_DEFAULTS.monthlyStep}
-          value={monthly}
-          onChange={(e) =>
-            onMonthlyChange(clampMonthly(parseInt(e.target.value, 10)))}
-          className="w-full min-h-[28px] touch-manipulation"
-        />
-        <div className="flex justify-between text-xs font-medium text-slate-400 mt-2">
-          <span>500 Kč</span>
-          <span>50 tis.</span>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-slate-600 mb-4 uppercase tracking-wide">
-          Doba investice
-        </label>
-        <div className="flex items-center gap-4">
+    <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 md:p-7">
+      <div className="space-y-6 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:p-5">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-600">
+              <span className="uppercase tracking-wide">Počáteční vklad</span>{" "}
+              <span className="font-normal text-slate-400">(v Kč)</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCurrency(initial)}
+              onChange={(e) =>
+                onInitialChange(clampInitial(parseCurrency(e.target.value)))
+              }
+              className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-right font-extrabold text-2xl text-slate-900 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 sm:w-56"
+              aria-label="Počáteční vklad"
+            />
+          </div>
           <input
             type="range"
-            min={INVESTMENT_DEFAULTS.yearsMin}
-            max={INVESTMENT_DEFAULTS.yearsMax}
-            step={1}
-            value={years}
+            min={INVESTMENT_DEFAULTS.initialMin}
+            max={INVESTMENT_DEFAULTS.initialMax}
+            step={INVESTMENT_DEFAULTS.initialStep}
+            value={initial}
             onChange={(e) =>
-              onYearsChange(clampYears(parseInt(e.target.value, 10)))}
-            className="flex-1 min-h-[28px] touch-manipulation"
+              onInitialChange(clampInitial(parseInt(e.target.value, 10)))}
+            className="investment-slider w-full min-h-[44px] touch-manipulation"
+            style={{
+              background: getSliderBackground(
+                initial,
+                INVESTMENT_DEFAULTS.initialMin,
+                INVESTMENT_DEFAULTS.initialMax,
+              ),
+            }}
+            aria-label="Slider počátečního vkladu"
           />
-          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-slate-900 min-w-[80px] text-center">
-            {years} let
+          <div className="flex justify-between text-xs font-semibold text-slate-400">
+            <span>0 Kč</span>
+            <span>2 mil.</span>
           </div>
         </div>
-        <div className="flex justify-between text-xs font-medium text-slate-400 mt-2">
-          <span>3 roky</span>
-          <span>30 let</span>
+
+        <div className="h-px bg-slate-200" />
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-600">
+              <span className="uppercase tracking-wide">Měsíční investice</span>{" "}
+              <span className="font-normal text-slate-400">(v Kč)</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCurrency(monthly)}
+              onChange={(e) =>
+                onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))
+              }
+              className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-right font-extrabold text-2xl text-slate-900 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 sm:w-56"
+              aria-label="Měsíční investice"
+            />
+          </div>
+          <input
+            type="range"
+            min={INVESTMENT_DEFAULTS.monthlyMin}
+            max={INVESTMENT_DEFAULTS.monthlyMax}
+            step={INVESTMENT_DEFAULTS.monthlyStep}
+            value={monthly}
+            onChange={(e) =>
+              onMonthlyChange(clampMonthly(parseInt(e.target.value, 10)))}
+            className="investment-slider w-full min-h-[44px] touch-manipulation"
+            style={{
+              background: getSliderBackground(
+                monthly,
+                INVESTMENT_DEFAULTS.monthlyMin,
+                INVESTMENT_DEFAULTS.monthlyMax,
+              ),
+            }}
+            aria-label="Slider měsíční investice"
+          />
+          <div className="flex justify-between text-xs font-semibold text-slate-400">
+            <span>500 Kč</span>
+            <span>50 tis.</span>
+          </div>
+        </div>
+
+        <div className="h-px bg-slate-200" />
+
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold uppercase tracking-wide text-slate-600">
+            Doba investice
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={INVESTMENT_DEFAULTS.yearsMin}
+              max={INVESTMENT_DEFAULTS.yearsMax}
+              step={1}
+              value={years}
+              onChange={(e) =>
+                onYearsChange(clampYears(parseInt(e.target.value, 10)))}
+              className="investment-slider min-h-[44px] flex-1 touch-manipulation"
+              style={{
+                background: getSliderBackground(
+                  years,
+                  INVESTMENT_DEFAULTS.yearsMin,
+                  INVESTMENT_DEFAULTS.yearsMax,
+                ),
+              }}
+              aria-label="Slider doby investice"
+            />
+            <div className="min-w-[92px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-center font-bold text-slate-900">
+              {years} let
+            </div>
+          </div>
+          <div className="flex justify-between text-xs font-semibold text-slate-400">
+            <span>3 roky</span>
+            <span>30 let</span>
+          </div>
         </div>
       </div>
 
-      <div className="mt-8 bg-blue-50/50 border border-blue-100/50 rounded-xl p-4 flex items-start gap-3">
+      <div className="mt-5 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
         <svg
           className="w-4 h-4 text-[#0B3A7A] mt-1 shrink-0"
           fill="currentColor"
@@ -143,10 +182,53 @@ export function InvestmentInputPanel({
           />
         </svg>
         <div className="text-sm text-slate-600">
-          <strong className="block text-slate-900 mb-1">{profileTitle}</strong>
+          <strong className="mb-1 block text-slate-900">{profileTitle}</strong>
           <span>{profileDescription}</span>
         </div>
       </div>
+
+      <style jsx>{`
+        .investment-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 8px;
+          border-radius: 9999px;
+          cursor: pointer;
+        }
+        .investment-slider::-webkit-slider-runnable-track {
+          height: 8px;
+          border-radius: 9999px;
+          background: transparent;
+        }
+        .investment-slider::-moz-range-track {
+          height: 8px;
+          border-radius: 9999px;
+          background: transparent;
+        }
+        .investment-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          margin-top: -6px;
+          border-radius: 9999px;
+          border: 3px solid #fff;
+          background: #4f46e5;
+          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+        }
+        .investment-slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border: 3px solid #fff;
+          border-radius: 9999px;
+          background: #4f46e5;
+          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+        }
+        .investment-slider:focus-visible {
+          outline: 2px solid #6366f1;
+          outline-offset: 4px;
+        }
+      `}</style>
     </div>
   );
 }

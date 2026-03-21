@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Finanční plán - Nikola Chloubová</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==========================================================================
+           1. CSS PROMĚNNÉ & DESIGN SYSTÉM (McKinsey / BCG Print Style)
+           ========================================================================== */
+        :root {
+            /* Aidvisora Brand Colors */
+            --c-primary: #1e1b4b;       /* Indigo 950 - Hlavní texty a nadpisy */
+            --c-primary-light: #4f46e5; /* Indigo 600 - Akcenty, linky */
+            --c-primary-bg: #eef2ff;    /* Indigo 50  - Podbarvení */
+            
+            --c-success: #10b981;       /* Emerald 500 - Zisk, Aktiva */
+            --c-success-bg: #ecfdf5;    
+            
+            --c-danger: #e11d48;        /* Rose 600 - Výdaje, Pasiva, Rizika */
+            --c-danger-bg: #fff1f2;     
+            
+            --c-warning: #f59e0b;       /* Amber 500 */
+            
+            /* Neutrals for Clean Print */
+            --slate-50:  #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+
+            /* Typografie */
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        /* ==========================================================================
+           2. RESET & ZÁKLADNÍ NASTAVENÍ
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            background-color: var(--slate-300); /* Pouze pro náhled na webu */
+            font-family: var(--font-body);
+            color: var(--slate-700);
+            font-size: 9pt;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20pt;
+            padding: 20pt 0;
+        }
+
+        h1, h2, h3, h4, h5 { 
+            font-family: var(--font-display); 
+            color: var(--c-primary); 
+            line-height: 1.3; 
+        }
+
+        p { margin-bottom: 8pt; }
+
+        /* ==========================================================================
+           3. FORMÁT A4 & ZALAMOVÁNÍ (CRITICAL FOR PDF)
+           ========================================================================== */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-wrapper {
+            padding: 20mm 20mm 15mm 20mm;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Zabránění rozseknutí bloků napůl */
+        .break-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        .page-break-before {
+            page-break-before: always;
+            break-before: page;
+        }
+
+        @media print {
+            body { background-color: transparent; padding: 0; gap: 0; display: block; }
+            .page { box-shadow: none; margin: 0; page-break-after: always; min-height: 297mm; height: 297mm; overflow: hidden; }
+            @page { size: A4 portrait; margin: 0; }
+        }
+
+        /* ==========================================================================
+           4. TYPOGRAFIE (Utility classes)
+           ========================================================================== */
+        .text-xs { font-size: 7.5pt; }
+        .text-sm { font-size: 8.5pt; }
+        .text-base { font-size: 9.5pt; }
+        .text-lg { font-size: 11pt; }
+        .text-xl { font-size: 14pt; }
+        .text-2xl { font-size: 18pt; }
+        .text-3xl { font-size: 24pt; }
+        
+        .font-normal { font-weight: 400; }
+        .font-medium { font-weight: 500; }
+        .font-bold { font-weight: 600; }
+        .font-black { font-weight: 800; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .uppercase { text-transform: uppercase; }
+        .tracking-wide { letter-spacing: 0.5pt; }
+        .tracking-wider { letter-spacing: 1pt; }
+        
+        /* Kritické pro zabránění přetečení měny na nový řádek */
+        .whitespace-nowrap { white-space: nowrap; }
+
+        /* Textové barvy */
+        .text-primary { color: var(--c-primary-light); }
+        .text-primary-dark { color: var(--c-primary); }
+        .text-success { color: var(--c-success); }
+        .text-danger { color: var(--c-danger); }
+        .text-warning { color: var(--c-warning); }
+        .text-muted { color: var(--slate-500); }
+        .text-light { color: var(--slate-400); }
+        .text-white { color: #ffffff; }
+
+        /* ==========================================================================
+           5. LAYOUT & SPACING (Utility classes)
+           ========================================================================== */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        
+        .grid { display: grid; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        
+        .gap-2 { gap: 8pt; }
+        .gap-4 { gap: 16pt; }
+        .gap-6 { gap: 24pt; }
+
+        .mt-2 { margin-top: 8pt; } .mb-2 { margin-bottom: 8pt; }
+        .mt-4 { margin-top: 16pt; } .mb-4 { margin-bottom: 16pt; }
+        .mt-6 { margin-top: 24pt; } .mb-6 { margin-bottom: 24pt; }
+        .mt-8 { margin-top: 32pt; } .mb-8 { margin-bottom: 32pt; }
+        .mt-auto { margin-top: auto; }
+
+        .p-4 { padding: 12pt; }
+        .p-6 { padding: 18pt; }
+        
+        .w-full { width: 100%; }
+
+        /* Pozadí a okraje */
+        .bg-white { background-color: #ffffff; }
+        .bg-slate-50 { background-color: var(--slate-50); }
+        .bg-slate-100 { background-color: var(--slate-100); }
+        .bg-primary-light { background-color: var(--c-primary-bg); }
+        
+        .rounded-lg { border-radius: 6pt; }
+        .rounded-xl { border-radius: 10pt; }
+        
+        .border { border: 1px solid var(--slate-200); }
+        .border-b { border-bottom: 1px solid var(--slate-200); }
+        .border-l-4 { border-left: 4px solid var(--c-primary-light); }
+
+        /* ==========================================================================
+           6. HLAVNÍ KOMPONENTY (Hlavička, Patička, Sekce, Tabulky)
+           ========================================================================== */
+        
+        /* Hlavička a Patička stran */
+        .doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 10pt;
+            border-bottom: 2px solid var(--slate-100);
+            margin-bottom: 20pt;
+            flex-shrink: 0;
+        }
+        .doc-header-logo { font-family: var(--font-display); font-size: 12pt; font-weight: 800; color: var(--c-primary); }
+        .doc-header-title { font-size: 7.5pt; font-weight: 700; color: var(--slate-400); text-transform: uppercase; letter-spacing: 1pt; }
+
+        .doc-footer {
+            margin-top: auto; /* Zaručí zatlačení patičky dolů bez absolutního pozicování */
+            padding-top: 12pt;
+            border-top: 1px solid var(--slate-100);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 7.5pt;
+            color: var(--slate-400);
+            font-weight: 500;
+        }
+
+        /* Sekce a nadpisy */
+        .section-title { font-size: 18pt; font-weight: 800; color: var(--c-primary); margin-bottom: 4pt; }
+        .section-desc { font-size: 9pt; color: var(--slate-500); margin-bottom: 20pt; max-width: 90%; }
+        
+        .block-title {
+            font-size: 12pt;
+            font-weight: 700;
+            color: var(--c-primary);
+            margin-bottom: 12pt;
+            display: flex;
+            align-items: center;
+            gap: 6pt;
+        }
+        .block-title i { color: var(--c-primary-light); font-size: 14pt; }
+
+        /* Zvýrazněné datové bloky (KPI) */
+        .kpi-card {
+            background-color: var(--slate-50);
+            border: 1px solid var(--slate-200);
+            border-radius: 10pt;
+            padding: 14pt;
+            display: flex;
+            flex-direction: column;
+            break-inside: avoid;
+        }
+        .kpi-card-dark {
+            background-color: var(--c-primary);
+            border-radius: 10pt;
+            padding: 14pt;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            break-inside: avoid;
+        }
+        .kpi-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; color: var(--slate-500); margin-bottom: 4pt; }
+        .kpi-card-dark .kpi-label { color: var(--indigo-100); opacity: 0.8; }
+        .kpi-value { font-family: var(--font-display); font-size: 16pt; font-weight: 800; color: var(--c-primary); margin-top: auto; }
+        .kpi-card-dark .kpi-value { color: white; }
+
+        /* Čisté a přehledné tabulky */
+        .table-premium {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16pt;
+            break-inside: avoid;
+        }
+        .table-premium th {
+            text-align: left;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+            color: var(--slate-500);
+            padding: 8pt 10pt;
+            border-bottom: 2px solid var(--slate-200);
+            background: var(--slate-50);
+        }
+        .table-premium td {
+            padding: 10pt;
+            font-size: 9.5pt;
+            border-bottom: 1px solid var(--slate-100);
+            vertical-align: middle;
+            color: var(--slate-800);
+            word-break: break-word;
+        }
+        .table-premium tr:last-child td { border-bottom: 1px solid var(--slate-200); }
+        
+        .table-premium .td-amount { text-align: right; font-weight: 700; white-space: nowrap; width: 100pt; }
+        .table-premium .th-amount { text-align: right; }
+
+        .table-total tr:last-child td {
+            font-weight: 800;
+            background: var(--slate-50);
+            border-bottom: 2px solid var(--slate-400);
+            color: var(--c-primary);
+        }
+
+        /* Seznamy */
+        ul.custom-list { list-style: none; padding-left: 0; }
+        ul.custom-list li { position: relative; padding-left: 16pt; margin-bottom: 8pt; }
+        ul.custom-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--c-success);
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        /* ==========================================================================
+           7. TITULNÍ STRANA (SPECIFICKÁ)
+           ========================================================================== */
+        .cover-page {
+            background: linear-gradient(135deg, #0a0f29 0%, #1e1b4b 100%);
+            color: #ffffff;
+        }
+        .cover-content {
+            display: flex;
+            flex-direction: column;
+            padding: 30mm 20mm;
+            height: 100%;
+            z-index: 2;
+        }
+        .cover-accent {
+            position: absolute;
+            top: -50mm; right: -50mm;
+            width: 200mm; height: 200mm;
+            background: radial-gradient(circle, rgba(79,70,229,0.2) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .cover-logo-box {
+            width: 60pt; height: 60pt;
+            background: white;
+            border-radius: 12pt;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display); font-size: 28pt; font-weight: 900; color: var(--c-primary);
+            margin-bottom: 80pt;
+        }
+        .cover-meta {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 24pt;
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 20pt;
+        }
+        .cover-meta-value { font-size: 14pt; font-weight: 700; color: white; margin-top: 4pt; }
+    </style>
+</head>
+<body>
+
+    <!-- =======================================================================
+         STRANA 1: TITULNÍ STRANA
+         ======================================================================= -->
+    <div class="page cover-page">
+        <div class="cover-accent"></div>
+        <div class="cover-content">
+            <div class="cover-logo-box">A</div>
+            
+            <div class="mb-8">
+                <div class="text-xs uppercase tracking-wider font-bold" style="color: #818cf8; margin-bottom: 12pt;">Komplexní finanční strategie</div>
+                <h1 class="font-black" style="font-size: 42pt; line-height: 1.1; letter-spacing: -1px; color: #ffffff;">Finanční plán<br>pro vaši budoucnost</h1>
+            </div>
+
+            <div class="cover-meta">
+                <div>
+                    <div class="text-xs uppercase tracking-wider font-bold text-light mb-1">Klient</div>
+                    <div class="cover-meta-value">Nikola Chloubová</div>
+                    <div class="text-xs text-light mt-1">Sporty: Ne</div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-wider font-bold text-light mb-1">Datum vyhotovení</div>
+                    <div class="cover-meta-value">23. Února 2026</div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-wider font-bold text-light mb-1">Osobní poradce</div>
+                    <div class="cover-meta-value">Marek Marek</div>
+                    <div class="text-xs text-light mt-1">Privátní finanční plánování</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 2: SOUHRN A BILANCE
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Přehled situace a Net Worth</div>
+            </div>
+
+            <h2 class="section-title">Souhrn & Bilance majetku</h2>
+            <p class="section-desc">Pohled na celkové zdraví vašich financí, rozdělení majetku a měsíční cashflow domácnosti.</p>
+
+            <div class="grid grid-3 gap-4 mb-6 break-avoid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Aktiva celkem</span>
+                    <span class="kpi-value text-success whitespace-nowrap">650 000 Kč</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Pasiva (Dluhy)</span>
+                    <span class="kpi-value text-danger whitespace-nowrap">0 Kč</span>
+                </div>
+                <div class="kpi-card-dark">
+                    <span class="kpi-label">Čisté jmění</span>
+                    <span class="kpi-value text-white whitespace-nowrap">650 000 Kč</span>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm mb-8 break-avoid">
+                <strong class="text-primary-dark">Interpretace:</strong> Vaše čisté jmění je kladné, což značí zdravý finanční základ a výborný startovní bod pro budování bohatství.
+            </div>
+
+            <div class="grid grid-2 gap-6 break-avoid mb-8">
+                <!-- Aktiva -->
+                <div>
+                    <h3 class="block-title"><i class="fa-solid fa-building-columns"></i> Majetek (Aktiva)</h3>
+                    <table class="table-premium table-total">
+                        <thead>
+                            <tr>
+                                <th>Položka</th>
+                                <th class="th-amount">Hodnota</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Hotovost & Rezerva</td>
+                                <td class="td-amount whitespace-nowrap">650 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Nemovitosti</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Investice a Penzijní</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Ostatní</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM AKTIVA</td>
+                                <td class="td-amount whitespace-nowrap">650 000 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pasiva -->
+                <div>
+                    <h3 class="block-title"><i class="fa-solid fa-credit-card"></i> Závazky (Pasiva)</h3>
+                    <table class="table-premium table-total">
+                        <thead>
+                            <tr>
+                                <th>Položka</th>
+                                <th class="th-amount">Zůstatek</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Hypotéky</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Úvěry</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Ostatní</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM PASIVA</td>
+                                <td class="td-amount whitespace-nowrap">0 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h2 class="section-title mt-4">Analýza měsíčního Cashflow</h2>
+            <div class="grid grid-2 gap-6 break-avoid">
+                <!-- Příjmy -->
+                <div>
+                    <table class="table-premium table-total mb-2">
+                        <thead>
+                            <tr>
+                                <th>Příjmy domácnosti</th>
+                                <th class="th-amount">Částka</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Hlavní příjem</td>
+                                <td class="td-amount text-success whitespace-nowrap">18 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Partner</td>
+                                <td class="td-amount text-success whitespace-nowrap">41 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Ostatní příjmy</td>
+                                <td class="td-amount text-muted whitespace-nowrap">0 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM PŘÍJMY</td>
+                                <td class="td-amount text-success whitespace-nowrap">59 000 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Výdaje -->
+                <div>
+                    <table class="table-premium table-total mb-2">
+                        <thead>
+                            <tr>
+                                <th>Výdaje domácnosti</th>
+                                <th class="th-amount">Částka</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Bydlení & Energie</td>
+                                <td class="td-amount text-danger whitespace-nowrap">- 2 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Spotřeba & Jídlo</td>
+                                <td class="td-amount text-danger whitespace-nowrap">- 6 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>Ostatní výdaje</td>
+                                <td class="td-amount text-danger whitespace-nowrap">- 8 000 Kč</td>
+                            </tr>
+                            <tr>
+                                <td>CELKEM VÝDAJE</td>
+                                <td class="td-amount text-danger whitespace-nowrap">- 16 000 Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Finanční Rezerva a Volné prostředky -->
+            <div class="grid grid-2 gap-4 mt-6 break-avoid">
+                <div class="kpi-card bg-slate-50 border border-slate-200">
+                    <span class="kpi-label">Finanční pohotovostní rezerva</span>
+                    <span class="kpi-value whitespace-nowrap">300 000 Kč</span>
+                    <span class="text-xs text-muted mt-2">Rezerva bezpečně pokrývá cca 18.8 měsíců standardních výdajů.</span>
+                </div>
+                <div class="kpi-card" style="background: var(--c-success-bg); border-color: #a7f3d0;">
+                    <span class="kpi-label" style="color: var(--c-success);">Volná kapacita na investice</span>
+                    <span class="kpi-value text-success whitespace-nowrap">43 000 Kč / měsíc</span>
+                    <span class="text-xs text-success mt-2">Rozdíl mezi příjmy a výdaji. Prostor pro plnění cílů.</span>
+                </div>
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 2</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 3: CÍLE A STRATEGIE
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Finanční cíle a Investiční strategie</div>
+            </div>
+
+            <h2 class="section-title">Plánování finančních cílů</h2>
+            <p class="section-desc">Modelace dosažení vašich definovaných životních cílů. Výpočet zohledňuje průměrnou roční inflaci pro zachování reálné kupní síly peněz.</p>
+
+            <div class="grid grid-2 gap-4 mb-6 break-avoid">
+                <div class="kpi-card bg-slate-50">
+                    <span class="kpi-label">Celková hodnota všech cílů</span>
+                    <span class="kpi-value text-primary whitespace-nowrap">31 146 263 Kč</span>
+                </div>
+                <div class="kpi-card" style="background: var(--c-success-bg); border-color: #a7f3d0;">
+                    <span class="kpi-label" style="color: var(--c-success);">Potenciál portfolia (Pokrytí)</span>
+                    <span class="kpi-value text-success whitespace-nowrap">32 200 386 Kč <span class="text-sm font-bold opacity-80">(103 %)</span></span>
+                </div>
+            </div>
+
+            <div class="break-avoid mb-8">
+                <table class="table-premium">
+                    <thead>
+                        <tr>
+                            <th>Definovaný Cíl</th>
+                            <th>Horizont</th>
+                            <th class="th-amount">Cílová částka</th>
+                            <th class="th-amount">Potřeba měsíčně</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">Finanční nezávislost (Renta)</td>
+                            <td>42 let</td>
+                            <td class="td-amount font-bold whitespace-nowrap">31 146 263 Kč</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">5 535 Kč</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-6 bg-slate-50 border border-slate-200 rounded-lg break-avoid mb-8">
+                <h3 class="block-title"><i class="fa-solid fa-calculator"></i> Výpočet cíle „Finanční nezávislost (Renta)“</h3>
+                <p class="text-sm text-muted mb-4">Budoucí hodnota měsíční renty s ohledem na inflaci (3 % p.a.):</p>
+                <div class="text-center font-display text-xl font-bold text-primary mb-4" style="font-family: 'Times New Roman', serif; font-style: italic;">
+                    FV = P × (1 + i)ⁿ
+                </div>
+                <p class="text-xs text-muted mb-4">
+                    kde <strong>P</strong> = dnešní požadovaná měsíční renta (Kč), <strong>i</strong> = 0,03 (3% inflace), <strong>n</strong> = počet let do cíle.
+                </p>
+                <p class="text-sm font-medium">
+                    Potřebný kapitál k zajištění budoucí renty (předpoklad 6% výnosu ve fázi čerpání):<br>
+                    <strong>Potřebný kapitál = (budoucí renta × 12) / 0,06</strong>
+                </p>
+            </div>
+
+            <h2 class="section-title mt-4">Doporučené portfolio</h2>
+            <div class="flex justify-between items-center mb-4 break-avoid">
+                <span class="text-sm text-muted">Strategie: <strong>Vyvážená</strong>. Kompromis mezi výnosem a stabilitou (5-10 let). Zlatá střední cesta.</span>
+            </div>
+
+            <div class="break-avoid">
+                <table class="table-premium table-total">
+                    <thead>
+                        <tr>
+                            <th>Produkt / Fond</th>
+                            <th>Typ úložky</th>
+                            <th class="th-amount">Vklad</th>
+                            <th class="th-amount">Oček. Výnos</th>
+                            <th class="th-amount">Předpoklad FV</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">iShares MSCI World ETF</td>
+                            <td class="text-xs font-bold text-muted uppercase">Pravidelná</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">2 000 Kč/m</td>
+                            <td class="td-amount font-bold text-success whitespace-nowrap">12.0 %</td>
+                            <td class="td-amount font-bold whitespace-nowrap">29 930 226 Kč</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Conseq Globální Akciový</td>
+                            <td class="text-xs font-bold text-muted uppercase">Penzijní</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">1 000 Kč/m</td>
+                            <td class="td-amount font-bold text-success whitespace-nowrap">6.0 %</td>
+                            <td class="td-amount font-bold whitespace-nowrap">2 270 160 Kč</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">CELKEM MĚSÍČNĚ</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">3 000 Kč/m</td>
+                            <td></td>
+                            <td class="td-amount font-bold text-success whitespace-nowrap">32 200 386 Kč</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 3</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 4: DETAIL PRODUKTU 1 (iShares)
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Detail Doporučeného Produktu</div>
+            </div>
+
+            <div class="flex justify-between items-start mb-6 break-avoid">
+                <div>
+                    <div class="text-xs font-bold text-primary uppercase tracking-widest mb-2 px-3 py-1 bg-primary-light inline-block rounded-lg">PRAVIDELNÁ INVESTICE</div>
+                    <h2 class="text-3xl font-black text-primary-dark">iShares MSCI World</h2>
+                    <p class="text-base font-medium text-muted mt-2">Akciové ETF ***** Morningstar</p>
+                </div>
+                <div class="text-right">
+                    <span class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Vaše investice</span>
+                    <span class="text-2xl font-black text-primary whitespace-nowrap">2 000 Kč / měs.</span>
+                </div>
+            </div>
+
+            <p class="text-base leading-relaxed text-slate-700 mb-8 break-avoid">
+                iShares Core MSCI World UCITS ETF je pasivně řízený fond kopírující index MSCI World. Fond fyzicky investuje do přibližně 1 320 společností střední a velké tržní kapitalizace z 23 rozvinutých zemí, čímž pokrývá zhruba 85 % volně obchodovatelné tržní kapitalizace vyspělého světa. Jedná se o jeden z nejrespektovanějších nástrojů pro globální diverzifikaci a budování dlouhodobého majetku.
+            </p>
+
+            <div class="grid grid-3 gap-4 mb-8 break-avoid">
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Rizikový profil SRI</span>
+                    <span class="kpi-value">5 / 7</span>
+                </div>
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Doporučený horizont</span>
+                    <span class="kpi-value">10+ let</span>
+                </div>
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Likvidita fondu</span>
+                    <span class="kpi-value">Denní</span>
+                </div>
+            </div>
+
+            <div class="break-avoid mb-8">
+                <h3 class="block-title"><i class="fa-solid fa-bullseye"></i> Investiční strategie a složení</h3>
+                <p class="text-sm text-slate-700 leading-relaxed mb-4">
+                    Index je vážený tržní kapitalizací (největší firmy mají největší zastoupení). Dominantní podíl tvoří Spojené státy americké (cca 69 %), následované Japonskem (5,4 %), Velkou Británií (3,7 %) a Kanadou (2,9 %). Z pohledu sektorového rozložení převažují informační technologie (28 %), finance (14 %), zdravotnictví (12 %), spotřební zboží (10 %) a průmysl (10 %). Top 10 největších titulů tvoří přibližně 24 % celého portfolia fondu.
+                </p>
+                <table class="table-premium">
+                    <tbody>
+                        <tr>
+                            <td class="font-bold text-muted w-1/3">Investiční cíl</td>
+                            <td class="font-medium">Globální růst (Capital Appreciation)</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Minimální investice</td>
+                            <td class="font-medium">Bez limitu</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Měna fondu</td>
+                            <td class="font-medium">USD (Americký dolar)</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Největší pozice (Top holdings)</td>
+                            <td class="font-medium">NVIDIA, Apple, Microsoft, Amazon, Alphabet, Broadcom, Meta Platforms, Tesla, Eli Lilly.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="break-avoid">
+                <h3 class="block-title"><i class="fa-solid fa-star"></i> Klíčové výhody řešení</h3>
+                <ul class="custom-list font-medium text-slate-700">
+                    <li><strong>Okamžitá a masivní diverzifikace</strong> do 1 320 firem jedním nákupem.</li>
+                    <li><strong>Vysoká likvidita</strong> - možnost fond kdykoliv prodat v obchodních hodinách burzy.</li>
+                    <li>Ocenění <strong>Morningstar Bronze medaile</strong> pro ETF.</li>
+                    <li>Zcela transparentní složení, denně dostupné informace o portfoliu.</li>
+                </ul>
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 4</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 5: DETAIL PRODUKTU 2 (Conseq)
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Detail Doporučeného Produktu</div>
+            </div>
+
+            <div class="flex justify-between items-start mb-6 break-avoid">
+                <div>
+                    <div class="text-xs font-bold text-warning uppercase tracking-widest mb-2 px-3 py-1 bg-warning-light inline-block rounded-lg" style="color: #b45309;">PENZIJNÍ SPOŘENÍ (DPS)</div>
+                    <h2 class="text-3xl font-black text-primary-dark">Conseq Globální Akciový</h2>
+                    <p class="text-base font-medium text-muted mt-2">Účastnický fond • ZLATÁ KORUNA 2024</p>
+                </div>
+                <div class="text-right">
+                    <span class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Vaše investice</span>
+                    <span class="text-2xl font-black text-primary whitespace-nowrap">1 000 Kč / měs.</span>
+                </div>
+            </div>
+
+            <p class="text-base leading-relaxed text-slate-700 mb-8 break-avoid">
+                Conseq Globální Akciový účastnický fond je plně dynamický fond doplňkového penzijního spoření (DPS), který je určen pro dlouhodobé odkládání prostředků na postproduktivní věk. Fond se stal absolutním vítězem prestižní soutěže Zlatá koruna 2024 v kategorii Penzijní spoření a dlouhodobě se řadí mezi nejvýkonnější účastnické fondy v České republice.
+            </p>
+
+            <div class="grid grid-3 gap-4 mb-8 break-avoid">
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Rizikový profil SRI</span>
+                    <span class="kpi-value">5 / 7</span>
+                </div>
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Doporučený horizont</span>
+                    <span class="kpi-value">5+ let</span>
+                </div>
+                <div class="kpi-card text-center">
+                    <span class="kpi-label">Likvidita fondu</span>
+                    <span class="kpi-value">Denní (Při splnění podmínek)</span>
+                </div>
+            </div>
+
+            <div class="break-avoid mb-8">
+                <h3 class="block-title"><i class="fa-solid fa-chart-line"></i> Investiční strategie a výkonnost</h3>
+                <p class="text-sm text-slate-700 leading-relaxed mb-4">
+                    Fond provádí aktivní výběr akcií a investuje přímo do konkrétních titulů nebo prostřednictvím světových ETF a finančních derivátů. Pro snížení měnového rizika české koruny a využití lokálního potenciálu klade fond větší důraz na akciové trhy ve střední Evropě. 
+                    Od svého založení v roce 2013 dosáhl fond úctyhodného celkového zhodnocení +224 % (průměrně 9,5 % p.a.). Historická roční výkonnost činila +12,4 % v roce 2024 a krásných +21,9 % v roce 2023.
+                </p>
+                <table class="table-premium">
+                    <tbody>
+                        <tr>
+                            <td class="font-bold text-muted w-1/3">Investiční cíl</td>
+                            <td class="font-medium">Dlouhodobý růst hodnoty kapitálu pomocí akcií</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Minimální investice</td>
+                            <td class="font-medium">100 Kč</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Základní měna fondu</td>
+                            <td class="font-medium">CZK (Česká koruna)</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-muted">Typické regionální zastoupení</td>
+                            <td class="font-medium">Akcie ČR, Polsko, Rakousko, Německo, USA + ETF fondy zaměřené na rozvíjející se trhy (Emerging Markets).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="break-avoid mb-6">
+                <h3 class="block-title"><i class="fa-solid fa-gift"></i> Klíčové výhody řešení</h3>
+                <ul class="custom-list font-medium text-slate-700">
+                    <li>Odborně oceněný produkt – <strong>Zlatá koruna 2024 (1. místo)</strong>.</li>
+                    <li>Možnost významného <strong>daňového zvýhodnění</strong> (odpočet ze základu daně až do výše 48 000 Kč/rok napříč produkty na stáří).</li>
+                    <li>Nárok na štědrý <strong>státní příspěvek</strong> (až 340 Kč měsíčně od státu zdarma při vhodné úložce).</li>
+                    <li>Možnost zapnutí garance prostředků blížícím se koncem investičního horizontu.</li>
+                </ul>
+            </div>
+            
+            <div class="kpi-card-dark break-avoid text-center p-6">
+                <span class="kpi-label mb-2 text-white">Očekávaná hodnota na konci horizontu</span>
+                <span class="kpi-value text-success" style="font-size: 28pt;">2 270 160 Kč</span>
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 5</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 6: PROJEKCE A GRAFY
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Projekce a Alokace</div>
+            </div>
+
+            <div class="section-header break-avoid">
+                <h2 class="section-title">Vývoj hodnoty majetku</h2>
+                <p class="section-desc">Graf zobrazuje modelovou projekci budoucího růstu hodnoty vašeho portfolia v čase díky síle složeného úročení. Výpočet kalkuluje s pravidelným měsíčním vkladem a průměrným očekávaným zhodnocením na dlouhodobém horizontu.</p>
+            </div>
+
+            <!-- Vektorový CSS graf (Zkonstruováno pro print-friendly PDF bez nutnosti JS) -->
+            <div class="card break-avoid mb-8" style="height: 350pt; padding: 20pt; position: relative;">
+                <svg width="100%" height="100%" viewBox="0 0 1000 400" preserveAspectRatio="none">
+                    <!-- Osa Y grid lines -->
+                    <g stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4">
+                        <line x1="80" y1="360" x2="980" y2="360"/>
+                        <line x1="80" y1="290" x2="980" y2="290"/>
+                        <line x1="80" y1="220" x2="980" y2="220"/>
+                        <line x1="80" y1="150" x2="980" y2="150"/>
+                        <line x1="80" y1="80" x2="980" y2="80"/>
+                        <line x1="80" y1="10" x2="980" y2="10"/>
+                    </g>
+                    <!-- Osa Y Labels -->
+                    <g fill="#64748b" font-size="14" font-family="Inter, sans-serif" text-anchor="end" font-weight="600">
+                        <text x="60" y="365">0</text>
+                        <text x="60" y="295">6.5 mil.</text>
+                        <text x="60" y="225">13.0 mil.</text>
+                        <text x="60" y="155">19.5 mil.</text>
+                        <text x="60" y="85">26.0 mil.</text>
+                        <text x="60" y="15">32.2 mil.</text>
+                    </g>
+                    <!-- Osa X Labels (Roky) -->
+                    <g fill="#64748b" font-size="14" font-family="Inter, sans-serif" text-anchor="middle" font-weight="600">
+                        <text x="80" y="390">Dnes</text>
+                        <text x="230" y="390">Rok 7</text>
+                        <text x="380" y="390">Rok 14</text>
+                        <text x="530" y="390">Rok 21</text>
+                        <text x="680" y="390">Rok 28</text>
+                        <text x="830" y="390">Rok 35</text>
+                        <text x="980" y="390">Rok 42</text>
+                    </g>
+
+                    <!-- Výplň oblasti grafu (Gradient) -->
+                    <defs>
+                        <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#4f46e5" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Exponenciální křivka (Složené úročení pro simulaci investice) -->
+                    <path d="M 80 360 Q 500 340, 750 180 T 980 10 L 980 360 Z" fill="url(#chartGradient)" />
+                    <!-- Tlustá linka grafu -->
+                    <path d="M 80 360 Q 500 340, 750 180 T 980 10" fill="none" stroke="#1e1b4b" stroke-width="5" stroke-linecap="round" />
+                    
+                    <!-- Zvýrazněný koncový bod -->
+                    <circle cx="980" cy="10" r="8" fill="#ffffff" stroke="#10b981" stroke-width="4"/>
+                    
+                    <!-- Box s hodnotou na konci -->
+                    <rect x="780" y="10" width="160" height="40" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+                    <text x="860" y="35" fill="#1e1b4b" font-size="16" font-weight="800" font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">32.2 mil. Kč</text>
+                </svg>
+            </div>
+
+            <div class="grid grid-2 gap-8 items-center mt-8 break-avoid border-t border-slate-200 pt-8">
+                <div>
+                    <h2 class="section-title">Rozložení aktiv</h2>
+                    <p class="section-desc mb-6">Navržená struktura portfolia, která efektivně rozkládá riziko mezi pasivní globální růst a aktivní správu s důrazem na měnové zajištění.</p>
+                    
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-center gap-3">
+                            <div style="width: 16pt; height: 16pt; background-color: #4f46e5; border-radius: 4pt;"></div>
+                            <div class="font-bold text-primary-dark">iShares MSCI World ETF</div>
+                            <div class="font-black text-primary-light ml-auto">67 %</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div style="width: 16pt; height: 16pt; background-color: #10b981; border-radius: 4pt;"></div>
+                            <div class="font-bold text-primary-dark">Conseq Globální Akciový</div>
+                            <div class="font-black text-success ml-auto">33 %</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vektorový Donut Chart (Print friendly) -->
+                <div class="flex justify-center relative">
+                    <svg width="220" height="220" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="168.3" transform="rotate(-90 50 50)"></circle>
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#4f46e5" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="82.9" transform="rotate(30 50 50)"></circle>
+                    </svg>
+                    <!-- Bílý vnitřek pro vyříznutí díry -->
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 110px; height: 110px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);">
+                        <span class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Riziko</span>
+                        <span class="text-2xl font-black text-primary-dark leading-none">5/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-xs text-muted mt-auto border-t border-slate-200 pt-4 break-avoid text-justify">
+                <strong>Právní upozornění:</strong> Minulé výnosy nejsou zárukou budoucích. Hodnota investice a příjem z ní může v čase kolísat a není zaručena návratnost investované částky. Výpočty a grafy jsou pouze modelové, založené na odhadu dlouhodobých historických průměrů a nezohledňují budoucí inflaci, pokud není v textu explicitně uvedeno jinak. Daňové dopady závisí na individuální situaci klienta a platné legislativě. Tento materiál nenahrazuje poskytnutí odborného investičního poradenství. Uvedené zhodnocení (např. 12 % p.a. nebo 6 % p.a.) je pracovní předpoklad finančního plánu, nikoliv garance výsledku.
+            </p>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 6</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 7: ZAJIŠTĚNÍ OSOB 1 (Nikola)
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Osobní zabezpečení a rizika</div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">Ochrana příjmů – Nikola Chloubová</h2>
+                <p class="section-desc">Detailní audit krytí pro případ nenadálých zdravotních událostí. Doporučené pojistné částky vycházejí z přesného poměru vašich příjmů, mandatorních výdajů a zůstatku závazků.</p>
+            </div>
+
+            <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 p-4 rounded-xl mb-6 break-avoid">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-primary border border-slate-200 shadow-sm"><i class="fa-solid fa-wallet text-xl"></i></div>
+                <div>
+                    <span class="block text-xs font-bold text-muted uppercase tracking-widest">Příjem zajišťované osoby</span>
+                    <span class="text-xl font-black text-primary-dark whitespace-nowrap">18 000 Kč čistého / měsíčně</span>
+                </div>
+            </div>
+
+            <div class="break-avoid mb-8">
+                <h3 class="block-title"><i class="fa-solid fa-shield-halved"></i> Souhrn doporučeného nastavení (Potřeba krytí)</h3>
+                <table class="table-premium table-total">
+                    <thead>
+                        <tr>
+                            <th>Krytá rizika</th>
+                            <th class="th-amount">Pojistná částka / nastavení</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">Invalidita 2. a 3. stupeň (Případně všechny stupně)</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">2 100 000 Kč</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Trvalé následky úrazu <span class="font-normal text-muted text-xs">(Plnění od 0,5 % a od 10 %)</span></td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">1 000 000 Kč <span class="text-xs text-muted font-normal">(progrese 8x)</span></td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Pracovní neschopnost (PN) <span class="font-normal text-muted text-xs">(Plnění od 29. dne zpětně)</span></td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">200 Kč / den</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Smrt z jakýchkoliv příčin</td>
+                            <td class="td-amount font-bold text-primary whitespace-nowrap">700 000 Kč</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detailní rozpad výpočtů -->
+            <div class="grid grid-2 gap-6 break-avoid">
+                <div class="card" style="border-top: 4px solid var(--c-primary-light);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Invalidita</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-600);">Potřeba rodiny při invaliditě:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">21 600 Kč/měs</td></tr>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-500);">- Kryto státním důchodem:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">8 100 Kč/měs</td></tr>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-500); border-bottom: 1px solid var(--slate-200);">- Pokryto vlastním majetkem:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">3 250 Kč/měs</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Zajistit z pojištění (Rentou):</td><td class="text-right font-bold text-primary whitespace-nowrap" style="padding-top: 8pt;">10 500 Kč/měs</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--c-primary-light);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Pracovní neschopnost</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-600);">Výplata od ČSSZ (Nemocenská):</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">cca 14 250 Kč/měs</td></tr>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-600); border-bottom: 1px solid var(--slate-200);">Plnění z pojištění (200 Kč × 30):</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">6 000 Kč/měs</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Celkem k dispozici po úrazu:</td><td class="text-right font-bold text-primary whitespace-nowrap" style="padding-top: 8pt;">20 250 Kč/měs</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="mt-4 p-2 bg-success-light text-success font-bold text-xs rounded-lg border border-emerald-200 text-center">
+                        <i class="fa-solid fa-check"></i> Vytvořená rezerva pokryje 173 měsíců případného dalšího výpadku.
+                    </div>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--amber-500);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Trvalé následky</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-600); border-bottom: 1px solid var(--slate-200);">Základní sjednané plnění:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">1 000 000 Kč</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Maximální plnění (Progrese 8x):</td><td class="text-right font-black text-warning whitespace-nowrap" style="padding-top: 8pt; font-size: 11pt;">až 8 000 000 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--c-primary-dark);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Úmrtí</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-600);">Zůstatek závazků a dluhů:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">0 Kč</td></tr>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-600); border-bottom: 1px solid var(--slate-200);">Zajištění běžného chodu rodiny:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">1 344 000 Kč</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Celkem doporučeno zajistit:</td><td class="text-right font-bold text-primary-dark whitespace-nowrap" style="padding-top: 8pt;">700 000 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs text-muted mt-auto break-avoid text-center">
+                <strong>Denní vyměřovací základ (DVZ) pro rok 2026:</strong> Redukce 90 % do 1 633 Kč, redukce 60 % do 2 449 Kč, redukce 30 % do 4 897 Kč. Maximální redukovaný DVZ činí 2 419 Kč.
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 7</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         STRANA 8: ZAJIŠTĚNÍ OSOB 2 (Ondřej)
+         ======================================================================= -->
+    <div class="page">
+        <div class="content-wrapper">
+            
+            <div class="doc-header">
+                <div class="doc-header-logo">Aidvisora</div>
+                <div class="doc-header-title">Osobní zabezpečení a rizika</div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">Ochrana příjmů – Ondřej Šoura</h2>
+                <p class="section-desc">Audit nastavení pro druhého živitele rodiny. Výrazně vyšší nároky na zajištění odpovídají vyššímu podílu na tvorbě domácího rozpočtu.</p>
+            </div>
+
+            <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 p-4 rounded-xl mb-6 break-avoid">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-danger border border-slate-200 shadow-sm"><i class="fa-solid fa-wallet text-xl"></i></div>
+                <div>
+                    <span class="block text-xs font-bold text-muted uppercase tracking-widest">Příjem zajišťované osoby</span>
+                    <span class="text-xl font-black text-primary-dark whitespace-nowrap">41 000 Kč čistého / měsíčně</span>
+                </div>
+            </div>
+
+            <div class="break-avoid mb-8">
+                <h3 class="block-title"><i class="fa-solid fa-shield-halved"></i> Souhrn doporučeného nastavení (Potřeba krytí)</h3>
+                <table class="table-premium table-total">
+                    <thead>
+                        <tr>
+                            <th>Krytá rizika</th>
+                            <th class="th-amount">Pojistná částka / nastavení</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">Invalidita 2. a 3. stupeň</td>
+                            <td class="td-amount font-bold text-danger whitespace-nowrap">6 600 000 Kč</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Trvalé následky úrazu <span class="font-normal text-muted text-xs">(Plnění od 0,5 % a od 10 %)</span></td>
+                            <td class="td-amount font-bold text-danger whitespace-nowrap">1 500 000 Kč <span class="text-xs text-muted font-normal">(progrese 8x)</span></td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Pracovní neschopnost (PN) <span class="font-normal text-muted text-xs">(Plnění od 29. dne zpětně)</span></td>
+                            <td class="td-amount font-bold text-danger whitespace-nowrap">400 Kč / den</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Smrt z jakýchkoliv příčin</td>
+                            <td class="td-amount font-bold text-muted whitespace-nowrap">0 Kč</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="alert-box alert-danger mt-2">
+                    <i class="fa-solid fa-circle-exclamation mt-1 text-danger"></i>
+                    <div>
+                        <strong>Vysoká závislost rozpočtu na příjmu:</strong> Pan Ondřej zajišťuje většinu příjmů domácnosti. V případě jeho trvalé invalidity by rodina zažila fatální pokles životní úrovně. Sjednání kvalitního pojištění invalidity s navrženou částkou 6.6M Kč je absolutní prioritou tohoto plánu.
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-2 gap-6 break-avoid">
+                <div class="card" style="border-top: 4px solid var(--c-danger);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Invalidita</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-600);">Celková měsíční potřeba rodiny:</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">49 200 Kč/měs</td></tr>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-500); border-bottom: 1px solid var(--slate-200);">- Státní invalidní důchod (odhad):</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">16 250 Kč/měs</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Zajistit z pojištění (Krytí):</td><td class="text-right font-black text-danger whitespace-nowrap" style="padding-top: 8pt; font-size: 11pt;">6 600 000 Kč</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--c-danger);">
+                    <h4 class="font-bold text-lg mb-4 text-primary-dark">Detail: Pracovní neschopnost</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;">
+                        <tbody>
+                            <tr><td style="padding-bottom: 4pt; color: var(--slate-600);">Výplata od ČSSZ (Nemocenská):</td><td class="text-right font-bold whitespace-nowrap" style="padding-bottom: 4pt;">31 350 Kč/měs</td></tr>
+                            <tr><td style="padding-bottom: 8pt; color: var(--slate-600); border-bottom: 1px solid var(--slate-200);">Měsíční propad příjmu (Výpadek):</td><td class="text-right font-bold text-danger whitespace-nowrap" style="padding-bottom: 8pt; border-bottom: 1px solid var(--slate-200);">9 650 Kč/měs</td></tr>
+                            <tr><td style="padding-top: 8pt; font-weight: 700; color: var(--c-primary-dark);">Vyžadované plnění z pojištění:</td><td class="text-right font-black text-danger whitespace-nowrap" style="padding-top: 8pt; font-size: 11pt;">400 Kč/den</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Místo pro formální podpisová pole v tiskovém PDF -->
+            <div class="grid grid-2 mt-auto pt-24 break-avoid">
+                <div class="text-center">
+                    <div style="border-bottom: 1px solid var(--slate-400); width: 80%; margin: 0 auto 10pt auto; height: 30pt;"></div>
+                    <p class="font-bold text-primary-dark text-base">Podpis klientů</p>
+                    <p class="text-muted text-sm mt-1">Nikola Chloubová, Ondřej Šoura</p>
+                </div>
+                <div class="text-center">
+                    <div style="border-bottom: 1px solid var(--slate-400); width: 80%; margin: 0 auto 10pt auto; height: 30pt;"></div>
+                    <p class="font-bold text-primary-dark text-base">Podpis poradce</p>
+                    <p class="text-muted text-sm mt-1">Bc. Martin Dvořák</p>
+                </div>
+            </div>
+
+            <div class="doc-footer">
+                <span>Bc. Martin Dvořák | martin.dvorak@aidvisora.cz</span>
+                <span>Strana 8</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

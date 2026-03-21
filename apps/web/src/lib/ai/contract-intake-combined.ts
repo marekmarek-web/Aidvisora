@@ -10,7 +10,14 @@ import {
   type InputModeResult,
   type ExtractionMode,
 } from "./input-mode-detection";
-import { CONTRACT_DOCUMENT_TYPES, type ClassificationResult } from "./document-classification";
+import {
+  type ClassificationResult,
+  normalizeClassification,
+} from "./document-classification";
+import {
+  DOCUMENT_LIFECYCLE_STATUSES,
+  PRIMARY_DOCUMENT_TYPES,
+} from "./document-review-types";
 
 const ALLOWED_MIMES = new Set([
   "application/pdf",
@@ -23,7 +30,9 @@ const combinedSchema = z.object({
   inputMode: z.enum(INPUT_MODES),
   inputConfidence: z.number().min(0).max(1).optional(),
   inputReason: z.string().optional(),
-  documentType: z.enum(CONTRACT_DOCUMENT_TYPES),
+  primaryType: z.enum(PRIMARY_DOCUMENT_TYPES),
+  subtype: z.string().optional(),
+  lifecycleStatus: z.enum(DOCUMENT_LIFECYCLE_STATUSES).optional(),
   classificationConfidence: z.number().min(0).max(1),
   reasons: z.array(z.string()),
 });
@@ -36,15 +45,19 @@ const COMBINED_PROMPT = `Prohlédni přiložený dokument a vrať JEDINĚ platn�
 - image_document: obrázek (JPG/PNG apod.)
 - unsupported: nelze určit nebo nepodporovaný formát
 
-Část B — typ smluvního dokumentu (documentType), přesně jedna z hodnot:
-"insurance_contract", "investment_contract", "loan_or_mortgage_contract", "amendment", "application_or_proposal", "payment_document", "terms_and_conditions", "unknown"
+Část B — klasifikace dokumentu:
+- primaryType: jedna z hodnot ${PRIMARY_DOCUMENT_TYPES.map((t) => `"${t}"`).join(", ")}
+- subtype: krátký produkt/instituce hint (např. "generali_bel_mondo"), jinak "unknown"
+- lifecycleStatus: jedna z hodnot ${DOCUMENT_LIFECYCLE_STATUSES.map((t) => `"${t}"`).join(", ")}
 
 JSON tvar:
 {
   "inputMode": "...",
   "inputConfidence": 0-1,
   "inputReason": "krátký důvod pro režim",
-  "documentType": "...",
+  "primaryType": "...",
+  "subtype": "...",
+  "lifecycleStatus": "...",
   "classificationConfidence": 0-1,
   "reasons": ["krátké důvody pro typ dokumentu"]
 }`;
@@ -60,7 +73,9 @@ function mimeBlockedResult(mimeType: string): {
       extractionWarnings: [`Nepodporovaný typ souboru: ${mimeType}`],
     },
     classification: {
-      documentType: "unknown",
+      primaryType: "unsupported_or_unknown",
+      subtype: "unknown",
+      lifecycleStatus: "unknown",
       confidence: 0,
       reasons: ["Nepodporovaný MIME typ"],
     },
@@ -103,11 +118,13 @@ export async function runCombinedContractIntake(
       extractionMode,
       extractionWarnings,
     };
-    const classification: ClassificationResult = {
-      documentType: d.documentType,
+    const classification: ClassificationResult = normalizeClassification({
+      primaryType: d.primaryType,
+      subtype: d.subtype,
+      lifecycleStatus: d.lifecycleStatus,
       confidence: d.classificationConfidence,
       reasons: d.reasons.length ? d.reasons : ["Klasifikace z kombinovaného kroku"],
-    };
+    });
     return { input, classification };
   } catch {
     return null;

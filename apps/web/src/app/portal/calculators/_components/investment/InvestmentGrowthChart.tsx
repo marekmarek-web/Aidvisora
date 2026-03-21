@@ -74,6 +74,10 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: "#0f172a",
+          borderColor: "#334155",
+          borderWidth: 1,
+          padding: 10,
           callbacks: {
             label: (tooltipItem: TooltipItem<"line">) =>
               `${tooltipItem.dataset?.label ?? ""}: ${new Intl.NumberFormat("cs-CZ").format(tooltipItem.parsed?.y ?? 0)} Kč`,
@@ -83,8 +87,10 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
       scales: {
         y: {
           beginAtZero: false,
-          grid: { color: "#f1f5f9" },
+          grid: { color: "#eef2ff" },
+          border: { display: false },
           ticks: {
+            color: "#64748b",
             callback: (v: number | string) =>
               Number(v) >= 1_000_000
                 ? `${(Number(v) / 1_000_000).toFixed(1)}M`
@@ -93,7 +99,8 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
         },
         x: {
           grid: { display: false },
-          ticks: { maxTicksLimit: 6 },
+          border: { display: false },
+          ticks: { maxTicksLimit: 6, color: "#94a3b8" },
         },
       },
     }),
@@ -101,7 +108,7 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
   );
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-[280px] w-full sm:h-[300px]">
       <Line data={chartData} options={options} />
     </div>
   );

@@ -17,6 +17,9 @@ import { decideReviewStatus } from "./review-decision-engine";
 import type { ContractProcessingStatus } from "db";
 import type { ExtractionTrace } from "./review-queue-repository";
 import type { ValidationWarning } from "./extraction-validation";
+import { resolveDocumentSchema } from "./document-schema-router";
+import { runVerificationPass } from "./document-verification";
+import { resolveSensitivityProfile } from "./document-sensitivity";
 
 export type PipelineSuccess = {
   ok: true;
@@ -104,14 +107,15 @@ export async function runContractUnderstandingPipeline(
 
   const isScanFallback = inputModeResult.extractionMode === "vision_fallback";
 
-  trace.documentType = classification.documentType;
+  trace.documentType = classification.primaryType;
   trace.classificationConfidence = classification.confidence;
   if (classification.reasons.length) {
     allReasons.push(...classification.reasons);
   }
 
   // Step 3 & 4: Schema is chosen by document type (no separate step)
-  const documentType = classification.documentType;
+  const documentType = classification.primaryType;
+  const schemaDefinition = resolveDocumentSchema(documentType);
 
   // Step 5: Structured extraction
   const extractionPrompt = buildExtractionPrompt(documentType, isScanFallback);
@@ -147,13 +151,57 @@ export async function runContractUnderstandingPipeline(
   }
 
   const data = validated.data;
-  const extractionConfidence = typeof data.confidence === "number" ? data.confidence : 0.5;
-  const fieldConfidenceMap = data.fieldConfidenceMap ?? null;
+  data.documentClassification.primaryType = documentType;
+  data.documentClassification.lifecycleStatus = classification.lifecycleStatus;
+  data.documentClassification.subtype = classification.subtype;
+  data.documentClassification.confidence = classification.confidence;
+  data.documentClassification.reasons = classification.reasons;
+  data.documentMeta.scannedVsDigital =
+    inputModeResult.inputMode === "text_pdf"
+      ? "digital"
+      : inputModeResult.inputMode === "scanned_pdf"
+        ? "scanned"
+        : "unknown";
+  const extractionConfidence =
+    typeof data.documentMeta.overallConfidence === "number"
+      ? data.documentMeta.overallConfidence
+      : data.documentClassification.confidence ?? 0.5;
+  data.documentMeta.overallConfidence = extractionConfidence;
+  const fieldConfidenceMap = Object.fromEntries(
+    Object.entries(data.extractedFields).map(([key, field]) => [
+      key,
+      typeof field.confidence === "number" ? field.confidence : 0,
+    ])
+  );
 
   // Step 6: Validation
-  const validation: ValidationResult = validateExtractedContract(data);
+  const legacyValidationPayload = {
+    contractNumber: data.extractedFields.contractNumber?.value as string | null,
+    institutionName: data.extractedFields.institutionName?.value as string | null,
+    client: {
+      email: data.extractedFields.clientEmail?.value as string | null,
+      phone: data.extractedFields.clientPhone?.value as string | null,
+      personalId: data.extractedFields.maskedPersonalId?.value as string | null,
+      companyId: data.extractedFields.companyId?.value as string | null,
+    },
+    paymentDetails: {
+      amount: data.extractedFields.loanAmount?.value as number | string | null,
+      currency: data.extractedFields.currency?.value as string | null,
+      frequency: data.extractedFields.paymentFrequency?.value as string | null,
+    },
+    effectiveDate: data.extractedFields.policyStartDate?.value as string | null,
+    expirationDate: data.extractedFields.policyEndDate?.value as string | null,
+  };
+  const validation: ValidationResult = validateExtractedContract(legacyValidationPayload);
+  const verification = runVerificationPass(data, schemaDefinition);
+  data.sensitivityProfile = resolveSensitivityProfile(data);
+  data.reviewWarnings = verification.warnings;
+  data.dataCompleteness = verification.completeness;
   if (validation.reasonsForReview.length) {
     allReasons.push(...validation.reasonsForReview);
+  }
+  if (verification.reasonsForReview.length) {
+    allReasons.push(...verification.reasonsForReview);
   }
 
   // Step 7: Review decision
@@ -165,14 +213,31 @@ export async function runContractUnderstandingPipeline(
     extractionFailed: false,
   });
 
-  if (data.needsHumanReview) {
-    allReasons.push("model_flagged");
-  }
   if (extractionConfidence < 0.7) {
     allReasons.push("low_confidence");
   }
-  if (data.missingFields?.length) {
-    allReasons.push("missing_fields");
+  if (data.reviewWarnings.some((w) => w.severity === "critical")) {
+    allReasons.push("critical_review_warning");
+  }
+  if (data.dataCompleteness && data.dataCompleteness.score < 0.7) {
+    allReasons.push("incomplete_required_data");
+  }
+  if (data.sensitivityProfile === "health_data" || data.sensitivityProfile === "special_category_data") {
+    allReasons.push("sensitive_section_detected");
+  }
+  if (data.documentClassification.lifecycleStatus === "proposal") {
+    allReasons.push("proposal_not_final_contract");
+  }
+  if (data.documentClassification.lifecycleStatus === "offer") {
+    allReasons.push("offer_not_binding_contract");
+  }
+  if (data.documentMeta.scannedVsDigital === "scanned" && extractionConfidence < 0.65) {
+    allReasons.push("low_ocr_quality");
+  }
+
+  // Backward-compatible signals from legacy shape if model still emits them in notes.
+  if ((data as unknown as { needsHumanReview?: boolean }).needsHumanReview) {
+    allReasons.push("model_flagged");
   }
 
   return {
@@ -185,7 +250,7 @@ export async function runContractUnderstandingPipeline(
     extractionMode: inputModeResult.extractionMode,
     detectedDocumentType: documentType,
     extractionTrace: trace,
-    validationWarnings: validation.warnings,
+    validationWarnings: [...validation.warnings, ...verification.warnings],
     fieldConfidenceMap,
     classificationReasons: classification.reasons,
   };

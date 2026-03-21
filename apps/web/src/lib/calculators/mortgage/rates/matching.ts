@@ -2,6 +2,34 @@ import { BANKS_DATA } from "../mortgage.config";
 import type { BankEntry } from "../mortgage.types";
 import type { NormalizedOffer } from "./types";
 
+export const ALLOWED_BANK_IDS = ["rb", "ucb", "csob", "cs", "mbank", "kb"] as const;
+
+const CANONICAL_BANK_META: Record<(typeof ALLOWED_BANK_IDS)[number], { name: string }> = {
+  rb: { name: "Raiffeisenbank" },
+  ucb: { name: "UniCredit Bank" },
+  csob: { name: "ČSOB" },
+  cs: { name: "Česká spořitelna" },
+  mbank: { name: "mBank" },
+  kb: { name: "Komerční banka" },
+};
+
+function detectCanonicalBankId(providerId: string, providerName: string): (typeof ALLOWED_BANK_IDS)[number] | null {
+  const id = providerId.toLowerCase();
+  const name = providerName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (id.includes("raiff") || name.includes("raiffeisen")) return "rb";
+  if (id.includes("unicredit") || id === "ucb" || name.includes("unicredit")) return "ucb";
+  if (id.includes("csob") || name.includes("csob")) return "csob";
+  if (id === "cs" || id.includes("sporitelna") || name.includes("ceska sporitelna")) return "cs";
+  if (id.includes("mbank") || name.includes("mbank")) return "mbank";
+  if (id === "kb" || name.includes("komercni banka")) return "kb";
+
+  return null;
+}
+
 export interface RateScenario {
   productType: "mortgage" | "loan";
   subtype: string;
@@ -61,17 +89,34 @@ export function normalizedOffersToBankEntries(
   rankedOffers: NormalizedOffer[],
   productType: "mortgage" | "loan"
 ): BankEntry[] {
-  const logosById = new Map(BANKS_DATA.map((bank) => [bank.id, bank.logoUrl]));
+  const logosById = new Map(BANKS_DATA.map((bank) => [bank.id, bank.logoUrl] as const));
+  const bestByCanonicalId = new Map<(typeof ALLOWED_BANK_IDS)[number], NormalizedOffer>();
 
-  return rankedOffers.map((offer) => ({
-    id: offer.providerId,
-    name: offer.providerName,
+  for (const offer of rankedOffers) {
+    const canonicalId = detectCanonicalBankId(offer.providerId, offer.providerName);
+    if (!canonicalId) continue;
+
+    const existing = bestByCanonicalId.get(canonicalId);
+    if (!existing || offer.nominalRate < existing.nominalRate) {
+      bestByCanonicalId.set(canonicalId, offer);
+    }
+  }
+
+  const entries = Array.from(bestByCanonicalId.entries()).map(([canonicalId, offer]) => ({
+    id: canonicalId,
+    name: CANONICAL_BANK_META[canonicalId].name,
     baseRate: productType === "mortgage" ? offer.nominalRate : 99,
     loanRate: productType === "loan" ? offer.nominalRate : 99,
     apr: offer.apr,
-    logoUrl: logosById.get(offer.providerId) ?? "",
+    logoUrl: logosById.get(canonicalId) ?? "",
     source: offer.source,
     sourceUrl: offer.sourceUrl,
     fetchedAt: offer.fetchedAt,
   }));
+
+  return entries.sort((a, b) => {
+    const aRate = productType === "mortgage" ? a.baseRate : a.loanRate;
+    const bRate = productType === "mortgage" ? b.baseRate : b.loanRate;
+    return aRate - bRate;
+  });
 }

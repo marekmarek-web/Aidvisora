@@ -12,14 +12,14 @@ export function MortgageProductSwitcher({
   onProductChange,
 }: MortgageProductSwitcherProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
       <button
         type="button"
         onClick={() => onProductChange("mortgage")}
-        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all touch-manipulation ${
+        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-wider transition-all touch-manipulation ${
           product === "mortgage"
-            ? "bg-indigo-600 text-white shadow-md"
-            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            ? "bg-slate-900 text-white shadow-sm"
+            : "bg-transparent text-slate-600 hover:bg-white"
         }`}
       >
         Hypotéka
@@ -27,10 +27,10 @@ export function MortgageProductSwitcher({
       <button
         type="button"
         onClick={() => onProductChange("loan")}
-        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all touch-manipulation ${
+        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-wider transition-all touch-manipulation ${
           product === "loan"
-            ? "bg-indigo-600 text-white shadow-md"
-            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            ? "bg-slate-900 text-white shadow-sm"
+            : "bg-transparent text-slate-600 hover:bg-white"
         }`}
       >
         Úvěry

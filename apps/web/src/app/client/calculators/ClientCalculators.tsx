@@ -230,6 +230,12 @@ export function ClientCalculators() {
               >
                 Mám zájem to řešit
               </button>
+              {activeCalculator === "hypo" ? (
+                <p className="text-xs text-slate-400 mt-4 leading-relaxed max-w-md relative z-10">
+                  Sazby a splátky jsou orientační. Finální nabídka závisí na bonitě klienta,
+                  účelu úvěru a podmínkách konkrétní banky.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

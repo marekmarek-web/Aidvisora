@@ -1,0 +1,593 @@
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import { 
+  LayoutDashboard, FileText, CreditCard, TrendingUp, 
+  FolderOpen, MessageSquare, ListTodo, Bell, User,
+  Plus, ArrowRight, ShieldCheck, Download, UploadCloud,
+  CheckCircle2, Clock, AlertCircle, File, ChevronRight,
+  PieChart, Home, Shield, Briefcase, Search, Settings2,
+  Calculator, QrCode, X, Check, Baby, Heart,
+  Activity, Sparkles, Send, ArrowLeft, Wifi, BatteryMedium, Signal
+} from 'lucide-react';
+
+// ==========================================
+// MOCK DATA (Zůstává beze změny)
+// ==========================================
+const CLIENT_INFO = {
+  name: 'Jan Novák',
+  email: 'jan.novak@example.cz',
+  phone: '+420 777 123 456',
+  address: 'Sluneční 145, Praha 4',
+  birthDate: '15. 4. 1985',
+  advisor: {
+    name: 'Bc. Martin Dvořák',
+    phone: '+420 777 888 999',
+    email: 'martin.dvorak@aidvisora.cz',
+    avatar: 'MD'
+  },
+  metrics: {
+    aum: '5 200 000 Kč',
+    monthly: '25 000 Kč',
+    health: 88
+  },
+  family: [
+    { id: 1, name: 'Eva Nováková', role: 'Partnerka', age: 38 },
+    { id: 2, name: 'Tomáš Novák', role: 'Syn', age: 12 },
+  ]
+};
+
+// Spodní navigace pro mobilní aplikaci
+const BOTTOM_NAV = [
+  { id: 'prehled', label: 'Přehled', icon: LayoutDashboard },
+  { id: 'smlouvy', label: 'Portfolio', icon: Briefcase },
+  { id: 'pozadavky', label: 'Požadavky', icon: ListTodo },
+  { id: 'zpravy', label: 'Zprávy', icon: MessageSquare, badge: 1 },
+  { id: 'profil', label: 'Profil', icon: User },
+];
+
+const PRODUCTS = [
+  { id: 'p1', type: 'investice', name: 'Portu - Dlouhodobé portfolio', provider: 'Portu', value: '1.2M Kč', detail: '15 000 Kč / měs', status: 'active', paymentAcc: '123456789/0800', vs: '888111' },
+  { id: 'p2', type: 'investice', name: 'Conseq Repofond', provider: 'Conseq', value: '4.0M Kč', detail: 'Jednorázová', status: 'active', paymentAcc: '—', vs: '—' },
+  { id: 'p3', type: 'pojisteni', name: 'Životní pojištění FLEXI', provider: 'Kooperativa', value: 'Krytí 3M Kč', detail: '2 500 Kč / měs', status: 'active', paymentAcc: '987654321/0100', vs: '555222' },
+  { id: 'p4', type: 'hypo', name: 'Refinancování hypotéky', provider: 'Česká spořitelna', value: '4.5M Kč', detail: 'Sazba 4.2%', status: 'pending', paymentAcc: '—', vs: '—' },
+];
+
+const MESSAGES = [
+  { id: 'm1', sender: 'advisor', text: 'Dobrý den, Jane. Připravil jsem pro vás návrh na refinancování té hypotéky. Pošlete mi prosím do Trezoru ty výpisy.', time: '10:30' },
+  { id: 'm2', sender: 'client', text: 'Dobrý den, jasně, hned to jdu nahrát.', time: '10:35' }
+];
+
+function getProductDesign(type) {
+  switch(type) {
+    case 'hypo': return { icon: <Home size={16}/>, color: 'text-blue-600 bg-blue-50 border-blue-200' };
+    case 'investice': return { icon: <TrendingUp size={16}/>, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
+    case 'pojisteni': return { icon: <Shield size={16}/>, color: 'text-rose-600 bg-rose-50 border-rose-200' };
+    default: return { icon: <Briefcase size={16}/>, color: 'text-purple-600 bg-purple-50 border-purple-200' };
+  }
+}
+
+// ==========================================
+// HLAVNÍ KOMPONENTA MOBILNÍ APLIKACE
+// ==========================================
+export default function MobileClientPortalApp() {
+  const [activeTab, setActiveTab] = useState('prehled');
+  
+  // Globální Modály
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isAddFamilyModalOpen, setIsAddFamilyModalOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 selection:bg-indigo-500 selection:text-white font-lato">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .bg-dot-grid { background-image: radial-gradient(#cbd5e1 1px, transparent 0); background-size: 32px 32px; }
+        .modal-overlay { animation: fadeIn 0.2s ease-out forwards; }
+        .modal-content { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* --- SIMULACE MOBILNÍ OBRAZOVKY --- */}
+      <div className="w-full max-w-[400px] h-[850px] bg-[#f8fafc] rounded-[40px] shadow-2xl relative overflow-hidden border-[8px] border-slate-800 flex flex-col">
+        
+        {/* Falešný iOS Status Bar */}
+        <div className="h-7 w-full flex justify-between items-center px-6 pt-2 text-[11px] font-bold text-slate-800 z-50 bg-white/80 backdrop-blur-md shrink-0">
+           <span>9:41</span>
+           <div className="flex gap-1.5 items-center">
+             <Signal size={12} className="fill-current" />
+             <Wifi size={12} />
+             <BatteryMedium size={14} className="fill-current" />
+           </div>
+        </div>
+
+        {/* Header Appky */}
+        <header className="bg-white/80 backdrop-blur-md px-5 py-3 border-b border-slate-100 sticky top-0 z-30 flex items-center justify-between shadow-sm shrink-0">
+           <div className="flex items-center gap-3">
+             <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-emerald-400 rounded-lg flex items-center justify-center text-white font-display font-bold text-sm shadow-md">C</div>
+             <h1 className="text-lg font-display font-black text-slate-900 tracking-tight capitalize">
+               {activeTab === 'dokumenty' ? 'Trezor' : 
+                activeTab === 'platby' ? 'Platby' : 
+                activeTab === 'kalkulacky' ? 'Kalkulačky' :
+                BOTTOM_NAV.find(n => n.id === activeTab)?.label}
+             </h1>
+           </div>
+           <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative bg-slate-50 rounded-full">
+             <Bell size={18} />
+             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+           </button>
+        </header>
+
+        {/* Hlavní obsah (Scrollable) */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar bg-dot-grid relative z-10 w-full pb-24">
+          <div className="p-4 space-y-6">
+            {activeTab === 'prehled' && <DashboardView setActiveTab={setActiveTab} openRequest={() => setIsRequestModalOpen(true)} />}
+            {activeTab === 'smlouvy' && <ContractsView />}
+            {activeTab === 'platby' && <PaymentsView setActiveTab={setActiveTab} />}
+            {activeTab === 'kalkulacky' && <CalculatorsView openRequest={() => setIsRequestModalOpen(true)} setActiveTab={setActiveTab} />}
+            {activeTab === 'pozadavky' && <RequestsView openRequest={() => setIsRequestModalOpen(true)} />}
+            {activeTab === 'zpravy' && <MessagesView />}
+            {activeTab === 'dokumenty' && <DocumentsView setActiveTab={setActiveTab} />}
+            {activeTab === 'profil' && <ProfileView openFamily={() => setIsAddFamilyModalOpen(true)} />}
+          </div>
+        </div>
+
+        {/* Plovoucí AI asistent pro klienta (Upraveno pro mobil) */}
+        {activeTab !== 'zpravy' && (
+          <div className="absolute bottom-[88px] right-4 z-40">
+            <button className="p-3 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-900/30 hover:scale-105 transition-all">
+              <Sparkles size={20} className="text-white" />
+            </button>
+          </div>
+        )}
+
+        {/* --- SPODNÍ NAVIGAČNÍ LIŠTA (Bottom Nav) --- */}
+        <nav className="absolute bottom-0 left-0 w-full bg-white border-t border-slate-100 flex items-center justify-around px-2 py-3 pb-6 z-50 rounded-b-[32px]">
+          {BOTTOM_NAV.map(item => {
+            const isActive = activeTab === item.id;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center gap-1 w-16 relative transition-colors
+                  ${isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
+                `}
+              >
+                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-indigo-50' : ''}`}>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-indigo-700' : ''}`}>
+                  {item.label}
+                </span>
+                {item.badge && (
+                  <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[8px] font-black shadow-sm border border-white">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Falešný iOS Home Indicator */}
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-slate-900 rounded-full z-50 pointer-events-none"></div>
+
+        {/* MODÁLY (Předělané na Bottom Sheets) */}
+        {isRequestModalOpen && <NewRequestModal onClose={() => setIsRequestModalOpen(false)} />}
+        {isAddFamilyModalOpen && <AddFamilyMemberModal onClose={() => setIsAddFamilyModalOpen(false)} />}
+
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 1. PŘEHLED (Mobilní Dashboard)
+// ==========================================
+function DashboardView({ setActiveTab, openRequest }) {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-6">
+      
+      {/* Welcome hlavička */}
+      <div>
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight mb-1">
+          Dobrý den, Jane 👋
+        </h1>
+        <p className="text-xs text-slate-500 font-medium">Váš finanční přehled je připraven.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white rounded-[20px] p-5 border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-2 mb-1 text-indigo-600"><PieChart size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Spravovaný majetek</span></div>
+          <div className="text-2xl font-display font-black text-slate-900">{CLIENT_INFO.metrics.aum}</div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1 text-emerald-600"><TrendingUp size={12} /><span className="text-[9px] font-black uppercase tracking-widest">Měs. investice</span></div>
+            <div className="text-lg font-display font-black text-slate-900">{CLIENT_INFO.metrics.monthly}</div>
+          </div>
+          <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1 text-amber-500"><Shield size={12} /><span className="text-[9px] font-black uppercase tracking-widest">Health Score</span></div>
+            <div className="text-lg font-display font-black text-slate-900">{CLIENT_INFO.metrics.health}%</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rychlý rozcestník (Grid 2x2) */}
+      <div className="bg-white rounded-[24px] border border-slate-100 p-4 shadow-sm grid grid-cols-2 gap-3">
+        {[
+           { id: 'smlouvy', label: 'Smlouvy', icon: Briefcase, color: 'text-indigo-600 bg-indigo-50' },
+           { id: 'platby', label: 'Platby & QR', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50' },
+           { id: 'dokumenty', label: 'Trezor', icon: FolderOpen, color: 'text-amber-600 bg-amber-50' },
+           { id: 'kalkulacky', label: 'Kalkulačky', icon: Calculator, color: 'text-blue-600 bg-blue-50' },
+        ].map(item => (
+           <button 
+              key={item.id} onClick={() => setActiveTab(item.id)}
+              className="p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-slate-50 transition-all flex flex-col items-center justify-center text-center gap-2"
+           >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.color}`}>
+                <item.icon size={20} />
+              </div>
+              <span className="font-bold text-[11px] text-slate-700">{item.label}</span>
+           </button>
+        ))}
+      </div>
+
+      {/* Notifikace od poradce */}
+      <div className="bg-gradient-to-br from-[#1a1c2e] to-[#0f172a] rounded-[24px] p-6 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-[40px] pointer-events-none"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-indigo-300 backdrop-blur-sm">
+              <Bell size={16} />
+            </div>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">K řešení</h2>
+          </div>
+          <h3 className="text-sm font-bold text-white mb-4 leading-snug">
+            Poradce vám zaslal návrh na <span className="text-emerald-400">Refinancování hypotéky</span>. Chybí výpisy z účtu.
+          </h3>
+          <button onClick={() => setActiveTab('pozadavky')} className="w-full py-3 bg-indigo-600 rounded-xl text-xs font-bold tracking-wide shadow-md shadow-indigo-500/30">Nahrát výpisy</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 2. MOJE PORTFOLIO (Mobilní Smlouvy)
+// ==========================================
+function ContractsView() {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-4">
+      {PRODUCTS.map(product => {
+        const design = getProductDesign(product.type);
+        return (
+          <div key={product.id} className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex items-start justify-between">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${design.color} mb-2`}>
+                {design.icon}
+              </div>
+              {product.status === 'active' && <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded border border-emerald-100">Aktivní</span>}
+              {product.status === 'pending' && <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest rounded border border-amber-100">V řešení</span>}
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <h3 className="font-bold text-sm text-slate-900 mb-0.5 leading-tight">{product.name}</h3>
+              <p className="text-xs font-bold text-slate-500 mb-4">{product.provider}</p>
+              
+              <div className="grid grid-cols-2 gap-2 mt-auto bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div>
+                  <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Hodnota</span>
+                  <span className="text-xs font-black text-slate-900">{product.value}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Platba</span>
+                  <span className="text-xs font-bold text-slate-600">{product.detail}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==========================================
+// 3. PLATBY (Mobilní tabulka zredukovaná na karty)
+// ==========================================
+function PaymentsView({ setActiveTab }) {
+  const [qrModal, setQrModal] = useState(null);
+  const activePayments = PRODUCTS.filter(p => p.status === 'active' && p.paymentAcc !== '—');
+
+  return (
+    <div className="animate-in fade-in duration-500 space-y-4">
+      <button onClick={() => setActiveTab('prehled')} className="text-xs font-bold text-slate-400 hover:text-indigo-600 mb-2 flex items-center gap-1"><ArrowLeft size={14}/> Zpět</button>
+      
+      {activePayments.map(pay => (
+        <div key={pay.id} className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex flex-col">
+          <div className="mb-3">
+            <p className="font-bold text-slate-900 text-sm">{pay.name}</p>
+            <p className="text-[10px] font-medium text-slate-500">{pay.provider}</p>
+          </div>
+          
+          <div className="space-y-2 mb-4 bg-slate-50 p-3 rounded-xl text-xs">
+             <div className="flex justify-between"><span className="text-slate-500 font-bold">Částka</span><span className="font-black text-slate-800">{pay.detail}</span></div>
+             <div className="flex justify-between"><span className="text-slate-500 font-bold">Účet</span><span className="font-bold text-slate-700">{pay.paymentAcc}</span></div>
+             <div className="flex justify-between"><span className="text-slate-500 font-bold">VS</span><span className="font-bold text-slate-700">{pay.vs}</span></div>
+          </div>
+
+          <button onClick={() => setQrModal(pay)} className="w-full py-2.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+            <QrCode size={16} /> QR Platba
+          </button>
+        </div>
+      ))}
+      
+      {/* Bottom Sheet QR Modal */}
+      {qrModal && (
+        <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={() => setQrModal(null)}>
+           <div className="bg-white w-full rounded-t-[32px] p-6 pb-12 modal-content" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+              <h3 className="font-black text-lg text-slate-900 mb-1 text-center">QR Platba</h3>
+              <p className="text-xs font-medium text-slate-500 mb-6 text-center">{qrModal.name}</p>
+              
+              <div className="w-40 h-40 mx-auto bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center mb-6">
+                 <QrCode size={48} className="text-slate-300" />
+              </div>
+              
+              <div className="bg-slate-50 rounded-xl p-4 text-left mb-6 text-sm">
+                 <div className="flex justify-between mb-2"><span className="text-slate-500 font-bold">Účet</span><span className="font-black text-slate-800">{qrModal.paymentAcc}</span></div>
+                 <div className="flex justify-between mb-2"><span className="text-slate-500 font-bold">Částka</span><span className="font-black text-slate-800">{qrModal.detail}</span></div>
+                 <div className="flex justify-between"><span className="text-slate-500 font-bold">VS</span><span className="font-black text-slate-800">{qrModal.vs}</span></div>
+              </div>
+
+              <button onClick={() => setQrModal(null)} className="w-full py-3.5 bg-[#1a1c2e] text-white rounded-xl font-bold text-sm">Hotovo, zavřít</button>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 4. KALKULAČKY (Mobilní)
+// ==========================================
+function CalculatorsView({ setActiveTab }) {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-4">
+      <button onClick={() => setActiveTab('prehled')} className="text-xs font-bold text-slate-400 hover:text-indigo-600 mb-2 flex items-center gap-1"><ArrowLeft size={14}/> Zpět</button>
+      
+      <div className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm text-center">
+        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4"><Home size={24}/></div>
+        <h3 className="text-base font-black text-slate-900 mb-1">Hypotéka</h3>
+        <p className="text-[11px] font-medium text-slate-500 mb-4">Orientační měsíční splátka úvěru.</p>
+        <button className="w-full py-2.5 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200">Spustit</button>
+      </div>
+
+      <div className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm text-center">
+        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4"><TrendingUp size={24}/></div>
+        <h3 className="text-base font-black text-slate-900 mb-1">Investice</h3>
+        <p className="text-[11px] font-medium text-slate-500 mb-4">Zhodnocení peněz v čase.</p>
+        <button className="w-full py-2.5 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200">Spustit</button>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 5. POŽADAVKY
+// ==========================================
+function RequestsView({ openRequest }) {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-4">
+      <button onClick={openRequest} className="w-full py-3.5 bg-emerald-500 text-white rounded-xl text-sm font-black shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 mb-2">
+        <Plus size={18} /> Nový požadavek
+      </button>
+
+      {/* Aktivní */}
+      <div className="bg-white p-5 rounded-[20px] border border-indigo-200 shadow-sm flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center border border-amber-100 shrink-0"><Clock size={18} /></div>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-0.5 block">V řešení</span>
+            <h3 className="font-bold text-sm text-slate-900 leading-tight">Refinancování hypotéky</h3>
+            <p className="text-[11px] font-medium text-slate-500 mt-1">Doložit výpisy z účtu za 3 měsíce.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Hotový */}
+      <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm flex flex-col gap-4 opacity-70">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center border border-emerald-100 shrink-0"><CheckCircle2 size={18} /></div>
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 leading-tight">Založení účtu Portu</h3>
+            <p className="text-[11px] font-medium text-slate-500 mt-1">Dokončeno: 14. 2. 2026</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// MEGA MODÁL PRO NOVÝ POŽADAVEK (Bottom Sheet Mobilní)
+function NewRequestModal({ onClose }) {
+  const [step, setStep] = useState(1);
+
+  const CATEGORIES = [
+    { id: 'uvery', label: 'Bydlení a úvěry' },
+    { id: 'majetek', label: 'Pojištění majetku a aut' },
+    { id: 'osoby', label: 'Pojištění osob' },
+    { id: 'investice', label: 'Investice a Penze' }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={onClose}>
+      <div className="bg-white w-full h-[90%] rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+        
+        <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between shrink-0">
+           <h2 className="text-lg font-black text-slate-900">Nový požadavek</h2>
+           <button onClick={onClose} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={16}/></button>
+        </div>
+
+        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+          {step === 1 && (
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Co potřebujete vyřešit?</h3>
+              <div className="space-y-3">
+                {CATEGORIES.map(c => (
+                  <button key={c.id} onClick={() => setStep(2)} className="w-full p-4 rounded-2xl border border-slate-200 text-left font-bold text-sm text-slate-700 shadow-sm flex justify-between items-center">
+                    {c.label} <ChevronRight size={16} className="text-slate-300"/>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {step === 2 && (
+            <div className="flex flex-col h-full">
+              <button onClick={() => setStep(1)} className="text-[11px] font-bold text-indigo-600 mb-4 w-fit">← Zpět</button>
+              <textarea rows={6} placeholder="Zde popište svou představu..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:border-indigo-400 resize-none mb-6"></textarea>
+              <button onClick={() => setStep(3)} className="w-full py-4 mt-auto bg-[#1a1c2e] text-white rounded-2xl font-black text-sm shadow-lg">Odeslat poradci</button>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="flex flex-col items-center justify-center text-center h-full pt-10">
+               <div className="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-6"><Check size={40} strokeWidth={3}/></div>
+               <h2 className="text-xl font-black text-slate-900 mb-2">Požadavek odeslán!</h2>
+               <p className="text-xs text-slate-500 font-medium mb-8">Váš poradce byl notifikován.</p>
+               <button onClick={onClose} className="w-full py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl">Zavřít okno</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 6. ZPRÁVY (Mobilní Chat)
+// ==========================================
+function MessagesView() {
+  return (
+    <div className="absolute inset-0 bg-[#f8fafc] flex flex-col z-20">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar">
+        <div className="flex justify-center mb-4"><span className="px-3 py-1 bg-slate-200/50 text-slate-500 text-[9px] font-black uppercase tracking-widest rounded-full">Dnes</span></div>
+        
+        {MESSAGES.map(m => (
+          <div key={m.id} className={`flex flex-col max-w-[85%] ${m.sender === 'client' ? 'self-end items-end' : 'self-start items-start'}`}>
+            <div className={`p-3.5 rounded-2xl text-[14px] leading-relaxed shadow-sm ${m.sender === 'client' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-800 rounded-tl-sm'}`}>
+              {m.text}
+            </div>
+            <span className="text-[9px] font-bold text-slate-400 mt-1 px-1">{m.time}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+        <div className="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-[20px] p-1.5">
+          <textarea rows={1} placeholder="Napište zprávu..." className="flex-1 bg-transparent border-none outline-none py-2.5 px-3 text-sm font-medium text-slate-700 resize-none max-h-24" />
+          <button className="p-2.5 bg-indigo-600 text-white rounded-xl shrink-0"><Send size={16} className="ml-0.5" /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 7. TREZOR DOKUMENTŮ (Mobilní)
+// ==========================================
+function DocumentsView({ setActiveTab }) {
+  return (
+    <div className="animate-in fade-in duration-300 space-y-4">
+      <button onClick={() => setActiveTab('prehled')} className="text-xs font-bold text-slate-400 hover:text-indigo-600 mb-2 flex items-center gap-1"><ArrowLeft size={14}/> Zpět</button>
+      
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 text-center">
+        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400"><FolderOpen size={24}/></div>
+        <h2 className="text-lg font-black text-slate-900 mb-1">Trezor</h2>
+        <p className="text-xs text-slate-500 mb-6">Zabezpečené úložiště šifrovaných smluv.</p>
+        <button className="w-full py-3 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+          <UploadCloud size={16} /> Nahrát
+        </button>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+         <div className="p-2.5 bg-rose-50 text-rose-500 rounded-xl"><File size={16}/></div>
+         <div className="flex-1 min-w-0"><h4 className="font-bold text-sm text-slate-800 truncate">Návrh_Refi_2026.pdf</h4><p className="text-[10px] font-bold text-slate-400">Od poradce • Dnes</p></div>
+         <button className="p-2 text-slate-400"><Download size={18}/></button>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 8. PROFIL (Mobilní)
+// ==========================================
+function ProfileView({ openFamily }) {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-6">
+      
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-slate-800 text-white flex items-center justify-center font-black text-xl shadow-lg mx-auto mb-4">JN</div>
+        <h2 className="text-xl font-black text-slate-900 mb-1">{CLIENT_INFO.name}</h2>
+        <p className="text-xs font-bold text-slate-500 mb-4">{CLIENT_INFO.email}</p>
+        <button className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest">
+          Změnit heslo
+        </button>
+      </div>
+
+      {/* RODINA */}
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+         <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-sm font-black text-slate-900 flex items-center gap-2"><Heart size={16} className="text-rose-500"/> Rodina</h2>
+            <button onClick={openFamily} className="p-1.5 bg-indigo-50 text-indigo-700 rounded-lg"><Plus size={14}/></button>
+         </div>
+         <div className="p-4 space-y-3">
+            {CLIENT_INFO.family.map(mem => (
+              <div key={mem.id} className="p-3 border border-slate-100 rounded-xl flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black ${mem.role === 'Syn' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                  {mem.role === 'Syn' ? <Baby size={16}/> : mem.name.split(' ').map(n=>n[0]).join('')}
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900">{mem.name}</h4>
+                  <p className="text-[10px] font-bold text-slate-500">{mem.role} • {mem.age} let</p>
+                </div>
+              </div>
+            ))}
+         </div>
+      </div>
+      
+      <button className="w-full py-3.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest">Odhlásit se</button>
+
+    </div>
+  );
+}
+
+// MODÁL PŘIDÁNÍ ČLENA RODINY (Mobilní Bottom Sheet)
+function AddFamilyMemberModal({ onClose }) {
+  const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-400 transition-all text-slate-800";
+  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={onClose}>
+      <div className="bg-white w-full rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
+           <h2 className="text-lg font-black text-slate-900">Přidat člena</h2>
+           <button onClick={onClose} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={16}/></button>
+        </div>
+        <div className="p-6 space-y-4">
+           <div><label className={labelClass}>Vztah</label><select className={inputClass}><option>Partner</option><option>Dítě</option></select></div>
+           <div><label className={labelClass}>Jméno a Příjmení</label><input type="text" placeholder="Např. Eva Nováková" className={inputClass} /></div>
+           <div><label className={labelClass}>Datum narození</label><input type="date" className={inputClass} /></div>
+        </div>
+        <div className="px-6 py-5 bg-slate-50 border-t border-slate-100">
+           <button onClick={onClose} className="w-full py-3.5 bg-[#1a1c2e] text-white rounded-xl text-sm font-black shadow-lg">Přidat</button>
+        </div>
+      </div>
+    </div>
+  );
+}

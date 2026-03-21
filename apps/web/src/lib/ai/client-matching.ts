@@ -1,8 +1,17 @@
 import { db } from "db";
-import { contacts, companies, companyPersonLinks } from "db";
-import { eq, and, or, sql } from "db";
+import {
+  contacts,
+  companies,
+  companyPersonLinks,
+  households,
+  householdMembers,
+  opportunities,
+  contracts,
+} from "db";
+import { eq, and, sql, inArray } from "db";
 import type { ExtractedContractSchema } from "./extraction-schemas";
 import type { ClientMatchCandidate, MatchConfidence } from "./review-queue";
+import type { DocumentReviewEnvelope } from "./document-review-types";
 import {
   normalizeForCompare,
   normalizePhone,
@@ -19,13 +28,15 @@ export type ClientMatchingContext = {
 };
 
 const SCORE = {
-  personalIdExact: 1.0,
-  companyIdExact: 0.95,
-  fullNameBirthDate: 0.9,
-  fullNameEmail: 0.75,
-  fullNamePhone: 0.7,
-  fullNameOnly: 0.35,
-  addressOnly: 0.2,
+  personalIdExact: 0.46,
+  companyIdExact: 0.34,
+  birthDate: 0.22,
+  fullName: 0.18,
+  email: 0.14,
+  phone: 0.14,
+  address: 0.1,
+  employer: 0.08,
+  insurerOrLenderHint: 0.06,
 } as const;
 
 function confidenceFromScore(score: number): MatchConfidence {
@@ -34,12 +45,71 @@ function confidenceFromScore(score: number): MatchConfidence {
   return "low";
 }
 
-function fullNameFromExtracted(extracted: ExtractedContractSchema): string {
-  const c = extracted.client;
-  if (c?.fullName) return normalizeName(c.fullName);
-  const first = normalizeName(c?.firstName ?? "");
-  const last = normalizeName(c?.lastName ?? "");
+function fullNameFromParts(firstRaw?: string | null, lastRaw?: string | null, fullRaw?: string | null): string {
+  if (fullRaw) return normalizeName(fullRaw);
+  const first = normalizeName(firstRaw ?? "");
+  const last = normalizeName(lastRaw ?? "");
   return [first, last].filter(Boolean).join(" ");
+}
+
+function extractSignals(
+  extracted: ExtractedContractSchema | DocumentReviewEnvelope
+): {
+  fullNameNorm: string;
+  birthDateNorm: string;
+  emailNorm: string;
+  phoneNorm: string;
+  personalIdNorm: string;
+  companyIdNorm: string;
+  addressNorm: string;
+  employerNorm: string;
+  institutionNorm: string;
+} {
+  const asEnvelope = extracted as DocumentReviewEnvelope;
+  const isEnvelope = !!asEnvelope?.documentClassification && !!asEnvelope?.extractedFields;
+  if (isEnvelope) {
+    const fields = asEnvelope.extractedFields;
+    const fullName = String(
+      fields.employeeFullName?.value ??
+      fields.investorFullName?.value ??
+      fields.insuredPersonName?.value ??
+      fields.clientFullName?.value ??
+      ""
+    );
+    const firstName = String(fields.clientFirstName?.value ?? "");
+    const lastName = String(fields.clientLastName?.value ?? "");
+    const birthDate = String(fields.birthDate?.value ?? fields.employeeBirthDate?.value ?? "");
+    const email = String(fields.email?.value ?? fields.clientEmail?.value ?? "");
+    const phone = String(fields.phone?.value ?? fields.clientPhone?.value ?? "");
+    const personalId = String(fields.maskedPersonalId?.value ?? fields.personalId?.value ?? "");
+    const companyId = String(fields.companyId?.value ?? fields.employerIco?.value ?? "");
+    const address = String(fields.address?.value ?? fields.permanentAddress?.value ?? "");
+    const employer = String(fields.employerName?.value ?? "");
+    const institution = String(fields.insurer?.value ?? fields.lender?.value ?? fields.bankName?.value ?? "");
+    return {
+      fullNameNorm: fullNameFromParts(firstName, lastName, fullName),
+      birthDateNorm: normalizeDate(birthDate),
+      emailNorm: normalizeEmail(email),
+      phoneNorm: normalizePhone(phone),
+      personalIdNorm: normalizePersonalId(personalId),
+      companyIdNorm: normalizeCompanyId(companyId),
+      addressNorm: normalizeAddress(address),
+      employerNorm: normalizeForCompare(employer),
+      institutionNorm: normalizeForCompare(institution),
+    };
+  }
+  const legacy = extracted as ExtractedContractSchema;
+  return {
+    fullNameNorm: fullNameFromParts(legacy.client?.firstName, legacy.client?.lastName, legacy.client?.fullName),
+    birthDateNorm: normalizeDate(legacy.client?.birthDate),
+    emailNorm: normalizeEmail(legacy.client?.email),
+    phoneNorm: normalizePhone(legacy.client?.phone),
+    personalIdNorm: normalizePersonalId(legacy.client?.personalId),
+    companyIdNorm: normalizeCompanyId(legacy.client?.companyId),
+    addressNorm: normalizeAddress(legacy.client?.address),
+    employerNorm: "",
+    institutionNorm: normalizeForCompare(legacy.institutionName),
+  };
 }
 
 /**
@@ -47,20 +117,22 @@ function fullNameFromExtracted(extracted: ExtractedContractSchema): string {
  * Uses normalized comparison; returns candidates with score, confidence, reasons, matchedFields.
  */
 export async function findClientCandidates(
-  extracted: ExtractedContractSchema,
+  extracted: ExtractedContractSchema | DocumentReviewEnvelope,
   context: ClientMatchingContext
 ): Promise<ClientMatchCandidate[]> {
   const { tenantId } = context;
-  const c = extracted.client;
   const byId = new Map<string, ClientMatchCandidate>();
-
-  const personalIdNorm = normalizePersonalId(c?.personalId);
-  const companyIdNorm = normalizeCompanyId(c?.companyId);
-  const emailNorm = normalizeEmail(c?.email);
-  const phoneNorm = normalizePhone(c?.phone);
-  const fullNameNorm = fullNameFromExtracted(extracted);
-  const birthDateNorm = normalizeDate(c?.birthDate);
-  const addressNorm = normalizeAddress(c?.address);
+  const {
+    personalIdNorm,
+    companyIdNorm,
+    emailNorm,
+    phoneNorm,
+    fullNameNorm,
+    birthDateNorm,
+    addressNorm,
+    employerNorm,
+    institutionNorm,
+  } = extractSignals(extracted);
 
   // 1) personalId exact match – very strong
   if (personalIdNorm.length >= 9) {
@@ -132,127 +204,78 @@ export async function findClientCandidates(
     }
   }
 
-  // 3) fullName + birthDate
-  if (fullNameNorm && birthDateNorm) {
-    const allContacts = await db
-      .select({
-        id: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        birthDate: contacts.birthDate,
-        email: contacts.email,
-        phone: contacts.phone,
-        street: contacts.street,
-        personalId: contacts.personalId,
-      })
-      .from(contacts)
-      .where(eq(contacts.tenantId, tenantId))
-      .limit(200);
-    for (const r of allContacts) {
-      const contactFullName = normalizeName([r.firstName, r.lastName].filter(Boolean).join(" "));
-      const contactBirth = normalizeDate(r.birthDate);
-      if (contactFullName !== fullNameNorm || contactBirth !== birthDateNorm) continue;
-      const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.id;
-      const existing = byId.get(r.id);
-      if (!existing || existing.score < SCORE.fullNameBirthDate) {
-        byId.set(r.id, {
-          clientId: r.id,
-          score: SCORE.fullNameBirthDate,
-          confidence: "high",
-          reasons: ["Shoda jména a data narození"],
-          matchedFields: { fullName: true, firstName: true, lastName: true, birthDate: true },
-          displayName,
-        });
-      }
-    }
-  }
+  const allContacts = await db
+    .select({
+      id: contacts.id,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      email: contacts.email,
+      phone: contacts.phone,
+      birthDate: contacts.birthDate,
+      personalId: contacts.personalId,
+      street: contacts.street,
+      notes: contacts.notes,
+    })
+    .from(contacts)
+    .where(eq(contacts.tenantId, tenantId))
+    .limit(400);
 
-  // 4) fullName + email
-  if (fullNameNorm && emailNorm) {
-    const allContacts = await db
-      .select({
-        id: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        email: contacts.email,
-      })
-      .from(contacts)
-      .where(eq(contacts.tenantId, tenantId))
-      .limit(200);
-    for (const r of allContacts) {
-      if (normalizeEmail(r.email) !== emailNorm) continue;
-      const contactFullName = normalizeName([r.firstName, r.lastName].filter(Boolean).join(" "));
-      if (contactFullName !== fullNameNorm) continue;
-      const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.id;
-      const existing = byId.get(r.id);
-      if (!existing || existing.score < SCORE.fullNameEmail) {
-        byId.set(r.id, {
-          clientId: r.id,
-          score: SCORE.fullNameEmail,
-          confidence: "medium",
-          reasons: ["Shoda jména a e-mailu"],
-          matchedFields: { fullName: true, email: true },
-          displayName,
-        });
-      }
+  for (const r of allContacts) {
+    let score = 0;
+    const reasons: string[] = [];
+    const matchedFields: Record<string, boolean> = {};
+    const contactName = normalizeName([r.firstName, r.lastName].filter(Boolean).join(" "));
+    if (fullNameNorm && contactName === fullNameNorm) {
+      score += SCORE.fullName;
+      matchedFields.fullName = true;
+      matchedFields.firstName = true;
+      matchedFields.lastName = true;
+      reasons.push("Shoda jména");
     }
-  }
-
-  // 5) fullName + phone
-  if (fullNameNorm && phoneNorm) {
-    const allContacts = await db
-      .select({
-        id: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        phone: contacts.phone,
-      })
-      .from(contacts)
-      .where(eq(contacts.tenantId, tenantId))
-      .limit(200);
-    for (const r of allContacts) {
-      if (normalizePhone(r.phone) !== phoneNorm) continue;
-      const contactFullName = normalizeName([r.firstName, r.lastName].filter(Boolean).join(" "));
-      if (contactFullName !== fullNameNorm) continue;
-      const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.id;
-      const existing = byId.get(r.id);
-      if (!existing || existing.score < SCORE.fullNamePhone) {
-        byId.set(r.id, {
-          clientId: r.id,
-          score: SCORE.fullNamePhone,
-          confidence: "medium",
-          reasons: ["Shoda jména a telefonu"],
-          matchedFields: { fullName: true, phone: true },
-          displayName,
-        });
-      }
+    if (birthDateNorm && normalizeDate(r.birthDate) === birthDateNorm) {
+      score += SCORE.birthDate;
+      matchedFields.birthDate = true;
+      reasons.push("Shoda data narození");
     }
-  }
-
-  // 6) fullName only – weak
-  if (fullNameNorm && byId.size === 0) {
-    const allContacts = await db
-      .select({
-        id: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-      })
-      .from(contacts)
-      .where(eq(contacts.tenantId, tenantId))
-      .limit(100);
-    for (const r of allContacts) {
-      const contactFullName = normalizeName([r.firstName, r.lastName].filter(Boolean).join(" "));
-      if (contactFullName !== fullNameNorm) continue;
-      const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.id;
-      byId.set(r.id, {
-        clientId: r.id,
-        score: SCORE.fullNameOnly,
-        confidence: "low",
-        reasons: ["Shoda jména"],
-        matchedFields: { fullName: true, firstName: true, lastName: true },
-        displayName,
-      });
+    if (emailNorm && normalizeEmail(r.email) === emailNorm) {
+      score += SCORE.email;
+      matchedFields.email = true;
+      reasons.push("Shoda e-mailu");
     }
+    if (phoneNorm && normalizePhone(r.phone) === phoneNorm) {
+      score += SCORE.phone;
+      matchedFields.phone = true;
+      reasons.push("Shoda telefonu");
+    }
+    if (addressNorm && normalizeAddress(r.street) === addressNorm) {
+      score += SCORE.address;
+      matchedFields.address = true;
+      reasons.push("Shoda adresy");
+    }
+    if (personalIdNorm.length >= 9 && normalizePersonalId(r.personalId) === personalIdNorm) {
+      score += SCORE.personalIdExact;
+      matchedFields.personalId = true;
+      reasons.push("Shoda rodného čísla");
+    }
+    if (employerNorm && normalizeForCompare(r.notes).includes(employerNorm)) {
+      score += SCORE.employer;
+      reasons.push("Shoda zaměstnavatele v poznámce");
+    }
+    if (institutionNorm && normalizeForCompare(r.notes).includes(institutionNorm)) {
+      score += SCORE.insurerOrLenderHint;
+      reasons.push("Shoda instituce v kontextu");
+    }
+    if (score < 0.25) continue;
+    score = Math.min(1, score);
+    const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.id;
+    byId.set(r.id, {
+      clientId: r.id,
+      score,
+      confidence: confidenceFromScore(score),
+      reasons,
+      matchedFields,
+      displayName,
+    });
   }
 
   const result = Array.from(byId.values()).map((c) => ({
@@ -270,6 +293,72 @@ export function isMatchingAmbiguous(candidates: ClientMatchCandidate[]): boolean
   const high = candidates.filter((c) => c.confidence === "high");
   if (high.length > 1) return true;
   const topScore = candidates[0]?.score ?? 0;
-  const similar = candidates.filter((c) => c.score >= topScore - 0.15 && c.score <= topScore + 0.15);
+  const similar = candidates.filter((c) => c.score >= topScore - 0.07 && c.score <= topScore + 0.07);
   return similar.length > 1;
+}
+
+export async function findMatchedHouseholds(
+  tenantId: string,
+  clientCandidates: ClientMatchCandidate[]
+): Promise<Array<{ entityId: string; score: number; reason: string }>> {
+  const top = clientCandidates.slice(0, 5);
+  if (top.length === 0) return [];
+  const contactIds = top.map((c) => c.clientId);
+  const rows = await db
+    .select({
+      householdId: households.id,
+      contactId: householdMembers.contactId,
+      householdName: households.name,
+    })
+    .from(householdMembers)
+    .innerJoin(households, eq(households.id, householdMembers.householdId))
+    .where(and(eq(households.tenantId, tenantId), inArray(householdMembers.contactId, contactIds)))
+    .limit(20);
+  const out = new Map<string, { entityId: string; score: number; reason: string }>();
+  for (const row of rows) {
+    const candidate = top.find((c) => c.clientId === row.contactId);
+    if (!candidate) continue;
+    const current = out.get(row.householdId);
+    const score = Math.min(1, candidate.score * 0.92);
+    if (!current || current.score < score) {
+      out.set(row.householdId, {
+        entityId: row.householdId,
+        score,
+        reason: `Člen householdu: ${row.householdName}`,
+      });
+    }
+  }
+  return [...out.values()].sort((a, b) => b.score - a.score);
+}
+
+export async function findMatchedDeals(
+  tenantId: string,
+  clientCandidates: ClientMatchCandidate[],
+  contractNumber?: string | null
+): Promise<Array<{ entityId: string; score: number; reason: string }>> {
+  const topClient = clientCandidates[0];
+  if (!topClient) return [];
+  const oppRows = await db
+    .select({ id: opportunities.id, title: opportunities.title })
+    .from(opportunities)
+    .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.contactId, topClient.clientId)))
+    .limit(5);
+  const contractRows =
+    contractNumber && contractNumber.trim()
+      ? await db
+          .select({ id: contracts.id, contractNumber: contracts.contractNumber })
+          .from(contracts)
+          .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contractNumber, contractNumber.trim())))
+          .limit(5)
+      : [];
+  const mapped = [
+    ...oppRows.map((r) => ({ entityId: r.id, score: Math.min(1, topClient.score * 0.85), reason: `Opportunity: ${r.title}` })),
+    ...contractRows.map((r) => ({
+      entityId: r.id,
+      score: Math.min(1, topClient.score * 0.9),
+      reason: `Smlouva s číslem ${r.contractNumber ?? contractNumber ?? "—"}`,
+    })),
+  ];
+  mapped.sort((a, b) => b.score - a.score);
+  return mapped;
 }

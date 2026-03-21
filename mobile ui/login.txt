@@ -1,0 +1,326 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { 
+  Mail, Lock, Eye, EyeOff, ArrowRight, 
+  ScanFace, AlertCircle, ChevronLeft
+} from 'lucide-react';
+
+const GoogleIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+);
+
+const AppleIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+    <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702z"/>
+  </svg>
+);
+
+export default function MobileLoginView() {
+  const [role, setRole] = useState('advisor'); // 'advisor' | 'client'
+  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(true);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Hodiny pro fake status bar
+  const [time, setTime] = useState(new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute:'2-digit'}));
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute:'2-digit'}));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleLogin = (e) => {
+    e?.preventDefault();
+    setIsLoading(true);
+    setHasError(false);
+    
+    // Simulace requestu
+    setTimeout(() => {
+      setIsLoading(false);
+      // Schválně vyhodíme chybu pro ukázku nového elegantního alertu
+      if (email.includes('error') || email === '') {
+        setHasError(true);
+      } else {
+        console.log(`Login success pro: ${role}`);
+      }
+    }, 1200);
+  };
+
+  const handleBiometricLogin = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      console.log("Biometric Login success");
+    }, 1000);
+  };
+
+  // Dynamické třídy podle vybrané role
+  const isClient = role === 'client';
+  const themeColor = isClient ? 'emerald' : 'indigo';
+  
+  const inputClass = `w-full pl-12 pr-12 py-4 bg-white/10 border border-white/10 rounded-[20px] text-base font-bold text-white outline-none focus:bg-white/15 focus:ring-4 transition-all placeholder:text-slate-400 placeholder:font-medium backdrop-blur-md
+    ${isClient ? 'focus:border-emerald-400 focus:ring-emerald-500/20' : 'focus:border-indigo-400 focus:ring-indigo-500/20'}`;
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-0 md:p-8 font-sans selection:bg-indigo-500 selection:text-white">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
+        .font-sans { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        @keyframes float-slow {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, 30px); }
+        }
+        .orb-1 { animation: float-slow 15s ease-in-out infinite; }
+        .orb-2 { animation: float-slow 18s ease-in-out infinite reverse; }
+
+        .mobile-waves { position: absolute; bottom: 0; left: 0; width: 100%; height: 120px; z-index: 0; }
+        .parallax > use { animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite; }
+        .parallax > use:nth-child(1) { animation-delay: -2s; animation-duration: 7s; }
+        .parallax > use:nth-child(2) { animation-delay: -3s; animation-duration: 10s; }
+        .parallax > use:nth-child(3) { animation-delay: -4s; animation-duration: 13s; }
+        @keyframes move-forever { 0% { transform: translate3d(-90px,0,0); } 100% { transform: translate3d(85px,0,0); } }
+
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Jemná animace třesu pro chybovou hlášku */
+        @keyframes subtle-shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+        .animate-subtle-shake { animation: subtle-shake 0.3s ease-in-out; }
+      `}</style>
+
+      {/* SIMULACE MOBILNÍ OBRAZOVKY */}
+      <div className="w-full md:max-w-[400px] h-[100dvh] md:h-[844px] bg-[#060918] relative overflow-hidden flex flex-col md:rounded-[40px] md:shadow-[0_0_50px_rgba(0,0,0,0.5)] md:border-[8px] md:border-slate-800 transition-colors duration-700">
+        
+        {/* FAKE iOS STATUS BAR */}
+        <div className="h-12 w-full px-6 flex justify-between items-center z-50 absolute top-0 text-white font-semibold text-sm">
+          <span>{time}</span>
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="2" width="18" height="8" rx="2" ry="2"/><line x1="23" y1="4" x2="23" y2="8"/></svg>
+          </div>
+        </div>
+
+        {/* --- POZADÍ (Dynamické podle role) --- */}
+        <div className="absolute inset-0 z-0 pointer-events-none transition-colors duration-700">
+          <div className={`absolute top-0 left-0 w-[150%] h-[50%] blur-[100px] rounded-full orb-1 -translate-x-1/4 -translate-y-1/4 transition-colors duration-700
+            ${isClient ? 'bg-emerald-600/20' : 'bg-indigo-600/30'}
+          `}></div>
+          <div className="absolute top-1/3 right-[-20%] w-[100%] h-[40%] bg-purple-600/20 blur-[80px] rounded-full orb-2"></div>
+          
+          <svg className="mobile-waves opacity-80" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none">
+            <defs>
+              <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+            </defs>
+            <g className="parallax transition-colors duration-700">
+              <use href="#gentle-wave" x="48" y="0" fill={isClient ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.15)"} />
+              <use href="#gentle-wave" x="48" y="3" fill="rgba(168, 85, 247, 0.2)" />
+              <use href="#gentle-wave" x="48" y="5" fill="rgba(10, 15, 41, 1)" />
+            </g>
+          </svg>
+        </div>
+
+        {/* --- OBSAH OBRAZOVKY --- */}
+        <div className="flex-1 flex flex-col relative z-10 overflow-y-auto hide-scroll pt-16 px-6 pb-8">
+          
+          {/* Zpět tlačítko (pouze při registraci) */}
+          {!isLogin && (
+            <button onClick={() => setIsLogin(true)} className="absolute top-14 left-4 p-2 text-white hover:bg-white/10 rounded-full transition-colors">
+              <ChevronLeft size={24} />
+            </button>
+          )}
+
+          {/* Přepínač Rolí (Poradce / Klient) */}
+          <div className="flex bg-white/10 p-1 rounded-full w-fit mx-auto mb-6 backdrop-blur-md border border-white/10 shadow-lg">
+            <button 
+              onClick={() => { setRole('advisor'); setIsLogin(true); setHasError(false); }}
+              className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 
+                ${!isClient ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}
+              `}
+            >
+              Poradce
+            </button>
+            <button 
+              onClick={() => { setRole('client'); setIsLogin(true); setHasError(false); }}
+              className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 
+                ${isClient ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}
+              `}
+            >
+              Klient
+            </button>
+          </div>
+
+          {/* Hlavička & Logo */}
+          <div className="flex flex-col items-center mb-10 animate-in fade-in duration-500">
+            <div className={`w-16 h-16 rounded-[20px] flex items-center justify-center text-white font-black text-3xl shadow-lg border border-white/20 mb-4 transition-all duration-500
+              ${isClient ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/30' : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30'}
+            `}>
+              A
+            </div>
+            <h1 className="font-display text-3xl font-black text-white tracking-tight mb-2 text-center">
+              {isClient ? 'Klientská zóna' : (isLogin ? 'Vítejte zpět' : 'Založit účet')}
+            </h1>
+            <p className="text-slate-400 text-sm font-medium text-center max-w-[250px]">
+              {isClient ? 'Přihlaste se ke svým financím.' : (isLogin ? 'Přihlaste se do pracovního prostředí.' : 'Získejte přehled o svých klientech.')}
+            </p>
+          </div>
+
+          {/* FORMULÁŘ */}
+          <form onSubmit={handleLogin} className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 flex flex-col">
+            
+            {!isLogin && !isClient && (
+              <div>
+                <div className="relative group">
+                  <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 transition-colors ${isClient ? 'group-focus-within:text-emerald-400' : 'group-focus-within:text-indigo-400'}`}>
+                    <span className="font-bold font-display text-lg">@</span>
+                  </div>
+                  <input type="text" required placeholder="Jméno a příjmení" className={inputClass} />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="relative group">
+                <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 transition-colors ${isClient ? 'group-focus-within:text-emerald-400' : 'group-focus-within:text-indigo-400'}`}>
+                  <Mail size={20} />
+                </div>
+                <input 
+                  type="email" required placeholder="Váš e-mail" inputMode="email" autoCapitalize="none"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative group">
+                <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 transition-colors ${isClient ? 'group-focus-within:text-emerald-400' : 'group-focus-within:text-indigo-400'}`}>
+                  <Lock size={20} />
+                </div>
+                <input 
+                  type={showPassword ? "text" : "password"} required placeholder="Heslo"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                />
+                <button 
+                  type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              
+              {isLogin && (
+                <div className="flex justify-end mt-3">
+                  <button type="button" className={`text-xs font-bold transition-colors py-1 ${isClient ? 'text-emerald-400 hover:text-emerald-300' : 'text-indigo-400 hover:text-indigo-300'}`}>
+                    Zapomněli jste heslo?
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* OPRAVENÁ ELEGANTNÍ CHYBOVÁ HLÁŠKA */}
+            {hasError && (
+              <div className="flex items-center justify-center gap-2 text-rose-300 bg-rose-500/10 border border-rose-500/20 py-3.5 px-4 rounded-xl text-sm font-bold animate-in fade-in animate-subtle-shake backdrop-blur-sm">
+                <AlertCircle size={18} className="shrink-0" />
+                Nesprávný e-mail nebo heslo
+              </div>
+            )}
+
+            {/* Hlavní akce (Login + FaceID) */}
+            <div className="flex gap-3 pt-2 mt-auto pb-4">
+              <button 
+                type="submit" disabled={isLoading}
+                className={`flex-1 text-white font-black uppercase tracking-widest text-sm py-4 rounded-[20px] shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 group
+                  ${isClient ? 'bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-600/30' : 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-600/30'}
+                `}
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    {isClient ? 'Vstoupit' : (isLogin ? 'Přihlásit' : 'Vytvořit účet')}
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+              
+              {isLogin && isBiometricAvailable && (
+                <button 
+                  type="button" 
+                  onClick={handleBiometricLogin}
+                  className="w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-[20px] flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-[0.95] shrink-0"
+                  aria-label="Přihlásit pomocí Face ID"
+                >
+                  <ScanFace size={24} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+            
+            {/* Social Logins - Apple a Google */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 opacity-40">
+                <div className="h-[1px] bg-white flex-1"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">Nebo</span>
+                <div className="h-[1px] bg-white flex-1"></div>
+              </div>
+
+              <div className="flex gap-3">
+                <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 rounded-[16px] text-white font-bold text-sm transition-colors active:scale-[0.98]">
+                  <AppleIcon /> Apple
+                </button>
+                <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 rounded-[16px] text-white font-bold text-sm transition-colors active:scale-[0.98]">
+                  <GoogleIcon /> Google
+                </button>
+              </div>
+            </div>
+
+            {/* Přepínač Login / Register - Zobrazeno jen pro poradce */}
+            {!isClient ? (
+              <div className="text-center pt-4">
+                <p className="text-sm font-medium text-slate-400">
+                  {isLogin ? 'Nemáte ještě účet?' : 'Zpět na přihlášení.'}
+                  <button 
+                    type="button"
+                    onClick={() => { setIsLogin(!isLogin); setHasError(false); }}
+                    className="ml-2 text-white font-bold hover:text-indigo-300 transition-colors"
+                  >
+                    {isLogin ? 'Založit účet' : 'Přihlásit se'}
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <div className="text-center pt-4">
+                <p className="text-[11px] font-medium text-slate-500 leading-relaxed px-4">
+                  Přístup do klientské zóny zakládá váš poradce. Pokud nemáte údaje, kontaktujte jej.
+                </p>
+              </div>
+            )}
+          </form>
+
+        </div>
+
+        {/* FAKE iOS HOME INDICATOR */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1/3 h-1.5 bg-white/30 rounded-full z-50"></div>
+      </div>
+    </div>
+  );
+}

@@ -16,17 +16,17 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
       : "0,0";
 
   return (
-    <div className="bg-[#0a0f29] text-white rounded-2xl shadow-2xl shadow-[#0a0f29]/30 border border-slate-800 p-6 md:p-8 relative overflow-hidden">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0f29] p-6 text-white shadow-2xl shadow-[#0a0f29]/30 md:p-8">
       <div className="absolute top-0 right-0 w-48 h-48 bg-[#0B3A7A] opacity-20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none" />
 
-      <h3 className="text-slate-400 font-medium mb-6 relative z-10 text-sm uppercase tracking-wider">
+      <h3 className="relative z-10 mb-6 text-sm font-medium uppercase tracking-wider text-slate-400">
         Výsledek
       </h3>
 
       <div className="space-y-6 relative z-10">
-        <div>
-          <div className="text-slate-400 text-sm font-medium mb-1">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-1 text-sm font-medium text-slate-400">
             Chybí vám měsíčně
           </div>
           <div className="text-3xl md:text-4xl font-extrabold text-emerald-400 tracking-tight">
@@ -34,15 +34,15 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-4">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-2">
           <div className="flex justify-between items-center py-2">
-            <span className="text-slate-300 text-sm">Nutno investovat dnes</span>
+            <span className="text-sm text-slate-300">Nutno investovat dnes</span>
             <span className="text-xl font-bold text-white">
               {formatCurrency(Math.round(result.monthlyInvestment))} Kč
             </span>
           </div>
-          <div className="flex justify-between items-center py-2">
-            <span className="text-slate-300 text-sm">
+          <div className="flex justify-between items-center border-t border-white/10 py-2">
+            <span className="text-sm text-slate-300">
               Cílový majetek v 65 letech
             </span>
             <span className="text-xl font-bold text-white">
@@ -56,7 +56,7 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
             <button
               type="button"
               onClick={onCtaPrimary}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-5 px-6 rounded-xl shadow-lg transition-all min-h-[48px] flex items-center justify-center gap-3"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-5 font-extrabold text-white shadow-lg transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
             >
               <span className="text-lg">Chci tento plán nastavit</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

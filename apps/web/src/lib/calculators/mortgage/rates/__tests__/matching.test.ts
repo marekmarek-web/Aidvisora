@@ -7,8 +7,8 @@ import type { NormalizedOffer } from "../types";
 
 const mockOffers: NormalizedOffer[] = [
   {
-    providerId: "a",
-    providerName: "Banka A",
+    providerId: "kb",
+    providerName: "Komerční banka",
     productType: "mortgage",
     subtype: null,
     nominalRate: 4.59,
@@ -22,8 +22,8 @@ const mockOffers: NormalizedOffer[] = [
     fetchedAt: new Date().toISOString(),
   },
   {
-    providerId: "b",
-    providerName: "Banka B",
+    providerId: "rb",
+    providerName: "Raiffeisenbank",
     productType: "mortgage",
     subtype: null,
     nominalRate: 4.29,
@@ -52,7 +52,7 @@ describe("rates matching", () => {
     });
 
     expect(ranked).toHaveLength(2);
-    expect(ranked[0].providerId).toBe("b");
+    expect(ranked[0].providerId).toBe("rb");
   });
 
   it("normalizes ranked offers into BankEntry shape", () => {
@@ -67,6 +67,7 @@ describe("rates matching", () => {
     });
     const banks = normalizedOffersToBankEntries(ranked, "mortgage");
 
+    expect(banks.length).toBeGreaterThan(0);
     expect(banks[0].baseRate).toBeTypeOf("number");
     expect(banks[0].source).toBeDefined();
     expect(banks[0].fetchedAt).toBeDefined();

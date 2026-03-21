@@ -28,7 +28,7 @@ function renderBars(items: Array<{ name: string; weight: number }>, title: strin
 function renderHoldings(detail: FundDetail): string {
   if (!detail.topHoldings || detail.topHoldings.length === 0) return '';
   return `<div class="bar-section">
-    <div class="bar-section-title">TOP ${detail.topHoldings.length} Holdings${detail.top10WeightPercent ? ` (${fmtPct(detail.top10WeightPercent, 1)} portfolia)` : ''}</div>
+    <div class="bar-section-title">TOP ${detail.topHoldings.length} pozic${detail.top10WeightPercent ? ` (${fmtPct(detail.top10WeightPercent, 1)} portfolia)` : ''}</div>
     ${detail.topHoldings.map((h) => `<div class="bar-row"><span class="bar-row-name">${esc(h.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${(h.weight / (detail.topHoldings![0]!.weight || 1)) * 100}%;background:var(--navy-800,#112238)"></div></div><span class="bar-pct">${fmtPct(h.weight, 2)}</span></div>`).join('')}
   </div>`;
 }
@@ -84,13 +84,18 @@ export function renderProductDetails(ctx: SectionCtx): string {
           <div class="product-meta">${esc(detail.manager)}${detail.awards ? ` — <strong style="color:var(--gold-500,#c9a84c)">${esc(detail.awards)}</strong>` : ''}</div>
         </div>
         <div class="product-invest">
-          ${logo ? `<div style="margin-bottom:8px;text-align:right"><img src="${esc(logo)}" alt="${esc(name)}" style="height:28px;object-fit:contain" onerror="this.style.display='none'"></div>` : ''}
+          <div class="product-logo-wrap">
+            ${logo
+      ? `<img src="${esc(logo)}" alt="${esc(name)}" class="product-logo" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='inline-flex'"><span class="product-logo-fallback" style="display:none">${esc(name)}</span>`
+      : `<span class="product-logo-fallback">${esc(name)}</span>`}
+          </div>
           <div class="product-invest-label">Investice</div>
           <div class="product-invest-amt">${investmentAmountLabel(inv)}</div>
         </div>
       </div>
       <div class="product-card-body">
         ${detail.description ? `<div class="product-desc">${detail.description}</div>` : ''}
+        ${detail.heroImage ? `<div class="product-hero-image-wrap"><img src="${esc(detail.heroImage)}" alt="${esc(name)}" class="product-hero-image" onerror="this.parentElement&&this.parentElement.remove()"></div>` : ''}
         ${renderStatGrid(detail)}
         ${detail.countries ? renderBars(detail.countries, 'Zastoupení', theme) : ''}
         ${detail.sectors ? renderBars(detail.sectors, 'Sektory', theme) : ''}

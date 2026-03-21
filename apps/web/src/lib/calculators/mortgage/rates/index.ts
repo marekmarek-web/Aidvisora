@@ -87,4 +87,8 @@ export async function getLoanRates(): Promise<NormalizedOffer[]> {
 }
 
 export type { NormalizedOffer, RateProvider } from "./types";
-export { rankOffersByScenario, normalizedOffersToBankEntries } from "./matching";
+export {
+  ALLOWED_BANK_IDS,
+  rankOffersByScenario,
+  normalizedOffersToBankEntries,
+} from "./matching";

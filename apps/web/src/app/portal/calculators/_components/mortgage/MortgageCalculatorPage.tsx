@@ -12,6 +12,7 @@ import { MortgageResultsPanel } from "./MortgageResultsPanel";
 import { MortgageBankOffers } from "./MortgageBankOffers";
 import { MortgageContactModal } from "./MortgageContactModal";
 import {
+  BANKS_DATA,
   DEFAULT_STATE,
   LIMITS,
 } from "@/lib/calculators/mortgage/mortgage.config";
@@ -24,6 +25,7 @@ import type { MortgageState } from "@/lib/calculators/mortgage/mortgage.types";
 import type { BankEntry } from "@/lib/calculators/mortgage/mortgage.types";
 import type { NormalizedOffer } from "@/lib/calculators/mortgage/rates";
 import {
+  ALLOWED_BANK_IDS,
   normalizedOffersToBankEntries,
   rankOffersByScenario,
 } from "@/lib/calculators/mortgage/rates";
@@ -44,6 +46,10 @@ export function MortgageCalculatorPage() {
   });
   const [modalBank, setModalBank] = useState<string | null | undefined>(undefined);
   const [liveRates, setLiveRates] = useState<NormalizedOffer[] | null>(null);
+  const defaultAllowedBanks = useMemo(
+    () => BANKS_DATA.filter((bank) => ALLOWED_BANK_IDS.includes(bank.id as (typeof ALLOWED_BANK_IDS)[number])),
+    []
+  );
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -70,7 +76,7 @@ export function MortgageCalculatorPage() {
   }, [state.product]);
 
   const rankedBanks = useMemo<BankEntry[] | undefined>(() => {
-    if (!liveRates || liveRates.length === 0) return undefined;
+    if (!liveRates || liveRates.length === 0) return defaultAllowedBanks;
     const scenario = {
       productType: state.product,
       subtype: state.product === "mortgage" ? state.mortgageType : state.loanType,
@@ -82,8 +88,9 @@ export function MortgageCalculatorPage() {
     } as const;
 
     const ranked = rankOffersByScenario(liveRates, scenario);
-    return normalizedOffersToBankEntries(ranked, state.product);
-  }, [liveRates, state]);
+    const normalized = normalizedOffersToBankEntries(ranked, state.product);
+    return normalized.length > 0 ? normalized : defaultAllowedBanks;
+  }, [liveRates, state, defaultAllowedBanks]);
 
   const result = useMemo(
     () => calculateResult(state, rankedBanks),
@@ -103,7 +110,7 @@ export function MortgageCalculatorPage() {
           subtitle="Měsíční splátka hypotéky nebo úvěru podle zadaných parametrů. Srovnání nabídek bank."
         />
 
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-2">
           <MortgageProductSwitcher
             product={state.product}
             onProductChange={(product) =>
@@ -136,7 +143,7 @@ export function MortgageCalculatorPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
           <CalculatorInputSection>
             <MortgageInputPanel
               state={state}

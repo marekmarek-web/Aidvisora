@@ -43,22 +43,22 @@ export function InvestmentAllocationChart({ data }: InvestmentAllocationChartPro
   };
 
   return (
-    <div className="flex flex-col justify-center items-center gap-6">
-      <div className="relative h-56 w-56">
+    <div className="flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <div className="relative h-52 w-52 sm:h-56 sm:w-56">
         <Doughnut data={chartData} options={options} />
       </div>
       <div className="w-full max-w-xs space-y-2">
         {data.labels.map((label, i) => (
           <div
             key={label}
-            className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-2.5 transition-colors hover:bg-slate-50"
           >
             <div className="flex items-center gap-3">
               <span
                 className="w-3 h-3 rounded-full shadow-sm shrink-0"
                 style={{ backgroundColor: data.colors[i] }}
               />
-              <span className="font-bold text-slate-700 text-sm">{label}</span>
+              <span className="text-sm font-bold text-slate-700">{label}</span>
             </div>
             <span className="font-bold text-[#0a0f29]">{data.values[i]} %</span>
           </div>

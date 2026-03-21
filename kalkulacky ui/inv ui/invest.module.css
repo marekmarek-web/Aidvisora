@@ -1,0 +1,432 @@
+/*
+ * ================================================================
+ * InvesticniKalkulacka — CSS Module
+ * Stejný design systém jako HypotecniKalkulacka
+ * ================================================================
+ */
+
+/* ================================================================
+   TOKENS — zkopírujte do globals.css pro sdílení s hypoteční kal.
+   ================================================================ */
+.kalkulacka {
+  --font-ui:       'Inter', system-ui, sans-serif;
+  --font-display:  'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --bg:            #F4F6FB;
+  --surface:       #FFFFFF;
+  --navy:          #0D1F4E;
+  --accent:        #2563EB;
+  --accent-light:  #EFF4FF;
+  --accent-hover:  #1D4ED8;
+  --green:         #059669;
+  --green-light:   #ECFDF5;
+  --gold:          #D97706;
+  --gold-light:    #FFFBEB;
+
+  --text:          #0D1F4E;
+  --text-2:        #475569;
+  --text-3:        #94A3B8;
+  --text-inv:      rgba(255,255,255,0.92);
+  --text-inv-2:    rgba(255,255,255,0.5);
+  --text-inv-3:    rgba(255,255,255,0.28);
+
+  --border:        #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  --r-xl:          20px;
+  --r-lg:          14px;
+  --r-md:          10px;
+  --r-sm:          7px;
+
+  --sh-sm:         0 1px 3px rgba(13,31,78,0.06), 0 1px 2px rgba(13,31,78,0.04);
+  --sh-md:         0 4px 16px rgba(13,31,78,0.08), 0 1px 4px rgba(13,31,78,0.04);
+  --sh-lg:         0 16px 48px rgba(13,31,78,0.14), 0 4px 12px rgba(13,31,78,0.06);
+
+  --track-col:     #E2E8F0;
+
+  font-family: var(--font-ui);
+  color: var(--text);
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+
+/* ================================================================
+   HEADER
+   ================================================================ */
+.modulHeader { margin-bottom: 24px; }
+.eyebrow {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 5px;
+}
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800;
+  color: var(--navy); letter-spacing: -0.02em; margin: 0 0 5px;
+}
+.subtitle { font-size: 0.875rem; color: var(--text-2); margin: 0; }
+
+/* ================================================================
+   MAIN GRID
+   ================================================================ */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .mainGrid { grid-template-columns: 1fr; } }
+
+/* ================================================================
+   INPUT CARD
+   ================================================================ */
+.inputCard {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-sm);
+  padding: 28px;
+}
+
+/* ================================================================
+   PROFIL INVESTORA
+   ================================================================ */
+.profileSection { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.sectionLabel {
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3); margin-bottom: 12px;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+@media (max-width: 520px) { .profileGrid { grid-template-columns: 1fr; } }
+
+.profileCard {
+  position: relative;
+  padding: 16px 12px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.profileCard:hover:not(.profileCardActive) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.profileCardActive {
+  border-color: var(--pc, var(--accent));
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc, var(--accent)) 15%, transparent);
+}
+
+.profileCardRate {
+  font-family: var(--font-display);
+  font-size: 1.15rem; font-weight: 800;
+  color: var(--text-3);
+  line-height: 1;
+}
+.profileCardLabel {
+  font-size: 0.76rem; font-weight: 600; color: var(--text-2);
+}
+.profileCardCheck {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 0.65rem; font-weight: 800;
+  color: var(--pc, var(--accent));
+}
+
+.profileDesc {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--bg);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+}
+.profileDescIcon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; font-weight: 700; flex-shrink: 0; line-height: 1;
+}
+.profileDescName { font-size: 0.8rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
+.profileDescText { font-size: 0.76rem; color: var(--text-2); line-height: 1.55; margin: 0; }
+
+/* ================================================================
+   FIELD SECTIONS — identické s hypoteční kal.
+   ================================================================ */
+.fieldSection {}
+.fieldBorder { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+.fieldRow {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+}
+.fieldLabel {
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3);
+}
+.fieldValueWrap { display: flex; align-items: baseline; gap: 4px; }
+
+.fieldValueInput {
+  font-family: var(--font-display);
+  font-size: 1.35rem; font-weight: 700; color: var(--navy);
+  background: none; border: none; outline: none;
+  text-align: right; width: 170px;
+  padding: 2px 5px; border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-block;
+}
+.fieldValueInput:hover  { background: var(--bg); }
+.fieldValueInput:focus  { background: var(--accent-light); color: var(--accent); cursor: text; }
+.fieldValueAccent       { color: var(--accent); }
+
+.fieldUnit { font-size: 0.78rem; font-weight: 600; color: var(--text-3); }
+.termVal {
+  font-family: var(--font-display); font-size: 1.35rem; font-weight: 700;
+  color: var(--navy); padding: 0 4px;
+}
+
+/* ================================================================
+   SLIDER — identické s hypoteční kal.
+   ================================================================ */
+.sliderOuter { width: 100%; }
+.sliderWrap  { padding: 8px 10px 4px; }
+
+.rangeInput {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 5px; border-radius: 3px;
+  background: var(--track-col);
+  outline: none; cursor: pointer; display: block;
+}
+.rangeInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 2.5px solid #2563EB;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.13), 0 2px 7px rgba(37,99,235,0.28);
+  cursor: grab; margin-top: -7px;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.rangeInput::-webkit-slider-thumb:hover {
+  transform: scale(1.22);
+  box-shadow: 0 0 0 5px rgba(37,99,235,0.15), 0 4px 12px rgba(37,99,235,0.38);
+}
+.rangeInput::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
+.rangeInput::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: transparent; }
+.rangeInput::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 2.5px solid #2563EB;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.13); cursor: grab; box-sizing: border-box;
+}
+.rangeInput::-moz-range-track { height: 5px; border-radius: 3px; background: var(--track-col); }
+.rangeInput::-moz-range-progress { background: linear-gradient(90deg,#2563EB,#38BDF8); border-radius: 3px; }
+.rangeInput:focus { outline: none; }
+
+.rangeLimits { display: flex; justify-content: space-between; padding: 0 10px; margin-top: 2px; }
+.rangeLimit  { font-size: 0.68rem; color: var(--text-3); line-height: 1; }
+
+/* ================================================================
+   RESULT CARD (dark)
+   ================================================================ */
+.resultPanel { position: sticky; top: 24px; }
+
+.resultCard {
+  background: var(--navy); border-radius: var(--r-xl);
+  padding: 26px 24px; color: var(--text-inv);
+  box-shadow: var(--sh-lg); position: relative; overflow: hidden;
+}
+.resultCard::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle 160px at 15% 20%, rgba(37,99,235,0.22) 0%, transparent 70%),
+    radial-gradient(circle 120px at 85% 80%, rgba(245,158,11,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.rcInner { position: relative; z-index: 1; }
+
+.rcEyebrow {
+  font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-inv-2); margin: 0 0 6px;
+}
+.rcAmount {
+  font-family: var(--font-display);
+  font-size: 2.4rem; font-weight: 800; color: #fff;
+  letter-spacing: -0.03em; line-height: 1; margin-bottom: 22px;
+}
+.rcAmountUnit { font-size: 1rem; font-weight: 500; color: var(--text-inv-2); margin-left: 5px; }
+
+.rcRows {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.rcRow {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.rcRowLast { border-bottom: none; }
+.rcRowLabel { font-size: 0.78rem; color: var(--text-inv-2); }
+.rcRowVal   { font-family: var(--font-display); font-size: 0.96rem; font-weight: 700; color: #fff; }
+.rcRowGreen { color: #34D399; }
+.rcRowGold  { color: #FCD34D; }
+
+.rcDisclaimer {
+  font-size: 0.68rem; color: var(--text-inv-3);
+  line-height: 1.6; margin-bottom: 18px;
+}
+
+.rcCta {
+  display: block; width: 100%; padding: 14px;
+  border-radius: var(--r-lg); border: none;
+  background: var(--accent); color: #fff;
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
+  text-align: center; cursor: pointer;
+  transition: all 0.18s; position: relative; overflow: hidden;
+  letter-spacing: -0.01em;
+}
+.rcCta::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 55%);
+  pointer-events: none;
+}
+.rcCta:hover {
+  background: var(--accent-hover); transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+}
+
+/* ================================================================
+   CHARTS GRID
+   ================================================================ */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 768px) { .chartsGrid { grid-template-columns: 1fr; } }
+
+.chartCard {
+  background: var(--surface); border-radius: var(--r-xl);
+  border: 1.5px solid var(--border); box-shadow: var(--sh-sm); padding: 24px;
+}
+.chartCardHeader { margin-bottom: 20px; }
+.chartCardTitle {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  color: var(--navy); margin: 0 0 3px; letter-spacing: -0.01em;
+}
+.chartCardSub { font-size: 0.76rem; color: var(--text-2); margin: 0; }
+.chartWrap { position: relative; height: 260px; }
+
+/* Složení portfolia — donut + legenda */
+.allocLayout {
+  display: flex; align-items: center; gap: 24px; justify-content: center;
+}
+.allocDonutWrap { flex-shrink: 0; }
+.allocLegend { display: flex; flex-direction: column; gap: 10px; }
+.allocLegendRow { display: flex; align-items: center; gap: 8px; }
+.allocLegendPip { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.allocLegendName { font-size: 0.78rem; color: var(--text-2); flex: 1; }
+.allocLegendVal  { font-family: var(--font-display); font-size: 0.88rem; font-weight: 700; color: var(--navy); }
+
+/* ================================================================
+   BACKTEST
+   ================================================================ */
+.backtestCard {
+  background: var(--surface); border-radius: var(--r-xl);
+  border: 1.5px solid var(--border); box-shadow: var(--sh-sm);
+  padding: 28px; margin-bottom: 16px;
+}
+.backtestHeader {
+  display: flex; gap: 24px; align-items: flex-start;
+  justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px;
+}
+.backtestTitle {
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  color: var(--navy); margin: 0 0 4px; letter-spacing: -0.01em;
+}
+.backtestSub { font-size: 0.78rem; color: var(--text-2); margin: 0; max-width: 480px; }
+
+.startYearControl {
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 200px;
+}
+.startYearLabel { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); }
+.startYearVal {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  color: var(--accent); padding-left: 10px; margin-top: 2px;
+}
+
+.crisisLabels {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+}
+.crisisChip {
+  font-size: 0.67rem; font-weight: 600;
+  background: #FEF2F2; color: #DC2626;
+  border: 1px solid rgba(220,38,38,0.2);
+  padding: 2px 9px; border-radius: 100px;
+}
+
+.backtestChartWrap { position: relative; height: 300px; }
+.backtestDisclaimer { margin-top: 12px; font-size: 0.68rem; color: var(--text-3); }
+
+/* ================================================================
+   FAQ
+   ================================================================ */
+.faqSection { margin-bottom: 16px; }
+.faqHeader { margin-bottom: 20px; }
+.faqTitle {
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 700;
+  color: var(--navy); margin: 0 0 4px; letter-spacing: -0.01em;
+}
+.faqSub { font-size: 0.82rem; color: var(--text-2); margin: 0; }
+
+.faqList { display: flex; flex-direction: column; gap: 6px; }
+
+.faqItem {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.faqItem:hover { border-color: var(--accent); box-shadow: var(--sh-sm); }
+.faqItemOpen  { border-color: var(--accent-light); }
+
+.faqQ {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; cursor: pointer; background: none; border: none;
+  font-family: var(--font-ui); font-size: 0.88rem; font-weight: 600;
+  color: var(--navy); text-align: left; gap: 12px;
+  transition: color 0.15s;
+}
+.faqQ:hover { color: var(--accent); }
+.faqChevron { font-size: 1.1rem; color: var(--text-3); transition: transform 0.2s; flex-shrink: 0; }
+.faqChevronOpen { transform: rotate(180deg); color: var(--accent); }
+
+.faqA {
+  padding: 0 20px 16px; font-size: 0.82rem; color: var(--text-2);
+  line-height: 1.65; margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* ================================================================
+   MOBILE (doplňuje responsive výše)
+   ================================================================ */
+@media (max-width: 640px) {
+  .kalkulacka { padding: 24px 16px; }
+  .inputCard, .chartCard, .backtestCard { padding: 20px; }
+  .backtestHeader { flex-direction: column; }
+  .startYearControl { min-width: unset; width: 100%; }
+  .allocLayout { flex-direction: column; }
+}

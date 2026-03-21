@@ -8,14 +8,14 @@ import {
 import type { ContractDocumentType } from "../document-classification";
 
 const DOC_TYPES: ContractDocumentType[] = [
-  "insurance_contract",
-  "investment_contract",
-  "loan_or_mortgage_contract",
-  "amendment",
-  "application_or_proposal",
-  "payment_document",
-  "terms_and_conditions",
-  "unknown",
+  "life_insurance_contract",
+  "investment_service_agreement",
+  "consumer_loan_contract",
+  "generic_financial_document",
+  "life_insurance_proposal",
+  "bank_statement",
+  "service_agreement",
+  "unsupported_or_unknown",
 ];
 
 describe("extraction-schemas-by-type", () => {
@@ -29,72 +29,90 @@ describe("extraction-schemas-by-type", () => {
       }
     });
 
-    it("insurance_contract fragment mentions policyType or pojištění", () => {
-      const info = getSchemaForDocumentType("insurance_contract");
-      expect(info.promptFragment.toLowerCase()).toMatch(/policytype|pojistná|premium|beneficiary/);
+    it("life_insurance_contract fragment includes review hints", () => {
+      const info = getSchemaForDocumentType("life_insurance_contract");
+      expect(info.promptFragment.toLowerCase()).toMatch(/proposal|nesjednano|broker/);
     });
 
-    it("loan_or_mortgage_contract fragment mentions loan or úvěr", () => {
-      const info = getSchemaForDocumentType("loan_or_mortgage_contract");
-      expect(info.promptFragment.toLowerCase()).toMatch(/loan|úvěr|interest|collateral/);
+    it("consumer_loan_contract fragment includes collateral rule", () => {
+      const info = getSchemaForDocumentType("consumer_loan_contract");
+      expect(info.promptFragment.toLowerCase()).toMatch(/collateral|missing|not_applicable/);
     });
   });
 
   describe("validateExtractionByType", () => {
     it("accepts valid minimal payload", () => {
       const raw = JSON.stringify({
-        documentType: "insurance_contract",
-        contractNumber: "123",
-        institutionName: "Pojistovna",
-        confidence: 0.8,
-        needsHumanReview: false,
-        missingFields: [],
-      });
-      const result = validateExtractionByType(raw, "insurance_contract");
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.contractNumber).toBe("123");
-        expect(result.data.confidence).toBe(0.8);
-      }
-    });
-
-    it("accepts payload with fieldConfidenceMap", () => {
-      const raw = JSON.stringify({
-        contractNumber: "456",
-        confidence: 0.9,
-        fieldConfidenceMap: { contract: 0.9, client: 0.85, paymentDetails: 0.7 },
-      });
-      const result = validateExtractionByType(raw, "unknown");
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.fieldConfidenceMap?.contract).toBe(0.9);
-      }
-    });
-
-    it("accepts paymentDetails with null strings (model JSON)", () => {
-      const raw = JSON.stringify({
-        documentType: "loan_or_mortgage_contract",
-        contractNumber: "CSOB-1",
-        institutionName: "ČSOB",
-        productName: "Spotřebitelský úvěr",
-        paymentDetails: {
-          iban: null,
-          accountNumber: null,
-          currency: "CZK",
-          amount: 500000,
+        documentClassification: {
+          primaryType: "life_insurance_contract",
+          subtype: "generali_bel_mondo",
+          lifecycleStatus: "final_contract",
+          confidence: 0.8,
         },
-        confidence: 0.85,
+        documentMeta: { scannedVsDigital: "digital", overallConfidence: 0.8 },
+        parties: {},
+        productsOrObligations: [],
+        financialTerms: {},
+        serviceTerms: {},
+        extractedFields: {
+          insurer: { value: "Generali", confidence: 0.9, sourcePage: 1, evidenceSnippet: "Generali", status: "extracted" },
+        },
+        evidence: [],
+        candidateMatches: {
+          matchedClients: [],
+          matchedHouseholds: [],
+          matchedDeals: [],
+          score: 0,
+          reason: "no_match",
+          ambiguityFlags: [],
+        },
+        reviewWarnings: [],
+        suggestedActions: [],
+        sensitivityProfile: "financial_data",
       });
-      const result = validateExtractionByType(raw, "loan_or_mortgage_contract");
+      const result = validateExtractionByType(raw, "life_insurance_contract");
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.paymentDetails?.iban).toBeUndefined();
-        expect(result.data.paymentDetails?.currency).toBe("CZK");
+        expect(result.data.documentClassification.primaryType).toBe("life_insurance_contract");
+        expect(result.data.extractedFields.insurer?.value).toBe("Generali");
+      }
+    });
+
+    it("forces classification primaryType from router type", () => {
+      const raw = JSON.stringify({
+        documentClassification: {
+          primaryType: "bank_statement",
+          lifecycleStatus: "statement",
+          confidence: 0.9,
+        },
+        documentMeta: { scannedVsDigital: "digital" },
+        parties: {},
+        productsOrObligations: [],
+        financialTerms: {},
+        serviceTerms: {},
+        extractedFields: {},
+        evidence: [],
+        candidateMatches: {
+          matchedClients: [],
+          matchedHouseholds: [],
+          matchedDeals: [],
+          score: 0,
+          reason: "no_match",
+          ambiguityFlags: [],
+        },
+        reviewWarnings: [],
+        suggestedActions: [],
+        sensitivityProfile: "financial_data",
+      });
+      const result = validateExtractionByType(raw, "consumer_loan_contract");
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.documentClassification.primaryType).toBe("consumer_loan_contract");
       }
     });
 
     it("rejects invalid JSON", () => {
-      const result = validateExtractionByType("not json at all", "unknown");
+      const result = validateExtractionByType("not json at all", "unsupported_or_unknown");
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.issues.length).toBeGreaterThan(0);
     });
@@ -102,16 +120,16 @@ describe("extraction-schemas-by-type", () => {
 
   describe("buildExtractionPrompt", () => {
     it("includes base and type-specific fragment", () => {
-      const prompt = buildExtractionPrompt("insurance_contract", false);
+      const prompt = buildExtractionPrompt("life_insurance_contract", false);
       expect(prompt).toContain("JSON");
-      expect(prompt).toContain("fieldConfidenceMap");
-      expect(prompt).toMatch(/pojistná|insurance|policyType/i);
+      expect(prompt).toContain("DocumentReviewEnvelope");
+      expect(prompt).toMatch(/extractedFields|explicitly_not_selected|not_applicable/i);
     });
 
     it("includes scan hint when isScanFallback is true", () => {
-      const promptScan = buildExtractionPrompt("unknown", true);
-      const promptText = buildExtractionPrompt("unknown", false);
-      expect(promptScan).toMatch(/naskenovaný|scan/i);
+      const promptScan = buildExtractionPrompt("unsupported_or_unknown", true);
+      const promptText = buildExtractionPrompt("unsupported_or_unknown", false);
+      expect(promptScan).toMatch(/scan|nasken|inferred_low_confidence/i);
       expect(promptScan.length).toBeGreaterThan(promptText.length);
     });
   });

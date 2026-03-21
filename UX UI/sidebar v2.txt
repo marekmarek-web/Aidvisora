@@ -1,0 +1,394 @@
+"use client";
+
+import React, { useState, useRef } from 'react';
+import { 
+  Home, Trello, Users, Building2, Briefcase, 
+  BarChart2, Calculator, CheckSquare, Network, 
+  LineChart, Calendar, FileText, Bell, Settings, 
+  ChevronLeft, ChevronRight, MoreVertical, Search, 
+  Sparkles, Zap, PieChart, GripVertical
+} from 'lucide-react';
+
+// --- VÝCHOZÍ DATA NAVIGACE ---
+const INITIAL_NAV_MENU = [
+  {
+    id: 'sec-prehled',
+    section: 'Přehled',
+    items: [
+      { id: 'nastenka', label: 'Nástěnka', icon: Home, color: 'text-indigo-600', activeColor: 'text-white', hoverAnim: 'group-hover:-translate-y-1 group-hover:scale-110', isHighlighted: true },
+      { id: 'ukoly', label: 'Úkoly', icon: CheckSquare, badge: 3, color: 'text-slate-500', activeColor: 'text-amber-300', hoverAnim: 'group-hover:rotate-12 group-hover:scale-110' }, 
+      { id: 'zpravy', label: 'Zprávy', icon: Bell, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:rotate-[20deg] origin-top' },
+      { id: 'kalendar', label: 'Kalendář', icon: Calendar, color: 'text-sky-500', activeColor: 'text-sky-300', hoverAnim: 'group-hover:-translate-y-1 group-hover:scale-110', isHighlighted: true },
+      { id: 'zapisky', label: 'Zápisky', icon: FileText, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:translate-x-1' },
+    ]
+  },
+  {
+    id: 'sec-databaze',
+    section: 'Klientská databáze',
+    items: [
+      { id: 'kontakty', label: 'Kontakty', icon: Users, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:scale-110' },
+      { id: 'domacnosti', label: 'Domácnosti', icon: Building2, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:-translate-y-1' },
+    ]
+  },
+  {
+    id: 'sec-byznys',
+    section: 'Obchod a Byznys',
+    items: [
+      { id: 'obchody', label: 'Obchody', icon: Briefcase, color: 'text-slate-500', activeColor: 'text-blue-300', hoverAnim: 'group-hover:rotate-[-12deg] group-hover:scale-110' }, 
+      { id: 'board', label: 'Board', icon: Trello, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:scale-110' },
+      { id: 'produkce', label: 'Produkce', icon: LineChart, color: 'text-slate-500', activeColor: 'text-emerald-300', hoverAnim: 'group-hover:translate-x-1 group-hover:-translate-y-1' },
+    ]
+  },
+  {
+    id: 'sec-nastroje',
+    section: 'Nástroje poradce',
+    specialBg: true,
+    items: [
+      { id: 'review', label: 'AI Review smluv', icon: Sparkles, color: 'text-fuchsia-500', activeColor: 'text-white', hoverAnim: '', isAi: true },
+      { id: 'analyzy', label: 'Finanční analýzy', icon: PieChart, color: 'text-blue-600', activeColor: 'text-blue-200', hoverAnim: 'group-hover:scale-110 group-hover:rotate-6', isHighlighted: true },
+      { id: 'kalkulacky', label: 'Kalkulačky', icon: Calculator, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:rotate-12 group-hover:scale-110' },
+      { id: 'mindmap', label: 'Mindmap', icon: Network, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:-translate-y-1' },
+    ]
+  },
+  {
+    id: 'sec-system',
+    section: 'Systém',
+    items: [
+      { id: 'nastaveni', label: 'Nastavení', icon: Settings, color: 'text-slate-500', activeColor: 'text-white', hoverAnim: 'group-hover:rotate-90 duration-500' },
+    ]
+  }
+];
+
+export default function SidebarNavigation() {
+  const [activeItem, setActiveItem] = useState('nastenka');
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  // Stav pro dynamické řazení položek
+  const [menuGroups, setMenuGroups] = useState(INITIAL_NAV_MENU);
+
+  // Refy pro Drag & Drop logiku POLOŽEK
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
+
+  const handleDragStart = (e, groupIdx, itemIdx) => {
+    dragItem.current = { groupIdx, itemIdx };
+    // Vizuální feedback pro taženou položku
+    setTimeout(() => {
+      e.target.classList.add('opacity-40', 'scale-[0.98]', 'bg-slate-100');
+    }, 0);
+  };
+
+  const handleDragEnter = (e, groupIdx, itemIdx) => {
+    dragOverItem.current = { groupIdx, itemIdx };
+    e.preventDefault();
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.classList.remove('opacity-40', 'scale-[0.98]', 'bg-slate-100');
+    
+    if (dragItem.current && dragOverItem.current) {
+      const { groupIdx: fromGroupIdx, itemIdx: fromItemIdx } = dragItem.current;
+      const { groupIdx: toGroupIdx, itemIdx: toItemIdx } = dragOverItem.current;
+
+      // Pokud se pozice nezměnila, neděláme nic
+      if (fromGroupIdx === toGroupIdx && fromItemIdx === toItemIdx) {
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return;
+      }
+
+      setMenuGroups(prevGroups => {
+        // Vytvoříme novou kopii stavu zachovávající reference na komponenty (ikony)
+        const newGroups = [...prevGroups];
+        newGroups[fromGroupIdx] = { ...newGroups[fromGroupIdx], items: [...newGroups[fromGroupIdx].items] };
+        
+        if (fromGroupIdx !== toGroupIdx) {
+          newGroups[toGroupIdx] = { ...newGroups[toGroupIdx], items: [...newGroups[toGroupIdx].items] };
+        }
+
+        // Vyjmeme položku ze starého místa
+        const [movedItem] = newGroups[fromGroupIdx].items.splice(fromItemIdx, 1);
+        // Vložíme položku na nové místo
+        newGroups[toGroupIdx].items.splice(toItemIdx, 0, movedItem);
+
+        return newGroups;
+      });
+    }
+    
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  return (
+    <div className="flex h-screen bg-[#f8fafc] font-lato text-slate-800 overflow-hidden">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Animace pro AI ikonu */
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 8s linear infinite;
+        }
+        
+        /* Animace pulzující záře pro AI ikonu */
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px rgba(217, 70, 239, 0.4)); }
+          50% { opacity: 0.7; filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.8)); }
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2.5s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* --- SIDEBAR --- */}
+      <aside 
+        className={`bg-white border-r border-slate-100 flex flex-col transition-all duration-300 ease-in-out relative z-20 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]
+          ${isCollapsed ? 'w-[80px]' : 'w-[280px]'}
+        `}
+      >
+        {/* Hlavička (Logo) */}
+        <div className="h-20 flex items-center justify-between px-5 border-b border-slate-50 flex-shrink-0">
+          <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? 'justify-center w-full' : ''}`}>
+            <div className="w-9 h-9 bg-transparent flex items-center justify-center text-[#5b2b90] font-black text-2xl flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+                <path d="M2 22l10-20 10 20M12 2l-4 8M12 2l4 8" />
+              </svg>
+            </div>
+            {!isCollapsed && (
+              <span className="font-black text-[22px] tracking-tight whitespace-nowrap text-[#5b2b90]">Aidvisora</span>
+            )}
+          </div>
+          
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors flex-shrink-0
+              ${isCollapsed ? 'absolute -right-3.5 top-6 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 z-50' : ''}
+            `}
+          >
+            {isCollapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+
+        {/* Vyhledávání */}
+        {!isCollapsed && (
+          <div className="px-5 py-4">
+            <div className="relative group">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Hledat v menu..." 
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all text-slate-700"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Hlavní menu */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar pb-6 pt-2">
+          {menuGroups.map((group, groupIdx) => (
+            <div 
+              key={group.id}
+              className={`
+                ${groupIdx !== 0 ? 'mt-2' : isCollapsed ? 'mt-4' : ''}
+                ${group.specialBg && !isCollapsed ? 'bg-gradient-to-b from-fuchsia-50/40 to-indigo-50/40 mx-3 py-3 rounded-2xl border border-indigo-100/50 shadow-sm' : 'px-3'}
+                ${group.specialBg && isCollapsed ? 'bg-fuchsia-50/40 mx-2 py-2 rounded-2xl' : ''}
+              `}
+            >
+              
+              {/* Název sekce */}
+              {!isCollapsed && (
+                <div className="flex items-center px-3 mb-2 pt-1">
+                  <h4 className={`text-[10px] font-black uppercase tracking-[0.15em] pointer-events-none
+                    ${group.specialBg ? 'text-indigo-500 flex items-center gap-1.5' : 'text-slate-400'}
+                  `}>
+                    {group.specialBg && <Zap size={10} className="text-amber-500" />}
+                    {group.section}
+                  </h4>
+                </div>
+              )}
+              
+              {/* Oddělovač pro sbalený stav */}
+              {isCollapsed && groupIdx !== 0 && !group.specialBg && (
+                <div className="w-8 h-px bg-slate-100 mx-auto mb-4 mt-2"></div>
+              )}
+
+              {/* POLOŽKY (Jednotlivé nástroje - DRAGGABLE) */}
+              <ul className="space-y-1">
+                {group.items.map((item, itemIdx) => {
+                  const isActive = activeItem === item.id;
+                  const Icon = item.icon;
+
+                  // Zvláštní render pro AI Položku
+                  if (item.isAi) {
+                    return (
+                      <li 
+                        key={item.id}
+                        draggable={!isCollapsed}
+                        onDragStart={(e) => handleDragStart(e, groupIdx, itemIdx)}
+                        onDragEnter={(e) => handleDragEnter(e, groupIdx, itemIdx)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => e.preventDefault()}
+                        className="group relative rounded-xl"
+                      >
+                        <button
+                          onClick={() => setActiveItem(item.id)}
+                          className={`w-full flex items-center relative transition-all duration-300
+                            ${isCollapsed ? 'justify-center p-3 rounded-2xl' : 'px-3 py-2.5 rounded-xl'}
+                            ${isActive 
+                              ? 'bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white shadow-lg shadow-fuchsia-900/20' 
+                              : 'text-slate-700 hover:bg-white hover:shadow-md border border-transparent hover:border-fuchsia-100'}
+                          `}
+                          title={isCollapsed ? item.label : undefined}
+                        >
+                          <div className="relative flex items-center justify-center">
+                            <Icon 
+                              size={18} 
+                              className={`transition-colors ${isActive ? 'text-white animate-spin-slow' : 'text-fuchsia-500 animate-pulse-glow group-hover:text-fuchsia-600'}`} 
+                              strokeWidth={isActive ? 2.5 : 2} 
+                            />
+                          </div>
+                          {!isCollapsed && (
+                            <span className={`ml-3 text-[13px] font-black tracking-wide bg-clip-text flex-1 text-left ${isActive ? 'text-white' : 'text-transparent bg-gradient-to-r from-fuchsia-600 to-indigo-600'}`}>
+                              {item.label}
+                            </span>
+                          )}
+                          
+                          {/* Grip ikona pro uchopení */}
+                          {!isCollapsed && (
+                            <GripVertical size={14} className="text-fuchsia-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  }
+
+                  // Běžné položky
+                  return (
+                    <li 
+                      key={item.id}
+                      draggable={!isCollapsed}
+                      onDragStart={(e) => handleDragStart(e, groupIdx, itemIdx)}
+                      onDragEnter={(e) => handleDragEnter(e, groupIdx, itemIdx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => e.preventDefault()}
+                      className="group relative rounded-xl"
+                    >
+                      <button
+                        onClick={() => setActiveItem(item.id)}
+                        className={`w-full flex items-center relative transition-all duration-200
+                          ${isCollapsed ? 'justify-center p-3 rounded-2xl' : 'px-3 py-2.5 rounded-xl'}
+                          ${isActive 
+                            ? 'bg-[#0f172a] text-white shadow-md' 
+                            : item.isHighlighted 
+                              ? 'text-slate-700 hover:bg-slate-100/80 font-bold'
+                              : 'text-slate-600 hover:bg-slate-50'}
+                        `}
+                        title={isCollapsed ? item.label : undefined}
+                      >
+                        {/* Indikátor pro sbalený stav */}
+                        {isCollapsed && isActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-indigo-400 rounded-r-full"></div>
+                        )}
+
+                        <div className={`relative flex items-center justify-center transition-all duration-300 ${!isActive ? item.hoverAnim : ''}`}>
+                          <Icon 
+                            size={18} 
+                            className={`transition-colors ${isActive ? item.activeColor : item.color} ${!isActive && 'group-hover:text-indigo-600'}`} 
+                            strokeWidth={isActive || item.isHighlighted ? 2.5 : 2} 
+                          />
+                        </div>
+
+                        {!isCollapsed && (
+                          <span className={`ml-3 text-[13px] whitespace-nowrap tracking-wide transition-colors flex-1 text-left
+                            ${isActive ? 'text-white font-bold' : item.isHighlighted ? 'font-bold text-slate-800' : 'font-semibold'}
+                          `}>
+                            {item.label}
+                          </span>
+                        )}
+
+                        {!isCollapsed && item.badge && (
+                          <span className={`ml-auto text-[10px] font-black px-2 py-0.5 rounded-full transition-colors mr-2
+                            ${isActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700 group-hover:bg-amber-200'}
+                          `}>
+                            {item.badge}
+                          </span>
+                        )}
+
+                        {/* Grip ikona pro uchopení */}
+                        {!isCollapsed && (
+                          <GripVertical size={14} className={`text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing ${item.badge ? '' : 'ml-auto'}`} />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+            </div>
+          ))}
+        </div>
+
+        {/* Patička (Profil uživatele) */}
+        <div className="p-4 border-t border-slate-100 flex-shrink-0 bg-slate-50/50">
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} group cursor-pointer hover:bg-white p-2 -m-2 rounded-xl transition-colors`}>
+            
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0 shadow-inner">
+                MF
+              </div>
+              {!isCollapsed && (
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-900 truncate">mfragtv@gmail.com</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">AIDVISORA CRM V2.0</p>
+                </div>
+              )}
+            </div>
+
+            {!isCollapsed && (
+              <MoreVertical size={16} className="text-slate-400 group-hover:text-slate-700 flex-shrink-0" />
+            )}
+          </div>
+        </div>
+
+      </aside>
+
+      {/* --- UKÁZKOVÝ OBSAH --- */}
+      <main className="flex-1 p-8 overflow-y-auto bg-[radial-gradient(#e2e8f0_1px,transparent_0)] [background-size:24px_24px]">
+        <div className="max-w-4xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Osobní přizpůsobení</h1>
+            <p className="text-slate-500 font-medium mt-2">Animace jsou zpět a nástroje si poskládáte přesně jak potřebujete.</p>
+          </div>
+          
+          <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-[32px] p-8 md:p-12 text-center shadow-xl shadow-slate-200/50 relative overflow-hidden">
+            <div className="flex justify-center gap-4 mb-6">
+              <div className="w-16 h-16 bg-fuchsia-50 text-fuchsia-500 rounded-2xl flex items-center justify-center shadow-inner">
+                <Sparkles size={28} className="animate-spin-slow" />
+              </div>
+              <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center shadow-inner">
+                <GripVertical size={28} />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-black text-slate-800 mb-4">Přesouvejte přímo nástroje!</h2>
+            <p className="text-slate-500 max-w-md mx-auto leading-relaxed mb-8">
+              Když najedete myší na konkrétní položku (např. <em>Kalkulačky</em> nebo <em>Úkoly</em>), objeví se na pravé straně malá tečkovaná ikonka.
+              <strong>Nyní můžete nástroje libovolně přetahovat nahoru a dolů</strong> a klidně je přesouvat i mezi různými sekcemi! 
+            </p>
+
+            <div className="inline-block bg-indigo-50 border border-indigo-100 text-indigo-700 px-6 py-3 rounded-xl text-sm font-bold shadow-sm">
+              Vyzkoušejte: Přesuňte "Kalkulačky" úplně nahoru do sekce "Přehled".
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  );
+}

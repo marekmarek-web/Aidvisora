@@ -20,6 +20,15 @@ function getInitials(name: string): string {
   return first.slice(0, 2).toUpperCase();
 }
 
+const FALLBACK_BRAND_STYLES: Record<string, string> = {
+  rb: "bg-[#fff8d6] text-[#111827]",
+  ucb: "bg-[#ffe7ee] text-[#9f1239]",
+  csob: "bg-[#e8f0ff] text-[#1e3a8a]",
+  cs: "bg-[#e6f4ff] text-[#0c4a6e]",
+  mbank: "bg-[#eef2ff] text-[#1e3a8a]",
+  kb: "bg-[#e7ecff] text-[#1e40af]",
+};
+
 export function MortgageBankOffers({
   offers,
   fetchedAt,
@@ -59,22 +68,19 @@ export function MortgageBankOffers({
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 text-xs text-slate-600 leading-relaxed">
-        <p>
-          Sazby a splátky jsou orientační. Finální nabídka závisí na bonitě klienta,
-          účelu úvěru a podmínkách konkrétní banky. Výsledky slouží pro rychlou
-          orientaci poradce na trhu.
-        </p>
         {updatedAt ? (
-          <p className="mt-2 text-slate-500">
+          <p className="text-slate-500">
             Aktualizováno: {updatedAt.toLocaleDateString("cs-CZ")}{" "}
             {updatedAt.toLocaleTimeString("cs-CZ", {
               hour: "2-digit",
               minute: "2-digit",
             })}
             {source ? ` · Zdroj: ${source}` : ""}
-            {sourceUrl ? ` (${sourceUrl})` : ""}
+            {sourceUrl ? ` · ${sourceUrl}` : ""}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-slate-500">Zdroj sazeb se aktualizuje průběžně.</p>
+        )}
       </div>
     </div>
   );
@@ -99,33 +105,39 @@ function BankOfferCard({
 
   return (
     <div
-      className="animate-fade-in bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col relative overflow-hidden min-h-0"
+      className="animate-fade-in bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col min-h-0"
       style={{ animationDelay: `${index * 70}ms` }}
     >
-      {index === 0 && (
-        <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10 shadow-sm flex items-center gap-1">
-          <CheckCircle2 size={10} /> Top volba
-        </div>
-      )}
-      {isLowestRate && (
-        <div className="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg z-10">
-          Nejnižší sazba
-        </div>
-      )}
-      {isLowestMonthly && (
-        <div className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg z-10">
-          Nejnižší splátka
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 mb-3 min-h-[22px]">
+        {isLowestRate && (
+          <span className="inline-flex items-center rounded-full bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1">
+            Nejnižší sazba
+          </span>
+        )}
+        {isLowestMonthly && (
+          <span className="inline-flex items-center rounded-full bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1">
+            Nejnižší splátka
+          </span>
+        )}
+        {index === 0 && (
+          <span className="inline-flex items-center rounded-full bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 gap-1">
+            <CheckCircle2 size={10} /> Top volba
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-slate-100 text-slate-700 shrink-0 overflow-hidden">
+        <div
+          className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 overflow-hidden border border-slate-200 ${
+            FALLBACK_BRAND_STYLES[offer.bank.id] ?? "bg-slate-100 text-slate-700"
+          }`}
+        >
           {showLogo ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={offer.bank.logoUrl}
-              alt=""
-              className="w-full h-full object-contain"
+              alt={offer.bank.name}
+              className="w-full h-full object-contain p-1"
               onError={() => setLogoError(true)}
             />
           ) : (
@@ -133,12 +145,15 @@ function BankOfferCard({
           )}
         </div>
         <div className="min-w-0">
-          <h4 className="font-bold text-slate-800 text-sm leading-tight truncate">
+          <h4 className="font-black text-slate-900 text-sm leading-tight truncate">
             {offer.bank.name}
           </h4>
-          <span className="text-xs font-black text-indigo-600">
+          <span className="text-xs font-bold text-indigo-600">
             {formatRate(offer.rate)} p.a.
           </span>
+          {offer.apr != null ? (
+            <div className="text-[11px] text-slate-400 mt-0.5">RPSN {formatRate(offer.apr)}</div>
+          ) : null}
         </div>
       </div>
 
@@ -147,7 +162,7 @@ function BankOfferCard({
           <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
             Splátka
           </span>
-          <span className="font-black text-base text-slate-900 break-all">
+          <span className="font-black text-xl text-slate-900 break-all leading-none">
             {formatCurrency(offer.monthlyPayment)} Kč
           </span>
         </div>

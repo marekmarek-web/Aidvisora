@@ -5,6 +5,7 @@ import { createContractReview, updateContractReview } from "@/lib/ai/review-queu
 import { runContractUnderstandingPipeline } from "@/lib/ai/contract-understanding-pipeline";
 import { findClientCandidates, buildAllDraftActions } from "@/lib/ai/draft-actions";
 import { isMatchingAmbiguous } from "@/lib/ai/client-matching";
+import { findMatchedDeals, findMatchedHouseholds } from "@/lib/ai/client-matching";
 import { logOpenAICall } from "@/lib/openai";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -232,6 +233,35 @@ export async function POST(request: Request) {
     const data = pipelineResult.extractedPayload;
     const draftActions = buildAllDraftActions(data);
     const clientMatchCandidates = await findClientCandidates(data, { tenantId });
+    const matchedHouseholds = await findMatchedHouseholds(tenantId, clientMatchCandidates);
+    const matchedDeals = await findMatchedDeals(
+      tenantId,
+      clientMatchCandidates,
+      String(data.extractedFields.contractNumber?.value ?? "")
+    );
+    data.candidateMatches = {
+      matchedClients: clientMatchCandidates.map((c) => ({
+        entityId: c.clientId,
+        score: c.score,
+        reason: c.reasons.join("; "),
+        ambiguous: false,
+        extra: {
+          confidence: c.confidence,
+          matchedFields: c.matchedFields,
+          displayName: c.displayName,
+        },
+      })),
+      matchedHouseholds,
+      matchedDeals,
+      score: clientMatchCandidates[0]?.score ?? 0,
+      reason: clientMatchCandidates[0]?.reasons.join("; ") ?? "no_match",
+      ambiguityFlags: isMatchingAmbiguous(clientMatchCandidates) ? ["multiple_close_candidates"] : [],
+    };
+    data.suggestedActions = draftActions.map((a) => ({
+      type: a.type,
+      label: a.label,
+      payload: a.payload,
+    }));
     const reasonsForReview = [...pipelineResult.reasonsForReview];
     if (isMatchingAmbiguous(clientMatchCandidates)) {
       reasonsForReview.push("ambiguous_client_match");
@@ -247,10 +277,14 @@ export async function POST(request: Request) {
       inputMode: pipelineResult.inputMode,
       extractionMode: pipelineResult.extractionMode,
       detectedDocumentType: pipelineResult.detectedDocumentType,
+      detectedDocumentSubtype: data.documentClassification.subtype ?? null,
+      lifecycleStatus: data.documentClassification.lifecycleStatus ?? null,
       extractionTrace: pipelineResult.extractionTrace,
       validationWarnings: pipelineResult.validationWarnings.length ? pipelineResult.validationWarnings : null,
       fieldConfidenceMap: pipelineResult.fieldConfidenceMap ?? undefined,
       classificationReasons: pipelineResult.classificationReasons.length ? pipelineResult.classificationReasons : null,
+      dataCompleteness: data.dataCompleteness ?? null,
+      sensitivityProfile: data.sensitivityProfile ?? null,
     });
     await logAudit({
       tenantId,

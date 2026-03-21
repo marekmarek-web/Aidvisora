@@ -18,12 +18,18 @@ export function PensionCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorPageHeader
-          title="Penzijní kalkulačka"
-          subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice (náhradové poměry, demografický scénář)."
-        />
+        <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
+          <CalculatorPageHeader
+            title="Penzijní kalkulačka"
+            subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice (náhradové poměry, demografický scénář)."
+          />
+          <p className="mt-3 max-w-3xl rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
+            Výpočet je orientační projekce. Slouží jako podklad pro nastavení dlouhodobé
+            důchodové strategie (DPS, DIP, ETF) podle reálných cílů klienta.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
           <CalculatorInputSection>
             <PensionInputPanel
               state={state}
@@ -32,7 +38,7 @@ export function PensionCalculatorPage() {
             />
           </CalculatorInputSection>
           <CalculatorResultsSection>
-            <div className="hidden lg:block sticky top-24">
+            <div className="hidden lg:sticky lg:top-6 lg:block">
               <PensionResultsPanel result={result} />
             </div>
           </CalculatorResultsSection>

@@ -614,11 +614,11 @@ export default function PremiumLandingPage() {
           </p>
 
           <div className="hero-anim delay-300 flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link
-              href="/prihlaseni"
-              className="w-full sm:w-auto px-8 py-4 bg-white text-[#0a0f29] rounded-full text-base font-bold tracking-wide hover:bg-slate-200 transition-all hover:scale-105 shadow-[0_0_30px_rgba(255,255,255,0.3)] text-center min-h-[44px] flex items-center justify-center gap-2"
-            >
-              Portál Aidvisora <ArrowRight size={18} />
+            <Link href="/prihlaseni?register=1" className="w-full sm:w-auto px-8 py-4 bg-white text-[#0a0f29] rounded-full text-base font-bold tracking-wide hover:bg-slate-200 transition-all hover:scale-105 shadow-[0_0_30px_rgba(255,255,255,0.3)] text-center min-h-[44px] flex items-center justify-center">
+              Vyzkoušet zdarma na 14 dní
+            </Link>
+            <Link href="/prihlaseni" className="w-full sm:w-auto px-8 py-4 bg-white/5 text-white border border-white/10 rounded-full text-base font-bold tracking-wide hover:bg-white/10 transition-all flex items-center justify-center gap-2 backdrop-blur-md min-h-[44px]">
+              Domluvit demo
             </Link>
           </div>
 

@@ -422,6 +422,8 @@ export interface FundDetail {
   minInvestment?: string;
   /** Category for product pill */
   category?: string;
+  /** Optional visual for product detail header/body */
+  heroImage?: string;
 }
 
 /** Liability provider group */

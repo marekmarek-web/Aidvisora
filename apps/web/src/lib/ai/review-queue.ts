@@ -43,7 +43,17 @@ export interface ClientMatchCandidate {
   displayName?: string;
 }
 
-export type DraftActionType = "create_client" | "create_contract" | "create_task" | "create_payment" | "draft_email";
+export type DraftActionType =
+  | "create_client"
+  | "create_contract"
+  | "create_task"
+  | "create_payment"
+  | "draft_email"
+  | "create_opportunity"
+  | "create_income_verification_record"
+  | "attach_to_existing_client"
+  | "propose_financial_analysis_update"
+  | "request_manual_review";
 
 export interface DraftActionBase {
   type: DraftActionType;

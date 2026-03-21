@@ -51,6 +51,10 @@ export const contractUploadReviews = pgTable("contract_upload_reviews", {
   extractionMode: text("extraction_mode"),
   /** Pipeline: classified document type. */
   detectedDocumentType: text("detected_document_type"),
+  /** Pipeline: subtype from classification layer. */
+  detectedDocumentSubtype: text("detected_document_subtype"),
+  /** Pipeline: lifecycle status (contract/proposal/offer/...). */
+  lifecycleStatus: text("lifecycle_status"),
   /** Pipeline: trace without document content (inputMode, documentType, classificationConfidence, extractionMode, warnings, failedStep). */
   extractionTrace: jsonb("extraction_trace"),
   /** Pipeline: validation warnings [{ code, message, field? }]. */
@@ -59,12 +63,29 @@ export const contractUploadReviews = pgTable("contract_upload_reviews", {
   fieldConfidenceMap: jsonb("field_confidence_map"),
   /** Pipeline: classification reasons from AI. */
   classificationReasons: jsonb("classification_reasons").$type<string[]>(),
+  /** Pipeline: aggregate completeness stats. */
+  dataCompleteness: jsonb("data_completeness"),
+  /** GDPR profile of extracted document. */
+  sensitivityProfile: text("sensitivity_profile"),
   /** Human correction: snapshot of payload before correction. */
   originalExtractedPayload: jsonb("original_extracted_payload"),
   /** Human correction: user-corrected payload. */
   correctedPayload: jsonb("corrected_payload"),
   /** Human correction: list of field names that were corrected. */
   correctedFields: jsonb("corrected_fields").$type<string[]>(),
+  /** Human correction: corrected classification primary type. */
+  correctedDocumentType: text("corrected_document_type"),
+  /** Human correction: corrected lifecycle status. */
+  correctedLifecycleStatus: text("corrected_lifecycle_status"),
+  /** Human correction: fields marked explicitly not applicable. */
+  fieldMarkedNotApplicable: jsonb("field_marked_not_applicable").$type<string[]>(),
+  /** Human correction: force linked client / deal for apply. */
+  linkedClientOverride: uuid("linked_client_override"),
+  linkedDealOverride: uuid("linked_deal_override"),
+  /** Human correction: explicit confidence override. */
+  confidenceOverride: jsonb("confidence_override").$type<number>(),
+  /** Human correction: warnings ignored by reviewer. */
+  ignoredWarnings: jsonb("ignored_warnings").$type<string[]>(),
   /** Human correction: reason for correction. */
   correctionReason: text("correction_reason"),
   /** Human correction: user id. */

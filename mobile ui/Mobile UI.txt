@@ -1,0 +1,1309 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+  LayoutDashboard, CheckSquare, Users, Briefcase, Menu, 
+  ChevronLeft, ChevronRight, Bell, Plus, Search, Filter, 
+  Phone, Mail, MoreVertical, CheckCircle2, Clock, 
+  Calendar as CalendarIcon, User, Sparkles, TrendingUp, 
+  DollarSign, FileText, PieChart, Settings2, Network, 
+  ArrowLeft, ArrowRight, X, AlertCircle, Flag, ChevronDown, 
+  Shield, Home, Building2, MapPin, Download, ChevronUp, Edit2,
+  MessageSquare, Calculator, Circle, FileCheck, ShieldAlert, 
+  BrainCircuit, UploadCloud, FileWarning, Activity, Heart, 
+  PiggyBank, CreditCard, Baby, Share2, Star, RefreshCw, FileDigit, FileSignature,
+  Target, Trophy, ArrowUpRight, Compass, KanbanSquare, UserPlus, TrendingDown, AlertTriangle
+} from 'lucide-react';
+
+// ==========================================
+// 1. MOCK DATA PRO VŠECHNY MODULY
+// ==========================================
+
+// --- ÚKOLY ---
+const INITIAL_TASKS = [
+  { id: 't1', title: 'Zavolat ohledně refinancování', client: 'Martin Dvořák', date: 'Dnes, 14:00', urgency: 'high', status: 'pending', tag: 'Telefonát' },
+  { id: 't2', title: 'Připravit nabídku životního poj.', client: 'Kristýna Benešová', date: 'Dnes, 16:00', urgency: 'medium', status: 'pending', tag: 'Příprava' },
+  { id: 't3', title: 'Online schůzka - Prezentace', client: 'Rodina Novákova', date: 'Zítra, 10:00', urgency: 'normal', status: 'pending', tag: 'Schůzka' },
+];
+
+const TABS = [
+  { id: 'all', label: 'Vše', count: 5 },
+  { id: 'today', label: 'Dnes', count: 2 },
+  { id: 'week', label: 'Tento týden', count: 4 },
+  { id: 'overdue', label: 'Zpožděné', count: 1, alert: true },
+];
+
+// --- KONTAKTY ---
+const INITIAL_CONTACTS = [
+  { id: 'c1', name: 'Kristýna Benešová', email: 'klient16@example.cz', phone: '+420 715 115 165', status: 'vip', initials: 'KB', color: 'bg-indigo-100 text-indigo-700' },
+  { id: 'c2', name: 'Jana Černá', email: 'klient6@example.cz', phone: '+420 705 105 555', status: 'client', initials: 'JČ', color: 'bg-emerald-100 text-emerald-700' },
+  { id: 'c3', name: 'Martin Dvořák', email: 'klient5@example.cz', phone: '+420 704 104 444', status: 'lead', initials: 'MD', color: 'bg-slate-100 text-slate-700' },
+  { id: 'c4', name: 'Pavel Horák', email: 'klient11@example.cz', phone: '+420 710 110 110', status: 'client', initials: 'PH', color: 'bg-blue-100 text-blue-700' },
+];
+
+// --- PIPELINE ---
+const STAGES = [
+  { id: 's1', title: '1. Začínáme', color: 'bg-emerald-500', lightColor: 'bg-emerald-50 text-emerald-700' },
+  { id: 's2', title: '2. Analýza', color: 'bg-blue-500', lightColor: 'bg-blue-50 text-blue-700' },
+  { id: 's3', title: '3. Příprava', color: 'bg-indigo-600', lightColor: 'bg-indigo-50 text-indigo-700' },
+  { id: 's4', title: '4. Realizace', color: 'bg-rose-500', lightColor: 'bg-rose-50 text-rose-700' },
+];
+const INITIAL_OPPORTUNITIES = [
+  { id: 'o1', stageId: 's1', title: 'Hypotéka - Koupě domu', client: 'Tomáš Procházka', value: '8.5M Kč', type: 'hypo' },
+  { id: 'o2', stageId: 's2', title: 'Investiční portfolio', client: 'Lucie Opalenská', value: '20k/měs', type: 'investice' },
+  { id: 'o3', stageId: 's4', title: 'Refinancování bytu', client: 'Rodina Černá', value: '4.2M Kč', type: 'hypo', alert: 'Chybí odhad' },
+];
+
+// --- PROFIL A DOMÁCNOST ---
+const CLIENT_PROFILE = {
+  fullName: 'MUDr. Jan Novák', tags: ['Podnikatel', 'VIP'], email: 'jan.novak@example.cz', phone: '+420 777 123 456', address: 'Sluneční 145, Praha',
+  metrics: { aum: '5.2M Kč', monthly: '25 000 Kč', health: 88, since: '2019' },
+  products: [
+    { id: 'p1', type: 'investice', name: 'Portu - Portfolio', provider: 'Portu', value: '1.2M Kč', status: 'active' },
+    { id: 'p2', type: 'hypo', name: 'Refinancování hypotéky', provider: 'Česká spořitelna', value: '4.5M Kč', status: 'pending' },
+  ],
+  notes: [{ id: 'n1', text: 'Klient uvažuje o koupi investiční nemovitosti v příštím roce.', date: 'Před 2 dny' }]
+};
+
+const HOUSEHOLD_MOCK = {
+  name: 'Rodina Novákova', address: 'Sluneční 145, Praha 4', aum: '8.45M Kč', health: 92,
+  members: [
+    { id: 'c1', name: 'MUDr. Jan Novák', role: 'Hlava rodiny', age: 45, type: 'adult', avatar: 'JN' },
+    { id: 'c2', name: 'Ing. Eva Nováková', role: 'Manželka', age: 42, type: 'adult', avatar: 'EN' },
+    { id: 'c3', name: 'Tomáš Novák', role: 'Syn', age: 17, type: 'child', avatar: 'TN' }
+  ]
+};
+
+const AI_CONTRACTS_MOCK = [
+  { id: 'c1', fileName: 'Kooperativa_Zivot.pdf', type: 'Životní pojištění', status: 'review', confidence: 94, insights: [{ label: 'Pojistná částka', value: '2 000 000 Kč' }] },
+  { id: 'c2', fileName: 'Hypoteka_CS.pdf', type: 'Hypoteční úvěr', status: 'processing', insights: [] },
+  { id: 'c3', fileName: 'Allianz_Auto.pdf', type: 'Pojištění vozidel', status: 'done', insights: [{ label: 'SPZ', value: '1AB 2345' }] }
+];
+
+const ANALYSES_MOCK = [
+  { id: 'a1', client: 'MUDr. Jan Novák', type: 'Komplexní finanční plán', status: 'completed', progress: 100 },
+  { id: 'a2', client: 'Rodina Dvořákova', type: 'Analýza bydlení', status: 'draft', progress: 45 },
+  { id: 'a3', client: 'Lucie Opalenská', type: 'Investiční strategie', status: 'review', progress: 90 }
+];
+
+const CALCULATORS_MOCK = [
+  { id: 'investicni', title: 'Investiční kalkulačka', icon: TrendingUp, color: 'text-emerald-600 bg-emerald-50' },
+  { id: 'hypotecni', title: 'Hypoteční kalkulačka', icon: Home, color: 'text-blue-600 bg-blue-50' },
+  { id: 'penzijni', title: 'Penzijní kalkulačka', icon: PiggyBank, color: 'text-purple-600 bg-purple-50' },
+  { id: 'zivotni', title: 'Životní pojištění', icon: Heart, color: 'text-rose-600 bg-rose-50' },
+];
+
+// --- MŮJ BYZNYS PLÁN A TÝM ---
+const INITIAL_PLAN_DATA = {
+  mesic: {
+    label: 'Březen 2026',
+    production: { current: 185000, target: 300000, unit: 'Kč' },
+    meetings: { current: 12, target: 25, unit: 'schůzek' },
+    newClients: { current: 3, target: 6, unit: 'klientů' },
+    reverseMath: { calls: 120, meetings: 25, contracts: 8, production: 300 },
+    mix: [{ label: 'Investice', pct: 50, color: '#10b981' }, { label: 'Životní poj.', pct: 30, color: '#f43f5e' }, { label: 'Hypotéky', pct: 20, color: '#3b82f6' }],
+    activities: [
+      { id: 'calls', label: 'Dovolání', current: 55, target: 120, color: 'bg-blue-500' },
+      { id: 'first_meetings', label: '1. schůzky', current: 8, target: 15, color: 'bg-indigo-500' },
+      { id: 'closing', label: 'Uzavíračky', current: 4, target: 10, color: 'bg-emerald-500' },
+    ],
+    insight: 'Tento měsíc ti chybí domluvit 13 schůzek. Věnuj dnešní odpoledne telefonování (20 dovolání), abys doplnil trychtýř.'
+  },
+  kvartal: {
+    label: 'Q1 2026',
+    production: { current: 520000, target: 900000, unit: 'Kč' },
+    meetings: { current: 45, target: 75, unit: 'schůzek' },
+    newClients: { current: 11, target: 18, unit: 'klientů' },
+    reverseMath: { calls: 360, meetings: 75, contracts: 24, production: 900 },
+    mix: [{ label: 'Investice', pct: 45, color: '#10b981' }, { label: 'Životní poj.', pct: 35, color: '#f43f5e' }, { label: 'Hypotéky', pct: 20, color: '#3b82f6' }],
+    activities: [
+      { id: 'calls', label: 'Dovolání', current: 180, target: 360, color: 'bg-blue-500' },
+      { id: 'first_meetings', label: '1. schůzky', current: 28, target: 45, color: 'bg-indigo-500' },
+      { id: 'closing', label: 'Uzavíračky', current: 17, target: 30, color: 'bg-emerald-500' },
+    ],
+    insight: 'Kvartální cíl plníš na 58 %. Dobrá práce! Uzavři ještě 2 rodinné plány a máš bonus.'
+  }
+};
+
+const INITIAL_VISION_GOALS = [
+  { id: 1, title: 'Vlastní kancelář (Kauce)', progress: 85, colorClass: 'bg-emerald-400', textClass: 'text-emerald-500' },
+  { id: 2, title: 'Pasivní příjem 50k / měs', progress: 40, colorClass: 'bg-amber-400', textClass: 'text-amber-500' }
+];
+
+const TEAM_MEMBERS = [
+  { id: '1', name: 'Martin Dvořák', role: 'Senior', initials: 'MD', color: 'bg-indigo-100 text-indigo-700', production: '1.25M', meetings: 24, activity: 95, trend: 'up', status: 'online' },
+  { id: '2', name: 'Lucie Černá', role: 'Poradce', initials: 'LČ', color: 'bg-emerald-100 text-emerald-700', production: '850k', meetings: 18, activity: 82, trend: 'up', status: 'offline' },
+  { id: '3', name: 'Petr Nový', role: 'Junior', initials: 'PN', color: 'bg-blue-100 text-blue-700', production: '320k', meetings: 12, activity: 65, trend: 'down', status: 'online', alert: true },
+];
+
+const PERFORMANCE_DATA = [
+  { month: 'Říjen', value: 65, label: '2.1M' },
+  { month: 'Listopad', value: 80, label: '2.8M' },
+  { month: 'Prosinec', value: 95, label: '3.4M' },
+  { month: 'Leden', value: 45, label: '1.5M' },
+  { month: 'Únor', value: 70, label: '2.4M' },
+  { month: 'Březen', value: 85, label: '3.1M', isCurrent: true },
+];
+
+
+const BOTTOM_NAV = [
+  { id: 'home', label: 'Přehled', icon: LayoutDashboard },
+  { id: 'tasks', label: 'Úkoly', icon: CheckSquare, badge: 2 },
+  { id: 'clients', label: 'Klienti', icon: Users },
+  { id: 'pipeline', label: 'Pipeline', icon: Briefcase },
+  { id: 'menu', label: 'Menu', icon: Menu },
+];
+
+const DROPDOWN_OPTS = {
+  client: [{ id: 'none', label: 'Bez klienta' }, { id: 'novakova', label: 'Rodina Novákova' }, { id: 'cerna', label: 'Jana Černá' }],
+  reminder: [{ id: 'none', label: 'Bez připomenutí' }, { id: '15m', label: '15 min předem' }, { id: '1h', label: '1 hodinu předem' }]
+};
+
+// ==========================================
+// 2. SDÍLENÉ KOMPONENTY
+// ==========================================
+function CustomDropdown({ value, onChange, options, placeholder, icon: Icon, direction = 'down', variant = 'input' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownStyles, setDropdownStyles] = useState({});
+  const buttonRef = useRef(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  const selected = options.find(o => o.id === value);
+  const isPlaceholder = !selected || selected.id === 'none';
+  const isInput = variant === 'input';
+
+  const buttonClasses = isInput
+    ? `w-full px-4 py-3.5 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-sm font-bold transition-all focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 flex items-center justify-between ${isPlaceholder ? 'text-slate-400' : 'text-slate-800'}`
+    : `flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-700 transition-all shadow-sm active:scale-95`;
+
+  const toggleOpen = (e) => {
+    e.preventDefault();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const pickerHeight = Math.min(options.length * 44 + 16, 240); 
+      const spaceBelow = window.innerHeight - rect.bottom;
+      let styles = { left: rect.left, width: isInput ? rect.width : 224 }; 
+      if (direction === 'up' || (spaceBelow < pickerHeight && rect.top > pickerHeight)) {
+        styles.bottom = window.innerHeight - rect.top + 8;
+      } else {
+        styles.top = rect.bottom + 8;
+      }
+      setDropdownStyles(styles);
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div className="relative">
+      <button ref={buttonRef} type="button" onClick={toggleOpen} className={buttonClasses}>
+        {isInput ? (
+          <div className="flex items-center gap-3 truncate">
+            {Icon && <Icon size={18} className={isPlaceholder ? "text-slate-300" : "text-slate-500"} />}
+            <span className="truncate">{selected ? selected.label : placeholder}</span>
+          </div>
+        ) : (
+          <>
+            {Icon && <Icon size={14} className={!isPlaceholder ? 'fill-indigo-200' : ''} />}
+            {selected ? selected.label : placeholder}
+          </>
+        )}
+        <ChevronDown size={isInput ? 16 : 14} className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isInput ? 'text-slate-400' : ''}`} />
+      </button>
+
+      {isOpen && mounted && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} onWheel={() => setIsOpen(false)} onTouchMove={() => setIsOpen(false)}></div>
+          <div 
+            className="fixed bg-white border border-slate-100 rounded-2xl shadow-xl shadow-indigo-900/10 py-2 z-[9999] animate-in fade-in duration-200 max-h-60 overflow-y-auto custom-scrollbar"
+            style={dropdownStyles}
+          >
+            {options.map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => { onChange(opt.id); setIsOpen(false); }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold transition-colors hover:bg-slate-50
+                  ${value === opt.id ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600'}
+                `}
+              >
+                <span className="truncate pr-4">{opt.label}</span>
+                {value === opt.id && <Check size={16} strokeWidth={3} className="shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function CustomDatePicker({ value, onChange, placeholder }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(value ? new Date(value) : new Date(2026, 2, 20));
+  const [mounted, setMounted] = useState(false);
+  const buttonRef = useRef(null);
+  const [dropdownStyles, setDropdownStyles] = useState({});
+
+  useEffect(() => setMounted(true), []);
+
+  const toggleOpen = (e) => {
+    e.preventDefault();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const pickerHeight = 350;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      let styles = { left: rect.left };
+      if (spaceBelow < pickerHeight && rect.top > pickerHeight) {
+        styles.bottom = window.innerHeight - rect.top + 8;
+      } else {
+        styles.top = rect.bottom + 8;
+      }
+      setDropdownStyles(styles);
+    }
+    setIsOpen(!isOpen);
+  };
+
+  const formatDisplayDate = (dateString) => {
+    if (!dateString) return placeholder || "dd.mm.rrrr";
+    const d = new Date(dateString);
+    return d.toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanks = Array.from({ length: startOffset }, (_, i) => i);
+  const monthsCZ = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+  const weekDaysCZ = ['po', 'út', 'st', 'čt', 'pá', 'so', 'ne'];
+
+  const handleSelectDate = (d) => {
+    const selected = new Date(Date.UTC(year, month, d));
+    onChange(selected.toISOString().split('T')[0]);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button ref={buttonRef} type="button" onClick={toggleOpen} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-sm font-bold transition-all focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 flex items-center justify-between text-left text-slate-800">
+        <span className={!value ? "text-slate-400 font-medium" : ""}>{formatDisplayDate(value)}</span>
+      </button>
+
+      {isOpen && mounted && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} onWheel={() => setIsOpen(false)} onTouchMove={() => setIsOpen(false)}></div>
+          <div className="fixed w-[280px] bg-white border border-slate-100 rounded-2xl shadow-xl shadow-indigo-900/10 p-5 z-[9999] animate-in fade-in zoom-in-95 duration-200" style={dropdownStyles}>
+            <div className="flex justify-between items-center mb-5">
+              <span className="font-black text-slate-800 text-sm capitalize">{monthsCZ[month]} {year}</span>
+              <div className="flex gap-1">
+                <button type="button" onClick={(e) => { e.stopPropagation(); setViewDate(new Date(year, month - 1, 1)); }} className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100"><ChevronLeft size={16} /></button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setViewDate(new Date(year, month + 1, 1)); }} className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100"><ChevronRight size={16} /></button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 mb-3">
+              {weekDaysCZ.map(day => <div key={day} className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">{day}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-y-2 gap-x-1 mb-4">
+              {blanks.map(b => <div key={`b-${b}`} className="h-8"></div>)}
+              {days.map(d => {
+                const dateStr = new Date(Date.UTC(year, month, d)).toISOString().split('T')[0];
+                const isSelected = value === dateStr;
+                const isToday = d === 20 && month === 2 && year === 2026;
+                return (
+                  <button
+                    key={d} type="button" onClick={() => handleSelectDate(d)}
+                    className={`h-8 w-8 mx-auto flex items-center justify-center rounded-full text-xs font-bold transition-all
+                      ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'}
+                      ${isToday && !isSelected ? 'ring-2 ring-inset ring-indigo-500 text-indigo-600 bg-indigo-50' : ''}
+                    `}
+                  >{d}</button>
+                )
+              })}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// WIZARD KOMPONENTA PRO NOVÝ ÚKOL
+// ==========================================
+function NewTaskWizard({ onClose }) {
+  const [step, setStep] = useState(1);
+  const [taskData, setTaskData] = useState({ 
+    title: '', date: '2026-03-20', priority: 'normal', reminder: '1h', client: 'none', deal: 'none', desc: ''
+  });
+
+  const isStep1Valid = taskData.title.trim() !== '' && taskData.date !== '';
+  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={onClose}>
+      <div className="bg-white w-full h-[90%] rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+        
+        <div className="px-6 pt-6 pb-0 border-b border-slate-100 bg-white relative z-10 shrink-0">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <CheckSquare className="text-indigo-500" /> Nový úkol
+            </h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors shadow-sm">
+              <X size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pb-4 relative px-2">
+            <div className="absolute left-0 top-3 w-full h-1 bg-slate-100 rounded-full -z-10"></div>
+            <div className="absolute left-0 top-3 h-1 bg-indigo-500 rounded-full -z-10 transition-all duration-500" style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}></div>
+            
+            {[ { id: 1, label: 'Základ' }, { id: 2, label: 'Kontext' }, { id: 3, label: 'Detaily' } ].map(s => (
+              <div key={s.id} className="flex flex-col items-center gap-2 bg-white px-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 transition-colors duration-300
+                  ${step === s.id ? 'border-indigo-500 bg-indigo-50 text-indigo-600 shadow-sm' : 
+                    step > s.id ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-slate-200 bg-slate-50 text-slate-400'}
+                `}>
+                  {step > s.id ? <Check size={12} strokeWidth={4} /> : s.id}
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${step >= s.id ? 'text-slate-800' : 'text-slate-400'}`}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+          {step === 1 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <label className={labelClass}>Název úkolu *</label>
+                <input type="text" autoFocus placeholder="Např. Urgovat výpisy z účtu" value={taskData.title} onChange={(e) => setTaskData({...taskData, title: e.target.value})} className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-base font-black outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all text-slate-800 placeholder:text-slate-300" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Termín *</label>
+                  <div className="relative">
+                    <CalendarIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <CustomDatePicker value={taskData.date} onChange={(val) => setTaskData({...taskData, date: val})} placeholder="dd.mm.rrrr" />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Připomenutí</label>
+                  <CustomDropdown value={taskData.reminder} onChange={(val) => setTaskData({...taskData, reminder: val})} options={DROPDOWN_OPTS.reminder} icon={Bell} />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Priorita</label>
+                <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                  <button onClick={() => setTaskData({...taskData, priority: 'low'})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === 'low' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>Nízká</button>
+                  <button onClick={() => setTaskData({...taskData, priority: 'normal'})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === 'normal' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>Běžná</button>
+                  <button onClick={() => setTaskData({...taskData, priority: 'high'})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${taskData.priority === 'high' ? 'bg-white text-rose-600 shadow-sm border border-rose-200' : 'text-slate-500 hover:text-slate-700'}`}><Flag size={14} className={taskData.priority === 'high' ? 'fill-rose-100' : ''} /> Urgentní</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex items-start gap-3 mb-4">
+                <Sparkles size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                <p className="text-xs font-medium text-indigo-900/80 leading-relaxed">
+                  Propojením úkolu s klientem zajistíte, že se úkol zobrazí přímo na jeho klientské kartě v CRM.
+                </p>
+              </div>
+              <div><label className={labelClass}>Klient (Volitelné)</label><CustomDropdown value={taskData.client} onChange={(val) => setTaskData({...taskData, client: val})} options={DROPDOWN_OPTS.client} placeholder="— Bez klienta —" icon={User} /></div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6 animate-in fade-in duration-300 h-full flex flex-col">
+              <div className="flex-1">
+                <label className={labelClass}>Detailní popis úkolu</label>
+                <textarea rows={6} value={taskData.desc} onChange={(e) => setTaskData({...taskData, desc: e.target.value})} placeholder="Přidejte kontext, co je potřeba udělat..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-slate-800 resize-none leading-relaxed custom-scrollbar"></textarea>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-4 shrink-0">
+          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shadow-sm flex items-center gap-2">
+            {step > 1 ? <><ChevronLeft size={16}/> Zpět</> : 'Zrušit'}
+          </button>
+          {step < 3 ? (
+            <button onClick={() => setStep(step + 1)} disabled={step === 1 && !isStep1Valid} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black tracking-wide shadow-md shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              Další <ChevronRight size={16}/>
+            </button>
+          ) : (
+            <button onClick={() => onClose()} className="flex-1 py-3 bg-[#1a1c2e] text-white rounded-xl text-sm font-black tracking-wide shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+              <Check size={16}/> Vytvořit
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 3. OBRAZOVKY APLIKACE (VIEWS)
+// ==========================================
+
+// --- PŘEHLED (HOME) ---
+function DashboardView({ navigateTo }) {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 pb-6">
+      <div>
+        <h1 className="text-2xl font-display font-black text-slate-900 mb-1">Dobrý den, Marku 👋</h1>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Čtvrtek, 19. března</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div onClick={() => navigateTo('calendar')} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center cursor-pointer hover:border-emerald-300">
+          <div className="flex items-center gap-2 mb-2 text-emerald-600"><CalendarIcon size={14}/><span className="text-[9px] font-black uppercase tracking-widest">Schůzky</span></div>
+          <div className="text-2xl font-display font-black text-slate-900">3</div>
+        </div>
+        <div onClick={() => navigateTo('tasks')} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center cursor-pointer hover:border-blue-300">
+          <div className="flex items-center gap-2 mb-2 text-blue-600"><CheckSquare size={14}/><span className="text-[9px] font-black uppercase tracking-widest">Úkoly</span></div>
+          <div className="text-2xl font-display font-black text-slate-900">7</div>
+        </div>
+      </div>
+
+      <div className="bg-[#1a1c2e] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/30 rounded-full blur-[40px]"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-indigo-300"><Sparkles size={16}/></div><h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">AI Asistent</h2></div>
+          <h3 className="text-sm font-bold text-white mb-4 leading-snug">Dnes máte 1 urgentní úkol po termínu a odpoledne schůzku s rodinou Novákovou.</h3>
+          <button onClick={() => navigateTo('tasks')} className="w-full py-3 bg-indigo-600 rounded-xl text-xs font-bold tracking-wide shadow-md">Zobrazit dnešní agendu</button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-sm">
+        <h3 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2"><Clock size={16} className="text-slate-400"/> Nedávná aktivita</h3>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center shrink-0"><FileText size={14}/></div>
+            <div>
+              <p className="text-xs font-bold text-slate-800">Byla nahrána nová smlouva</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Rodina Novákova (Hypotéka)</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer" onClick={() => navigateTo('client_profile')}>
+            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center shrink-0"><User size={14}/></div>
+            <div>
+              <p className="text-xs font-bold text-slate-800">Profil klienta (Klikni)</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">MUDr. Jan Novák</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- ÚKOLY ---
+function TasksView({ openTaskWizard }) {
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [activeTab, setActiveTab] = useState('all');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const toggleTaskStatus = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, status: t.status === 'pending' ? 'completed' : 'pending' } : t));
+  };
+
+  const handleQuickAdd = () => {
+    if (!newTaskTitle.trim()) return;
+    const newTask = { id: `t${Date.now()}`, title: newTaskTitle, client: '', date: 'Dnes', urgency: 'normal', status: 'pending', tag: 'Nový úkol' };
+    setTasks([newTask, ...tasks]);
+    setNewTaskTitle('');
+    setIsInputFocused(false);
+  };
+
+  return (
+    <div className="animate-in fade-in duration-500 flex flex-col h-full pb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Moje úkoly</h1>
+        <button onClick={openTaskWizard} className="w-8 h-8 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95"><Plus size={16} strokeWidth={3}/></button>
+      </div>
+
+      <div className={`bg-white rounded-[20px] border transition-all duration-300 shadow-sm mb-4 ${isInputFocused ? 'border-indigo-400 ring-2 ring-indigo-50' : 'border-slate-200'}`}>
+        <div className="flex items-center p-1">
+          <div className="p-3 text-slate-300 shrink-0"><Plus size={16} className={isInputFocused ? "text-indigo-500" : ""} /></div>
+          <input 
+            type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)}
+            onFocus={() => setIsInputFocused(true)} onBlur={() => { if(!newTaskTitle) setIsInputFocused(false); }}
+            placeholder="Rychlý úkol..." 
+            className="flex-1 bg-transparent text-slate-800 font-semibold placeholder:font-medium placeholder:text-slate-400 outline-none text-sm py-3"
+            onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleQuickAdd(); } }}
+          />
+          {isInputFocused && <button onMouseDown={(e) => { e.preventDefault(); handleQuickAdd(); }} className="px-3 py-1.5 mr-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">Vytvořit</button>}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 mb-4 overflow-x-auto hide-scrollbar">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'} ${tab.alert && activeTab !== tab.id ? 'text-rose-500' : ''}`}>
+            {tab.label}
+            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700' : tab.alert ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm mb-4">
+         <h3 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-3 flex items-center gap-2"><AlertCircle size={14} className="text-rose-500" /> AI Priority</h3>
+         <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
+            <p className="text-xs text-rose-700 font-medium mb-2">"Urgovat dodání výpisů" pro Petra Malého mělo proběhnout včera.</p>
+            <button className="text-[9px] font-black uppercase tracking-widest text-rose-600 bg-white px-3 py-1.5 rounded-md border border-rose-200 w-full">Přesunout na dnešek</button>
+         </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto hide-scrollbar space-y-3">
+        {tasks.filter(t => activeTab === 'all' || (activeTab === 'done' && t.status === 'completed') || (activeTab !== 'done' && t.status !== 'completed')).map((task) => {
+          const isCompleted = task.status === 'completed';
+          const isOverdue = task.urgency === 'high' && !isCompleted;
+          return (
+            <div key={task.id} className={`bg-white p-4 rounded-[20px] border transition-all flex flex-col gap-2 ${isCompleted ? 'border-slate-100 bg-slate-50/50 opacity-60' : 'border-slate-200 shadow-sm'}`}>
+              <div className="flex items-start gap-3">
+                <button onClick={() => toggleTaskStatus(task.id)} className={`mt-0.5 shrink-0 transition-colors ${isCompleted ? 'text-emerald-500' : isOverdue ? 'text-rose-400' : 'text-slate-300'}`}>
+                  {isCompleted ? <CheckCircle2 size={20} className="fill-emerald-50" /> : <Circle size={20} />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <h3 className={`font-bold text-[13px] leading-snug mb-1.5 ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</h3>
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-500">
+                    <span className={`px-1.5 py-0.5 rounded border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>{task.date}</span>
+                    {task.client && <span className="flex items-center gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100"><User size={10} /> {task.client}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- KLIENTI & KONTAKTY ---
+function ClientsView({ navigateTo }) {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300 pb-6">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Kontakty</h1>
+        <button className="w-8 h-8 bg-[#1a1c2e] text-white rounded-xl flex items-center justify-center shadow-md active:scale-95"><Plus size={16}/></button>
+      </div>
+
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input type="text" placeholder="Hledat klienta..." className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" />
+      </div>
+
+      <div className="space-y-3">
+        {INITIAL_CONTACTS.map(c => (
+          <div key={c.id} onClick={() => navigateTo('client_profile')} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3 cursor-pointer active:scale-[0.98] transition-transform">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border shadow-sm ${c.color}`}>{c.initials}</div>
+                <div>
+                  <h3 className="font-bold text-[15px] text-slate-900">{c.name}</h3>
+                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border mt-1 inline-block ${c.status === 'vip' ? 'bg-amber-100 text-amber-700 border-amber-200' : c.status === 'client' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    {c.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+              <div className="flex gap-2">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500"><Phone size={14}/></div>
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500"><Mail size={14}/></div>
+              </div>
+              <button className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg">Detail</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- PIPELINE KANBAN (Mobile Accordion) ---
+function PipelineView() {
+  const [openStage, setOpenStage] = useState('s1');
+
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300 pb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Pipeline</h1>
+        <button className="w-8 h-8 bg-[#1a1c2e] text-white rounded-xl flex items-center justify-center shadow-md"><Plus size={16}/></button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-6 flex justify-between items-center">
+        <div>
+          <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Celkový potenciál</span>
+          <span className="text-lg font-black text-slate-900">12.5M Kč</span>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {STAGES.map(stage => {
+          const opps = INITIAL_OPPORTUNITIES.filter(o => o.stageId === stage.id);
+          const isOpen = openStage === stage.id;
+
+          return (
+            <div key={stage.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+              <button onClick={() => setOpenStage(isOpen ? null : stage.id)} className="w-full p-4 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${stage.color.replace('text-', 'bg-')}`}></div>
+                  <span className="font-bold text-sm text-slate-800">{stage.title}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-slate-500 bg-white px-2 py-1 rounded shadow-sm border border-slate-200">{opps.length}</span>
+                  {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="p-4 bg-white border-t border-slate-100 space-y-3 animate-in slide-in-from-top-2">
+                  {opps.length === 0 && <p className="text-xs text-center text-slate-400 font-medium py-2">Prázdná fáze</p>}
+                  {opps.map(opp => (
+                    <div key={opp.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${opp.type === 'hypo' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
+                          {opp.typeLabel}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">{opp.value}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 leading-tight">{opp.title}</h4>
+                        <p className="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1"><User size={12}/> {opp.client}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-50 flex justify-center items-center gap-1">
+                    <Plus size={14}/> Přidat
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// NOVÉ: MŮJ BUSINESS PLÁN (Mobilní verze z BusinessPlanView)
+// ==========================================
+function MobileBusinessPlanView() {
+  const [period, setPeriod] = useState('mesic');
+  const [isParamsModalOpen, setIsParamsModalOpen] = useState(false);
+  const [isVisionModalOpen, setIsVisionModalOpen] = useState(false);
+  const [planData, setPlanData] = useState(INITIAL_PLAN_DATA);
+  const [tempParams, setTempParams] = useState({ production: 0, meetings: 0, newClients: 0 });
+
+  const currentData = planData[period];
+  const calculateProgress = (current, target) => target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
+
+  const openParamsModal = () => {
+    setTempParams({
+      production: currentData.production.target,
+      meetings: currentData.meetings.target,
+      newClients: currentData.newClients.target
+    });
+    setIsParamsModalOpen(true);
+  };
+
+  const saveParams = () => {
+    setPlanData(prev => ({
+      ...prev,
+      [period]: {
+        ...prev[period],
+        production: { ...prev[period].production, target: Number(tempParams.production) },
+        meetings: { ...prev[period].meetings, target: Number(tempParams.meetings) },
+        newClients: { ...prev[period].newClients, target: Number(tempParams.newClients) },
+      }
+    }));
+    setIsParamsModalOpen(false);
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 pb-6 relative min-h-full">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Můj Plán</h1>
+        <button onClick={openParamsModal} className="p-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"><Edit2 size={16}/></button>
+      </div>
+
+      <div className="bg-slate-100/80 p-1 rounded-xl flex items-center border border-slate-200/60 shadow-inner w-full mb-4">
+        {[ { id: 'mesic', label: 'Měsíc' }, { id: 'kvartal', label: 'Q1 26' }, { id: 'rok', label: 'Rok' }].map(t => (
+          <button key={t.id} onClick={() => setPeriod(t.id)} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${period === t.id ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Moje Vize */}
+      <div className="bg-gradient-to-br from-[#1a1c2e] to-indigo-950 rounded-[24px] p-6 text-white relative overflow-hidden shadow-lg">
+        <Compass className="absolute -top-4 -right-4 w-24 h-24 text-white/5 pointer-events-none" />
+        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300 mb-4 flex items-center gap-2 relative z-10"><Flag size={14} /> Moje Vize</h3>
+        <div className="space-y-4 relative z-10">
+          {INITIAL_VISION_GOALS.map(goal => (
+            <div key={goal.id}>
+              <div className="flex justify-between items-end mb-1.5"><span className="font-bold text-sm">{goal.title}</span><span className={`text-xs font-black ${goal.textClass}`}>{goal.progress}%</span></div>
+              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden"><div className={`h-full ${goal.colorClass} rounded-full`} style={{ width: `${goal.progress}%` }}></div></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Matematika Úspěchu (Mobile Horizontal Flow) */}
+      <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-sm">
+        <h2 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-4"><Target className="text-rose-500" size={16} /> Reverzní matematika</h2>
+        <div className="flex items-center justify-between px-2">
+          <div className="flex flex-col items-center text-center"><div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-1"><Phone size={14}/></div><span className="text-base font-black text-slate-900">{currentData.reverseMath.calls}</span><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Volání</span></div>
+          <ArrowRight className="text-slate-200" size={16}/>
+          <div className="flex flex-col items-center text-center"><div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-1"><Calendar size={14}/></div><span className="text-base font-black text-slate-900">{currentData.reverseMath.meetings}</span><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Schůzky</span></div>
+          <ArrowRight className="text-slate-200" size={16}/>
+          <div className="flex flex-col items-center text-center"><div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-1"><FileSignature size={14}/></div><span className="text-base font-black text-slate-900">{currentData.reverseMath.contracts}</span><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Smluv</span></div>
+        </div>
+      </div>
+
+      {/* Plnění cílů */}
+      <div className="space-y-4">
+        {[
+          { label: 'Produkce (Kč)', current: currentData.production.current, target: currentData.production.target, color: 'bg-emerald-500', text: 'text-emerald-600', bgL: 'bg-emerald-50' },
+          { label: 'Schůzky', current: currentData.meetings.current, target: currentData.meetings.target, color: 'bg-indigo-500', text: 'text-indigo-600', bgL: 'bg-indigo-50' },
+          { label: 'Noví klienti', current: currentData.newClients.current, target: currentData.newClients.target, color: 'bg-amber-500', text: 'text-amber-600', bgL: 'bg-amber-50' }
+        ].map((kpi, i) => {
+          const pct = calculateProgress(kpi.current, kpi.target);
+          return (
+            <div key={i} className="bg-white rounded-[20px] p-5 border border-slate-100 shadow-sm flex flex-col gap-2">
+              <div className="flex justify-between items-end">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{kpi.label}</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${kpi.text} ${kpi.bgL}`}>{pct}%</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-black text-slate-900">{kpi.current >= 1000 ? (kpi.current/1000).toFixed(0)+'k' : kpi.current}</span>
+                <span className="text-xs font-bold text-slate-400">/ {kpi.target >= 1000 ? (kpi.target/1000).toFixed(0)+'k' : kpi.target}</span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-1"><div className={`h-full rounded-full ${kpi.color}`} style={{width:`${pct}%`}}></div></div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modál Parametry */}
+      {isParamsModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={() => setIsParamsModalOpen(false)}>
+          <div className="bg-white w-full rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+               <h2 className="text-lg font-black text-slate-900">Upravit cíle ({currentData.label})</h2>
+               <button onClick={() => setIsParamsModalOpen(false)} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={16}/></button>
+            </div>
+            <div className="p-6 space-y-5">
+               <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Cílová produkce</label><input type="number" value={tempParams.production} onChange={e => setTempParams({...tempParams, production: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:border-indigo-400" /></div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Počet schůzek</label><input type="number" value={tempParams.meetings} onChange={e => setTempParams({...tempParams, meetings: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:border-indigo-400" /></div>
+                 <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Noví klienti</label><input type="number" value={tempParams.newClients} onChange={e => setTempParams({...tempParams, newClients: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:border-indigo-400" /></div>
+               </div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+               <button onClick={() => setIsParamsModalOpen(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl font-bold border border-slate-200 text-sm">Zrušit</button>
+               <button onClick={saveParams} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-md">Uložit</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// NOVÉ: TÝMOVÝ PŘEHLED (Mobilní verze z TeamOverviewView)
+// ==========================================
+function MobileTeamOverviewView() {
+  const [period, setPeriod] = useState('mesic');
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 pb-6 relative min-h-full">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Můj Tým</h1>
+        <div className="flex gap-2">
+          <button onClick={() => setIsTaskModalOpen(true)} className="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100"><CheckSquare size={16}/></button>
+          <button onClick={() => setIsEventModalOpen(true)} className="p-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100"><Calendar size={16}/></button>
+        </div>
+      </div>
+
+      {/* KPI Kvarteto */}
+      <div className="grid grid-cols-2 gap-3">
+         <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Produkce</span>
+            <div className="text-lg font-black text-slate-900">3.77M</div>
+            <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 mt-1"><TrendingUp size={10} /> +12%</span>
+         </div>
+         <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Schůzky</span>
+            <div className="text-lg font-black text-slate-900">85</div>
+            <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1 mt-1"><TrendingDown size={10} /> -5%</span>
+         </div>
+      </div>
+
+      {/* Výkon v čase zmenšený */}
+      <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-sm">
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><BarChart2 size={16} className="text-indigo-500" /> Výkon v čase</h2>
+        <div className="h-[120px] flex items-end justify-between gap-1 relative pt-4">
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0"><div className="w-full h-px bg-slate-100"></div><div className="w-full h-px bg-slate-100"></div><div className="w-full h-px bg-slate-100"></div></div>
+          {[65, 80, 95, 45, 70, 85].map((val, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-2 z-10">
+              <div className={`w-full max-w-[20px] rounded-t-sm transition-all ${i === 5 ? 'bg-indigo-500' : 'bg-slate-200'}`} style={{ height: `${val}%` }}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Seznam Členů jako Karty na mobilu */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Tým ({TEAM_MEMBERS.length})</h3>
+        {TEAM_MEMBERS.map(member => (
+          <div key={member.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border shadow-sm ${member.color}`}>{member.initials}</div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">{member.name} {member.alert && <AlertTriangle size={12} className="text-rose-500" />}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{member.role}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${member.status === 'online' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}><span className={`w-1.5 h-1.5 rounded-full ${member.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>{member.status}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 border-t border-slate-50 pt-3">
+               <div><span className="block text-[9px] text-slate-400 uppercase font-black">Produkce</span><span className="text-xs font-black text-slate-800">{member.production}</span></div>
+               <div><span className="block text-[9px] text-slate-400 uppercase font-black">Schůzky</span><span className="text-xs font-black text-slate-800">{member.meetings}</span></div>
+               <div><span className="block text-[9px] text-slate-400 uppercase font-black">Aktivita</span><div className="flex items-center gap-1 mt-1"><div className="h-1.5 w-full bg-slate-100 rounded-full"><div className="h-full bg-blue-500 rounded-full" style={{width:`${member.activity}%`}}></div></div></div></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* RIZIKA A UPOZORNĚNÍ (Alerts) */}
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5">
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><AlertTriangle size={16} className="text-rose-500" /> Upozornění</h2>
+        <div className="space-y-3">
+          <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-2">
+             <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+             <p className="text-xs font-medium text-rose-800 leading-snug">Petr Nový nedosáhl na minimální KPI v počtu volaných kontaktů (45/100).</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Modál Nová Událost (Bottom Sheet) */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={() => setIsEventModalOpen(false)}>
+          <div className="bg-white w-full rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+               <h2 className="text-lg font-black text-slate-900">Týmová událost</h2>
+               <button onClick={() => setIsEventModalOpen(false)} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={16}/></button>
+            </div>
+            <div className="p-6 space-y-4">
+               <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Název *</label><input type="text" placeholder="Porada..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400" /></div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Začátek</label><input type="datetime-local" className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-400" /></div>
+                 <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Konec</label><input type="datetime-local" className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-400" /></div>
+               </div>
+               <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Příjemci</label><div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2"><input type="checkbox" defaultChecked className="w-4 h-4"/><span className="text-sm font-bold">Celý tým</span></div></div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+               <button onClick={() => setIsEventModalOpen(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl font-bold border border-slate-200 text-sm">Zrušit</button>
+               <button onClick={() => setIsEventModalOpen(false)} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-md">Vytvořit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modál Nový Úkol (Bottom Sheet) */}
+      {isTaskModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end bg-slate-900/60 backdrop-blur-sm modal-overlay" onClick={() => setIsTaskModalOpen(false)}>
+          <div className="bg-white w-full rounded-t-[32px] flex flex-col modal-content overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+               <h2 className="text-lg font-black text-slate-900">Týmový úkol</h2>
+               <button onClick={() => setIsTaskModalOpen(false)} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={16}/></button>
+            </div>
+            <div className="p-6 space-y-4">
+               <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Název *</label><input type="text" placeholder="Úkol pro tým..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400" /></div>
+               <div><label className="block text-[10px] font-black uppercase text-slate-500 mb-2">Termín</label><input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400" /></div>
+            </div>
+            <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+               <button onClick={() => setIsTaskModalOpen(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl font-bold border border-slate-200 text-sm">Zrušit</button>
+               <button onClick={() => setIsTaskModalOpen(false)} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-md">Vytvořit</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- MENU (Rozcestník s doplněnými moduly) ---
+function MenuView({ navigateTo }) {
+  const menuItems = [
+    { id: 'business_plan', label: 'Můj Plán', icon: Target, color: 'text-rose-500 bg-rose-50' },
+    { id: 'team_overview', label: 'Můj Tým', icon: Users, color: 'text-indigo-500 bg-indigo-50' },
+    { id: 'kalkulacky', label: 'Kalkulačky', icon: Calculator, color: 'text-amber-500 bg-amber-50' },
+    { id: 'fin_analyzy', label: 'Analýzy', icon: PieChart, color: 'text-blue-600 bg-blue-50' },
+    { id: 'ai_assistant', label: 'AI Smlouvy', icon: BrainCircuit, color: 'text-fuchsia-500 bg-fuchsia-50' },
+    { id: 'domacnost_detail', label: 'Domácnosti', icon: Building2, color: 'text-emerald-500 bg-emerald-50' },
+    { id: 'settings', label: 'Nastavení', icon: Settings2, color: 'text-slate-600 bg-slate-100' },
+  ];
+
+  return (
+    <div className="animate-in fade-in duration-300 pb-6">
+      <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight mb-6">Nástroje</h1>
+      
+      <div className="bg-[#1a1c2e] rounded-3xl p-6 text-white shadow-xl mb-6 flex items-center justify-between border border-slate-700">
+         <div>
+           <h3 className="font-bold text-sm flex items-center gap-2 mb-1"><Sparkles size={16} className="text-fuchsia-400"/> AI Review Smluv</h3>
+           <p className="text-xs text-slate-400">Automatická extrakce z PDF</p>
+         </div>
+         <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center"><ArrowRight size={18}/></div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {menuItems.map(item => (
+          <button 
+            key={item.id} onClick={() => navigateTo(item.id)}
+            className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center text-center gap-3 active:scale-95"
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${item.color}`}><item.icon size={24}/></div>
+            <span className="font-bold text-sm text-slate-700">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ==========================================
+// 4. NOVÉ POHLEDY (Z předchozího kroku a zachované)
+// ==========================================
+
+function MobileClientProfileView({ navigateTo }) {
+  const [activeTab, setActiveTab] = useState('prehled');
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-300 pb-6 space-y-6">
+      <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 opacity-50"></div>
+        <div className="flex items-center gap-4 mb-4 z-10 relative">
+          <div className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-slate-800 to-[#1a1c2e] flex items-center justify-center text-white font-black text-xl shadow-lg border-2 border-white">
+            JN
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">{CLIENT_PROFILE.fullName}</h1>
+            <span className="inline-block px-2 py-0.5 mt-1 bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest rounded border border-amber-200">VIP</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-2 text-xs font-bold text-slate-500 z-10 relative">
+          <span className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> {CLIENT_PROFILE.email}</span>
+          <span className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> {CLIENT_PROFILE.phone}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto hide-scrollbar">
+        {['prehled', 'produkty', 'dokumenty'].map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-[11px] font-bold rounded-lg transition-all capitalize whitespace-nowrap ${activeTab === t ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'prehled' && (
+        <div className="space-y-4 animate-in fade-in">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm"><span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">AUM</span><div className="text-lg font-black text-slate-900">{CLIENT_PROFILE.metrics.aum}</div></div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm"><span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Měs. investice</span><div className="text-lg font-black text-emerald-600">{CLIENT_PROFILE.metrics.monthly}</div></div>
+            <div className="col-span-2 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between cursor-pointer" onClick={() => navigateTo('domacnost_detail')}>
+               <div><span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Domácnost</span><div className="text-sm font-bold text-slate-900">Rodina Novákova (3 členové)</div></div>
+               <ChevronRight size={16} className="text-slate-400" />
+            </div>
+          </div>
+          <div className="bg-amber-50/80 rounded-2xl border border-amber-100 p-4">
+            <h3 className="text-xs font-black text-amber-900 uppercase tracking-widest mb-2 flex items-center gap-2"><FileText size={14} /> Poslední zápisek</h3>
+            <p className="text-sm font-medium text-amber-900/80 italic">{CLIENT_PROFILE.notes[0].text}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileHouseholdDetailView() {
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-300 pb-6 space-y-6">
+      <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm text-center">
+         <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-3"><Home size={28}/></div>
+         <h1 className="text-2xl font-black text-slate-900 tracking-tight">{HOUSEHOLD_MOCK.name}</h1>
+         <p className="text-xs font-bold text-slate-500 mt-1">{HOUSEHOLD_MOCK.address}</p>
+         <div className="grid grid-cols-2 gap-3 mt-6">
+            <div className="bg-slate-50 p-3 rounded-xl"><span className="block text-[9px] font-black uppercase text-slate-400 mb-1">AUM</span><span className="text-lg font-black text-indigo-600">{HOUSEHOLD_MOCK.aum}</span></div>
+            <div className="bg-slate-50 p-3 rounded-xl"><span className="block text-[9px] font-black uppercase text-slate-400 mb-1">Health</span><span className="text-lg font-black text-emerald-500">{HOUSEHOLD_MOCK.health}%</span></div>
+         </div>
+      </div>
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-50 flex justify-between items-center"><h3 className="font-bold text-slate-900 text-sm">Členové ({HOUSEHOLD_MOCK.members.length})</h3></div>
+        <div className="p-4 space-y-3">
+          {HOUSEHOLD_MOCK.members.map(m => (
+            <div key={m.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black ${m.type === 'child' ? 'bg-amber-100 text-amber-700' : 'bg-slate-800 text-white'}`}>
+                 {m.type === 'child' ? <Baby size={16}/> : m.avatar}
+               </div>
+               <div>
+                 <h4 className="font-bold text-sm text-slate-900 leading-tight">{m.name}</h4>
+                 <p className="text-[10px] font-bold text-slate-500">{m.role} • {m.age} let</p>
+               </div>
+            </div>
+          ))}
+          <button className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 flex justify-center items-center gap-2"><Plus size={14}/> Přidat člena</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileAIAssistantView() {
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-300 pb-6 space-y-6">
+      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[24px] p-6 text-white shadow-lg relative overflow-hidden text-center">
+        <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-2" />
+        <h1 className="text-xl font-black tracking-tight mb-2">AI Review smluv</h1>
+        <p className="text-xs font-medium text-indigo-100 mb-6">Nahrajte fotku nebo PDF, systém sám vyčte data do CRM.</p>
+        <button className="w-full py-3.5 bg-white text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-md flex justify-center items-center gap-2">
+          <UploadCloud size={16}/> Nahrát dokument
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {AI_CONTRACTS_MOCK.map(c => (
+          <div key={c.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-3">
+             <div className="flex justify-between items-start">
+               <div className="flex items-center gap-2">
+                 <div className={`p-2 rounded-lg ${c.status === 'done' ? 'bg-emerald-50 text-emerald-600' : c.status === 'review' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                   {c.status === 'done' ? <FileCheck size={16}/> : c.status === 'review' ? <ShieldAlert size={16}/> : <RefreshCw size={16} className="animate-spin"/>}
+                 </div>
+                 <h4 className="font-bold text-sm text-slate-900 truncate max-w-[180px]">{c.fileName}</h4>
+               </div>
+             </div>
+             
+             {c.insights.length > 0 && (
+               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col gap-1.5">
+                 <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1"><BrainCircuit size={10}/> Data z AI</span>
+                 {c.insights.map((i, idx) => (
+                   <div key={idx} className="flex justify-between text-xs font-bold"><span className="text-slate-500">{i.label}</span><span className="text-slate-800">{i.value}</span></div>
+                 ))}
+               </div>
+             )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MobileFinancialAnalysesHub() {
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-300 pb-6 space-y-6">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Analýzy</h1>
+        <button className="w-8 h-8 bg-[#1a1c2e] text-white rounded-xl flex items-center justify-center shadow-md active:scale-95"><Plus size={16}/></button>
+      </div>
+
+      <div className="bg-indigo-600 text-white rounded-[24px] p-6 shadow-lg shadow-indigo-600/20">
+        <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4"><PieChart size={24}/></div>
+        <h2 className="text-xl font-black mb-1">Nový Finanční Plán</h2>
+        <p className="text-xs font-medium text-indigo-200 mb-4">Spusťte interaktivního průvodce od Cashflow po Rentu.</p>
+        <button className="bg-white text-indigo-600 w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-widest">Spustit Wizard</button>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Rozpracované & Hotové</h3>
+        {ANALYSES_MOCK.map(a => (
+          <div key={a.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
+             <div className="flex justify-between">
+               <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${a.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                 {a.status === 'completed' ? 'Hotovo' : 'Koncept'}
+               </span>
+               <span className="text-[10px] font-bold text-slate-400">{a.progress}%</span>
+             </div>
+             <h4 className="font-bold text-sm text-slate-900">{a.client}</h4>
+             <p className="text-xs font-medium text-slate-500">{a.type}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MobileCalculatorsHub() {
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-300 pb-6 space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">Kalkulačky</h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {CALCULATORS_MOCK.map((calc) => (
+          <div key={calc.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 transition-transform">
+             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${calc.color}`}><calc.icon size={20}/></div>
+             <h3 className="font-bold text-xs text-slate-800 leading-tight">{calc.title}</h3>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 5. MAIN APP SHELL (Obal a Routování)
+// ==========================================
+export default function MobileAdvisorPortalApp() {
+  const [activeTab, setActiveTab] = useState('home'); 
+  const [activeSubView, setActiveSubView] = useState(null); 
+  const [isTaskWizardOpen, setIsTaskWizardOpen] = useState(false);
+
+  const navigateTo = (viewId) => {
+    if (BOTTOM_NAV.find(n => n.id === viewId)) {
+      setActiveTab(viewId);
+      setActiveSubView(null);
+    } else {
+      setActiveSubView(viewId);
+    }
+  };
+
+  const handleBack = () => {
+    setActiveSubView(null);
+  };
+
+  const renderContent = () => {
+    // Nové Sub-views (Můj plán & Tým)
+    if (activeSubView === 'business_plan') return <MobileBusinessPlanView />;
+    if (activeSubView === 'team_overview') return <MobileTeamOverviewView />;
+
+    // Další Sub-views
+    if (activeSubView === 'client_profile') return <MobileClientProfileView navigateTo={navigateTo} />;
+    if (activeSubView === 'domacnost_detail') return <MobileHouseholdDetailView />;
+    if (activeSubView === 'ai_assistant') return <MobileAIAssistantView />;
+    if (activeSubView === 'fin_analyzy') return <MobileFinancialAnalysesHub />;
+    if (activeSubView === 'kalkulacky') return <MobileCalculatorsHub />;
+
+    // Hlavní taby
+    if (activeTab === 'home') return <DashboardView navigateTo={navigateTo} />;
+    if (activeTab === 'tasks') return <TasksView openTaskWizard={() => setIsTaskWizardOpen(true)} />;
+    if (activeTab === 'clients') return <ClientsView navigateTo={navigateTo} />;
+    if (activeTab === 'pipeline') return <PipelineView />;
+    if (activeTab === 'menu') return <MenuView navigateTo={navigateTo} />;
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 selection:bg-indigo-500 selection:text-white font-lato">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
+        .font-lato { font-family: 'Lato', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .bg-dot-grid { background-image: radial-gradient(#cbd5e1 1px, transparent 0); background-size: 32px 32px; }
+      `}</style>
+
+      {/* --- SIMULACE MOBILNÍ OBRAZOVKY --- */}
+      <div className="w-full max-w-[400px] h-[850px] bg-[#f8fafc] rounded-[40px] shadow-2xl relative overflow-hidden border-[8px] border-slate-800 flex flex-col">
+        
+        {/* Falešný iOS Status Bar */}
+        <div className="h-7 w-full flex justify-between items-center px-6 pt-2 text-[11px] font-bold text-slate-800 z-50 bg-white/80 backdrop-blur-md shrink-0">
+           <span>9:41</span>
+           <div className="flex gap-1.5 items-center">
+             <div className="flex gap-0.5 items-end"><div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div><div className="w-1 h-2 bg-slate-800 rounded-sm"></div><div className="w-1 h-2.5 bg-slate-800 rounded-sm"></div><div className="w-1 h-3 bg-slate-800 rounded-sm"></div></div>
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+             <svg width="22" height="11" viewBox="0 0 24 12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="2" width="18" height="8" rx="2" ry="2"/><line x1="23" y1="4" x2="23" y2="8"/></svg>
+           </div>
+        </div>
+
+        {/* Dynamic Header */}
+        <header className="bg-white/80 backdrop-blur-md px-5 py-3 border-b border-slate-100 sticky top-0 z-30 flex items-center justify-between shadow-sm shrink-0 transition-all">
+           {activeSubView ? (
+             <div className="flex items-center gap-2">
+               <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                 <ArrowLeft size={20} /> <span className="text-sm font-bold">Zpět</span>
+               </button>
+             </div>
+           ) : (
+             <div className="flex items-center gap-3 animate-in fade-in">
+               <div className="w-8 h-8 bg-[#1a1c2e] rounded-lg flex items-center justify-center text-white font-display font-black text-sm shadow-md">W</div>
+               <h1 className="text-lg font-display font-black text-slate-900 tracking-tight capitalize">
+                 {BOTTOM_NAV.find(n => n.id === activeTab)?.label}
+               </h1>
+             </div>
+           )}
+           
+           <div className="flex items-center gap-3">
+             <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative bg-slate-50 rounded-full">
+               <Bell size={16} />
+               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+             </button>
+             {!activeSubView && <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black shadow-sm border border-indigo-200">MD</div>}
+           </div>
+        </header>
+
+        {/* Hlavní obsah */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar bg-dot-grid relative z-10 w-full pb-24">
+          <div className="p-4 h-full">
+             {renderContent()}
+          </div>
+        </div>
+
+        {/* --- SPODNÍ NAVIGAČNÍ LIŠTA --- */}
+        <nav className={`absolute bottom-0 left-0 w-full bg-white border-t border-slate-100 flex items-center justify-around px-2 py-3 pb-6 z-50 rounded-b-[32px] transition-transform duration-300 ${activeSubView ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+          {BOTTOM_NAV.map(item => {
+            const isActive = activeTab === item.id && !activeSubView;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigateTo(item.id)}
+                className={`flex flex-col items-center justify-center gap-1 w-16 relative transition-colors
+                  ${isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
+                `}
+              >
+                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-indigo-50' : ''}`}>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-indigo-700' : ''}`}>
+                  {item.label}
+                </span>
+                {item.badge && (
+                  <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[8px] font-black shadow-sm border border-white">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Falešný iOS Home Indicator */}
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-slate-900 rounded-full z-50 pointer-events-none"></div>
+
+        {/* MODÁLY (Bottom Sheet) */}
+        {isTaskWizardOpen && <NewTaskWizard onClose={() => setIsTaskWizardOpen(false)} />}
+
+      </div>
+    </div>
+  );
+}

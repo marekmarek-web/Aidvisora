@@ -16,12 +16,22 @@ function matchSearch(row: { extractedPayload?: unknown }, q: string): boolean {
   if (!p) return false;
   const str = (v: unknown) => (v != null ? String(v).toLowerCase() : "");
   const client = p.client as Record<string, unknown> | undefined;
-  const fullName = client ? str(client.fullName) || [str(client.firstName), str(client.lastName)].filter(Boolean).join(" ") : "";
+  const extractedFields = p.extractedFields as Record<string, { value?: unknown }> | undefined;
+  const getField = (key: string) => str(extractedFields?.[key]?.value);
+  const fullName = client
+    ? str(client.fullName) || [str(client.firstName), str(client.lastName)].filter(Boolean).join(" ")
+    : getField("clientFullName") || getField("insuredPersonName") || getField("investorFullName") || getField("employeeFullName");
   return (
     str(p.institutionName).includes(s) ||
     str(p.contractNumber).includes(s) ||
+    getField("insurer").includes(s) ||
+    getField("lender").includes(s) ||
+    getField("bankName").includes(s) ||
+    getField("contractNumber").includes(s) ||
     fullName.includes(s) ||
-    (client ? str(client.email).includes(s) || str(client.phone).includes(s) : false)
+    (client ? str(client.email).includes(s) || str(client.phone).includes(s) : false) ||
+    getField("email").includes(s) ||
+    getField("phone").includes(s)
   );
 }
 
