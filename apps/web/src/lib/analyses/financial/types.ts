@@ -426,6 +426,8 @@ export interface FundDetail {
   heroImage?: string;
   /** Optional gallery visuals shown under the hero image */
   galleryImages?: string[];
+  /** 'photo' for building/landscape images (cover), 'logo' for company logos (contain) */
+  galleryType?: 'photo' | 'logo';
 }
 
 /** Liability provider group */

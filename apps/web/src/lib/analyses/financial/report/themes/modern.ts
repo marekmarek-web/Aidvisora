@@ -186,6 +186,8 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .product-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
 .product-gallery-item{border:1px solid var(--surface-3);border-radius:var(--r2);overflow:hidden;background:var(--surface-2)}
 .product-gallery-image{width:100%;height:84px;object-fit:cover;display:block}
+.product-gallery-logos .product-gallery-item{background:#fff;padding:12px;display:flex;align-items:center;justify-content:center}
+.product-gallery-logos .product-gallery-image{height:60px;object-fit:contain}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--surface-3);border:1px solid var(--surface-3);border-radius:var(--r3);overflow:hidden;margin-bottom:20px}
 .stat-cell{background:var(--surface);padding:12px 14px}
 .stat-lbl{font-family:var(--ff-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink-4);margin-bottom:3px}
@@ -284,8 +286,8 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .dvz-note{padding:11px 16px;background:var(--surface-2);border-radius:var(--r2);border:1px solid var(--surface-3);font-size:11px;color:var(--ink-4);text-align:center;margin-top:16px;font-family:var(--ff-data)}
 
 /* INSURANCE PROVIDER LOGOS */
-.ins-provider-cell{display:flex;align-items:center;gap:6px}
-.ins-provider-logo{width:24px;height:24px;object-fit:contain;border-radius:4px;flex-shrink:0}
+.ins-provider-cell{display:flex;align-items:center;gap:8px}
+.ins-provider-logo{width:40px;height:28px;object-fit:contain;flex-shrink:0}
 .ins-provider-fallback{font-size:11px;font-weight:600;color:var(--ink-3)}
 .sum-row td{border-top:2px solid var(--brand);padding-top:8px;font-weight:700}
 
@@ -300,7 +302,9 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .legal{font-size:10.5px;color:var(--ink-5);line-height:1.7;padding:20px 0 0;border-top:1px solid var(--surface-3);margin-top:32px}
 
 /* LAYOUT */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.g2>.card{display:flex;flex-direction:column}
+.g2>.card .cf-list{flex:1}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 
 /* ANIMATION */
@@ -354,6 +358,9 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .product-hero-image{max-height:90px}
   .product-gallery{gap:6px;margin-bottom:10px}
   .product-gallery-image{height:58px}
+  .product-gallery-logos .product-gallery-item{padding:6px}
+  .product-gallery-logos .product-gallery-image{height:40px}
+  .ins-provider-logo{width:32px;height:22px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
   .stat-val{font-size:11px}

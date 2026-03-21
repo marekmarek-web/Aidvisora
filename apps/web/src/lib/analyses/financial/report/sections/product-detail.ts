@@ -38,9 +38,10 @@ function renderBenefits(benefits: string[]): string {
   return `<ul class="check-list">${benefits.map((b) => `<li>${b}</li>`).join('')}</ul>`;
 }
 
-function renderGallery(images: string[]): string {
+function renderGallery(images: string[], isLogo = false): string {
   if (!images || images.length === 0) return '';
-  return `<div class="product-gallery">${images.map((img) => `<div class="product-gallery-item"><img src="${esc(img)}" alt="Ilustrační obrázek fondu" class="product-gallery-image" onerror="this.parentElement&&this.parentElement.remove()"></div>`).join('')}</div>`;
+  const cls = isLogo ? 'product-gallery product-gallery-logos' : 'product-gallery';
+  return `<div class="${cls}">${images.map((img) => `<div class="product-gallery-item"><img src="${esc(img)}" alt="" class="product-gallery-image" onerror="this.parentElement&&this.parentElement.remove()"></div>`).join('')}</div>`;
 }
 
 function computeFV(inv: InvestmentEntry): number {
@@ -101,7 +102,7 @@ export function renderProductDetails(ctx: SectionCtx): string {
       <div class="product-card-body">
         ${detail.description ? `<div class="product-desc">${detail.description}</div>` : ''}
         ${detail.heroImage ? `<div class="product-hero-image-wrap"><img src="${esc(detail.heroImage)}" alt="${esc(name)}" class="product-hero-image" onerror="this.parentElement&&this.parentElement.remove()"></div>` : ''}
-        ${detail.galleryImages ? renderGallery(detail.galleryImages) : ''}
+        ${detail.galleryImages ? renderGallery(detail.galleryImages, detail.galleryType === 'logo') : ''}
         ${renderStatGrid(detail)}
         ${detail.countries ? renderBars(detail.countries, 'Zastoupení', theme) : ''}
         ${detail.sectors ? renderBars(detail.sectors, 'Sektory', theme) : ''}

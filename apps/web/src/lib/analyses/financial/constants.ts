@@ -70,6 +70,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     galleryImages: [
       '/report-assets/atris/atris2.jpg',
       '/report-assets/atris/atris3.jpg',
+      '/report-assets/atris/atris4.jpg',
     ],
     benefits: [
       'Jeden z nejstarších retailových nemovitostních fondů v ČR (od roku 2009).',
@@ -107,6 +108,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
       '/report-assets/penta/penta2.jpg',
       '/report-assets/penta/penta3.webp',
     ],
+    galleryType: 'logo' as const,
     benefits: [
       'Přístup k privátním investicím běžně nedostupným pro retailové investory.',
       'Aktivní správa portfoliových firem zkušeným investičním týmem.',
@@ -143,6 +145,7 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
       '/report-assets/msci/msci2.png',
       '/report-assets/msci/msci3.png',
     ],
+    galleryType: 'logo' as const,
     benefits: [
       '<strong>Okamžitá diverzifikace</strong> do 1 320 firem jedním nákupem.',
       '<strong>Nejvyšší likvidita</strong> — fond prodejný kdykoliv v obchodních hodinách burzy.',

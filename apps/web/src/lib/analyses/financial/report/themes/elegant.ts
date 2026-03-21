@@ -178,6 +178,8 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .product-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 var(--s5)}
 .product-gallery-item{border:1px solid var(--stone-200);border-radius:var(--r-sm);overflow:hidden;background:var(--stone-50)}
 .product-gallery-image{width:100%;height:84px;object-fit:cover;display:block}
+.product-gallery-logos .product-gallery-item{background:#fff;padding:12px;display:flex;align-items:center;justify-content:center}
+.product-gallery-logos .product-gallery-image{height:60px;object-fit:contain}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--stone-100);border:1px solid var(--stone-100);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--s6)}
 .stat-cell{background:var(--white);padding:var(--s4) var(--s5)}
 .stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--stone-400);margin-bottom:4px}
@@ -274,8 +276,8 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .dvz-note{padding:var(--s4) var(--s5);background:var(--stone-50);border-radius:var(--r-md);border:1px solid var(--stone-200);font-size:11px;color:var(--stone-400);text-align:center;margin-top:var(--s5)}
 
 /* INSURANCE PROVIDER LOGOS */
-.ins-provider-cell{display:flex;align-items:center;gap:6px}
-.ins-provider-logo{width:24px;height:24px;object-fit:contain;border-radius:4px;flex-shrink:0}
+.ins-provider-cell{display:flex;align-items:center;gap:8px}
+.ins-provider-logo{width:40px;height:28px;object-fit:contain;flex-shrink:0}
 .ins-provider-fallback{font-size:11px;font-weight:600;color:var(--stone-500)}
 .sum-row td{border-top:2px solid var(--gold-500);padding-top:8px;font-weight:700}
 
@@ -290,7 +292,9 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .legal{font-size:10.5px;color:var(--stone-400);line-height:1.7;padding:var(--s6) 0;border-top:1px solid var(--stone-200);margin-top:var(--s8)}
 
 /* LAYOUT */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5);align-items:start}
+.g2>.card{display:flex;flex-direction:column}
+.g2>.card .cf-list{flex:1}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s4)}
 
 /* ANIMATION */
@@ -341,6 +345,9 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
   .product-hero-image{max-height:90px}
   .product-gallery{gap:6px;margin-bottom:10px}
   .product-gallery-image{height:58px}
+  .product-gallery-logos .product-gallery-item{padding:6px}
+  .product-gallery-logos .product-gallery-image{height:40px}
+  .ins-provider-logo{width:32px;height:22px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
   .stat-val{font-size:11px}
