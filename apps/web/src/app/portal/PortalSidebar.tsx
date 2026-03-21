@@ -31,8 +31,6 @@ import {
   FileText,
   Target,
   User,
-  Link2,
-  type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getOpenTasksCount } from "@/app/actions/tasks";
@@ -73,39 +71,27 @@ interface SectionConfig {
 
 function GoogleDriveLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden>
-      <path d="M7.12 3.02h9.76l2.28 3.96h-9.76z" fill="#0f9d58" />
-      <path d="M17.94 7.15 13.06 15.6l2.44 4.23 4.88-8.44z" fill="#f4b400" />
-      <path d="M8.5 19.83h9.76l2.28-3.95h-9.76z" fill="#4285f4" />
-      <path d="M10.94 15.6 6.06 7.15H1.5l4.88 8.44z" fill="#0f9d58" opacity=".95" />
-      <path d="M8.5 19.83 3.62 11.4 1.34 15.35l4.88 8.44z" fill="#4285f4" opacity=".95" />
-      <path d="M7.12 3.02 2.24 11.46H6.8l4.88-8.44z" fill="#34a853" opacity=".9" />
-    </svg>
+    <img
+      src="/logos/Google_Drive-Logo.wine.png"
+      alt="Google Disk"
+      width={size}
+      height={size}
+      className={className}
+      style={{ objectFit: "contain" }}
+    />
   );
 }
 
 function GmailLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden>
-      <path d="M3 6.75 12 13l9-6.25V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#e8eaed" />
-      <path d="M3 6.75 12 13l9-6.25V6a2 2 0 0 0-2-2h-.5L12 9 5.5 4H5a2 2 0 0 0-2 2z" fill="#ea4335" />
-      <path d="M3 6.75V18a2 2 0 0 0 2 2h.5V9.5z" fill="#4285f4" />
-      <path d="M21 6.75V18a2 2 0 0 1-2 2h-.5V9.5z" fill="#34a853" />
-      <path d="M18.5 4 12 9 5.5 4z" fill="#fbbc04" />
-    </svg>
-  );
-}
-
-function GoogleCalendarLogo({ size = 18, className }: { size?: number; className?: string; strokeWidth?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="3.5" fill="#4285f4" />
-      <rect x="3" y="8" width="18" height="13" rx="0" fill="#34a853" opacity=".95" />
-      <path d="M15 8h6v10z" fill="#fbbc04" />
-      <path d="M15 18v3h3z" fill="#ea4335" />
-      <rect x="6.4" y="10.2" width="8.2" height="7.4" rx="1.1" fill="#0b57d0" />
-      <path d="M8.4 15.8v-4.2h1.6c.74 0 1.24.45 1.24 1.1 0 .44-.22.78-.6.95.5.16.8.55.8 1.07 0 .74-.58 1.08-1.3 1.08zm1.2-2.55h.36c.28 0 .44-.14.44-.37s-.16-.35-.45-.35H9.6zm0 1.7h.45c.3 0 .48-.15.48-.4 0-.24-.17-.38-.46-.38H9.6zm4.67.85h-1.04v-3.2l-.9.52-.37-.8 1.42-.82h.9z" fill="#fff" />
-    </svg>
+    <img
+      src="/logos/Gmail_icon_(2020).svg.png"
+      alt="Gmail"
+      width={size}
+      height={size}
+      className={className}
+      style={{ objectFit: "contain" }}
+    />
   );
 }
 
@@ -148,10 +134,8 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network, hoverAnim: "group-hover:-translate-y-1" },
-      { href: "/portal/setup?tab=integrace", label: "Připojení", Icon: Link2, hoverAnim: "group-hover:scale-110" },
-      { href: "/portal/setup?tab=integrace&provider=google-calendar", label: "Google Kalendář", Icon: GoogleCalendarLogo, hoverAnim: "group-hover:scale-110" },
-      { href: "/portal/setup?tab=integrace&provider=google-drive", label: "Google Disk", Icon: GoogleDriveLogo, hoverAnim: "group-hover:scale-110" },
-      { href: "/portal/setup?tab=integrace&provider=gmail", label: "Gmail", Icon: GmailLogo, hoverAnim: "group-hover:scale-110" },
+      { href: "/portal/tools/drive", label: "Google Disk", Icon: GoogleDriveLogo, hoverAnim: "group-hover:scale-110" },
+      { href: "/portal/tools/gmail", label: "Gmail", Icon: GmailLogo, hoverAnim: "group-hover:scale-110" },
     ],
   },
   {
@@ -447,7 +431,7 @@ export function PortalSidebar({
             {collapsed ? (
               <img
                 key="logo-a"
-                src="/Aidvisora logo A.png"
+                src="/aidvisora-logo-a.png"
                 alt="Aidvisora"
                 className="h-10 w-10 object-contain object-center flex-shrink-0"
                 style={sidebarTheme === "gradient" ? { filter: "brightness(0) invert(1)" } : undefined}
@@ -455,7 +439,7 @@ export function PortalSidebar({
             ) : (
               <img
                 key="logo-big"
-                src="/Aidvisora logo.png"
+                src="/aidvisora-logo-big.png"
                 alt="Aidvisora"
                 className="h-16 max-h-16 w-auto max-w-full object-contain object-left flex-shrink-0"
                 style={sidebarTheme === "gradient" ? { filter: "brightness(0) invert(1)" } : undefined}

@@ -12,14 +12,14 @@ export function MortgageProductSwitcher({
   onProductChange,
 }: MortgageProductSwitcherProps) {
   return (
-    <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+    <div className="grid grid-cols-2 gap-2">
       <button
         type="button"
         onClick={() => onProductChange("mortgage")}
-        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-wider transition-all touch-manipulation ${
+        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-[10px] border-[1.5px] font-semibold text-xs sm:text-sm transition-all touch-manipulation ${
           product === "mortgage"
-            ? "bg-slate-900 text-white shadow-sm"
-            : "bg-transparent text-slate-600 hover:bg-white"
+            ? "bg-[#0d1f4e] border-[#0d1f4e] text-white shadow-sm"
+            : "bg-[#f4f6fb] border-slate-300 text-slate-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
         }`}
       >
         Hypotéka
@@ -27,10 +27,10 @@ export function MortgageProductSwitcher({
       <button
         type="button"
         onClick={() => onProductChange("loan")}
-        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm uppercase tracking-wider transition-all touch-manipulation ${
+        className={`min-h-[44px] min-w-[44px] px-5 sm:px-6 py-2.5 rounded-[10px] border-[1.5px] font-semibold text-xs sm:text-sm transition-all touch-manipulation ${
           product === "loan"
-            ? "bg-slate-900 text-white shadow-sm"
-            : "bg-transparent text-slate-600 hover:bg-white"
+            ? "bg-[#0d1f4e] border-[#0d1f4e] text-white shadow-sm"
+            : "bg-[#f4f6fb] border-slate-300 text-slate-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
         }`}
       >
         Úvěry

@@ -46,9 +46,9 @@ export function InvestmentResultsPanel({
             <button
               type="button"
               onClick={onCtaClick}
-              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-white shadow-lg transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-[14px] bg-[#2563eb] px-6 py-4 text-white shadow-lg transition-all hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1f4e]"
             >
-              <span className="text-lg uppercase">Chci investiční plán</span>
+              <span className="text-base uppercase">Chci investiční plán</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>

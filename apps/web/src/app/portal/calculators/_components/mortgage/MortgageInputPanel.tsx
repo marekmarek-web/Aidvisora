@@ -128,10 +128,10 @@ export function MortgageInputPanel({
   const loanMaxLabel = state.product === "mortgage" ? "30 mil." : "2,5 mil.";
 
   return (
-    <div className="bg-white rounded-3xl p-5 sm:p-7 md:p-8 shadow-sm border border-slate-200 space-y-6 sm:space-y-7">
+    <div className="bg-white rounded-[20px] p-5 sm:p-6 md:p-7 shadow-sm border-[1.5px] border-slate-200 space-y-6 sm:space-y-7">
       <div className="pb-5 border-b border-slate-100">
-        <label className="block text-sm font-bold text-slate-600 tracking-wide mb-2">
-          <span className="uppercase">{loanLabel}</span>{" "}
+        <label className="block text-sm font-semibold text-slate-600 tracking-wide mb-2">
+          <span className="uppercase text-xs tracking-[0.06em] text-slate-400">{loanLabel}</span>{" "}
           <span className="text-slate-400 font-normal normal-case">(v Kč)</span>
         </label>
         <div className="flex justify-between items-end gap-2 mb-2">
@@ -140,7 +140,7 @@ export function MortgageInputPanel({
             inputMode="numeric"
             value={formatCurrency(state.loan)}
             onChange={(e) => handleLoanChange(parseCurrency(e.target.value))}
-            className="flex-1 text-right font-black text-2xl md:text-3xl text-slate-900 border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
+            className="flex-1 text-right font-black text-2xl md:text-3xl text-[#0d1f4e] border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
           />
         </div>
         <input
@@ -160,8 +160,8 @@ export function MortgageInputPanel({
 
       {isConsolidation && (
         <div className="pb-5 border-b border-slate-100">
-          <label className="block text-sm font-bold text-slate-600 tracking-wide mb-2">
-            <span className="uppercase">Peníze navíc</span>{" "}
+          <label className="block text-sm font-semibold text-slate-600 tracking-wide mb-2">
+            <span className="uppercase text-xs tracking-[0.06em] text-slate-400">Peníze navíc</span>{" "}
             <span className="text-slate-400 font-normal normal-case">(v Kč)</span>
           </label>
           <div className="flex justify-between items-end gap-2 mb-2">
@@ -170,7 +170,7 @@ export function MortgageInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.extra)}
               onChange={(e) => handleExtraChange(parseCurrency(e.target.value))}
-              className="flex-1 text-right font-black text-2xl text-slate-900 border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
+            className="flex-1 text-right font-black text-2xl text-[#0d1f4e] border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input
@@ -187,7 +187,7 @@ export function MortgageInputPanel({
 
       {(isMortgage || isAuto) && (
         <div id="ownResourcesBlock" className="pb-5 border-b border-slate-100">
-          <label className="block text-sm font-bold text-slate-600 tracking-wide mb-2">
+          <label className="block text-sm font-semibold text-slate-600 tracking-wide mb-2">
             <span className="uppercase">
               {isMortgage ? "Vlastní zdroje" : "Akontace"}
             </span>{" "}
@@ -199,7 +199,7 @@ export function MortgageInputPanel({
               inputMode="numeric"
               value={formatCurrency(state.own)}
               onChange={(e) => handleOwnChange(parseCurrency(e.target.value))}
-              className="flex-1 text-right font-black text-2xl text-slate-900 border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
+              className="flex-1 text-right font-black text-2xl text-[#0d1f4e] border-b-2 border-slate-200 focus:border-blue-600 focus:ring-0 outline-none bg-transparent transition-colors p-1 min-w-0"
             />
           </div>
           <input

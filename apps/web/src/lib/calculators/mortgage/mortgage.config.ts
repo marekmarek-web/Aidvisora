@@ -14,7 +14,7 @@ export const BANKS_DATA: BankEntry[] = [
   { id: "partners", name: "Partners Banka", baseRate: 4.59, loanRate: 6.4, logoUrl: "" },
   { id: "csob", name: "ČSOB", baseRate: 4.79, loanRate: 7.9, logoUrl: "/logos/csob-logo.png" },
   { id: "kb", name: "Komerční banka", baseRate: 4.59, loanRate: 6.9, logoUrl: "/logos/kb-logo.png" },
-  { id: "cs", name: "Česká spořitelna", baseRate: 4.59, loanRate: 7.5, logoUrl: "" },
+  { id: "cs", name: "Česká spořitelna", baseRate: 4.59, loanRate: 7.5, logoUrl: "/logos/ceska-sporitelna-logo.svg" },
   { id: "mbank", name: "mBank", baseRate: 4.79, loanRate: 6.2, logoUrl: "/logos/mbank-logo.png" },
 ];
 

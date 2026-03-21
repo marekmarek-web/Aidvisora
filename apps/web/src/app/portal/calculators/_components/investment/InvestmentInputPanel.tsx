@@ -42,16 +42,16 @@ export function InvestmentInputPanel({
 
   const getSliderBackground = (value: number, min: number, max: number) => {
     const ratio = ((value - min) / (max - min)) * 100;
-    return `linear-gradient(90deg, #4f46e5 ${ratio}%, #e2e8f0 ${ratio}%)`;
+    return `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${ratio}%, #cbd5e1 ${ratio}%)`;
   };
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 md:p-7">
-      <div className="space-y-6 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:p-5">
+    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:p-7">
+      <div className="space-y-6 rounded-[14px] border border-slate-100 bg-white p-4 sm:p-5">
         <div className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-600">
-              <span className="uppercase tracking-wide">Počáteční vklad</span>{" "}
+            <label className="text-sm font-semibold text-slate-600 leading-tight">
+              <span className="uppercase tracking-[0.06em] text-xs text-slate-400">Počáteční vklad</span>{" "}
               <span className="font-normal text-slate-400">(v Kč)</span>
             </label>
             <input
@@ -61,7 +61,7 @@ export function InvestmentInputPanel({
               onChange={(e) =>
                 onInitialChange(clampInitial(parseCurrency(e.target.value)))
               }
-              className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-right font-extrabold text-2xl text-slate-900 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 sm:w-56"
+              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-2 text-right font-extrabold text-xl sm:text-2xl text-[#0d1f4e] outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-56"
               aria-label="Počáteční vklad"
             />
           </div>
@@ -93,8 +93,8 @@ export function InvestmentInputPanel({
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-600">
-              <span className="uppercase tracking-wide">Měsíční investice</span>{" "}
+            <label className="text-sm font-semibold text-slate-600 leading-tight">
+              <span className="uppercase tracking-[0.06em] text-xs text-slate-400">Měsíční investice</span>{" "}
               <span className="font-normal text-slate-400">(v Kč)</span>
             </label>
             <input
@@ -104,7 +104,7 @@ export function InvestmentInputPanel({
               onChange={(e) =>
                 onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))
               }
-              className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-right font-extrabold text-2xl text-slate-900 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 sm:w-56"
+              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-2 text-right font-extrabold text-xl sm:text-2xl text-[#0d1f4e] outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-56"
               aria-label="Měsíční investice"
             />
           </div>
@@ -135,7 +135,7 @@ export function InvestmentInputPanel({
         <div className="h-px bg-slate-200" />
 
         <div className="space-y-3">
-          <label className="block text-sm font-semibold uppercase tracking-wide text-slate-600">
+          <label className="block text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">
             Doba investice
           </label>
           <div className="flex items-center gap-3">
@@ -157,7 +157,7 @@ export function InvestmentInputPanel({
               }}
               aria-label="Slider doby investice"
             />
-            <div className="min-w-[92px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-center font-bold text-slate-900">
+            <div className="min-w-[92px] rounded-[10px] border-[1.5px] border-slate-300 bg-white px-3 py-2 text-center text-sm sm:text-base font-bold text-[#0d1f4e]">
               {years} let
             </div>
           </div>
@@ -168,7 +168,7 @@ export function InvestmentInputPanel({
         </div>
       </div>
 
-      <div className="mt-5 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+      <div className="mt-5 flex items-start gap-3 rounded-[10px] border border-blue-100 bg-blue-50/70 p-4">
         <svg
           className="w-4 h-4 text-[#0B3A7A] mt-1 shrink-0"
           fill="currentColor"
@@ -191,18 +191,18 @@ export function InvestmentInputPanel({
         .investment-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           cursor: pointer;
         }
         .investment-slider::-webkit-slider-runnable-track {
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           background: transparent;
         }
         .investment-slider::-moz-range-track {
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           background: transparent;
         }
         .investment-slider::-webkit-slider-thumb {
@@ -210,22 +210,22 @@ export function InvestmentInputPanel({
           appearance: none;
           width: 20px;
           height: 20px;
-          margin-top: -6px;
-          border-radius: 9999px;
-          border: 3px solid #fff;
-          background: #4f46e5;
-          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+          margin-top: -7px;
+          border-radius: 999px;
+          border: 2.5px solid #2563eb;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13), 0 2px 7px rgba(37, 99, 235, 0.28);
         }
         .investment-slider::-moz-range-thumb {
           width: 20px;
           height: 20px;
-          border: 3px solid #fff;
-          border-radius: 9999px;
-          background: #4f46e5;
-          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+          border: 2.5px solid #2563eb;
+          border-radius: 999px;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
         }
         .investment-slider:focus-visible {
-          outline: 2px solid #6366f1;
+          outline: 2px solid #2563eb;
           outline-offset: 4px;
         }
       `}</style>

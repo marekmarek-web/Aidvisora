@@ -55,18 +55,20 @@ export function LifeResultsPanel({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0f29] p-6 text-white shadow-2xl shadow-[#0a0f29]/30 md:p-8">
-      <div className="absolute top-0 right-0 w-48 h-48 bg-[#0B3A7A] opacity-20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none" />
+    <div className="relative overflow-hidden rounded-[20px] border border-slate-800 bg-[#0d1f4e] p-6 text-white shadow-[0_16px_48px_rgba(13,31,78,0.14),0_4px_12px_rgba(13,31,78,0.06)] md:p-7">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -ml-10 -mb-10" />
+      </div>
 
-      <h3 className="relative z-10 mb-6 flex flex-wrap items-center justify-between gap-2 text-sm font-medium uppercase tracking-wider text-slate-400">
+      <h3 className="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-300">
         Doporučené min. pojistné částky
-        <span className="rounded bg-indigo-500/10 px-2 py-1 text-xs font-bold normal-case text-indigo-400">
+        <span className="rounded bg-white/10 px-2 py-1 text-xs font-bold normal-case text-slate-100">
           Klesající do 65 let
         </span>
       </h3>
 
-      <div className="relative z-10 space-y-0 rounded-xl border border-white/10 bg-white/5 p-1.5">
+      <div className="relative z-10 space-y-0 rounded-xl border border-white/10 bg-white/5 p-1">
         {rows.map((row) => {
           const Icon = row.icon;
           return (
@@ -79,25 +81,25 @@ export function LifeResultsPanel({
                   className={`p-2 rounded-lg ${row.highlight ? "bg-emerald-500/20" : "bg-white/5"}`}
                 >
                   <Icon
-                    className={`w-5 h-5 ${row.highlight ? "text-red-400" : "text-slate-300"}`}
+                    className={`w-5 h-5 ${row.highlight ? "text-emerald-300" : "text-slate-300"}`}
                   />
                 </div>
                 <div>
                   <div
-                    className={`text-sm font-bold ${row.highlight ? "text-white" : "text-slate-200"}`}
+                  className={`text-[13px] sm:text-sm font-bold ${row.highlight ? "text-white" : "text-slate-200"}`}
                   >
                     {row.label}
                   </div>
-                  <div className="text-xs text-slate-500">{row.subtext}</div>
+                  <div className="text-xs text-slate-400">{row.subtext}</div>
                 </div>
               </div>
-                <div className="text-right pl-2">
+              <div className="text-right pl-2">
                 <div
-                  className={`text-xl md:text-2xl font-bold tracking-tight ${row.highlight ? "text-emerald-400" : "text-white"}`}
+                  className={`text-lg sm:text-xl md:text-2xl font-bold tracking-tight ${row.highlight ? "text-emerald-300" : "text-white"}`}
                 >
                   {formatCurrency(row.value)}
                 </div>
-                <div className="text-xs text-slate-500 uppercase font-bold">
+                <div className="text-xs text-slate-400 uppercase font-bold">
                   {row.unit}
                 </div>
               </div>
@@ -109,7 +111,7 @@ export function LifeResultsPanel({
           <div className="flex justify-between items-center mb-1">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/5 rounded-lg">
-                <Zap className="w-4 h-4 text-indigo-500" />
+                <Zap className="w-4 h-4 text-sky-300" />
               </div>
               <span className="text-slate-300 text-sm font-medium">
                 Trvalé následky
@@ -120,17 +122,17 @@ export function LifeResultsPanel({
             </div>
           </div>
           <div className="flex justify-between items-center pl-11 flex-wrap gap-2">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
               Lineární plnění
             </span>
-            <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
+            <span className="text-[10px] text-sky-200 font-bold bg-white/10 px-2 py-0.5 rounded">
               Až 10násobná progrese ({formatCurrency(result.tnProgression)})
             </span>
           </div>
         </div>
 
-        <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-4 relative overflow-hidden group hover:bg-white/10 transition-colors">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500 opacity-5 blur-xl -mr-5 -mt-5" />
+        <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-4 relative overflow-hidden transition-colors">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-xl -mr-5 -mt-5" />
           <div className="flex items-start gap-4 relative z-10">
             <div className="bg-white p-2 rounded-lg shrink-0 w-12 h-12 flex items-center justify-center">
               <Scale className="w-6 h-6 text-slate-900" />
@@ -143,11 +145,11 @@ export function LifeResultsPanel({
                 Zajistí, že vám pojišťovna vyplatí{" "}
                 <strong>maximální plnění</strong>. Nutnost ke smlouvě.
               </p>
-              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-500">
-                <span className="bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 whitespace-nowrap">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-sky-200">
+                <span className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
                   {EUCS_LABELS.perPerson}
                 </span>
-                <span className="bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 whitespace-nowrap">
+                <span className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
                   {EUCS_LABELS.perFamily}
                 </span>
               </div>
@@ -162,9 +164,9 @@ export function LifeResultsPanel({
             <button
               type="button"
               onClick={onCtaPrimary}
-              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-5 font-extrabold text-white shadow-lg transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+              className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-[14px] bg-[#2563eb] px-6 py-4 font-bold text-white shadow-lg transition-all hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1f4e]"
             >
-              <span className="text-lg">Chci řešení na míru</span>
+              <span className="text-sm sm:text-base">Chci řešení na míru</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -174,7 +176,7 @@ export function LifeResultsPanel({
             <button
               type="button"
               onClick={onCtaCheck}
-              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1f4e]"
             >
               <svg
                 className="w-4 h-4 text-slate-400"

@@ -215,7 +215,7 @@ export function InvestmentBacktestChart({
           onChange={(e) => onStartYearChange(parseInt(e.target.value, 10))}
           className="investment-backtest-slider min-h-[44px] w-full touch-manipulation"
           style={{
-            background: `linear-gradient(90deg, #4f46e5 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%, #e2e8f0 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%)`,
+            background: `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%, #cbd5e1 ${((startYear - START_YEAR_MIN) / (START_YEAR_MAX - START_YEAR_MIN)) * 100}%)`,
           }}
           aria-label="Startovní rok backtestu"
         />
@@ -230,13 +230,13 @@ export function InvestmentBacktestChart({
         .investment-backtest-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           cursor: pointer;
         }
         .investment-backtest-slider::-webkit-slider-runnable-track {
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           background: transparent;
         }
         .investment-backtest-slider::-webkit-slider-thumb {
@@ -244,27 +244,27 @@ export function InvestmentBacktestChart({
           appearance: none;
           width: 20px;
           height: 20px;
-          margin-top: -6px;
-          border-radius: 9999px;
-          border: 3px solid #fff;
-          background: #4f46e5;
-          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+          margin-top: -7px;
+          border-radius: 999px;
+          border: 2.5px solid #2563eb;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13), 0 2px 7px rgba(37, 99, 235, 0.28);
         }
         .investment-backtest-slider::-moz-range-track {
-          height: 8px;
-          border-radius: 9999px;
+          height: 5px;
+          border-radius: 999px;
           background: transparent;
         }
         .investment-backtest-slider::-moz-range-thumb {
           width: 20px;
           height: 20px;
-          border: 3px solid #fff;
-          border-radius: 9999px;
-          background: #4f46e5;
-          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+          border: 2.5px solid #2563eb;
+          border-radius: 999px;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
         }
         .investment-backtest-slider:focus-visible {
-          outline: 2px solid #6366f1;
+          outline: 2px solid #2563eb;
           outline-offset: 4px;
         }
       `}</style>

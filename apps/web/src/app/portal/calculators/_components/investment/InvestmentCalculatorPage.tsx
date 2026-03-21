@@ -5,6 +5,9 @@ import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorInputSection } from "../core/CalculatorInputSection";
 import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
+import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
+import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
+import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { InvestmentStrategySwitcher } from "./InvestmentStrategySwitcher";
 import { InvestmentInputPanel } from "./InvestmentInputPanel";
 import { InvestmentResultsPanel } from "./InvestmentResultsPanel";
@@ -66,10 +69,11 @@ export function InvestmentCalculatorPage() {
   );
 
   return (
-    <div className="pt-0 pb-8 sm:pb-12">
+    <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
+        <CalculatorModuleCard>
           <CalculatorPageHeader
+            eyebrow="Kalkulačka investic · 2026"
             title="Investiční kalkulačka"
             subtitle="Projekce hodnoty investice v čase při pravidelném investování a zvolené strategii."
           />
@@ -84,9 +88,9 @@ export function InvestmentCalculatorPage() {
               <span className="text-slate-400">({profile.rate} % p.a.)</span>
             </p>
           </div>
-        </div>
+        </CalculatorModuleCard>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 items-start">
+        <CalculatorModuleMainGrid>
           <CalculatorInputSection>
             <InvestmentInputPanel
               initial={initial}
@@ -109,15 +113,12 @@ export function InvestmentCalculatorPage() {
               />
             </div>
           </CalculatorResultsSection>
-        </div>
+        </CalculatorModuleMainGrid>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-          <section className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <header className="mb-4 space-y-1">
-              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <span className="text-indigo-500">📈</span>
-                Projekce vývoje
-              </h3>
+              <h3 className="text-lg font-bold text-slate-900">Projekce vývoje</h3>
               <p className="text-sm text-slate-500">
                 Graf ukazuje odhadovaný vývoj hodnoty investice v čase při pravidelném investování a zvolené strategii.
               </p>
@@ -125,12 +126,9 @@ export function InvestmentCalculatorPage() {
             <InvestmentGrowthChart data={growthChartData} />
           </section>
 
-          <section className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <header className="mb-4 space-y-1">
-              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <span className="text-indigo-500">📊</span>
-                Složení portfolia
-              </h3>
+              <h3 className="text-lg font-bold text-slate-900">Složení portfolia</h3>
               <p className="text-sm text-slate-500">
                 Rozdělení strategie podle jednotlivých tříd aktiv.
               </p>
@@ -139,7 +137,7 @@ export function InvestmentCalculatorPage() {
           </section>
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-sm">
           <div className="p-5 sm:p-6 md:p-8">
             <InvestmentBacktestChart
               series={backtestSeries}
@@ -150,6 +148,15 @@ export function InvestmentCalculatorPage() {
           </div>
         </div>
       </CalculatorPageShell>
+
+      <CalculatorMobileResultDock>
+        <InvestmentResultsPanel
+          totalBalance={projection.totalBalance}
+          totalInvested={projection.totalInvested}
+          totalGain={projection.totalGain}
+          totalGainPercent={projection.totalGainPercent}
+        />
+      </CalculatorMobileResultDock>
     </div>
   );
 }

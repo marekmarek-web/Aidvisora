@@ -5,6 +5,9 @@ import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorInputSection } from "../core/CalculatorInputSection";
 import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
+import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
+import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
+import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { PensionInputPanel } from "./PensionInputPanel";
 import { PensionResultsPanel } from "./PensionResultsPanel";
 import { DEFAULT_STATE } from "@/lib/calculators/pension/pension.config";
@@ -18,8 +21,9 @@ export function PensionCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
+        <CalculatorModuleCard>
           <CalculatorPageHeader
+            eyebrow="Kalkulačka penze · 2026"
             title="Penzijní kalkulačka"
             subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice (náhradové poměry, demografický scénář)."
           />
@@ -27,9 +31,9 @@ export function PensionCalculatorPage() {
             Výpočet je orientační projekce. Slouží jako podklad pro nastavení dlouhodobé
             důchodové strategie (DPS, DIP, ETF) podle reálných cílů klienta.
           </p>
-        </div>
+        </CalculatorModuleCard>
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+        <CalculatorModuleMainGrid>
           <CalculatorInputSection>
             <PensionInputPanel
               state={state}
@@ -42,14 +46,12 @@ export function PensionCalculatorPage() {
               <PensionResultsPanel result={result} />
             </div>
           </CalculatorResultsSection>
-        </div>
+        </CalculatorModuleMainGrid>
       </CalculatorPageShell>
 
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-fixed-cta p-3 pb-[env(safe-area-inset-bottom)] pointer-events-none">
-        <div className="max-w-[420px] mx-auto pointer-events-auto shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
-          <PensionResultsPanel result={result} />
-        </div>
-      </div>
+      <CalculatorMobileResultDock>
+        <PensionResultsPanel result={result} />
+      </CalculatorMobileResultDock>
     </div>
   );
 }

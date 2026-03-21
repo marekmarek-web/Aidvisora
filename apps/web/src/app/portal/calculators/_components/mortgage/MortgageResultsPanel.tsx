@@ -37,9 +37,9 @@ export function MortgageResultsPanel({ result, onCtaClick }: MortgageResultsPane
             <button
               type="button"
               onClick={onCtaClick}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-5 px-6 rounded-xl shadow-lg transition-all min-h-[48px] flex items-center justify-center gap-3"
+              className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold py-4 px-6 rounded-[14px] shadow-lg transition-all min-h-[48px] flex items-center justify-center gap-3"
             >
-              <span className="text-lg uppercase">Chci nezávaznou nabídku</span>
+              <span className="text-sm sm:text-base uppercase">Chci nezávaznou nabídku</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>

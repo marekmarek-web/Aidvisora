@@ -8,11 +8,13 @@ import type { CalculatorPageShellProps } from "./types";
  */
 export function CalculatorPageShell({
   children,
-  maxWidth = "max-w-[1600px]",
+  maxWidth = "max-w-[1160px]",
   className = "",
 }: CalculatorPageShellProps) {
   return (
-    <div className={`${maxWidth} mx-auto space-y-6 p-4 sm:p-6 ${className}`.trim()}>
+    <div
+      className={`${maxWidth} mx-auto space-y-4 rounded-[20px] bg-[#f4f6fb] p-4 sm:p-6 ${className}`.trim()}
+    >
       {children}
     </div>
   );

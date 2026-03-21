@@ -5,6 +5,9 @@ import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorInputSection } from "../core/CalculatorInputSection";
 import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
+import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
+import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
+import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { MortgageProductSwitcher } from "./MortgageProductSwitcher";
 import { MortgageTabSwitcher } from "./MortgageTabSwitcher";
 import { MortgageInputPanel } from "./MortgageInputPanel";
@@ -105,45 +108,47 @@ export function MortgageCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorPageHeader
-          title="Kalkulačka hypoték a úvěrů"
-          subtitle="Měsíční splátka hypotéky nebo úvěru podle zadaných parametrů. Srovnání nabídek bank."
-        />
-
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-2">
-          <MortgageProductSwitcher
-            product={state.product}
-            onProductChange={(product) =>
-              setState((s) => ({
-                ...s,
-                product,
-                ...(product === "mortgage"
-                  ? {
-                      loan: LIMITS.mortgage.default,
-                      own: 600_000,
-                      term: 30,
-                      fix: 5,
-                      type: "new" as const,
-                      ltvLock: 90 as number | null,
-                    }
-                  : {
-                      loan: LIMITS.loan.default,
-                      own: 0,
-                      term: 12,
-                      type: "new" as const,
-                      ltvLock: null,
-                    }),
-              }))
-            }
+        <CalculatorModuleCard>
+          <CalculatorPageHeader
+            eyebrow="Kalkulačka hypoték a úvěrů · 2026"
+            title="Spočítejte si splátku"
+            subtitle="Zjistěte měsíční splátku a srovnejte aktuální nabídky bank."
           />
-          <MortgageTabSwitcher
-            product={state.product}
-            type={state.type}
-            onTypeChange={(type) => setState((s) => ({ ...s, type }))}
-          />
-        </div>
+          <div className="mt-5 space-y-3">
+            <MortgageProductSwitcher
+              product={state.product}
+              onProductChange={(product) =>
+                setState((s) => ({
+                  ...s,
+                  product,
+                  ...(product === "mortgage"
+                    ? {
+                        loan: LIMITS.mortgage.default,
+                        own: 600_000,
+                        term: 30,
+                        fix: 5,
+                        type: "new" as const,
+                        ltvLock: 90 as number | null,
+                      }
+                    : {
+                        loan: LIMITS.loan.default,
+                        own: 0,
+                        term: 12,
+                        type: "new" as const,
+                        ltvLock: null,
+                      }),
+                }))
+              }
+            />
+            <MortgageTabSwitcher
+              product={state.product}
+              type={state.type}
+              onTypeChange={(type) => setState((s) => ({ ...s, type }))}
+            />
+          </div>
+        </CalculatorModuleCard>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
+        <CalculatorModuleMainGrid>
           <CalculatorInputSection>
             <MortgageInputPanel
               state={state}
@@ -151,16 +156,16 @@ export function MortgageCalculatorPage() {
             />
           </CalculatorInputSection>
           <CalculatorResultsSection>
-            <div className="hidden lg:block sticky top-24">
+            <div className="hidden lg:block sticky top-6">
               <MortgageResultsPanel
                 result={result}
                 onCtaClick={() => setModalBank(null)}
               />
             </div>
           </CalculatorResultsSection>
-        </div>
+        </CalculatorModuleMainGrid>
 
-        <div className="w-full">
+        <div className="w-full rounded-[20px] border-[1.5px] border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:p-7">
           <MortgageBankOffers
             offers={offers}
             fetchedAt={ratesMeta?.fetchedAt}
@@ -171,15 +176,12 @@ export function MortgageCalculatorPage() {
         </div>
       </CalculatorPageShell>
 
-      {/* Mobile: floating result card at bottom (touch-friendly) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-fixed-cta p-3 pb-[env(safe-area-inset-bottom)] pointer-events-none">
-        <div className="max-w-[420px] mx-auto pointer-events-auto shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
-          <MortgageResultsPanel
-            result={result}
-            onCtaClick={() => setModalBank(null)}
-          />
-        </div>
-      </div>
+      <CalculatorMobileResultDock>
+        <MortgageResultsPanel
+          result={result}
+          onCtaClick={() => setModalBank(null)}
+        />
+      </CalculatorMobileResultDock>
       <MortgageContactModal
         open={modalBank !== undefined}
         bankName={modalBank ?? null}
