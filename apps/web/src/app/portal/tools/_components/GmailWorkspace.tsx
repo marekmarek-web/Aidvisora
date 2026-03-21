@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { GmailComposeSheet } from "./GmailComposeSheet";
 import { IntegrationConnectionGate } from "./IntegrationConnectionGate";
 import s from "./GmailWorkspace.module.css";
@@ -169,6 +169,32 @@ export function GmailWorkspace() {
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const replyRef = useRef<HTMLTextAreaElement>(null);
+  const [listWidth, setListWidth] = useState(420);
+  const resizerActive = useRef(false);
+  const mainAreaRef = useRef<HTMLDivElement>(null);
+
+  const onResizerDown = useCallback((e: ReactMouseEvent) => {
+    e.preventDefault();
+    resizerActive.current = true;
+    const startX = e.clientX;
+    const startW = listWidth;
+    const onMove = (ev: globalThis.MouseEvent) => {
+      const maxW = (mainAreaRef.current?.offsetWidth ?? 900) - 340;
+      const newW = Math.max(260, Math.min(maxW, startW + (ev.clientX - startX)));
+      setListWidth(newW);
+    };
+    const onUp = () => {
+      resizerActive.current = false;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [listWidth]);
 
   const loadLabels = useCallback(async () => {
     const res = await fetch("/api/gmail/labels");
@@ -345,8 +371,11 @@ export function GmailWorkspace() {
           </div>
         </aside>
 
+        {/* ====== MAIN AREA (list + resizer + detail) ====== */}
+        <div className={s.mainArea} ref={mainAreaRef}>
+
         {/* ====== EMAIL LIST ====== */}
-        <div className={s.emailListPanel}>
+        <div className={s.emailListPanel} style={{ width: listWidth, minWidth: 260, flexShrink: 0 }}>
           <div className={s.listToolbar}>
             <div className={s.searchBox}>
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -437,8 +466,11 @@ export function GmailWorkspace() {
           )}
         </div>
 
+        {/* ====== RESIZER ====== */}
+        <div className={s.resizer} onMouseDown={onResizerDown} />
+
         {/* ====== EMAIL DETAIL ====== */}
-        <div className={`${s.emailDetail} ${mobileDetailVisible ? s.mobileDetailVisible : ""}`}>
+        <div className={`${s.emailDetail} ${mobileDetailVisible ? s.mobileDetailVisible : ""}`} style={{ flex: 1 }}>
           {selected ? (
             <>
               <div className={s.detailToolbar}>
@@ -542,6 +574,8 @@ export function GmailWorkspace() {
             </div>
           )}
         </div>
+
+        </div>{/* /mainArea */}
       </div>
 
       <GmailComposeSheet
