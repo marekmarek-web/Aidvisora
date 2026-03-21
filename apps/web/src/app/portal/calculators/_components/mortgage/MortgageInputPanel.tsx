@@ -26,7 +26,7 @@ export interface MortgageInputPanelProps {
   onResultChange?: () => void;
 }
 
-const LTV_BUTTONS_MORTGAGE = [90, 80, 70] as const;
+const LTV_BUTTONS_MORTGAGE = [90, 80, 70, 60, 50] as const;
 const LTV_BUTTONS_AUTO = [0, 10, 20, 30, 40, 50] as const;
 
 function getTermLimits(state: MortgageState): { min: number; max: number } {
