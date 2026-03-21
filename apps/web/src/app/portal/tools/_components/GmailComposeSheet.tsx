@@ -63,7 +63,7 @@ export function GmailComposeSheet({
         } satisfies AttachmentDraft;
       })
     );
-    setAttachments((prev) => [...prev, ...next]);
+    setAttachments(prev => [...prev, ...next]);
   }
 
   async function submit() {
@@ -74,111 +74,151 @@ export function GmailComposeSheet({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to,
-          cc: cc || undefined,
-          bcc: bcc || undefined,
-          subject,
-          body,
+          to, cc: cc || undefined, bcc: bcc || undefined, subject, body,
           threadId: initial?.threadId,
           replyToMessageId: initial?.replyToMessageId,
           attachments,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setError(data.error ?? "Odeslání selhalo.");
-        return;
-      }
+      if (!res.ok) { setError(data.error ?? "Odeslání selhalo."); return; }
       onSent();
       onClose();
-    } catch {
-      setError("Odeslání selhalo.");
-    } finally {
-      setSending(false);
-    }
+    } catch { setError("Odeslání selhalo."); }
+    finally { setSending(false); }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px",
+    border: "1.5px solid #E2E8F0", borderRadius: 12,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: "0.82rem", color: "#0D1F4E", outline: "none",
+    transition: "border-color 0.15s",
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 p-3 sm:p-6">
-      <div className="mx-auto flex h-full w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h3 className="text-base font-bold text-slate-900">Nový e-mail</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[44px] rounded-lg px-3 text-sm font-bold text-slate-600"
-          >
-            Zavřít
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 300,
+      background: "rgba(13,31,78,0.3)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "'Inter', system-ui, sans-serif",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 18,
+        boxShadow: "0 16px 40px rgba(13,31,78,0.12)",
+        display: "flex", flexDirection: "column",
+        width: "90%", maxWidth: 640, maxHeight: "90vh",
+        animation: "dialogIn 0.2s ease",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 20px", borderBottom: "1px solid #E2E8F0",
+        }}>
+          <h3 style={{
+            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+            fontSize: "0.95rem", fontWeight: 700, color: "#0D1F4E", margin: 0,
+          }}>
+            {initial?.replyToMessageId ? "Odpovědět" : "Nový e-mail"}
+          </h3>
+          <button type="button" onClick={onClose} style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "#94A3B8", padding: 4,
+          }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
-        <div className="space-y-3 overflow-y-auto p-4">
-          <input
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="Komu"
-            className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 text-sm"
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input
-              value={cc}
-              onChange={(e) => setCc(e.target.value)}
-              placeholder="Kopie"
-              className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 text-sm"
-            />
-            <input
-              value={bcc}
-              onChange={(e) => setBcc(e.target.value)}
-              placeholder="Skrytá kopie"
-              className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 text-sm"
-            />
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <input value={to} onChange={e => setTo(e.target.value)} placeholder="Komu" style={inputStyle}
+            onFocus={e => { e.target.style.borderColor = "#2563EB"; }}
+            onBlur={e => { e.target.style.borderColor = "#E2E8F0"; }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <input value={cc} onChange={e => setCc(e.target.value)} placeholder="Kopie" style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "#2563EB"; }}
+              onBlur={e => { e.target.style.borderColor = "#E2E8F0"; }} />
+            <input value={bcc} onChange={e => setBcc(e.target.value)} placeholder="Skrytá kopie" style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "#2563EB"; }}
+              onBlur={e => { e.target.style.borderColor = "#E2E8F0"; }} />
           </div>
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Předmět"
-            className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 text-sm"
-          />
-          <textarea
-            rows={10}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
+
+          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Předmět" style={inputStyle}
+            onFocus={e => { e.target.style.borderColor = "#2563EB"; }}
+            onBlur={e => { e.target.style.borderColor = "#E2E8F0"; }} />
+
+          <textarea rows={8} value={body} onChange={e => setBody(e.target.value)}
             placeholder="Napište zprávu…"
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-          />
-          <div className="rounded-xl border border-slate-200 p-3">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Přílohy
-            </label>
-            <input
-              type="file"
-              multiple
-              onChange={(e) => onPickFiles(e.target.files)}
-              className="mt-2 block w-full text-sm"
-            />
-            <div className="mt-2 space-y-1">
-              {attachments.map((att, idx) => (
-                <div key={`${att.filename}-${idx}`} className="text-xs text-slate-600">
-                  {att.filename} ({Math.round(att.size / 1024)} kB)
-                </div>
-              ))}
-            </div>
+            style={{
+              ...inputStyle, minHeight: 120, resize: "vertical", lineHeight: 1.55,
+            }}
+            onFocus={e => { e.target.style.borderColor = "#2563EB"; }}
+            onBlur={e => { e.target.style.borderColor = "#E2E8F0"; }} />
+
+          <div style={{
+            border: "1.5px solid #E2E8F0", borderRadius: 12, padding: 14,
+          }}>
+            <label style={{
+              display: "block", fontSize: "0.65rem", fontWeight: 700,
+              textTransform: "uppercase" as const, letterSpacing: "0.1em",
+              color: "#94A3B8", marginBottom: 8,
+            }}>Přílohy</label>
+            <input type="file" multiple onChange={e => onPickFiles(e.target.files)}
+              style={{ display: "block", width: "100%", fontSize: "0.82rem" }} />
+            {attachments.length > 0 && (
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                {attachments.map((att, idx) => (
+                  <div key={`${att.filename}-${idx}`} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 10px", background: "#F1F4FA", borderRadius: 6,
+                    fontSize: "0.75rem", color: "#475569",
+                  }}>
+                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2}>
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                    {att.filename} ({Math.round(att.size / 1024)} kB)
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+
+          {error && (
+            <div style={{
+              padding: "10px 14px", background: "#FEF2F2",
+              border: "1px solid rgba(220,38,38,0.15)", borderRadius: 8,
+              fontSize: "0.78rem", color: "#991B1B",
+            }}>{error}</div>
+          )}
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 p-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[44px] rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700"
-          >
-            Zrušit
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={sending || !to || !body}
-            className="min-h-[44px] rounded-xl bg-[#1a1c2e] px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-          >
+
+        {/* Footer */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10,
+          padding: "14px 20px", borderTop: "1px solid #E2E8F0",
+        }}>
+          <button type="button" onClick={onClose} style={{
+            padding: "8px 16px", borderRadius: 8,
+            border: "1.5px solid #E2E8F0", background: "#fff",
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: "0.79rem", fontWeight: 600, color: "#475569",
+            cursor: "pointer", transition: "all 0.15s",
+          }}>Zrušit</button>
+          <button type="button" onClick={submit} disabled={sending || !to || !body} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "8px 18px", borderRadius: 8, border: "none",
+            background: sending || !to || !body ? "#94A3B8" : "#2563EB",
+            color: "#fff", cursor: sending || !to || !body ? "not-allowed" : "pointer",
+            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+            fontSize: "0.8rem", fontWeight: 700, opacity: sending || !to || !body ? 0.6 : 1,
+            transition: "all 0.15s",
+          }}>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
             {sending ? "Odesílám…" : "Odeslat"}
           </button>
         </div>

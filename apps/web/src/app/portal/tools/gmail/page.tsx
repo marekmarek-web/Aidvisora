@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 export default function PortalToolsGmailPage() {
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6 md:py-8">
+    <div className="h-[calc(100vh-80px)] min-h-[500px] -mx-2 -my-2 md:-mx-4 md:-my-4">
       <GmailWorkspace />
     </div>
   );
