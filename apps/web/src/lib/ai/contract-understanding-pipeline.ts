@@ -4,6 +4,7 @@
  */
 
 import { createResponseWithFile } from "@/lib/openai";
+import { runCombinedContractIntake } from "./contract-intake-combined";
 import { detectInputMode } from "./input-mode-detection";
 import { classifyContractDocument } from "./document-classification";
 import {
@@ -49,20 +50,41 @@ export async function runContractUnderstandingPipeline(
   const trace: ExtractionTrace = {};
   const allReasons: string[] = [];
 
-  // Step 1: Detect input mode
-  let inputModeResult;
-  try {
-    inputModeResult = await detectInputMode(fileUrl, mimeType);
-  } catch (e) {
-    trace.failedStep = "detect_input_mode";
-    trace.warnings = [e instanceof Error ? e.message : String(e)];
-    return {
-      ok: false,
-      processingStatus: "failed",
-      errorMessage: "Detekce režimu vstupu selhala.",
-      extractionTrace: trace,
-      details: e instanceof Error ? e.message : String(e),
-    };
+  // Steps 1–2: Jedno volání s PDF (detekce režimu + typ dokumentu), při selhání fallback na 2× sekvenční volání.
+  let inputModeResult: Awaited<ReturnType<typeof detectInputMode>>;
+  let classification: Awaited<ReturnType<typeof classifyContractDocument>>;
+
+  const combined = await runCombinedContractIntake(fileUrl, mimeType);
+  if (combined) {
+    inputModeResult = combined.input;
+    classification = combined.classification;
+  } else {
+    try {
+      inputModeResult = await detectInputMode(fileUrl, mimeType);
+    } catch (e) {
+      trace.failedStep = "detect_input_mode";
+      trace.warnings = [e instanceof Error ? e.message : String(e)];
+      return {
+        ok: false,
+        processingStatus: "failed",
+        errorMessage: "Detekce režimu vstupu selhala.",
+        extractionTrace: trace,
+        details: e instanceof Error ? e.message : String(e),
+      };
+    }
+    try {
+      classification = await classifyContractDocument(fileUrl);
+    } catch (e) {
+      trace.failedStep = "classify_document";
+      trace.warnings = [...(trace.warnings ?? []), e instanceof Error ? e.message : String(e)];
+      return {
+        ok: false,
+        processingStatus: "failed",
+        errorMessage: "Klasifikace dokumentu selhala.",
+        extractionTrace: trace,
+        details: e instanceof Error ? e.message : String(e),
+      };
+    }
   }
 
   trace.inputMode = inputModeResult.inputMode;
@@ -81,22 +103,6 @@ export async function runContractUnderstandingPipeline(
   }
 
   const isScanFallback = inputModeResult.extractionMode === "vision_fallback";
-
-  // Step 2: Classify document
-  let classification;
-  try {
-    classification = await classifyContractDocument(fileUrl);
-  } catch (e) {
-    trace.failedStep = "classify_document";
-    trace.warnings = [...(trace.warnings ?? []), e instanceof Error ? e.message : String(e)];
-    return {
-      ok: false,
-      processingStatus: "failed",
-      errorMessage: "Klasifikace dokumentu selhala.",
-      extractionTrace: trace,
-      details: e instanceof Error ? e.message : String(e),
-    };
-  }
 
   trace.documentType = classification.documentType;
   trace.classificationConfidence = classification.confidence;

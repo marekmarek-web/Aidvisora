@@ -104,6 +104,8 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 
 **Upload smluv: `DB_INSERT_REVIEW`:** Produkční Postgres nemá aktuální tabulku `contract_upload_reviews`. V Supabase (stejný projekt jako `DATABASE_URL` na Vercelu) → **SQL Editor** spusť `docs/supabase-patch-contract_upload_reviews.sql`.
 
+**Výkon / hodně uživatelů u AI smluv:** viz `docs/contracts-upload-scaling.md`.
+
 ## Struktura
 
 - `apps/web` – Next.js aplikace (Aidvisora)

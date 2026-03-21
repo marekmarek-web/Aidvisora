@@ -13,6 +13,8 @@ import { tryBeginIdempotencyWindow } from "@/lib/security/idempotency";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 
 export const dynamic = "force-dynamic";
+/** OpenAI pipeline může trvat dlouho (2× volání s PDF po optimalizaci). Na Vercelu platí limit plánu (Pro často až 300 s). */
+export const maxDuration = 120;
 
 const ALLOWED_MIME = ["application/pdf"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
