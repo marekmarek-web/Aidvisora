@@ -6,6 +6,47 @@
 import { z } from "zod";
 import type { ContractDocumentType } from "./document-classification";
 
+/**
+ * OpenAI structured JSON often uses `null` for missing optional fields.
+ * Zod's `.optional()` only allows `undefined`, not `null` — without this, validation fails
+ * e.g. on paymentDetails.iban: null (common for loan contracts without IBAN in PDF).
+ */
+function jsonOptionalString() {
+  return z.preprocess((val: unknown) => (val === null ? undefined : val), z.string().optional());
+}
+
+function jsonOptionalAmount() {
+  return z.preprocess(
+    (val: unknown) => (val === null ? undefined : val),
+    z.union([z.number(), z.string()]).optional()
+  );
+}
+
+function jsonOptionalConfidence() {
+  return z.preprocess(
+    (val: unknown) => (val === null ? undefined : val),
+    z.number().min(0).max(1).optional()
+  );
+}
+
+function jsonOptionalBoolean() {
+  return z.preprocess((val: unknown) => (val === null ? undefined : val), z.boolean().optional());
+}
+
+function jsonOptionalStringArray() {
+  return z.preprocess(
+    (val: unknown) => (val === null ? undefined : val),
+    z.array(z.string()).optional()
+  );
+}
+
+function jsonOptionalFieldConfidenceMap() {
+  return z.preprocess(
+    (val: unknown) => (val === null ? undefined : val),
+    z.record(z.string(), z.number()).optional()
+  );
+}
+
 /** Section-level confidence keys returned by the model. */
 export const SECTION_CONFIDENCE_KEYS = [
   "contract",
@@ -25,60 +66,60 @@ export const sectionConfidenceMapSchema = z.record(
 
 /** Client block (common). */
 const clientSchema = z.object({
-  fullName: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  birthDate: z.string().optional(),
-  personalId: z.string().optional(),
-  companyId: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
+  fullName: jsonOptionalString(),
+  firstName: jsonOptionalString(),
+  lastName: jsonOptionalString(),
+  birthDate: jsonOptionalString(),
+  personalId: jsonOptionalString(),
+  companyId: jsonOptionalString(),
+  email: jsonOptionalString(),
+  phone: jsonOptionalString(),
+  address: jsonOptionalString(),
 });
 
 /** Payment details (common). */
 const paymentDetailsSchema = z.object({
-  amount: z.union([z.number(), z.string()]).optional(),
-  currency: z.string().optional(),
-  frequency: z.string().optional(),
-  iban: z.string().optional(),
-  accountNumber: z.string().optional(),
-  bankCode: z.string().optional(),
-  variableSymbol: z.string().optional(),
-  firstPaymentDate: z.string().optional(),
+  amount: jsonOptionalAmount(),
+  currency: jsonOptionalString(),
+  frequency: jsonOptionalString(),
+  iban: jsonOptionalString(),
+  accountNumber: jsonOptionalString(),
+  bankCode: jsonOptionalString(),
+  variableSymbol: jsonOptionalString(),
+  firstPaymentDate: jsonOptionalString(),
 });
 
 /** Common + optional type-specific fields; one schema validates all extraction outputs. */
 export const extractedContractByTypeSchema = z.object({
-  documentType: z.string().optional(),
-  contractNumber: z.string().optional(),
-  institutionName: z.string().optional(),
-  productName: z.string().optional(),
-  client: clientSchema.optional(),
-  paymentDetails: paymentDetailsSchema.optional(),
-  effectiveDate: z.string().optional(),
-  expirationDate: z.string().optional(),
-  notes: z.array(z.string()).optional(),
-  missingFields: z.array(z.string()).optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  needsHumanReview: z.boolean().optional(),
+  documentType: jsonOptionalString(),
+  contractNumber: jsonOptionalString(),
+  institutionName: jsonOptionalString(),
+  productName: jsonOptionalString(),
+  client: z.preprocess((v: unknown) => (v === null ? undefined : v), clientSchema.optional()),
+  paymentDetails: z.preprocess((v: unknown) => (v === null ? undefined : v), paymentDetailsSchema.optional()),
+  effectiveDate: jsonOptionalString(),
+  expirationDate: jsonOptionalString(),
+  notes: jsonOptionalStringArray(),
+  missingFields: jsonOptionalStringArray(),
+  confidence: jsonOptionalConfidence(),
+  needsHumanReview: jsonOptionalBoolean(),
   /** Section-level confidence (contract, client, institution, product, paymentDetails, dates). */
-  fieldConfidenceMap: z.record(z.string(), z.number()).optional(),
+  fieldConfidenceMap: jsonOptionalFieldConfidenceMap(),
   // Type-specific (insurance)
-  policyType: z.string().optional(),
-  insuredObject: z.string().optional(),
-  premium: z.union([z.number(), z.string()]).optional(),
-  beneficiary: z.string().optional(),
+  policyType: jsonOptionalString(),
+  insuredObject: jsonOptionalString(),
+  premium: jsonOptionalAmount(),
+  beneficiary: jsonOptionalString(),
   // Type-specific (investment)
-  productType: z.string().optional(),
-  riskClass: z.string().optional(),
-  fundName: z.string().optional(),
-  contributionAmount: z.union([z.number(), z.string()]).optional(),
+  productType: jsonOptionalString(),
+  riskClass: jsonOptionalString(),
+  fundName: jsonOptionalString(),
+  contributionAmount: jsonOptionalAmount(),
   // Type-specific (loan/mortgage)
-  loanAmount: z.union([z.number(), z.string()]).optional(),
-  interestRate: z.union([z.number(), z.string()]).optional(),
-  maturity: z.string().optional(),
-  collateral: z.string().optional(),
+  loanAmount: jsonOptionalAmount(),
+  interestRate: jsonOptionalAmount(),
+  maturity: jsonOptionalString(),
+  collateral: jsonOptionalString(),
 });
 
 export type ExtractedContractByType = z.infer<typeof extractedContractByTypeSchema>;

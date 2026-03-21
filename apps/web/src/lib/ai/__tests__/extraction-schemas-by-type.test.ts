@@ -71,6 +71,28 @@ describe("extraction-schemas-by-type", () => {
       }
     });
 
+    it("accepts paymentDetails with null strings (model JSON)", () => {
+      const raw = JSON.stringify({
+        documentType: "loan_or_mortgage_contract",
+        contractNumber: "CSOB-1",
+        institutionName: "ČSOB",
+        productName: "Spotřebitelský úvěr",
+        paymentDetails: {
+          iban: null,
+          accountNumber: null,
+          currency: "CZK",
+          amount: 500000,
+        },
+        confidence: 0.85,
+      });
+      const result = validateExtractionByType(raw, "loan_or_mortgage_contract");
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.paymentDetails?.iban).toBeUndefined();
+        expect(result.data.paymentDetails?.currency).toBe("CZK");
+      }
+    });
+
     it("rejects invalid JSON", () => {
       const result = validateExtractionByType("not json at all", "unknown");
       expect(result.ok).toBe(false);
