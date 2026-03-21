@@ -200,6 +200,8 @@ function applyOrderToSections(
         used.add(href);
       }
     }
+    const newItems = sec.items.filter((i) => !used.has(i.href));
+    newItems.forEach((i) => { items.push(i); used.add(i.href); });
     if (items.length > 0) result.push({ ...sec, items });
   }
   sections.forEach((sec) => {
