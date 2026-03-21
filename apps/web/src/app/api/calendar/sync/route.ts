@@ -173,12 +173,12 @@ async function handleCalendarSyncPost(request: Request): Promise<Response> {
     const msg = e instanceof Error ? e.message : String(e);
     const isMissingColumn =
       /column .* does not exist/i.test(msg) ||
-      /google_event_id|google_calendar_id/i.test(msg);
+      /google_event_id|google_calendar_id|team_event_id|team_task_id/i.test(msg);
     return NextResponse.json(
       {
         ok: false,
         error: isMissingColumn
-          ? "V databázi chybí sloupce pro Google sync. Spusťte migraci add_events_google_calendar_fields.sql v Supabase."
+          ? "V databázi chybí sloupce tabulky events (např. team_event_id nebo google_*). Spusťte v Supabase migraci packages/db/migrations/add_events_google_calendar_fields.sql."
           : "Uložení událostí do databáze selhalo.",
         detail: safeErrorDetail(e),
       },
