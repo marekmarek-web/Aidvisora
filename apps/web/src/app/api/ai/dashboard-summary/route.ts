@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
+import { getMembership } from "@/lib/auth/get-membership";
 import { createResponseSafe } from "@/lib/openai";
 import { logOpenAICall } from "@/lib/openai";
 import {
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       userId = user.id;
     }
     const membership = await getMembership(userId);
-    if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
+    if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

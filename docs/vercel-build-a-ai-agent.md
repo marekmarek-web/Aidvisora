@@ -11,6 +11,7 @@ Zkontroluj v [vercel.com](https://vercel.com) u projektu (např. `advisorcrm-web
 2. **Settings → General → Root Directory**
    - Musí být **`apps/web`** (monorepo).  
    - Pokud je prázdné, Vercel buildí z kořene repa a často to **nepozná Next.js** nebo nainstaluje špatně workspace `db`.
+   - Když Vercel hlásí, že **Production deployment má jiné nastavení než Project Settings**, po úpravě nastavení udělej **Redeploy** z aktuálního commitu, ať se to srovná.
 
 3. **Deployments**
    - Vidíš vůbec záznam po pushi?  
@@ -41,14 +42,16 @@ Endpoint: **`POST /api/ai/assistant/chat`**
 2. **Volitelně `OPENAI_MODEL`**  
    - Pokud není, použije se výchozí model z kódu (`openai.ts`).
 
-3. **Přihlášení**  
-   - Middleware pro `/api/ai/*` nastavuje `x-user-id`; uživatel musí mít v CRM roli s oprávněním k **`documents:read`** (jinak 403).
+3. **Přihlášení a kdo může psát asistentovi**  
+   - Musíš být **přihlášený** (Supabase session). Middleware u `/api/ai/*` doplní hlavičku `x-user-id`.  
+   - Stačí mít **členství ve workspace** (řádek v `memberships` u tenantu) – **nevyžadujeme** zvlášť oprávnění typu `documents:read`. Asistent má být dostupný **všem registrovaným uživatelům firmy**.  
+   - Omezení podle **zaplaceného plánu** nebo jemnějších rolí můžeme doplnit později v kódu.
 
 4. **Proměnné `OPENAI_PROMPT_*_ID`**  
    - Ty jsou pro **konkrétní funkce** (shrnutí klienta, tým, …), **ne** pro základní chat v postranním panelu.  
    - Chat používá **Responses API** s textovým promptem + kontext z DB.
 
-5. **Upload smluv** je jiný endpoint (`/api/contracts/upload`) – opravy tam nejsou „Supabase agent“, ale Storage + DB + pipeline.
+5. **Upload smluv** je jiný endpoint (`/api/contracts/upload`) – Storage + DB + pipeline (nezávislé na tomto chatu).
 
 ---
 

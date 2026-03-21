@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getMembership, hasPermission, type RoleName } from "@/lib/auth/get-membership";
+import { getMembership } from "@/lib/auth/get-membership";
 import { createResponseSafe } from "@/lib/openai";
 import { logOpenAICall } from "@/lib/openai";
 import { buildAssistantContext } from "@/lib/ai/assistant-context";
@@ -35,7 +35,8 @@ export async function POST(request: Request) {
       userId = user.id;
     }
     const membership = await getMembership(userId);
-    if (!membership || !hasPermission(membership.roleName as RoleName, "documents:read")) {
+    // Každý uživatel s účtem ve workspace může používat asistenta; placená / role-based omezení přidáme později.
+    if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const rate = checkRateLimit(request, "ai-assistant-chat", userId, {
