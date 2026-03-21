@@ -3,10 +3,6 @@
 import { useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
-import { CalculatorInputSection } from "../core/CalculatorInputSection";
-import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
-import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
-import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { PensionInputPanel } from "./PensionInputPanel";
 import { PensionResultsPanel } from "./PensionResultsPanel";
@@ -21,32 +17,25 @@ export function PensionCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorModuleCard>
+        <div className="mb-3">
           <CalculatorPageHeader
             eyebrow="Kalkulačka penze · 2026"
             title="Penzijní kalkulačka"
-            subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice (náhradové poměry, demografický scénář)."
+            subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice."
           />
-          <p className="mt-3 max-w-3xl rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
-            Výpočet je orientační projekce. Slouží jako podklad pro nastavení dlouhodobé
-            důchodové strategie (DPS, DIP, ETF) podle reálných cílů klienta.
-          </p>
-        </CalculatorModuleCard>
+        </div>
 
-        <CalculatorModuleMainGrid>
-          <CalculatorInputSection>
-            <PensionInputPanel
-              state={state}
-              onStateChange={setState}
-              estimatedPension={result.estimatedPension}
-            />
-          </CalculatorInputSection>
-          <CalculatorResultsSection>
-            <div className="hidden lg:sticky lg:top-6 lg:block">
-              <PensionResultsPanel result={result} />
-            </div>
-          </CalculatorResultsSection>
-        </CalculatorModuleMainGrid>
+        {/* Main grid: input | result */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
+          <PensionInputPanel
+            state={state}
+            onStateChange={setState}
+            estimatedPension={result.estimatedPension}
+          />
+          <div className="hidden lg:block sticky top-6">
+            <PensionResultsPanel result={result} />
+          </div>
+        </div>
       </CalculatorPageShell>
 
       <CalculatorMobileResultDock>

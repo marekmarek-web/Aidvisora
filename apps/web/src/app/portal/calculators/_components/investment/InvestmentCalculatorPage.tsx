@@ -3,10 +3,6 @@
 import { useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
-import { CalculatorInputSection } from "../core/CalculatorInputSection";
-import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
-import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
-import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { InvestmentStrategySwitcher } from "./InvestmentStrategySwitcher";
 import { InvestmentInputPanel } from "./InvestmentInputPanel";
@@ -38,114 +34,82 @@ export function InvestmentCalculatorPage() {
   const profile = INVESTMENT_PROFILES[profileIndex] ?? INVESTMENT_PROFILES[1];
 
   const projection = useMemo(
-    () =>
-      computeProjection({
-        initial,
-        monthly,
-        years,
-        profile,
-      }),
+    () => computeProjection({ initial, monthly, years, profile }),
     [initial, monthly, years, profile],
   );
-
-  const backtestResult = useMemo(
-    () => runBacktest(monthly, startYear, HISTORICAL_DATA),
-    [monthly, startYear],
-  );
-
-  const growthChartData = useMemo(
-    () => getGrowthChartData(projection, profile.color),
-    [projection, profile.color],
-  );
-
-  const allocationChartData = useMemo(
-    () => getAllocationChartData(profile),
-    [profile],
-  );
-
-  const backtestSeries = useMemo(
-    () => getBacktestChartSeries(backtestResult),
-    [backtestResult],
-  );
+  const backtestResult = useMemo(() => runBacktest(monthly, startYear, HISTORICAL_DATA), [monthly, startYear]);
+  const growthChartData = useMemo(() => getGrowthChartData(projection, profile.color), [projection, profile.color]);
+  const allocationChartData = useMemo(() => getAllocationChartData(profile), [profile]);
+  const backtestSeries = useMemo(() => getBacktestChartSeries(backtestResult), [backtestResult]);
 
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorModuleCard>
+        <div className="mb-3">
           <CalculatorPageHeader
             eyebrow="Kalkulačka investic · 2026"
             title="Investiční kalkulačka"
             subtitle="Projekce hodnoty investice v čase při pravidelném investování a zvolené strategii."
           />
-          <div className="mt-5">
-            <InvestmentStrategySwitcher
-              profiles={INVESTMENT_PROFILES}
-              activeIndex={profileIndex}
-              onSelect={setProfileIndex}
-            />
-            <p className="mt-3 text-sm font-medium text-slate-500">
-              Strategie: <span className="text-slate-800">{profile.name}</span>{" "}
-              <span className="text-slate-400">({profile.rate} % p.a.)</span>
-            </p>
-          </div>
-        </CalculatorModuleCard>
-
-        <CalculatorModuleMainGrid>
-          <CalculatorInputSection>
-            <InvestmentInputPanel
-              initial={initial}
-              monthly={monthly}
-              years={years}
-              onInitialChange={(v) => setInitial(v)}
-              onMonthlyChange={(v) => setMonthly(v)}
-              onYearsChange={(v) => setYears(v)}
-              profileTitle={profile.name}
-              profileDescription={profile.description}
-            />
-          </CalculatorInputSection>
-          <CalculatorResultsSection>
-            <div className="lg:sticky lg:top-6">
-              <InvestmentResultsPanel
-                totalBalance={projection.totalBalance}
-                totalInvested={projection.totalInvested}
-                totalGain={projection.totalGain}
-                totalGainPercent={projection.totalGainPercent}
-              />
-            </div>
-          </CalculatorResultsSection>
-        </CalculatorModuleMainGrid>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-          <section className="rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <header className="mb-4 space-y-1">
-              <h3 className="text-lg font-bold text-slate-900">Projekce vývoje</h3>
-              <p className="text-sm text-slate-500">
-                Graf ukazuje odhadovaný vývoj hodnoty investice v čase při pravidelném investování a zvolené strategii.
-              </p>
-            </header>
-            <InvestmentGrowthChart data={growthChartData} />
-          </section>
-
-          <section className="rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <header className="mb-4 space-y-1">
-              <h3 className="text-lg font-bold text-slate-900">Složení portfolia</h3>
-              <p className="text-sm text-slate-500">
-                Rozdělení strategie podle jednotlivých tříd aktiv.
-              </p>
-            </header>
-            <InvestmentAllocationChart data={allocationChartData} />
-          </section>
         </div>
 
-        <div className="overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-sm">
-          <div className="p-5 sm:p-6 md:p-8">
-            <InvestmentBacktestChart
-              series={backtestSeries}
-              monthlyFormatted={formatCurrency(monthly)}
-              startYear={startYear}
-              onStartYearChange={setStartYear}
+        {/* Strategy switcher */}
+        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+          <InvestmentStrategySwitcher
+            profiles={INVESTMENT_PROFILES}
+            activeIndex={profileIndex}
+            onSelect={setProfileIndex}
+          />
+          <p className="mt-3 text-sm font-medium text-[#475569]">
+            Strategie: <span className="text-[#0d1f4e] font-bold">{profile.name}</span>{" "}
+            <span className="text-[#94a3b8]">({profile.rate} % p.a.)</span>
+          </p>
+        </div>
+
+        {/* Main grid: input | result */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
+          <InvestmentInputPanel
+            initial={initial}
+            monthly={monthly}
+            years={years}
+            onInitialChange={setInitial}
+            onMonthlyChange={setMonthly}
+            onYearsChange={setYears}
+            profileTitle={profile.name}
+            profileDescription={profile.description}
+          />
+          <div className="hidden lg:block sticky top-6">
+            <InvestmentResultsPanel
+              totalBalance={projection.totalBalance}
+              totalInvested={projection.totalInvested}
+              totalGain={projection.totalGain}
+              totalGainPercent={projection.totalGainPercent}
             />
           </div>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+            <h3 className="text-base font-bold text-[#0d1f4e] mb-1">Projekce vývoje</h3>
+            <p className="text-xs text-[#475569] mb-4">Odhadovaný vývoj hodnoty investice v čase.</p>
+            <InvestmentGrowthChart data={growthChartData} />
+          </div>
+          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+            <h3 className="text-base font-bold text-[#0d1f4e] mb-1">Složení portfolia</h3>
+            <p className="text-xs text-[#475569] mb-4">Rozdělení strategie podle tříd aktiv.</p>
+            <InvestmentAllocationChart data={allocationChartData} />
+          </div>
+        </div>
+
+        {/* Backtest */}
+        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6 md:p-7">
+          <InvestmentBacktestChart
+            series={backtestSeries}
+            monthlyFormatted={formatCurrency(monthly)}
+            startYear={startYear}
+            onStartYearChange={setStartYear}
+          />
         </div>
       </CalculatorPageShell>
 

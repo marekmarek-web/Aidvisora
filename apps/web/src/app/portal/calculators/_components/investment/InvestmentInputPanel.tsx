@@ -14,6 +14,11 @@ export interface InvestmentInputPanelProps {
   profileDescription: string;
 }
 
+function sliderGradient(value: number, min: number, max: number): string {
+  const pct = ((value - min) / (max - min)) * 100;
+  return `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${pct}%, #cbd5e1 ${pct}%)`;
+}
+
 export function InvestmentInputPanel({
   initial,
   monthly,
@@ -25,209 +30,133 @@ export function InvestmentInputPanel({
   profileDescription,
 }: InvestmentInputPanelProps) {
   const clampInitial = (v: number) =>
-    Math.min(
-      INVESTMENT_DEFAULTS.initialMax,
-      Math.max(INVESTMENT_DEFAULTS.initialMin, v),
-    );
+    Math.min(INVESTMENT_DEFAULTS.initialMax, Math.max(INVESTMENT_DEFAULTS.initialMin, v));
   const clampMonthly = (v: number) =>
-    Math.min(
-      INVESTMENT_DEFAULTS.monthlyMax,
-      Math.max(INVESTMENT_DEFAULTS.monthlyMin, v),
-    );
+    Math.min(INVESTMENT_DEFAULTS.monthlyMax, Math.max(INVESTMENT_DEFAULTS.monthlyMin, v));
   const clampYears = (v: number) =>
-    Math.min(
-      INVESTMENT_DEFAULTS.yearsMax,
-      Math.max(INVESTMENT_DEFAULTS.yearsMin, v),
-    );
-
-  const getSliderBackground = (value: number, min: number, max: number) => {
-    const ratio = ((value - min) / (max - min)) * 100;
-    return `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${ratio}%, #cbd5e1 ${ratio}%)`;
-  };
+    Math.min(INVESTMENT_DEFAULTS.yearsMax, Math.max(INVESTMENT_DEFAULTS.yearsMin, v));
 
   return (
-    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:p-7">
-      <div className="space-y-6 rounded-[14px] border border-slate-100 bg-white p-4 sm:p-5">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-600 leading-tight">
-              <span className="uppercase tracking-[0.06em] text-xs text-slate-400">Počáteční vklad</span>{" "}
-              <span className="font-normal text-slate-400">(v Kč)</span>
-            </label>
+    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
+
+      {/* Počáteční vklad */}
+      <div className="mb-0">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]">Počáteční vklad</span>
+          <div className="flex items-baseline gap-1">
             <input
               type="text"
               inputMode="numeric"
               value={formatCurrency(initial)}
-              onChange={(e) =>
-                onInitialChange(clampInitial(parseCurrency(e.target.value)))
-              }
-              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-2 text-right font-extrabold text-xl sm:text-2xl text-[#0d1f4e] outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-56"
-              aria-label="Počáteční vklad"
+              onChange={(e) => onInitialChange(clampInitial(parseCurrency(e.target.value)))}
+              onFocus={(e) => e.target.select()}
+              className="text-right font-bold text-[1.3rem] text-[#0d1f4e] bg-transparent border-none outline-none w-[170px] p-0.5 rounded hover:bg-[#f4f6fb] focus:bg-[#eff4ff] focus:text-[#2563eb] transition-colors"
             />
+            <span className="text-xs font-semibold text-[#94a3b8]">Kč</span>
           </div>
+        </div>
+        <div className="px-2.5 pb-1">
           <input
             type="range"
             min={INVESTMENT_DEFAULTS.initialMin}
             max={INVESTMENT_DEFAULTS.initialMax}
             step={INVESTMENT_DEFAULTS.initialStep}
             value={initial}
-            onChange={(e) =>
-              onInitialChange(clampInitial(parseInt(e.target.value, 10)))}
-            className="investment-slider w-full min-h-[44px] touch-manipulation"
-            style={{
-              background: getSliderBackground(
-                initial,
-                INVESTMENT_DEFAULTS.initialMin,
-                INVESTMENT_DEFAULTS.initialMax,
-              ),
-            }}
-            aria-label="Slider počátečního vkladu"
+            onChange={(e) => onInitialChange(clampInitial(parseInt(e.target.value, 10)))}
+            className="mod-slider w-full"
+            style={{ background: sliderGradient(initial, INVESTMENT_DEFAULTS.initialMin, INVESTMENT_DEFAULTS.initialMax) }}
           />
-          <div className="flex justify-between text-xs font-semibold text-slate-400">
-            <span>0 Kč</span>
-            <span>2 mil.</span>
-          </div>
         </div>
+        <div className="flex justify-between px-2.5 mt-0.5">
+          <span className="text-[11px] text-[#94a3b8]">0 Kč</span>
+          <span className="text-[11px] text-[#94a3b8]">2 mil. Kč</span>
+        </div>
+      </div>
 
-        <div className="h-px bg-slate-200" />
-
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-600 leading-tight">
-              <span className="uppercase tracking-[0.06em] text-xs text-slate-400">Měsíční investice</span>{" "}
-              <span className="font-normal text-slate-400">(v Kč)</span>
-            </label>
+      {/* Měsíční investice */}
+      <div className="mt-6 pt-6 border-t border-[#e2e8f0]">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]">Měsíční investice</span>
+          <div className="flex items-baseline gap-1">
             <input
               type="text"
               inputMode="numeric"
               value={formatCurrency(monthly)}
-              onChange={(e) =>
-                onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))
-              }
-              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-2 text-right font-extrabold text-xl sm:text-2xl text-[#0d1f4e] outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-56"
-              aria-label="Měsíční investice"
+              onChange={(e) => onMonthlyChange(clampMonthly(parseCurrency(e.target.value)))}
+              onFocus={(e) => e.target.select()}
+              className="text-right font-bold text-[1.3rem] text-[#0d1f4e] bg-transparent border-none outline-none w-[170px] p-0.5 rounded hover:bg-[#f4f6fb] focus:bg-[#eff4ff] focus:text-[#2563eb] transition-colors"
             />
+            <span className="text-xs font-semibold text-[#94a3b8]">Kč</span>
           </div>
+        </div>
+        <div className="px-2.5 pb-1">
           <input
             type="range"
             min={INVESTMENT_DEFAULTS.monthlyMin}
             max={INVESTMENT_DEFAULTS.monthlyMax}
             step={INVESTMENT_DEFAULTS.monthlyStep}
             value={monthly}
-            onChange={(e) =>
-              onMonthlyChange(clampMonthly(parseInt(e.target.value, 10)))}
-            className="investment-slider w-full min-h-[44px] touch-manipulation"
-            style={{
-              background: getSliderBackground(
-                monthly,
-                INVESTMENT_DEFAULTS.monthlyMin,
-                INVESTMENT_DEFAULTS.monthlyMax,
-              ),
-            }}
-            aria-label="Slider měsíční investice"
+            onChange={(e) => onMonthlyChange(clampMonthly(parseInt(e.target.value, 10)))}
+            className="mod-slider w-full"
+            style={{ background: sliderGradient(monthly, INVESTMENT_DEFAULTS.monthlyMin, INVESTMENT_DEFAULTS.monthlyMax) }}
           />
-          <div className="flex justify-between text-xs font-semibold text-slate-400">
-            <span>500 Kč</span>
-            <span>50 tis.</span>
-          </div>
         </div>
-
-        <div className="h-px bg-slate-200" />
-
-        <div className="space-y-3">
-          <label className="block text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">
-            Doba investice
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min={INVESTMENT_DEFAULTS.yearsMin}
-              max={INVESTMENT_DEFAULTS.yearsMax}
-              step={1}
-              value={years}
-              onChange={(e) =>
-                onYearsChange(clampYears(parseInt(e.target.value, 10)))}
-              className="investment-slider min-h-[44px] flex-1 touch-manipulation"
-              style={{
-                background: getSliderBackground(
-                  years,
-                  INVESTMENT_DEFAULTS.yearsMin,
-                  INVESTMENT_DEFAULTS.yearsMax,
-                ),
-              }}
-              aria-label="Slider doby investice"
-            />
-            <div className="min-w-[92px] rounded-[10px] border-[1.5px] border-slate-300 bg-white px-3 py-2 text-center text-sm sm:text-base font-bold text-[#0d1f4e]">
-              {years} let
-            </div>
-          </div>
-          <div className="flex justify-between text-xs font-semibold text-slate-400">
-            <span>3 roky</span>
-            <span>30 let</span>
-          </div>
+        <div className="flex justify-between px-2.5 mt-0.5">
+          <span className="text-[11px] text-[#94a3b8]">500 Kč</span>
+          <span className="text-[11px] text-[#94a3b8]">50 tis. Kč</span>
         </div>
       </div>
 
-      <div className="mt-5 flex items-start gap-3 rounded-[10px] border border-blue-100 bg-blue-50/70 p-4">
-        <svg
-          className="w-4 h-4 text-[#0B3A7A] mt-1 shrink-0"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden
-        >
-          <path
-            fillRule="evenodd"
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-            clipRule="evenodd"
+      {/* Doba investice */}
+      <div className="mt-6 pt-6 border-t border-[#e2e8f0]">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]">Doba investice</span>
+          <div className="flex items-baseline gap-1">
+            <span className="font-bold text-[1.2rem] text-[#0d1f4e]">{years}</span>
+            <span className="text-xs font-semibold text-[#94a3b8]">let</span>
+          </div>
+        </div>
+        <div className="px-2.5 pb-1">
+          <input
+            type="range"
+            min={INVESTMENT_DEFAULTS.yearsMin}
+            max={INVESTMENT_DEFAULTS.yearsMax}
+            step={1}
+            value={years}
+            onChange={(e) => onYearsChange(clampYears(parseInt(e.target.value, 10)))}
+            className="mod-slider w-full"
+            style={{ background: sliderGradient(years, INVESTMENT_DEFAULTS.yearsMin, INVESTMENT_DEFAULTS.yearsMax) }}
           />
-        </svg>
-        <div className="text-sm text-slate-600">
-          <strong className="mb-1 block text-slate-900">{profileTitle}</strong>
-          <span>{profileDescription}</span>
+        </div>
+        <div className="flex justify-between px-2.5 mt-0.5">
+          <span className="text-[11px] text-[#94a3b8]">3 roky</span>
+          <span className="text-[11px] text-[#94a3b8]">30 let</span>
+        </div>
+      </div>
+
+      {/* Info box */}
+      <div className="mt-6 pt-6 border-t border-[#e2e8f0]">
+        <div className="flex items-start gap-3 rounded-[10px] border border-blue-100 bg-[#eff4ff] p-3.5">
+          <svg className="w-4 h-4 text-[#2563eb] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <div className="text-sm text-slate-600">
+            <strong className="mb-0.5 block text-[#0d1f4e]">{profileTitle}</strong>
+            <span>{profileDescription}</span>
+          </div>
         </div>
       </div>
 
       <style jsx>{`
-        .investment-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          height: 5px;
-          border-radius: 999px;
-          cursor: pointer;
-        }
-        .investment-slider::-webkit-slider-runnable-track {
-          height: 5px;
-          border-radius: 999px;
-          background: transparent;
-        }
-        .investment-slider::-moz-range-track {
-          height: 5px;
-          border-radius: 999px;
-          background: transparent;
-        }
-        .investment-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 20px;
-          height: 20px;
-          margin-top: -7px;
-          border-radius: 999px;
-          border: 2.5px solid #2563eb;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13), 0 2px 7px rgba(37, 99, 235, 0.28);
-        }
-        .investment-slider::-moz-range-thumb {
-          width: 20px;
-          height: 20px;
-          border: 2.5px solid #2563eb;
-          border-radius: 999px;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
-        }
-        .investment-slider:focus-visible {
-          outline: 2px solid #2563eb;
-          outline-offset: 4px;
-        }
+        .mod-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 3px; outline: none; cursor: pointer; }
+        .mod-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2.5px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.13), 0 2px 7px rgba(37,99,235,0.28); cursor: grab; margin-top: -7px; transition: transform 0.14s ease, box-shadow 0.14s ease; }
+        .mod-slider::-webkit-slider-thumb:hover { transform: scale(1.22); box-shadow: 0 0 0 5px rgba(37,99,235,0.15), 0 4px 12px rgba(37,99,235,0.38); }
+        .mod-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
+        .mod-slider::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: transparent; }
+        .mod-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2.5px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.13); cursor: grab; }
+        .mod-slider::-moz-range-track { height: 5px; border-radius: 3px; background: transparent; }
+        .mod-slider::-moz-range-progress { background: linear-gradient(90deg, #2563eb, #38bdf8); border-radius: 3px; }
+        .mod-slider:focus { outline: none; }
       `}</style>
     </div>
   );

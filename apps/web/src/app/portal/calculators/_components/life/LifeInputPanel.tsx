@@ -1,29 +1,29 @@
 "use client";
 
-import { LIMITS, DEFAULT_STATE } from "@/lib/calculators/life/life.config";
-import { formatCurrency, parseCurrency } from "@/lib/calculators/life/formatters";
+import { LIMITS } from "@/lib/calculators/life/life.config";
+import { formatCurrency } from "@/lib/calculators/life/formatters";
 import type { LifeState } from "@/lib/calculators/life/life.types";
-import { Users, Landmark, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
 const INPUT_GROUPS: Array<{
   id: keyof Pick<LifeState, "age" | "netIncome" | "expenses" | "liabilities" | "reserves">;
   label: string;
-  subLabel: string;
   unit: string;
 }> = [
-  { id: "age", label: "Váš věk", subLabel: "(let)", unit: "let" },
-  { id: "netIncome", label: "Čistý měsíční příjem", subLabel: "(Kč)", unit: "Kč" },
-  { id: "expenses", label: "Nutné měsíční výdaje", subLabel: "(Kč)", unit: "Kč" },
-  { id: "liabilities", label: "Hypotéka a závazky", subLabel: "(celkem)", unit: "Kč" },
-  { id: "reserves", label: "Vlastní rezervy", subLabel: "(investice, hotovost)", unit: "Kč" },
+  { id: "age", label: "Váš věk", unit: "let" },
+  { id: "netIncome", label: "Čistý měsíční příjem", unit: "Kč" },
+  { id: "expenses", label: "Nutné měsíční výdaje", unit: "Kč" },
+  { id: "liabilities", label: "Hypotéka a závazky", unit: "Kč" },
+  { id: "reserves", label: "Vlastní rezervy", unit: "Kč" },
 ];
 
-function clamp(
-  value: number,
-  min: number,
-  max: number
-): number {
+function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function sliderGradient(value: number, min: number, max: number): string {
+  const pct = ((value - min) / (max - min)) * 100;
+  return `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${pct}%, #cbd5e1 ${pct}%)`;
 }
 
 export interface LifeInputPanelProps {
@@ -32,147 +32,105 @@ export interface LifeInputPanelProps {
 }
 
 export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
-  const update = (patch: Partial<LifeState>) => {
-    onStateChange({ ...state, ...patch });
-  };
+  const update = (patch: Partial<LifeState>) => onStateChange({ ...state, ...patch });
 
   const handleRangeChange = (
     id: keyof Pick<LifeState, "age" | "netIncome" | "expenses" | "liabilities" | "reserves">,
-    value: number
+    value: number,
   ) => {
     const lim = LIMITS[id];
-    value = clamp(value, lim.min, lim.max);
-    update({ [id]: value });
+    update({ [id]: clamp(value, lim.min, lim.max) });
   };
 
   const handleTextChange = (
     id: keyof Pick<LifeState, "age" | "netIncome" | "expenses" | "liabilities" | "reserves">,
-    raw: string
+    raw: string,
   ) => {
     const num = parseInt(raw.replace(/[^0-9]/g, ""), 10) || 0;
     const lim = LIMITS[id];
-    const value = clamp(num, lim.min, lim.max);
-    update({ [id]: value });
-  };
-
-  const handleChildrenChange = (value: number) => {
-    update({
-      children: clamp(value, LIMITS.children.min, LIMITS.children.max),
-    });
-  };
-
-  const handleSpouseToggle = () => {
-    update({ hasSpouse: !state.hasSpouse });
+    update({ [id]: clamp(num, lim.min, lim.max) });
   };
 
   const expensesWarning = state.expenses > state.netIncome;
-  const sliderBackground = (id: keyof typeof LIMITS, value: number) => {
-    const lim = LIMITS[id];
-    const ratio = ((value - lim.min) / (lim.max - lim.min)) * 100;
-    return `linear-gradient(90deg, #2563eb 0%, #38bdf8 ${ratio}%, #cbd5e1 ${ratio}%)`;
-  };
+
+  const fmtMin = (id: string, lim: { min: number }, unit: string) =>
+    id === "age" ? `${lim.min} ${unit}` : `${formatCurrency(lim.min)} ${unit}`;
+  const fmtMax = (id: string, lim: { max: number }, unit: string) =>
+    id === "age" ? `${lim.max} ${unit}` : `${formatCurrency(lim.max)} ${unit}`;
 
   return (
-    <div className="space-y-5 rounded-[20px] border-[1.5px] border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:p-7">
-      <section className="space-y-5 rounded-[14px] border border-slate-100 bg-white p-4 sm:p-5">
-        <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-slate-400">
-          <Users className="h-4 w-4 text-indigo-500" />
-          Vaše údaje
-        </h3>
+    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
 
-        {INPUT_GROUPS.map(({ id, label, subLabel, unit }) => {
-          const lim = LIMITS[id];
-          const value = state[id];
-          const isWarning = id === "expenses" && expensesWarning;
-          return (
-            <div
-              key={id}
-              className={`space-y-3 ${isWarning ? "rounded-xl border border-red-100 bg-red-50 p-3" : ""}`}
-            >
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <label
-                  htmlFor={`${id}-range`}
-                  className="text-sm font-semibold text-slate-600 leading-tight"
-                >
-                  <span className="uppercase tracking-[0.06em] text-xs text-slate-400">{label}</span>{" "}
-                  <span className="font-normal text-slate-400">{subLabel}</span>
-                </label>
+      {INPUT_GROUPS.map(({ id, label, unit }, idx) => {
+        const lim = LIMITS[id];
+        const value = state[id];
+        const isWarning = id === "expenses" && expensesWarning;
+        const isFirst = idx === 0;
+        return (
+          <div key={id} className={`${!isFirst ? "mt-6 pt-6 border-t border-[#e2e8f0]" : ""} ${isWarning ? "rounded-[10px] border-[1.5px] border-[rgba(234,88,12,0.2)] bg-[#fff7ed] p-3" : ""}`}>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8]">{label}</span>
+              <div className="flex items-baseline gap-1">
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={formatCurrency(value)}
+                  value={id === "age" ? String(value) : formatCurrency(value)}
                   onChange={(e) => handleTextChange(id, e.target.value)}
-                  className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-2 text-right text-xl sm:text-2xl font-extrabold text-[#0d1f4e] outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-56"
+                  onFocus={(e) => e.target.select()}
+                  className="text-right font-bold text-[1.3rem] text-[#0d1f4e] bg-transparent border-none outline-none w-[170px] p-0.5 rounded hover:bg-[#f4f6fb] focus:bg-[#eff4ff] focus:text-[#2563eb] transition-colors"
                 />
+                <span className="text-xs font-semibold text-[#94a3b8]">{unit}</span>
               </div>
+            </div>
+            <div className="px-2.5 pb-1">
               <input
                 type="range"
-                id={`${id}-range`}
                 min={lim.min}
                 max={lim.max}
                 step={lim.step}
                 value={value}
                 onChange={(e) => handleRangeChange(id, Number(e.target.value))}
-                className="life-slider min-h-[44px] w-full touch-manipulation"
-                style={{ background: sliderBackground(id, value) }}
+                className="mod-slider w-full"
+                style={{ background: sliderGradient(value, lim.min, lim.max) }}
               />
-              <div className="flex justify-between text-[11px] sm:text-xs font-semibold text-slate-400">
-                <span>
-                  {id === "age" ? lim.min : formatCurrency(lim.min)} {unit}
-                </span>
-                <span>
-                  {id === "age" ? lim.max : formatCurrency(lim.max)} {unit}
-                </span>
-              </div>
-              {isWarning && (
-                <div className="mt-1 flex items-center gap-2 text-xs font-bold text-red-600">
-                  <Info className="h-4 w-4 shrink-0" />
-                  Pozor: Výdaje převyšují příjem. Pojištění bude kalkulováno z
-                  výdajů.
-                </div>
-              )}
             </div>
-          );
-        })}
-      </section>
+            <div className="flex justify-between px-2.5 mt-0.5">
+              <span className="text-[11px] text-[#94a3b8]">{fmtMin(id, lim, unit)}</span>
+              <span className="text-[11px] text-[#94a3b8]">{fmtMax(id, lim, unit)}</span>
+            </div>
+            {isWarning && (
+              <div className="mt-2 flex items-center gap-2 text-xs font-bold text-[#ea580c]">
+                <Info className="h-4 w-4 shrink-0" />
+                Pozor: Výdaje převyšují příjem.
+              </div>
+            )}
+          </div>
+        );
+      })}
 
-      <section className="rounded-[14px] border border-slate-100 bg-white p-4 sm:p-5">
-        <h3 className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-slate-400">
-          <Landmark className="h-4 w-4 text-indigo-500" />
-          Majetek a rodina
-        </h3>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Rodina */}
+      <div className="mt-6 pt-6 border-t border-[#e2e8f0]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label
-              htmlFor="input-children"
-              className="mb-2 block text-xs font-bold uppercase tracking-[0.06em] text-slate-400"
-            >
-              Děti
-            </label>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8] mb-2">Děti</span>
             <input
               type="number"
-              id="input-children"
               min={LIMITS.children.min}
               max={LIMITS.children.max}
               value={state.children}
-              onChange={(e) =>
-                handleChildrenChange(parseInt(e.target.value, 10) || 0)
-              }
-              className="min-h-[48px] w-full rounded-[10px] border-[1.5px] border-slate-300 bg-white px-4 py-3.5 font-bold text-[#0d1f4e] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => update({ children: clamp(parseInt(e.target.value, 10) || 0, LIMITS.children.min, LIMITS.children.max) })}
+              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-[#cbd5e1] bg-white px-4 py-2 font-bold text-[#0d1f4e] outline-none focus:ring-2 focus:ring-[#2563eb]"
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-[0.06em] text-slate-400">
-              Manžel/ka
-            </label>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94a3b8] mb-2">Manžel/ka</span>
             <button
               type="button"
-              onClick={handleSpouseToggle}
-              className={`min-h-[48px] w-full rounded-[10px] border-[1.5px] py-3.5 font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              onClick={() => update({ hasSpouse: !state.hasSpouse })}
+              className={`min-h-[44px] w-full rounded-[10px] border-[1.5px] py-2 font-semibold transition-all ${
                 state.hasSpouse
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-slate-300 bg-white text-slate-500"
+                  ? "bg-[#0d1f4e] border-[#0d1f4e] text-white"
+                  : "bg-white border-[#cbd5e1] text-[#475569] hover:border-[#2563eb]"
               }`}
               aria-pressed={state.hasSpouse}
             >
@@ -180,49 +138,18 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
             </button>
           </div>
         </div>
-      </section>
+      </div>
 
       <style jsx>{`
-        .life-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          height: 5px;
-          border-radius: 999px;
-          cursor: pointer;
-        }
-        .life-slider::-webkit-slider-runnable-track {
-          height: 5px;
-          border-radius: 999px;
-          background: transparent;
-        }
-        .life-slider::-moz-range-track {
-          height: 5px;
-          border-radius: 999px;
-          background: transparent;
-        }
-        .life-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 20px;
-          height: 20px;
-          margin-top: -7px;
-          border-radius: 999px;
-          border: 2.5px solid #2563eb;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13), 0 2px 7px rgba(37, 99, 235, 0.28);
-        }
-        .life-slider::-moz-range-thumb {
-          width: 20px;
-          height: 20px;
-          border: 2.5px solid #2563eb;
-          border-radius: 999px;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
-        }
-        .life-slider:focus-visible {
-          outline: 2px solid #2563eb;
-          outline-offset: 4px;
-        }
+        .mod-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 3px; outline: none; cursor: pointer; }
+        .mod-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2.5px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.13), 0 2px 7px rgba(37,99,235,0.28); cursor: grab; margin-top: -7px; transition: transform 0.14s ease, box-shadow 0.14s ease; }
+        .mod-slider::-webkit-slider-thumb:hover { transform: scale(1.22); box-shadow: 0 0 0 5px rgba(37,99,235,0.15), 0 4px 12px rgba(37,99,235,0.38); }
+        .mod-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
+        .mod-slider::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: transparent; }
+        .mod-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2.5px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.13); cursor: grab; }
+        .mod-slider::-moz-range-track { height: 5px; border-radius: 3px; background: transparent; }
+        .mod-slider::-moz-range-progress { background: linear-gradient(90deg, #2563eb, #38bdf8); border-radius: 3px; }
+        .mod-slider:focus { outline: none; }
       `}</style>
     </div>
   );

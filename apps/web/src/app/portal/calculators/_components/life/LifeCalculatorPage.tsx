@@ -3,10 +3,6 @@
 import { useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
-import { CalculatorInputSection } from "../core/CalculatorInputSection";
-import { CalculatorResultsSection } from "../core/CalculatorResultsSection";
-import { CalculatorModuleCard } from "../core/CalculatorModuleCard";
-import { CalculatorModuleMainGrid } from "../core/CalculatorModuleMainGrid";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { LifeInputPanel } from "./LifeInputPanel";
 import { LifeResultsPanel } from "./LifeResultsPanel";
@@ -22,40 +18,31 @@ export function LifeCalculatorPage() {
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
-        <CalculatorModuleCard>
+        <div className="mb-3">
           <CalculatorPageHeader
             eyebrow="Kalkulačka pojištění · 2026"
             title="Kalkulačka životního pojištění"
             subtitle="Orientační výpočet potřebného krytí podle příjmů, výdajů a závazků."
           />
-          <p className="mt-3 max-w-3xl rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
-            Výsledky jsou modelové doporučení minimálního krytí. Finální nastavení
-            vždy závisí na konkrétní smlouvě, zdravotním stavu a rodinné situaci.
-          </p>
-        </CalculatorModuleCard>
+        </div>
 
-        <CalculatorModuleMainGrid>
-          <CalculatorInputSection>
-            <LifeInputPanel state={state} onStateChange={setState} />
-          </CalculatorInputSection>
-          <CalculatorResultsSection>
-            <div className="hidden lg:sticky lg:top-6 lg:block">
-              <LifeResultsPanel state={state} result={result} />
-            </div>
-          </CalculatorResultsSection>
-        </CalculatorModuleMainGrid>
+        {/* Main grid: input | result */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
+          <LifeInputPanel state={state} onStateChange={setState} />
+          <div className="hidden lg:block sticky top-6">
+            <LifeResultsPanel state={state} result={result} />
+          </div>
+        </div>
 
+        {/* Risk chart */}
         <div className="hidden md:block">
-          <section className="rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <header className="mb-4 space-y-1">
-              <h3 className="text-lg font-bold text-slate-900">Analýza rizika (měsíční bilance)</h3>
-              <p className="text-sm text-slate-500">
-                Graf znázorňuje propad příjmů v případě nemoci nebo invalidity a částku,
-                kterou je třeba dokrýt. Oranžová část představuje finanční mezeru.
-              </p>
-            </header>
+          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+            <h3 className="text-base font-bold text-[#0d1f4e] mb-1">Analýza rizika (měsíční bilance)</h3>
+            <p className="text-xs text-[#475569] mb-4">
+              Propad příjmů v případě nemoci nebo invalidity a částka, kterou je třeba dokrýt.
+            </p>
             <LifeRiskChart chartData={result.chartData} />
-          </section>
+          </div>
         </div>
       </CalculatorPageShell>
 
