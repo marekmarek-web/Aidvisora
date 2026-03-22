@@ -219,13 +219,16 @@ export async function saveFinancialAnalysisDraft(params: {
 
   const now = new Date();
   if (id) {
+    const updateSet: Record<string, unknown> = {
+      payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
+      updatedBy: auth.userId,
+      updatedAt: now,
+    };
+    if (contactId !== undefined) updateSet.contactId = contactId ?? null;
+    if (householdId !== undefined) updateSet.householdId = householdId ?? null;
     await db
       .update(financialAnalyses)
-      .set({
-        payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
-        updatedBy: auth.userId,
-        updatedAt: now,
-      })
+      .set(updateSet as typeof financialAnalyses.$inferInsert)
       .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
     return id;
   }

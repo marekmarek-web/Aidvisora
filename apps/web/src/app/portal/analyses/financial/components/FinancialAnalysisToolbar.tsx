@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { exportToFile } from "@/lib/analyses/financial/saveLoad";
 import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
-import { Download, FolderOpen, PlusCircle, CloudUpload, List } from "lucide-react";
+import { Download, FolderOpen, PlusCircle, CloudUpload, List, UserPlus } from "lucide-react";
 
 export function FinancialAnalysisToolbar() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export function FinancialAnalysisToolbar() {
   const setAnalysisId = useFinancialAnalysisStore((s) => s.setAnalysisId);
   const reset = useFinancialAnalysisStore((s) => s.reset);
   const loadFromFile = useFinancialAnalysisStore((s) => s.loadFromFile);
+  const goToStep = useFinancialAnalysisStore((s) => s.goToStep);
   const hasCrmContext = Boolean(data.clientId || data.householdId);
 
   const handleSave = async () => {
@@ -89,8 +90,18 @@ export function FinancialAnalysisToolbar() {
         <CloudUpload className="w-4 h-4" />
         <span>{saving ? "…" : "Uložit"}</span>
       </button>
-      {hasCrmContext && (
+      {hasCrmContext ? (
         <span className="text-xs text-slate-500 hidden sm:inline">Propojeno s klientem / domácností</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => goToStep(1)}
+          className="min-h-[44px] min-w-[44px] text-xs px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors flex items-center gap-1.5 font-semibold text-amber-800"
+          title="Přejít na krok 1 a přidat klienta do CRM"
+        >
+          <UserPlus className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Přidat klienta</span>
+        </button>
       )}
       <Link
         href="/portal/analyses"

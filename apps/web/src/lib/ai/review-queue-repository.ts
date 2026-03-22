@@ -174,7 +174,7 @@ export async function getContractReviewById(
   return (row as ContractReviewRow) ?? null;
 }
 
-/** Base columns – existují i v DB bez pipeline migrace (bez input_mode atd.) */
+/** Full list projection when DB has pipeline + phase-two columns. */
 const listReviewColumns = {
   id: contractUploadReviews.id,
   tenantId: contractUploadReviews.tenantId,
@@ -200,6 +200,37 @@ const listReviewColumns = {
   updatedAt: contractUploadReviews.updatedAt,
 };
 
+/** Minimal columns for older DBs missing redesign / phase-two ALTERs. */
+const listReviewColumnsLegacy = {
+  id: contractUploadReviews.id,
+  tenantId: contractUploadReviews.tenantId,
+  fileName: contractUploadReviews.fileName,
+  storagePath: contractUploadReviews.storagePath,
+  mimeType: contractUploadReviews.mimeType,
+  sizeBytes: contractUploadReviews.sizeBytes,
+  processingStatus: contractUploadReviews.processingStatus,
+  errorMessage: contractUploadReviews.errorMessage,
+  extractedPayload: contractUploadReviews.extractedPayload,
+  clientMatchCandidates: contractUploadReviews.clientMatchCandidates,
+  draftActions: contractUploadReviews.draftActions,
+  confidence: contractUploadReviews.confidence,
+  reasonsForReview: contractUploadReviews.reasonsForReview,
+  reviewStatus: contractUploadReviews.reviewStatus,
+  detectedDocumentType: contractUploadReviews.detectedDocumentType,
+  uploadedBy: contractUploadReviews.uploadedBy,
+  createdAt: contractUploadReviews.createdAt,
+  updatedAt: contractUploadReviews.updatedAt,
+};
+
+function isPgMissingColumnError(err: unknown): boolean {
+  const pgCode = (err as { code?: string })?.code;
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    pgCode === "42703" ||
+    (message.toLowerCase().includes("column") && message.toLowerCase().includes("does not exist"))
+  );
+}
+
 export async function listContractReviews(
   tenantId: string,
   options?: { limit?: number; reviewStatus?: ContractReviewStatus }
@@ -211,13 +242,41 @@ export async function listContractReviews(
           eq(contractUploadReviews.reviewStatus, options.reviewStatus)
         )
       : eq(contractUploadReviews.tenantId, tenantId);
-  const rows = await db
-    .select(listReviewColumns)
-    .from(contractUploadReviews)
-    .where(conditions)
-    .orderBy(desc(contractUploadReviews.createdAt))
-    .limit(options?.limit ?? 50);
-  return rows as ContractReviewRow[];
+  const limit = options?.limit ?? 50;
+
+  try {
+    const rows = await db
+      .select(listReviewColumns)
+      .from(contractUploadReviews)
+      .where(conditions)
+      .orderBy(desc(contractUploadReviews.createdAt))
+      .limit(limit);
+    return rows as ContractReviewRow[];
+  } catch (err) {
+    if (!isPgMissingColumnError(err)) throw err;
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[listContractReviews] falling back to legacy column set (run Supabase patches: document_review_redesign + document_review_phase_two)"
+    );
+    const rows = await db
+      .select(listReviewColumnsLegacy)
+      .from(contractUploadReviews)
+      .where(conditions)
+      .orderBy(desc(contractUploadReviews.createdAt))
+      .limit(limit);
+    return rows.map((r) => {
+      const base = r as ContractReviewRow;
+      return {
+        ...base,
+        detectedDocumentSubtype: base.detectedDocumentSubtype ?? null,
+        lifecycleStatus: base.lifecycleStatus ?? null,
+        documentIntent: null,
+        sensitivityProfile: base.sensitivityProfile ?? null,
+        sectionSensitivity: null,
+        relationshipInference: null,
+      } as ContractReviewRow;
+    });
+  }
 }
 
 export async function updateContractReview(

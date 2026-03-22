@@ -1,7 +1,12 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
-import { User, PlusCircle } from "lucide-react";
+import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
+import { createContact } from "@/app/actions/contacts";
+import { mapFaClientToContactForm, splitFullName } from "../faClientMapper";
+import { User, PlusCircle, UserPlus, ExternalLink, CheckCircle } from "lucide-react";
 
 function ageFromBirthYear(birthDate: string): number | null {
   if (!birthDate?.trim()) return null;
@@ -55,6 +60,13 @@ export function StepClientInfo() {
   const addChild = useFinancialAnalysisStore((s) => s.addChild);
   const updateChild = useFinancialAnalysisStore((s) => s.updateChild);
   const removeChild = useFinancialAnalysisStore((s) => s.removeChild);
+  const analysisId = useFinancialAnalysisStore((s) => s.analysisId);
+  const currentStep = useFinancialAnalysisStore((s) => s.currentStep);
+  const saveToStorage = useFinancialAnalysisStore((s) => s.saveToStorage);
+
+  const [creatingClient, setCreatingClient] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
 
   const client = data.client;
   const partner = data.partner;
@@ -62,6 +74,40 @@ export function StepClientInfo() {
   const includeCompany = data.includeCompany ?? false;
   const age = ageFromBirthYear(client.birthDate);
   const partnerAge = ageFromBirthYear(partner.birthDate);
+  const clientId = data.clientId;
+
+  const handleCreateClient = async () => {
+    setCreateError(null);
+    const { firstName, lastName } = splitFullName(client.name);
+    if (!firstName && !lastName) {
+      setCreateError("Doplňte jméno klienta.");
+      return;
+    }
+    if (!lastName) {
+      setCreateError("Doplňte jméno ve tvaru „Jméno Příjmení".");
+      return;
+    }
+    setCreatingClient(true);
+    try {
+      const form = mapFaClientToContactForm(client);
+      const newId = await createContact(form);
+      if (!newId) throw new Error("Nepodařilo se vytvořit kontakt.");
+      setData({ clientId: newId });
+      saveToStorage();
+      if (analysisId) {
+        await saveFinancialAnalysisDraft({
+          id: analysisId,
+          contactId: newId,
+          payload: { data: { ...data, clientId: newId } as unknown as Record<string, unknown>, currentStep },
+        });
+      }
+      setJustCreated(true);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Nepodařilo se vytvořit kontakt.");
+    } finally {
+      setCreatingClient(false);
+    }
+  };
 
   return (
     <>
@@ -154,6 +200,39 @@ export function StepClientInfo() {
             </div>
           </div>
         </div>
+
+        {clientId ? (
+          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+            <span className="text-sm text-emerald-800 font-semibold">Klient je propojen s CRM</span>
+            <Link
+              href={`/portal/contacts/${clientId}`}
+              className="text-sm text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1"
+            >
+              Otevřít profil <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={creatingClient}
+              onClick={handleCreateClient}
+              className="min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-500 transition-colors disabled:opacity-50"
+            >
+              <UserPlus className="w-4 h-4" />
+              {creatingClient ? "Vytvářím…" : "Přidat klienta do CRM"}
+            </button>
+            {justCreated && (
+              <span className="text-sm text-emerald-700 font-semibold flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" /> Klient vytvořen
+              </span>
+            )}
+            {createError && (
+              <span className="text-sm text-red-600">{createError}</span>
+            )}
+          </div>
+        )}
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3">
           <input

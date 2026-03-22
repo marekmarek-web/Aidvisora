@@ -208,9 +208,12 @@ export async function POST(request: Request) {
         pipelineResult.details != null
           ? ` ${typeof pipelineResult.details === "string" ? pipelineResult.details : JSON.stringify(pipelineResult.details).slice(0, 200)}`
           : "";
+      const isRateLimit = pipelineResult.errorCode === "OPENAI_RATE_LIMIT";
       await updateContractReview(reviewId, tenantId, {
         processingStatus: "failed",
-        errorMessage: pipelineResult.errorMessage + errDetail,
+        errorMessage: isRateLimit
+          ? pipelineResult.errorMessage
+          : pipelineResult.errorMessage + errDetail,
         extractionTrace: pipelineResult.extractionTrace ?? undefined,
       });
       await logAudit({
@@ -230,7 +233,13 @@ export async function POST(request: Request) {
         error: maskForLog(pipelineResult.errorMessage),
       });
       return NextResponse.json(
-        { error: "Extrakce ze smlouvy selhala.", id: reviewId },
+        {
+          error: isRateLimit
+            ? pipelineResult.errorMessage
+            : "Extrakce ze smlouvy selhala.",
+          code: pipelineResult.errorCode,
+          id: reviewId,
+        },
         { status: 200 }
       );
     }

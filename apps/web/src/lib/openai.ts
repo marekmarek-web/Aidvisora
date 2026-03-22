@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withOpenAIRateLimitRetry } from "./openai-rate-limit";
 
 const defaultModel = "gpt-4o-mini";
 const fallbackModel = "gpt-4o-mini";
@@ -74,18 +75,26 @@ export async function createResponse(
   let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
   let usedModel = primaryModel;
   try {
-    response = await client.responses.create({
-      model: primaryModel,
-      input,
-      store,
-    });
+    response = await withOpenAIRateLimitRetry(
+      () =>
+        client.responses.create({
+          model: primaryModel,
+          input,
+          store,
+        }),
+      { label: "responses.create", maxAttempts: 6 }
+    );
   } catch (err) {
     if (isModelError(err) && primaryModel !== fallbackModel) {
-      response = await client.responses.create({
-        model: fallbackModel,
-        input,
-        store,
-      });
+      response = await withOpenAIRateLimitRetry(
+        () =>
+          client.responses.create({
+            model: fallbackModel,
+            input,
+            store,
+          }),
+        { label: "responses.create(fallback_model)", maxAttempts: 6 }
+      );
       usedModel = fallbackModel;
     } else {
       const latencyMs = Date.now() - start;
@@ -277,18 +286,26 @@ export async function createResponseWithFile(
   let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
   let usedModel = primaryModel;
   try {
-    response = await client.responses.create({
-      model: primaryModel,
-      input,
-      store,
-    });
+    response = await withOpenAIRateLimitRetry(
+      () =>
+        client.responses.create({
+          model: primaryModel,
+          input,
+          store,
+        }),
+      { label: "responses.create_with_file", maxAttempts: 6 }
+    );
   } catch (err) {
     if (isModelError(err) && primaryModel !== fallbackModel) {
-      response = await client.responses.create({
-        model: fallbackModel,
-        input,
-        store,
-      });
+      response = await withOpenAIRateLimitRetry(
+        () =>
+          client.responses.create({
+            model: fallbackModel,
+            input,
+            store,
+          }),
+        { label: "responses.create_with_file(fallback_model)", maxAttempts: 6 }
+      );
       usedModel = fallbackModel;
     } else {
       const latencyMs = Date.now() - start;

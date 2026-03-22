@@ -62,6 +62,22 @@ ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS correction_r
 ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS corrected_by text;
 ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS corrected_at timestamp with time zone;
 
+-- Document review redesign + AI pipeline phase two (chybí často → padá GET /api/contracts/review i část INSERT)
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS detected_document_subtype text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS lifecycle_status text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS data_completeness jsonb;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS sensitivity_profile text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS document_intent text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS section_sensitivity jsonb;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS relationship_inference jsonb;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS corrected_document_type text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS corrected_lifecycle_status text;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS field_marked_not_applicable jsonb;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS linked_client_override uuid;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS linked_deal_override uuid;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS confidence_override jsonb;
+ALTER TABLE public.contract_upload_reviews ADD COLUMN IF NOT EXISTS ignored_warnings jsonb;
+
 -- Výchozí review_status, pokud sloupec vznikl bez DEFAULT
 ALTER TABLE public.contract_upload_reviews
   ALTER COLUMN review_status SET DEFAULT 'pending';

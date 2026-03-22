@@ -162,6 +162,7 @@ export async function createContact(form: {
   leadSource?: string;
   leadSourceUrl?: string;
   priority?: string;
+  notes?: string;
 }) {
   try {
     const auth = await requireAuthInAction();
@@ -187,6 +188,7 @@ export async function createContact(form: {
         leadSource: form.leadSource?.trim() || null,
         leadSourceUrl: form.leadSourceUrl?.trim() || null,
         priority: form.priority?.trim() || null,
+        notes: form.notes?.trim() || null,
       })
       .returning({ id: contacts.id });
     return row?.id ?? null;

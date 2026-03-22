@@ -21,6 +21,7 @@ import { resolveDocumentSchema } from "./document-schema-router";
 import { runVerificationPass } from "./document-verification";
 import { resolveSensitivityProfile } from "./document-sensitivity";
 import { inferDocumentRelationships } from "./document-relationships";
+import { isOpenAIRateLimitError } from "./openai-rate-limit";
 
 export type PipelineSuccess = {
   ok: true;
@@ -41,6 +42,8 @@ export type PipelineError = {
   ok: false;
   processingStatus: "failed";
   errorMessage: string;
+  /** Machine-readable code for clients (e.g. OPENAI_RATE_LIMIT). */
+  errorCode?: string;
   extractionTrace?: ExtractionTrace;
   details?: unknown;
 };
@@ -68,6 +71,17 @@ export async function runContractUnderstandingPipeline(
     } catch (e) {
       trace.failedStep = "detect_input_mode";
       trace.warnings = [e instanceof Error ? e.message : String(e)];
+      if (isOpenAIRateLimitError(e)) {
+        return {
+          ok: false,
+          processingStatus: "failed",
+          errorCode: "OPENAI_RATE_LIMIT",
+          errorMessage:
+            "OpenAI dočasně odmítá požadavky (limit tokenů za minutu). Počkejte cca minutu a zkuste znovu, případně omezte paralelní nahrávání.",
+          extractionTrace: trace,
+          details: e instanceof Error ? e.message : String(e),
+        };
+      }
       return {
         ok: false,
         processingStatus: "failed",
@@ -81,6 +95,17 @@ export async function runContractUnderstandingPipeline(
     } catch (e) {
       trace.failedStep = "classify_document";
       trace.warnings = [...(trace.warnings ?? []), e instanceof Error ? e.message : String(e)];
+      if (isOpenAIRateLimitError(e)) {
+        return {
+          ok: false,
+          processingStatus: "failed",
+          errorCode: "OPENAI_RATE_LIMIT",
+          errorMessage:
+            "OpenAI dočasně odmítá požadavky (limit tokenů za minutu). Počkejte cca minutu a zkuste znovu, případně omezte paralelní nahrávání.",
+          extractionTrace: trace,
+          details: e instanceof Error ? e.message : String(e),
+        };
+      }
       return {
         ok: false,
         processingStatus: "failed",
@@ -126,6 +151,17 @@ export async function runContractUnderstandingPipeline(
   } catch (e) {
     trace.failedStep = "structured_extraction";
     trace.warnings = [...(trace.warnings ?? []), e instanceof Error ? e.message : String(e)];
+    if (isOpenAIRateLimitError(e)) {
+      return {
+        ok: false,
+        processingStatus: "failed",
+        errorCode: "OPENAI_RATE_LIMIT",
+        errorMessage:
+          "OpenAI dočasně odmítá požadavky (limit tokenů za minutu). Počkejte cca minutu a zkuste znovu, případně omezte paralelní nahrávání.",
+        extractionTrace: trace,
+        details: e instanceof Error ? e.message : String(e),
+      };
+    }
     return {
       ok: false,
       processingStatus: "failed",
