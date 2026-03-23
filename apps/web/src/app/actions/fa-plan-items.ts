@@ -4,6 +4,7 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db, financialAnalyses, faPlanItems, eq, and } from "db";
 import type { FinancialAnalysisData } from "@/lib/analyses/financial/types";
+import { CREDIT_WISH_BANKS } from "@/lib/analyses/financial/constants";
 import type { FaPlanItemStatus } from "db";
 
 export type FaPlanItemRow = {
@@ -146,6 +147,12 @@ export async function extractFaPlanItems(analysisId: string): Promise<number> {
   }
 
   for (const credit of data.newCreditWishList ?? []) {
+    const bank = CREDIT_WISH_BANKS.find((b) => b.id === credit.selectedBankId);
+    const providerName = bank
+      ? bank.name
+      : credit.selectedBankId === "other"
+        ? "Jiná banka"
+        : "Nezadáno";
     items.push({
       tenantId: fa.tenantId,
       analysisId,
@@ -154,7 +161,7 @@ export async function extractFaPlanItems(analysisId: string): Promise<number> {
       itemKey: "hypo",
       segmentCode: "HYPO",
       label: `Úvěr ${credit.purpose ?? ""}`.trim(),
-      provider: credit.bank ?? undefined,
+      provider: providerName,
       amountMonthly: credit.estimatedMonthly != null ? String(Math.round(credit.estimatedMonthly)) : null,
       amountAnnual: null,
       status: "recommended",

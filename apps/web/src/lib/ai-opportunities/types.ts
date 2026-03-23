@@ -32,7 +32,10 @@ export type OpportunityType =
   | "open_opportunity"
   | "create_task"
   | "analysis_gaps"
-  | "ask_referral";
+  | "ask_referral"
+  | "fa_waiting_signature"
+  | "fa_in_progress"
+  | "fa_recommended";
 
 export type RecommendedActionType =
   | "open_analysis"
@@ -145,6 +148,9 @@ export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
   create_task: "Vytvořit úkol",
   analysis_gaps: "Mezery v analýze",
   ask_referral: "Požádat o doporučení",
+  fa_waiting_signature: "FA – čeká na podpis",
+  fa_in_progress: "FA – produkt v jednání",
+  fa_recommended: "FA – nedokončená doporučení",
 };
 
 export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
