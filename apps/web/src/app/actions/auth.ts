@@ -255,6 +255,12 @@ export async function updatePortalProfile(
       if (selfRoleName === "Director" && supervisorRole !== "Admin") {
         throw new Error("Ředitel může mít nadřízeného pouze Admin.");
       }
+      if (selfRoleName === "Admin" && supervisorRole !== "Admin") {
+        throw new Error("Admin může mít nadřízeného pouze jiného Admina.");
+      }
+      if (selfRoleName === "Viewer") {
+        throw new Error("Role prohlížeče nemá týmového nadřízeného.");
+      }
     }
 
     await db

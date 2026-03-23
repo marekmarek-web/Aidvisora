@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getContactsCount } from "@/app/actions/contacts";
 import { PortalShell } from "./PortalShell";
 import { MobilePortalApp } from "./mobile/MobilePortalApp";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
@@ -38,8 +39,14 @@ export default async function PortalLayout({
   if (auth.roleName === "Client") {
     redirect("/client");
   }
-  const showTeamOverview = auth.roleName === "Admin" || auth.roleName === "Director" || auth.roleName === "Manager" || auth.roleName === "Advisor";
   const headerList = await headers();
+  if (auth.roleName === "Advisor") {
+    const pathname = headerList.get("x-pathname");
+    if (pathname && !pathname.startsWith("/portal/setup") && (await getContactsCount()) === 0) {
+      redirect("/portal/setup");
+    }
+  }
+  const showTeamOverview = auth.roleName === "Admin" || auth.roleName === "Director" || auth.roleName === "Manager" || auth.roleName === "Advisor";
   const cookieStore = await cookies();
   const mobileUiEnabled = isMobileUiV1EnabledForRequest({
     userAgent: headerList.get("user-agent"),

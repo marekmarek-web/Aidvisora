@@ -125,3 +125,9 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 - Compliance balíček (ZIP)
 - Import CSV
 - Dashboard „Dnes“
+
+## Provoz a bezpečnost
+
+- **`docs/OPS_RUNBOOK.md`** – provozní příručka (rollback, cron, monitoring, env, zálohy, support).
+- **`docs/SECURITY.md`** – bezpečnostní poznámky a postupy.
+- **`packages/db/migrations/`** – SQL migrace nad produkční databází.

@@ -71,9 +71,9 @@ export function AiSupportButton({ anchorClassName = "bottom-5 right-5" }: { anch
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="group relative p-[2.5px] rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-900/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+          className="group relative p-[2.5px] rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-900/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[44px]"
         >
-          <span className="bg-white rounded-full px-5 py-2.5 flex items-center justify-center gap-2">
+          <span className="bg-white rounded-full px-5 min-h-[44px] py-2.5 flex items-center justify-center gap-2">
             <Sparkles size={16} className="text-purple-500" />
             <span className="font-black text-slate-800 text-sm tracking-wide">AI Podpora</span>
           </span>
@@ -87,7 +87,7 @@ export function AiSupportButton({ anchorClassName = "bottom-5 right-5" }: { anch
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500"
               aria-label="Zavřít AI panel"
             >
               <X size={15} />

@@ -270,13 +270,13 @@ export function ClientDashboardLayout({
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/client/requests"
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide shadow-lg shadow-indigo-500/30"
+                className="min-h-[44px] inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide shadow-lg shadow-indigo-500/30"
               >
                 Otevřít požadavky
               </Link>
               <Link
                 href="/client/messages"
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-xl text-sm font-bold tracking-wide backdrop-blur-sm border border-white/10"
+                className="min-h-[44px] inline-flex items-center px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-xl text-sm font-bold tracking-wide backdrop-blur-sm border border-white/10"
               >
                 Napsat zprávu
               </Link>
@@ -344,7 +344,7 @@ export function ClientDashboardLayout({
         {!isUnsubscribed && (
           <Link
             href={`/client/unsubscribe?contactId=${authContactId}`}
-            className="text-sm text-rose-600 font-bold hover:underline"
+            className="text-sm text-rose-600 font-bold hover:underline inline-flex min-h-[44px] items-center"
           >
             Odhlásit se z notifikací
           </Link>
@@ -353,7 +353,7 @@ export function ClientDashboardLayout({
 
       <div className="flex flex-wrap gap-4 items-center">
         <ClientZoneExportButton />
-        <Link href="/gdpr" className="text-sm text-indigo-600 font-bold hover:underline">
+        <Link href="/gdpr" className="text-sm text-indigo-600 font-bold hover:underline inline-flex min-h-[44px] items-center">
           Ochrana osobních údajů (GDPR)
         </Link>
       </div>

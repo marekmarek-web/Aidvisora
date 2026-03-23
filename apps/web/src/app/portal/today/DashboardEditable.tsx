@@ -366,7 +366,10 @@ export function DashboardEditable({
           return (
             <div className="flex flex-col h-full justify-center items-center text-center">
               <p className="text-sm text-rose-600 mb-2">{productionError}</p>
-              <Link href="/portal/production" className="text-xs font-bold text-indigo-600 hover:underline">
+              <Link
+                href="/portal/production"
+                className="text-xs font-bold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
+              >
                 Otevřít produkci →
               </Link>
             </div>

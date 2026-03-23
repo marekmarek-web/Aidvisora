@@ -154,12 +154,25 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
 
           <form ref={formRef} onSubmit={handleSubmit} className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 flex flex-col">
             {token && (
-              <label className="flex items-center gap-2 text-sm text-white/90">
-                <input type="checkbox" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required />
-                Souhlasím s{" "}
-                <Link href="/gdpr" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline opacity-90">
-                  GDPR
-                </Link>
+              <label className="flex items-center gap-3 min-h-[44px] text-sm text-white/90 py-1">
+                <input
+                  type="checkbox"
+                  checked={gdprConsent}
+                  onChange={(e) => setGdprConsent(e.target.checked)}
+                  required
+                  className="h-5 w-5 shrink-0 rounded border-white/20 accent-emerald-500"
+                />
+                <span>
+                  Souhlasím s{" "}
+                  <Link
+                    href="/gdpr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold hover:underline opacity-90 inline-flex min-h-[44px] items-center"
+                  >
+                    GDPR
+                  </Link>
+                </span>
               </label>
             )}
 

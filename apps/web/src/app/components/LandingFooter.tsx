@@ -31,7 +31,7 @@ export function LandingFooter({ activeTheme: _activeTheme }: LandingFooterProps)
           />
         </Link>
         <nav className="flex flex-wrap items-center justify-center gap-2 sm:gap-4" aria-label="Patička">
-          <Link href="/gdpr" className={linkClass}>
+          <Link href="/privacy" className={linkClass}>
             GDPR
           </Link>
           <Link href="/" className={linkClass}>

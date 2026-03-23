@@ -58,6 +58,17 @@ export async function getContactsList(): Promise<ContactRow[]> {
   return rows;
 }
 
+/** Počet nearchivovaných kontaktů v tenantovi (např. first-run onboarding). */
+export async function getContactsCount(): Promise<number> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) return 0;
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)));
+  return row?.count ?? 0;
+}
+
 function escapeCsvCell(s: string | null | undefined): string {
   if (s == null) return "";
   const t = String(s);

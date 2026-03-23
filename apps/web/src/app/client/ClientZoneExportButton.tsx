@@ -27,7 +27,7 @@ export function ClientZoneExportButton() {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="rounded-lg px-4 py-2 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover disabled:opacity-50"
+      className="rounded-lg px-4 min-h-[44px] inline-flex items-center justify-center text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover disabled:opacity-50"
     >
       {loading ? "Připravuji…" : "Export mých dat (GDPR)"}
     </button>

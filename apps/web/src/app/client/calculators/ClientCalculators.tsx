@@ -246,6 +246,10 @@ export function ClientCalculators() {
         onClose={() => setRequestModalOpen(false)}
         defaultCaseType={activeCalculator === "hypo" ? "hypotéka" : "investice"}
       />
+
+      <p className="text-center text-sm text-slate-500">
+        Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
+      </p>
     </div>
   );
 }

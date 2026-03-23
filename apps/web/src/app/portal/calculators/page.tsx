@@ -67,6 +67,9 @@ export default function CalculatorsPage() {
           title="Žádné kalkulačky"
           description="V registru nejsou momentálně žádné kalkulačky."
         />
+        <p className="text-center text-sm text-slate-500 mt-8">
+          Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
+        </p>
       </ListPageShell>
     );
   }
@@ -187,6 +190,10 @@ export default function CalculatorsPage() {
           ))}
         </div>
       </div>
+
+      <p className="text-center text-sm text-slate-500 mt-8">
+        Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
+      </p>
     </ListPageShell>
   );
 }

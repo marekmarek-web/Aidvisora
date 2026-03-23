@@ -1677,9 +1677,9 @@ export default function PremiumLandingPage() {
             <div>
                <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Právní a Bezpečnost</h4>
                <ul className="space-y-4 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Obchodní podmínky</a></li>
-                <li><Link href="/gdpr" className="hover:text-white transition-colors">Zásady ochrany (GDPR)</Link></li>
-                <li><a href="#" className="hover:text-white transition-colors">Nastavení Cookies</a></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Obchodní podmínky</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Zásady ochrany (GDPR)</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Nastavení Cookies</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">SLA a Onboarding Support</a></li>
                 <li><a href="#" className="hover:text-emerald-400 transition-colors flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Status systému</a></li>
               </ul>

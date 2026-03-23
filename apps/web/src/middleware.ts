@@ -107,13 +107,20 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/client")) {
       requestHeaders.set("x-demo-client-zone", "1");
     }
+    if (pathname.startsWith("/portal")) {
+      requestHeaders.set("x-pathname", pathname);
+    }
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({ request });
+  const forwardHeaders = new Headers(request.headers);
+  if (pathname.startsWith("/portal")) {
+    forwardHeaders.set("x-pathname", pathname);
+  }
+  let response = NextResponse.next({ request: { headers: forwardHeaders } });
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
