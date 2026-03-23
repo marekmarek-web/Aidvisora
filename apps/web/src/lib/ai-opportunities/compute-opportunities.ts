@@ -27,6 +27,8 @@ import {
   buildAnalysisGaps,
   conditionAskReferral,
   buildAskReferral,
+  conditionPendingFaPlanItems,
+  buildPendingFaPlanItemsAll,
 } from "./opportunity-rules";
 
 /** Priority score 0–100: higher = more urgent. */
@@ -105,6 +107,10 @@ export function computeOpportunities(
   }
   if (conditionAskReferral(signals)) {
     list.push(buildAskReferral(signals));
+  }
+
+  if (conditionPendingFaPlanItems(signals)) {
+    list.push(...buildPendingFaPlanItemsAll(signals));
   }
 
   const deduped = deduplicateOpportunities(list);

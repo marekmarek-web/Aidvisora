@@ -11,6 +11,7 @@ import { getTasksByContactId, type TaskRow } from "@/app/actions/tasks";
 import { listEvents, type EventRow } from "@/app/actions/events";
 import { getPipelineByContact, type StageWithOpportunities } from "@/app/actions/pipeline";
 import { getCoverageForContact } from "@/app/actions/coverage";
+import { db, faPlanItems, financialAnalyses, eq, and } from "db";
 import type { ClientTimelineEvent } from "@/lib/timeline/types";
 import type { ClientFinancialSummaryView } from "@/app/actions/client-financial-summary";
 import { SEGMENT_LABELS } from "db";
@@ -91,6 +92,7 @@ export type ClientAiContextRaw = {
   };
   activeDeals: ActiveDealSummary[];
   timelineTotalCount: number;
+  pendingFaPlanItems: { label: string; status: string; provider: string | null; segmentCode: string | null }[];
 };
 
 function ensureContactAccess(clientId: string): Promise<{ tenantId: string; userId: string }> {
@@ -133,6 +135,30 @@ export async function buildClientAiContextRaw(clientId: string): Promise<ClientA
     getPipelineByContact(clientId),
     getCoverageForContact(clientId).catch(() => ({ resolvedItems: [], summary: { total: 0, covered: 0, gap: 0, unknown: 0 } })),
   ]);
+
+  const pendingFaPlanItemsRaw = await (async () => {
+    try {
+      const { tenantId } = await ensureContactAccess(clientId);
+      const rows = await db
+        .select({
+          label: faPlanItems.label,
+          status: faPlanItems.status,
+          provider: faPlanItems.provider,
+          segmentCode: faPlanItems.segmentCode,
+        })
+        .from(faPlanItems)
+        .innerJoin(financialAnalyses, eq(faPlanItems.analysisId, financialAnalyses.id))
+        .where(
+          and(
+            eq(faPlanItems.tenantId, tenantId),
+            eq(faPlanItems.contactId, clientId),
+          )
+        );
+      return rows.filter((r) => r.status !== "sold" && r.status !== "not_relevant" && r.status !== "cancelled");
+    } catch {
+      return [];
+    }
+  })();
 
   if (!contact) throw new Error("Kontakt nenalezen");
 
@@ -211,6 +237,12 @@ export async function buildClientAiContextRaw(clientId: string): Promise<ClientA
     },
     activeDeals,
     timelineTotalCount: timelineInput.length,
+    pendingFaPlanItems: pendingFaPlanItemsRaw.map((r) => ({
+      label: r.label ?? "—",
+      status: r.status,
+      provider: r.provider,
+      segmentCode: r.segmentCode,
+    })),
   };
 }
 
@@ -392,6 +424,14 @@ export async function renderClientAiPromptVariables(raw: ClientAiContextRaw): Pr
     open_items: open_items_trimmed,
     service_status: truncate(service_status, MAX_VAR_LENGTH),
     active_deals: active_deals_trimmed,
+    pending_fa_items: truncate(
+      raw.pendingFaPlanItems.length > 0
+        ? raw.pendingFaPlanItems
+            .map((i) => `- ${i.label} [${i.status}]${i.provider ? ` (${i.provider})` : ""}${i.segmentCode ? ` – ${i.segmentCode}` : ""}`)
+            .join("\n")
+        : "Žádné nedokončené položky z finanční analýzy.",
+      MAX_VAR_LENGTH
+    ),
     _context_quality: qualityHint,
   };
 }

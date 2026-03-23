@@ -259,6 +259,15 @@ export async function setFinancialAnalysisStatus(
     .update(financialAnalyses)
     .set({ status, updatedBy: auth.userId, updatedAt: new Date() })
     .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+
+  if (status === "completed") {
+    try {
+      const { extractFaPlanItems } = await import("./fa-plan-items");
+      await extractFaPlanItems(id);
+    } catch {
+      // non-critical: plan items extraction failure should not block status update
+    }
+  }
 }
 
 export async function setFinancialAnalysisLastExportedAt(id: string): Promise<void> {

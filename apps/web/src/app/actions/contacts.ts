@@ -4,7 +4,7 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { contacts } from "db";
-import { eq, and, asc, inArray } from "db";
+import { eq, and, asc, inArray, isNull, sql } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export type ContactRow = {
@@ -53,7 +53,7 @@ export async function getContactsList(): Promise<ContactRow[]> {
       leadSourceUrl: contacts.leadSourceUrl,
     })
     .from(contacts)
-    .where(eq(contacts.tenantId, auth.tenantId))
+    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
     .orderBy(asc(contacts.lastName), asc(contacts.firstName));
   return rows;
 }
@@ -78,7 +78,7 @@ export async function exportContactsCsv(): Promise<string> {
       lifecycleStage: contacts.lifecycleStage,
     })
     .from(contacts)
-    .where(eq(contacts.tenantId, auth.tenantId))
+    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
     .orderBy(asc(contacts.lastName), asc(contacts.firstName));
 
   const header = "Jméno,Příjmení,E-mail,Telefon,Město,Fáze";
@@ -320,17 +320,69 @@ export async function uploadContactAvatar(contactId: string, formData: FormData)
 }
 
 /** Smaže kontakt. Závislosti (household_members, dokumenty, atd.) řeší DB CASCADE / SET NULL. */
+/** @deprecated Use archiveContact instead. Hard delete removed from UI. */
 export async function deleteContact(id: string): Promise<void> {
+  return archiveContact(id);
+}
+
+export async function archiveContact(id: string, reason?: string): Promise<void> {
   try {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
     await db
-      .delete(contacts)
+      .update(contacts)
+      .set({
+        archivedAt: new Date(),
+        archivedReason: reason?.trim() || null,
+        updatedAt: new Date(),
+      })
       .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
   } catch (e) {
-    console.error("[deleteContact]", e);
-    throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo smazat.");
+    console.error("[archiveContact]", e);
+    throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo archivovat.");
   }
+}
+
+export async function restoreContact(id: string): Promise<void> {
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    await db
+      .update(contacts)
+      .set({
+        archivedAt: null,
+        archivedReason: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+  } catch (e) {
+    console.error("[restoreContact]", e);
+    throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo obnovit.");
+  }
+}
+
+export async function getContactDependencyCounts(id: string): Promise<{
+  contracts: number;
+  opportunities: number;
+  documents: number;
+  tasks: number;
+  analyses: number;
+}> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+  const { contracts: contractsTable, opportunities, documents, tasks, financialAnalyses } = await import("db");
+  const [c] = await db.select({ count: sql<number>`count(*)::int` }).from(contractsTable).where(and(eq(contractsTable.contactId, id), eq(contractsTable.tenantId, auth.tenantId)));
+  const [o] = await db.select({ count: sql<number>`count(*)::int` }).from(opportunities).where(and(eq(opportunities.contactId, id), eq(opportunities.tenantId, auth.tenantId)));
+  const [d] = await db.select({ count: sql<number>`count(*)::int` }).from(documents).where(and(eq(documents.contactId, id), eq(documents.tenantId, auth.tenantId)));
+  const [t] = await db.select({ count: sql<number>`count(*)::int` }).from(tasks).where(and(eq(tasks.contactId, id), eq(tasks.tenantId, auth.tenantId)));
+  const [a] = await db.select({ count: sql<number>`count(*)::int` }).from(financialAnalyses).where(and(eq(financialAnalyses.contactId, id), eq(financialAnalyses.tenantId, auth.tenantId)));
+  return {
+    contracts: c?.count ?? 0,
+    opportunities: o?.count ?? 0,
+    documents: d?.count ?? 0,
+    tasks: t?.count ?? 0,
+    analyses: a?.count ?? 0,
+  };
 }
 
 export async function updateContactsLifecycle(ids: string[], lifecycleStage: string): Promise<void> {

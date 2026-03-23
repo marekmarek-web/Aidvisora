@@ -33,6 +33,8 @@ export * from "./team-events";
 export * from "./advisor-business-plan";
 export * from "./advisor-vision-goals";
 export * from "./coverage";
+export * from "./fa-plan-items";
+export * from "./fa-sync-log";
 export * from "./ai-generations";
 export * from "./ai-feedback";
 export * from "./user-devices";

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { getContact, getContactsList, updateContact, uploadContactAvatar, deleteContact } from "@/app/actions/contacts";
+import { getContact, getContactsList, updateContact, uploadContactAvatar, archiveContact, getContactDependencyCounts } from "@/app/actions/contacts";
 import { getHouseholdForContact, getHouseholdsList, setContactHousehold } from "@/app/actions/households";
 import { ArrowLeft, Flag, User, Home, RefreshCw } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
@@ -46,6 +46,8 @@ export default function EditContactPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [depCounts, setDepCounts] = useState<{ contracts: number; opportunities: number; documents: number; tasks: number; analyses: number } | null>(null);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
   useEffect(() => {
     getContact(id)
@@ -159,16 +161,28 @@ export default function EditContactPage() {
     }
   }
 
-  async function onDelete() {
-    if (!window.confirm("Opravdu smazat tohoto kontakt navždy? Tuto akci nelze vrátit zpět.")) return;
+  async function onArchiveClick() {
+    setShowArchiveDialog(false);
+    setDepCounts(null);
+    try {
+      const counts = await getContactDependencyCounts(id);
+      setDepCounts(counts);
+      setShowArchiveDialog(true);
+    } catch (err) {
+      setSubmitErr(err instanceof Error ? err.message : "Nepodařilo se načíst závislosti.");
+    }
+  }
+
+  async function onArchiveConfirm() {
     setDeleting(true);
     try {
-      await deleteContact(id);
+      await archiveContact(id);
       router.push("/portal/contacts");
     } catch (err) {
-      setSubmitErr(err instanceof Error ? err.message : "Smazání se nezdařilo");
+      setSubmitErr(err instanceof Error ? err.message : "Archivace se nezdařila");
     } finally {
       setDeleting(false);
+      setShowArchiveDialog(false);
     }
   }
 
@@ -438,21 +452,56 @@ export default function EditContactPage() {
             </div>
           </section>
 
-          {/* Nebezpečná zóna */}
-          <section className="rounded-[24px] border border-red-200 bg-red-50/50 p-6 md:p-8">
-            <h2 className="text-lg font-black text-red-700 mb-2">Nebezpečná zóna</h2>
+          {/* Archivace */}
+          <section className="rounded-[24px] border border-amber-200 bg-amber-50/50 p-6 md:p-8">
+            <h2 className="text-lg font-black text-amber-800 mb-2">Archivace kontaktu</h2>
             <p className="text-sm text-slate-600 mb-5">
-              Smazání kontaktu je nevratné. Smažou se i vazby v domácnostech a související data dle nastavení systému.
+              Archivovaný kontakt zmizí ze seznamu, ale data (smlouvy, obchody, dokumenty, analýzy) zůstanou zachována a kontakt lze kdykoli obnovit.
             </p>
             <button
               type="button"
-              onClick={onDelete}
+              onClick={onArchiveClick}
               disabled={deleting}
-              className="rounded-xl px-5 py-2.5 text-sm font-bold border border-red-300 text-red-700 bg-white hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+              className="rounded-xl px-5 py-2.5 text-sm font-bold border border-amber-300 text-amber-800 bg-white hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
             >
-              {deleting ? "Mažu…" : "Smazat kontakt navždy"}
+              {deleting ? "Archivuji…" : "Archivovat kontakt"}
             </button>
           </section>
+
+          {showArchiveDialog && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+                <h3 className="text-lg font-black text-slate-900">Opravdu archivovat?</h3>
+                {depCounts && (
+                  <div className="text-sm text-slate-600 space-y-1">
+                    {depCounts.contracts > 0 && <p>Smlouvy: <strong>{depCounts.contracts}</strong></p>}
+                    {depCounts.opportunities > 0 && <p>Obchody: <strong>{depCounts.opportunities}</strong></p>}
+                    {depCounts.documents > 0 && <p>Dokumenty: <strong>{depCounts.documents}</strong></p>}
+                    {depCounts.tasks > 0 && <p>Úkoly: <strong>{depCounts.tasks}</strong></p>}
+                    {depCounts.analyses > 0 && <p>Finanční analýzy: <strong>{depCounts.analyses}</strong></p>}
+                    <p className="pt-2 text-slate-500">Vše zůstane zachováno. Kontakt půjde kdykoli obnovit.</p>
+                  </div>
+                )}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowArchiveDialog(false)}
+                    className="rounded-xl px-4 py-2.5 text-sm font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 min-h-[44px]"
+                  >
+                    Zrušit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onArchiveConfirm}
+                    disabled={deleting}
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 min-h-[44px]"
+                  >
+                    {deleting ? "Archivuji…" : "Archivovat"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>

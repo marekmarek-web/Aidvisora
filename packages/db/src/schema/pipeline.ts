@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer, decimal, date, jsonb } from "drizzle-orm/pg-core";
 import { contacts } from "./contacts";
+import { financialAnalyses } from "./financial-analyses";
 
 export const opportunityStages = pgTable("opportunity_stages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -25,6 +26,7 @@ export const opportunities = pgTable("opportunities", {
   closedAt: timestamp("closed_at", { withTimezone: true }),
   closedAs: text("closed_as"), // 'won' | 'lost'
   customFields: jsonb("custom_fields"),
+  faSourceId: uuid("fa_source_id").references(() => financialAnalyses.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

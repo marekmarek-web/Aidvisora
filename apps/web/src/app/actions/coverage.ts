@@ -204,3 +204,136 @@ export async function createTaskFromCoverageItem(
     contactId,
   });
 }
+
+const FA_STATUS_TO_COVERAGE: Record<string, string> = {
+  recommended: "opportunity",
+  in_progress: "in_progress",
+  waiting_signature: "waiting_signature",
+  sold: "done",
+  not_relevant: "not_relevant",
+  cancelled: "none",
+};
+
+export async function importFaItemsToCoverage(
+  analysisId: string,
+  itemIds: string[]
+): Promise<number> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  const { faPlanItems, financialAnalyses } = await import("db");
+  const { inArray } = await import("db");
+
+  const [fa] = await db
+    .select({ contactId: financialAnalyses.contactId })
+    .from(financialAnalyses)
+    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, analysisId)))
+    .limit(1);
+  if (!fa?.contactId) throw new Error("FA nemá napojený kontakt.");
+
+  const items = await db
+    .select()
+    .from(faPlanItems)
+    .where(and(eq(faPlanItems.tenantId, auth.tenantId), inArray(faPlanItems.id, itemIds)));
+
+  let count = 0;
+  for (const item of items) {
+    if (!item.itemKey || !item.segmentCode) continue;
+    const coverageStatus = FA_STATUS_TO_COVERAGE[item.status] ?? "opportunity";
+    const existing = await db
+      .select({ id: contactCoverage.id })
+      .from(contactCoverage)
+      .where(
+        and(
+          eq(contactCoverage.tenantId, auth.tenantId),
+          eq(contactCoverage.contactId, fa.contactId!),
+          eq(contactCoverage.itemKey, item.itemKey)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(contactCoverage)
+        .set({
+          status: coverageStatus,
+          faAnalysisId: analysisId,
+          faItemId: item.id,
+          updatedAt: new Date(),
+          updatedBy: auth.userId,
+        })
+        .where(eq(contactCoverage.id, existing[0].id));
+    } else {
+      await db.insert(contactCoverage).values({
+        tenantId: auth.tenantId,
+        contactId: fa.contactId!,
+        itemKey: item.itemKey,
+        segmentCode: item.segmentCode,
+        status: coverageStatus,
+        faAnalysisId: analysisId,
+        faItemId: item.id,
+        updatedBy: auth.userId,
+      });
+    }
+    count++;
+  }
+  return count;
+}
+
+export async function createOpportunityFromFaItem(
+  faItemId: string,
+  stageId?: string
+): Promise<string | null> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "opportunities:write")) throw new Error("Forbidden");
+
+  const { faPlanItems, financialAnalyses, opportunities } = await import("db");
+
+  const [item] = await db
+    .select()
+    .from(faPlanItems)
+    .where(and(eq(faPlanItems.tenantId, auth.tenantId), eq(faPlanItems.id, faItemId)))
+    .limit(1);
+  if (!item) throw new Error("Plan item nenalezen.");
+
+  const [fa] = await db
+    .select({ contactId: financialAnalyses.contactId })
+    .from(financialAnalyses)
+    .where(eq(financialAnalyses.id, item.analysisId))
+    .limit(1);
+
+  let targetStageId = stageId;
+  if (!targetStageId) {
+    const stages = await db
+      .select({ id: opportunityStages.id })
+      .from(opportunityStages)
+      .where(eq(opportunityStages.tenantId, auth.tenantId))
+      .orderBy(asc(opportunityStages.sortOrder))
+      .limit(3);
+    targetStageId = stages[2]?.id ?? stages[0]?.id;
+  }
+  if (!targetStageId) throw new Error("Žádné pipeline stages.");
+
+  const caseType = item.segmentCode ? segmentToCaseType(item.segmentCode) : "Ostatní";
+  const title = item.label ?? `${item.itemType} z FA`;
+
+  const newId = await createOpportunity({
+    title,
+    caseType,
+    contactId: fa?.contactId ?? undefined,
+    stageId: targetStageId,
+  });
+
+  if (newId) {
+    await db
+      .update(faPlanItems)
+      .set({ opportunityId: newId, status: "in_progress", updatedAt: new Date() })
+      .where(eq(faPlanItems.id, faItemId));
+
+    await db
+      .update(opportunities)
+      .set({ faSourceId: item.analysisId })
+      .where(eq(opportunities.id, newId));
+  }
+  return newId;
+}

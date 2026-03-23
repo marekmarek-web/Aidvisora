@@ -22,4 +22,17 @@ export const financialAnalyses = pgTable("financial_analyses", {
   // Phase 7: link to company for refresh-from-shared-facts
   linkedCompanyId: uuid("linked_company_id").references(() => companies.id, { onDelete: "set null" }),
   lastRefreshedFromSharedAt: timestamp("last_refreshed_from_shared_at", { withTimezone: true }),
+  // FA → CRM workflow: stav prodeje plánu
+  saleStatus: text("sale_status").default("draft"), // draft | recommended | in_progress | sold_partial | sold_full
+  saleNotes: text("sale_notes"),
+  soldAt: timestamp("sold_at", { withTimezone: true }),
 });
+
+export const FA_SALE_STATUSES = [
+  "draft",
+  "recommended",
+  "in_progress",
+  "sold_partial",
+  "sold_full",
+] as const;
+export type FaSaleStatus = (typeof FA_SALE_STATUSES)[number];

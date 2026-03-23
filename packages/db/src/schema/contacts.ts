@@ -27,6 +27,8 @@ export const contacts = pgTable("contacts", {
   serviceCycleMonths: text("service_cycle_months"),
   lastServiceDate: date("last_service_date", { mode: "string" }),
   nextServiceDue: date("next_service_due", { mode: "string" }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  archivedReason: text("archived_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -2,9 +2,11 @@ import { pgTable, uuid, text, timestamp, boolean, unique } from "drizzle-orm/pg-
 import { contacts } from "./contacts";
 import { contracts } from "./contracts";
 import { opportunities } from "./pipeline";
+import { financialAnalyses } from "./financial-analyses";
+import { faPlanItems } from "./fa-plan-items";
 
 /** Stav položky pokrytí – systémové hodnoty. */
-export const COVERAGE_STATUSES = ["done", "in_progress", "none", "not_relevant", "opportunity"] as const;
+export const COVERAGE_STATUSES = ["done", "in_progress", "none", "not_relevant", "opportunity", "waiting_signature"] as const;
 export type CoverageStatus = (typeof COVERAGE_STATUSES)[number];
 
 /**
@@ -26,6 +28,8 @@ export const contactCoverage = pgTable(
     linkedOpportunityId: uuid("linked_opportunity_id").references(() => opportunities.id, { onDelete: "set null" }),
     notes: text("notes"),
     isRelevant: boolean("is_relevant").default(true),
+    faAnalysisId: uuid("fa_analysis_id").references(() => financialAnalyses.id, { onDelete: "set null" }),
+    faItemId: uuid("fa_item_id").references(() => faPlanItems.id, { onDelete: "set null" }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     updatedBy: text("updated_by"),
   },

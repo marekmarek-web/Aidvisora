@@ -503,3 +503,77 @@ export function buildAskReferral(signals: OpportunitySignals): AiOpportunity {
     `referral_${signals.contactId}`
   );
 }
+
+export function conditionPendingFaPlanItems(signals: OpportunitySignals): boolean {
+  return (signals.pendingFaPlanItems ?? []).length > 0;
+}
+
+export function buildPendingFaPlanItemsAll(signals: OpportunitySignals): AiOpportunity[] {
+  const items = signals.pendingFaPlanItems ?? [];
+  const waitingSig = items.filter((i) => i.status === "waiting_signature");
+  const inProgress = items.filter((i) => i.status === "in_progress");
+  const recommended = items.filter((i) => i.status === "recommended");
+  const opps: AiOpportunity[] = [];
+
+  if (waitingSig.length > 0) {
+    opps.push(
+      baseOpportunity(
+        signals,
+        "fa_waiting_signature",
+        "service_need",
+        `Čeká na podpis: ${waitingSig.length} produkt${waitingSig.length > 1 ? "ů" : ""}`,
+        `FA doporučila produkty, které čekají na podpis klienta: ${waitingSig.map((i) => i.label).join(", ")}.`,
+        "Kontaktujte klienta a domluvte podpis.",
+        "Vytvořit úkol: Zajistit podpis",
+        "create_task",
+        5,
+        waitingSig.map((i) => ({ type: "fa_plan_item" as const, label: i.label })),
+        "high",
+        undefined,
+        `fa_waiting_${signals.contactId}`
+      )
+    );
+  }
+
+  if (inProgress.length > 0) {
+    opps.push(
+      baseOpportunity(
+        signals,
+        "fa_in_progress",
+        "active_deal",
+        `Rozjednáno: ${inProgress.length} produkt${inProgress.length > 1 ? "ů" : ""}`,
+        `Z finanční analýzy je ${inProgress.length} produkt${inProgress.length > 1 ? "ů" : ""} v jednání: ${inProgress.map((i) => i.label).join(", ")}.`,
+        "Pokračujte v jednání a posuňte k podpisu.",
+        "Zobrazit obchody",
+        "open_deal",
+        3,
+        inProgress.map((i) => ({ type: "fa_plan_item" as const, label: i.label })),
+        "medium",
+        undefined,
+        `fa_inprogress_${signals.contactId}`
+      )
+    );
+  }
+
+  if (recommended.length > 0) {
+    opps.push(
+      baseOpportunity(
+        signals,
+        "fa_recommended",
+        "new_opportunity",
+        `Nedokončená doporučení: ${recommended.length}`,
+        `FA doporučila ${recommended.length} produkt${recommended.length > 1 ? "ů" : ""}, ale ještě se nic nerozjelo: ${recommended.map((i) => i.label).join(", ")}.`,
+        "Zahajte jednání s klientem.",
+        "Vytvořit obchod",
+        "create_deal",
+        2,
+        recommended.map((i) => ({ type: "fa_plan_item" as const, label: i.label })),
+        "medium",
+        undefined,
+        `fa_recommended_${signals.contactId}`
+      )
+    );
+  }
+
+  return opps;
+}

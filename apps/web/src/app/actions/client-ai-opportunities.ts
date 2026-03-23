@@ -98,6 +98,18 @@ export async function aggregateSignalsForContact(
     lastMeetingAt,
     nextMeetingAt,
     hasAnyData,
+    pendingFaPlanItems: await (async () => {
+      try {
+        const { getFaPlanItems } = await import("./fa-plan-items");
+        if (!financialSummaryView.primaryAnalysisId) return [];
+        const items = await getFaPlanItems(financialSummaryView.primaryAnalysisId);
+        return items
+          .filter((i) => i.status !== "sold" && i.status !== "not_relevant" && i.status !== "cancelled")
+          .map((i) => ({ label: i.label ?? "—", status: i.status, segmentCode: i.segmentCode, provider: i.provider }));
+      } catch {
+        return [];
+      }
+    })(),
   };
 }
 

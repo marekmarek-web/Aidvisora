@@ -6,7 +6,8 @@ import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
 import { createContact } from "@/app/actions/contacts";
 import { mapFaClientToContactForm, splitFullName } from "../faClientMapper";
-import { User, PlusCircle, UserPlus, ExternalLink, CheckCircle } from "lucide-react";
+import { User, PlusCircle, UserPlus, ExternalLink, CheckCircle, Users } from "lucide-react";
+import { FaSyncDialog } from "../FaSyncDialog";
 
 function ageFromBirthYear(birthDate: string): number | null {
   if (!birthDate?.trim()) return null;
@@ -67,6 +68,7 @@ export function StepClientInfo() {
   const [creatingClient, setCreatingClient] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
 
   const client = data.client;
   const partner = data.partner;
@@ -232,6 +234,31 @@ export function StepClientInfo() {
               <span className="text-sm text-red-600">{createError}</span>
             )}
           </div>
+        )}
+
+        {analysisId && (client.hasPartner || (children?.length ?? 0) > 0) && (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSyncDialog(true)}
+              className="min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              Synchronizovat celou rodinu do CRM
+            </button>
+            <p className="text-xs text-slate-500">Vytvoří kontakty pro partnera, děti a domácnost.</p>
+          </div>
+        )}
+
+        {showSyncDialog && analysisId && (
+          <FaSyncDialog
+            analysisId={analysisId}
+            onClose={() => setShowSyncDialog(false)}
+            onDone={() => {
+              setShowSyncDialog(false);
+              setJustCreated(true);
+            }}
+          />
         )}
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3">

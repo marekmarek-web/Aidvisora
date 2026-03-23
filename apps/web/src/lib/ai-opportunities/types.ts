@@ -113,6 +113,7 @@ export const SOURCE_SIGNAL_TYPES = {
   CONTRACT_ANNIVERSARY: "contract_anniversary",
   OPPORTUNITY_STALE: "opportunity_stale",
   SEGMENT_CODE: "segment_code",
+  FA_PLAN_ITEM: "fa_plan_item",
 } as const;
 
 export const OPPORTUNITY_CATEGORY_LABELS: Record<OpportunityCategory, string> = {
@@ -196,4 +197,6 @@ export type OpportunitySignals = {
   nextMeetingAt: Date | null;
   /** Whether we have at least one contract or analysis or event (for empty state) */
   hasAnyData: boolean;
+  /** Pending FA plan items (not sold, not cancelled, not irrelevant) */
+  pendingFaPlanItems: Array<{ label: string; status: string; segmentCode: string | null; provider: string | null }>;
 };
