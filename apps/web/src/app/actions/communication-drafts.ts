@@ -2,7 +2,7 @@
 
 import { db, communicationDrafts, eq, and, desc } from "db";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
-import { logAudit } from "@/lib/audit";
+import { logAuditAction } from "@/lib/audit";
 
 export async function createDraft(params: {
   contactId?: string;
@@ -71,13 +71,13 @@ export async function updateDraft(
     .where(eq(communicationDrafts.id, draftId))
     .returning();
 
-  logAudit({
+  logAuditAction({
     action: "communication_draft_updated",
     userId: auth.userId,
     tenantId: auth.tenantId,
-    resourceId: draftId,
-    resourceType: "communication_draft",
-    metadata: { status: updates.status },
+    entityId: draftId,
+    entityType: "communication_draft",
+    meta: { status: updates.status },
   });
 
   return updated;

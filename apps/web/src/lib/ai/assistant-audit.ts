@@ -56,13 +56,13 @@ function maskSensitive(value: unknown): unknown {
 export function logAssistantEvent(event: AssistantAuditEvent): void {
   const maskedMeta = event.metadata ? (maskSensitive(event.metadata) as Record<string, unknown>) : undefined;
 
-  logAudit({
+  void logAudit({
     action: `assistant:${event.eventType}`,
     userId: event.userId,
     tenantId: event.tenantId,
-    resourceId: event.entityId,
-    resourceType: event.entityType ?? "assistant",
-    metadata: {
+    entityId: event.entityId ?? null,
+    entityType: event.entityType ?? "assistant",
+    meta: {
       sessionId: event.sessionId,
       toolName: event.toolName,
       actionType: event.actionType,
