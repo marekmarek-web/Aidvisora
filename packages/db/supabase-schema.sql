@@ -1,5 +1,16 @@
--- Advisor CRM – schéma pro Supabase (spusť v SQL Editoru)
--- Spouštět v pořadí; IF NOT EXISTS = bezpečné opakované spuštění
+-- Advisor CRM – starší ruční bootstrap pro Supabase (SQL Editor)
+--
+-- DŮLEŽITÉ: Tento soubor NENÍ plná aktuální definice DB oproti kódu (Drizzle).
+-- Chybí např. řada tabulek (user_profiles, document_extractions, Stripe, FA/AI, …)
+-- a rozšíření `documents` (document_type, upload_source, sensitive, processing, …).
+--
+-- Pro nový / čistý Supabase projekt použij ve správném pořadí migrace v:
+--   packages/db/drizzle/0000_*.sql … 0016_*.sql
+-- (řádky "--> statement-breakpoint" smaž nebo ignoruj – Postgres je nezná.)
+-- Doplň také ruční SQL z packages/db/migrations/ podle docs/OPS_RUNBOOK.md
+-- (pre-launch-*, add-document-upload-source, Stripe, atd.).
+--
+-- Níže: historický bootstrap; IF NOT EXISTS = bezpečné opakované spuštění.
 
 -- 1. tenants + roles + memberships (potřeba pro přihlášení)
 CREATE TABLE IF NOT EXISTS tenants (
@@ -177,6 +188,15 @@ CREATE TABLE IF NOT EXISTS events (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Idempotent column sync (older DBs skipped these on CREATE TABLE IF NOT EXISTS)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS analysis_id uuid;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type text DEFAULT 'schuzka';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS reminder_at timestamptz;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS status text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS meeting_link text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS task_id uuid;
 
 -- 5. contracts
 CREATE TABLE IF NOT EXISTS partners (
@@ -525,3 +545,110 @@ CREATE TABLE IF NOT EXISTS portal_notifications (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS portal_notifications_contact_read_idx ON portal_notifications (contact_id, read_at);
+
+-- ---------------------------------------------------------------------------
+-- Portal + financial analysis (align with Drizzle app schema / Sentry fixes)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS financial_analyses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  contact_id uuid,
+  household_id uuid,
+  company_id uuid,
+  primary_contact_id uuid,
+  type text NOT NULL DEFAULT 'financial',
+  status text NOT NULL DEFAULT 'draft',
+  source_type text NOT NULL DEFAULT 'native',
+  version integer NOT NULL DEFAULT 1,
+  payload jsonb NOT NULL,
+  created_by text,
+  updated_by text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  last_exported_at timestamptz,
+  linked_company_id uuid,
+  last_refreshed_from_shared_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS advisor_preferences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  quick_actions jsonb,
+  avatar_url text,
+  phone text,
+  website text,
+  report_logo_url text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, user_id)
+);
+
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS quick_actions jsonb;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS website text;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_logo_url text;
+
+DO $$ BEGIN
+  ALTER TABLE tasks
+    ADD CONSTRAINT tasks_analysis_id_financial_analyses_id_fk
+    FOREIGN KEY (analysis_id) REFERENCES financial_analyses(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE events
+    ADD CONSTRAINT events_task_id_tasks_id_fk
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS fa_plan_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  analysis_id uuid NOT NULL,
+  contact_id uuid,
+  opportunity_id uuid,
+  item_type text NOT NULL,
+  item_key text,
+  segment_code text,
+  label text,
+  provider text,
+  amount_monthly numeric(14,2),
+  amount_annual numeric(14,2),
+  status text NOT NULL DEFAULT 'recommended',
+  source_payload jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fa_plan_items_analysis_idx ON fa_plan_items (analysis_id);
+CREATE INDEX IF NOT EXISTS fa_plan_items_contact_idx ON fa_plan_items (contact_id);
+
+DO $$ BEGIN
+  ALTER TABLE fa_plan_items
+    ADD CONSTRAINT fa_plan_items_analysis_id_financial_analyses_id_fk
+    FOREIGN KEY (analysis_id) REFERENCES financial_analyses(id) ON DELETE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE fa_plan_items
+    ADD CONSTRAINT fa_plan_items_contact_id_contacts_id_fk
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE fa_plan_items
+    ADD CONSTRAINT fa_plan_items_opportunity_id_opportunities_id_fk
+    FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

@@ -789,6 +789,15 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+-- Pre-existing DBs (e.g. older supabase-schema.sql): IF NOT EXISTS skipped CREATE, so these columns may be missing before FKs below.
+ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "analysis_id" uuid;
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "event_type" text DEFAULT 'schuzka';
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "reminder_at" timestamp with time zone;
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "status" text;
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "notes" text;
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "meeting_link" text;
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "task_id" uuid;
+--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "events" ADD CONSTRAINT "events_opportunity_id_opportunities_id_fk" FOREIGN KEY ("opportunity_id") REFERENCES "public"."opportunities"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
