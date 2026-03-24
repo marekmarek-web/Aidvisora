@@ -44,7 +44,10 @@ export async function GET(request: Request) {
     const nativeFromCookie = cookieStore.get("mobile_ui_v1_beta")?.value === "1";
     const isNative = nativeFromQuery || nativeFromCookie;
     if (isNative) {
-      return NextResponse.redirect("aidvisora://auth/done");
+      // Chrome Custom Tabs block HTTP 302 redirects to custom URL schemes.
+      // Redirect to an intermediate page that uses JavaScript to trigger the
+      // deep link, which Android handles reliably.
+      return NextResponse.redirect(`${origin}/auth/native-return`);
     }
 
     return NextResponse.redirect(`${origin}${next.startsWith("/") ? next : "/" + next}`);
