@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
@@ -26,6 +26,8 @@ import {
   normalizedOffersToBankEntries,
   rankOffersByScenario,
 } from "@/lib/calculators/mortgage/rates";
+import { buildMortgagePdfSections } from "@/lib/calculators/pdf";
+import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
 
 export function MortgageCalculatorPage() {
   const [state, setState] = useState<MortgageState>({
@@ -90,6 +92,11 @@ export function MortgageCalculatorPage() {
   const offers = useMemo(() => getOffersWithBanks(state, rankedBanks), [state, rankedBanks]);
   const ratesMeta = rankedBanks?.[0];
 
+  const getPdfSections = useCallback(
+    () => buildMortgagePdfSections(state, result, offers, ratesMeta),
+    [state, result, offers, ratesMeta]
+  );
+
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
@@ -98,6 +105,13 @@ export function MortgageCalculatorPage() {
             eyebrow="Kalkulačka hypoték a úvěrů · 2026"
             title="Spočítejte si splátku"
             subtitle="Zjistěte přesnou měsíční splátku a srovnejte aktuální nabídky bank."
+            actions={
+              <CalculatorPdfExportButton
+                documentTitle="Hypotéka a úvěr – přehled výpočtu"
+                filePrefix="hypoteka"
+                getSections={getPdfSections}
+              />
+            }
           />
         </div>
 

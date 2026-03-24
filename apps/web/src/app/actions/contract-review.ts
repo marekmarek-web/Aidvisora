@@ -2,7 +2,12 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
-import { getContractReviewById, updateContractReview } from "@/lib/ai/review-queue-repository";
+import {
+  getContractReviewById,
+  updateContractReview,
+  saveContractCorrection,
+} from "@/lib/ai/review-queue-repository";
+import { mergeFieldEditsIntoExtractedPayload } from "@/lib/ai-review/mappers";
 import { applyContractReview } from "@/lib/ai/apply-contract-review";
 import { mapContractReviewToBridgePayload } from "@/lib/ai/contracts-analyses-bridge";
 import { db } from "db";
@@ -11,7 +16,7 @@ import { eq, and } from "db";
 
 export type ContractReviewActionResult =
   | { ok: true; payload?: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
-  | { ok: false; error: string };
+  | { ok: false; error: string; blockedReasons?: string[] };
 
 function canApproveOrReject(processingStatus: string): boolean {
   return (
@@ -27,7 +32,14 @@ function canApply(processingStatus: string, reviewStatus: string | null): boolea
   );
 }
 
-export async function approveContractReview(id: string): Promise<ContractReviewActionResult> {
+export async function approveContractReview(
+  id: string,
+  options?: {
+    fieldEdits?: Record<string, string>;
+    rawExtractedPayload?: Record<string, unknown>;
+    correctionReason?: string | null;
+  }
+): Promise<ContractReviewActionResult> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) {
     return { ok: false, error: "Nemáte oprávnění." };
@@ -42,6 +54,21 @@ export async function approveContractReview(id: string): Promise<ContractReviewA
   if (!canApproveOrReject(row.processingStatus)) {
     return { ok: false, error: "Položku nelze schválit v aktuálním stavu." };
   }
+
+  const edits = options?.fieldEdits ?? {};
+  const raw = options?.rawExtractedPayload;
+  if (raw && Object.keys(edits).length > 0) {
+    const { merged, correctedFields } = mergeFieldEditsIntoExtractedPayload(raw, edits);
+    if (correctedFields.length > 0) {
+      await saveContractCorrection(id, auth.tenantId, {
+        correctedPayload: merged,
+        correctedFields,
+        correctedBy: auth.userId,
+        correctionReason: options?.correctionReason?.trim() || null,
+      });
+    }
+  }
+
   await updateContractReview(id, auth.tenantId, {
     reviewStatus: "approved",
     reviewedBy: auth.userId,
@@ -123,7 +150,13 @@ export async function confirmCreateNewClient(reviewId: string): Promise<Contract
   return { ok: true };
 }
 
-export async function applyContractReviewDrafts(id: string): Promise<ContractReviewActionResult> {
+export async function applyContractReviewDrafts(
+  id: string,
+  options?: {
+    overrideGateReasons?: string[];
+    overrideReason?: string;
+  },
+): Promise<ContractReviewActionResult> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) {
     return { ok: false, error: "Nemáte oprávnění." };
@@ -146,6 +179,34 @@ export async function applyContractReviewDrafts(id: string): Promise<ContractRev
   }
   if (row.processingStatus === "failed") {
     return { ok: false, error: "U neúspěšné položky nelze aplikovat akce." };
+  }
+
+  const { evaluateApplyReadiness } = await import("@/lib/ai/quality-gates");
+  const gate = evaluateApplyReadiness(row);
+  if (gate.readiness === "blocked_for_apply") {
+    const overrides = options?.overrideGateReasons ?? [];
+    const remaining = gate.blockedReasons.filter((r) => !overrides.includes(r));
+    if (remaining.length > 0) {
+      return {
+        ok: false,
+        error: `Aplikace zablokována: ${remaining.join(", ")}`,
+        blockedReasons: remaining,
+      };
+    }
+    if (overrides.length > 0) {
+      const { logAudit } = await import("@/lib/audit");
+      await logAudit({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        action: "apply_gate_override",
+        entityType: "contract_review",
+        entityId: id,
+        meta: {
+          overriddenReasons: overrides,
+          overrideReason: options?.overrideReason ?? null,
+        },
+      }).catch(() => {});
+    }
   }
 
   const result = await applyContractReview({

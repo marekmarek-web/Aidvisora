@@ -8,14 +8,16 @@ import {
   CheckSquare,
   Users,
   Briefcase,
-  Menu,
+  LayoutGrid,
   Bell,
   ArrowLeft,
-  Phone,
-  Mail,
-  ChevronRight,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
+import type { ServiceRecommendationWithContact } from "@/app/actions/service-engine";
+import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
+import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
+import type { ProductionSummary } from "@/app/actions/production";
+import type { BusinessPlanWidgetData } from "@/app/portal/today/DashboardEditable";
 import {
   completeTask,
   createTask,
@@ -36,26 +38,23 @@ import {
 } from "@/app/actions/pipeline";
 import { getNotificationBadgeCount } from "@/app/actions/notification-log";
 import { getUnreadConversationsCount } from "@/app/actions/messages";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import {
   BottomSheet,
   EmptyState,
   ErrorState,
-  FilterChips,
   FloatingActionButton,
   FullscreenSheet,
   LoadingSkeleton,
-  MetricCard,
   MobileAppShell,
   MobileBottomNav,
   MobileCard,
   MobileHeader,
   MobileScreen,
   MobileSection,
-  SearchBar,
   StatusBadge,
   StepWizard,
 } from "@/app/shared/mobile-ui/primitives";
-import { ClientProfileScreen } from "./screens/ClientProfileScreen";
 import { HouseholdDetailScreen } from "./screens/HouseholdDetailScreen";
 import { ContractsReviewScreen } from "./screens/ContractsReviewScreen";
 import { AnalysesHubScreen } from "./screens/AnalysesHubScreen";
@@ -66,6 +65,15 @@ import { SettingsProfileScreen } from "./screens/SettingsProfileScreen";
 import { NotificationsInboxScreen } from "./screens/NotificationsInboxScreen";
 import { CalendarMobileScreen } from "./screens/CalendarMobileScreen";
 import { notifyRouteForWebview, notifyWebviewReady } from "@/app/shared/mobile-ui/webview-bridge";
+import { useDeviceClass } from "@/lib/ui/useDeviceClass";
+import { ToolsHubScreen } from "./screens/ToolsHubScreen";
+import { DashboardScreen } from "./screens/DashboardScreen";
+import { TasksScreen } from "./screens/TasksScreen";
+import { ContactsScreen } from "./screens/ContactsScreen";
+import { PipelineScreen } from "./screens/PipelineScreen";
+import { AiAssistantChatScreen } from "./screens/AiAssistantChatScreen";
+import { DocumentsHubScreen } from "./screens/DocumentsHubScreen";
+import { ProductionScreen } from "./screens/ProductionScreen";
 
 type TabId = "home" | "tasks" | "clients" | "pipeline" | "menu";
 type TaskFilter = "all" | "today" | "week" | "overdue" | "completed";
@@ -85,15 +93,13 @@ function toTaskFilter(pathname: string): TabId {
   if (pathname.startsWith("/portal/notifications")) return "menu";
   if (pathname.startsWith("/portal/calendar")) return "menu";
   if (pathname.startsWith("/portal/tools")) return "menu";
+  if (pathname.startsWith("/portal/ai")) return "menu";
+  if (pathname.startsWith("/portal/production")) return "menu";
+  if (pathname.startsWith("/portal/documents")) return "menu";
   if (pathname.startsWith("/portal/today")) return "home";
   return "menu";
 }
 
-function formatDateLabel(date: string | null) {
-  if (!date) return "Bez termínu";
-  const d = new Date(`${date}T00:00:00`);
-  return d.toLocaleDateString("cs-CZ", { day: "numeric", month: "short" });
-}
 
 function parseContactIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/portal\/contacts\/([^/]+)/);
@@ -127,6 +133,13 @@ export function MobilePortalClient({
   initialTaskCounts,
   initialContacts,
   initialPipeline,
+  showTeamOverview = true,
+  serviceRecommendations = [],
+  initialNotes = [],
+  initialAnalyses = [],
+  productionSummary = null,
+  productionError = null,
+  businessPlanWidgetData = null,
 }: {
   advisorName: string;
   initialKpis: DashboardKpis;
@@ -134,18 +147,24 @@ export function MobilePortalClient({
   initialTaskCounts: TaskCounts;
   initialContacts: ContactRow[];
   initialPipeline: StageWithOpportunities[];
+  showTeamOverview?: boolean;
+  serviceRecommendations?: ServiceRecommendationWithContact[];
+  initialNotes?: MeetingNoteForBoard[];
+  initialAnalyses?: FinancialAnalysisListItem[];
+  productionSummary?: ProductionSummary | null;
+  productionError?: string | null;
+  businessPlanWidgetData?: BusinessPlanWidgetData | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const deviceClass = useDeviceClass();
   const [tab, setTab] = useState<TabId>(() => toTaskFilter(pathname));
   const [kpis] = useState<DashboardKpis>(initialKpis);
   const [tasks, setTasks] = useState<TaskRow[]>(initialTasks);
   const [taskCounts, setTaskCounts] = useState<TaskCounts>(initialTaskCounts);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
-  const [taskSearch, setTaskSearch] = useState("");
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
-  const [contactSearch, setContactSearch] = useState("");
   const [pipeline, setPipeline] = useState<StageWithOpportunities[]>(initialPipeline);
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +207,9 @@ export function MobilePortalClient({
   const onNotificationsRoute = pathname.startsWith("/portal/notifications");
   const onCalendarRoute = pathname.startsWith("/portal/calendar");
   const onToolsRoute = pathname.startsWith("/portal/tools");
+  const onAiRoute = pathname.startsWith("/portal/ai");
+  const onProductionRoute = pathname.startsWith("/portal/production");
+  const onDocumentsRoute = pathname.startsWith("/portal/documents");
 
   useEffect(() => {
     notifyWebviewReady();
@@ -235,33 +257,8 @@ export function MobilePortalClient({
     return null;
   }, [pipeline, selectedOpportunityId]);
 
-  const taskFilterOptions = useMemo(
-    () => [
-      { id: "all", label: "Vše", badge: taskCounts.all },
-      { id: "today", label: "Dnes", badge: taskCounts.today },
-      { id: "week", label: "Týden", badge: taskCounts.week },
-      { id: "overdue", label: "Po termínu", badge: taskCounts.overdue, tone: "warning" as const },
-      { id: "completed", label: "Hotovo", badge: taskCounts.completed },
-    ],
-    [taskCounts]
-  );
 
-  const filteredTasks = useMemo(() => {
-    const query = taskSearch.trim().toLowerCase();
-    return tasks.filter((task) => {
-      if (!query) return true;
-      return task.title.toLowerCase().includes(query) || (task.contactName ?? "").toLowerCase().includes(query);
-    });
-  }, [taskSearch, tasks]);
 
-  const filteredContacts = useMemo(() => {
-    const query = contactSearch.trim().toLowerCase();
-    return contacts.filter((c) => {
-      if (!query) return true;
-      const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
-      return fullName.includes(query) || (c.email ?? "").toLowerCase().includes(query) || (c.phone ?? "").toLowerCase().includes(query);
-    });
-  }, [contactSearch, contacts]);
 
   const stageOptions = useMemo(() => pipeline.map((s) => ({ id: s.id, label: s.name })), [pipeline]);
 
@@ -271,7 +268,7 @@ export function MobilePortalClient({
     else if (next === "tasks") router.push("/portal/tasks");
     else if (next === "clients") router.push("/portal/contacts");
     else if (next === "pipeline") router.push("/portal/pipeline");
-    else router.push("/portal/setup");
+    else router.push("/portal/tools");
   }
 
   function isWaveSubviewActive() {
@@ -284,32 +281,41 @@ export function MobilePortalClient({
         onBusinessPlanRoute ||
         onTeamOverviewRoute ||
         onSetupRoute ||
-        onNotificationsRoute
-      || onToolsRoute
+        onNotificationsRoute ||
+        onToolsRoute ||
+        onCalendarRoute ||
+        onAiRoute ||
+        onProductionRoute ||
+        onDocumentsRoute
     );
   }
 
+  const BACK_ROUTE_MAP: Array<[boolean, string]> = [
+    [Boolean(selectedContactId), "/portal/contacts"],
+    [Boolean(selectedHouseholdId), "/portal/households"],
+    [onContractsRoute, "/portal/tools"],
+    [onAnalysesRoute, "/portal/tools"],
+    [onCalculatorsRoute, "/portal/tools"],
+    [onBusinessPlanRoute, "/portal/tools"],
+    [onTeamOverviewRoute, "/portal/tools"],
+    [onCalendarRoute, "/portal/tools"],
+    [onSetupRoute, "/portal/tools"],
+    [onNotificationsRoute, "/portal/tools"],
+    [onAiRoute, "/portal/tools"],
+    [onProductionRoute, "/portal/tools"],
+    [onDocumentsRoute, "/portal/tools"],
+    [onToolsRoute, "/portal/tools"],
+  ];
+
   function handleHeaderBack() {
-    if (selectedContactId) {
-      router.push("/portal/contacts");
-      return;
+    for (const [condition, route] of BACK_ROUTE_MAP) {
+      if (condition) {
+        router.push(route);
+        return;
+      }
     }
-    if (selectedHouseholdId) {
-      router.push("/portal/households");
-      return;
-    }
-    if (
-      onContractsRoute ||
-      onAnalysesRoute ||
-      onCalculatorsRoute ||
-      onBusinessPlanRoute ||
-      onTeamOverviewRoute ||
-      onSetupRoute ||
-      onNotificationsRoute ||
-      onToolsRoute ||
-      onCalendarRoute
-    ) {
-      router.push("/portal/setup");
+    if (typeof window !== "undefined" && window.history.length <= 1) {
+      router.push("/portal/today");
       return;
     }
     router.back();
@@ -448,10 +454,9 @@ export function MobilePortalClient({
     { id: "tasks", label: "Úkoly", icon: CheckSquare, badge: taskCounts.overdue > 0 ? taskCounts.overdue : undefined },
     { id: "clients", label: "Klienti", icon: Users },
     { id: "pipeline", label: "Pipeline", icon: Briefcase },
-    { id: "menu", label: "Menu", icon: Menu },
+    { id: "menu", label: "Nástroje", icon: LayoutGrid, badge: notificationBadgeCount > 0 ? notificationBadgeCount : undefined },
   ];
 
-  const overdueFirstTask = tasks.find((t) => !t.completedAt && !!t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10));
   const headerTitle = selectedContact
     ? `${selectedContact.firstName} ${selectedContact.lastName}`
     : selectedHouseholdId
@@ -470,6 +475,12 @@ export function MobilePortalClient({
                   ? "Nastavení"
                   : onNotificationsRoute
                     ? "Notifikace"
+                    : onAiRoute
+                      ? "AI Asistent"
+                      : onProductionRoute
+                        ? "Produkce"
+                        : onDocumentsRoute
+                          ? "Dokumenty"
             : tab === "home"
               ? "Přehled"
               : tab === "tasks"
@@ -498,17 +509,24 @@ export function MobilePortalClient({
                   ? "Profil, preference, integrace"
                   : onNotificationsRoute
                     ? "Inbox a log notifikací"
-                    : onCalendarRoute
+                    : onAiRoute
+                      ? "Váš CRM asistent s přístupem k datům"
+                      : onProductionRoute
+                        ? "Uzavřené smlouvy a pojistné"
+                        : onDocumentsRoute
+                          ? "Nahrané dokumenty a skeny"
+                        : onCalendarRoute
                       ? "Schůzky a události"
                       : onToolsRoute
                         ? "Gmail a Google Drive"
             : `Advisor • ${advisorName}`;
 
   return (
-    <MobileAppShell>
+    <MobileAppShell deviceClass={deviceClass}>
       <MobileHeader
         title={headerTitle}
         subtitle={headerSubtitle}
+        deviceClass={deviceClass}
         left={
           isWaveSubviewActive() ? (
             <button
@@ -545,206 +563,64 @@ export function MobilePortalClient({
         {busy ? <LoadingSkeleton rows={2} /> : null}
 
         {!selectedContact && tab === "home" ? (
-          <>
-            <MobileSection>
-              <MobileCard className="bg-gradient-to-br from-[#1a1c2e] to-indigo-950 text-white border-slate-800">
-                <p className="text-[11px] uppercase tracking-wider text-indigo-200 font-black">Dnešní kontext</p>
-                <p className="mt-2 text-sm font-semibold leading-relaxed">
-                  Máte {kpis.tasksDueToday.length} úkolů na dnes, {kpis.overdueTasks.length} po termínu a {kpis.meetingsToday} schůzek.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigateTab("tasks")}
-                  className="mt-3 min-h-[44px] w-full rounded-xl bg-indigo-600 text-white text-sm font-bold"
-                >
-                  Otevřít dnešní agendu
-                </button>
-              </MobileCard>
-            </MobileSection>
-
-            <MobileSection title="Metriky">
-              <div className="grid grid-cols-2 gap-2">
-                <MetricCard label="Schůzky dnes" value={kpis.meetingsToday} />
-                <MetricCard label="Otevřené úkoly" value={kpis.tasksOpen} tone={kpis.overdueTasks.length > 0 ? "warning" : "default"} />
-                <MetricCard label="Otevřené případy" value={kpis.opportunitiesOpen} />
-                <MetricCard label="Kontakty" value={kpis.totalContacts} />
-              </div>
-            </MobileSection>
-
-            <MobileSection title="Rychlé vstupy">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: "tasks", label: "Úkoly", onClick: () => navigateTab("tasks") },
-                  { id: "clients", label: "Klienti", onClick: () => navigateTab("clients") },
-                  { id: "pipeline", label: "Pipeline", onClick: () => navigateTab("pipeline") },
-                  { id: "menu", label: "Nástroje", onClick: () => navigateTab("menu") },
-                ].map((x) => (
-                  <MobileCard key={x.id} className="p-3">
-                    <button type="button" onClick={x.onClick} className="w-full text-left min-h-[44px]">
-                      <p className="text-sm font-bold">{x.label}</p>
-                    </button>
-                  </MobileCard>
-                ))}
-              </div>
-            </MobileSection>
-          </>
+          <DashboardScreen
+            kpis={kpis}
+            advisorName={advisorName}
+            serviceRecommendations={serviceRecommendations}
+            initialNotes={initialNotes}
+            initialAnalyses={initialAnalyses}
+            productionSummary={productionSummary}
+            productionError={productionError}
+            businessPlanWidgetData={businessPlanWidgetData}
+            deviceClass={deviceClass}
+            onNewTask={() => setTaskCreateOpen(true)}
+            onNewClient={() => setClientCreateOpen(true)}
+            onNewOpportunity={() => setOpportunityCreateOpen(true)}
+          />
         ) : null}
 
         {!selectedContact && tab === "tasks" ? (
-          <>
-            <SearchBar value={taskSearch} onChange={setTaskSearch} placeholder="Hledat úkol..." />
-            <FilterChips
-              value={taskFilter}
-              onChange={(id) => {
-                const next = id as TaskFilter;
-                setTaskFilter(next);
-                refreshTasks(next);
-              }}
-              options={taskFilterOptions}
-            />
-            {overdueFirstTask ? (
-              <MobileCard className="border-rose-200 bg-rose-50/50">
-                <p className="text-sm font-bold text-rose-800">AI priorita</p>
-                <p className="text-sm text-rose-700 mt-1">Úkol „{overdueFirstTask.title}“ je po termínu.</p>
-                <button
-                  type="button"
-                  onClick={() => onTaskQuickOverdueFix(overdueFirstTask)}
-                  className="mt-2 min-h-[40px] rounded-lg px-3 border border-rose-200 bg-white text-rose-700 text-sm font-bold"
-                >
-                  Přesunout na dnešek
-                </button>
-              </MobileCard>
-            ) : null}
-            {filteredTasks.length === 0 ? (
-              <EmptyState title="Žádné úkoly" description="V tomto filtru nejsou žádné položky." />
-            ) : (
-              filteredTasks.map((task) => (
-                <MobileCard key={task.id} className="p-3.5">
-                  <div className="flex items-start gap-3">
-                    <button type="button" onClick={() => onTaskToggle(task)} className="mt-0.5 min-h-[24px] min-w-[24px] rounded-full border border-slate-300">
-                      {task.completedAt ? "✓" : ""}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-bold ${task.completedAt ? "line-through text-slate-400" : "text-slate-900"}`}>{task.title}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <StatusBadge tone={!task.completedAt && !!task.dueDate && task.dueDate < new Date().toISOString().slice(0, 10) ? "danger" : "neutral"}>
-                          {formatDateLabel(task.dueDate)}
-                        </StatusBadge>
-                        {task.contactName ? <StatusBadge tone="info">{task.contactName}</StatusBadge> : null}
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => onTaskDelete(task.id)} className="text-xs text-rose-700 font-bold min-h-[30px]">
-                      Smazat
-                    </button>
-                  </div>
-                </MobileCard>
-              ))
-            )}
-          </>
+          <TasksScreen
+            tasks={tasks}
+            taskCounts={taskCounts}
+            taskFilter={taskFilter}
+            contacts={contacts}
+            deviceClass={deviceClass}
+            onFilterChange={(next) => {
+              setTaskFilter(next);
+              refreshTasks(next);
+            }}
+            onToggleTask={onTaskToggle}
+            onDeleteTask={onTaskDelete}
+            onQuickOverdueFix={onTaskQuickOverdueFix}
+          />
         ) : null}
 
-        {selectedContact || tab === "clients" ? (
-          <>
-            {!selectedContact ? (
-              <>
-                <SearchBar value={contactSearch} onChange={setContactSearch} placeholder="Hledat klienta..." />
-                {filteredContacts.length === 0 ? (
-                  <EmptyState title="Žádní klienti" />
-                ) : (
-                  filteredContacts.map((c) => (
-                    <MobileCard key={c.id} className="p-3.5">
-                      <button type="button" onClick={() => router.push(`/portal/contacts/${c.id}`)} className="w-full text-left">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-900 truncate">{c.firstName} {c.lastName}</p>
-                            <p className="text-xs text-slate-500 truncate">{c.email ?? "Bez e-mailu"}</p>
-                            <p className="text-xs text-slate-500">{c.phone ?? "Bez telefonu"}</p>
-                          </div>
-                          <ChevronRight size={16} className="text-slate-400 mt-0.5" />
-                        </div>
-                      </button>
-                      <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
-                        {c.phone ? (
-                          <a href={`tel:${c.phone}`} className="min-h-[44px] flex-1 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold grid place-items-center">
-                            <Phone size={14} />
-                          </a>
-                        ) : null}
-                        {c.email ? (
-                          <a href={`mailto:${c.email}`} className="min-h-[44px] flex-1 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold grid place-items-center">
-                            <Mail size={14} />
-                          </a>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTaskDraft((prev) => ({ ...prev, contactId: c.id }));
-                            setTaskCreateOpen(true);
-                          }}
-                          className="min-h-[44px] flex-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold"
-                        >
-                          Úkol
-                        </button>
-                      </div>
-                    </MobileCard>
-                  ))
-                )}
-              </>
-            ) : (
-              <ClientProfileScreen
-                contactId={selectedContact.id}
-                onOpenTaskWizard={(contactId) => {
-                  setTaskDraft((prev) => ({
-                    ...prev,
-                    title: prev.title || "Navazující úkol po klientském profilu",
-                    contactId,
-                  }));
-                  setTaskCreateOpen(true);
-                }}
-                onOpenOpportunityWizard={(contactId) => {
-                  setOpportunityDraft((prev) => ({ ...prev, contactId }));
-                  setOpportunityCreateOpen(true);
-                }}
-                onOpenHousehold={(householdId) => router.push(`/portal/households/${householdId}`)}
-              />
-            )}
-          </>
+        {tab === "clients" ? (
+          <ContactsScreen
+            contacts={contacts}
+            selectedContactId={selectedContactId}
+            deviceClass={deviceClass}
+            onSelectContact={(id) => router.push(`/portal/contacts/${id}`)}
+            onOpenNewContact={() => setClientCreateOpen(true)}
+            onTaskWizard={(contactId) => {
+              setTaskDraft((prev) => ({ ...prev, contactId }));
+              setTaskCreateOpen(true);
+            }}
+            onOpportunityWizard={(contactId) => {
+              setOpportunityDraft((prev) => ({ ...prev, contactId }));
+              setOpportunityCreateOpen(true);
+            }}
+            onOpenHousehold={(householdId) => router.push(`/portal/households/${householdId}`)}
+          />
         ) : null}
 
         {!selectedContact && tab === "pipeline" ? (
-          <>
-            {pipeline.length === 0 ? (
-              <EmptyState title="Pipeline je prázdná" />
-            ) : (
-              pipeline.map((stage) => (
-                <MobileCard key={stage.id} className="p-3.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-black">{stage.name}</p>
-                    <StatusBadge>{stage.opportunities.length}</StatusBadge>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {stage.opportunities.length === 0 ? (
-                      <p className="text-xs text-slate-500">Žádné případy</p>
-                    ) : (
-                      stage.opportunities.map((opp) => (
-                        <button
-                          key={opp.id}
-                          type="button"
-                          onClick={() => router.push(`/portal/pipeline/${opp.id}`)}
-                          className="w-full rounded-xl border border-slate-200 p-3 text-left"
-                        >
-                          <p className="text-sm font-bold">{opp.title}</p>
-                          <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
-                            <span>{opp.contactName || "Bez kontaktu"}</span>
-                            <span>{opp.expectedValue ? `${Number(opp.expectedValue).toLocaleString("cs-CZ")} Kč` : "—"}</span>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </MobileCard>
-              ))
-            )}
-          </>
+          <PipelineScreen
+            pipeline={pipeline}
+            deviceClass={deviceClass}
+            onMoveOpportunity={onOpportunityMove}
+          />
         ) : null}
 
         {!selectedContact &&
@@ -757,64 +633,10 @@ export function MobilePortalClient({
         !onSetupRoute &&
         !onNotificationsRoute &&
         !onCalendarRoute &&
+        !onDocumentsRoute &&
         !onToolsRoute &&
         tab === "menu" ? (
-          <MobileSection title="Nástroje">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Kalendář", href: "/portal/calendar" },
-                { label: "Analýzy", href: "/portal/analyses" },
-                { label: "AI smlouvy", href: "/portal/contracts/review" },
-                { label: "Kalkulačky", href: "/portal/calculators" },
-                { label: "Domácnosti", href: "/portal/households" },
-                { label: "Můj plán", href: "/portal/business-plan" },
-                { label: "Můj tým", href: "/portal/team-overview" },
-                { label: "Google Disk", href: "/portal/tools/drive" },
-                { label: "Gmail", href: "/portal/tools/gmail" },
-                { label: "Nastavení", href: "/portal/setup" },
-                { label: "Notifikace", href: "/portal/notifications" },
-              ].map((item) => (
-                <MobileCard key={item.href} className="p-0">
-                  <button type="button" onClick={() => router.push(item.href)} className="w-full text-left px-3 py-4 min-h-[56px] text-sm font-bold">
-                    {item.label}
-                  </button>
-                </MobileCard>
-              ))}
-            </div>
-            <MobileCard>
-              <p className="text-xs text-slate-600">Beta přepínač mobilní vlny</p>
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await fetch("/api/feature-flags/mobile-ui-v1", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ enabled: true }),
-                    });
-                    window.location.reload();
-                  }}
-                  className="min-h-[40px] rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-emerald-700 text-sm font-bold"
-                >
-                  Zapnout beta
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await fetch("/api/feature-flags/mobile-ui-v1", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ enabled: false }),
-                    });
-                    window.location.reload();
-                  }}
-                  className="min-h-[40px] rounded-lg border border-slate-200 px-3 text-slate-700 text-sm font-bold"
-                >
-                  Vypnout beta
-                </button>
-              </div>
-            </MobileCard>
-          </MobileSection>
+          <ToolsHubScreen showTeamOverview={showTeamOverview} deviceClass={deviceClass} />
         ) : null}
 
         {selectedHouseholdId ? (
@@ -826,7 +648,7 @@ export function MobilePortalClient({
         ) : null}
 
         {onAnalysesRoute ? (
-          <AnalysesHubScreen detailIdFromPath={selectedAnalysisIdFromQuery} />
+          <AnalysesHubScreen detailIdFromPath={selectedAnalysisIdFromQuery} deviceClass={deviceClass} />
         ) : null}
 
         {onCalculatorsRoute ? (
@@ -841,12 +663,13 @@ export function MobilePortalClient({
               setOpportunityCreateOpen(true);
             }}
             onOpenAnalyses={() => router.push("/portal/analyses")}
+            deviceClass={deviceClass}
           />
         ) : null}
 
-        {onBusinessPlanRoute ? <BusinessPlanScreen /> : null}
+        {onBusinessPlanRoute ? <BusinessPlanScreen deviceClass={deviceClass} /> : null}
 
-        {onTeamOverviewRoute ? <TeamOverviewScreen /> : null}
+        {onTeamOverviewRoute ? <TeamOverviewScreen deviceClass={deviceClass} /> : null}
 
         {onSetupRoute ? <SettingsProfileScreen advisorName={advisorName} /> : null}
 
@@ -854,7 +677,13 @@ export function MobilePortalClient({
           <NotificationsInboxScreen onBadgeCountChange={setNotificationBadgeCount} />
         ) : null}
 
-        {onCalendarRoute ? <CalendarMobileScreen contacts={contacts} /> : null}
+        {onCalendarRoute ? <CalendarMobileScreen contacts={contacts} deviceClass={deviceClass} /> : null}
+
+        {onAiRoute ? <AiAssistantChatScreen /> : null}
+
+        {onDocumentsRoute ? <DocumentsHubScreen deviceClass={deviceClass} /> : null}
+
+        {onProductionRoute ? <ProductionScreen deviceClass={deviceClass} /> : null}
 
         {onToolsRoute ? (
           <MobileSection title="Nástroje Google">
@@ -924,18 +753,18 @@ export function MobilePortalClient({
           {taskWizardStep === 2 ? (
             <div className="space-y-3">
               <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Klient</label>
-              <select
+              <CustomDropdown
                 value={taskDraft.contactId}
-                onChange={(e) => setTaskDraft((prev) => ({ ...prev, contactId: e.target.value }))}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white"
-              >
-                <option value="">Bez klienta</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setTaskDraft((prev) => ({ ...prev, contactId: id }))}
+                placeholder="Bez klienta"
+                options={[
+                  { id: "", label: "Bez klienta" },
+                  ...contacts.map((c) => ({
+                    id: c.id,
+                    label: `${c.firstName} ${c.lastName}`,
+                  })),
+                ]}
+              />
             </div>
           ) : null}
           {taskWizardStep === 3 ? (
@@ -999,42 +828,36 @@ export function MobilePortalClient({
             className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
           />
           <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Typ případu</label>
-          <select
+          <CustomDropdown
             value={opportunityDraft.caseType}
-            onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, caseType: e.target.value }))}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white"
-          >
-            <option value="hypotéka">Hypotéka</option>
-            <option value="investice">Investice</option>
-            <option value="pojištění">Pojištění</option>
-            <option value="úvěr">Úvěr</option>
-            <option value="jiné">Jiné</option>
-          </select>
+            onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, caseType: id }))}
+            options={[
+              { id: "hypotéka", label: "Hypotéka" },
+              { id: "investice", label: "Investice" },
+              { id: "pojištění", label: "Pojištění" },
+              { id: "úvěr", label: "Úvěr" },
+              { id: "jiné", label: "Jiné" },
+            ]}
+          />
           <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Fáze</label>
-          <select
+          <CustomDropdown
             value={opportunityDraft.stageId}
-            onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, stageId: e.target.value }))}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white"
-          >
-            {stageOptions.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.label}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, stageId: id }))}
+            options={stageOptions.map((stage) => ({ id: stage.id, label: stage.label }))}
+          />
           <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Klient</label>
-          <select
+          <CustomDropdown
             value={opportunityDraft.contactId}
-            onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, contactId: e.target.value }))}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white"
-          >
-            <option value="">Bez klienta</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.firstName} {c.lastName}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, contactId: id }))}
+            placeholder="Bez klienta"
+            options={[
+              { id: "", label: "Bez klienta" },
+              ...contacts.map((c) => ({
+                id: c.id,
+                label: `${c.firstName} ${c.lastName}`,
+              })),
+            ]}
+          />
           <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
@@ -1095,7 +918,7 @@ export function MobilePortalClient({
         )}
       </FullscreenSheet>
 
-      <MobileBottomNav items={navItems} activeId={tab} onSelect={(id) => navigateTab(id as TabId)} />
+      <MobileBottomNav items={navItems} activeId={tab} onSelect={(id) => navigateTab(id as TabId)} deviceClass={deviceClass} />
     </MobileAppShell>
   );
 }

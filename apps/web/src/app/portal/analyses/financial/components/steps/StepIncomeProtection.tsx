@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { computeInsurance } from "@/lib/analyses/financial/report";
-import { formatCzk } from "@/lib/analyses/financial/formatters";
+import { formatCzk, formatCurrencyMonthly } from "@/lib/analyses/financial/formatters";
 import {
   getDerivedIncomeProtectionPersons,
   getRiskTypesForPerson,
@@ -11,6 +11,7 @@ import {
   getDefaultInsuredRisks,
   getInsuranceCompanies,
   showBenefitOptimization,
+  computePlanTotalMonthly,
 } from "@/lib/analyses/financial/incomeProtection";
 import type {
   IncomeProtectionPlan,
@@ -21,6 +22,8 @@ import type {
 } from "@/lib/analyses/financial/types";
 import { Shield, Plus, Trash2, Calculator } from "lucide-react";
 import { ProvenanceBadge } from "../ProvenanceBadge";
+import { CurrencyCzkInput } from "../CurrencyCzkInput";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 const FUNDING_LABELS: Record<InsuranceFundingSource, string> = {
   company: "Firma",
@@ -32,6 +35,22 @@ const PLAN_TYPE_OPTIONS = [
   { value: "full" as const, label: "Plné pojištění" },
   { value: "urazovka" as const, label: "Pouze úrazové pojištění" },
 ];
+
+const ROLE_TYPE_OPTIONS = [
+  { id: "client", label: "Klient" },
+  { id: "partner", label: "Partner" },
+  { id: "director", label: "Jednatel / jednatelka" },
+  { id: "owner", label: "Majitel" },
+  { id: "partner_company", label: "Společník" },
+] as const;
+
+const EMPLOYMENT_TYPE_OPTIONS = [
+  { id: "employee", label: "Zaměstnanec" },
+  { id: "osvc", label: "OSVČ" },
+  { id: "mixed", label: "Kombinace" },
+  { id: "invalidni_duchod", label: "Invalidní důchod" },
+  { id: "starobni_duchod", label: "Starobní důchod" },
+] as const;
 
 export function StepIncomeProtection() {
   const data = useFinancialAnalysisStore((s) => s.data);
@@ -113,13 +132,7 @@ export function StepIncomeProtection() {
     setAddBlockChoice((prev) => ({ ...prev, [personKey]: "" }));
   };
 
-  const planMonthly = (p: IncomeProtectionPlan) =>
-    p.monthlyPremium != null ? p.monthlyPremium : (p.annualContribution ?? 0) / 12;
-
-  const riskPriceTotal = (p: IncomeProtectionPlan) =>
-    (p.insuredRisks ?? []).reduce((s, r) => s + (r.enabled && r.finalPrice ? r.finalPrice : 0), 0);
-
-  const planTotalMonthly = (p: IncomeProtectionPlan) => planMonthly(p) + riskPriceTotal(p);
+  const planTotalMonthly = (p: IncomeProtectionPlan) => computePlanTotalMonthly(p);
 
   const totalMonthlyPerPerson = (plans: IncomeProtectionPlan[]) =>
     plans.reduce((sum, p) => sum + planTotalMonthly(p), 0);
@@ -179,38 +192,33 @@ export function StepIncomeProtection() {
               </h3>
               {(person.roleType === "client" || person.roleType === "partner") && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <select
-                    value={person.roleType ?? "client"}
-                    onChange={(e) => {
-                      const roleType = e.target.value as "client" | "partner" | "director" | "owner" | "partner_company";
-                      setIncomeProtectionPerson(person.personKey, { roleType });
-                      if (person.funding?.companyContributionMonthly && (roleType === "director" || roleType === "owner" || roleType === "partner_company")) {
-                        setTimeout(() => recalcBenefitVsSalary(person.personKey), 0);
+                  <div className="min-w-[200px] flex-1 sm:flex-none">
+                    <CustomDropdown
+                      value={person.roleType ?? "client"}
+                      onChange={(id) => {
+                        const roleType = id as (typeof ROLE_TYPE_OPTIONS)[number]["id"];
+                        setIncomeProtectionPerson(person.personKey, { roleType });
+                        if (
+                          person.funding?.companyContributionMonthly &&
+                          (roleType === "director" || roleType === "owner" || roleType === "partner_company")
+                        ) {
+                          setTimeout(() => recalcBenefitVsSalary(person.personKey), 0);
+                        }
+                      }}
+                      options={[...ROLE_TYPE_OPTIONS]}
+                    />
+                  </div>
+                  <div className="min-w-[200px] flex-1 sm:flex-none">
+                    <CustomDropdown
+                      value={person.employmentType ?? "employee"}
+                      onChange={(id) =>
+                        setIncomeProtectionPerson(person.personKey, {
+                          employmentType: id as (typeof EMPLOYMENT_TYPE_OPTIONS)[number]["id"],
+                        })
                       }
-                    }}
-                    className="min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium"
-                  >
-                    <option value="client">Klient</option>
-                    <option value="partner">Partner</option>
-                    <option value="director">Jednatel / jednatelka</option>
-                    <option value="owner">Majitel</option>
-                    <option value="partner_company">Společník</option>
-                  </select>
-                  <select
-                    value={person.employmentType ?? "employee"}
-                    onChange={(e) =>
-                      setIncomeProtectionPerson(person.personKey, {
-                        employmentType: e.target.value as "employee" | "osvc" | "mixed" | "invalidni_duchod" | "starobni_duchod",
-                      })
-                    }
-                    className="min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium"
-                  >
-                    <option value="employee">Zaměstnanec</option>
-                    <option value="osvc">OSVČ</option>
-                    <option value="mixed">Kombinace</option>
-                    <option value="invalidni_duchod">Invalidní důchod</option>
-                    <option value="starobni_duchod">Starobní důchod</option>
-                  </select>
+                      options={[...EMPLOYMENT_TYPE_OPTIONS]}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -343,9 +351,6 @@ export function StepIncomeProtection() {
                   {person.funding?.benefitVsSalaryComparison?.explanation && (
                     <p className="text-sm text-slate-600 mt-3">{person.funding.benefitVsSalaryComparison.explanation}</p>
                   )}
-                  <div className="mt-4 p-3 bg-slate-100 rounded-lg border border-slate-200 text-sm text-slate-700">
-                    <strong>Co se stane s 1000 Kč nákladu firmy?</strong> Při navýšení mzdy: část jde na odvody (stát), část dostane zaměstnanec čistě. Při firemním příspěvku (benefit): 100&nbsp;% jde do pojištění bez odvodů.
-                  </div>
                 </div>
               )}
               {!showBenefitOptimization(person) && (person.roleType === "client" || person.roleType === "partner") && (
@@ -380,26 +385,29 @@ export function StepIncomeProtection() {
                   ))}
                 </div>
                 <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={addBlockChoice[person.personKey] ?? ""}
-                    onChange={(e) => onAddBlockChange(person.personKey, e.target.value)}
-                    className="min-h-[44px] px-4 py-2 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-medium bg-white focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                  <div
+                    className="max-w-md w-full border-2 border-dashed border-slate-300 rounded-xl p-0.5 bg-white"
                     aria-label="Přidat pojistný blok"
                   >
-                    <option value="">Přidat pojistný blok...</option>
-                    <option value="__empty__">Nový prázdný blok</option>
-                    {persons
-                      .filter(
-                        (p) =>
-                          p.personKey !== person.personKey &&
-                          (p.insurancePlans?.length ?? 0) > 0
-                      )
-                      .map((p) => (
-                        <option key={p.personKey} value={`copy:${p.personKey}`}>
-                          Okopírovat z: {p.displayName}
-                        </option>
-                      ))}
-                  </select>
+                    <CustomDropdown
+                      value={addBlockChoice[person.personKey] ?? ""}
+                      onChange={(id) => onAddBlockChange(person.personKey, id)}
+                      placeholder="Přidat pojistný blok..."
+                      options={[
+                        { id: "__empty__", label: "Nový prázdný blok" },
+                        ...persons
+                          .filter(
+                            (p) =>
+                              p.personKey !== person.personKey &&
+                              (p.insurancePlans?.length ?? 0) > 0
+                          )
+                          .map((p) => ({
+                            id: `copy:${p.personKey}`,
+                            label: `Okopírovat z: ${p.displayName}`,
+                          })),
+                      ]}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -471,39 +479,38 @@ function PlanCard({
 
   const riskPriceSum = riskTypes.reduce((sum, rt) => {
     const entry = risks.find((r) => r.riskType === rt);
-    return sum + (entry?.enabled && entry?.finalPrice ? entry.finalPrice : 0);
+    return sum + (entry?.enabled && entry?.finalPrice != null ? entry.finalPrice : 0);
   }, 0);
+  const planTotal = computePlanTotalMonthly(plan);
 
   return (
     <div className="border border-slate-200 rounded-xl p-4 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <select
-          value={plan.provider}
-          onChange={(e) => onUpdate({ provider: e.target.value })}
-          className="min-h-[44px] px-3 py-2 rounded-lg border border-slate-200 text-slate-800 font-medium flex-1 min-w-[180px]"
-        >
-          {companies.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <select
-          value={plan.fundingSource ?? "personal"}
-          onChange={(e) => onUpdate({ fundingSource: e.target.value as InsuranceFundingSource })}
-          className="min-h-[44px] px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm"
-        >
-          {(Object.entries(FUNDING_LABELS) as [InsuranceFundingSource, string][]).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-        <select
-          value={planType}
-          onChange={(e) => onUpdate({ planType: e.target.value as "full" | "urazovka" })}
-          className="min-h-[44px] px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm"
-        >
-          {PLAN_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="flex-1 min-w-[180px]">
+          <CustomDropdown
+            value={plan.provider || (companies[0] ?? "")}
+            onChange={(id) => onUpdate({ provider: id })}
+            options={companies.map((c) => ({ id: c, label: c }))}
+            placeholder="Pojišťovna"
+          />
+        </div>
+        <div className="min-w-[140px] flex-1 sm:flex-none">
+          <CustomDropdown
+            value={plan.fundingSource ?? "personal"}
+            onChange={(id) => onUpdate({ fundingSource: id as InsuranceFundingSource })}
+            options={(Object.entries(FUNDING_LABELS) as [InsuranceFundingSource, string][]).map(([id, label]) => ({
+              id,
+              label,
+            }))}
+          />
+        </div>
+        <div className="min-w-[200px] flex-1 sm:flex-none">
+          <CustomDropdown
+            value={planType}
+            onChange={(id) => onUpdate({ planType: id as "full" | "urazovka" })}
+            options={PLAN_TYPE_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
+          />
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -515,32 +522,36 @@ function PlanCard({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <label className="block">
-          <span className="text-xs text-slate-500">Měsíční příspěvek (Kč)</span>
-          <input
-            type="number"
-            min={0}
-            step={100}
-            value={plan.monthlyPremium ?? ""}
-            onChange={(e) => {
-              const v = e.target.value === "" ? undefined : Number(e.target.value);
-              onUpdate({ monthlyPremium: v, annualContribution: v != null ? v * 12 : undefined });
-            }}
-            className="mt-1 block w-full min-h-[44px] rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
+          <span className="text-xs text-slate-500">Měsíční příspěvek</span>
+          <div className="mt-1">
+            <CurrencyCzkInput
+              value={plan.monthlyPremium}
+              onChange={(v) =>
+                onUpdate({
+                  monthlyPremium: v,
+                  annualContribution: v != null ? Math.round(v * 12) : undefined,
+                })
+              }
+              placeholder="0"
+              unitLabel="Kč/měs."
+            />
+          </div>
         </label>
         <label className="block">
-          <span className="text-xs text-slate-500">Roční příspěvek (Kč)</span>
-          <input
-            type="number"
-            min={0}
-            step={1000}
-            value={plan.annualContribution ?? ""}
-            onChange={(e) => {
-              const v = e.target.value === "" ? undefined : Number(e.target.value);
-              onUpdate({ annualContribution: v, monthlyPremium: v != null ? v / 12 : undefined });
-            }}
-            className="mt-1 block w-full min-h-[44px] rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
+          <span className="text-xs text-slate-500">Roční příspěvek</span>
+          <div className="mt-1">
+            <CurrencyCzkInput
+              value={plan.annualContribution}
+              onChange={(v) =>
+                onUpdate({
+                  annualContribution: v,
+                  monthlyPremium: v != null ? Math.round(v / 12) : undefined,
+                })
+              }
+              placeholder="0"
+              unitLabel="Kč/rok"
+            />
+          </div>
         </label>
       </div>
 
@@ -569,20 +580,18 @@ function PlanCard({
                   <span className="text-sm font-semibold text-slate-700">{getRiskLabel(rt as InsuredRiskType)}</span>
                 </label>
                 {entry.enabled && (
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="number"
-                      placeholder="Krytí (Kč)"
-                      value={entry.coverageAmount ?? ""}
-                      onChange={(e) => updateRisk(rt, { coverageAmount: e.target.value === "" ? undefined : Number(e.target.value) })}
-                      className="w-full min-h-[36px] rounded-lg border border-slate-200 px-2 text-sm"
+                  <div className="flex flex-col gap-2">
+                    <CurrencyCzkInput
+                      value={entry.coverageAmount}
+                      onChange={(v) => updateRisk(rt, { coverageAmount: v })}
+                      placeholder="Krytí"
+                      unitLabel="Kč"
                     />
-                    <input
-                      type="number"
-                      placeholder="Cena (Kč/měs)"
-                      value={entry.finalPrice ?? ""}
-                      onChange={(e) => updateRisk(rt, { finalPrice: e.target.value === "" ? undefined : Number(e.target.value) })}
-                      className="w-full min-h-[36px] rounded-lg border border-slate-200 px-2 text-sm"
+                    <CurrencyCzkInput
+                      value={entry.finalPrice}
+                      onChange={(v) => updateRisk(rt, { finalPrice: v })}
+                      placeholder="Příplatek"
+                      unitLabel="Kč/měs."
                     />
                   </div>
                 )}
@@ -590,11 +599,16 @@ function PlanCard({
             );
           })}
         </div>
-        {riskPriceSum > 0 && (
-          <div className="mt-3 text-sm font-semibold text-indigo-700">
-            Celkem z rizik: {formatCzk(riskPriceSum)} / měsíc
+        <div className="mt-3 space-y-1">
+          <div className="text-sm font-bold text-slate-800">
+            Celkem za tento plán: {formatCurrencyMonthly(planTotal)}
           </div>
-        )}
+          {riskPriceSum > 0 && (
+            <div className="text-xs font-medium text-slate-600">
+              Z toho příplatky za rizika: {formatCurrencyMonthly(riskPriceSum)}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

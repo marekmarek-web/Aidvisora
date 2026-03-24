@@ -2,8 +2,8 @@ import type { SectionCtx } from '../types';
 import { nextSection, fmtCzk, fmtMonthly, fmtDaily, fmtBigCzk, esc } from '../helpers';
 import { computeInsurance } from '../../report';
 import { INSURANCE_LOGOS } from '../../constants';
-import { getRiskLabel } from '../../incomeProtection';
-import type { IncomeProtectionPerson, IncomeProtectionPlan, InsuranceFundingSource } from '../../types';
+import { getRiskLabel, computePlanTotalMonthly } from '../../incomeProtection';
+import type { IncomeProtectionPerson, InsuranceFundingSource } from '../../types';
 
 export function renderInsurance(ctx: SectionCtx): string {
   const { data } = ctx;
@@ -175,14 +175,6 @@ function renderChildrenInsurance(
 </section>`;
 }
 
-function planTotalMonthly(plan: IncomeProtectionPlan): number {
-  if (plan.monthlyPremium != null && plan.monthlyPremium > 0) return plan.monthlyPremium;
-  if (plan.annualContribution != null && plan.annualContribution > 0) return Math.round(plan.annualContribution / 12);
-  return (plan.insuredRisks ?? [])
-    .filter((r) => r.enabled && r.finalPrice)
-    .reduce((sum, r) => sum + (r.finalPrice ?? 0), 0);
-}
-
 const FUNDING_LABELS: Record<InsuranceFundingSource, string> = { company: 'Firma', personal: 'Osobně', osvc: 'OSVČ' };
 const ROLE_LABELS: Record<string, string> = {
   client: 'Klient', partner: 'Partner/ka', child: 'Dítě',
@@ -195,7 +187,7 @@ function renderProposedInsurance(ctx: SectionCtx, persons: IncomeProtectionPerso
 
   const rows = persons.flatMap((person) =>
     (person.insurancePlans ?? []).map((plan) => {
-      const monthly = planTotalMonthly(plan);
+      const monthly = computePlanTotalMonthly(plan);
       totalMonthly += monthly;
       const risks = (plan.insuredRisks ?? [])
         .filter((r) => r.enabled)

@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ArrowLeft, Home, TrendingUp } from "lucide-react";
 import { NewRequestModal } from "../NewRequestModal";
+import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
+import {
+  buildClientHypoPdfSections,
+  buildClientInvestPdfSections,
+} from "@/lib/calculators/pdf";
 
 type CalculatorType = "hypo" | "invest" | null;
 
@@ -37,6 +42,28 @@ export function ClientCalculators() {
     future += investmentMonthly * ((Math.pow(1 + r, n) - 1) / r);
     return Math.round(future);
   }, [investmentDeposit, investmentMonthly, investmentYears]);
+
+  const getHypoPdfSections = useCallback(
+    () =>
+      buildClientHypoPdfSections({
+        amount: hypoAmount,
+        years: hypoYears,
+        ratePercent: hypoRate,
+        monthlyPayment: mortgageMonthlyPayment,
+      }),
+    [hypoAmount, hypoYears, hypoRate, mortgageMonthlyPayment]
+  );
+
+  const getInvestPdfSections = useCallback(
+    () =>
+      buildClientInvestPdfSections({
+        deposit: investmentDeposit,
+        monthly: investmentMonthly,
+        years: investmentYears,
+        futureValue: investmentFutureValue,
+      }),
+    [investmentDeposit, investmentMonthly, investmentYears, investmentFutureValue]
+  );
 
   return (
     <div className="space-y-8 client-fade-in">
@@ -85,17 +112,32 @@ export function ClientCalculators() {
         </div>
       ) : (
         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden client-scale-in">
-          <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-            <button
-              onClick={() => setActiveCalculator(null)}
-              className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors min-h-[44px]"
-            >
-              <ArrowLeft size={16} />
-              Zpět na výběr
-            </button>
-            <h3 className="font-black text-lg text-slate-900">
-              {activeCalculator === "hypo" ? "Hypoteční kalkulačka" : "Investiční kalkulačka"}
-            </h3>
+          <div className="px-8 py-6 border-b border-slate-50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-slate-50/50">
+            <div className="flex items-center gap-4 min-w-0">
+              <button
+                onClick={() => setActiveCalculator(null)}
+                className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors min-h-[44px] shrink-0"
+              >
+                <ArrowLeft size={16} />
+                Zpět na výběr
+              </button>
+              <h3 className="font-black text-lg text-slate-900 truncate">
+                {activeCalculator === "hypo" ? "Hypoteční kalkulačka" : "Investiční kalkulačka"}
+              </h3>
+            </div>
+            {activeCalculator === "hypo" ? (
+              <CalculatorPdfExportButton
+                documentTitle="Hypoteční kalkulačka – klientský přehled"
+                filePrefix="klient-hypoteka"
+                getSections={getHypoPdfSections}
+              />
+            ) : (
+              <CalculatorPdfExportButton
+                documentTitle="Investiční kalkulačka – klientský přehled"
+                filePrefix="klient-investice"
+                getSections={getInvestPdfSections}
+              />
+            )}
           </div>
 
           <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">

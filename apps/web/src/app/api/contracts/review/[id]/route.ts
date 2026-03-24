@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { deleteContractReview, getContractReviewById } from "@/lib/ai/review-queue-repository";
-import { maskSensitiveEnvelopeForUi } from "@/lib/ai/document-sensitivity";
+import { serializeContractReviewDetailResponse } from "@/lib/ai/contract-review-serialize";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -32,7 +32,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const includeDebug = new URL(request.url).searchParams.get("debug") === "1";
+    const wantsDebug = new URL(request.url).searchParams.get("debug") === "1";
     const userId = request.headers.get(USER_ID_HEADER);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,91 +41,14 @@ export async function GET(
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const includeDebug = wantsDebug && membership.roleName.toLowerCase() === "admin";
 
     const row = await getContractReviewById(id, membership.tenantId);
     if (!row) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const safePayload =
-      row.extractedPayload && typeof row.extractedPayload === "object"
-        ? maskSensitiveEnvelopeForUi(row.extractedPayload as Parameters<typeof maskSensitiveEnvelopeForUi>[0])
-        : row.extractedPayload;
-
-    return NextResponse.json({
-      id: row.id,
-      fileName: row.fileName,
-      mimeType: row.mimeType,
-      sizeBytes: row.sizeBytes,
-      processingStatus: row.processingStatus,
-      errorMessage: row.errorMessage,
-      extractedPayload: safePayload,
-      clientMatchCandidates: row.clientMatchCandidates,
-      draftActions: row.draftActions,
-      confidence: row.confidence,
-      reasonsForReview: row.reasonsForReview,
-      reviewStatus: row.reviewStatus,
-      reviewedBy: row.reviewedBy,
-      reviewedAt: row.reviewedAt,
-      rejectReason: row.rejectReason,
-      appliedBy: row.appliedBy,
-      appliedAt: row.appliedAt,
-      matchedClientId: row.matchedClientId ?? undefined,
-      createNewClientConfirmed: row.createNewClientConfirmed ?? undefined,
-      applyResultPayload: row.applyResultPayload ?? undefined,
-      reviewDecisionReason: row.reviewDecisionReason ?? undefined,
-      inputMode: row.inputMode ?? undefined,
-      extractionMode: row.extractionMode ?? undefined,
-      detectedDocumentType: row.detectedDocumentType ?? undefined,
-      detectedDocumentSubtype: row.detectedDocumentSubtype ?? undefined,
-      lifecycleStatus: row.lifecycleStatus ?? undefined,
-      documentIntent: row.documentIntent ?? undefined,
-      extractionTrace: row.extractionTrace ?? undefined,
-      validationWarnings: row.validationWarnings ?? undefined,
-      fieldConfidenceMap: row.fieldConfidenceMap ?? undefined,
-      classificationReasons: row.classificationReasons ?? undefined,
-      dataCompleteness: row.dataCompleteness ?? undefined,
-      sensitivityProfile: row.sensitivityProfile ?? undefined,
-      sectionSensitivity: row.sectionSensitivity ?? undefined,
-      relationshipInference: row.relationshipInference ?? undefined,
-      originalExtractedPayload: row.originalExtractedPayload ?? undefined,
-      correctedPayload: row.correctedPayload ?? undefined,
-      correctedFields: row.correctedFields ?? undefined,
-      correctedDocumentType: row.correctedDocumentType ?? undefined,
-      correctedLifecycleStatus: row.correctedLifecycleStatus ?? undefined,
-      fieldMarkedNotApplicable: row.fieldMarkedNotApplicable ?? undefined,
-      linkedClientOverride: row.linkedClientOverride ?? undefined,
-      linkedDealOverride: row.linkedDealOverride ?? undefined,
-      confidenceOverride: row.confidenceOverride ?? undefined,
-      ignoredWarnings: row.ignoredWarnings ?? undefined,
-      correctionReason: row.correctionReason ?? undefined,
-      correctedBy: row.correctedBy ?? undefined,
-      correctedAt: row.correctedAt ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      debug: includeDebug
-        ? {
-            classification: {
-              detectedDocumentType: row.detectedDocumentType ?? undefined,
-              detectedDocumentSubtype: row.detectedDocumentSubtype ?? undefined,
-              lifecycleStatus: row.lifecycleStatus ?? undefined,
-              documentIntent: row.documentIntent ?? undefined,
-              classificationReasons: row.classificationReasons ?? undefined,
-            },
-            verification: {
-              validationWarnings: row.validationWarnings ?? undefined,
-              reasonsForReview: row.reasonsForReview ?? undefined,
-              dataCompleteness: row.dataCompleteness ?? undefined,
-            },
-            matching: row.clientMatchCandidates ?? undefined,
-            suggestedActions: row.draftActions ?? undefined,
-            extractionTrace: row.extractionTrace ?? undefined,
-            sensitivityProfile: row.sensitivityProfile ?? undefined,
-            sectionSensitivity: row.sectionSensitivity ?? undefined,
-            relationshipInference: row.relationshipInference ?? undefined,
-          }
-        : undefined,
-    });
+    return NextResponse.json(serializeContractReviewDetailResponse(row, includeDebug));
   } catch {
     return NextResponse.json(
       { error: "Načtení detailu selhalo." },

@@ -68,6 +68,8 @@ Ověření ručně z terminálu:
 | `RESEND_REPLY_TO` | Globální fallback pro **Reply-To**; u akcí přihlášeného poradce má přednost e-mail z profilu / Supabase účtu |
 | ostatní | viz tabulka „Env proměnné (production)“ níže |
 
+**Resend (klíč a doména):** `RESEND_API_KEY` nikdy necommitovat – jen Vercel / lokální `.env.local`. Po úniku klíče ho v [Resend → API Keys](https://resend.com/api-keys) zruš, vytvoř nový, nastav na Vercelu a **Redeploy**. Vlastní odesílatel (`RESEND_FROM_EMAIL` nebo generovaný From přes `RESEND_FROM_DOMAIN`) vyžaduje ověřenou doménu v Resend **Domains** (DNS).
+
 **E-maily (From / Reply-To):** U přihlášeného poradce aplikace sestaví **From** jako zobrazované jméno + adresa `jmeno.prijmeni.<suffix>@RESEND_FROM_DOMAIN` (suffix z userId kvůli jednoznačnosti), pokud je doména známa. **Reply-To** = `user_profiles.email` → jinak Supabase **user.email** → jinak `RESEND_REPLY_TO`. Cron **service-reminders** (bez přihlášeného uživatele): **Reply-To** = `tenants.notification_email`, pak `RESEND_REPLY_TO`. Viz [`advisor-mail-headers.ts`](../apps/web/src/lib/email/advisor-mail-headers.ts).
 
 4. Po změně env často stačí **Redeploy** posledního deploye (Deployments → … → Redeploy).

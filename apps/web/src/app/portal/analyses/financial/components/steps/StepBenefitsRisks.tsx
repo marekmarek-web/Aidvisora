@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
-import type { CompanyRisks, CompanyRiskDetails } from "@/lib/analyses/financial/types";
+import type { CompanyRisks, CompanyRiskDetails, CompanyRiskLineDetail } from "@/lib/analyses/financial/types";
 import { STATE_PENSION_TAX_LIMIT_ANNUAL, STATE_PENSION_TAX_REFUND_ANNUAL } from "@/lib/analyses/financial/types";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import {
@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
+import { CurrencyCzkInput } from "../CurrencyCzkInput";
 
 const BENEFIT_OPTIONS: { key: "dps" | "dip" | "izp"; label: string; subtitle: string; Icon: typeof PiggyBank; iconBg: string }[] = [
   { key: "dps", label: "DPS", subtitle: "Penzijní připojištění", Icon: PiggyBank, iconBg: "bg-blue-100 text-blue-600" },
@@ -75,7 +76,9 @@ export function StepBenefitsRisks() {
     setData({ companyRisks: { ...risks, ...patch } });
   };
 
-  const setRiskDetail = (risk: "property" | "interruption" | "liability", patch: { limit?: number; contractYears?: number }) => {
+  type RiskDetailKey = keyof CompanyRiskDetails;
+
+  const setRiskDetail = (risk: RiskDetailKey, patch: Partial<CompanyRiskLineDetail>) => {
     const next: CompanyRiskDetails = { ...riskDetails };
     next[risk] = { ...(next[risk] ?? {}), ...patch };
     setData({ companyRiskDetails: next });
@@ -309,10 +312,6 @@ export function StepBenefitsRisks() {
                 </div>
               )}
             </div>
-            <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200">
-              <p className="font-bold text-slate-800 mb-2 text-sm">Co se stane s 1000 Kč nákladu firmy?</p>
-              <p className="text-sm text-slate-600">U mzdy jde zaměstnanci čistě cca 550 Kč, stát bere odvody. U benefitů jde 100 % zaměstnanci / vám.</p>
-            </div>
           </section>
         </div>
       )}
@@ -321,7 +320,14 @@ export function StepBenefitsRisks() {
         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
           <h3 className="text-lg font-bold text-slate-800 mb-4">Jaká pojištění má firma?</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {RISK_OPTIONS.map(({ key, label, subtitle, Icon, iconBg, hasDetail, tooltip }) => (
+            {RISK_OPTIONS.map(({ key, label, subtitle, Icon, iconBg, hasDetail, tooltip }) => {
+              const rk = key as keyof CompanyRiskDetails;
+              const d = riskDetails[rk];
+              const curPrem = d?.currentPremiumMonthly;
+              const propPrem = d?.proposedPremiumMonthly;
+              const monthlySaving =
+                curPrem != null && propPrem != null && curPrem > propPrem ? curPrem - propPrem : null;
+              return (
               <div
                 key={key}
                 className={`bg-white border-2 rounded-xl p-4 transition-all ${
@@ -352,13 +358,12 @@ export function StepBenefitsRisks() {
                 {hasDetail && risks[key] && (key === "property" || key === "interruption" || key === "liability") && (
                   <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-0.5">Pojistný limit (cca) Kč</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={riskDetails[key]?.limit ?? ""}
-                        onChange={(e) => setRiskDetail(key, { limit: parseFloat(e.target.value) || undefined })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm min-h-[40px]"
+                      <label className="block text-xs font-semibold text-slate-600 mb-0.5">Pojistný limit</label>
+                      <CurrencyCzkInput
+                        value={riskDetails[key]?.limit}
+                        onChange={(v: number | undefined) => setRiskDetail(key, { limit: v })}
+                        placeholder="0"
+                        unitLabel="Kč"
                       />
                     </div>
                     <div>
@@ -373,8 +378,43 @@ export function StepBenefitsRisks() {
                     </div>
                   </div>
                 )}
+                {risks[key] && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Pojistné – srovnání</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <span className="block text-xs font-semibold text-slate-600 mb-1">Aktuálně platí</span>
+                        <CurrencyCzkInput
+                          value={d?.currentPremiumMonthly}
+                          onChange={(v: number | undefined) => setRiskDetail(rk, { currentPremiumMonthly: v })}
+                          placeholder="0"
+                          unitLabel="Kč/měs."
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-slate-600 mb-1">Návrh (nově)</span>
+                        <CurrencyCzkInput
+                          value={d?.proposedPremiumMonthly}
+                          onChange={(v: number | undefined) => setRiskDetail(rk, { proposedPremiumMonthly: v })}
+                          placeholder="0"
+                          unitLabel="Kč/měs."
+                        />
+                      </div>
+                      <div className="flex flex-col justify-end min-h-[40px] rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                        <span className="text-xs font-semibold text-slate-500">Úspora měsíčně</span>
+                        <span className="text-sm font-bold text-emerald-700">
+                          {monthlySaving != null && monthlySaving > 0 ? formatCzk(monthlySaving) : "—"}
+                        </span>
+                        {monthlySaving != null && monthlySaving > 0 && (
+                          <span className="text-xs text-slate-500">Rok: {formatCzk(monthlySaving * 12)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            );
+            })}
           </div>
           <div className="mt-6 p-4 bg-white rounded-xl border border-slate-200">
             <div className="flex items-center justify-between mb-2">

@@ -20,6 +20,8 @@ export const contractReviewCorrections = pgTable("contract_review_corrections", 
   confidenceOverride: jsonb("confidence_override"),
   ignoredWarnings: jsonb("ignored_warnings"),
   correctedBy: text("corrected_by"),
+  /** Structured diff from compareExtractedToCorrected (Plan 4 correction learning). */
+  comparisonDelta: jsonb("comparison_delta"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

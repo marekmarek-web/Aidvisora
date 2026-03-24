@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decideReviewStatus } from "../review-decision-engine";
+import { decideReviewStatus, decideReviewStatusWithReason } from "../review-decision-engine";
 
 function validationResult(valid: boolean, warnings: { code: string; message: string }[] = []) {
   return {
@@ -96,5 +96,49 @@ describe("review-decision-engine", () => {
       extractionFailed: false,
     });
     expect(status).toBe("review_required");
+  });
+
+  it("returns review_required when envelope validation has blocking warnings", () => {
+    const result = decideReviewStatusWithReason({
+      classificationConfidence: 0.9,
+      extractionConfidence: 0.9,
+      validation: validationResult(true),
+      envelopeValidation: validationResult(false, [
+        { code: "PROPOSAL_MARKED_AS_CONTRACT", message: "conflict" },
+      ]),
+      inputMode: "text_pdf",
+      extractionFailed: false,
+    });
+    expect(result.status).toBe("review_required");
+    expect(result.reason).toBe("envelope_validation_blocking");
+  });
+
+  it("returns review_required when envelope has PROPOSAL_MARKED_AS_CONTRACT critical warning", () => {
+    const result = decideReviewStatusWithReason({
+      classificationConfidence: 0.9,
+      extractionConfidence: 0.9,
+      validation: validationResult(true),
+      envelopeValidation: {
+        valid: true,
+        warnings: [{ code: "PROPOSAL_MARKED_AS_CONTRACT", message: "x" }],
+        reasonsForReview: [],
+      },
+      inputMode: "text_pdf",
+      extractionFailed: false,
+    });
+    expect(result.status).toBe("review_required");
+    expect(result.reason).toBe("envelope_classification_conflict");
+  });
+
+  it("returns extracted with reason null when no issues", () => {
+    const result = decideReviewStatusWithReason({
+      classificationConfidence: 0.9,
+      extractionConfidence: 0.9,
+      validation: validationResult(true),
+      inputMode: "text_pdf",
+      extractionFailed: false,
+    });
+    expect(result.status).toBe("extracted");
+    expect(result.reason).toBeNull();
   });
 });

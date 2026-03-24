@@ -6,6 +6,7 @@ import { selectStrategyTotals } from "@/lib/analyses/financial/selectors";
 import { getProductName, getStrategyProfileLabel, formatCzk, getProfileRate } from "@/lib/analyses/financial/formatters";
 import { FUND_DETAILS, FUND_LOGOS } from "@/lib/analyses/financial/constants";
 import { TrendingUp, PieChart } from "lucide-react";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { EmbeddedInvestmentProjection } from "@/app/portal/calculators/_components/investment/EmbeddedInvestmentProjection";
 
 const RETIREMENT_AGE = 65;
@@ -194,17 +195,16 @@ export function StepStrategy() {
                   <div className="text-xs text-slate-500 mb-2">{getTypeLabel(inv.type)}</div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <label className="text-xs font-semibold text-slate-600">Zhodnocení:</label>
-                    <select
-                      value={getSelectYield(inv.productKey, inv.annualRate)}
-                      onChange={(e) => setYield(inv, parseFloat(e.target.value))}
-                      className="min-h-[44px] px-3 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                    >
-                      {getYieldOptions(inv.productKey).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="min-w-[140px] flex-1">
+                      <CustomDropdown
+                        value={String(getSelectYield(inv.productKey, inv.annualRate))}
+                        onChange={(id) => setYield(inv, parseFloat(id))}
+                        options={getYieldOptions(inv.productKey).map((opt) => ({
+                          id: String(opt.value),
+                          label: opt.label,
+                        }))}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <div>

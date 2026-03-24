@@ -3,7 +3,10 @@ import type {
   DocumentProcessingJobType,
   DocumentProcessingStatus,
   DocumentProcessingStage,
+  DocumentBusinessStatus,
   DocumentAiInputSource,
+  DocumentSourceChannel,
+  DocumentInputMode,
 } from "db";
 
 export type ProcessingInput = {
@@ -15,6 +18,7 @@ export type ProcessingInput = {
   pageCount: number | null;
   isScanLike: boolean | null;
   hasTextLayer: boolean | null;
+  sourceChannel?: DocumentSourceChannel | null;
 };
 
 export type ProcessingOutput = {
@@ -48,10 +52,40 @@ export type OrchestratorResult = {
   processingStage: DocumentProcessingStage;
   aiInputSource: DocumentAiInputSource;
   ocrPdfPath?: string;
+  normalizedPdfPath?: string;
   markdownPath?: string;
   markdownContent?: string;
   extractJsonPath?: string;
+  detectedInputMode?: DocumentInputMode;
+  readabilityScore?: number;
+  preprocessingWarnings?: string[];
+  pageTextMap?: Record<number, string>;
   error?: string;
 };
 
-export { type DocumentProcessingProvider, type DocumentProcessingJobType };
+/**
+ * Standardized internal document representation after Adobe preprocessing.
+ * All downstream pipeline stages work over this unified format,
+ * regardless of whether the original was a text PDF, scan, or photo.
+ */
+export type NormalizedDocument = {
+  documentId: string;
+  tenantId: string;
+  sourceChannel: DocumentSourceChannel;
+  originalFilePath: string;
+  normalizedPdfPath: string | null;
+  adobeJobId: string | null;
+  adobeProcessingStatus: "pending" | "running" | "completed" | "failed";
+  pageCount: number | null;
+  inputMode: DocumentInputMode;
+  readabilityScore: number;
+  preprocessingWarnings: string[];
+  extractedPlainText: string | null;
+  pageTextMap: Record<number, string>;
+  pageImageRefs: string[];
+  documentFingerprint: string | null;
+  createdAt: Date;
+  processedAt: Date | null;
+};
+
+export { type DocumentProcessingProvider, type DocumentProcessingJobType, type DocumentBusinessStatus, type DocumentSourceChannel, type DocumentInputMode };

@@ -3,13 +3,17 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 import { getProcessingProvider } from "./provider";
 import { decideProcessing } from "./heuristics";
+import { estimateOcrConfidenceFromText } from "@/lib/documents/adobe-service";
 import type { ProcessingInput, OrchestratorResult } from "./types";
 import type {
   DocumentAiInputSource,
+  DocumentBusinessStatus,
+  DocumentInputMode,
   DocumentProcessingJobStatus,
   DocumentProcessingProvider,
   DocumentProcessingStage,
   DocumentProcessingStatus,
+  DocumentSourceChannel,
 } from "db";
 
 type DocumentRow = {
@@ -22,6 +26,7 @@ type DocumentRow = {
   pageCount: number | null;
   hasTextLayer: boolean | null;
   isScanLike: boolean | null;
+  sourceChannel?: string | null;
 };
 
 async function getSignedUrl(storagePath: string): Promise<string | null> {
@@ -41,14 +46,23 @@ async function updateDocumentStatus(
     processingProvider: DocumentProcessingProvider;
     processingStatus: DocumentProcessingStatus;
     processingStage: DocumentProcessingStage;
+    businessStatus: DocumentBusinessStatus;
     processingError: string | null;
     processingStartedAt: Date | null;
     processingFinishedAt: Date | null;
     ocrPdfPath: string | null;
+    normalizedPdfPath: string | null;
     markdownPath: string | null;
     markdownContent: string | null;
     extractJsonPath: string | null;
     aiInputSource: DocumentAiInputSource;
+    detectedInputMode: DocumentInputMode;
+    readabilityScore: number;
+    preprocessingWarnings: string[];
+    pageTextMap: Record<number, string>;
+    pageImageRefs: string[];
+    documentFingerprint: string | null;
+    sourceChannel: DocumentSourceChannel;
   }>
 ) {
   await db.update(documents).set({ ...update, updatedAt: new Date() }).where(eq(documents.id, documentId));
@@ -95,6 +109,62 @@ async function updateJob(
     .where(eq(documentProcessingJobs.id, jobId));
 }
 
+function resolveSourceChannel(uploadSource: string | null): DocumentSourceChannel {
+  switch (uploadSource) {
+    case "mobile_camera": return "mobile_camera";
+    case "mobile_gallery": return "mobile_gallery";
+    case "mobile_file": return "mobile_file";
+    case "mobile_share": return "mobile_share";
+    case "mobile_scan": return "mobile_scan";
+    case "email_attachment": return "email_attachment";
+    case "api": return "api";
+    case "ai_drawer": return "ai_drawer";
+    case "backoffice_import": return "backoffice_import";
+    default: return "web_upload";
+  }
+}
+
+function resolveInputMode(doc: DocumentRow, decision: { reason: string }): DocumentInputMode {
+  const isMobile = doc.uploadSource === "mobile_scan" || doc.uploadSource === "mobile_camera";
+  const isImage = doc.mimeType?.startsWith("image/") ?? false;
+  if (isImage || isMobile) return "image_document";
+  if (doc.isScanLike && doc.hasTextLayer) return "mixed_pdf";
+  if (doc.isScanLike) return "scanned_pdf";
+  if (doc.hasTextLayer) return "text_pdf";
+  if (decision.reason === "unsupported_mime") return "unsupported";
+  return "scanned_pdf";
+}
+
+function computeReadabilityScore(
+  hasText: boolean,
+  markdownContent: string | undefined,
+  pageCount: number | null,
+  isScan: boolean,
+  hasNormalizedPdf: boolean
+): number {
+  const textLength = markdownContent?.trim().length ?? 0;
+  const est = estimateOcrConfidenceFromText(textLength, hasNormalizedPdf, hasText);
+  let score = Math.round(est * 100);
+  if (isScan && textLength < 80) score = Math.min(score, 45);
+  const pages = Math.max(pageCount ?? 1, 1);
+  const charsPerPage = textLength / pages;
+  if (charsPerPage > 500) score = Math.max(score, 95);
+  return score;
+}
+
+function buildPageTextMap(markdownContent: string | undefined, pageCount: number | null): Record<number, string> {
+  if (!markdownContent) return {};
+  const pages = Math.max(pageCount ?? 1, 1);
+  if (pages === 1) return { 1: markdownContent };
+  const pageBreakPattern = /(?:---\s*page\s*\d+\s*---|\f|<!-- page \d+ -->)/gi;
+  const parts = markdownContent.split(pageBreakPattern).filter(Boolean);
+  const map: Record<number, string> = {};
+  for (let i = 0; i < parts.length; i++) {
+    map[i + 1] = parts[i].trim();
+  }
+  return map;
+}
+
 export async function processDocument(
   doc: DocumentRow,
   requestedBy: string | null
@@ -110,17 +180,25 @@ export async function processDocument(
     isScanLike: doc.isScanLike,
   });
 
+  const sourceChannel = resolveSourceChannel(doc.uploadSource);
+  const inputMode = resolveInputMode(doc, decision);
+  const warnings: string[] = [];
+
+  await updateDocumentStatus(doc.id, { sourceChannel });
+
   if (!decision.shouldProcess || !provider.isEnabled()) {
     await updateDocumentStatus(doc.id, {
       processingStatus: "skipped",
       processingStage: "none",
       processingProvider: provider.name,
+      detectedInputMode: inputMode,
     });
     return {
       success: true,
       processingStatus: "skipped",
       processingStage: "none",
       aiInputSource: "none",
+      detectedInputMode: inputMode,
       error: decision.reason,
     };
   }
@@ -137,10 +215,11 @@ export async function processDocument(
 
   await updateDocumentStatus(doc.id, {
     processingProvider: provider.name,
-    processingStatus: "processing",
-    processingStage: "none",
+    processingStatus: "preprocessing_running",
+    processingStage: "preprocessing",
     processingStartedAt: new Date(),
     processingError: null,
+    detectedInputMode: inputMode,
   });
 
   const input: ProcessingInput = {
@@ -152,17 +231,24 @@ export async function processDocument(
     pageCount: doc.pageCount,
     isScanLike: doc.isScanLike,
     hasTextLayer: doc.hasTextLayer,
+    sourceChannel,
   };
 
   let ocrPdfPath: string | undefined;
+  let normalizedPdfPath: string | undefined;
   let markdownPath: string | undefined;
   let markdownContent: string | undefined;
   let extractJsonPath: string | undefined;
-  let currentStage: DocumentProcessingStage = "none";
+  let currentStage: DocumentProcessingStage = "preprocessing";
   let aiInputSource: DocumentAiInputSource = "none";
 
   try {
-    // Step 1: OCR (if needed)
+    if (provider.name === "adobe") {
+      warnings.push(
+        "page_images:not_implemented — use PDF + markdown for AI until Adobe page raster export is wired."
+      );
+    }
+
     if (decision.runOcr) {
       currentStage = "ocr";
       await updateDocumentStatus(doc.id, { processingStage: "ocr" });
@@ -192,12 +278,14 @@ export async function processDocument(
 
       if (ocrResult.success && ocrResult.outputPath) {
         ocrPdfPath = ocrResult.outputPath;
+        normalizedPdfPath = ocrResult.outputPath;
         aiInputSource = "ocr_text";
         input.fileUrl = (await getSignedUrl(ocrResult.outputPath)) ?? input.fileUrl;
+      } else if (ocrResult.error) {
+        warnings.push(`OCR warning: ${ocrResult.error}`);
       }
     }
 
-    // Step 2: Markdown conversion
     if (decision.runMarkdown) {
       currentStage = "markdown";
       await updateDocumentStatus(doc.id, { processingStage: "markdown" });
@@ -229,10 +317,16 @@ export async function processDocument(
         markdownPath = mdResult.outputPath;
         markdownContent = mdResult.outputContent;
         aiInputSource = "markdown";
+      } else if (mdResult.error) {
+        warnings.push(`Markdown warning: ${mdResult.error}`);
       }
     }
 
-    // Step 3: Extract JSON (if enabled)
+    await updateDocumentStatus(doc.id, {
+      processingStatus: "normalized",
+      processingStage: "extract",
+    });
+
     if (decision.runExtract) {
       currentStage = "extract";
       await updateDocumentStatus(doc.id, { processingStage: "extract" });
@@ -263,8 +357,19 @@ export async function processDocument(
       if (extractResult.success && extractResult.outputPath) {
         extractJsonPath = extractResult.outputPath;
         if (!markdownContent) aiInputSource = "extract";
+      } else if (extractResult.error) {
+        warnings.push(`Extract warning: ${extractResult.error}`);
       }
     }
+
+    const readability = computeReadabilityScore(
+      doc.hasTextLayer ?? false,
+      markdownContent,
+      doc.pageCount,
+      doc.isScanLike ?? false,
+      Boolean(normalizedPdfPath || ocrPdfPath)
+    );
+    const pageTextMap = buildPageTextMap(markdownContent, doc.pageCount);
 
     currentStage = "completed";
     await updateDocumentStatus(doc.id, {
@@ -272,10 +377,14 @@ export async function processDocument(
       processingStage: "completed",
       processingFinishedAt: new Date(),
       ocrPdfPath: ocrPdfPath ?? null,
+      normalizedPdfPath: normalizedPdfPath ?? ocrPdfPath ?? null,
       markdownPath: markdownPath ?? null,
       markdownContent: markdownContent ?? null,
       extractJsonPath: extractJsonPath ?? null,
       aiInputSource,
+      readabilityScore: readability,
+      preprocessingWarnings: warnings.length ? warnings : [],
+      pageTextMap: Object.keys(pageTextMap).length ? pageTextMap : null as unknown as Record<number, string>,
     });
 
     return {
@@ -284,23 +393,32 @@ export async function processDocument(
       processingStage: "completed",
       aiInputSource,
       ocrPdfPath,
+      normalizedPdfPath,
       markdownPath,
       markdownContent,
       extractJsonPath,
+      detectedInputMode: inputMode,
+      readabilityScore: readability,
+      preprocessingWarnings: warnings,
+      pageTextMap,
     };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Processing failed";
+    warnings.push(errorMessage);
     await updateDocumentStatus(doc.id, {
-      processingStatus: "failed",
+      processingStatus: "preprocessing_failed",
       processingStage: currentStage,
       processingFinishedAt: new Date(),
       processingError: errorMessage,
+      preprocessingWarnings: warnings,
     });
     return {
       success: false,
-      processingStatus: "failed",
+      processingStatus: "preprocessing_failed",
       processingStage: currentStage,
       aiInputSource,
+      detectedInputMode: inputMode,
+      preprocessingWarnings: warnings,
       error: errorMessage,
     };
   }

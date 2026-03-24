@@ -131,11 +131,24 @@ export interface CompanyRisks {
   cyber?: boolean;
 }
 
-/** Detail u vybraných rizik (Majetek, Přerušení, Odpovědnost) – pojistný limit, stáří smlouvy. */
+/** Jedna kategorie firemního rizika – limit, smlouva, srovnání pojistného (aktuální vs. návrh). */
+export interface CompanyRiskLineDetail {
+  limit?: number;
+  contractYears?: number;
+  /** Aktuální měsíční pojistné (stav klienta). */
+  currentPremiumMonthly?: number;
+  /** Navrhované měsíční pojistné (návrh poradce). */
+  proposedPremiumMonthly?: number;
+}
+
+/** Detail u všech sledovaných rizik firmy. */
 export interface CompanyRiskDetails {
-  property?: { limit?: number; contractYears?: number };
-  interruption?: { limit?: number; contractYears?: number };
-  liability?: { limit?: number; contractYears?: number };
+  property?: CompanyRiskLineDetail;
+  interruption?: CompanyRiskLineDetail;
+  liability?: CompanyRiskLineDetail;
+  director?: CompanyRiskLineDetail;
+  fleet?: CompanyRiskLineDetail;
+  cyber?: CompanyRiskLineDetail;
 }
 
 export interface AssetListItem {

@@ -105,7 +105,7 @@ type Props = {
   doc: ExtractionDocument;
   onBack: () => void;
   onDiscard: () => void;
-  onApprove: () => void;
+  onApprove: (editedFields: Record<string, string>) => void | Promise<void>;
   onReject?: (reason?: string) => void;
   onApply?: () => void;
   onSelectClient?: (clientId: string) => void;
@@ -191,6 +191,10 @@ export function AIReviewExtractionShell({
     // TODO: wire to actual task creation flow
   }, []);
 
+  const handleApproveClick = useCallback(() => {
+    void Promise.resolve(onApprove(state.editedFields));
+  }, [onApprove, state.editedFields]);
+
   return (
     <div className="flex flex-col h-full min-h-[600px] bg-[#f8fafc] font-sans text-slate-800 overflow-hidden -m-4 md:-m-6">
       <style>{`
@@ -207,7 +211,7 @@ export function AIReviewExtractionShell({
         doc={doc}
         onBack={onBack}
         onDiscard={onDiscard}
-        onApprove={onApprove}
+        onApprove={handleApproveClick}
         isApproving={isApproving}
         canApproveReject={canApproveReject}
         canApply={canApply}
@@ -269,6 +273,131 @@ export function AIReviewExtractionShell({
           </div>
         </div>
       )}
+
+      {doc.pipelineInsights && !isFailed && !isProcessing ? (
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 md:px-6">
+          <div className="max-w-5xl mx-auto space-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-black uppercase tracking-widest text-slate-600">
+              {doc.pipelineInsights.extractionRoute ? (
+                <span>
+                  Trasa:{" "}
+                  <span className="text-indigo-700">{doc.pipelineInsights.extractionRoute}</span>
+                </span>
+              ) : null}
+              {doc.pipelineInsights.normalizedPipelineClassification ? (
+                <span>
+                  Typ:{" "}
+                  <span className="text-slate-900">{doc.pipelineInsights.normalizedPipelineClassification}</span>
+                </span>
+              ) : null}
+              {doc.pipelineInsights.preprocessStatus ? (
+                <span>
+                  Preprocess: <span className="text-slate-900">{doc.pipelineInsights.preprocessStatus}</span>
+                </span>
+              ) : null}
+            </div>
+            {doc.applyGate ? (
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${
+                  doc.applyGate.readiness === "ready_for_apply"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : doc.applyGate.readiness === "blocked_for_apply"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {doc.applyGate.readiness === "ready_for_apply"
+                  ? "Připraveno k aplikaci"
+                  : doc.applyGate.readiness === "blocked_for_apply"
+                    ? "Blokováno"
+                    : "Vyžaduje kontrolu"}
+              </span>
+            ) : null}
+            {doc.applyGate &&
+            doc.applyGate.blockedReasons.length > 0 ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                <strong>Důvody blokace:</strong>{" "}
+                {doc.applyGate.blockedReasons.join(", ")}
+              </div>
+            ) : null}
+            {doc.applyGate &&
+            doc.applyGate.warnings.length > 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <strong>Varování:</strong>{" "}
+                {doc.applyGate.warnings.join(", ")}
+              </div>
+            ) : null}
+            {doc.pipelineInsights.preprocessStatus === "failed" ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Adobe preprocessing selhal — pipeline pokračovala na originálním PDF. Výsledek může být méně přesný;
+                doporučujeme porovnat s originálem.
+              </div>
+            ) : null}
+            {typeof doc.pipelineInsights.textCoverageEstimate === "number" &&
+            doc.pipelineInsights.textCoverageEstimate < 0.35 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Nízký odhad pokrytí textu (cca {Math.round(doc.pipelineInsights.textCoverageEstimate * 100)} %). U
+                skenů zkontrolujte extrahovaná pole proti dokumentu.
+              </div>
+            ) : null}
+            {(doc.reasonsForReview ?? []).some(
+              (r) =>
+                r.includes("proposal_or_modelation") ||
+                r.includes("proposal_not_final") ||
+                r.includes("offer_not_binding")
+            ) ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                Upozornění: dokument vypadá jako návrh, modelace nebo nezávazná nabídka — není automaticky
+                považován za finální podepsanou smlouvu.
+              </div>
+            ) : null}
+            {doc.pipelineInsights.paymentPreview &&
+            Object.keys(doc.pipelineInsights.paymentPreview).length > 0 ? (
+              <div className="rounded-xl border border-emerald-200 bg-white p-3 shadow-sm">
+                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-900 mb-2">
+                  Platební údaje (náhled)
+                </h4>
+                <dl className="grid grid-cols-1 gap-1.5 text-xs text-slate-700 sm:grid-cols-2">
+                  {(
+                    [
+                      ["Komu (instituce)", doc.pipelineInsights.paymentPreview.institutionName],
+                      ["Produkt", doc.pipelineInsights.paymentPreview.productName],
+                      ["Plátce", doc.pipelineInsights.paymentPreview.payerName],
+                      ["Příjemce", doc.pipelineInsights.paymentPreview.beneficiaryName],
+                      ["Částka", doc.pipelineInsights.paymentPreview.amount],
+                      ["Měna", doc.pipelineInsights.paymentPreview.currency],
+                      ["Frekvence", doc.pipelineInsights.paymentPreview.paymentFrequency],
+                      [
+                        "Splatnost / datum",
+                        doc.pipelineInsights.paymentPreview.dueDate || doc.pipelineInsights.paymentPreview.dueDay,
+                      ],
+                      ["Kanál", doc.pipelineInsights.paymentPreview.paymentChannel],
+                      ["Variabilní symbol", doc.pipelineInsights.paymentPreview.variableSymbol],
+                      ["Konstantní symbol", doc.pipelineInsights.paymentPreview.constantSymbol],
+                      ["Specifický symbol", doc.pipelineInsights.paymentPreview.specificSymbol],
+                      ["Reference", doc.pipelineInsights.paymentPreview.reference],
+                      ["IBAN (nápověda)", doc.pipelineInsights.paymentPreview.ibanHint],
+                    ] as [string, unknown][]
+                  ).map(([k, v]) => {
+                    if (v == null || String(v).trim() === "") return null;
+                    return (
+                      <div key={k} className="flex flex-col gap-0.5">
+                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{k}</dt>
+                        <dd className="font-medium text-slate-900">{String(v)}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+                {doc.pipelineInsights.paymentPreview.needsHumanReview ? (
+                  <p className="mt-2 text-[11px] font-semibold text-amber-800">
+                    Vyžaduje kontrolu poradce před sdílením s klientem.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {/* Mobile tab switcher */}
       <div className="lg:hidden flex border-b border-slate-200 bg-white">

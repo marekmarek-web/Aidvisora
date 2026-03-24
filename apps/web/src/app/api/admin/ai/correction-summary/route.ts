@@ -1,0 +1,26 @@
+import { NextResponse } from "next/server";
+import { getMembership } from "@/lib/auth/get-membership";
+import { getCorrectionSummary } from "@/lib/ai/quality-metrics-repository";
+
+export const dynamic = "force-dynamic";
+
+const USER_ID_HEADER = "x-user-id";
+
+export async function GET(request: Request) {
+  const userId = request.headers.get(USER_ID_HEADER);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const membership = await getMembership(userId);
+  if (!membership || !["admin", "director"].includes(membership.roleName.toLowerCase())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  const days = url.searchParams.get("days");
+  const windowDays = days ? parseInt(days, 10) : undefined;
+
+  const summary = await getCorrectionSummary(membership.tenantId, windowDays);
+  return NextResponse.json(summary);
+}

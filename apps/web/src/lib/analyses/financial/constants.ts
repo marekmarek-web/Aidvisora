@@ -102,7 +102,6 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     currency: 'EUR',
     minInvestment: '1 000 000 Kč',
     category: 'Privátní kapitál',
-    heroImage: '/logos/Penta.png',
     galleryImages: [
       '/report-assets/penta/penta1.png',
       '/report-assets/penta/penta2.jpg',

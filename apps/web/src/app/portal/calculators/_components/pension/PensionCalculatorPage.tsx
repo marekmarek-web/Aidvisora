@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
@@ -9,10 +9,14 @@ import { PensionResultsPanel } from "./PensionResultsPanel";
 import { DEFAULT_STATE } from "@/lib/calculators/pension/pension.config";
 import { runCalculations } from "@/lib/calculators/pension/pension.engine";
 import type { PensionState } from "@/lib/calculators/pension/pension.types";
+import { buildPensionPdfSections } from "@/lib/calculators/pdf";
+import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
 
 export function PensionCalculatorPage() {
   const [state, setState] = useState<PensionState>({ ...DEFAULT_STATE });
   const result = useMemo(() => runCalculations(state), [state]);
+
+  const getPdfSections = useCallback(() => buildPensionPdfSections(state, result), [state, result]);
 
   return (
     <div className="pt-0 pb-56 lg:pb-0">
@@ -22,6 +26,13 @@ export function PensionCalculatorPage() {
             eyebrow="Kalkulačka penze · 2026"
             title="Penzijní kalkulačka"
             subtitle="Odhad státního důchodu, měsíční mezery k cílové rentě a nutné měsíční investice."
+            actions={
+              <CalculatorPdfExportButton
+                documentTitle="Penzijní kalkulačka – přehled výpočtu"
+                filePrefix="penze"
+                getSections={getPdfSections}
+              />
+            }
           />
         </div>
 

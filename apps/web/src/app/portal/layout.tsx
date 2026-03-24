@@ -59,7 +59,7 @@ export default async function PortalLayout({
     cookieStore,
   });
   if (mobileUiEnabled) {
-    return <MobilePortalApp />;
+    return <MobilePortalApp showTeamOverview={showTeamOverview} />;
   }
   return <PortalShell showTeamOverview={showTeamOverview}>{children}</PortalShell>;
 }

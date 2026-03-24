@@ -17,6 +17,7 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
 import { detectMagicMimeTypeFromBytes, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
 import { tryBeginIdempotencyWindow } from "@/lib/security/idempotency";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
+import { preprocessForAiExtraction } from "@/lib/documents/processing/preprocess-for-ai";
 
 export const dynamic = "force-dynamic";
 /** OpenAI pipeline může trvat dlouho (2× volání s PDF po optimalizaci). Na Vercelu platí limit plánu (Pro často až 300 s). */
@@ -201,7 +202,101 @@ export async function POST(request: Request) {
       );
     }
 
-    const pipelineResult = await runContractUnderstandingPipeline(fileUrl, mimeType);
+    let preprocessedUrl = fileUrl;
+    let adobePreprocessResult: Awaited<ReturnType<typeof preprocessForAiExtraction>> | null = null;
+    let preprocessThrew = false;
+    const preprocessStartedAt = Date.now();
+    let preprocessDurationMs: number | undefined;
+    let pipelineDurationMs: number | undefined;
+    try {
+      adobePreprocessResult = await preprocessForAiExtraction(
+        fileUrl,
+        storagePath,
+        tenantId,
+        id,
+        mimeType
+      );
+      preprocessDurationMs = Date.now() - preprocessStartedAt;
+      preprocessedUrl = adobePreprocessResult.fileUrl;
+
+      if (adobePreprocessResult.preprocessed) {
+        await updateContractReview(reviewId, tenantId, {
+          extractionTrace: {
+            adobePreprocessed: true,
+            adobeJobIds: adobePreprocessResult.providerJobIds,
+            adobeWarnings: adobePreprocessResult.warnings,
+            readabilityScore: adobePreprocessResult.readabilityScore,
+            ocrConfidenceEstimate: adobePreprocessResult.ocrConfidenceEstimate,
+            ocrPdfPath: adobePreprocessResult.ocrPdfPath,
+            preprocessDurationMs,
+          },
+        });
+      }
+    } catch (preprocessErr) {
+      preprocessThrew = true;
+      preprocessDurationMs = Date.now() - preprocessStartedAt;
+      const preprocessMsg = preprocessErr instanceof Error ? preprocessErr.message : String(preprocessErr);
+      console.warn("[contracts/upload] Adobe preprocessing failed, continuing with original", preprocessMsg);
+    }
+
+    const pipelineStartedAt = Date.now();
+    const preprocessMeta =
+      adobePreprocessResult != null
+        ? {
+            adobePreprocessed: adobePreprocessResult.preprocessed,
+            preprocessStatus: adobePreprocessResult.preprocessStatus,
+            preprocessMode: adobePreprocessResult.preprocessMode,
+            preprocessWarnings: adobePreprocessResult.warnings,
+            ocrConfidenceEstimate: adobePreprocessResult.ocrConfidenceEstimate,
+            readabilityScore: adobePreprocessResult.readabilityScore,
+            preprocessDurationMs,
+            normalizedPdfPath: adobePreprocessResult.normalizedPdfPath,
+            markdownContentLength: adobePreprocessResult.markdownContent?.length ?? 0,
+            pageCountEstimate: adobePreprocessResult.pageCountEstimate,
+          }
+        : preprocessThrew
+          ? {
+              preprocessStatus: "failed",
+              preprocessMode: "adobe",
+              adobePreprocessed: false,
+              preprocessWarnings: ["preprocess_exception"],
+              preprocessDurationMs,
+            }
+          : {
+              preprocessStatus: "skipped",
+              preprocessMode: "none",
+              adobePreprocessed: false,
+            };
+
+    console.info(
+      "[contracts/upload] preprocess_done",
+      JSON.stringify({
+        reviewId,
+        preprocessStatus: preprocessMeta.preprocessStatus,
+        preprocessMode: preprocessMeta.preprocessMode,
+        adobePreprocessed: preprocessMeta.adobePreprocessed,
+        durationMs: preprocessDurationMs,
+      })
+    );
+
+    const pipelineResult = await runContractUnderstandingPipeline(preprocessedUrl, mimeType, {
+      ruleBasedTextHint: adobePreprocessResult?.markdownContent ?? null,
+      preprocessMeta,
+    });
+    pipelineDurationMs = Date.now() - pipelineStartedAt;
+
+    if (pipelineResult.ok) {
+      console.info(
+        "[contracts/upload] pipeline_ok",
+        JSON.stringify({
+          reviewId,
+          processingStatus: pipelineResult.processingStatus,
+          route: pipelineResult.extractionTrace?.extractionRoute,
+          normalized: pipelineResult.extractionTrace?.normalizedPipelineClassification,
+          documentType: pipelineResult.detectedDocumentType,
+        })
+      );
+    }
 
     if (!pipelineResult.ok) {
       const errDetail =
@@ -209,12 +304,28 @@ export async function POST(request: Request) {
           ? ` ${typeof pipelineResult.details === "string" ? pipelineResult.details : JSON.stringify(pipelineResult.details).slice(0, 200)}`
           : "";
       const isRateLimit = pipelineResult.errorCode === "OPENAI_RATE_LIMIT";
+      const failTrace = {
+        ...(pipelineResult.extractionTrace ?? {}),
+        preprocessDurationMs,
+        pipelineDurationMs,
+        ...(adobePreprocessResult?.preprocessed
+          ? {
+              adobePreprocessed: true,
+              adobeJobIds: adobePreprocessResult.providerJobIds,
+              adobeWarnings: adobePreprocessResult.warnings,
+              readabilityScore: adobePreprocessResult.readabilityScore,
+              ocrPdfPath: adobePreprocessResult.ocrPdfPath,
+              normalizedPdfPath: adobePreprocessResult.normalizedPdfPath,
+              ocrConfidenceEstimate: adobePreprocessResult.ocrConfidenceEstimate,
+            }
+          : {}),
+      };
       await updateContractReview(reviewId, tenantId, {
         processingStatus: "failed",
         errorMessage: isRateLimit
           ? pipelineResult.errorMessage
           : pipelineResult.errorMessage + errDetail,
-        extractionTrace: pipelineResult.extractionTrace ?? undefined,
+        extractionTrace: failTrace,
       });
       await logAudit({
         tenantId,
@@ -291,6 +402,23 @@ export async function POST(request: Request) {
       reasonsForReview.push("missing_existing_contract_match");
     }
 
+    const mergedTrace = {
+      ...pipelineResult.extractionTrace,
+      preprocessDurationMs,
+      pipelineDurationMs,
+      ...(adobePreprocessResult?.preprocessed
+        ? {
+            adobePreprocessed: true,
+            adobeJobIds: adobePreprocessResult.providerJobIds,
+            adobeWarnings: adobePreprocessResult.warnings,
+            readabilityScore: adobePreprocessResult.readabilityScore,
+            ocrPdfPath: adobePreprocessResult.ocrPdfPath,
+            normalizedPdfPath: adobePreprocessResult.normalizedPdfPath,
+            ocrConfidenceEstimate: adobePreprocessResult.ocrConfidenceEstimate,
+          }
+        : {}),
+    };
+
     await updateContractReview(reviewId, tenantId, {
       processingStatus: pipelineResult.processingStatus,
       extractedPayload: data,
@@ -304,7 +432,7 @@ export async function POST(request: Request) {
       detectedDocumentSubtype: data.documentClassification.subtype ?? null,
       lifecycleStatus: data.documentClassification.lifecycleStatus ?? null,
       documentIntent: data.documentClassification.documentIntent ?? null,
-      extractionTrace: pipelineResult.extractionTrace,
+      extractionTrace: mergedTrace,
       validationWarnings: pipelineResult.validationWarnings.length ? pipelineResult.validationWarnings : null,
       fieldConfidenceMap: pipelineResult.fieldConfidenceMap ?? undefined,
       classificationReasons: pipelineResult.classificationReasons.length ? pipelineResult.classificationReasons : null,

@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import { X } from "lucide-react";
+import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
 type ClassName = { className?: string };
 
@@ -9,12 +10,21 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export function MobileAppShell({ children, className }: { children: ReactNode } & ClassName) {
+export function MobileAppShell({
+  children,
+  className,
+  deviceClass = "phone",
+}: {
+  children: ReactNode;
+  deviceClass?: DeviceClass;
+} & ClassName) {
   return (
     <div
       className={cx(
         "min-h-screen bg-slate-50 text-slate-900 flex flex-col",
-        "pb-[calc(80px+var(--safe-area-bottom))]",
+        deviceClass === "phone" && "pb-[calc(80px+var(--safe-area-bottom))]",
+        deviceClass === "tablet" && "pb-[calc(64px+var(--safe-area-bottom))]",
+        deviceClass === "desktop" && "pb-0",
         className
       )}
     >
@@ -29,24 +39,28 @@ export function MobileHeader({
   left,
   right,
   className,
+  deviceClass = "phone",
 }: {
   title: string;
   subtitle?: string;
   left?: ReactNode;
   right?: ReactNode;
+  deviceClass?: DeviceClass;
 } & ClassName) {
   return (
     <header
       className={cx(
         "sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200",
-        "pt-[calc(var(--safe-area-top)+0.5rem)] px-4 pb-3",
+        "pt-[calc(var(--safe-area-top)+0.5rem)] pb-3",
+        deviceClass === "phone" && "px-4",
+        deviceClass === "tablet" && "px-6",
         className
       )}
     >
-      <div className="min-h-[44px] flex items-center justify-between gap-3">
+      <div className={cx("min-h-[44px] flex items-center justify-between gap-3", deviceClass === "tablet" && "max-w-3xl mx-auto")}>
         <div className="min-w-0 flex items-center gap-2">{left}</div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-base font-black truncate text-center">{title}</h1>
+          <h1 className={cx("font-black truncate text-center", deviceClass === "tablet" ? "text-lg" : "text-base")}>{title}</h1>
           {subtitle ? <p className="text-[11px] text-slate-500 text-center truncate">{subtitle}</p> : null}
         </div>
         <div className="min-w-0 flex items-center justify-end gap-2">{right}</div>
@@ -59,10 +73,12 @@ export function MobileBottomNav({
   items,
   activeId,
   onSelect,
+  deviceClass = "phone",
 }: {
   items: Array<{ id: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: number }>;
   activeId: string;
   onSelect: (id: string) => void;
+  deviceClass?: DeviceClass;
 }) {
   return (
     <nav
@@ -71,7 +87,13 @@ export function MobileBottomNav({
         "pb-[max(0.5rem,var(--safe-area-bottom))]"
       )}
     >
-      <div className="grid grid-cols-5 gap-1 px-2 py-2">
+      <div
+        className={cx(
+          deviceClass === "tablet"
+            ? "flex justify-around px-6 py-1.5 max-w-3xl mx-auto"
+            : "grid grid-cols-5 gap-1 px-2 py-2"
+        )}
+      >
         {items.map((item) => {
           const Icon = item.icon;
           const active = item.id === activeId;
@@ -81,19 +103,22 @@ export function MobileBottomNav({
               type="button"
               onClick={() => onSelect(item.id)}
               className={cx(
-                "min-h-[52px] rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
+                "min-h-[44px] rounded-xl",
+                deviceClass === "tablet"
+                  ? "flex items-center gap-2 px-4 py-1.5 text-sm font-bold"
+                  : "flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
                 active ? "text-indigo-700 bg-indigo-50" : "text-slate-500"
               )}
             >
-              <div className="relative">
-                <Icon size={20} />
+              <div className="relative flex-shrink-0">
+                <Icon size={deviceClass === "tablet" ? 18 : 20} />
                 {item.badge && item.badge > 0 ? (
                   <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 ) : null}
               </div>
-              <span className="truncate max-w-[60px]">{item.label}</span>
+              <span className={deviceClass === "tablet" ? "" : "truncate max-w-[60px]"}>{item.label}</span>
             </button>
           );
         })}

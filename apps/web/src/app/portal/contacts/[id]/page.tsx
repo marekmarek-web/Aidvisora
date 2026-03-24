@@ -33,6 +33,7 @@ import { ContactTagsEditor } from "@/app/components/contacts/ContactTagsEditor";
 import { ContactFinancialAnalysesSection } from "@/app/dashboard/contacts/[id]/ContactFinancialAnalysesSection";
 import { ClientFinancialSummaryBlock } from "./ClientFinancialSummaryBlock";
 import { ClientServiceBlock } from "./ClientServiceBlock";
+import { ContactPaymentSetupsSection } from "./ContactPaymentSetupsSection";
 import { ClientReferralSection } from "./ClientReferralSection";
 import { ClientTimeline } from "./ClientTimeline";
 import { Suspense } from "react";
@@ -73,6 +74,8 @@ export default async function ContactDetailPage({
 
       {/* Servis a doporučení */}
       <ClientServiceBlock contactId={id} />
+
+      <ContactPaymentSetupsSection contactId={id} />
 
       {/* Referral systém – kdo doporučil, koho doporučil, hodnota, timing */}
       <ClientReferralSection contactId={id} />

@@ -61,6 +61,10 @@ function addWarning(
   if (reasonPhrase) reasons.push(reasonPhrase);
 }
 
+function fieldExtracted(f: { value?: unknown; status?: string } | undefined): boolean {
+  return Boolean(f && f.status === "extracted" && f.value != null && String(f.value).trim() !== "");
+}
+
 export function validateExtractedContract(payload: {
   contractNumber?: string | null;
   institutionName?: string | null;
@@ -365,15 +369,98 @@ export function validateDocumentEnvelope(payload: {
         "Platební instrukce nesmí být označena jako smlouva.",
         "documentClassification.lifecycleStatus", "payment_instruction_as_contract");
     }
-    const requiredPaymentFields = ["bankAccount", "variableSymbol"];
-    const missingPayment = requiredPaymentFields.filter((k) => {
-      const f = fields[k];
-      return !f || f.status !== "extracted" || f.value == null;
-    });
-    if (missingPayment.length > 0) {
+    const hasAccount =
+      fieldExtracted(fields.bankAccount) ||
+      fieldExtracted(fields.iban) ||
+      fieldExtracted(fields.accountNumber);
+    const hasLinkId =
+      fieldExtracted(fields.variableSymbol) ||
+      fieldExtracted(fields.contractNumber) ||
+      fieldExtracted(fields.investmentReference);
+    if (!hasAccount) {
       addWarning(warnings, reasonsForReview, "INCOMPLETE_PAYMENT_DETAILS",
-        `Platební instrukce neobsahují dost údajů: chybí ${missingPayment.join(", ")}`,
+        "Platební instrukce: chybí účet nebo IBAN.",
         undefined, "incomplete_payment_details");
+    }
+    if (!hasLinkId) {
+      addWarning(warnings, reasonsForReview, "INCOMPLETE_PAYMENT_DETAILS",
+        "Platební instrukce: chybí VS, číslo smlouvy nebo jiný identifikátor platby.",
+        undefined, "incomplete_payment_details");
+    }
+  }
+
+  if (primaryType === "bank_statement") {
+    const hasPeriod =
+      fieldExtracted(fields.statementPeriodFrom) && fieldExtracted(fields.statementPeriodTo);
+    const hasBalances =
+      fieldExtracted(fields.openingBalance) && fieldExtracted(fields.closingBalance);
+    if (!hasBalances) {
+      addWarning(warnings, reasonsForReview, "BANK_STATEMENT_INCOMPLETE",
+        "Výpis z účtu: chybí počáteční nebo konečný zůstatek (§8.8).",
+        "extractedFields.openingBalance", "bank_statement_incomplete");
+    }
+    if (!hasPeriod) {
+      addWarning(warnings, reasonsForReview, "BANK_STATEMENT_INCOMPLETE",
+        "Výpis z účtu: chybí období výpisu.",
+        "extractedFields.statementPeriodFrom", "bank_statement_incomplete");
+    }
+    if (!fieldExtracted(fields.bankName) && !fieldExtracted(fields.institutionName)) {
+      addWarning(warnings, reasonsForReview, "BANK_STATEMENT_INCOMPLETE",
+        "Výpis z účtu: chybí název banky.",
+        undefined, "bank_statement_incomplete");
+    }
+  }
+
+  const incomeTypes = new Set([
+    "income_proof_document",
+    "payslip_document",
+    "income_confirmation",
+    "corporate_tax_return",
+    "self_employed_tax_or_income_document",
+  ]);
+  if (incomeTypes.has(primaryType)) {
+    const hasEmployer =
+      fieldExtracted(fields.employerName) ||
+      fieldExtracted(fields.institutionName) ||
+      fieldExtracted(fields.companyName);
+    const hasPeriod =
+      fieldExtracted(fields.incomePeriod) ||
+      fieldExtracted(fields.statementPeriodFrom) ||
+      fieldExtracted(fields.payPeriod);
+    const hasAmount =
+      fieldExtracted(fields.netIncome) ||
+      fieldExtracted(fields.grossIncome) ||
+      fieldExtracted(fields.incomeAmount);
+    if (!hasEmployer) {
+      addWarning(warnings, reasonsForReview, "INCOME_DOC_INCOMPLETE",
+        "Doklad o příjmu: chybí zaměstnavatel / plátce.",
+        undefined, "income_verification_incomplete");
+    }
+    if (!hasPeriod && !hasAmount) {
+      addWarning(warnings, reasonsForReview, "INCOME_DOC_INCOMPLETE",
+        "Doklad o příjmu: chybí období nebo částka příjmu.",
+        undefined, "income_verification_incomplete");
+    }
+  }
+
+  const loanContractTypes = new Set(["consumer_loan_contract", "consumer_loan_with_payment_protection"]);
+  if (loanContractTypes.has(primaryType)) {
+    const rpsn = fields.rpsn;
+    if (rpsn && rpsn.status === "extracted" && rpsn.value != null) {
+      const raw = String(rpsn.value).replace(/\s/g, "").replace(",", ".").replace(/%/g, "");
+      const n = parseFloat(raw);
+      if (!Number.isNaN(n) && (n < 0 || n > 60)) {
+        addWarning(warnings, reasonsForReview, "LOAN_RPSN_SUSPECT",
+          "RPSN mimo obvyklý rozsah — zkontrolujte extrakci.",
+          "extractedFields.rpsn", "loan_rpsn_suspect");
+      }
+    }
+    if (primaryType === "consumer_loan_contract") {
+      if (!fieldExtracted(fields.installmentCount) && !fieldExtracted(fields.loanTermMonths)) {
+        addWarning(warnings, reasonsForReview, "LOAN_TERMS_INCOMPLETE",
+          "Úvěrová smlouva: chybí počet splátek nebo délka úvěru.",
+          undefined, "loan_terms_incomplete");
+      }
     }
   }
 

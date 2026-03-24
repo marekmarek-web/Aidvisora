@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { addHouseholdMemberFromClient } from "@/app/actions/households";
 
 type AddFamilyMemberModalProps = {
@@ -87,15 +88,15 @@ export function AddFamilyMemberModal({
             <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
               Vztah
             </label>
-            <select
+            <CustomDropdown
               value={role}
-              onChange={(event) => setRole(event.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            >
-              <option value="partner">Partner / Manželka</option>
-              <option value="child">Dítě</option>
-              <option value="member">Jiné</option>
-            </select>
+              onChange={setRole}
+              options={[
+                { id: "partner", label: "Partner / Manželka" },
+                { id: "child", label: "Dítě" },
+                { id: "member", label: "Jiné" },
+              ]}
+            />
           </div>
 
           <div>

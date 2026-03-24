@@ -6,6 +6,7 @@ import { CREDIT_WISH_BANKS, CREDIT_PURPOSE_OPTIONS, LTV_OPTIONS } from "@/lib/an
 import { monthlyPayment, totalRepayment, ownResourcesFromLtv } from "@/lib/analyses/financial/calculations";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 const PRODUCT_OPTIONS = [
   { value: "hypoteka", label: "Hypotéka" },
@@ -76,23 +77,19 @@ export function StepCredits() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Produkt</label>
-              <select
+              <CustomDropdown
                 value={product}
-                onChange={(e) => setProduct(e.target.value as "hypoteka" | "uver")}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl"
-              >
-                {PRODUCT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+                onChange={(id) => setProduct(id as "hypoteka" | "uver")}
+                options={PRODUCT_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Účel</label>
-              <select value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                {CREDIT_PURPOSE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <CustomDropdown
+                value={purpose}
+                onChange={setPurpose}
+                options={CREDIT_PURPOSE_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Částka (Kč)</label>
@@ -105,20 +102,20 @@ export function StepCredits() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Fixace úroku</label>
-                <select value={fixYears} onChange={(e) => setFixYears(parseInt(e.target.value, 10) as typeof FIX_YEARS_OPTIONS[number])} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                  {FIX_YEARS_OPTIONS.map((y) => (
-                    <option key={y} value={y}>{y} let</option>
-                  ))}
-                </select>
+                <CustomDropdown
+                  value={String(fixYears)}
+                  onChange={(id) => setFixYears(parseInt(id, 10) as (typeof FIX_YEARS_OPTIONS)[number])}
+                  options={FIX_YEARS_OPTIONS.map((y) => ({ id: String(y), label: `${y} let` }))}
+                />
               </div>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Banka</label>
-              <select value={selectedBankId} onChange={(e) => setSelectedBankId(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                {CREDIT_WISH_BANKS.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+              <CustomDropdown
+                value={selectedBankId}
+                onChange={setSelectedBankId}
+                options={CREDIT_WISH_BANKS.map((b) => ({ id: b.id, label: b.name }))}
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Vlastní sazba (%) – volitelně</label>

@@ -19,10 +19,21 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ContactPicker, type ContactPickerValue } from "@/app/components/upload/ContactPicker";
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
+import { getPlatform } from "@/lib/capacitor/platform";
 import { useScanCapture, type ScanPage } from "@/lib/scan/useScanCapture";
 import { useFileUpload } from "@/lib/upload/useFileUpload";
 
-type ScanStep = "capture" | "metadata";
+type ScanStep = "capture" | "metadata" | "preview";
+
+function buildPageLevelCaptureWarnings(scanPages: ScanPage[]): string[] {
+  const out: string[] = [];
+  for (const p of scanPages) {
+    for (const issue of p.quality?.issues ?? []) {
+      out.push(`${issue.code}:${issue.severity}`);
+    }
+  }
+  return out;
+}
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
@@ -45,6 +56,17 @@ function ScanThumbnail({ file, alt }: { file: File; alt: string }) {
   return <img src={url} alt={alt} className="h-24 w-24 rounded-lg border border-slate-200 object-cover" />;
 }
 
+function QualityBadge({ quality }: { quality?: ScanPage["quality"] }) {
+  if (!quality || quality.ok) return null;
+  const errorIssues = quality.issues.filter((i) => i.severity === "error");
+  if (errorIssues.length === 0) return null;
+  return (
+    <div className="absolute right-1 top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+      !
+    </div>
+  );
+}
+
 function SortablePageCard({
   scanPage,
   index,
@@ -62,6 +84,7 @@ function SortablePageCard({
     id: scanPage.id,
   });
 
+  const hasError = scanPage.quality && !scanPage.quality.ok;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -70,19 +93,27 @@ function SortablePageCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2">
+    <div ref={setNodeRef} style={style} className={`shrink-0 rounded-xl border p-2 ${hasError ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
       <div {...attributes} {...listeners} className="cursor-grab touch-none active:cursor-grabbing">
         <div className="mb-1 text-center text-xs font-medium text-slate-500">{index + 1}</div>
-        <ScanThumbnail file={scanPage.file} alt={`Strana ${index + 1}`} />
+        <div className="relative">
+          <ScanThumbnail file={scanPage.file} alt={`Strana ${index + 1}`} />
+          <QualityBadge quality={scanPage.quality} />
+        </div>
       </div>
+      {hasError ? (
+        <div className="mt-1 text-center text-[10px] text-amber-700">
+          Nízká kvalita – doporučujeme přefotit
+        </div>
+      ) : null}
       <div className="mt-2 flex gap-1.5">
         <button
           type="button"
           onClick={() => onRetake(index)}
           disabled={isCapturing}
-          className="min-h-[40px] flex-1 rounded-lg border border-slate-300 px-2 text-xs font-semibold text-slate-700 disabled:opacity-50"
+          className={`min-h-[40px] flex-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${hasError ? "border-amber-400 bg-amber-100 text-amber-800" : "border-slate-300 text-slate-700"}`}
         >
-          Znovu
+          {hasError ? "Přefotit" : "Znovu"}
         </button>
         <button
           type="button"
@@ -115,6 +146,8 @@ export default function ScanPage() {
     error,
     setError,
     canAddMore,
+    qualityWarnings,
+    hasQualityIssues,
   } = useScanCapture();
   const { uploadFile, progress } = useFileUpload();
   const hasStartedCapture = useRef(false);
@@ -127,6 +160,8 @@ export default function ScanPage() {
   const [uploadState, setUploadState] = useState<"idle" | "building" | "uploading" | "done" | "error">("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [preparedPdf, setPreparedPdf] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -151,6 +186,12 @@ export default function ScanPage() {
     setSelectedContact({ id: initialContactId, name: "Vybraný klient" });
   }, [searchParams, selectedContact]);
 
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    };
+  }, [pdfPreviewUrl]);
+
   const tags = useMemo(() => {
     const nextTags: string[] = [];
     if (documentType.trim()) nextTags.push(documentType.trim());
@@ -168,7 +209,7 @@ export default function ScanPage() {
     }
   }
 
-  const uploadAsPdf = async () => {
+  const preparePreviewPdf = async () => {
     if (!selectedContact?.id) {
       setGlobalError("Vyberte klienta.");
       return;
@@ -189,14 +230,51 @@ export default function ScanPage() {
         return;
       }
 
-      setUploadState("uploading");
+      setPreparedPdf(pdf);
+      setPdfPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(pdf);
+      });
+      setStep("preview");
+      setUploadState("idle");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Vytvoření náhledu selhalo.";
+      setUploadState("error");
+      setUploadError(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-      await uploadFile(pdf, {
+  const uploadPreparedPdf = async () => {
+    if (!selectedContact?.id) {
+      setGlobalError("Vyberte klienta.");
+      return;
+    }
+    if (!preparedPdf) return;
+
+    setGlobalError(null);
+    setUploadError(null);
+    setIsUploading(true);
+    setUploadState("uploading");
+
+    try {
+      const docName = documentType.trim() || "Sken";
+      const platform = getPlatform();
+      const capturedPlatform = platform === "ios" || platform === "android" ? platform : undefined;
+      const captureQualityWarnings = buildPageLevelCaptureWarnings(scanPages);
+
+      await uploadFile(preparedPdf, {
         contactId: selectedContact.id,
         name: docName,
         tags,
         uploadSource: "mobile_scan",
         pageCount: pages.length,
+        capturedPlatform,
+        captureMode: "multi_page_scan",
+        captureQualityWarnings: captureQualityWarnings.length ? captureQualityWarnings : undefined,
+        manualCropApplied: false,
+        rotationAdjusted: false,
       });
 
       setUploadState("done");
@@ -207,6 +285,15 @@ export default function ScanPage() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const leavePreview = () => {
+    setPdfPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPreparedPdf(null);
+    setStep("metadata");
   };
 
   if (!isNative) return null;
@@ -221,8 +308,29 @@ export default function ScanPage() {
           </p>
         </div>
 
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-3">
+          <h2 className="mb-1 text-xs font-semibold text-blue-800">Tipy pro kvalitní sken</h2>
+          <ul className="space-y-0.5 text-xs text-blue-700">
+            <li>Foťte celý dokument na dobře osvětleném místě</li>
+            <li>Každou stranu zvlášť, nezakrývejte rohy</li>
+            <li>Držte telefon pevně a počkejte na zaostření</li>
+            <li>Vyhněte se odleskům a stínům</li>
+          </ul>
+        </div>
+
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        ) : null}
+
+        {qualityWarnings.length > 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div className="mb-1 text-xs font-semibold text-amber-800">Kvalita poslední fotografie</div>
+            {qualityWarnings.map((w, i) => (
+              <div key={i} className={`text-xs ${w.severity === "error" ? "font-medium text-amber-900" : "text-amber-700"}`}>
+                {w.severity === "error" ? "⚠ " : "ℹ "}{w.message}
+              </div>
+            ))}
+          </div>
         ) : null}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -253,6 +361,11 @@ export default function ScanPage() {
         </div>
 
         <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+          {hasQualityIssues ? (
+            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+              Některé strany mají nízkou kvalitu. Doporučujeme je přefotit pro lepší rozpoznání textu.
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
@@ -279,21 +392,107 @@ export default function ScanPage() {
     );
   }
 
-  const uploadLabel =
-    uploadState === "building"
-      ? "Sestavuji PDF..."
-      : uploadState === "uploading"
-        ? `Nahrávám... ${progress}%`
-        : uploadState === "done"
-          ? "Nahráno"
-          : "Nahrát jako PDF";
+  if (step === "preview") {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h1 className="text-lg font-semibold text-slate-900">Náhled PDF</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Zkontrolujte složený dokument. Teprve poté ho odešlete do knihovny dokumentů.
+          </p>
+        </div>
+
+        {pdfPreviewUrl ? (
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <iframe
+              title="Náhled PDF před nahráním"
+              src={pdfPreviewUrl}
+              className="min-h-[50vh] w-full bg-white"
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Náhled není k dispozici.</p>
+        )}
+
+        {uploadState === "uploading" ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
+            <div className="mb-1 text-sm font-medium text-slate-700">Nahrávání</div>
+            <div className="h-2 w-full overflow-hidden rounded bg-slate-100">
+              <div className="h-full bg-blue-500 transition-all duration-150" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        ) : null}
+
+        {uploadError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
+        ) : null}
+
+        <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              disabled={isUploading || uploadState === "done"}
+              onClick={() => void uploadPreparedPdf()}
+              className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {uploadState === "uploading"
+                ? `Nahrávám... ${progress}%`
+                : uploadState === "done"
+                  ? "Nahráno"
+                  : "Nahrát dokument"}
+            </button>
+          </div>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              disabled={isUploading}
+              onClick={leavePreview}
+              className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50"
+            >
+              Zpět k údajům
+            </button>
+            {uploadState === "error" ? (
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => void uploadPreparedPdf()}
+                className="min-h-[44px] flex-1 rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-700 disabled:opacity-50"
+              >
+                Zkusit znovu
+              </button>
+            ) : null}
+            {uploadState === "done" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPdfPreviewUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return null;
+                  });
+                  setPreparedPdf(null);
+                  clearPages();
+                  router.push(selectedContact ? `/portal/contacts/${selectedContact.id}` : "/portal/today");
+                }}
+                className="min-h-[44px] flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
+              >
+                Otevřít klienta
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const previewButtonLabel =
+    uploadState === "building" ? "Připravuji náhled…" : "Zobrazit náhled PDF";
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <h1 className="text-lg font-semibold text-slate-900">Nahrání skenu</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Všechny strany se složí do jednoho PDF a nahrají jako jeden dokument.
+          Vyplňte údaje, zobrazte náhled PDF a teprve poté nahrajte dokument.
         </p>
       </div>
 
@@ -341,15 +540,6 @@ export default function ScanPage() {
         </div>
       </div>
 
-      {uploadState === "uploading" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="mb-1 text-sm font-medium text-slate-700">Nahrávání</div>
-          <div className="h-2 w-full overflow-hidden rounded bg-slate-100">
-            <div className="h-full bg-blue-500 transition-all duration-150" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      ) : null}
-
       {uploadError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
       ) : null}
@@ -358,11 +548,11 @@ export default function ScanPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
-            disabled={isUploading || isBuildingPdf || pages.length === 0 || uploadState === "done"}
-            onClick={() => void uploadAsPdf()}
+            disabled={isUploading || isBuildingPdf || pages.length === 0}
+            onClick={() => void preparePreviewPdf()}
             className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {uploadLabel}
+            {previewButtonLabel}
           </button>
         </div>
 
@@ -373,6 +563,11 @@ export default function ScanPage() {
             onClick={() => {
               setUploadState("idle");
               setUploadError(null);
+              setPdfPreviewUrl((prev) => {
+                if (prev) URL.revokeObjectURL(prev);
+                return null;
+              });
+              setPreparedPdf(null);
               setStep("capture");
             }}
             className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50"
@@ -384,23 +579,10 @@ export default function ScanPage() {
             <button
               type="button"
               disabled={isUploading || isBuildingPdf}
-              onClick={() => void uploadAsPdf()}
+              onClick={() => void preparePreviewPdf()}
               className="min-h-[44px] flex-1 rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-700 disabled:opacity-50"
             >
               Zkusit znovu
-            </button>
-          ) : null}
-
-          {uploadState === "done" ? (
-            <button
-              type="button"
-              onClick={() => {
-                clearPages();
-                router.push(selectedContact ? `/portal/contacts/${selectedContact.id}` : "/portal/today");
-              }}
-              className="min-h-[44px] flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
-            >
-              Otevřít klienta
             </button>
           ) : null}
         </div>

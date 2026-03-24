@@ -143,6 +143,128 @@ export function computeCompleteness(
   return satisfied / requiredKeys.length;
 }
 
+// ---------------------------------------------------------------------------
+// Scan-specific eval metrics (Plan 2 Section 20)
+// ---------------------------------------------------------------------------
+
+export type PreprocessingMetrics = {
+  totalDocuments: number;
+  textDocuments: number;
+  scanDocuments: number;
+  successfulPreprocessingRate: number;
+  ocrSuccessRate: number;
+  averageReadabilityScore: number;
+  averagePreprocessingTimeMs: number;
+  preprocessingFailureReasons: Record<string, number>;
+};
+
+export type ScanVsTextMetrics = {
+  text: InputChannelMetrics;
+  scan: InputChannelMetrics;
+};
+
+export type InputChannelMetrics = {
+  documentCount: number;
+  classificationAccuracy: number;
+  fieldLevelAccuracy: number;
+  extractionCompleteness: number;
+  paymentExtractionAccuracy: number;
+  reviewRate: number;
+  falseCreateContractRate: number;
+  falsePaymentCreationRate: number;
+  averageUploadToExtractedMs: number;
+  manualCorrectionRate: number;
+};
+
+export type EvalDocumentResultWithPreprocessing = EvalDocumentResult & {
+  inputChannel: "text" | "scan";
+  preprocessingSucceeded: boolean;
+  ocrSucceeded: boolean;
+  readabilityScore: number;
+  preprocessingTimeMs: number;
+  adobePreprocessed: boolean;
+};
+
+export function computeScanVsTextMetrics(
+  results: EvalDocumentResultWithPreprocessing[]
+): ScanVsTextMetrics {
+  const text = results.filter((r) => r.inputChannel === "text");
+  const scan = results.filter((r) => r.inputChannel === "scan");
+  return {
+    text: computeChannelMetrics(text),
+    scan: computeChannelMetrics(scan),
+  };
+}
+
+function computeChannelMetrics(results: EvalDocumentResultWithPreprocessing[]): InputChannelMetrics {
+  const n = results.length;
+  if (n === 0) {
+    return {
+      documentCount: 0,
+      classificationAccuracy: 0,
+      fieldLevelAccuracy: 0,
+      extractionCompleteness: 0,
+      paymentExtractionAccuracy: 0,
+      reviewRate: 0,
+      falseCreateContractRate: 0,
+      falsePaymentCreationRate: 0,
+      averageUploadToExtractedMs: 0,
+      manualCorrectionRate: 0,
+    };
+  }
+
+  return {
+    documentCount: n,
+    classificationAccuracy: results.filter((r) => r.classificationCorrect).length / n,
+    fieldLevelAccuracy: results.reduce((s, r) => s + r.fieldAccuracy, 0) / n,
+    extractionCompleteness: results.reduce((s, r) => s + r.completeness, 0) / n,
+    paymentExtractionAccuracy: (() => {
+      const pDocs = results.filter((r) => r.paymentExtractionCorrect !== undefined);
+      return pDocs.length > 0 ? pDocs.filter((r) => r.paymentExtractionCorrect).length / pDocs.length : 1;
+    })(),
+    reviewRate: results.filter((r) => r.reviewDecision === "review_required").length / n,
+    falseCreateContractRate: results.filter((r) => r.reviewDecision === "extracted" && !r.classificationCorrect).length / n,
+    falsePaymentCreationRate: 0,
+    averageUploadToExtractedMs: results.reduce((s, r) => s + r.processingTimeMs, 0) / n,
+    manualCorrectionRate: 0,
+  };
+}
+
+export function computePreprocessingMetrics(
+  results: EvalDocumentResultWithPreprocessing[]
+): PreprocessingMetrics {
+  const n = results.length;
+  if (n === 0) {
+    return {
+      totalDocuments: 0,
+      textDocuments: 0,
+      scanDocuments: 0,
+      successfulPreprocessingRate: 0,
+      ocrSuccessRate: 0,
+      averageReadabilityScore: 0,
+      averagePreprocessingTimeMs: 0,
+      preprocessingFailureReasons: {},
+    };
+  }
+
+  const text = results.filter((r) => r.inputChannel === "text");
+  const scan = results.filter((r) => r.inputChannel === "scan");
+  const preprocessed = results.filter((r) => r.adobePreprocessed);
+  const ocrAttempted = scan;
+  const ocrSucceeded = ocrAttempted.filter((r) => r.ocrSucceeded);
+
+  return {
+    totalDocuments: n,
+    textDocuments: text.length,
+    scanDocuments: scan.length,
+    successfulPreprocessingRate: preprocessed.filter((r) => r.preprocessingSucceeded).length / Math.max(preprocessed.length, 1),
+    ocrSuccessRate: ocrSucceeded.length / Math.max(ocrAttempted.length, 1),
+    averageReadabilityScore: results.reduce((s, r) => s + r.readabilityScore, 0) / n,
+    averagePreprocessingTimeMs: results.reduce((s, r) => s + r.preprocessingTimeMs, 0) / n,
+    preprocessingFailureReasons: {},
+  };
+}
+
 export function aggregateEvalMetrics(results: EvalDocumentResult[]): Omit<EvalRunMetrics, "runId" | "datasetVersion" | "runAt" | "documentResults"> {
   const total = results.length;
   if (total === 0) {
@@ -175,9 +297,20 @@ export function aggregateEvalMetrics(results: EvalDocumentResult[]): Omit<EvalRu
 
   const byType = new Map<string, EvalDocumentResult[]>();
   for (const r of results) {
-    const key = r.entryId;
+    const key = r.documentName.split("/")[0] || r.entryId;
     if (!byType.has(key)) byType.set(key, []);
     byType.get(key)!.push(r);
+  }
+
+  const perTypeMetrics: Record<string, { count: number; classificationAccuracy: number; fieldAccuracy: number; completeness: number }> = {};
+  for (const [type, typeResults] of byType) {
+    const n = typeResults.length;
+    perTypeMetrics[type] = {
+      count: n,
+      classificationAccuracy: typeResults.filter((r) => r.classificationCorrect).length / n,
+      fieldAccuracy: typeResults.reduce((s, r) => s + r.fieldAccuracy, 0) / n,
+      completeness: typeResults.reduce((s, r) => s + r.completeness, 0) / n,
+    };
   }
 
   return {
@@ -189,6 +322,6 @@ export function aggregateEvalMetrics(results: EvalDocumentResult[]): Omit<EvalRu
     clientMatchingAccuracy: clientMatchAcc,
     reviewRate: reviewCount / total,
     falsePositiveApplyRate: falseExtracted / total,
-    perTypeMetrics: {},
+    perTypeMetrics,
   };
 }

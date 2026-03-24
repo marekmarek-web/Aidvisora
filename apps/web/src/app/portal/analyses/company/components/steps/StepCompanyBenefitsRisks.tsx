@@ -9,6 +9,7 @@ import {
   directorInsuranceRec,
   recalcStrategy,
 } from "@/lib/analyses/company-fa/calculations";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 function num(v: unknown, def: number): number {
   if (typeof v === "number" && !Number.isNaN(v)) return v;
@@ -232,19 +233,17 @@ export function StepCompanyBenefitsRisks() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
             />
           </label>
-          <label>
+          <label className="block w-full">
             <span className="block text-sm font-medium text-slate-600 mb-1">Stupeň invalidity (1–3)</span>
-            <select
+            <CustomDropdown
               value={String(directorIns.invalidityDegree ?? 1)}
-              onChange={(e) =>
-                setDirectorIns({ invalidityDegree: Number(e.target.value) as 1 | 2 | 3 })
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-            >
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
+              onChange={(id) => setDirectorIns({ invalidityDegree: Number(id) as 1 | 2 | 3 })}
+              options={[
+                { id: "1", label: "1" },
+                { id: "2", label: "2" },
+                { id: "3", label: "3" },
+              ]}
+            />
           </label>
           <label>
             <span className="block text-sm font-medium text-slate-600 mb-1">Státní invalidní důchod/měs (Kč)</span>
@@ -276,19 +275,17 @@ export function StepCompanyBenefitsRisks() {
       <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
         <h3 className="text-lg font-medium text-slate-800 mb-4">Investiční strategie</h3>
         <div className="flex flex-wrap gap-4">
-          <label>
+          <label className="block w-full min-w-[200px]">
             <span className="block text-sm font-medium text-slate-600 mb-1">Profil</span>
-            <select
+            <CustomDropdown
               value={strategy.profile ?? "balanced"}
-              onChange={(e) =>
-                setStrategy({ profile: e.target.value as CompanyFaStrategy["profile"] })
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-            >
-              <option value="conservative">Konzervativní</option>
-              <option value="balanced">Vyvážený</option>
-              <option value="dynamic">Dynamický</option>
-            </select>
+              onChange={(id) => setStrategy({ profile: id as CompanyFaStrategy["profile"] })}
+              options={[
+                { id: "conservative", label: "Konzervativní" },
+                { id: "balanced", label: "Vyvážený" },
+                { id: "dynamic", label: "Dynamický" },
+              ]}
+            />
           </label>
           <label className="flex items-center gap-2 self-end pb-2 min-h-[44px]">
             <input
@@ -313,21 +310,21 @@ export function StepCompanyBenefitsRisks() {
               <span className="font-medium text-slate-700 truncate">
                 {inv.productKey}
               </span>
-              <label>
+              <label className="block min-w-0">
                 <span className="block text-xs text-slate-500">Typ</span>
-                <select
+                <CustomDropdown
                   value={inv.type}
-                  onChange={(e) =>
+                  onChange={(id) =>
                     setInvestment(i, {
-                      type: e.target.value as "lump" | "monthly" | "pension",
+                      type: id as "lump" | "monthly" | "pension",
                     })
                   }
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
-                >
-                  <option value="lump">Jednorázově</option>
-                  <option value="monthly">Pravidelně</option>
-                  <option value="pension">Penzijní</option>
-                </select>
+                  options={[
+                    { id: "lump", label: "Jednorázově" },
+                    { id: "monthly", label: "Pravidelně" },
+                    { id: "pension", label: "Penzijní" },
+                  ]}
+                />
               </label>
               <label>
                 <span className="block text-xs text-slate-500">Částka (Kč)</span>

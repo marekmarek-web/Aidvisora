@@ -8,6 +8,7 @@ import { companyRunway } from "@/lib/analyses/financial/calculations";
 import { ArrowDown, ArrowUp, Plus, Shield, Trash2, Building2 } from "lucide-react";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { ProvenanceBadge } from "../ProvenanceBadge";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 const INSURANCE_TYPES: { value: InsuranceItemType; label: string }[] = [
   { value: "majetkové", label: "Majetkové" },
@@ -113,15 +114,14 @@ export function StepCashflow() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="client-income-type">Klient – typ příjmu</label>
-              <select
-                id="client-income-type"
+              <CustomDropdown
                 value={data.cashflow.incomeType ?? "zamestnanec"}
-                onChange={(e) => setCashflowField("incomeType", e.target.value)}
-                className="w-full min-h-[44px] px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-              >
-                <option value="zamestnanec">Zaměstnanec</option>
-                <option value="osvc">OSVČ</option>
-              </select>
+                onChange={(id) => setCashflowField("incomeType", id)}
+                options={[
+                  { id: "zamestnanec", label: "Zaměstnanec" },
+                  { id: "osvc", label: "OSVČ" },
+                ]}
+              />
             </div>
             <div className="flex flex-wrap items-center gap-2">
             <div className="flex-1 min-w-0">
@@ -142,17 +142,16 @@ export function StepCashflow() {
               <>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="partner-income-type">Partner – typ příjmu</label>
-                  <select
-                    id="partner-income-type"
+                  <CustomDropdown
                     value={data.cashflow.partnerIncomeType ?? "zamestnanec"}
-                    onChange={(e) => setCashflowField("partnerIncomeType", e.target.value)}
-                    className="w-full min-h-[44px] px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
-                  >
-                    <option value="zamestnanec">Zaměstnanec</option>
-                    <option value="osvc">OSVČ</option>
-                    <option value="invalidni_duchod">Invalidní důchod</option>
-                    <option value="starobni_duchod">Starobní důchod</option>
-                  </select>
+                    onChange={(id) => setCashflowField("partnerIncomeType", id)}
+                    options={[
+                      { id: "zamestnanec", label: "Zaměstnanec" },
+                      { id: "osvc", label: "OSVČ" },
+                      { id: "invalidni_duchod", label: "Invalidní důchod" },
+                      { id: "starobni_duchod", label: "Starobní důchod" },
+                    ]}
+                  />
                 </div>
                 {data.cashflow.partnerIncomeType === "zamestnanec" ? (
                   <>
@@ -233,34 +232,32 @@ export function StepCashflow() {
               <div className="space-y-2 mb-2">
                 {insuranceItems.map((item) => (
                   <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
-                    <select
-                      value={item.type}
-                      onChange={(e) => updateExpenseInsuranceItem(item.id, { type: e.target.value as InsuranceItemType })}
-                      className="min-w-[120px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
-                    >
-                      {INSURANCE_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={item.insurer ?? ""}
-                      onChange={(e) => updateExpenseInsuranceItem(item.id, { insurer: e.target.value || undefined })}
-                      className="min-w-[140px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
-                    >
-                      {INSURANCE_COMPANIES_CS.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={item.forPersonKey ?? ""}
-                      onChange={(e) => updateExpenseInsuranceItem(item.id, { forPersonKey: e.target.value || undefined })}
-                      className="min-w-[120px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
-                    >
-                      <option value="">Pro koho?</option>
-                      {personOptions.map((p) => (
-                        <option key={p.key} value={p.key}>{p.label}</option>
-                      ))}
-                    </select>
+                    <div className="min-w-[140px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.type}
+                        onChange={(id) => updateExpenseInsuranceItem(item.id, { type: id as InsuranceItemType })}
+                        options={INSURANCE_TYPES.map((t) => ({ id: t.value, label: t.label }))}
+                      />
+                    </div>
+                    <div className="min-w-[160px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.insurer ?? ""}
+                        onChange={(id) => updateExpenseInsuranceItem(item.id, { insurer: id || undefined })}
+                        options={[
+                          { id: "", label: "Pojišťovna" },
+                          ...INSURANCE_COMPANIES_CS.map((name) => ({ id: name, label: name })),
+                        ]}
+                        placeholder="Pojišťovna"
+                      />
+                    </div>
+                    <div className="min-w-[160px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.forPersonKey ?? ""}
+                        onChange={(id) => updateExpenseInsuranceItem(item.id, { forPersonKey: id || undefined })}
+                        options={[{ id: "", label: "Pro koho?" }, ...personOptions.map((p) => ({ id: p.key, label: p.label }))]}
+                        placeholder="Pro koho?"
+                      />
+                    </div>
                     <input
                       type="number"
                       value={item.amount || ""}

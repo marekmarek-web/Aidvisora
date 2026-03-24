@@ -9,6 +9,9 @@ export type AiInputResolution = {
   textContent: string | null;
   quality: "high" | "medium" | "low" | "none";
   warning: string | null;
+  readabilityScore: number | null;
+  preprocessingWarnings: string[] | null;
+  adobePreprocessed: boolean;
 };
 
 type DocumentForAi = {
@@ -24,6 +27,10 @@ type DocumentForAi = {
   extractJsonPath: string | null;
   hasTextLayer: boolean | null;
   isScanLike: boolean | null;
+  normalizedPdfPath?: string | null;
+  readabilityScore?: number | null;
+  preprocessingWarnings?: string[] | null;
+  processingProvider?: string | null;
 };
 
 async function getSignedUrl(path: string): Promise<string | null> {
@@ -46,10 +53,13 @@ async function readStorageText(path: string): Promise<string | null> {
 
 /**
  * Resolve the best available AI input for a document.
- * Priority: Markdown > Extract JSON > OCR PDF > Original file
+ * Priority: Markdown > Extract JSON > OCR PDF > Normalized PDF > Original file
  */
 export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolution> {
-  // Priority 1: Markdown content (stored inline)
+  const adobePreprocessed = doc.processingProvider === "adobe" && doc.processingStatus === "completed";
+  const readabilityScore = doc.readabilityScore ?? null;
+  const preprocessingWarnings = doc.preprocessingWarnings ?? null;
+
   if (doc.markdownContent && doc.markdownContent.trim().length > 50) {
     return {
       source: "markdown",
@@ -57,10 +67,12 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
       textContent: doc.markdownContent,
       quality: "high",
       warning: null,
+      readabilityScore,
+      preprocessingWarnings,
+      adobePreprocessed,
     };
   }
 
-  // Priority 2: Markdown from storage
   if (doc.markdownPath) {
     const text = await readStorageText(doc.markdownPath);
     if (text && text.trim().length > 50) {
@@ -70,11 +82,13 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
         textContent: text,
         quality: "high",
         warning: null,
+        readabilityScore,
+        preprocessingWarnings,
+        adobePreprocessed,
       };
     }
   }
 
-  // Priority 3: Extract structured JSON (Adobe Extract stores structuredData.json when unzip succeeds; else ZIP path)
   if (doc.extractJsonPath) {
     const url = await getSignedUrl(doc.extractJsonPath);
     if (url) {
@@ -84,11 +98,13 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
         textContent: null,
         quality: "medium",
         warning: null,
+        readabilityScore,
+        preprocessingWarnings,
+        adobePreprocessed,
       };
     }
   }
 
-  // Priority 4: OCR PDF (searchable PDF with text layer)
   if (doc.ocrPdfPath) {
     const url = await getSignedUrl(doc.ocrPdfPath);
     if (url) {
@@ -98,11 +114,29 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
         textContent: null,
         quality: "medium",
         warning: null,
+        readabilityScore,
+        preprocessingWarnings,
+        adobePreprocessed,
       };
     }
   }
 
-  // Priority 5: Original file with native text layer
+  if (doc.normalizedPdfPath) {
+    const url = await getSignedUrl(doc.normalizedPdfPath);
+    if (url) {
+      return {
+        source: "ocr_text",
+        fileUrl: url,
+        textContent: null,
+        quality: "medium",
+        warning: null,
+        readabilityScore,
+        preprocessingWarnings,
+        adobePreprocessed,
+      };
+    }
+  }
+
   if (doc.hasTextLayer) {
     const url = await getSignedUrl(doc.storagePath);
     return {
@@ -111,13 +145,15 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
       textContent: null,
       quality: "medium",
       warning: null,
+      readabilityScore,
+      preprocessingWarnings,
+      adobePreprocessed,
     };
   }
 
-  // Priority 6: Original file (no processing, no text layer)
   const url = await getSignedUrl(doc.storagePath);
   const isScan = doc.isScanLike;
-  const processingFailed = doc.processingStatus === "failed";
+  const processingFailed = doc.processingStatus === "failed" || doc.processingStatus === "preprocessing_failed";
 
   return {
     source: "none",
@@ -129,6 +165,9 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
       : isScan
         ? "Dokument je sken bez textové vrstvy. AI analýza bude omezená."
         : null,
+    readabilityScore,
+    preprocessingWarnings,
+    adobePreprocessed,
   };
 }
 
@@ -150,6 +189,10 @@ export async function resolveAiInputForDocument(documentId: string): Promise<AiI
       extractJsonPath: documents.extractJsonPath,
       hasTextLayer: documents.hasTextLayer,
       isScanLike: documents.isScanLike,
+      normalizedPdfPath: documents.normalizedPdfPath,
+      readabilityScore: documents.readabilityScore,
+      preprocessingWarnings: documents.preprocessingWarnings,
+      processingProvider: documents.processingProvider,
     })
     .from(documents)
     .where(eq(documents.id, documentId))

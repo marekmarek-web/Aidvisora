@@ -2,6 +2,7 @@
 
 import { useCompanyFaStore } from "@/lib/analyses/company-fa/store";
 import { step1Kpi } from "@/lib/analyses/company-fa/calculations";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 const INDUSTRIES = [
   "office",
@@ -52,17 +53,17 @@ export function StepCompanyInfo() {
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           />
         </label>
-        <label>
+        <label className="block w-full">
           <span className="block text-sm font-medium text-slate-600 mb-1">Obor</span>
-          <select
+          <CustomDropdown
             value={company.industry ?? ""}
-            onChange={(e) => setCompany({ industry: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-          >
-            {INDUSTRIES.map((ind) => (
-              <option key={ind} value={ind}>{ind}</option>
-            ))}
-          </select>
+            onChange={(id) => setCompany({ industry: id })}
+            placeholder="Obor"
+            options={[
+              { id: "", label: "— Vyberte obor —" },
+              ...INDUSTRIES.map((ind) => ({ id: ind, label: ind })),
+            ]}
+          />
         </label>
         <label>
           <span className="block text-sm font-medium text-slate-600 mb-1">Zaměstnanci</span>

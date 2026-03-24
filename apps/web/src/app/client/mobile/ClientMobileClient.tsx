@@ -30,6 +30,7 @@ import {
   markPortalNotificationRead,
   type PortalNotificationRow,
 } from "@/app/actions/portal-notifications";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import {
   getMessages,
   getUnreadAdvisorMessagesForClientCount,
@@ -602,14 +603,18 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
 
       <BottomSheet open={requestModalOpen} onClose={() => setRequestModalOpen(false)} title="Nový požadavek">
         <div className="space-y-3">
-          <select value={requestCaseType} onChange={(e) => setRequestCaseType(e.target.value)} className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white">
-            <option value="hypotéka">Hypotéka</option>
-            <option value="investice">Investice</option>
-            <option value="pojištění">Pojištění</option>
-            <option value="změna situace">Změna životní situace</option>
-            <option value="servis smlouvy">Servis smlouvy</option>
-            <option value="jiné">Jiné</option>
-          </select>
+          <CustomDropdown
+            value={requestCaseType}
+            onChange={setRequestCaseType}
+            options={[
+              { id: "hypotéka", label: "Hypotéka" },
+              { id: "investice", label: "Investice" },
+              { id: "pojištění", label: "Pojištění" },
+              { id: "změna situace", label: "Změna životní situace" },
+              { id: "servis smlouvy", label: "Servis smlouvy" },
+              { id: "jiné", label: "Jiné" },
+            ]}
+          />
           <textarea rows={4} value={requestDescription} onChange={(e) => setRequestDescription(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Popis požadavku (nepovinné)" />
           <button type="button" onClick={createRequest} className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-bold">
             Vytvořit požadavek
@@ -619,11 +624,15 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
 
       <BottomSheet open={addMemberOpen} onClose={() => setAddMemberOpen(false)} title="Přidat člena domácnosti">
         <div className="space-y-3">
-          <select value={newMemberRole} onChange={(e) => setNewMemberRole(e.target.value)} className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-white">
-            <option value="partner">Partner</option>
-            <option value="child">Dítě</option>
-            <option value="member">Jiné</option>
-          </select>
+          <CustomDropdown
+            value={newMemberRole}
+            onChange={setNewMemberRole}
+            options={[
+              { id: "partner", label: "Partner" },
+              { id: "child", label: "Dítě" },
+              { id: "member", label: "Jiné" },
+            ]}
+          />
           <input value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm" placeholder="Jméno a příjmení" />
           <input type="date" value={newMemberBirthDate} onChange={(e) => setNewMemberBirthDate(e.target.value)} className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm" />
           <button type="button" onClick={addHouseholdMember} className="w-full min-h-[44px] rounded-xl bg-[#1a1c2e] text-white text-sm font-bold">

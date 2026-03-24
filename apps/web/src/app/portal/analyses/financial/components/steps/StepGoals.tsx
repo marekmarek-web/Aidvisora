@@ -18,6 +18,7 @@ import { selectTotalMonthlySavings, selectTotalTargetCapital } from "@/lib/analy
 import { getGoalChartData } from "@/lib/analyses/financial/charts";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { Target, Plus, Trash2, Pencil } from "lucide-react";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -151,11 +152,11 @@ export function StepGoals() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Typ cíle</label>
-              <select value={type} onChange={(e) => setType(e.target.value as "renta" | "jina")} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                {GOAL_TYPES.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <CustomDropdown
+                value={type}
+                onChange={(id) => setType(id)}
+                options={GOAL_TYPES.map((o) => ({ id: o.value, label: o.label }))}
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Název cíle</label>
@@ -173,11 +174,11 @@ export function StepGoals() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Strategie zhodnocení</label>
-              <select value={strategy} onChange={(e) => setStrategy(parseFloat(e.target.value))} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                {STRATEGY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <CustomDropdown
+                value={String(strategy)}
+                onChange={(id) => setStrategy(parseFloat(id))}
+                options={STRATEGY_OPTIONS.map((o) => ({ id: String(o.value), label: o.label }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

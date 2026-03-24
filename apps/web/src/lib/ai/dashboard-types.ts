@@ -13,6 +13,15 @@ export interface UrgentItem {
   description: string;
   recommendedAction?: string;
   source?: string;
+  blockedReason?: string;
+}
+
+export interface BlockedItem {
+  type: "review" | "payment";
+  entityId: string;
+  title: string;
+  blockedReasons: string[];
+  source: string;
 }
 
 export type SuggestedActionType =
@@ -65,4 +74,7 @@ export interface DashboardSummary {
   missingDataWarnings: MissingDataWarning[];
   suggestedActions: SuggestedAction[];
   assistantSummaryText: string;
+  blockedItems?: BlockedItem[];
+  paymentsBlockedForPortal?: BlockedItem[];
+  communicationSuggestions?: string[];
 }

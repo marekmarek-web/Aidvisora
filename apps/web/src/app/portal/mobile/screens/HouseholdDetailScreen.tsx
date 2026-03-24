@@ -2,24 +2,85 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  Home,
+  Users,
+  Briefcase,
+  BarChart2,
+  UserPlus,
+  X,
+} from "lucide-react";
+import {
   addHouseholdMember,
   getHousehold,
   removeHouseholdMember,
   type HouseholdDetail,
 } from "@/app/actions/households";
-import { getOpportunitiesByHousehold, type OpportunityByHouseholdRow } from "@/app/actions/pipeline";
-import { getFinancialAnalysesForHousehold, type FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
+import {
+  getOpportunitiesByHousehold,
+  type OpportunityByHouseholdRow,
+} from "@/app/actions/pipeline";
+import {
+  getFinancialAnalysesForHousehold,
+  type FinancialAnalysisListItem,
+} from "@/app/actions/financial-analyses";
 import type { ContactRow } from "@/app/actions/contacts";
 import {
   BottomSheet,
   EmptyState,
   ErrorState,
-  HouseholdMemberCard,
+  FilterChips,
   LoadingSkeleton,
   MobileCard,
   MobileSection,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+type HouseholdTab = "members" | "deals" | "analyses";
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+const AVATAR_PALETTE = [
+  "bg-indigo-500",
+  "bg-purple-500",
+  "bg-emerald-500",
+  "bg-blue-500",
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-teal-500",
+  "bg-violet-500",
+];
+
+function getInitials(first: string, last: string) {
+  return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
+}
+
+function getAvatarColor(name: string) {
+  const idx = Array.from(name).reduce((s, c) => s + c.charCodeAt(0), 0) % AVATAR_PALETTE.length;
+  return AVATAR_PALETTE[idx];
+}
+
+function AnalysisProgressBar({ progress }: { progress?: number }) {
+  const pct = Math.max(0, Math.min(100, progress ?? 0));
+  return (
+    <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div
+        className={cx("h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-indigo-500")}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Screen                                                        */
+/* ------------------------------------------------------------------ */
 
 export function HouseholdDetailScreen({
   householdId,
@@ -33,11 +94,16 @@ export function HouseholdDetailScreen({
   const [analyses, setAnalyses] = useState<FinancialAnalysisListItem[]>([]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<HouseholdTab>("members");
+
   const [addOpen, setAddOpen] = useState(false);
   const [newMemberContactId, setNewMemberContactId] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("member");
 
-  const memberContactIds = useMemo(() => new Set(detail?.members.map((m) => m.contactId) ?? []), [detail?.members]);
+  const memberContactIds = useMemo(
+    () => new Set(detail?.members.map((m) => m.contactId) ?? []),
+    [detail?.members]
+  );
   const availableContacts = useMemo(
     () => contacts.filter((c) => !memberContactIds.has(c.id)),
     [contacts, memberContactIds]
@@ -56,20 +122,27 @@ export function HouseholdDetailScreen({
         setOpportunities(opps);
         setAnalyses(analysesData);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Nepodařilo se načíst detail domácnosti.");
+        setError(
+          e instanceof Error ? e.message : "Nepodařilo se načíst detail domácnosti."
+        );
       }
     });
   }
 
   useEffect(() => {
     reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [householdId]);
 
   async function handleAddMember() {
     if (!newMemberContactId) return;
     startTransition(async () => {
       try {
-        await addHouseholdMember(householdId, newMemberContactId, newMemberRole || undefined);
+        await addHouseholdMember(
+          householdId,
+          newMemberContactId,
+          newMemberRole || undefined
+        );
         setAddOpen(false);
         setNewMemberContactId("");
         setNewMemberRole("member");
@@ -95,101 +168,219 @@ export function HouseholdDetailScreen({
   if (error) return <ErrorState title={error} onRetry={reload} />;
   if (!detail) return <EmptyState title="Domácnost nebyla nalezena" />;
 
+  const householdName = detail.icon ? `${detail.icon} ${detail.name}` : detail.name;
+
   return (
-    <>
-      <MobileCard>
-        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Domácnost</p>
-        <p className="text-lg font-black mt-1">{detail.name}</p>
-        <div className="mt-2 flex items-center gap-2">
-          <StatusBadge tone="info">{detail.members.length} členů</StatusBadge>
-          <StatusBadge>{opportunities.length} obchodů</StatusBadge>
-          <StatusBadge>{analyses.length} analýz</StatusBadge>
+    <div className="pb-6">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-5">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
+            <Home size={22} className="text-white/80" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-black text-white truncate">{householdName}</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+                <Users size={11} /> {detail.members.length} {detail.members.length === 1 ? "člen" : detail.members.length < 5 ? "členové" : "členů"}
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+                <Briefcase size={11} /> {opportunities.length} obchodů
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+                <BarChart2 size={11} /> {analyses.length} analýz
+              </span>
+            </div>
+          </div>
         </div>
-      </MobileCard>
+      </div>
 
-      <MobileSection
-        title="Členové"
-        action={
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="min-h-[32px] px-2.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold"
-          >
-            Přidat
-          </button>
-        }
+      {/* Tab bar */}
+      <div className="px-4 py-2 bg-white border-b border-slate-100 sticky top-0 z-10">
+        <FilterChips
+          value={tab}
+          onChange={(id) => setTab(id as HouseholdTab)}
+          options={[
+            { id: "members", label: "Členové", badge: detail.members.length },
+            { id: "deals", label: "Obchody", badge: opportunities.length },
+            { id: "analyses", label: "Analýzy", badge: analyses.length },
+          ]}
+        />
+      </div>
+
+      {/* Members tab */}
+      {tab === "members" ? (
+        <MobileSection
+          title={`Členové (${detail.members.length})`}
+          action={
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg min-h-[32px]"
+            >
+              <UserPlus size={11} /> Přidat
+            </button>
+          }
+        >
+          {detail.members.length === 0 ? (
+            <EmptyState title="Bez členů" description="Přidejte prvního člena domácnosti." />
+          ) : (
+            detail.members.map((member) => {
+              const fullName = `${member.firstName} ${member.lastName}`;
+              const initials = getInitials(member.firstName, member.lastName);
+              const avatarColor = getAvatarColor(fullName);
+              return (
+                <MobileCard key={member.id} className="p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cx(
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black flex-shrink-0",
+                        avatarColor
+                      )}
+                    >
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">{fullName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {member.role ? (
+                          <span className="text-[11px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-lg border border-slate-200">
+                            {member.role}
+                          </span>
+                        ) : null}
+                        {member.email ? (
+                          <span className="text-[11px] text-slate-400 truncate">{member.email}</span>
+                        ) : member.phone ? (
+                          <span className="text-[11px] text-slate-400">{member.phone}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center flex-shrink-0"
+                      aria-label="Odebrat člena"
+                    >
+                      <X size={14} className="text-rose-500" />
+                    </button>
+                  </div>
+                </MobileCard>
+              );
+            })
+          )}
+        </MobileSection>
+      ) : null}
+
+      {/* Deals tab */}
+      {tab === "deals" ? (
+        <MobileSection title={`Obchodní příležitosti (${opportunities.length})`}>
+          {opportunities.length === 0 ? (
+            <EmptyState title="Žádné navázané obchody" description="Domácnost nemá obchodní příležitosti." />
+          ) : (
+            opportunities.map((opp) => (
+              <MobileCard key={opp.id} className="p-3.5">
+                <p className="text-sm font-bold text-slate-900">{opp.title}</p>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {opp.stageName ? (
+                    <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                      {opp.stageName}
+                    </span>
+                  ) : null}
+                  <span className="text-[11px] text-slate-500">{opp.contactName}</span>
+                </div>
+              </MobileCard>
+            ))
+          )}
+        </MobileSection>
+      ) : null}
+
+      {/* Analyses tab */}
+      {tab === "analyses" ? (
+        <MobileSection title={`Finanční analýzy (${analyses.length})`}>
+          {analyses.length === 0 ? (
+            <EmptyState title="Žádné analýzy" description="Domácnost nemá finanční analýzy." />
+          ) : (
+            analyses.map((analysis) => {
+              const progress = analysis.progress ?? 0;
+              const isDone = analysis.status === "completed" || progress === 100;
+              return (
+                <MobileCard key={analysis.id} className="p-3.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        {analysis.analysisTypeLabel || "Finanční analýza"}
+                      </p>
+                      {analysis.clientName ? (
+                        <p className="text-xs text-slate-500 mt-0.5">{analysis.clientName}</p>
+                      ) : null}
+                      <AnalysisProgressBar progress={progress} />
+                    </div>
+                    <StatusBadge
+                      tone={
+                        isDone ? "success" : analysis.status === "draft" ? "neutral" : "info"
+                      }
+                    >
+                      {isDone ? "hotovo" : analysis.status === "draft" ? "návrh" : "probíhá"}
+                    </StatusBadge>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">
+                    {new Date(analysis.createdAt).toLocaleDateString("cs-CZ")}
+                    {analysis.lastExportedAt
+                      ? ` · Export ${new Date(analysis.lastExportedAt).toLocaleDateString("cs-CZ")}`
+                      : ""}
+                  </p>
+                </MobileCard>
+              );
+            })
+          )}
+        </MobileSection>
+      ) : null}
+
+      {/* Add member sheet */}
+      <BottomSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Přidat člena domácnosti"
       >
-        {detail.members.length === 0 ? (
-          <EmptyState title="Bez členů domácnosti" />
-        ) : (
-          detail.members.map((member) => (
-            <HouseholdMemberCard
-              key={member.id}
-              name={`${member.firstName} ${member.lastName}`}
-              role={member.role}
-              subtitle={member.email || member.phone || ""}
-              action={
-                <button
-                  type="button"
-                  onClick={() => handleRemoveMember(member.id)}
-                  className="text-xs text-rose-700 font-bold min-h-[32px]"
-                >
-                  Odebrat
-                </button>
-              }
-            />
-          ))
-        )}
-      </MobileSection>
-
-      <MobileSection title="Navázané obchody">
-        {opportunities.length === 0 ? (
-          <EmptyState title="Žádné navázané obchody" />
-        ) : (
-          opportunities.slice(0, 4).map((opportunity) => (
-            <MobileCard key={opportunity.id} className="p-3.5">
-              <p className="text-sm font-bold">{opportunity.title}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {opportunity.stageName || "Bez fáze"} • {opportunity.contactName}
-              </p>
-            </MobileCard>
-          ))
-        )}
-      </MobileSection>
-
-      <BottomSheet open={addOpen} onClose={() => setAddOpen(false)} title="Přidat člena domácnosti">
         <div className="space-y-3">
-          <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Kontakt</label>
-          <select
-            value={newMemberContactId}
-            onChange={(e) => setNewMemberContactId(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm"
-          >
-            <option value="">Vyberte kontakt</option>
-            {availableContacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {contact.firstName} {contact.lastName}
-              </option>
-            ))}
-          </select>
-
-          <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Role</label>
-          <input
-            value={newMemberRole}
-            onChange={(e) => setNewMemberRole(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
-            placeholder="Např. partner, dítě, parent"
-          />
-
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              Kontakt
+            </label>
+            <CustomDropdown
+              value={newMemberContactId}
+              onChange={setNewMemberContactId}
+              placeholder="Vyberte kontakt"
+              options={[
+                { id: "", label: "Vyberte kontakt" },
+                ...availableContacts.map((contact) => ({
+                  id: contact.id,
+                  label: `${contact.firstName} ${contact.lastName}`,
+                })),
+              ]}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              Role
+            </label>
+            <input
+              value={newMemberRole}
+              onChange={(e) => setNewMemberRole(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              placeholder="Např. partner, dítě, rodič"
+            />
+          </div>
           <button
             type="button"
             onClick={handleAddMember}
-            className="w-full min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold"
+            disabled={!newMemberContactId}
+            className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50"
           >
             Přidat člena
           </button>
         </div>
       </BottomSheet>
-    </>
+    </div>
   );
 }

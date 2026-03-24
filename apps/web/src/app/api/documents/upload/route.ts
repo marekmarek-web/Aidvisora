@@ -7,6 +7,8 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
 import { executeIdempotent } from "@/lib/security/idempotency";
 import { detectMagicMimeTypeFromBytes, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
 import { isUuid, sanitizeStorageSegment, toTrimmedString } from "@/lib/security/validation";
+import { computeDocumentFingerprint } from "@/lib/documents/processing/fingerprint";
+import type { DocumentSourceChannel } from "db";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +24,38 @@ const ALLOWED_MIME_TYPES = new Set([
 
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
-type UploadSource = "web" | "mobile_camera" | "mobile_gallery" | "mobile_file" | "mobile_share" | "mobile_scan";
-type UploadResponseBody = { error: string } | { id: string; name: string; mimeType: string | null; sizeBytes: number | null };
+type UploadSource =
+  | "web"
+  | "mobile_camera"
+  | "mobile_gallery"
+  | "mobile_file"
+  | "mobile_share"
+  | "mobile_scan"
+  | "ai_drawer"
+  | "backoffice_import";
+type UploadResponseBody =
+  | { error: string }
+  | {
+      id: string;
+      name: string;
+      mimeType: string | null;
+      sizeBytes: number | null;
+      ok: true;
+      documentId: string;
+      processingStatus: string | null;
+    };
 
 function parseUploadSource(value: FormDataEntryValue | null): UploadSource {
   const raw = typeof value === "string" ? value : "";
-  if (raw === "mobile_camera" || raw === "mobile_gallery" || raw === "mobile_file" || raw === "mobile_share" || raw === "mobile_scan") {
+  if (
+    raw === "mobile_camera" ||
+    raw === "mobile_gallery" ||
+    raw === "mobile_file" ||
+    raw === "mobile_share" ||
+    raw === "mobile_scan" ||
+    raw === "ai_drawer" ||
+    raw === "backoffice_import"
+  ) {
     return raw;
   }
   return "web";
@@ -44,6 +72,28 @@ function parseTags(value: FormDataEntryValue | null): string[] | null {
 
 function parseBoolean(value: FormDataEntryValue | null): boolean {
   return value === "true" || value === "1" || value === "on";
+}
+
+function parseCaptureMode(value: FormDataEntryValue | null): string | null {
+  const s = toTrimmedString(value);
+  return s || null;
+}
+
+function parseCaptureQualityWarnings(value: FormDataEntryValue | null): string[] | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const out = parsed.filter((x): x is string => typeof x === "string");
+    return out.length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseOptionalBoolean(value: FormDataEntryValue | null): boolean | null {
+  if (value === null || value === undefined || value === "") return null;
+  return parseBoolean(value);
 }
 
 export async function POST(request: Request) {
@@ -111,6 +161,20 @@ export async function POST(request: Request) {
     const pageCount = pageCountRaw ? parseInt(String(pageCountRaw), 10) || null : null;
     const capturedPlatform = (formData.get("capturedPlatform") as "ios" | "android") || null;
     const isScanLike = uploadSource === "mobile_scan" || uploadSource === "mobile_camera" ? true : null;
+    const captureMode = parseCaptureMode(formData.get("captureMode"));
+    const captureQualityWarnings = parseCaptureQualityWarnings(formData.get("captureQualityWarnings"));
+    const manualCropApplied = parseOptionalBoolean(formData.get("manualCropApplied"));
+    const rotationAdjusted = parseOptionalBoolean(formData.get("rotationAdjusted"));
+
+    const sourceChannelMap: Record<string, DocumentSourceChannel> = {
+      web: "web_upload",
+      mobile_camera: "mobile_camera",
+      mobile_gallery: "mobile_gallery",
+      mobile_file: "mobile_file",
+      mobile_share: "mobile_share",
+      mobile_scan: "mobile_scan",
+    };
+    const sourceChannel: DocumentSourceChannel = sourceChannelMap[uploadSource] ?? "web_upload";
 
     const contactIdValue = toTrimmedString(contactIdRaw);
     const opportunityIdValue = toTrimmedString(opportunityIdRaw);
@@ -156,6 +220,8 @@ export async function POST(request: Request) {
         return { status: 500, body: { error: message } };
       }
 
+      const fingerprint = await computeDocumentFingerprint(fileBytes).catch(() => null);
+
       const [inserted] = await db
         .insert(documents)
         .values({
@@ -174,12 +240,19 @@ export async function POST(request: Request) {
           pageCount,
           capturedPlatform,
           isScanLike,
+          sourceChannel,
+          documentFingerprint: fingerprint,
+          captureMode,
+          captureQualityWarnings,
+          manualCropApplied,
+          rotationAdjusted,
         })
         .returning({
           id: documents.id,
           name: documents.name,
           mimeType: documents.mimeType,
           sizeBytes: documents.sizeBytes,
+          processingStatus: documents.processingStatus,
         });
 
       if (!inserted?.id) {
@@ -218,7 +291,15 @@ export async function POST(request: Request) {
         },
       }).catch(() => {});
 
-      return { status: 200, body: inserted };
+      return {
+        status: 200,
+        body: {
+          ...inserted,
+          ok: true as const,
+          documentId: inserted.id,
+          processingStatus: inserted.processingStatus ?? "none",
+        },
+      };
     };
 
     if (idempotencyKeyHeader) {

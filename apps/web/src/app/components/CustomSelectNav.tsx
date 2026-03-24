@@ -217,6 +217,7 @@ export function CustomSelectNav({ className = "" }: { className?: string }) {
       `}</style>
 
       <div className={`wp-custom-select-wrap ${className}`}>
+        {/* Intentional native <select>: experimental CSS-styled options (SVG in <option>); not replaced by CustomDropdown. */}
         <select defaultValue="Home">
           <span className="selected-content" aria-hidden />
           <option value="Menu">

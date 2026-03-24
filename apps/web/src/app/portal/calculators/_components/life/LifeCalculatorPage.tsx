@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
@@ -10,10 +10,14 @@ import { LifeRiskChart } from "./LifeRiskChart";
 import { DEFAULT_STATE } from "@/lib/calculators/life/life.config";
 import { runCalculations } from "@/lib/calculators/life/life.engine";
 import type { LifeState } from "@/lib/calculators/life/life.types";
+import { buildLifePdfSections } from "@/lib/calculators/pdf";
+import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
 
 export function LifeCalculatorPage() {
   const [state, setState] = useState<LifeState>({ ...DEFAULT_STATE });
   const result = useMemo(() => runCalculations(state), [state]);
+
+  const getPdfSections = useCallback(() => buildLifePdfSections(state, result), [state, result]);
 
   return (
     <div className="pt-0 pb-56 lg:pb-0">
@@ -23,6 +27,13 @@ export function LifeCalculatorPage() {
             eyebrow="Kalkulačka pojištění · 2026"
             title="Kalkulačka životního pojištění"
             subtitle="Orientační výpočet potřebného krytí podle příjmů, výdajů a závazků."
+            actions={
+              <CalculatorPdfExportButton
+                documentTitle="Životní pojištění – přehled výpočtu"
+                filePrefix="zivotni-pojisteni"
+                getSections={getPdfSections}
+              />
+            }
           />
         </div>
 

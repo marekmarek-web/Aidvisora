@@ -13,15 +13,158 @@ import {
   type ExtractedContractByType,
 } from "./extraction-schemas-by-type";
 import { validateExtractedContract, validateDocumentEnvelope, type ValidationResult } from "./extraction-validation";
-import { decideReviewStatus } from "./review-decision-engine";
+import { decideReviewStatus, decideReviewStatusWithReason } from "./review-decision-engine";
 import type { ContractProcessingStatus } from "db";
 import type { ExtractionTrace } from "./review-queue-repository";
 import type { ValidationWarning } from "./extraction-validation";
-import { resolveDocumentSchema } from "./document-schema-router";
+import type { DocumentReviewEnvelope } from "./document-review-types";
+import { selectSchemaForType } from "./document-schema-router";
+import { applyRuleBasedClassificationOverride } from "./document-classification-overrides";
+import { mapPrimaryToNormalized } from "./normalized-document-taxonomy";
 import { runVerificationPass } from "./document-verification";
 import { resolveSensitivityProfile } from "./document-sensitivity";
 import { inferDocumentRelationships } from "./document-relationships";
 import { isOpenAIRateLimitError } from "./openai-rate-limit";
+import {
+  mapPrimaryToPipelineClassification,
+  resolveExtractionRoute,
+  isProposalOrModelationLifecycle,
+  type ExtractionRoute,
+  type PipelineNormalizedClassification,
+} from "./pipeline-extraction-routing";
+import type { ClassificationResult } from "./document-classification";
+import {
+  extractPaymentInstructionsFromDocument,
+  buildPaymentInstructionEnvelope,
+  validatePaymentInstructionExtraction,
+  type PaymentInstructionExtraction,
+} from "./payment-instruction-extraction";
+
+export type PipelinePreprocessMeta = {
+  adobePreprocessed?: boolean;
+  preprocessStatus?: string;
+  preprocessMode?: string;
+  preprocessWarnings?: string[];
+  ocrConfidenceEstimate?: number;
+  readabilityScore?: number;
+  preprocessDurationMs?: number;
+  normalizedPdfPath?: string | null;
+  markdownContentLength?: number;
+  pageCountEstimate?: number | null;
+};
+
+function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {
+  console.info(
+    `[contract-pipeline] ${phase}`,
+    JSON.stringify({
+      ...payload,
+    })
+  );
+}
+
+function mergePreprocessIntoTrace(trace: ExtractionTrace, meta?: PipelinePreprocessMeta | null): void {
+  if (!meta) return;
+  trace.preprocessMode = meta.preprocessMode;
+  trace.preprocessStatus = meta.preprocessStatus;
+  if (typeof meta.ocrConfidenceEstimate === "number") {
+    trace.textCoverageEstimate = meta.ocrConfidenceEstimate;
+    trace.ocrConfidenceEstimate = meta.ocrConfidenceEstimate;
+  }
+  if (typeof meta.readabilityScore === "number") trace.readabilityScore = meta.readabilityScore;
+  if (meta.pageCountEstimate != null) trace.pageCount = meta.pageCountEstimate;
+  if (meta.adobePreprocessed) trace.adobePreprocessed = true;
+  if (meta.preprocessWarnings?.length) {
+    trace.warnings = [...(trace.warnings ?? []), ...meta.preprocessWarnings];
+  }
+}
+
+function buildManualReviewStubEnvelope(params: {
+  classification: ClassificationResult;
+  inputMode: string;
+  extractionMode: string;
+  pageCount?: number | null;
+  norm: PipelineNormalizedClassification;
+  route: ExtractionRoute;
+}): DocumentReviewEnvelope {
+  const { classification, inputMode, extractionMode, pageCount, norm, route } = params;
+  const scannedVsDigital =
+    inputMode === "text_pdf"
+      ? "digital"
+      : inputMode === "image_document" || inputMode === "scanned_pdf" || inputMode === "mixed_pdf"
+        ? "scanned"
+        : "unknown";
+  return {
+    documentClassification: {
+      primaryType: "unsupported_or_unknown",
+      subtype: classification.primaryType,
+      lifecycleStatus: "unknown",
+      documentIntent: "manual_review_required",
+      confidence: classification.confidence,
+      reasons: [
+        ...classification.reasons,
+        `original_primary:${classification.primaryType}`,
+        `normalized_pipeline:${norm}`,
+      ],
+    },
+    documentMeta: {
+      pageCount: pageCount ?? undefined,
+      scannedVsDigital,
+      overallConfidence: Math.max(0.12, Math.min(1, classification.confidence * 0.55)),
+      pipelineRoute: route,
+      normalizedPipelineClassification: norm,
+      rawPrimaryClassification: classification.primaryType,
+      extractionRoute: route,
+    },
+    parties: {},
+    productsOrObligations: [],
+    financialTerms: {},
+    serviceTerms: {},
+    extractedFields: {},
+    evidence: [],
+    candidateMatches: {
+      matchedClients: [],
+      matchedHouseholds: [],
+      matchedDeals: [],
+      matchedCompanies: [],
+      matchedContracts: [],
+      score: 0,
+      reason: "no_match",
+      ambiguityFlags: [],
+    },
+    sectionSensitivity: {},
+    relationshipInference: {
+      policyholderVsInsured: [],
+      childInsured: [],
+      intermediaryVsClient: [],
+      employerVsEmployee: [],
+      companyVsPerson: [],
+      bankOrLenderVsBorrower: [],
+    },
+    reviewWarnings: [
+      {
+        code: "manual_review_only",
+        message:
+          "Typ dokumentu není spolehlivě podporován pro automatickou extrakci. Ověřte obsah a doplňte údaje ručně.",
+        severity: "warning",
+      },
+    ],
+    suggestedActions: [],
+    sensitivityProfile: "standard_personal_data",
+    contentFlags: {
+      isFinalContract: false,
+      isProposalOnly: false,
+      containsPaymentInstructions: false,
+      containsClientData: false,
+      containsAdvisorData: false,
+      containsMultipleDocumentSections: false,
+    },
+    debug: {
+      originalClassification: classification,
+      inputMode,
+      extractionMode,
+    },
+  };
+}
 
 export type PipelineSuccess = {
   ok: true;
@@ -36,6 +179,7 @@ export type PipelineSuccess = {
   validationWarnings: ValidationWarning[];
   fieldConfidenceMap: Record<string, number> | null;
   classificationReasons: string[];
+  reviewDecisionReason?: string | null;
 };
 
 export type PipelineError = {
@@ -50,12 +194,31 @@ export type PipelineError = {
 
 export type PipelineResult = PipelineSuccess | PipelineError;
 
+export type ContractPipelineOptions = {
+  /** Markdown/OCR text snippet for rule-based classification overrides (e.g. Adobe preprocess). */
+  ruleBasedTextHint?: string | null;
+  preprocessMeta?: PipelinePreprocessMeta | null;
+};
+
 export async function runContractUnderstandingPipeline(
   fileUrl: string,
-  mimeType?: string | null
+  mimeType?: string | null,
+  options?: ContractPipelineOptions
 ): Promise<PipelineResult> {
-  const trace: ExtractionTrace = {};
+  const { getPipelineVersionInfo } = await import("./pipeline-versioning");
+  const versionInfo = getPipelineVersionInfo();
+  const trace: ExtractionTrace = {
+    pipelineVersion: versionInfo.pipelineVersion,
+    promptVersion: versionInfo.promptVersion,
+    schemaVersion: versionInfo.schemaVersion,
+    classifierVersion: versionInfo.classifierVersion,
+  };
   const allReasons: string[] = [];
+  mergePreprocessIntoTrace(trace, options?.preprocessMeta ?? null);
+  logPipelineEvent("start", {
+    hasPreprocessMeta: Boolean(options?.preprocessMeta),
+    preprocessStatus: options?.preprocessMeta?.preprocessStatus,
+  });
 
   // Steps 1–2: Jedno volání s PDF (detekce režimu + typ dokumentu), při selhání fallback na 2× sekvenční volání.
   let inputModeResult: Awaited<ReturnType<typeof detectInputMode>>;
@@ -116,6 +279,12 @@ export async function runContractUnderstandingPipeline(
     }
   }
 
+  const override = applyRuleBasedClassificationOverride(classification, options?.ruleBasedTextHint);
+  classification = override.classification;
+  if (override.overrideApplied && override.classificationOverrideReason) {
+    trace.classificationOverrideReason = override.classificationOverrideReason;
+  }
+
   trace.inputMode = inputModeResult.inputMode;
   trace.extractionMode = inputModeResult.extractionMode;
   trace.ocrRequired = inputModeResult.ocrRequired ?? false;
@@ -143,13 +312,179 @@ export async function runContractUnderstandingPipeline(
 
   trace.documentType = classification.primaryType;
   trace.classificationConfidence = classification.confidence;
+  trace.normalizedDocumentType = mapPrimaryToNormalized(classification.primaryType);
   if (classification.reasons.length) {
     allReasons.push(...classification.reasons);
   }
 
-  // Step 3 & 4: Schema is chosen by document type (no separate step)
+  const normPipeline = mapPrimaryToPipelineClassification(classification.primaryType);
+  const extractionRoute = resolveExtractionRoute(normPipeline, classification.confidence);
+  trace.normalizedPipelineClassification = normPipeline;
+  trace.extractionRoute = extractionRoute;
+  trace.rawClassification = classification.primaryType;
+  const textCov =
+    typeof trace.textCoverageEstimate === "number"
+      ? trace.textCoverageEstimate
+      : typeof options?.preprocessMeta?.ocrConfidenceEstimate === "number"
+        ? options.preprocessMeta.ocrConfidenceEstimate
+        : undefined;
+  if (textCov != null) trace.textCoverageEstimate = textCov;
+
+  logPipelineEvent("classified", {
+    raw: classification.primaryType,
+    normalizedPipeline: normPipeline,
+    route: extractionRoute,
+    confidence: classification.confidence,
+  });
+
+  if (options?.preprocessMeta?.preprocessStatus === "failed") {
+    allReasons.push("adobe_preprocess_failed_fallback");
+  }
+  if (typeof textCov === "number" && textCov < 0.35) {
+    allReasons.push("low_text_coverage_estimate");
+  }
+
+  if (extractionRoute === "manual_review_only") {
+    const stub = buildManualReviewStubEnvelope({
+      classification,
+      inputMode: inputModeResult.inputMode as string,
+      extractionMode: inputModeResult.extractionMode as string,
+      pageCount: inputModeResult.pageCount ?? trace.pageCount ?? null,
+      norm: normPipeline,
+      route: extractionRoute,
+    });
+    stub.documentMeta.textCoverageEstimate = textCov;
+    stub.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
+    stub.documentMeta.preprocessStatus = options?.preprocessMeta?.preprocessStatus;
+    trace.selectedSchema = "manual_review_only";
+    logPipelineEvent("branch_manual_review", { normalizedPipeline: normPipeline });
+    return {
+      ok: true,
+      processingStatus: "review_required",
+      extractedPayload: stub,
+      confidence: stub.documentClassification.confidence,
+      reasonsForReview: [...new Set([...allReasons, "manual_review_only"])],
+      inputMode: inputModeResult.inputMode,
+      extractionMode: inputModeResult.extractionMode,
+      detectedDocumentType: "unsupported_or_unknown",
+      extractionTrace: trace,
+      validationWarnings: stub.reviewWarnings,
+      fieldConfidenceMap: null,
+      classificationReasons: classification.reasons,
+    };
+  }
+
+  if (extractionRoute === "payment_instructions") {
+    trace.selectedSchema = "payment_instruction_dedicated";
+    logPipelineEvent("branch_payment_extraction", {});
+    const payRes = await extractPaymentInstructionsFromDocument(fileUrl, mimeType);
+    if (!payRes.ok) {
+      if (payRes.errorCode === "OPENAI_RATE_LIMIT") {
+        trace.failedStep = "payment_extraction";
+        return {
+          ok: false,
+          processingStatus: "failed",
+          errorCode: "OPENAI_RATE_LIMIT",
+          errorMessage: payRes.error,
+          extractionTrace: trace,
+        };
+      }
+      const fallbackExtraction: PaymentInstructionExtraction = {
+        paymentNote: payRes.error,
+        confidence: 0.15,
+        needsHumanReview: true,
+      };
+      const payPrimary =
+        classification.primaryType === "investment_payment_instruction"
+          ? "investment_payment_instruction"
+          : "payment_instruction";
+      const payData = buildPaymentInstructionEnvelope({
+        extraction: fallbackExtraction,
+        primaryType: payPrimary,
+        pageCount: inputModeResult.pageCount ?? trace.pageCount ?? undefined,
+      });
+      payData.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
+      payData.documentMeta.preprocessStatus = options?.preprocessMeta?.preprocessStatus;
+      payData.documentMeta.textCoverageEstimate = textCov;
+      payData.reviewWarnings.push({
+        code: "payment_extraction_parse_failed",
+        message: payRes.error,
+        severity: "critical",
+      });
+      logPipelineEvent("payment_extraction_failed_soft", { error: payRes.error.slice(0, 120) });
+      return {
+        ok: true,
+        processingStatus: "review_required",
+        extractedPayload: payData,
+        confidence: 0.2,
+        reasonsForReview: [...new Set([...allReasons, "payment_extraction_failed", "payment_needs_review"])],
+        inputMode: inputModeResult.inputMode,
+        extractionMode: inputModeResult.extractionMode,
+        detectedDocumentType: payPrimary,
+        extractionTrace: trace,
+        validationWarnings: payData.reviewWarnings,
+        fieldConfidenceMap: null,
+        classificationReasons: classification.reasons,
+      };
+    }
+
+    const payPrimary =
+      classification.primaryType === "investment_payment_instruction"
+        ? "investment_payment_instruction"
+        : "payment_instruction";
+    const payData = buildPaymentInstructionEnvelope({
+      extraction: payRes.data,
+      primaryType: payPrimary,
+      pageCount: inputModeResult.pageCount ?? trace.pageCount ?? undefined,
+    });
+    payData.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
+    payData.documentMeta.preprocessStatus = options?.preprocessMeta?.preprocessStatus;
+    payData.documentMeta.textCoverageEstimate = textCov;
+    payData.documentClassification.lifecycleStatus = classification.lifecycleStatus;
+    payData.documentClassification.documentIntent = classification.documentIntent;
+    payData.documentClassification.reasons = [
+      ...classification.reasons,
+      ...payData.documentClassification.reasons,
+    ];
+    const pv = validatePaymentInstructionExtraction(payRes.data);
+    payData.reviewWarnings = [...payData.reviewWarnings, ...pv.warnings];
+    let payStatus: ContractProcessingStatus = "review_required";
+    if (pv.needsHumanReview) {
+      allReasons.push("payment_validation_needs_review");
+    }
+    if (!pv.needsHumanReview && !pv.warnings.some((w) => w.severity === "critical")) {
+      payStatus = decideReviewStatus({
+        classificationConfidence: classification.confidence,
+        extractionConfidence: payRes.data.confidence ?? 0.65,
+        validation: { valid: true, warnings: [], reasonsForReview: [] },
+        inputMode: inputModeResult.inputMode,
+        extractionFailed: false,
+      });
+    }
+    logPipelineEvent("payment_extraction_ok", {
+      needsHumanReview: pv.needsHumanReview,
+      confidence: payRes.data.confidence,
+    });
+    return {
+      ok: true,
+      processingStatus: payStatus,
+      extractedPayload: payData,
+      confidence: payRes.data.confidence ?? 0.65,
+      reasonsForReview: [...new Set([...allReasons, ...(pv.needsHumanReview ? ["payment_needs_review"] : [])])],
+      inputMode: inputModeResult.inputMode,
+      extractionMode: inputModeResult.extractionMode,
+      detectedDocumentType: payPrimary,
+      extractionTrace: trace,
+      validationWarnings: payData.reviewWarnings,
+      fieldConfidenceMap: null,
+      classificationReasons: classification.reasons,
+    };
+  }
+
+  // Step 3 & 4: Schema selection by document type (Plan 3 §4.6) — contract / supporting paths
   const documentType = classification.primaryType;
-  const schemaDefinition = resolveDocumentSchema(documentType);
+  const schemaDefinition = selectSchemaForType(documentType);
+  trace.selectedSchema = documentType;
 
   // Step 5: Structured extraction
   const extractionPrompt = buildExtractionPrompt(documentType, isScanFallback);
@@ -178,6 +513,8 @@ export async function runContractUnderstandingPipeline(
       details: e instanceof Error ? e.message : String(e),
     };
   }
+
+  logPipelineEvent("contract_extraction_raw_ok", { documentType });
 
   const validated = validateExtractionByType(rawExtraction, documentType);
   if (!validated.ok) {
@@ -210,8 +547,22 @@ export async function runContractUnderstandingPipeline(
         ? "scanned"
         : "unknown";
 
+  data.documentMeta.pipelineRoute =
+    extractionRoute === "supporting_document" ? "supporting_document" : "contract_intake";
+  data.documentMeta.normalizedPipelineClassification = normPipeline;
+  data.documentMeta.rawPrimaryClassification = classification.primaryType;
+  data.documentMeta.extractionRoute = extractionRoute;
+  data.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
+  data.documentMeta.preprocessStatus = options?.preprocessMeta?.preprocessStatus;
+  data.documentMeta.textCoverageEstimate = textCov;
+  if (extractionRoute === "supporting_document") {
+    allReasons.push("supporting_document_review");
+  }
+
   const lifecycle = data.documentClassification.lifecycleStatus;
-  const intent = data.documentClassification.documentIntent;
+  if (isProposalOrModelationLifecycle(lifecycle)) {
+    allReasons.push("proposal_or_modelation_not_final_contract");
+  }
   if (!data.contentFlags) {
     data.contentFlags = {
       isFinalContract: false,
@@ -291,14 +642,16 @@ export async function runContractUnderstandingPipeline(
     allReasons.push(...verification.reasonsForReview);
   }
 
-  // Step 7: Review decision
-  const processingStatus = decideReviewStatus({
+  // Step 7: Review decision (envelopeValidation computed in Step 6)
+  const reviewDecision = decideReviewStatusWithReason({
     classificationConfidence: classification.confidence,
     extractionConfidence,
     validation,
+    envelopeValidation,
     inputMode: inputModeResult.inputMode,
     extractionFailed: false,
   });
+  const processingStatus = reviewDecision.status;
 
   if (extractionConfidence < 0.7) {
     allReasons.push("low_confidence");
@@ -340,5 +693,6 @@ export async function runContractUnderstandingPipeline(
     validationWarnings: [...validation.warnings, ...verification.warnings, ...envelopeValidation.warnings],
     fieldConfidenceMap,
     classificationReasons: classification.reasons,
+    reviewDecisionReason: reviewDecision.reason,
   };
 }

@@ -341,6 +341,37 @@ function buildSummary(
   return `${humanSummary} ${techDetail}`;
 }
 
+/**
+ * Apply inline review edits onto the API `extractedPayload` shape (section.key field ids from flattenPayload).
+ */
+export function mergeFieldEditsIntoExtractedPayload(
+  payload: Record<string, unknown>,
+  editedFields: Record<string, string>
+): { merged: Record<string, unknown>; correctedFields: string[] } {
+  const correctedFields: string[] = [];
+  let merged: Record<string, unknown>;
+  try {
+    merged = structuredClone(payload) as Record<string, unknown>;
+  } catch {
+    merged = JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
+  }
+  for (const [fieldId, value] of Object.entries(editedFields)) {
+    const parts = fieldId.split(".");
+    if (parts.length === 2 && parts[0] !== "root") {
+      const [sec, key] = parts;
+      const section = merged[sec];
+      if (section && typeof section === "object" && section !== null && !Array.isArray(section)) {
+        (section as Record<string, unknown>)[key] = value;
+        correctedFields.push(fieldId);
+      }
+    } else if (parts[0] === "root" && parts.length === 2) {
+      merged[parts[1]] = value;
+      correctedFields.push(fieldId);
+    }
+  }
+  return { merged, correctedFields };
+}
+
 export function mapApiToExtractionDocument(
   detail: ApiReviewDetail,
   pdfUrl: string
@@ -363,10 +394,16 @@ export function mapApiToExtractionDocument(
   const clientName =
     [client.fullName, client.firstName, client.lastName].filter(Boolean).join(" ") || "—";
 
+  const insights = detail.pipelineInsights as ExtractionDocument["pipelineInsights"] | undefined;
+  const norm = insights?.normalizedPipelineClassification;
+  const baseType = (detail.detectedDocumentType as string) ?? "Neznámý typ";
+  const documentTypeLabel =
+    norm && norm !== baseType ? `${baseType} · ${norm}` : baseType;
+
   return {
     id: detail.id as string,
     fileName: detail.fileName as string,
-    documentType: (detail.detectedDocumentType as string) ?? "Neznámý typ",
+    documentType: documentTypeLabel,
     clientName,
     uploadTime: detail.createdAt
       ? new Date(detail.createdAt as string).toLocaleString("cs-CZ")
@@ -405,5 +442,7 @@ export function mapApiToExtractionDocument(
     validationWarnings: detail.validationWarnings as ExtractionDocument["validationWarnings"],
     classificationReasons: detail.classificationReasons as string[] | undefined,
     fieldConfidenceMap,
+    pipelineInsights: insights,
+    applyGate: detail.applyGate as ExtractionDocument["applyGate"],
   };
 }

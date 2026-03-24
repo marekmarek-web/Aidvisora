@@ -1,6 +1,7 @@
 "use client";
 
 import { useCompanyFaStore } from "@/lib/analyses/company-fa/store";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 function num(v: unknown, def: number): number {
   if (typeof v === "number" && !Number.isNaN(v)) return v;
@@ -102,18 +103,16 @@ export function StepCompanyPeople() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
                 />
               </label>
-              <label>
+              <label className="block w-full">
                 <span className="block text-sm text-slate-600 mb-1">Typ příjmu</span>
-                <select
+                <CustomDropdown
                   value={d.incomeType ?? "employee"}
-                  onChange={(e) =>
-                    setDirector(i, { incomeType: e.target.value as "employee" | "osvc" })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-                >
-                  <option value="employee">Zaměstnanec</option>
-                  <option value="osvc">OSVČ</option>
-                </select>
+                  onChange={(id) => setDirector(i, { incomeType: id as "employee" | "osvc" })}
+                  options={[
+                    { id: "employee", label: "Zaměstnanec" },
+                    { id: "osvc", label: "OSVČ" },
+                  ]}
+                />
               </label>
             </div>
           </div>

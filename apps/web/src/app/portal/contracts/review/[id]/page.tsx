@@ -21,6 +21,7 @@ export default function ContractReviewDetailPage() {
   const toast = useToast();
 
   const [doc, setDoc] = useState<ExtractionDocument | null>(null);
+  const [rawExtractedPayload, setRawExtractedPayload] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -90,20 +91,26 @@ export default function ContractReviewDetailPage() {
     }
   }, [id, router, toast]);
 
-  const handleApprove = useCallback(async () => {
-    setActionLoading("approve");
-    try {
-      const result = await approveContractReview(id);
-      if (result.ok) {
-        toast.showToast("Položka schválena.", "success");
-        load();
-      } else {
-        toast.showToast(result.error ?? "Chyba", "error");
+  const handleApprove = useCallback(
+    async (editedFields: Record<string, string>) => {
+      setActionLoading("approve");
+      try {
+        const result = await approveContractReview(id, {
+          fieldEdits: editedFields,
+          rawExtractedPayload: rawExtractedPayload ?? undefined,
+        });
+        if (result.ok) {
+          toast.showToast("Položka schválena.", "success");
+          load();
+        } else {
+          toast.showToast(result.error ?? "Chyba", "error");
+        }
+      } finally {
+        setActionLoading(null);
       }
-    } finally {
-      setActionLoading(null);
-    }
-  }, [id, toast, load]);
+    },
+    [id, rawExtractedPayload, toast, load]
+  );
 
   const handleReject = useCallback(
     async (reason?: string) => {

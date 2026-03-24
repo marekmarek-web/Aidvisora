@@ -3,7 +3,7 @@
  * Extracted from financni-analyza.html (Phase 1). Preserves behavior 1:1.
  */
 
-import type { FinancialAnalysisData, CompanyRisks, FundDetail, IncomeProtectionPlan } from './types';
+import type { FinancialAnalysisData, CompanyRisks, FundDetail } from './types';
 import { STATE_PENSION_TAX_LIMIT_ANNUAL, STATE_PENSION_TAX_REFUND_ANNUAL } from './types';
 import { CREDIT_WISH_BANKS, FUND_DETAILS, FUND_LOGOS, INSURANCE_LOGOS } from './constants';
 import { buildPremiumReportHTML } from './report/index';
@@ -29,7 +29,7 @@ import {
   getStrategyDesc,
   getStrategyProfileLabel,
 } from './formatters';
-import { getAgeFromBirthDate, getRiskLabel } from './incomeProtection';
+import { getAgeFromBirthDate, getRiskLabel, computePlanTotalMonthly } from './incomeProtection';
 import { getGrowthChartData } from './charts';
 
 /* Aidvisor / WePlan theme: --wp-text #1f1c2e, --wp-text-muted #4a4a4a, --wp-border #e9ebf0, --wp-accent #0073ea, --wp-bg #f3f6fd, --wp-font Source Sans 3 */
@@ -931,16 +931,6 @@ function renderInsurancePage(
   return pages;
 }
 
-/** Měsíční částka za plán: základ (monthlyPremium nebo annual/12) + součet finalPrice zapnutých rizik. Stejný vzorec jako v StepIncomeProtection. */
-function planTotalMonthly(plan: IncomeProtectionPlan): number {
-  const base = plan.monthlyPremium ?? (plan.annualContribution ?? 0) / 12;
-  const riskTotal = (plan.insuredRisks ?? []).reduce(
-    (s, r) => s + (r.enabled && r.finalPrice != null ? r.finalPrice : 0),
-    0
-  );
-  return base + riskTotal;
-}
-
 /** Navržené řešení zajištění příjmů (grid) + optional optimalizace pro jednatele/majitele. */
 function renderIncomeProtectionProposed(
   data: FinancialAnalysisData,
@@ -969,7 +959,7 @@ function renderIncomeProtectionProposed(
   const fundingLabels: Record<string, string> = { company: 'Firma', personal: 'Osobně', osvc: 'OSVČ' };
   persons.forEach((person) => {
     (person.insurancePlans ?? []).forEach((plan) => {
-      const monthly = planTotalMonthly(plan);
+      const monthly = computePlanTotalMonthly(plan);
       totalMonthly += monthly;
       const risks = (plan.insuredRisks ?? []).filter((r) => r.enabled).map((r) => getRiskLabel(r.riskType)).join(', ') || '–';
       const price = formatCurrencyMonthly(monthly);
@@ -984,7 +974,7 @@ function renderIncomeProtectionProposed(
   html += `</div></div>${renderPdfFooter(footer)}</section>`;
 
   const companyMonthlyForPerson = (p: typeof persons[0]) =>
-    (p.insurancePlans ?? []).filter((pl) => pl.fundingSource === 'company').reduce((s, pl) => s + planTotalMonthly(pl), 0);
+    (p.insurancePlans ?? []).filter((pl) => pl.fundingSource === 'company').reduce((s, pl) => s + computePlanTotalMonthly(pl), 0);
   const anyOptimization = persons.some((p) => p.funding?.benefitOptimizationEnabled && ((p.funding?.companyContributionMonthly ?? 0) > 0 || companyMonthlyForPerson(p) > 0));
   if (anyOptimization) {
     html += `<section class="pdf-page">${renderPdfHeader('ZAJIŠTĚNÍ PŘÍJMŮ', clientName, today, author)}<div class="pdf-page-content"><div class="pdf-section"><div class="h2">Optimalizace zajištění příjmů</div>`;
@@ -995,7 +985,7 @@ function renderIncomeProtectionProposed(
       const comp = f.benefitVsSalaryComparison;
       const plans = person.insurancePlans ?? [];
       const companyFromPlans = companyFromPlansVal;
-      const totalPerson = plans.reduce((s, pl) => s + planTotalMonthly(pl), 0);
+      const totalPerson = plans.reduce((s, pl) => s + computePlanTotalMonthly(pl), 0);
       const personalOsvc = Math.max(0, totalPerson - companyFromPlans);
       const roleLabelMap: Record<string, string> = { client: 'Klient', partner: 'Partner', director: 'Jednatel/ka', owner: 'Majitel', partner_company: 'Společník' };
       const roleLabel = person.roleType ? roleLabelMap[person.roleType] ?? person.roleType : person.role;
@@ -1123,6 +1113,21 @@ function renderCompanyPDFSection(
           ${COMPANY_RISK_LABELS.map((r) => `<tr><td>${r.label}</td><td style="text-align: center;">${risks[r.key] ? 'Ano' : 'Ne'}</td></tr>`).join('')}
         </tbody>
       </table>
+      ${(() => {
+        const rd = riskDetails as Record<string, { limit?: number; currentPremiumMonthly?: number; proposedPremiumMonthly?: number } | undefined>;
+        const premiumRows = COMPANY_RISK_LABELS.filter((r) => risks[r.key])
+          .map((r) => {
+            const d = rd[r.key];
+            const cur = d?.currentPremiumMonthly;
+            const prop = d?.proposedPremiumMonthly;
+            const sav = cur != null && prop != null && cur > prop ? cur - prop : null;
+            return `<tr><td>${escapeHtml(r.label)}</td><td style="text-align:right">${cur != null ? formatCurrencyMonthly(cur) : '—'}</td><td style="text-align:right">${prop != null ? formatCurrencyMonthly(prop) : '—'}</td><td style="text-align:right">${sav != null && sav > 0 ? formatCurrencyMonthly(sav) : '—'}</td></tr>`;
+          })
+          .join('');
+        return premiumRows
+          ? `<p style="font-size: 9pt; font-weight: bold; margin-top: 4mm;">Pojistné – srovnání</p><table class="table" style="font-size: 8pt;"><thead><tr><th>Kategorie</th><th style="text-align:right">Aktuálně</th><th style="text-align:right">Návrh</th><th style="text-align:right">Úspora / měs.</th></tr></thead><tbody>${premiumRows}</tbody></table>`
+          : '';
+      })()}
       ${(riskDetails.property?.limit != null || riskDetails.property?.contractYears != null || riskDetails.interruption?.limit != null || riskDetails.interruption?.contractYears != null || riskDetails.liability?.limit != null || riskDetails.liability?.contractYears != null) ? `
       <p style="font-size: 8pt; color: #4a4a4a; margin-top: 3mm;">Detail: ${[
         riskDetails.property && (riskDetails.property.limit != null || riskDetails.property.contractYears != null) ? `Majetek – limit ${formatCzk(riskDetails.property.limit ?? 0)}, stáří ${riskDetails.property.contractYears ?? '—'} let` : null,

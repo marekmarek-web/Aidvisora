@@ -1,6 +1,6 @@
 import { db } from "db";
-import { contacts, contracts, tasks, auditLog } from "db";
-import { eq, and } from "db";
+import { contacts, contracts, tasks, auditLog, clientPaymentSetups, type ClientPaymentSetupPaymentType } from "db";
+import { eq, and, isNotNull } from "db";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
 
@@ -184,6 +184,41 @@ export async function applyContractReview(
             .returning({ id: tasks.id });
           if (inserted?.id) resultPayload.createdTaskId = inserted.id;
         } else if (action.type === "create_payment_setup" || action.type === "create_payment") {
+          if (effectiveContactId) {
+            const existingPay = await tx
+              .select({ id: clientPaymentSetups.id })
+              .from(clientPaymentSetups)
+              .where(
+                and(
+                  eq(clientPaymentSetups.tenantId, tenantId),
+                  eq(clientPaymentSetups.contactId, effectiveContactId),
+                  eq(clientPaymentSetups.sourceContractReviewId, reviewId),
+                  isNotNull(clientPaymentSetups.sourceContractReviewId)
+                )
+              )
+              .limit(1);
+            if (existingPay[0]?.id) {
+              resultPayload.createdPaymentSetupId = existingPay[0].id;
+              resultPayload.paymentSetup = {
+                obligationName: (action.payload.obligationName as string) || "Platba",
+                paymentType: (action.payload.paymentType as string) || "regular",
+                provider: (action.payload.provider as string) || "",
+                contractReference: (action.payload.contractReference as string) || "",
+                recipientAccount: (action.payload.recipientAccount as string) || (action.payload.accountNumber as string) || "",
+                iban: (action.payload.iban as string) || "",
+                bankCode: (action.payload.bankCode as string) || "",
+                variableSymbol: (action.payload.variableSymbol as string) || "",
+                specificSymbol: (action.payload.specificSymbol as string) || "",
+                regularAmount: (action.payload.regularAmount as string) || (action.payload.amount as string) || "",
+                oneOffAmount: (action.payload.oneOffAmount as string) || "",
+                currency: (action.payload.currency as string) || "CZK",
+                frequency: (action.payload.frequency as string) || "",
+                firstDueDate: (action.payload.firstDueDate as string) || (action.payload.firstPaymentDate as string) || "",
+                clientNote: (action.payload.clientNote as string) || "",
+              };
+              continue;
+            }
+          }
           resultPayload.paymentSetup = {
             obligationName: (action.payload.obligationName as string) || "Platba",
             paymentType: (action.payload.paymentType as string) || "regular",
@@ -201,6 +236,63 @@ export async function applyContractReview(
             firstDueDate: (action.payload.firstDueDate as string) || (action.payload.firstPaymentDate as string) || "",
             clientNote: (action.payload.clientNote as string) || "",
           };
+          if (effectiveContactId) {
+            const rawType = String(action.payload.paymentType ?? action.payload.obligationType ?? "other")
+              .toLowerCase()
+              .trim();
+            let domainType: ClientPaymentSetupPaymentType = "other";
+            if (rawType.includes("insurance") || rawType.includes("poji")) domainType = "insurance";
+            else if (rawType.includes("invest") || rawType.includes("fond")) domainType = "investment";
+            else if (rawType.includes("loan") || rawType.includes("úvěr") || rawType.includes("uver"))
+              domainType = "loan";
+
+            const amountStr =
+              (action.payload.regularAmount as string) ||
+              (action.payload.amount as string) ||
+              (action.payload.oneOffAmount as string) ||
+              "";
+            const parsedAmount = parseFloat(String(amountStr).replace(/\s/g, "").replace(",", "."));
+            const amount =
+              !Number.isNaN(parsedAmount) && parsedAmount >= 0 ? String(parsedAmount) : null;
+
+            const [insertedPs] = await tx
+              .insert(clientPaymentSetups)
+              .values({
+                tenantId,
+                contactId: effectiveContactId,
+                sourceContractReviewId: reviewId,
+                status: "draft",
+                paymentType: domainType,
+                providerName: (action.payload.provider as string)?.trim() || null,
+                productName: (action.payload.productName as string)?.trim() || null,
+                contractNumber:
+                  (action.payload.contractReference as string)?.trim() ||
+                  (action.payload.contractNumber as string)?.trim() ||
+                  null,
+                beneficiaryName: (action.payload.beneficiaryName as string)?.trim() || null,
+                accountNumber:
+                  (action.payload.recipientAccount as string)?.trim() ||
+                  (action.payload.accountNumber as string)?.trim() ||
+                  null,
+                bankCode: (action.payload.bankCode as string)?.trim() || null,
+                iban: (action.payload.iban as string)?.trim() || null,
+                bic: (action.payload.bic as string)?.trim() || null,
+                variableSymbol: (action.payload.variableSymbol as string)?.trim() || null,
+                specificSymbol: (action.payload.specificSymbol as string)?.trim() || null,
+                constantSymbol: (action.payload.constantSymbol as string)?.trim() || null,
+                amount: amount,
+                currency: (action.payload.currency as string)?.trim() || "CZK",
+                frequency: (action.payload.frequency as string)?.trim() || null,
+                firstPaymentDate:
+                  (action.payload.firstDueDate as string)?.trim() ||
+                  (action.payload.firstPaymentDate as string)?.trim() ||
+                  null,
+                paymentInstructionsText: (action.payload.clientNote as string)?.trim() || null,
+                needsHumanReview: true,
+              })
+              .returning({ id: clientPaymentSetups.id });
+            if (insertedPs?.id) resultPayload.createdPaymentSetupId = insertedPs.id;
+          }
         } else if (action.type === "draft_email" || action.type === "create_notification") {
           // No DB write - these are UI-only suggestions
         }
@@ -218,6 +310,7 @@ export async function applyContractReview(
         createdClientId: resultPayload.createdClientId ?? undefined,
         linkedClientId: resultPayload.linkedClientId ?? undefined,
         createdContractId: resultPayload.createdContractId ?? undefined,
+        createdPaymentSetupId: resultPayload.createdPaymentSetupId ?? undefined,
         createdTaskId: resultPayload.createdTaskId ?? undefined,
       },
     });

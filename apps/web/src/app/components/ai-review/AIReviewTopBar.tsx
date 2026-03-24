@@ -7,7 +7,7 @@ type Props = {
   doc: ExtractionDocument;
   onBack: () => void;
   onDiscard: () => void;
-  onApprove: () => void;
+  onApprove: () => void | Promise<void>;
   onReject?: () => void;
   onApply?: () => void;
   isApproving?: boolean;

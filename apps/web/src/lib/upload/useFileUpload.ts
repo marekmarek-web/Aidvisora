@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { validateFile } from "./validation";
 
-export type UploadSource = "web" | "mobile_camera" | "mobile_gallery" | "mobile_file" | "mobile_share" | "mobile_scan";
+export type UploadSource =
+  | "web"
+  | "mobile_camera"
+  | "mobile_gallery"
+  | "mobile_file"
+  | "mobile_share"
+  | "mobile_scan"
+  | "ai_drawer"
+  | "backoffice_import";
 export type UploadState = "idle" | "selected" | "uploading" | "done" | "error";
 
 export type UploadMetadata = {
@@ -16,6 +24,11 @@ export type UploadMetadata = {
   uploadSource?: UploadSource;
   pageCount?: number;
   capturedPlatform?: "ios" | "android";
+  /** Plan 3 §10.3 — mobile capture metadata */
+  captureMode?: string;
+  captureQualityWarnings?: string[];
+  manualCropApplied?: boolean;
+  rotationAdjusted?: boolean;
 };
 
 export type UploadResponse = {
@@ -23,6 +36,9 @@ export type UploadResponse = {
   name: string;
   mimeType: string | null;
   sizeBytes: number | null;
+  ok?: true;
+  documentId?: string;
+  processingStatus?: string | null;
 };
 
 type UseFileUploadOptions = {
@@ -125,6 +141,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       formData.set("uploadSource", metadata.uploadSource ?? "web");
       if (metadata.pageCount != null) formData.set("pageCount", String(metadata.pageCount));
       if (metadata.capturedPlatform) formData.set("capturedPlatform", metadata.capturedPlatform);
+      if (metadata.captureMode?.trim()) formData.set("captureMode", metadata.captureMode.trim());
+      if (metadata.captureQualityWarnings?.length) {
+        formData.set("captureQualityWarnings", JSON.stringify(metadata.captureQualityWarnings));
+      }
+      if (metadata.manualCropApplied != null) {
+        formData.set("manualCropApplied", String(metadata.manualCropApplied));
+      }
+      if (metadata.rotationAdjusted != null) {
+        formData.set("rotationAdjusted", String(metadata.rotationAdjusted));
+      }
 
       setState("uploading");
       setError(null);

@@ -2,7 +2,13 @@
  * Income protection step – derive persons from client/partner/children and merge with existing state.
  */
 
-import type { FinancialAnalysisData, IncomeProtectionPerson, InsuredRiskEntry, InsuredRiskType } from './types';
+import type {
+  FinancialAnalysisData,
+  IncomeProtectionPerson,
+  IncomeProtectionPlan,
+  InsuredRiskEntry,
+  InsuredRiskType,
+} from './types';
 import { INSURANCE_COMPANIES_CS } from './constants';
 
 const RISK_TYPES: InsuredRiskType[] = [
@@ -146,6 +152,24 @@ export function getDefaultInsuredRisks(): InsuredRiskEntry[] {
 
 export function getInsuranceCompanies(): string[] {
   return [...INSURANCE_COMPANIES_CS];
+}
+
+/** Měsíční základ plánu: měsíční příspěvek nebo roční/12 (bez příplatků za rizika). */
+export function computePlanBaseMonthly(plan: IncomeProtectionPlan): number {
+  return plan.monthlyPremium ?? (plan.annualContribution ?? 0) / 12;
+}
+
+/** Součet měsíčních příplatků za zapnutá rizika (finalPrice). */
+export function computeRiskPremiumsMonthly(plan: IncomeProtectionPlan): number {
+  return (plan.insuredRisks ?? []).reduce(
+    (s, r) => s + (r.enabled && r.finalPrice != null ? r.finalPrice : 0),
+    0,
+  );
+}
+
+/** Celkem měsíčně za plán: základ + příplatky za rizika (shodné v UI i reportu). */
+export function computePlanTotalMonthly(plan: IncomeProtectionPlan): number {
+  return computePlanBaseMonthly(plan) + computeRiskPremiumsMonthly(plan);
 }
 
 /** Check if optimization section should be shown for this person. */

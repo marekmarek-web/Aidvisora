@@ -147,6 +147,26 @@ export type ExtractionDocument = {
   validationWarnings?: Array<{ code?: string; message: string; field?: string }>;
   classificationReasons?: string[];
   fieldConfidenceMap?: Record<string, number>;
+  /** Quality gate result for apply readiness. */
+  applyGate?: {
+    readiness: "ready_for_apply" | "review_required" | "blocked_for_apply";
+    blockedReasons: string[];
+    warnings: string[];
+  };
+  /** From GET review `pipelineInsights` — routing, preprocess, payment preview. */
+  pipelineInsights?: {
+    normalizedPipelineClassification?: string;
+    extractionRoute?: string;
+    rawClassification?: string;
+    preprocessStatus?: string;
+    preprocessMode?: string;
+    adobePreprocessed?: boolean;
+    adobeWarnings?: string[];
+    textCoverageEstimate?: number;
+    readabilityScore?: number;
+    failedStep?: string;
+    paymentPreview?: Record<string, unknown>;
+  };
 };
 
 export type ExtractionReviewState = {

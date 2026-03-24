@@ -9,6 +9,8 @@ import {
   getTasksDueAndOverdue,
   getClientsNeedingAttention,
   buildSuggestedActionsFromUrgent,
+  getBlockedPaymentSetups,
+  getBlockedReviews,
 } from "@/lib/ai/dashboard-priority";
 import { listContractReviews } from "@/lib/ai/review-queue-repository";
 import type {
@@ -67,11 +69,15 @@ export async function GET(request: Request) {
       pendingReviews,
       tasksData,
       clientsNeedingAttention,
+      blockedPayments,
+      blockedReviews,
     ] = await Promise.all([
       computePriorityItems(tenantId),
       listContractReviews(tenantId, { reviewStatus: "pending", limit: 20 }),
       getTasksDueAndOverdue(tenantId),
       getClientsNeedingAttention(tenantId),
+      getBlockedPaymentSetups(tenantId),
+      getBlockedReviews(tenantId),
     ]);
 
     const contractsWaitingForReview: ContractWaitingForReview[] = pendingReviews.map((r) => ({
@@ -140,6 +146,13 @@ export async function GET(request: Request) {
       );
     }
 
+    const blockedItems = [...blockedReviews, ...blockedPayments];
+    const communicationSuggestions: string[] = [];
+    if (blockedPayments.length > 0)
+      communicationSuggestions.push("Vyžádat chybějící platební údaje od klienta.");
+    if (clientsNeedingAttention.length > 0)
+      communicationSuggestions.push("Kontaktovat klienty s blížícím se servisem.");
+
     const summary: DashboardSummary = {
       urgentItems,
       contractsWaitingForReview,
@@ -149,6 +162,9 @@ export async function GET(request: Request) {
       missingDataWarnings,
       suggestedActions,
       assistantSummaryText,
+      blockedItems,
+      paymentsBlockedForPortal: blockedPayments,
+      communicationSuggestions,
     };
 
     return NextResponse.json(summary);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
@@ -23,6 +23,8 @@ import {
   getBacktestChartSeries,
 } from "@/lib/calculators/investment/investment.charts";
 import { formatCurrency } from "@/lib/calculators/investment/formatters";
+import { buildInvestmentPdfSections } from "@/lib/calculators/pdf";
+import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
 
 export function InvestmentCalculatorPage() {
   const [initial, setInitial] = useState<number>(INVESTMENT_DEFAULTS.initialDefault);
@@ -42,6 +44,20 @@ export function InvestmentCalculatorPage() {
   const allocationChartData = useMemo(() => getAllocationChartData(profile), [profile]);
   const backtestSeries = useMemo(() => getBacktestChartSeries(backtestResult), [backtestResult]);
 
+  const getPdfSections = useCallback(
+    () =>
+      buildInvestmentPdfSections(
+        profile.name,
+        profile.rate,
+        initial,
+        monthly,
+        years,
+        projection,
+        { startYear, result: backtestResult }
+      ),
+    [profile.name, profile.rate, initial, monthly, years, projection, startYear, backtestResult]
+  );
+
   return (
     <div className="pt-0 pb-56 lg:pb-0">
       <CalculatorPageShell>
@@ -50,6 +66,13 @@ export function InvestmentCalculatorPage() {
             eyebrow="Kalkulačka investic · 2026"
             title="Investiční kalkulačka"
             subtitle="Projekce hodnoty investice v čase při pravidelném investování a zvolené strategii."
+            actions={
+              <CalculatorPdfExportButton
+                documentTitle="Investiční kalkulačka – přehled výpočtu"
+                filePrefix="investice"
+                getSections={getPdfSections}
+              />
+            }
           />
         </div>
 

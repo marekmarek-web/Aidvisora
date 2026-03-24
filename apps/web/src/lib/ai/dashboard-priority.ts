@@ -14,6 +14,7 @@ import type {
   TaskDueItem,
   ClientNeedingAttention,
   SuggestedAction,
+  BlockedItem,
 } from "./dashboard-types";
 
 const PENDING_REVIEW_DAYS_OLD = 3;
@@ -355,4 +356,75 @@ export function buildSuggestedActionsFromUrgent(
     }
   }
   return actions.slice(0, 10);
+}
+
+export async function getBlockedPaymentSetups(tenantId: string): Promise<BlockedItem[]> {
+  try {
+    const { clientPaymentSetups } = await import("db");
+    const rows = await db
+      .select({
+        id: clientPaymentSetups.id,
+        productName: clientPaymentSetups.productName,
+        providerName: clientPaymentSetups.providerName,
+      })
+      .from(clientPaymentSetups)
+      .where(
+        and(
+          eq(clientPaymentSetups.tenantId, tenantId),
+          eq(clientPaymentSetups.needsHumanReview, true),
+        ),
+      )
+      .limit(20);
+
+    return rows.map((r) => ({
+      type: "payment" as const,
+      entityId: r.id,
+      title: (r.providerName ?? r.productName ?? "Platba"),
+      blockedReasons: ["NEEDS_HUMAN_REVIEW"],
+      source: "client_payment_setups",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getBlockedReviews(tenantId: string): Promise<BlockedItem[]> {
+  const reviews = await db
+    .select({
+      id: contractUploadReviews.id,
+      fileName: contractUploadReviews.fileName,
+      confidence: contractUploadReviews.confidence,
+      processingStatus: contractUploadReviews.processingStatus,
+      extractionTrace: contractUploadReviews.extractionTrace,
+      extractedPayload: contractUploadReviews.extractedPayload,
+      detectedDocumentType: contractUploadReviews.detectedDocumentType,
+      matchedClientId: contractUploadReviews.matchedClientId,
+      matchedClientCandidates: contractUploadReviews.matchedClientCandidates,
+    })
+    .from(contractUploadReviews)
+    .where(
+      and(
+        eq(contractUploadReviews.tenantId, tenantId),
+        eq(contractUploadReviews.reviewStatus, "pending"),
+      ),
+    )
+    .limit(30);
+
+  const blocked: BlockedItem[] = [];
+  for (const r of reviews) {
+    try {
+      const { evaluateApplyReadiness } = await import("./quality-gates");
+      const gate = evaluateApplyReadiness(r as Parameters<typeof evaluateApplyReadiness>[0]);
+      if (gate.readiness === "blocked_for_apply") {
+        blocked.push({
+          type: "review",
+          entityId: r.id,
+          title: r.fileName,
+          blockedReasons: gate.blockedReasons,
+          source: "contract_upload_reviews",
+        });
+      }
+    } catch { /* quality gate module not available */ }
+  }
+  return blocked;
 }

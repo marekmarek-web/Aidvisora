@@ -4,9 +4,43 @@ import { opportunities } from "./pipeline";
 import { contracts } from "./contracts";
 
 export type DocumentProcessingProvider = "disabled" | "adobe" | "none";
-export type DocumentProcessingStatus = "none" | "queued" | "processing" | "completed" | "failed" | "skipped";
-export type DocumentProcessingStage = "none" | "ocr" | "markdown" | "extract" | "completed";
+export type DocumentProcessingStatus =
+  | "none"
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "skipped"
+  | "preprocessing_pending"
+  | "preprocessing_running"
+  | "preprocessing_failed"
+  | "normalized"
+  | "classified"
+  | "extraction_running"
+  | "extracted"
+  | "review_required";
+export type DocumentProcessingStage = "none" | "ocr" | "markdown" | "extract" | "completed" | "preprocessing" | "classification" | "extraction";
+export type DocumentBusinessStatus =
+  | "none"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "applied_to_crm"
+  | "applied_to_client_portal"
+  | "archived";
 export type DocumentAiInputSource = "markdown" | "extract" | "ocr_text" | "native_text" | "none";
+export type DocumentSourceChannel =
+  | "web_upload"
+  | "ai_drawer"
+  | "mobile_camera"
+  | "mobile_gallery"
+  | "mobile_file"
+  | "mobile_share"
+  | "mobile_scan"
+  | "email_attachment"
+  | "backoffice_import"
+  | "api";
+export type DocumentInputMode = "text_pdf" | "scanned_pdf" | "mixed_pdf" | "image_document" | "unreadable_or_low_quality" | "unsupported";
 export type CapturedPlatform = "ios" | "android";
 
 export const documents = pgTable("documents", {
@@ -31,9 +65,24 @@ export const documents = pgTable("documents", {
   hasTextLayer: boolean("has_text_layer"),
   isScanLike: boolean("is_scan_like"),
 
+  sourceChannel: text("source_channel").$type<DocumentSourceChannel>(),
+  detectedInputMode: text("detected_input_mode").$type<DocumentInputMode>(),
+  documentFingerprint: text("document_fingerprint"),
+  readabilityScore: integer("readability_score"),
+  normalizedPdfPath: text("normalized_pdf_path"),
+  preprocessingWarnings: jsonb("preprocessing_warnings").$type<string[]>(),
+  pageTextMap: jsonb("page_text_map").$type<Record<number, string>>(),
+  pageImageRefs: jsonb("page_image_refs").$type<string[]>(),
+
+  captureMode: text("capture_mode"),
+  captureQualityWarnings: jsonb("capture_quality_warnings").$type<string[]>(),
+  manualCropApplied: boolean("manual_crop_applied"),
+  rotationAdjusted: boolean("rotation_adjusted"),
+
   processingProvider: text("processing_provider").$type<DocumentProcessingProvider>().default("none"),
   processingStatus: text("processing_status").$type<DocumentProcessingStatus>().default("none"),
   processingStage: text("processing_stage").$type<DocumentProcessingStage>().default("none"),
+  businessStatus: text("business_status").$type<DocumentBusinessStatus>().default("none"),
   processingError: text("processing_error"),
   processingStartedAt: timestamp("processing_started_at", { withTimezone: true }),
   processingFinishedAt: timestamp("processing_finished_at", { withTimezone: true }),

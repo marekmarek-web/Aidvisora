@@ -2,37 +2,317 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  FileText,
+  CheckCircle2,
+  Clock,
+  Archive,
+  Upload,
+  Plus,
+  User,
+  RefreshCw,
+  ChevronRight,
+} from "lucide-react";
+import {
   getFinancialAnalysis,
   listFinancialAnalyses,
   saveFinancialAnalysisDraft,
   setFinancialAnalysisStatus,
   type FinancialAnalysisListItem,
+  type FinancialAnalysisStatus,
 } from "@/app/actions/financial-analyses";
 import { formatUpdated } from "@/app/portal/analyses/analyses-page-utils";
 import {
-  AnalysisCard,
   EmptyState,
   ErrorState,
   FilterChips,
   FullscreenSheet,
   LoadingSkeleton,
   MobileCard,
-  MobileSection,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
-type Filter = "all" | "draft" | "completed";
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+/* ------------------------------------------------------------------ */
+/*  Types / helpers                                                    */
+/* ------------------------------------------------------------------ */
+
+type Filter = "all" | "draft" | "done";
+
+const TOTAL_STEPS = 8;
+
+function getStatusConfig(status: string) {
+  switch (status) {
+    case "completed":
+      return { label: "Hotovo", tone: "success" as const, Icon: CheckCircle2, color: "text-emerald-600" };
+    case "exported":
+      return { label: "Exportováno", tone: "success" as const, Icon: Upload, color: "text-emerald-600" };
+    case "archived":
+      return { label: "Archiv", tone: "warning" as const, Icon: Archive, color: "text-amber-600" };
+    default:
+      return { label: "Koncept", tone: "info" as const, Icon: Clock, color: "text-indigo-600" };
+  }
+}
+
+function ProgressBar({ pct, status }: { pct: number; status: string }) {
+  const barColor =
+    status === "completed" || status === "exported"
+      ? "bg-emerald-500"
+      : status === "archived"
+        ? "bg-amber-400"
+        : "bg-indigo-500";
+  return (
+    <div className="mt-2.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-slate-400 font-bold">
+          {pct < 100 ? `Krok ${Math.ceil((pct / 100) * TOTAL_STEPS)} z ${TOTAL_STEPS}` : "Dokončeno"}
+        </span>
+        <span className="text-[10px] font-black text-slate-600">{pct}%</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={cx("h-full rounded-full transition-all", barColor)}
+          style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Analysis card                                                      */
+/* ------------------------------------------------------------------ */
+
+function AnalysisListCard({
+  item,
+  onOpen,
+}: {
+  item: FinancialAnalysisListItem;
+  onOpen: () => void;
+}) {
+  const cfg = getStatusConfig(item.status);
+  const pct = item.progress ?? 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 transition-colors"
+    >
+      <div className="p-3.5">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+            <FileText size={18} className="text-slate-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold text-slate-900 truncate">
+                {item.clientName || item.analysisTypeLabel || "Finanční analýza"}
+              </p>
+              <StatusBadge tone={cfg.tone}>{cfg.label}</StatusBadge>
+            </div>
+            {item.clientName && item.analysisTypeLabel ? (
+              <p className="text-xs text-slate-500 mt-0.5 truncate">{item.analysisTypeLabel}</p>
+            ) : null}
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Upraveno: {formatUpdated(new Date(item.updatedAt))}
+            </p>
+            <ProgressBar pct={pct} status={item.status} />
+          </div>
+          <ChevronRight size={14} className="text-slate-300 flex-shrink-0 mt-1" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Detail panel                                                       */
+/* ------------------------------------------------------------------ */
+
+function AnalysisDetailPanel({
+  detailId,
+  item,
+  onSetStatus,
+  pending,
+}: {
+  detailId: string;
+  item: FinancialAnalysisListItem | undefined;
+  onSetStatus: (s: FinancialAnalysisStatus) => void;
+  pending: boolean;
+}) {
+  const [payload, setPayload] = useState<{ currentStep?: number; data?: Record<string, unknown> } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingDetail(true);
+    getFinancialAnalysis(detailId)
+      .then((row) => {
+        if (cancelled) return;
+        setPayload((row?.payload ?? null) as typeof payload);
+      })
+      .catch(() => setPayload(null))
+      .finally(() => !cancelled && setLoadingDetail(false));
+    return () => { cancelled = true; };
+  }, [detailId]);
+
+  const pct = item?.progress ?? 0;
+  const currentStep = payload?.currentStep ?? 0;
+  const clientData = payload?.data?.client as Record<string, unknown> | undefined;
+  const cfg = getStatusConfig(item?.status ?? "draft");
+
+  return (
+    <div className="space-y-3 pb-4">
+      {/* Hero */}
+      <MobileCard className="p-4 bg-gradient-to-br from-[#0a0f29] to-indigo-900 border-0 rounded-xl">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+            <FileText size={22} className="text-indigo-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-black text-white truncate">
+              {item?.clientName || item?.analysisTypeLabel || "Finanční analýza"}
+            </p>
+            {item?.clientName && item?.analysisTypeLabel ? (
+              <p className="text-xs text-indigo-300 mt-0.5">{item.analysisTypeLabel}</p>
+            ) : null}
+            <div className="mt-1">
+              <StatusBadge tone={cfg.tone}>{cfg.label}</StatusBadge>
+            </div>
+          </div>
+        </div>
+        <ProgressBar pct={pct} status={item?.status ?? "draft"} />
+      </MobileCard>
+
+      {/* Client data */}
+      {loadingDetail ? (
+        <LoadingSkeleton rows={2} />
+      ) : (
+        <>
+          <MobileCard className="divide-y divide-slate-100 py-0">
+            <div className="flex items-center justify-between py-3 px-0.5">
+              <span className="text-xs text-slate-500 font-bold">Postup</span>
+              <span className="text-sm font-black text-slate-900">
+                Krok {currentStep} z {TOTAL_STEPS}
+              </span>
+            </div>
+            {clientData?.name ? (
+              <div className="flex items-center gap-2 py-3 px-0.5">
+                <User size={13} className="text-slate-400" />
+                <span className="text-xs text-slate-600 font-bold">{String(clientData.name)}</span>
+              </div>
+            ) : (
+              <div className="py-3 px-0.5">
+                <StatusBadge tone="warning">Chybí klientská data</StatusBadge>
+              </div>
+            )}
+            {item?.lastExportedAt ? (
+              <div className="flex items-center justify-between py-3 px-0.5">
+                <span className="text-xs text-slate-500">Export</span>
+                <span className="text-xs text-slate-700 font-bold">
+                  {formatUpdated(new Date(item.lastExportedAt))}
+                </span>
+              </div>
+            ) : null}
+          </MobileCard>
+
+          {/* Step checklist */}
+          <MobileCard className="p-3.5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+              Průběh kroků
+            </p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {Array.from({ length: TOTAL_STEPS }, (_, i) => {
+                const step = i + 1;
+                const done = step < currentStep;
+                const active = step === currentStep;
+                return (
+                  <div
+                    key={step}
+                    className={cx(
+                      "h-8 rounded-lg flex items-center justify-center text-xs font-black",
+                      done ? "bg-emerald-100 text-emerald-700" : active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"
+                    )}
+                  >
+                    {step}
+                  </div>
+                );
+              })}
+            </div>
+          </MobileCard>
+        </>
+      )}
+
+      {/* Status actions */}
+      <MobileCard className="p-3.5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+          Změnit status
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => onSetStatus("draft")}
+            disabled={pending || item?.status === "draft"}
+            className={cx(
+              "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
+              item?.status === "draft"
+                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 text-slate-600"
+            )}
+          >
+            Koncept
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetStatus("completed")}
+            disabled={pending || item?.status === "completed"}
+            className={cx(
+              "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
+              item?.status === "completed"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 text-slate-600"
+            )}
+          >
+            Hotovo
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetStatus("archived")}
+            disabled={pending || item?.status === "archived"}
+            className={cx(
+              "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
+              item?.status === "archived"
+                ? "border-amber-300 bg-amber-50 text-amber-700"
+                : "border-slate-200 text-slate-600"
+            )}
+          >
+            Archiv
+          </button>
+        </div>
+      </MobileCard>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Screen                                                        */
+/* ------------------------------------------------------------------ */
 
 export function AnalysesHubScreen({
   detailIdFromPath,
+  deviceClass = "phone",
 }: {
   detailIdFromPath: string | null;
+  deviceClass?: DeviceClass;
 }) {
   const [items, setItems] = useState<FinancialAnalysisListItem[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(detailIdFromPath);
-  const [detailPayload, setDetailPayload] = useState<{ currentStep?: number; data?: Record<string, unknown> } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -57,38 +337,22 @@ export function AnalysesHubScreen({
     setDetailOpen(true);
   }, [detailIdFromPath]);
 
-  useEffect(() => {
-    if (!detailId || !detailOpen) return;
-    startTransition(async () => {
-      try {
-        const row = await getFinancialAnalysis(detailId);
-        const payload = (row?.payload ?? null) as { currentStep?: number; data?: Record<string, unknown> } | null;
-        setDetailPayload(payload);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Načtení detailu analýzy selhalo.");
-      }
-    });
-  }, [detailId, detailOpen]);
-
   const filtered = useMemo(() => {
     if (filter === "all") return items;
     if (filter === "draft") return items.filter((item) => item.status === "draft" || item.status === "archived");
     return items.filter((item) => item.status === "completed" || item.status === "exported");
   }, [items, filter]);
 
+  const selectedItem = useMemo(() => items.find((i) => i.id === detailId), [items, detailId]);
+
   async function handleCreate() {
     startTransition(async () => {
       setError(null);
       try {
         const id = await saveFinancialAnalysisDraft({
-          payload: {
-            currentStep: 1,
-            data: {
-              client: { name: "" },
-            },
-          },
+          payload: { currentStep: 1, data: { client: { name: "" } } },
         });
-        await reload();
+        reload();
         setDetailId(id);
         setDetailOpen(true);
       } catch (e) {
@@ -97,119 +361,140 @@ export function AnalysesHubScreen({
     });
   }
 
-  async function setStatus(nextStatus: "draft" | "completed" | "archived") {
+  async function handleSetStatus(status: FinancialAnalysisStatus) {
     if (!detailId) return;
     startTransition(async () => {
       try {
-        await setFinancialAnalysisStatus(detailId, nextStatus);
-        await reload();
+        await setFinancialAnalysisStatus(detailId, status);
+        reload();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Aktualizace statusu selhala.");
       }
     });
   }
 
+  const draftCount = items.filter((i) => i.status === "draft" || i.status === "archived").length;
+  const doneCount = items.filter((i) => i.status === "completed" || i.status === "exported").length;
+
+  const isTablet = deviceClass === "tablet" || deviceClass === "desktop";
+
   return (
     <>
       {error ? <ErrorState title={error} onRetry={reload} /> : null}
-      {pending && items.length === 0 ? <LoadingSkeleton rows={2} /> : null}
 
-      <MobileSection
-        title="Finanční analýzy"
-        action={
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="min-h-[32px] rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-2.5 text-xs font-bold"
-          >
-            Nová
-          </button>
-        }
-      >
-        <FilterChips
-          value={filter}
-          onChange={(id) => setFilter(id as Filter)}
-          options={[
-            { id: "all", label: "Vše", badge: items.length },
-            { id: "draft", label: "Koncepty", badge: items.filter((i) => i.status === "draft").length },
-            {
-              id: "completed",
-              label: "Hotové",
-              badge: items.filter((i) => i.status === "completed" || i.status === "exported").length,
-            },
-          ]}
-        />
-
-        {filtered.length === 0 ? (
-          <EmptyState title="Žádné analýzy" description="Vytvořte první analýzu přes tlačítko Nová." />
-        ) : (
-          filtered.map((item) => (
-            <AnalysisCard
-              key={item.id}
-              title={item.clientName || item.analysisTypeLabel || "Finanční analýza"}
-              status={item.status}
-              progress={item.progress}
-              subtitle={`Upraveno: ${formatUpdated(new Date(item.updatedAt))}`}
-              action={
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDetailId(item.id);
-                    setDetailOpen(true);
-                  }}
-                  className="min-h-[40px] rounded-lg border border-slate-200 px-3 text-xs font-bold"
-                >
-                  Otevřít detail
-                </button>
-              }
-            />
-          ))
-        )}
-      </MobileSection>
-
-      <FullscreenSheet open={detailOpen} onClose={() => setDetailOpen(false)} title="Detail analýzy">
-        {!detailId ? (
-          <EmptyState title="Analýza není vybraná" />
-        ) : (
-          <div className="space-y-3">
-            <MobileCard>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-black">Progress</p>
-              <p className="text-sm mt-1">Krok: {detailPayload?.currentStep ?? "—"}</p>
-              {detailPayload?.data?.client ? (
-                <StatusBadge tone="info">Klientská data přítomna</StatusBadge>
-              ) : (
-                <StatusBadge tone="warning">Chybí klientská data</StatusBadge>
-              )}
-            </MobileCard>
-            <MobileCard>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-black">Workflow</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStatus("draft")}
-                  className="min-h-[40px] rounded-lg border border-slate-200 text-xs font-bold"
-                >
-                  Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatus("completed")}
-                  className="min-h-[40px] rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold"
-                >
-                  Hotovo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatus("archived")}
-                  className="min-h-[40px] rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold"
-                >
-                  Archiv
-                </button>
-              </div>
-            </MobileCard>
+      {/* Header */}
+      <div className="px-4 py-3 bg-white border-b border-slate-100">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-indigo-600" />
+            <h2 className="text-base font-black text-slate-900">Finanční analýzy</h2>
           </div>
-        )}
-      </FullscreenSheet>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={reload}
+              disabled={pending}
+              className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center"
+            >
+              <RefreshCw size={14} className={cx("text-slate-500", pending && "animate-spin")} />
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={pending}
+              className="flex items-center gap-1.5 min-h-[36px] rounded-xl bg-indigo-600 text-white px-3 text-xs font-bold"
+            >
+              <Plus size={14} />
+              Nová
+            </button>
+          </div>
+        </div>
+        <div className="mt-2">
+          <FilterChips
+            value={filter}
+            onChange={(id) => setFilter(id as Filter)}
+            options={[
+              { id: "all", label: "Vše", badge: items.length },
+              { id: "draft", label: "Koncepty", badge: draftCount },
+              { id: "done", label: "Hotové", badge: doneCount },
+            ]}
+          />
+        </div>
+      </div>
+
+      {pending && items.length === 0 ? <LoadingSkeleton rows={3} /> : null}
+
+      {!pending && filtered.length === 0 ? (
+        <div className="px-4 pt-8">
+          <EmptyState
+            title="Žádné analýzy"
+            description="Vytvořte první finanční analýzu přes tlačítko Nová."
+          />
+        </div>
+      ) : null}
+
+      {/* List — tablet: master-detail */}
+      {isTablet ? (
+        <div className="grid grid-cols-2 gap-0 h-[calc(100vh-10rem)]">
+          {/* Master */}
+          <div className="border-r border-slate-100 overflow-y-auto px-4 py-3 space-y-2">
+            {filtered.map((item) => (
+              <AnalysisListCard
+                key={item.id}
+                item={item}
+                onOpen={() => {
+                  setDetailId(item.id);
+                  setDetailOpen(true);
+                }}
+              />
+            ))}
+          </div>
+          {/* Detail */}
+          <div className="overflow-y-auto px-4 py-3">
+            {detailId ? (
+              <AnalysisDetailPanel
+                detailId={detailId}
+                item={selectedItem}
+                onSetStatus={handleSetStatus}
+                pending={pending}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <EmptyState title="Vyberte analýzu" description="Klikněte na analýzu vlevo." />
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 py-3 space-y-2">
+          {filtered.map((item) => (
+            <AnalysisListCard
+              key={item.id}
+              item={item}
+              onOpen={() => {
+                setDetailId(item.id);
+                setDetailOpen(true);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Phone detail sheet */}
+      {!isTablet ? (
+        <FullscreenSheet open={detailOpen} onClose={() => setDetailOpen(false)} title="Detail analýzy">
+          {detailId ? (
+            <AnalysisDetailPanel
+              detailId={detailId}
+              item={selectedItem}
+              onSetStatus={handleSetStatus}
+              pending={pending}
+            />
+          ) : (
+            <EmptyState title="Analýza není vybraná" />
+          )}
+        </FullscreenSheet>
+      ) : null}
     </>
   );
 }

@@ -101,6 +101,7 @@ export async function GET(
       processingProvider: documents.processingProvider,
       processingStatus: documents.processingStatus,
       processingStage: documents.processingStage,
+      businessStatus: documents.businessStatus,
       processingError: documents.processingError,
       processingStartedAt: documents.processingStartedAt,
       processingFinishedAt: documents.processingFinishedAt,
@@ -108,6 +109,12 @@ export async function GET(
       hasTextLayer: documents.hasTextLayer,
       isScanLike: documents.isScanLike,
       pageCount: documents.pageCount,
+      detectedInputMode: documents.detectedInputMode,
+      readabilityScore: documents.readabilityScore,
+      preprocessingWarnings: documents.preprocessingWarnings,
+      normalizedPdfPath: documents.normalizedPdfPath,
+      sourceChannel: documents.sourceChannel,
+      documentFingerprint: documents.documentFingerprint,
     })
     .from(documents)
     .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))

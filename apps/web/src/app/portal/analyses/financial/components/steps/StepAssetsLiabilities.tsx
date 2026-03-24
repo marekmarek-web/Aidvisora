@@ -6,6 +6,7 @@ import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { getMortgageProviderOptions, getLoanProvidersByType, LOAN_TYPES, INVESTMENT_ASSET_TYPES, PENSION_ASSET_TYPES } from "@/lib/analyses/financial/constants";
 import { Building2, Landmark, Plus, Trash2 } from "lucide-react";
 import { ProvenanceBadge } from "../ProvenanceBadge";
+import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 const REAL_ESTATE_LABELS = ['Byt', 'Rodinný dům', 'Garáž', 'Pozemek', 'Komerční', 'Jiná nemovitost'] as const;
 const mortgageProviders = getMortgageProviderOptions();
@@ -92,15 +93,13 @@ export function StepAssetsLiabilities() {
               <div className="space-y-2 mb-2">
                 {(assets.realEstateItems ?? []).map((item) => (
                   <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
-                    <select
-                      value={item.label}
-                      onChange={(e) => updateRealEstateItem(item.id, { label: e.target.value })}
-                      className="min-w-[120px] px-2 py-2 border border-slate-200 rounded-lg text-sm"
-                    >
-                      {REAL_ESTATE_LABELS.map((l) => (
-                        <option key={l} value={l}>{l}</option>
-                      ))}
-                    </select>
+                    <div className="min-w-[140px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.label}
+                        onChange={(id) => updateRealEstateItem(item.id, { label: id })}
+                        options={REAL_ESTATE_LABELS.map((l) => ({ id: l, label: l }))}
+                      />
+                    </div>
                     <input
                       type="number"
                       value={item.value || ""}
@@ -125,11 +124,13 @@ export function StepAssetsLiabilities() {
               <div className="space-y-2 mb-2">
                 {(assets.investmentsList || []).map((item) => (
                   <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
-                    <select value={item.type || "Akcie"} onChange={(e) => updateAssetInvestment(item.id, { type: e.target.value })} className="min-w-[120px] px-2 py-2 border border-slate-200 rounded-lg text-sm">
-                      {INVESTMENT_ASSET_TYPES.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
+                    <div className="min-w-[140px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.type || "Akcie"}
+                        onChange={(id) => updateAssetInvestment(item.id, { type: id })}
+                        options={INVESTMENT_ASSET_TYPES.map((t) => ({ id: t, label: t }))}
+                      />
+                    </div>
                     <input type="number" value={item.value || ""} onChange={(e) => updateAssetInvestment(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                     <span className="text-slate-500 text-sm">Kč</span>
                     <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetInvestment(item.id, { note: e.target.value })} placeholder="Poznámka" className="flex-1 min-w-0 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -146,11 +147,13 @@ export function StepAssetsLiabilities() {
               <div className="space-y-2 mb-2">
                 {(assets.pensionList || []).map((item) => (
                   <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
-                    <select value={item.type || "DPS"} onChange={(e) => updateAssetPension(item.id, { type: e.target.value })} className="min-w-[80px] px-2 py-2 border border-slate-200 rounded-lg text-sm">
-                      {PENSION_ASSET_TYPES.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
+                    <div className="min-w-[100px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={item.type || "DPS"}
+                        onChange={(id) => updateAssetPension(item.id, { type: id })}
+                        options={PENSION_ASSET_TYPES.map((t) => ({ id: t, label: t }))}
+                      />
+                    </div>
                     <input type="number" value={item.value || ""} onChange={(e) => updateAssetPension(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                     <span className="text-slate-500 text-sm">Kč</span>
                     <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetPension(item.id, { note: e.target.value })} placeholder="Poznámka / detail" className="flex-1 min-w-0 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -180,12 +183,15 @@ export function StepAssetsLiabilities() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="liab-mortgage-provider">Poskytovatel hypotéky</label>
-              <select id="liab-mortgage-provider" value={liab.mortgageProvider ?? ""} onChange={(e) => setLiabilitiesField("mortgageProvider", e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl">
-                <option value="">— Vyberte banku —</option>
-                {mortgageProviders.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              <CustomDropdown
+                value={liab.mortgageProvider ?? ""}
+                onChange={(id) => setLiabilitiesField("mortgageProvider", id)}
+                placeholder="— Vyberte banku —"
+                options={[
+                  { id: "", label: "— Vyberte banku —" },
+                  ...mortgageProviders.map((name) => ({ id: name, label: name })),
+                ]}
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Úvěry (kromě hypotéky)</label>
@@ -194,17 +200,24 @@ export function StepAssetsLiabilities() {
                   const loanProviders = getLoanProvidersByType(loan.type ?? LOAN_TYPES[0]);
                   return (
                   <div key={loan.id} className="flex flex-wrap gap-2 items-stretch bg-white rounded-lg p-3 border border-slate-100">
-                    <select value={loan.type ?? LOAN_TYPES[0]} onChange={(e) => updateLoan(loan.id, { type: e.target.value, provider: "" })} className="min-w-[140px] px-2 py-2 border border-slate-200 rounded-lg text-sm">
-                      {LOAN_TYPES.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                    <select value={loan.provider ?? ""} onChange={(e) => updateLoan(loan.id, { provider: e.target.value })} className="min-w-[140px] px-2 py-2 border border-slate-200 rounded-lg text-sm">
-                      <option value="">— Poskytovatel —</option>
-                      {loanProviders.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    <div className="min-w-[160px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={loan.type ?? LOAN_TYPES[0]}
+                        onChange={(id) => updateLoan(loan.id, { type: id, provider: "" })}
+                        options={LOAN_TYPES.map((t) => ({ id: t, label: t }))}
+                      />
+                    </div>
+                    <div className="min-w-[160px] flex-1 sm:flex-none">
+                      <CustomDropdown
+                        value={loan.provider ?? ""}
+                        onChange={(id) => updateLoan(loan.id, { provider: id })}
+                        placeholder="— Poskytovatel —"
+                        options={[
+                          { id: "", label: "— Poskytovatel —" },
+                          ...loanProviders.map((name) => ({ id: name, label: name })),
+                        ]}
+                      />
+                    </div>
                     <input type="number" value={Number(loan.balance) || ""} onChange={(e) => updateLoan(loan.id, { balance: parseFloat(e.target.value) || 0 })} placeholder="Zůstatek" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                     <span className="text-slate-500 text-sm flex items-center">Kč</span>
                     <input type="number" value={Number(loan.rate) || ""} onChange={(e) => updateLoan(loan.id, { rate: parseFloat(e.target.value) || 0 })} placeholder="Sazba %" className="w-20 px-2 py-2 border border-slate-200 rounded-lg text-sm" />

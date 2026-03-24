@@ -10,6 +10,7 @@ export type ApplyResultPayload = {
   linkedClientId?: string;
   createdContractId?: string;
   createdPaymentId?: string;
+  createdPaymentSetupId?: string;
   createdTaskId?: string;
   createdNoteId?: string;
   createdEmailDraftId?: string;
@@ -50,6 +51,33 @@ export type ExtractionTrace = {
   qualityWarnings?: string[];
   warnings?: string[];
   failedStep?: string;
+  adobePreprocessed?: boolean;
+  adobeJobIds?: string[];
+  adobeWarnings?: string[];
+  readabilityScore?: number;
+  ocrPdfPath?: string | null;
+  normalizedPdfPath?: string | null;
+  ocrConfidenceEstimate?: number;
+  normalizedDocumentType?: string;
+  classificationOverrideReason?: string;
+  selectedSchema?: string;
+  /** Adobe / preprocess phase duration (ms), Plan 3 observability. */
+  preprocessDurationMs?: number;
+  /** OpenAI pipeline duration after preprocess (ms). */
+  pipelineDurationMs?: number;
+  preprocessMode?: string;
+  preprocessStatus?: string;
+  /** 0–1 text / OCR coverage heuristic (Adobe + input mode). */
+  textCoverageEstimate?: number;
+  /** mapPrimaryToPipelineClassification — insurance_contract, payment_instructions, … */
+  normalizedPipelineClassification?: string;
+  rawClassification?: string;
+  extractionRoute?: string;
+  /** Plan 4: pipeline version triple for eval/versioning. */
+  pipelineVersion?: string;
+  promptVersion?: string;
+  schemaVersion?: string;
+  classifierVersion?: string;
 };
 
 /** Validation warning item. */
@@ -420,6 +448,7 @@ export async function saveContractCorrection(
   if (!row) throw new Error("Contract review not found");
   await updateContractReview(id, tenantId, {
     originalExtractedPayload: row.extractedPayload,
+    extractedPayload: params.correctedPayload,
     correctedPayload: params.correctedPayload,
     correctedFields: params.correctedFields,
     correctedDocumentType: params.correctedDocumentType ?? null,
@@ -433,6 +462,24 @@ export async function saveContractCorrection(
     correctedBy: params.correctedBy ?? null,
     correctedAt: new Date(),
   });
+  let comparisonDelta: unknown = null;
+  try {
+    const { compareExtractedToCorrected } = await import("./eval-comparison");
+    if (
+      row.extractedPayload &&
+      typeof row.extractedPayload === "object" &&
+      params.correctedPayload &&
+      typeof params.correctedPayload === "object"
+    ) {
+      comparisonDelta = compareExtractedToCorrected(
+        row.extractedPayload as Record<string, unknown>,
+        params.correctedPayload as Record<string, unknown>,
+      );
+    }
+  } catch {
+    // comparison is best-effort
+  }
+
   await db
     .insert(contractReviewCorrections)
     .values({
@@ -447,6 +494,7 @@ export async function saveContractCorrection(
       confidenceOverride: params.confidenceOverride ?? null,
       ignoredWarnings: params.ignoredWarnings ?? null,
       correctedBy: params.correctedBy ?? null,
+      ...(comparisonDelta ? { comparisonDelta } : {}),
     })
     .catch(() => {});
   await logAudit({

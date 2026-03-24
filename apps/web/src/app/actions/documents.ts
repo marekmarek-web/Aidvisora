@@ -3,8 +3,8 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db } from "db";
-import { documents } from "db";
-import { eq, and } from "db";
+import { documents, contacts } from "db";
+import { eq, and, desc } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logActivity } from "./activity";
 import { logAudit } from "@/lib/audit";
@@ -41,6 +41,40 @@ const documentSelectFields = {
   pageCount: documents.pageCount,
   isScanLike: documents.isScanLike,
 } as const;
+
+export async function listDocuments(): Promise<(DocumentRow & { contactName?: string | null })[]> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
+  const rows = await db
+    .select({
+      ...documentSelectFields,
+      contactFirstName: contacts.firstName,
+      contactLastName: contacts.lastName,
+    })
+    .from(documents)
+    .leftJoin(contacts, eq(documents.contactId, contacts.id))
+    .where(eq(documents.tenantId, auth.tenantId))
+    .orderBy(desc(documents.createdAt))
+    .limit(200);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    mimeType: r.mimeType,
+    tags: r.tags,
+    contractId: r.contractId,
+    visibleToClient: r.visibleToClient,
+    createdAt: r.createdAt,
+    uploadSource: r.uploadSource,
+    processingStatus: r.processingStatus,
+    processingStage: r.processingStage,
+    aiInputSource: r.aiInputSource,
+    pageCount: r.pageCount,
+    isScanLike: r.isScanLike,
+    contactName: r.contactFirstName && r.contactLastName
+      ? `${r.contactFirstName} ${r.contactLastName}`
+      : r.contactFirstName || r.contactLastName || null,
+  }));
+}
 
 export async function getDocumentsForContact(contactId: string): Promise<DocumentRow[]> {
   const auth = await requireAuthInAction();

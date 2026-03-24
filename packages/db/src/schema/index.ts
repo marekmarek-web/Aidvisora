@@ -16,6 +16,7 @@ export * from "./subscriptions";
 export * from "./stripe-webhook-events";
 export * from "./contracts";
 export * from "./contract-upload-reviews";
+export * from "./client-payment-setups";
 export * from "./contract-review-corrections";
 export * from "./document-extractions";
 export * from "./board-views";

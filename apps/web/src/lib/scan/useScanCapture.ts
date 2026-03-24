@@ -3,15 +3,18 @@
 import { useCallback, useMemo, useState } from "react";
 import { useDocumentCapture } from "@/lib/upload/useDocumentCapture";
 import { buildPdfFromImages } from "./pdfBuilder";
+import { checkScanQuality, type ScanQualityResult, type ScanQualityIssue } from "./quality-checks";
 
 export type ScanCaptureResult = {
   ok: boolean;
   error?: string;
+  qualityResult?: ScanQualityResult;
 };
 
 export type ScanPage = {
   id: string;
   file: File;
+  quality?: ScanQualityResult;
 };
 
 let _pageIdCounter = 0;
@@ -25,6 +28,7 @@ export function useScanCapture() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isBuildingPdf, setIsBuildingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qualityWarnings, setQualityWarnings] = useState<ScanQualityIssue[]>([]);
 
   const pages = useMemo(() => scanPages.map((p) => p.file), [scanPages]);
   const pageIds = useMemo(() => scanPages.map((p) => p.id), [scanPages]);
@@ -32,6 +36,7 @@ export function useScanCapture() {
   const capturePage = useCallback(async (): Promise<ScanCaptureResult> => {
     if (isCapturing) return { ok: false, error: "Fotoaparát se právě otevírá." };
     setIsCapturing(true);
+    setQualityWarnings([]);
     try {
       const result = await captureFromCamera();
       if (!result.file) {
@@ -39,9 +44,15 @@ export function useScanCapture() {
         setError(message);
         return { ok: false, error: message };
       }
-      setScanPages((prev) => [...prev, { id: nextPageId(), file: result.file as File }]);
+
+      const quality = await checkScanQuality(result.file);
+      if (quality.issues.length > 0) {
+        setQualityWarnings(quality.issues);
+      }
+
+      setScanPages((prev) => [...prev, { id: nextPageId(), file: result.file as File, quality }]);
       setError(null);
-      return { ok: true };
+      return { ok: true, qualityResult: quality };
     } finally {
       setIsCapturing(false);
     }
@@ -55,6 +66,7 @@ export function useScanCapture() {
       if (isCapturing) return { ok: false, error: "Fotoaparát se právě otevírá." };
 
       setIsCapturing(true);
+      setQualityWarnings([]);
       try {
         const result = await captureFromCamera();
         if (!result.file) {
@@ -62,13 +74,19 @@ export function useScanCapture() {
           setError(message);
           return { ok: false, error: message };
         }
+
+        const quality = await checkScanQuality(result.file);
+        if (quality.issues.length > 0) {
+          setQualityWarnings(quality.issues);
+        }
+
         setScanPages((prev) =>
           prev.map((page, pageIndex) =>
-            pageIndex === index ? { ...page, file: result.file as File } : page
+            pageIndex === index ? { ...page, file: result.file as File, quality } : page
           )
         );
         setError(null);
-        return { ok: true };
+        return { ok: true, qualityResult: quality };
       } finally {
         setIsCapturing(false);
       }
@@ -117,6 +135,11 @@ export function useScanCapture() {
 
   const canAddMore = useMemo(() => scanPages.length < 20, [scanPages.length]);
 
+  const hasQualityIssues = useMemo(
+    () => scanPages.some((p) => p.quality && !p.quality.ok),
+    [scanPages]
+  );
+
   return {
     pages,
     scanPages,
@@ -126,6 +149,8 @@ export function useScanCapture() {
     isBuildingPdf,
     error,
     canAddMore,
+    qualityWarnings,
+    hasQualityIssues,
     setError,
     capturePage,
     retakePage,
