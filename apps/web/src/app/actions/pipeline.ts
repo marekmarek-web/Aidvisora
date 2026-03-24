@@ -12,6 +12,39 @@ import {
 import { eq, and, asc, isNull, lte, gte, sql } from "db";
 import { logActivity } from "./activity";
 
+/** Postgres undefined_column — např. chybí sloupec fa_source_id v DB bez migrace */
+function isUndefinedColumnError(err: unknown): boolean {
+  let cur: unknown = err;
+  for (let i = 0; i < 5 && cur && typeof cur === "object"; i++) {
+    const o = cur as { code?: string; cause?: unknown; message?: string };
+    if (o.code === "42703") return true;
+    if (typeof o.message === "string" && /column .* does not exist/i.test(o.message)) return true;
+    cur = o.cause;
+  }
+  return false;
+}
+
+const opportunityDetailCoreSelect = {
+  id: opportunities.id,
+  title: opportunities.title,
+  caseType: opportunities.caseType,
+  contactId: opportunities.contactId,
+  stageId: opportunities.stageId,
+  probability: opportunities.probability,
+  expectedValue: opportunities.expectedValue,
+  expectedCloseDate: opportunities.expectedCloseDate,
+  assignedTo: opportunities.assignedTo,
+  closedAt: opportunities.closedAt,
+  closedAs: opportunities.closedAs,
+  customFields: opportunities.customFields,
+  createdAt: opportunities.createdAt,
+  updatedAt: opportunities.updatedAt,
+  firstName: contacts.firstName,
+  lastName: contacts.lastName,
+  stageName: opportunityStages.name,
+  stageProbability: opportunityStages.probability,
+};
+
 export type OpportunityCard = {
   id: string;
   title: string;
@@ -388,36 +421,60 @@ export async function getOpportunityById(id: string): Promise<OpportunityDetail 
   if (!hasPermission(auth.roleName, "opportunities:read")) throw new Error("Forbidden");
 
   const stages = await getOpportunityStages();
-  const [row] = await db
-    .select({
-      id: opportunities.id,
-      title: opportunities.title,
-      caseType: opportunities.caseType,
-      contactId: opportunities.contactId,
-      stageId: opportunities.stageId,
-      probability: opportunities.probability,
-      expectedValue: opportunities.expectedValue,
-      expectedCloseDate: opportunities.expectedCloseDate,
-      assignedTo: opportunities.assignedTo,
-      closedAt: opportunities.closedAt,
-      closedAs: opportunities.closedAs,
-      faSourceId: opportunities.faSourceId,
-      customFields: opportunities.customFields,
-      createdAt: opportunities.createdAt,
-      updatedAt: opportunities.updatedAt,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      stageName: opportunityStages.name,
-      stageProbability: opportunityStages.probability,
-    })
-    .from(opportunities)
-    .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
-    .leftJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
-    .where(and(eq(opportunities.tenantId, auth.tenantId), eq(opportunities.id, id)));
+  const whereDetail = and(eq(opportunities.tenantId, auth.tenantId), eq(opportunities.id, id));
+
+  let row: Record<string, unknown> | undefined;
+  let faSourceId: string | null = null;
+
+  try {
+    const [r] = await db
+      .select({
+        ...opportunityDetailCoreSelect,
+        faSourceId: opportunities.faSourceId,
+      })
+      .from(opportunities)
+      .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
+      .leftJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+      .where(whereDetail);
+    row = r as unknown as Record<string, unknown>;
+    faSourceId = (r as { faSourceId?: string | null }).faSourceId ?? null;
+  } catch (e) {
+    if (!isUndefinedColumnError(e)) throw e;
+    const [r] = await db
+      .select(opportunityDetailCoreSelect)
+      .from(opportunities)
+      .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
+      .leftJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+      .where(whereDetail);
+    row = r as unknown as Record<string, unknown>;
+    faSourceId = null;
+  }
 
   if (!row) return null;
 
-  const created = new Date(row.createdAt);
+  type DetailRow = {
+    id: string;
+    title: string;
+    caseType: string | null;
+    contactId: string | null;
+    stageId: string;
+    probability: number | null;
+    expectedValue: string | null;
+    expectedCloseDate: string | null;
+    assignedTo: string | null;
+    closedAt: Date | null;
+    closedAs: string | null;
+    customFields: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    firstName: string | null;
+    lastName: string | null;
+    stageName: string | null;
+    stageProbability: number | null;
+  };
+  const r = row as DetailRow;
+
+  const created = new Date(r.createdAt);
   const year = created.getFullYear();
   const shortYear = String(year).slice(-2);
   const startOfYear = new Date(year, 0, 1);
@@ -428,31 +485,31 @@ export async function getOpportunityById(id: string): Promise<OpportunityDetail 
       and(
         eq(opportunities.tenantId, auth.tenantId),
         gte(opportunities.createdAt, startOfYear),
-        lte(opportunities.createdAt, row.createdAt)
+        lte(opportunities.createdAt, r.createdAt)
       )
     );
   const seq = seqResult?.n ?? 1;
   const opportunityNumber = `OP-${shortYear}-${String(seq).padStart(3, "0")}`;
 
   return {
-    id: row.id,
-    title: row.title,
-    caseType: row.caseType ?? "",
-    contactId: row.contactId ?? null,
-    contactName: [row.firstName, row.lastName].filter(Boolean).join(" ") || "—",
-    stageId: row.stageId,
-    stageName: row.stageName ?? "—",
-    stageProbability: row.stageProbability ?? null,
-    probability: row.probability ?? null,
-    expectedValue: row.expectedValue ?? null,
-    expectedCloseDate: row.expectedCloseDate ?? null,
-    assignedTo: row.assignedTo ?? null,
-    closedAt: row.closedAt ?? null,
-    closedAs: row.closedAs ?? null,
-    faSourceId: row.faSourceId ?? null,
-    customFields: row.customFields as Record<string, unknown> | null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    id: r.id,
+    title: r.title,
+    caseType: r.caseType ?? "",
+    contactId: r.contactId ?? null,
+    contactName: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—",
+    stageId: r.stageId,
+    stageName: r.stageName ?? "—",
+    stageProbability: r.stageProbability ?? null,
+    probability: r.probability ?? null,
+    expectedValue: r.expectedValue ?? null,
+    expectedCloseDate: r.expectedCloseDate ?? null,
+    assignedTo: r.assignedTo ?? null,
+    closedAt: r.closedAt ?? null,
+    closedAs: r.closedAs ?? null,
+    faSourceId,
+    customFields: r.customFields as Record<string, unknown> | null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
     opportunityNumber,
     stages,
   };
