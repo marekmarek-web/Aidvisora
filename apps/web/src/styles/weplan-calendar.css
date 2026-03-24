@@ -858,8 +858,8 @@
 
 /* ── Context panel (right sidebar) ── */
 .wp-cal-context-panel {
-  width: 300px;
-  min-width: 280px;
+  width: 268px;
+  min-width: 252px;
   flex-shrink: 0;
   border-left: 1px solid rgba(166, 168, 179, 0.12);
   background: var(--wp-surface);

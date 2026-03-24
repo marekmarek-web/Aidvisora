@@ -21,7 +21,7 @@ export default async function PipelinePage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full bg-[#f8fafc]">
-      <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 lg:px-8 pb-4 w-full">
+      <div className="flex-1 min-h-0 flex flex-col pb-4 w-full min-w-0">
         <PipelineBoard stages={stages} contacts={contacts} totalPotential={totalPotential} />
       </div>
     </div>

@@ -7,7 +7,7 @@ interface KPIBarProps {
 
 export function KPIBar({ openCasesCount, potentialDeals }: KPIBarProps) {
   return (
-    <div className="flex items-center gap-6 h-9 px-4 border-b border-monday-border bg-monday-surface shrink-0 text-[13px]">
+    <div className="flex items-center gap-6 h-9 px-3 border-b border-monday-border bg-monday-surface shrink-0 text-[13px]">
       <span className="text-monday-text-muted">
         <strong className="text-monday-text">Otevřené případy:</strong> {openCasesCount}
       </span>

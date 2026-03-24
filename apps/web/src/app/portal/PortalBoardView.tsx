@@ -600,10 +600,10 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
   }, []);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 px-2 sm:px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="flex flex-col flex-1 min-h-0 px-1.5 sm:px-2 md:px-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <main className="flex-1 flex min-h-0 overflow-hidden flex-col md:flex-row">
         <div className="wp-projects-section flex-1 min-w-0 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between shrink-0 px-0 py-2 md:py-0" style={{ marginBottom: "var(--wp-space-4)" }}>
+          <div className="flex items-center justify-between shrink-0 px-0 py-2 md:py-0 mb-3 md:mb-2">
             <BoardHeader
               boardName={board.name}
               views={viewsList.length > 0 ? viewsList : board.views.map((v) => ({ id: v.id, name: v.name }))}

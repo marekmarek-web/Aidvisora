@@ -565,7 +565,7 @@ export function PipelineBoard({
       <div className="font-pipeline-sans text-slate-800 flex flex-col flex-1 min-h-0">
         {/* Local header (v2): Obchodní Pipeline, metadata, Všechny filtry */}
         {showLocalHeader && (
-          <div className="px-0 py-6 flex flex-wrap justify-between items-end gap-4 border-b border-slate-100 flex-shrink-0 z-10 bg-white rounded-t-xl">
+          <div className="px-0 py-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 border-b border-slate-100 flex-shrink-0 z-10 bg-white rounded-t-xl">
             <div>
               <h1 className="font-pipeline-display text-2xl font-black text-slate-900 leading-tight mb-1">Obchodní Pipeline</h1>
               <div className="flex items-center gap-3 text-sm font-medium text-slate-500 mt-1 flex-wrap">
@@ -605,7 +605,7 @@ export function PipelineBoard({
         )}
 
         {/* Toolbar: search, AI, Nový obchod (v2 style) */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 py-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 py-3 flex-shrink-0">
           <div className="relative group max-w-md w-full">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search size={16} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -638,7 +638,7 @@ export function PipelineBoard({
 
         {/* Grid 3x2 (v2) */}
         <main className="flex-1 overflow-y-auto hide-scrollbar min-h-0">
-          <div className="max-w-[1600px] mx-auto h-full pb-12">
+          <div className="w-full h-full pb-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
               {filteredStages.map((stage, stageIdx) => {
                 const theme = COLUMN_THEMES[stageIdx % COLUMN_THEMES.length];

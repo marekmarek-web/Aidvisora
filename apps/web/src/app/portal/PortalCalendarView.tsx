@@ -1119,7 +1119,7 @@ export function PortalCalendarView() {
         className={`wp-cal-container wp-cal-container--today-${settings.todayStyle} wp-cal-container--font-${settings.fontSize} flex flex-col flex-1 min-h-0`}
         style={cssVarsFromSettings(settings)}
       >
-        <div className={`flex-1 flex overflow-hidden p-2 sm:p-4 gap-2 sm:gap-4 min-h-0 ${isMobile ? "flex-col" : ""}`}>
+        <div className={`flex-1 flex overflow-hidden p-2 sm:p-3 lg:p-2 gap-2 sm:gap-3 lg:gap-2 min-h-0 ${isMobile ? "flex-col" : ""}`}>
           <CalendarLeftPanel
             baseDate={currentDate}
             selectedDate={selectedDate}
@@ -1135,9 +1135,9 @@ export function PortalCalendarView() {
             }}
           />
 
-          <main className="flex-1 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative min-w-0">
-            <div className={`px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between bg-white z-20 flex-wrap gap-2 ${isMobile ? "gap-y-2" : ""}`}>
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <main className="flex-1 bg-white rounded-xl sm:rounded-xl lg:rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden relative min-w-0">
+            <div className={`px-3 sm:px-4 lg:px-3 py-2 sm:py-2 border-b border-slate-100 flex items-center justify-between bg-white z-20 flex-wrap gap-2 lg:gap-2 ${isMobile ? "gap-y-2" : ""}`}>
+              <div className="flex items-center gap-2 sm:gap-3 lg:gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => { const today = new Date(); setCurrentDate(today); setSelectedDate(formatDate(today)); }}
@@ -1174,8 +1174,8 @@ export function PortalCalendarView() {
                   />
                 )}
               </div>
-              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <div className="bg-slate-100 p-0.5 sm:p-1 rounded-lg flex items-center">
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                <div className="bg-slate-100 p-0.5 rounded-lg flex items-center">
                   {isMobile
                     ? viewModesMobile.map((m) => (
                         <button key={m} type="button" onClick={() => setMode(m)} className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
@@ -1204,7 +1204,7 @@ export function PortalCalendarView() {
               </div>
             </div>
             {calendarConnected === false && (
-              <div className="mx-3 sm:mx-6 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="mx-3 sm:mx-4 lg:mx-3 mt-2 sm:mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-amber-900">
                   Pro synchronizaci s Google Kalendářem propojte svůj účet.
                 </p>

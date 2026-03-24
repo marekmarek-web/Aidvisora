@@ -18,7 +18,7 @@ import { mapPushNotificationToRoute } from "@/lib/push/routing";
 const MOBILE_BREAKPOINT = 768;
 
 const SIDEBAR_STORAGE_KEY = "portal-sidebar";
-const SIDEBAR_CONTENT_GAP_PX = 24;
+const SIDEBAR_CONTENT_GAP_PX = 14;
 const SIDEBAR_WIDTH_MIN = 240;
 const SIDEBAR_WIDTH_MAX = 320;
 const SIDEBAR_WIDTH_DEFAULT = 280;

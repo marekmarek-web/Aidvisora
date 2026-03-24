@@ -85,8 +85,8 @@ export function CalendarLeftPanel({
   const monthYear = `${MONTH_NAMES[baseDate.getMonth()]} ${baseDate.getFullYear()}`;
 
   return (
-    <aside className="w-64 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hidden lg:flex flex-shrink-0">
-      <div className="p-5 border-b border-slate-100">
+    <aside className="w-56 shrink-0 bg-white rounded-xl lg:rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden hidden lg:flex">
+      <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-slate-800 text-sm">{monthYear}</h3>
           <button
@@ -127,7 +127,7 @@ export function CalendarLeftPanel({
           })}
         </div>
       </div>
-      <div className="p-5 flex-1 overflow-y-auto wp-cal-hide-scrollbar flex flex-col min-h-0">
+      <div className="p-4 flex-1 overflow-y-auto wp-cal-hide-scrollbar flex flex-col min-h-0">
         <QuickNotes />
       </div>
     </aside>
