@@ -4,7 +4,7 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db } from "db";
 import { financialAnalyses, householdMembers, contacts, households } from "db";
-import { eq, and, desc, sql } from "db";
+import { eq, and, desc } from "db";
 
 export type FinancialAnalysisStatus = "draft" | "completed" | "exported" | "archived";
 
@@ -46,78 +46,79 @@ export type FinancialAnalysisListItem = {
 };
 
 export async function getFinancialAnalysis(id: string): Promise<FinancialAnalysisRow | null> {
-  const auth = await requireAuthInAction();
-  const [row] = await db
-    .select()
-    .from(financialAnalyses)
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
-  if (!row) return null;
-  if (auth.roleName === "Client") {
-    if (row.contactId === auth.contactId) return row as FinancialAnalysisRow;
-    if (row.householdId && auth.contactId) {
-      const [member] = await db
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, row.householdId),
-            eq(householdMembers.contactId, auth.contactId)
+  try {
+    const auth = await requireAuthInAction();
+    const [row] = await db
+      .select()
+      .from(financialAnalyses)
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+    if (!row) return null;
+    if (auth.roleName === "Client") {
+      if (row.contactId === auth.contactId) return row as FinancialAnalysisRow;
+      if (row.householdId && auth.contactId) {
+        const [member] = await db
+          .select({ id: householdMembers.id })
+          .from(householdMembers)
+          .where(
+            and(
+              eq(householdMembers.householdId, row.householdId),
+              eq(householdMembers.contactId, auth.contactId)
+            )
           )
-        )
-        .limit(1);
-      if (member) return row as FinancialAnalysisRow;
+          .limit(1);
+        if (member) return row as FinancialAnalysisRow;
+      }
+      return null;
     }
-    return null;
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return row as FinancialAnalysisRow;
+  } catch (err) {
+    console.error("[getFinancialAnalysis] failed for id=" + id, err);
+    throw err;
   }
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  return row as FinancialAnalysisRow;
 }
 
 export async function listFinancialAnalyses(): Promise<FinancialAnalysisListItem[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: financialAnalyses.id,
-      status: financialAnalyses.status,
-      createdAt: financialAnalyses.createdAt,
-      updatedAt: financialAnalyses.updatedAt,
-      lastExportedAt: financialAnalyses.lastExportedAt,
-      contactId: financialAnalyses.contactId,
-      householdId: financialAnalyses.householdId,
-      clientName: sql<string | null>`${financialAnalyses.payload} #>> '{data,client,name}'`,
-      currentStep: sql<number | null>`(${financialAnalyses.payload} ->> 'currentStep')::int`,
-      linkedCompanyId: financialAnalyses.linkedCompanyId,
-      lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
-    })
-    .from(financialAnalyses)
-    .where(eq(financialAnalyses.tenantId, auth.tenantId))
-    .orderBy(desc(financialAnalyses.updatedAt));
-  return rows.map((r) => {
-    const clientName = r.clientName ?? null;
-    const currentStep = r.currentStep ?? 0;
-    const progress =
-      r.status === "draft" || r.status === "archived"
-        ? Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100))
-        : r.status === "completed" || r.status === "exported"
-          ? 100
-          : Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100));
-    const analysisTypeLabel = "Komplexní finanční analýza";
-    return {
-      id: r.id,
-      status: r.status,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-      lastExportedAt: r.lastExportedAt,
-      contactId: r.contactId,
-      householdId: r.householdId,
-      clientName: clientName ?? null,
-      linkedCompanyId: r.linkedCompanyId ?? null,
-      lastRefreshedFromSharedAt: r.lastRefreshedFromSharedAt ?? null,
-      progress,
-      analysisTypeLabel,
-    } as FinancialAnalysisListItem;
-  });
+  try {
+    const rows = await db
+      .select()
+      .from(financialAnalyses)
+      .where(eq(financialAnalyses.tenantId, auth.tenantId))
+      .orderBy(desc(financialAnalyses.updatedAt));
+    return rows.map((r) => {
+      const payload =
+        typeof r.payload === "string"
+          ? (() => { try { return JSON.parse(r.payload as string); } catch { return {}; } })()
+          : (r.payload ?? {});
+      const clientName = payload?.data?.client?.name ?? null;
+      const currentStep = Number(payload?.currentStep) || 0;
+      const progress =
+        r.status === "draft" || r.status === "archived"
+          ? Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100))
+          : r.status === "completed" || r.status === "exported"
+            ? 100
+            : Math.min(100, Math.round((currentStep / FINANCIAL_WIZARD_TOTAL_STEPS) * 100));
+      return {
+        id: r.id,
+        status: r.status,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        lastExportedAt: r.lastExportedAt,
+        contactId: r.contactId,
+        householdId: r.householdId,
+        clientName,
+        linkedCompanyId: r.linkedCompanyId ?? null,
+        lastRefreshedFromSharedAt: r.lastRefreshedFromSharedAt ?? null,
+        progress,
+        analysisTypeLabel: "Komplexní finanční analýza",
+      } as FinancialAnalysisListItem;
+    });
+  } catch (err) {
+    console.error("[listFinancialAnalyses] DB query failed:", err);
+    throw err;
+  }
 }
 
 export async function getFinancialAnalysesForContact(contactId: string): Promise<FinancialAnalysisListItem[]> {

@@ -11,6 +11,11 @@ import { getAdvisorReportBranding } from "@/app/actions/preferences";
 import { FileText, Printer, CloudUpload, StickyNote, Monitor } from "lucide-react";
 
 type ReportTheme = "elegant" | "modern";
+const FALLBACK_BRANDING = {
+  authorName: "Poradce",
+  footerLine: "Privátní finanční plánování",
+  logoUrl: null as string | null,
+};
 
 async function embedLocalImages(html: string): Promise<string> {
   const srcRe = /src="(\/[^"]+)"/g;
@@ -89,6 +94,7 @@ export function StepSummary() {
       lower.includes("server components render")
       || lower.includes("omitted in production")
       || lower.includes("digest property")
+      || lower.includes("unexpected response was received from the server")
     ) {
       return fallback;
     }
@@ -112,7 +118,7 @@ export function StepSummary() {
     : undefined;
 
   const generateHTML = useCallback(async () => {
-    const branding = await getAdvisorReportBranding();
+    const branding = await getAdvisorReportBranding().catch(() => FALLBACK_BRANDING);
     return buildReportHTML(data, { ...reportOptions, branding, theme: selectedTheme });
   }, [data, reportOptions, selectedTheme]);
 

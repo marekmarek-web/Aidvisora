@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getWorkspaceBillingSnapshot } from "@/lib/stripe/workspace-billing";
@@ -27,15 +28,17 @@ export default async function SetupPage() {
   });
 
   return (
-    <SetupView
-      initial={{
-        userId: auth.userId,
-        email,
-        fullName,
-        roleName: auth.roleName,
-        tenantName,
-        billing,
-      }}
-    />
+    <Suspense>
+      <SetupView
+        initial={{
+          userId: auth.userId,
+          email,
+          fullName,
+          roleName: auth.roleName,
+          tenantName,
+          billing,
+        }}
+      />
+    </Suspense>
   );
 }

@@ -7,17 +7,18 @@ const nextMajor = Number.parseInt(nextVersion.split(".")[0] || "0", 10);
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["db"],
-  serverActions: {
-    bodySizeLimit: "5mb",
+  experimental: {
+    ...(nextMajor < 15
+      ? {
+          serverComponentsExternalPackages: ["postgres"],
+        }
+      : {}),
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
   },
   // Keep postgres external across Next 14+.
-  ...(nextMajor >= 15
-    ? { serverExternalPackages: ["postgres"] }
-    : {
-        experimental: {
-          serverComponentsExternalPackages: ["postgres"],
-        },
-      }),
+  ...(nextMajor >= 15 ? { serverExternalPackages: ["postgres"] } : {}),
   // Required in Next 16 when custom webpack config is present.
   ...(nextMajor >= 16 ? { turbopack: {} } : {}),
   webpack: (config, { isServer }) => {

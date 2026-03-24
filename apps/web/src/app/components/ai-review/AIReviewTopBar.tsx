@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BrainCircuit, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, BrainCircuit, Check, Loader2, X, Send } from "lucide-react";
 import type { ExtractionDocument } from "@/lib/ai-review/types";
 
 type Props = {
@@ -8,7 +8,13 @@ type Props = {
   onBack: () => void;
   onDiscard: () => void;
   onApprove: () => void;
+  onReject?: () => void;
+  onApply?: () => void;
   isApproving?: boolean;
+  canApproveReject?: boolean;
+  canApply?: boolean;
+  isApplied?: boolean;
+  actionLoading?: string | null;
 };
 
 export function AIReviewTopBar({
@@ -16,7 +22,13 @@ export function AIReviewTopBar({
   onBack,
   onDiscard,
   onApprove,
+  onReject,
+  onApply,
   isApproving,
+  canApproveReject,
+  canApply,
+  isApplied,
+  actionLoading,
 }: Props) {
   return (
     <header className="bg-white px-4 md:px-6 py-3 md:py-4 border-b border-slate-200 flex items-center justify-between shadow-sm z-20 flex-shrink-0">
@@ -40,26 +52,64 @@ export function AIReviewTopBar({
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
-        <button
-          onClick={onDiscard}
-          className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all"
-        >
-          <span className="hidden sm:inline">Zahodit</span>
-          <span className="sm:hidden">×</span>
-        </button>
-        <button
-          onClick={onApprove}
-          disabled={isApproving}
-          className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
-        >
-          {isApproving ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Check size={16} />
-          )}
-          <span className="hidden sm:inline">Schválit do CRM</span>
-          <span className="sm:hidden">Schválit</span>
-        </button>
+        {!isApplied && (
+          <>
+            {canApproveReject && (
+              <>
+                <button
+                  onClick={onReject}
+                  disabled={!!actionLoading}
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-white border border-rose-200 text-rose-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-rose-50 transition-all disabled:opacity-50"
+                >
+                  <X size={14} />
+                  <span className="hidden sm:inline">Zamítnout</span>
+                </button>
+                <button
+                  onClick={onApprove}
+                  disabled={!!actionLoading}
+                  className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#2a2d4a] transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isApproving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  <span className="hidden sm:inline">Schválit do CRM</span>
+                  <span className="sm:hidden">Schválit</span>
+                </button>
+              </>
+            )}
+            {canApply && (
+              <button
+                onClick={onApply}
+                disabled={!!actionLoading}
+                className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-60"
+              >
+                {actionLoading === "apply" ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
+                <span className="hidden sm:inline">Aplikovat do CRM</span>
+                <span className="sm:hidden">Aplikovat</span>
+              </button>
+            )}
+            {!canApproveReject && !canApply && (
+              <button
+                onClick={onDiscard}
+                className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all"
+              >
+                <span className="hidden sm:inline">Zahodit</span>
+                <span className="sm:hidden">×</span>
+              </button>
+            )}
+          </>
+        )}
+        {isApplied && (
+          <span className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-200">
+            <Check size={16} /> Aplikováno
+          </span>
+        )}
       </div>
     </header>
   );

@@ -70,6 +70,7 @@ export function FinancialAnalysisLayout() {
       lower.includes("server components render")
       || lower.includes("omitted in production")
       || lower.includes("digest property")
+      || lower.includes("unexpected response was received from the server")
     ) {
       return fallbackMessage;
     }
@@ -90,6 +91,7 @@ export function FinancialAnalysisLayout() {
     try {
       id = await createTask(payload);
     } catch (e) {
+      console.error("[FA] createTask failed:", e);
       const msg = e instanceof Error ? e.message : "";
       const lower = msg.toLowerCase();
       if (
@@ -97,26 +99,31 @@ export function FinancialAnalysisLayout() {
         && (lower.includes("foreign key") || lower.includes("violates foreign key"))
       ) {
         try {
-          id = await createTask({
-            ...payload,
-            analysisId: undefined,
-          });
+          id = await createTask({ ...payload, analysisId: undefined });
         } catch (retryError) {
-          const retryMsg = normalizeActionError(
-            retryError,
-            "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.",
-          );
-          setConvertLoading(null);
-          setConvertError(retryMsg);
-          return;
+          console.error("[FA] createTask retry (no analysisId) failed:", retryError);
+          const retryMsg = retryError instanceof Error ? retryError.message.toLowerCase() : "";
+          if (
+            payload.contactId
+            && (retryMsg.includes("foreign key") || retryMsg.includes("violates foreign key"))
+          ) {
+            try {
+              id = await createTask({ ...payload, analysisId: undefined, contactId: undefined });
+            } catch (finalRetryError) {
+              console.error("[FA] createTask final retry failed:", finalRetryError);
+              setConvertLoading(null);
+              setConvertError(normalizeActionError(finalRetryError, "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly."));
+              return;
+            }
+          } else {
+            setConvertLoading(null);
+            setConvertError(normalizeActionError(retryError, "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly."));
+            return;
+          }
         }
       } else {
-        const normalized = normalizeActionError(
-          e,
-          "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.",
-        );
         setConvertLoading(null);
-        setConvertError(normalized);
+        setConvertError(normalizeActionError(e, "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly."));
         return;
       }
     }
@@ -143,13 +150,25 @@ export function FinancialAnalysisLayout() {
     try {
       id = await createMeetingNote(payload);
     } catch (e) {
-      const msg = normalizeActionError(
-        e,
-        "Nepodařilo se vytvořit zápisek. Zkuste to znovu nebo zkopírujte text do zápisků ručně.",
-      );
-      setConvertLoading(null);
-      setConvertError(msg);
-      return;
+      console.error("[FA] createMeetingNote failed:", e);
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      if (
+        payload.contactId
+        && (msg.includes("foreign key") || msg.includes("violates foreign key"))
+      ) {
+        try {
+          id = await createMeetingNote({ ...payload, contactId: null });
+        } catch (retryError) {
+          console.error("[FA] createMeetingNote retry failed:", retryError);
+          setConvertLoading(null);
+          setConvertError(normalizeActionError(retryError, "Nepodařilo se vytvořit zápisek. Zkuste to znovu nebo zkopírujte text do zápisků ručně."));
+          return;
+        }
+      } else {
+        setConvertLoading(null);
+        setConvertError(normalizeActionError(e, "Nepodařilo se vytvořit zápisek. Zkuste to znovu nebo zkopírujte text do zápisků ručně."));
+        return;
+      }
     }
     setConvertLoading(null);
     if (id) {

@@ -5,7 +5,8 @@ export default async function AnalysesPage() {
   let analyses: Awaited<ReturnType<typeof listFinancialAnalyses>> = [];
   try {
     analyses = await listFinancialAnalyses();
-  } catch {
+  } catch (err) {
+    console.error("[AnalysesPage] listFinancialAnalyses failed:", err);
     analyses = [];
   }
 

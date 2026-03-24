@@ -18,16 +18,20 @@ function withTimeout<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
 const PERSONAL_FA_IMPORT_KEY = "financial_analysis_import";
 
 function hasSignificantLocalDraft(): boolean {
-  const loaded = loadFromStorage();
-  if (!loaded) return false;
-  if (loaded.currentStep > 1) return true;
-  const data = loaded.data;
-  return Boolean(
-    data.client?.name?.trim()
-      || data.notes?.trim()
-      || data.clientId
-      || data.householdId
-  );
+  try {
+    const loaded = loadFromStorage();
+    if (!loaded) return false;
+    if (loaded.currentStep > 1) return true;
+    const data = loaded.data;
+    return Boolean(
+      data.client?.name?.trim()
+        || data.notes?.trim()
+        || data.clientId
+        || data.householdId
+    );
+  } catch {
+    return false;
+  }
 }
 
 export default function FinancialAnalysisPage() {
@@ -49,10 +53,21 @@ export default function FinancialAnalysisPage() {
     if (id) {
       setLoadState("loading");
       withTimeout(getFinancialAnalysis(id))
+        .catch(async (err) => {
+          if (err?.message === "Timeout") {
+            // Fallback retry without timeout for large legacy payloads.
+            return getFinancialAnalysis(id);
+          }
+          throw err;
+        })
         .then((row) => {
           if (row) {
             try {
-              loadFromServerPayload(row.payload ?? {});
+              const payload =
+                typeof row.payload === "string"
+                  ? JSON.parse(row.payload)
+                  : (row.payload ?? {});
+              loadFromServerPayload(payload);
               setAnalysisId(row.id);
               setLinkIds(row.contactId ?? undefined, row.householdId ?? undefined);
               setLinkMetadata(
@@ -60,14 +75,18 @@ export default function FinancialAnalysisPage() {
                 (row as { linkedCompanyId?: string | null; lastRefreshedFromSharedAt?: Date | null }).lastRefreshedFromSharedAt ?? null
               );
               setLoadState("ok");
-            } catch {
+            } catch (e) {
+              console.error("[FinancialAnalysisPage] failed to hydrate analysis payload", e);
               setLoadState("error");
             }
           } else {
             setLoadState("error");
           }
         })
-        .catch((err) => setLoadState(err?.message === "Timeout" ? "timeout" : "error"));
+        .catch((err) => {
+          console.error("[FinancialAnalysisPage] getFinancialAnalysis failed", err);
+          setLoadState(err?.message === "Timeout" ? "timeout" : "error");
+        });
       return;
     }
     if (fromImport === "1" && typeof window !== "undefined") {

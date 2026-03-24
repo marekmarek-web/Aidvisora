@@ -18,7 +18,14 @@ export type FieldFilter =
 
 export type FieldSource = "ai" | "ocr" | "manual";
 
-export type ReviewStatus = "pending" | "in_review" | "approved" | "rejected";
+export type ReviewStatus = "pending" | "in_review" | "approved" | "rejected" | "applied";
+
+export type ProcessingStatus =
+  | "uploaded"
+  | "processing"
+  | "extracted"
+  | "review_required"
+  | "failed";
 
 export type BoundingBox = {
   x: number;
@@ -81,6 +88,34 @@ export type ExtractionDiagnostics = {
   notes: string[];
 };
 
+export type ClientMatchCandidate = {
+  clientId: string;
+  score: number;
+  confidence: "high" | "medium" | "low";
+  reasons: string[];
+  matchedFields: Record<string, boolean>;
+  displayName?: string;
+};
+
+export type DraftAction = {
+  type: string;
+  label: string;
+  payload: Record<string, unknown>;
+};
+
+export type ApplyResultPayload = {
+  createdClientId?: string;
+  linkedClientId?: string;
+  createdContractId?: string;
+  createdTaskId?: string;
+  bridgeSuggestions?: Array<{
+    id: string;
+    label: string;
+    href: string;
+    type: "analysis" | "service_action";
+  }>;
+};
+
 export type ExtractionDocument = {
   id: string;
   fileName: string;
@@ -90,8 +125,8 @@ export type ExtractionDocument = {
   pageCount: number;
   globalConfidence: number;
   reviewStatus: ReviewStatus;
+  processingStatus: ProcessingStatus;
   extractionProvider: "internal" | "adobe" | "mixed";
-  processingStatus: string;
   uploadSource: string;
   lastProcessedAt: string;
   executiveSummary: string;
@@ -100,6 +135,18 @@ export type ExtractionDocument = {
   groups: ExtractedGroup[];
   extraRecommendations: AIRecommendation[];
   pdfUrl: string;
+  errorMessage?: string;
+  reasonsForReview?: string[];
+  clientMatchCandidates: ClientMatchCandidate[];
+  draftActions: DraftAction[];
+  matchedClientId?: string;
+  createNewClientConfirmed?: string;
+  isApplied: boolean;
+  applyResultPayload?: ApplyResultPayload;
+  extractionTrace?: { failedStep?: string; warnings?: string[] };
+  validationWarnings?: Array<{ code?: string; message: string; field?: string }>;
+  classificationReasons?: string[];
+  fieldConfidenceMap?: Record<string, number>;
 };
 
 export type ExtractionReviewState = {

@@ -155,3 +155,41 @@ V repu je manuální setup podle [sentry-for-ai `sentry-nextjs-sdk/SKILL.md`](ht
 1. Bugy od uživatelů: GitHub Issues nebo dedicovaný kanál
 2. Kritické chyby: Sentry alerts → email/Slack
 3. Eskalace: kontaktovat vývojový tým
+
+---
+
+## Cursor MCP: PostHog, Postman, Clerk, Langfuse (nástroje pro AI v editoru)
+
+Tyto integrace **nejsou** nasazené závislosti webu samy o sobě – jde o **MCP servery v Cursoru**, které rozšiřují asistenta (dokumentace, přístup k účtům po přihlášení). Stav aplikace `apps/web` je níže.
+
+### PostHog MCP (`plugin-posthog-posthog`)
+
+- **K čemu:** produktová analytika (události, feature flags, …) na posthog.com; MCP po přihlášení umožní asistentovi pracovat s obsahem tvého PostHog workspace.
+- **Ověření:** Cursor → nastavení MCP → u serveru PostHog dokonči přihlášení (nástroj `mcp_auth` otevře flow v prohlížeči). Po úspěchu by měly být k dispozici další PostHog nástroje kromě `mcp_auth`.
+- **Aplikace:** v `apps/web/package.json` **není** `posthog-js` – sledování v CRM až po záměru přidat SDK a env klíče.
+
+### Postman MCP (`plugin-postman-postman`)
+
+- **K čemu:** kolekce a workspace na postman.com; MCP po přihlášení napojí asistenta na tvůj účet.
+- **Ověření:** v **Cursor → Settings → MCP** u serveru Postman musí být přihlášení v pořádku (zelený / connected). V detailu serveru uvidíš seznam nástrojů (např. `getWorkspaces`, `getCollections`, `getCollection` – záleží na verzi pluginu). Rychlý test v **novém** chatu s agentem: *„Pomocí Postman MCP vyjmenuj moje workspace.“* Pokud agent nástroje nevidí, zkus znovu otevřít projekt nebo restart Cursoru po dokončení OAuth.
+- **Aplikace:** lokální běh API a e2e testy zůstávají u `pnpm dev`, Playwright, vlastních skriptů; MCP nespouští server za tebe.
+
+### Clerk MCP (`plugin-clerk-clerk`)
+
+- **K čemu:** oficiální **SDK snippetů** (ne přímý dashboard). Asistent může volat např. `list_clerk_sdk_snippets` (filtr tag `auth`) a `clerk_sdk_snippet` se slugy jako `server-auth-nextjs`, `b2b-saas`, `use-auth`.
+- **Ověření:** v chatu s agentem požádej o Clerk snippet pro Next.js App Router – očekávej obsah pro `@clerk/nextjs/server` a `clerkMiddleware`.
+- **Aplikace:** Aidvisor používá **Supabase Auth** (`apps/web/src/lib/auth/require-auth.ts`), ne Clerk. Clerk MCP slouží k návrhu/migraci, ne k auditu současného přihlášení.
+
+### Langfuse
+
+- **V této workspace není** samostatný Langfuse MCP server v `mcps/`. Pro dokumentaci a CLI existuje Cursor skill **langfuse** (`npx langfuse-cli`, env `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`).
+- **Kdy ověřovat:** až po přidání LLM tracingu do kódu – pak Langfuse UI a/nebo CLI nad trace/prompt daty.
+
+### Shrnutí stacku webu (kontrola reality)
+
+| Oblast | Stav v repu |
+|--------|-------------|
+| Přihlášení | Supabase (`@supabase/ssr`, `@supabase/supabase-js`), viz `require-auth` |
+| Chyby / výkon | Sentry (`@sentry/nextjs`), Vercel Speed Insights |
+| PostHog / Clerk / Langfuse v závislostech | **Nejsou** v `apps/web/package.json` |
+| API testy | Vitest, Playwright (`test:e2e`) |

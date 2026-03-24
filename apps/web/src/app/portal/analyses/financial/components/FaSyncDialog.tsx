@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFaSyncPreview, syncFaToContacts, type FaSyncPreview } from "@/app/actions/fa-sync";
+import { getFaSyncPreview, syncFaToContacts } from "@/app/actions/fa-sync";
+import type { FaSyncPreview } from "@/lib/analyses/financial/contactSync";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { Users, UserPlus, Home, CheckCircle, AlertTriangle, Loader2, X } from "lucide-react";
 

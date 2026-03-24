@@ -74,9 +74,10 @@ export function PDFViewerPanel({
   onHighlightClick,
 }: Props) {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("ready");
+  const [iframeError, setIframeError] = useState(false);
   const highlights = buildHighlights(doc);
   const pageHighlights = highlights.filter((h) => h.page === activePage);
-  const hasPdf = !!doc.pdfUrl;
+  const hasPdf = !!doc.pdfUrl && doc.pdfUrl.length > 0;
 
   const zoomIn = useCallback(
     () => onZoomChange(Math.min(zoomLevel + 25, 200)),
@@ -184,11 +185,12 @@ export function PDFViewerPanel({
               transformOrigin: "top center",
             }}
           >
-            {hasPdf ? (
+            {hasPdf && !iframeError ? (
               <iframe
                 src={doc.pdfUrl}
                 className="w-full min-h-[1000px]"
                 title="PDF náhled"
+                onError={() => setIframeError(true)}
               />
             ) : (
               <SimulatedPDFPage
@@ -215,122 +217,49 @@ function SimulatedPDFPage({
   activeFieldId: string | null;
   onHighlightClick: (fieldId: string, page?: number) => void;
 }) {
-  return (
-    <div className="min-h-[900px] p-8 md:p-12 relative font-serif text-slate-700">
-      {/* Contract header */}
-      <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
-        <div className="w-32 h-10 bg-emerald-600 text-white font-black text-xl flex items-center justify-center font-sans rounded">
-          KOOP
-        </div>
-        <div className="text-right">
-          <h2 className="text-2xl font-bold text-slate-900 font-sans">
-            Pojistná smlouva
-          </h2>
-          <p className="text-sm text-slate-500 font-sans">Číslo: 6543219870</p>
-        </div>
+  if (highlights.length === 0) {
+    return (
+      <div className="min-h-[900px] p-8 md:p-12 flex flex-col items-center justify-center text-slate-400">
+        <FileText size={48} className="mb-4 opacity-30" />
+        <p className="text-sm font-medium">PDF náhled nedostupný</p>
+        <p className="text-xs mt-1">Extrahovaná data se zobrazují v levém panelu</p>
       </div>
+    );
+  }
 
-      <div className="space-y-8 text-sm leading-relaxed">
-        {/* Pojistník section */}
-        <HighlightBlock
-          fieldId="pojistnik"
-          isActive={activeFieldId === "pojistnik"}
-          status="success"
-          onClick={onHighlightClick}
-        >
-          <strong>Pojistník:</strong>{" "}
-          <HighlightValue fieldId="pojistnik" active={activeFieldId} onClick={onHighlightClick} status="success">
-            Jan Novák
-          </HighlightValue>
-          , nar.{" "}
-          <HighlightValue fieldId="rc" active={activeFieldId} onClick={onHighlightClick} status="success">
-            850415/1234
-          </HighlightValue>
-          , trvale bytem{" "}
-          <HighlightValue fieldId="adresa" active={activeFieldId} onClick={onHighlightClick} status="success">
-            Sluneční 145, Praha 4
-          </HighlightValue>
-          .
-        </HighlightBlock>
-
-        <p>
-          Smluvní strany uzavírají tuto pojistnou smlouvu pro produkt FLEXI
-          Životní pojištění. Počátek pojištění je stanoven na{" "}
-          <HighlightValue fieldId="pocatek" active={activeFieldId} onClick={onHighlightClick} status="success">
-            01. 05. 2026
-          </HighlightValue>
-          .
+  return (
+    <div className="min-h-[900px] p-8 md:p-12 relative font-sans text-slate-700">
+      <div className="border-b-2 border-slate-800 pb-6 mb-8">
+        <h2 className="text-xl font-bold text-slate-900">Extrahovaná data z dokumentu</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Klikněte na zvýrazněnou hodnotu pro zobrazení odpovídajícího pole
         </p>
-
-        <h4 className="font-bold text-slate-900 text-lg mt-8 mb-4 font-sans">
-          Rozsah pojištění
-        </h4>
-        <table className="w-full border-collapse border border-slate-300 text-sm font-sans">
-          <tbody>
-            <tr>
-              <td className="border border-slate-300 p-3">
-                Základní pojištění pro případ smrti
-              </td>
-              <td className="border border-slate-300 p-3 text-right bg-indigo-50/30">
-                <HighlightValue fieldId="smrt" active={activeFieldId} onClick={onHighlightClick} status="success">
-                  2 500 000 Kč
-                </HighlightValue>
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-slate-300 p-3">
-                Trvalé následky úrazu
-              </td>
-              <td className="border border-slate-300 p-3 text-right">
-                <HighlightValue fieldId="trvale" active={activeFieldId} onClick={onHighlightClick} status="success">
-                  1 000 000 Kč
-                </HighlightValue>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div className="mt-10 pt-10 border-t border-slate-200 space-y-6">
-          <p className="flex items-center gap-2 font-sans">
-            <strong>Měsíční pojistné:</strong>
-            <HighlightValue fieldId="platba" active={activeFieldId} onClick={onHighlightClick} status="warning">
-              1 450 Kč
-            </HighlightValue>
-          </p>
-          <p className="flex items-center gap-2 font-sans">
-            <strong>Obmyšlená osoba:</strong>
-            <HighlightValue fieldId="obmyslena" active={activeFieldId} onClick={onHighlightClick} status="error">
-              Dle zákona (Není uvedena)
-            </HighlightValue>
-          </p>
-        </div>
       </div>
-    </div>
-  );
-}
 
-function HighlightBlock({
-  fieldId,
-  isActive,
-  status,
-  onClick,
-  children,
-}: {
-  fieldId: string;
-  isActive: boolean;
-  status: FieldStatus;
-  onClick: (fieldId: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      onClick={() => onClick(fieldId)}
-      className={`p-2 -mx-2 rounded-lg border cursor-pointer transition-all ${highlightBorder(
-        status,
-        isActive
-      )}`}
-    >
-      {children}
+      <div className="space-y-4 text-sm">
+        {highlights.map((h) => (
+          <div
+            key={h.fieldId}
+            onClick={() => onHighlightClick(h.fieldId)}
+            className={`p-3 rounded-lg border cursor-pointer transition-all ${highlightBorder(
+              h.status,
+              activeFieldId === h.fieldId
+            )}`}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
+              {h.label}
+            </span>
+            <HighlightValue
+              fieldId={h.fieldId}
+              active={activeFieldId}
+              onClick={onHighlightClick}
+              status={h.status}
+            >
+              {h.value}
+            </HighlightValue>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   approveContractReview,
   rejectContractReview,
@@ -11,71 +10,33 @@ import {
   confirmCreateNewClient,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
-import { ContractReviewDetailView } from "./ContractReviewDetailView";
-
-type ClientMatchCandidate = {
-  clientId: string;
-  score: number;
-  confidence: "high" | "medium" | "low";
-  reasons: string[];
-  matchedFields: Record<string, boolean>;
-  displayName?: string;
-};
-
-type ValidationWarningItem = { code?: string; message: string; field?: string };
-
-type ReviewDetail = {
-  id: string;
-  fileName: string;
-  processingStatus: string;
-  errorMessage?: string | null;
-  extractedPayload?: Record<string, unknown>;
-  clientMatchCandidates?: ClientMatchCandidate[];
-  draftActions?: Array<{ type: string; label: string; payload: Record<string, unknown> }>;
-  confidence?: number | null;
-  reasonsForReview?: string[] | null;
-  reviewStatus?: string | null;
-  reviewedBy?: string | null;
-  reviewedAt?: string | null;
-  rejectReason?: string | null;
-  appliedBy?: string | null;
-  appliedAt?: string | null;
-  matchedClientId?: string | null;
-  createNewClientConfirmed?: string | null;
-  applyResultPayload?: {
-    createdClientId?: string;
-    linkedClientId?: string;
-    createdContractId?: string;
-    createdTaskId?: string;
-    bridgeSuggestions?: Array<{
-      id: string;
-      label: string;
-      href: string;
-      type: "analysis" | "service_action";
-    }>;
-  };
-  detectedDocumentType?: string | null;
-  inputMode?: string | null;
-  extractionMode?: string | null;
-  extractionTrace?: { failedStep?: string; warnings?: string[] } | null;
-  validationWarnings?: ValidationWarningItem[] | null;
-  fieldConfidenceMap?: Record<string, number> | null;
-  classificationReasons?: string[] | null;
-};
+import { AIReviewExtractionShell } from "@/app/components/ai-review/AIReviewExtractionShell";
+import { mapApiToExtractionDocument } from "@/lib/ai-review/mappers";
+import type { ExtractionDocument } from "@/lib/ai-review/types";
 
 export default function ContractReviewDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
   const toast = useToast();
-  const [detail, setDetail] = useState<ReviewDetail | null>(null);
+
+  const [doc, setDoc] = useState<ExtractionDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
+
+  const loadPdf = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/contracts/review/${id}/file`);
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) setPdfUrl(url);
+      }
+    } catch {
+      /* PDF URL optional */
+    }
+  }, [id]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -88,19 +49,48 @@ export default function ContractReviewDetailPage() {
         throw new Error("Načtení detailu selhalo.");
       }
       const data = await res.json();
-      setDetail(data);
+      const mapped = mapApiToExtractionDocument(data, pdfUrl);
+      setDoc(mapped);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chyba");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, pdfUrl]);
+
+  useEffect(() => {
+    loadPdf();
+  }, [loadPdf]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const handleApprove = async () => {
+  const handleBack = useCallback(() => {
+    router.push("/portal/contracts/review");
+  }, [router]);
+
+  const handleDiscard = useCallback(async () => {
+    const msg = "Smazat soubor z úložiště i z revize? Tím odeberete dokument a související data.";
+    if (!window.confirm(msg)) return;
+    setActionLoading("delete");
+    try {
+      const res = await fetch(`/api/contracts/review/${id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.showToast(data.error ?? "Smazání selhalo.", "error");
+        return;
+      }
+      toast.showToast("Položka smazána.", "success");
+      router.push("/portal/contracts/review");
+    } catch {
+      toast.showToast("Smazání selhalo.", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [id, router, toast]);
+
+  const handleApprove = useCallback(async () => {
     setActionLoading("approve");
     try {
       const result = await approveContractReview(id);
@@ -113,16 +103,32 @@ export default function ContractReviewDetailPage() {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [id, toast, load]);
 
-  const handleReject = async () => {
-    setActionLoading("reject");
+  const handleReject = useCallback(
+    async (reason?: string) => {
+      setActionLoading("reject");
+      try {
+        const result = await rejectContractReview(id, reason || undefined);
+        if (result.ok) {
+          toast.showToast("Položka zamítnuta.", "success");
+          load();
+        } else {
+          toast.showToast(result.error ?? "Chyba", "error");
+        }
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [id, toast, load]
+  );
+
+  const handleApply = useCallback(async () => {
+    setActionLoading("apply");
     try {
-      const result = await rejectContractReview(id, rejectReason || undefined);
+      const result = await applyContractReviewDrafts(id);
       if (result.ok) {
-        toast.showToast("Položka zamítnuta.", "success");
-        setShowRejectModal(false);
-        setRejectReason("");
+        toast.showToast("Akce aplikovány do CRM.", "success");
         load();
       } else {
         toast.showToast(result.error ?? "Chyba", "error");
@@ -130,24 +136,27 @@ export default function ContractReviewDetailPage() {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [id, toast, load]);
 
-  const handleSelectClient = async (clientId: string) => {
-    setActionLoading("select");
-    try {
-      const result = await selectMatchedClient(id, clientId);
-      if (result.ok) {
-        toast.showToast("Klient vybrán.", "success");
-        load();
-      } else {
-        toast.showToast(result.error ?? "Chyba", "error");
+  const handleSelectClient = useCallback(
+    async (clientId: string) => {
+      setActionLoading("select");
+      try {
+        const result = await selectMatchedClient(id, clientId);
+        if (result.ok) {
+          toast.showToast("Klient vybrán.", "success");
+          load();
+        } else {
+          toast.showToast(result.error ?? "Chyba", "error");
+        }
+      } finally {
+        setActionLoading(null);
       }
-    } finally {
-      setActionLoading(null);
-    }
-  };
+    },
+    [id, toast, load]
+  );
 
-  const handleConfirmCreateNew = async () => {
+  const handleConfirmCreateNew = useCallback(async () => {
     setActionLoading("createNew");
     try {
       const result = await confirmCreateNewClient(id);
@@ -160,119 +169,49 @@ export default function ContractReviewDetailPage() {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [id, toast, load]);
 
-  const handleApply = async () => {
-    setActionLoading("apply");
-    try {
-      const result = await applyContractReviewDrafts(id);
-      if (result.ok) {
-        toast.showToast("Akce aplikovány do CRM.", "success");
-        setShowApplyConfirm(false);
-        load();
-      } else {
-        toast.showToast(result.error ?? "Chyba", "error");
-      }
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const openOriginalFile = async () => {
-    try {
-      const res = await fetch(`/api/contracts/review/${id}/file`);
-      if (!res.ok) throw new Error("Odkaz nelze vytvořit.");
-      const { url } = await res.json();
-      if (url) window.open(url, "_blank");
-    } catch {
-      toast.showToast("Otevření souboru selhalo.", "error");
-    }
-  };
-
-  const handleDeleteDocument = async () => {
-    const processing =
-      detail?.processingStatus === "uploaded" || detail?.processingStatus === "processing";
-    const msg = processing
-      ? "Položka se stále zpracovává. Opravdu smazat soubor z úložiště i z revize?"
-      : "Smazat soubor z úložiště i z revize? Tím odeberete dokument a související data revize.";
-    if (!window.confirm(msg)) return;
-    setDeleteLoading(true);
-    try {
-      const res = await fetch(`/api/contracts/review/${id}`, { method: "DELETE" });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        toast.showToast(data.error ?? "Smazání selhalo.", "error");
-        return;
-      }
-      toast.showToast("Položka byla smazána.", "success");
-      router.push("/portal/contracts/review");
-    } catch {
-      toast.showToast("Smazání selhalo.", "error");
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const extracted = detail?.extractedPayload as Record<string, unknown> | undefined;
-  const client = extracted?.client as Record<string, unknown> | undefined;
-  const candidates = (detail?.clientMatchCandidates ?? []) as ClientMatchCandidate[];
-  const isApplied = detail?.reviewStatus === "applied";
-  const isPending = detail?.reviewStatus === "pending" || !detail?.reviewStatus;
-  const canApproveReject =
-    isPending && (detail?.processingStatus === "extracted" || detail?.processingStatus === "review_required");
-  const isApproved = detail?.reviewStatus === "approved";
-  const hasResolvedClient = !!detail?.matchedClientId || detail?.createNewClientConfirmed === "true";
-  const canApply = isApproved && hasResolvedClient && !isApplied;
-  const confidenceVal = detail?.confidence ?? 0;
-  const lowConfidence = confidenceVal < 0.7;
-  const missingFields = (extracted?.missingFields as string[] | undefined) ?? [];
-
-  if (loading && !detail) {
+  if (loading && !doc) {
     return (
-      <div className="p-6 text-center" style={{ color: "var(--wp-text-muted)" }}>
-        Načítám…
+      <div className="flex items-center justify-center h-[80vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <p className="text-sm font-bold text-slate-500">Načítám AI extrakci…</p>
+        </div>
       </div>
     );
   }
-  if (error || !detail) {
+
+  if (error || !doc) {
     return (
-      <div className="p-6">
-        <p className="text-red-600">{error ?? "Položka nenalezena."}</p>
-        <Link href="/portal/contracts/review" className="text-sm mt-2 inline-block" style={{ color: "var(--wp-accent)" }}>
-          ← Zpět na seznam
-        </Link>
+      <div className="flex items-center justify-center h-[80vh]">
+        <div className="flex flex-col items-center gap-3 max-w-sm text-center">
+          <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center">
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+          <p className="text-sm font-bold text-slate-800">{error ?? "Dokument nenalezen."}</p>
+          <button onClick={handleBack} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+            Zpět na seznam
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <ContractReviewDetailView
-      detail={detail}
-      extracted={extracted}
-      client={client}
-      candidates={candidates}
-      isApplied={isApplied}
-      canApproveReject={canApproveReject}
-      isApproved={isApproved}
-      hasResolvedClient={hasResolvedClient}
-      canApply={canApply}
-      lowConfidence={lowConfidence}
-      missingFields={missingFields}
-      actionLoading={actionLoading}
-      rejectReason={rejectReason}
-      showRejectModal={showRejectModal}
-      showApplyConfirm={showApplyConfirm}
-      onOpenOriginalFile={openOriginalFile}
-      onSelectClient={handleSelectClient}
-      onConfirmCreateNew={handleConfirmCreateNew}
+    <AIReviewExtractionShell
+      doc={doc}
+      onBack={handleBack}
+      onDiscard={handleDiscard}
       onApprove={handleApprove}
       onReject={handleReject}
-      setShowRejectModal={setShowRejectModal}
-      setRejectReason={setRejectReason}
-      setShowApplyConfirm={setShowApplyConfirm}
       onApply={handleApply}
-      onDeleteDocument={handleDeleteDocument}
-      deleteLoading={deleteLoading}
+      onSelectClient={handleSelectClient}
+      onConfirmCreateNew={handleConfirmCreateNew}
+      isApproving={actionLoading === "approve"}
+      actionLoading={actionLoading}
     />
   );
 }

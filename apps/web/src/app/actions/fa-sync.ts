@@ -4,10 +4,8 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/get-membership";
 import { db, contacts, households, householdMembers, financialAnalyses, faSyncLog, eq, and, isNull } from "db";
 import { createContact } from "./contacts";
-import { buildSyncPreview, findDuplicate, type ExistingContactForDedup, type FaSyncPersonPreview, type FaSyncPreview } from "@/lib/analyses/financial/contactSync";
+import { buildSyncPreview, type ExistingContactForDedup, type FaSyncPersonPreview, type FaSyncPreview } from "@/lib/analyses/financial/contactSync";
 import type { FinancialAnalysisData } from "@/lib/analyses/financial/types";
-
-export type { FaSyncPreview, FaSyncPersonPreview };
 
 export async function getFaSyncPreview(analysisId: string): Promise<FaSyncPreview | null> {
   const auth = await requireAuthInAction();
@@ -43,17 +41,17 @@ export async function getFaSyncPreview(analysisId: string): Promise<FaSyncPrevie
   );
 }
 
-export interface SyncFaToContactsParams {
+type SyncFaToContactsParams = {
   analysisId: string;
   selectedPersonIndices: number[];
   createHousehold: boolean;
   householdName?: string;
-}
+};
 
-export interface SyncFaToContactsResult {
+type SyncFaToContactsResult = {
   contactIds: { faRole: string; contactId: string; created: boolean }[];
   householdId: string | null;
-}
+};
 
 export async function syncFaToContacts(params: SyncFaToContactsParams): Promise<SyncFaToContactsResult> {
   const auth = await requireAuthInAction();
