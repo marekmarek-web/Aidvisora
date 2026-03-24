@@ -399,7 +399,7 @@ export async function getBlockedReviews(tenantId: string): Promise<BlockedItem[]
       extractedPayload: contractUploadReviews.extractedPayload,
       detectedDocumentType: contractUploadReviews.detectedDocumentType,
       matchedClientId: contractUploadReviews.matchedClientId,
-      matchedClientCandidates: contractUploadReviews.matchedClientCandidates,
+      clientMatchCandidates: contractUploadReviews.clientMatchCandidates,
     })
     .from(contractUploadReviews)
     .where(
