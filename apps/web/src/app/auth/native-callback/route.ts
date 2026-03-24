@@ -31,7 +31,6 @@ export async function GET(request: Request) {
       }
     }
 
-    const origin = new URL(request.url).origin;
     // Chrome Custom Tabs block HTTP 302 redirects to custom URL schemes.
     // Redirect to an intermediate page that uses JavaScript to trigger the
     // deep link, which Android handles reliably.
