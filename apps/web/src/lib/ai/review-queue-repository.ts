@@ -174,6 +174,34 @@ export async function getContractReviewById(
   return (row as ContractReviewRow) ?? null;
 }
 
+/**
+ * Hard-delete a contract review row for the tenant (CASCADE removes contract_review_corrections).
+ * Caller should remove the Storage object first when possible.
+ */
+export async function deleteContractReview(
+  id: string,
+  tenantId: string
+): Promise<{ deleted: boolean; storagePath: string | null }> {
+  const [existing] = await db
+    .select({
+      id: contractUploadReviews.id,
+      storagePath: contractUploadReviews.storagePath,
+    })
+    .from(contractUploadReviews)
+    .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)))
+    .limit(1);
+
+  if (!existing) {
+    return { deleted: false, storagePath: null };
+  }
+
+  await db
+    .delete(contractUploadReviews)
+    .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)));
+
+  return { deleted: true, storagePath: existing.storagePath };
+}
+
 /** Full list projection when DB has pipeline + phase-two columns. */
 const listReviewColumns = {
   id: contractUploadReviews.id,

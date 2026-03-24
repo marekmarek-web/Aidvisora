@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Sparkles,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
@@ -133,6 +134,7 @@ export default function ContractReviewListPage() {
   const [processingFilter, setProcessingFilter] = useState<ProcessingStatus | "">("");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -197,6 +199,31 @@ export default function ContractReviewListPage() {
 
   const isProcessing = (row: ReviewItem) =>
     row.processingStatus === "uploaded" || row.processingStatus === "processing";
+
+  const handleDeleteReview = async (e: React.MouseEvent, row: ReviewItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const warn = isProcessing(row);
+    const msg = warn
+      ? "Položka se stále zpracovává. Opravdu smazat soubor z úložiště i z revize?"
+      : "Smazat soubor z úložiště i z revize?";
+    if (!window.confirm(msg)) return;
+    setDeletingId(row.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/contracts/review/${row.id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Smazání selhalo.");
+        return;
+      }
+      setItems((prev) => prev.filter((i) => i.id !== row.id));
+    } catch {
+      setError("Smazání selhalo.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc]">
@@ -263,9 +290,7 @@ export default function ContractReviewListPage() {
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 text-rose-700">
               <AlertCircle size={20} className="shrink-0" />
-              <span className="font-bold text-sm">
-                Načtení seznamu selhalo. Zkontrolujte připojení nebo akci opakujte.
-              </span>
+              <span className="font-bold text-sm">{error}</span>
             </div>
             <button
               type="button"
@@ -437,29 +462,45 @@ export default function ContractReviewListPage() {
                         )}
                       </div>
 
-                      <div className="flex xl:flex-col items-center xl:items-end justify-between xl:w-[200px] gap-4 shrink-0">
+                      <div className="flex flex-col items-stretch xl:items-end justify-between gap-3 shrink-0 w-full xl:w-[220px]">
                         <div
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border shadow-sm ${statusConfig.color}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border shadow-sm self-start xl:self-end ${statusConfig.color}`}
                         >
                           <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
                           {statusConfig.text}
                         </div>
-                        {row.reviewStatus !== "applied" && (
-                          <Link
-                            href={`/portal/contracts/review/${row.id}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:bg-[#2a2d4a] transition-all active:scale-95"
+                        <div className="flex flex-wrap items-center gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteReview(e, row)}
+                            disabled={deletingId === row.id}
+                            className="min-h-[44px] min-w-[44px] px-3 inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white text-rose-700 text-xs font-bold hover:bg-rose-50 transition-colors disabled:opacity-50"
+                            aria-label="Smazat položku revize"
                           >
-                            Provést revizi <ArrowRight size={14} />
-                          </Link>
-                        )}
-                        {row.reviewStatus === "applied" && (
-                          <Link
-                            href={`/portal/contracts/review/${row.id}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
-                          >
-                            Otevřít v CRM <ArrowRight size={14} />
-                          </Link>
-                        )}
+                            {deletingId === row.id ? (
+                              <RefreshCw size={18} className="animate-spin shrink-0" />
+                            ) : (
+                              <Trash2 size={18} className="shrink-0" />
+                            )}
+                            <span>Smazat</span>
+                          </button>
+                          {row.reviewStatus !== "applied" && (
+                            <Link
+                              href={`/portal/contracts/review/${row.id}`}
+                              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-[#1a1c2e] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:bg-[#2a2d4a] transition-all active:scale-95"
+                            >
+                              Provést revizi <ArrowRight size={14} />
+                            </Link>
+                          )}
+                          {row.reviewStatus === "applied" && (
+                            <Link
+                              href={`/portal/contracts/review/${row.id}`}
+                              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                            >
+                              Otevřít v CRM <ArrowRight size={14} />
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

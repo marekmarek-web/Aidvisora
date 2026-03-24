@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   approveContractReview,
@@ -65,6 +65,7 @@ type ReviewDetail = {
 
 export default function ContractReviewDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const toast = useToast();
   const [detail, setDetail] = useState<ReviewDetail | null>(null);
@@ -74,6 +75,7 @@ export default function ContractReviewDetailPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -187,6 +189,30 @@ export default function ContractReviewDetailPage() {
     }
   };
 
+  const handleDeleteDocument = async () => {
+    const processing =
+      detail?.processingStatus === "uploaded" || detail?.processingStatus === "processing";
+    const msg = processing
+      ? "Položka se stále zpracovává. Opravdu smazat soubor z úložiště i z revize?"
+      : "Smazat soubor z úložiště i z revize? Tím odeberete dokument a související data revize.";
+    if (!window.confirm(msg)) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/contracts/review/${id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.showToast(data.error ?? "Smazání selhalo.", "error");
+        return;
+      }
+      toast.showToast("Položka byla smazána.", "success");
+      router.push("/portal/contracts/review");
+    } catch {
+      toast.showToast("Smazání selhalo.", "error");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const extracted = detail?.extractedPayload as Record<string, unknown> | undefined;
   const client = extracted?.client as Record<string, unknown> | undefined;
   const candidates = (detail?.clientMatchCandidates ?? []) as ClientMatchCandidate[];
@@ -245,6 +271,8 @@ export default function ContractReviewDetailPage() {
       setRejectReason={setRejectReason}
       setShowApplyConfirm={setShowApplyConfirm}
       onApply={handleApply}
+      onDeleteDocument={handleDeleteDocument}
+      deleteLoading={deleteLoading}
     />
   );
 }

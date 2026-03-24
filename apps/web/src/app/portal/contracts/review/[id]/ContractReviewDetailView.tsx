@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { FileText, ChevronLeft, UserPlus, Check, X, Send, AlertTriangle, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { FileText, ChevronLeft, UserPlus, Check, X, Send, AlertTriangle, ChevronDown, ChevronRight, Info, Trash2, RefreshCw } from "lucide-react";
 import { StickyBottomCTA, STICKY_BOTTOM_CTA_PADDING_CLASS } from "@/app/components/StickyBottomCTA";
 
 type ClientMatchCandidate = {
@@ -179,6 +179,8 @@ type Props = {
   setRejectReason: (v: string) => void;
   setShowApplyConfirm: (v: boolean) => void;
   onApply: () => void;
+  onDeleteDocument: () => void;
+  deleteLoading: boolean;
 };
 
 export function ContractReviewDetailView(props: Props) {
@@ -207,6 +209,8 @@ export function ContractReviewDetailView(props: Props) {
     setRejectReason,
     setShowApplyConfirm,
     onApply,
+    onDeleteDocument,
+    deleteLoading,
   } = props;
 
   const showStickyActions = !props.isApplied && (props.canApproveReject || props.canApply);
@@ -444,6 +448,31 @@ export function ContractReviewDetailView(props: Props) {
           ) : null}
         </section>
       )}
+
+      <section
+        className="rounded-xl border border-red-200 dark:border-red-900/40 p-4 mb-4"
+        style={{ background: "var(--wp-bg-card)" }}
+        aria-labelledby="contract-review-danger-heading"
+      >
+        <h2
+          id="contract-review-danger-heading"
+          className="text-sm font-semibold uppercase tracking-wider mb-2 text-red-800 dark:text-red-300"
+        >
+          Nebezpečná zóna
+        </h2>
+        <p className="text-sm mb-3" style={{ color: "var(--wp-text-muted)" }}>
+          Dokument bude trvale odstraněn z úložiště a z revize včetně korekcí.
+        </p>
+        <button
+          type="button"
+          onClick={onDeleteDocument}
+          disabled={deleteLoading}
+          className="min-h-[44px] px-4 rounded-lg font-medium flex items-center gap-2 border border-red-300 text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-50 w-full sm:w-auto justify-center"
+        >
+          {deleteLoading ? <RefreshCw size={18} className="animate-spin" /> : <Trash2 size={18} />}
+          {deleteLoading ? "Mažu…" : "Smazat dokument"}
+        </button>
+      </section>
 
       {!isApplied && (
         <section className="rounded-xl border p-4 flex flex-wrap gap-3" style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)" }}>
