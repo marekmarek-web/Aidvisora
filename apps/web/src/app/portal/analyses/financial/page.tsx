@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
+import { loadFromStorage, clearStorage } from "@/lib/analyses/financial/saveLoad";
 import { FinancialAnalysisLayout } from "./components/FinancialAnalysisLayout";
 import { getFinancialAnalysis } from "@/app/actions/financial-analyses";
 
@@ -16,9 +17,23 @@ function withTimeout<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
 
 const PERSONAL_FA_IMPORT_KEY = "financial_analysis_import";
 
+function hasSignificantLocalDraft(): boolean {
+  const loaded = loadFromStorage();
+  if (!loaded) return false;
+  if (loaded.currentStep > 1) return true;
+  const data = loaded.data;
+  return Boolean(
+    data.client?.name?.trim()
+      || data.notes?.trim()
+      || data.clientId
+      || data.householdId
+  );
+}
+
 export default function FinancialAnalysisPage() {
   const searchParams = useSearchParams();
   const hydrate = useFinancialAnalysisStore((s) => s.hydrate);
+  const reset = useFinancialAnalysisStore((s) => s.reset);
   const setLinkIds = useFinancialAnalysisStore((s) => s.setLinkIds);
   const loadFromServerPayload = useFinancialAnalysisStore((s) => s.loadFromServerPayload);
   const setAnalysisId = useFinancialAnalysisStore((s) => s.setAnalysisId);
@@ -26,6 +41,7 @@ export default function FinancialAnalysisPage() {
   const loadFromFile = useFinancialAnalysisStore((s) => s.loadFromFile);
 
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error" | "timeout">("idle");
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -63,6 +79,10 @@ export default function FinancialAnalysisPage() {
         return;
       }
     }
+    if (hasSignificantLocalDraft()) {
+      setShowDraftPrompt(true);
+      return;
+    }
     hydrate();
     setLoadState("ok");
   }, [searchParams, hydrate, loadFromServerPayload, setAnalysisId, setLinkIds, loadFromFile]);
@@ -76,6 +96,46 @@ export default function FinancialAnalysisPage() {
   }, [searchParams, setLinkIds]);
 
   const idParam = searchParams.get("id");
+  if (showDraftPrompt) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+        <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl p-6 sm:p-8">
+          <h2 className="text-xl font-extrabold text-slate-900 mb-2">
+            Máte rozpracovanou analýzu
+          </h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Chcete pokračovat v rozpracované verzi, nebo začít úplně novou analýzu?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                hydrate();
+                setShowDraftPrompt(false);
+                setLoadState("ok");
+              }}
+              className="min-h-[44px] px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+            >
+              Pokračovat
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearStorage();
+                reset();
+                setShowDraftPrompt(false);
+                setLoadState("ok");
+              }}
+              className="min-h-[44px] px-5 py-3 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50"
+            >
+              Začít znovu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loadState === "loading" || (loadState === "idle" && idParam)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4">

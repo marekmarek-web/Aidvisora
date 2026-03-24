@@ -7,6 +7,9 @@ const nextMajor = Number.parseInt(nextVersion.split(".")[0] || "0", 10);
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["db"],
+  serverActions: {
+    bodySizeLimit: "5mb",
+  },
   // Keep postgres external across Next 14+.
   ...(nextMajor >= 15
     ? { serverExternalPackages: ["postgres"] }

@@ -40,6 +40,7 @@ import {
 
 const VALID_TABS = ["osobni", "rezervace", "integrace", "notifikace", "fakturace"] as const;
 type TabId = (typeof VALID_TABS)[number];
+const ADVISOR_AVATAR_MAX_SIZE = 3 * 1024 * 1024;
 
 function isValidTab(t: string): t is TabId {
   return VALID_TABS.includes(t as TabId);
@@ -233,6 +234,11 @@ export function AdvisorProfileView({
   const onAdvisorAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > ADVISOR_AVATAR_MAX_SIZE) {
+      setAdvisorAvatarError("Soubor je příliš velký (max 3 MB)");
+      e.target.value = "";
+      return;
+    }
     setAdvisorAvatarError(null);
     setAdvisorAvatarUploading(true);
     try {

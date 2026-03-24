@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { createTask } from "@/app/actions/tasks";
 import { createMeetingNote } from "@/app/actions/meeting-notes";
@@ -46,7 +45,6 @@ function getStepComponents(includeCompany: boolean) {
 }
 
 export function FinancialAnalysisLayout() {
-  const router = useRouter();
   const [convertLoading, setConvertLoading] = useState<"task" | "note" | null>(null);
   const [convertError, setConvertError] = useState<string | null>(null);
   const currentStep = useFinancialAnalysisStore((s) => s.currentStep);
@@ -60,6 +58,23 @@ export function FinancialAnalysisLayout() {
 
   const stepComponents = getStepComponents(data.includeCompany ?? false);
   const StepComponent = stepComponents[currentStep - 1];
+
+  function normalizeActionError(
+    error: unknown,
+    fallbackMessage: string,
+  ): string {
+    const msg = error instanceof Error ? error.message : "";
+    if (!msg) return fallbackMessage;
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("server components render")
+      || lower.includes("omitted in production")
+      || lower.includes("digest property")
+    ) {
+      return fallbackMessage;
+    }
+    return msg;
+  }
 
   async function handleConvertToTask() {
     setConvertError(null);
@@ -76,9 +91,34 @@ export function FinancialAnalysisLayout() {
       id = await createTask(payload);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
-      setConvertLoading(null);
-      setConvertError(msg || "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.");
-      return;
+      const lower = msg.toLowerCase();
+      if (
+        payload.analysisId
+        && (lower.includes("foreign key") || lower.includes("violates foreign key"))
+      ) {
+        try {
+          id = await createTask({
+            ...payload,
+            analysisId: undefined,
+          });
+        } catch (retryError) {
+          const retryMsg = normalizeActionError(
+            retryError,
+            "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.",
+          );
+          setConvertLoading(null);
+          setConvertError(retryMsg);
+          return;
+        }
+      } else {
+        const normalized = normalizeActionError(
+          e,
+          "Nepodařilo se vytvořit úkol. Zkuste to znovu nebo přidejte úkol ručně v sekci Úkoly.",
+        );
+        setConvertLoading(null);
+        setConvertError(normalized);
+        return;
+      }
     }
     setConvertLoading(null);
     if (id) {
@@ -102,8 +142,14 @@ export function FinancialAnalysisLayout() {
     let id: string | null = null;
     try {
       id = await createMeetingNote(payload);
-    } catch {
-      id = null;
+    } catch (e) {
+      const msg = normalizeActionError(
+        e,
+        "Nepodařilo se vytvořit zápisek. Zkuste to znovu nebo zkopírujte text do zápisků ručně.",
+      );
+      setConvertLoading(null);
+      setConvertError(msg);
+      return;
     }
     setConvertLoading(null);
     if (id) {

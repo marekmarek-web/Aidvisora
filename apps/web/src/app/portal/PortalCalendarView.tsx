@@ -571,7 +571,7 @@ function EventFormModal({
             style={keyboardInset ? { paddingBottom: `${keyboardInset}px` } : undefined}
           >
             {/* Activity type pills */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
               {CALENDAR_EVENT_CATEGORIES.filter((t) => ["schuzka", "telefonat", "kafe", "mail", "ukol", "priorita"].includes(t.id)).map((t) => {
                 const isActive = form.eventType === t.id;
                 const ps = EVENT_PILL_STYLES[t.id] ?? { active: "bg-slate-700 text-white shadow-lg", inactive: "bg-slate-100 text-slate-600 hover:bg-slate-200" };
@@ -580,7 +580,7 @@ function EventFormModal({
                     key={t.id}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, eventType: t.id, reminderMinutes: (t.id === "ukol" || t.id === "priorita") ? 15 : 30 }))}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${isActive ? ps.active : ps.inactive}`}
+                    className={`shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${isActive ? ps.active : ps.inactive}`}
                   >
                     <span className="text-base">{t.icon}</span>
                     {t.label}

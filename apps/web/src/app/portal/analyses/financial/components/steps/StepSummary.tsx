@@ -81,6 +81,20 @@ export function StepSummary() {
   });
   const canSaveToDocuments = Boolean(data.clientId);
 
+  const normalizeExportError = (error: unknown, fallback: string) => {
+    const msg = error instanceof Error ? error.message : "";
+    if (!msg) return fallback;
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("server components render")
+      || lower.includes("omitted in production")
+      || lower.includes("digest property")
+    ) {
+      return fallback;
+    }
+    return msg;
+  };
+
   const handleThemeChange = (t: ReportTheme) => {
     setSelectedTheme(t);
     if (typeof window !== "undefined") {
@@ -120,8 +134,9 @@ export function StepSummary() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch {
-      setExportError("Nepodařilo se stáhnout report. Zkuste to znovu.");
+    } catch (error) {
+      console.error("[StepSummary] handleDownloadHTML failed", error);
+      setExportError(normalizeExportError(error, "Nepodařilo se stáhnout report. Zkuste to znovu."));
     } finally {
       setIsDownloading(false);
     }
@@ -133,8 +148,9 @@ export function StepSummary() {
     try {
       const html = await generateHTML();
       setPrintPayload({ html });
-    } catch {
-      setExportError("Nepodařilo se připravit report k tisku. Zkuste to znovu.");
+    } catch (error) {
+      console.error("[StepSummary] handlePrintReport failed", error);
+      setExportError(normalizeExportError(error, "Nepodařilo se připravit report k tisku. Zkuste to znovu."));
       setIsPreparingPrint(false);
     }
   };
@@ -155,8 +171,8 @@ export function StepSummary() {
       await uploadDocument(data.clientId!, formData, { tags: ["financial-report"] });
       if (analysisId) await setFinancialAnalysisLastExportedAt(analysisId);
     } catch (e) {
-      console.error(e);
-      alert(typeof e === "object" && e && "message" in e ? (e as Error).message : "Nepodařilo se uložit report.");
+      console.error("[StepSummary] handleSaveReportToDocuments failed", e);
+      alert(normalizeExportError(e, "Nepodařilo se uložit report."));
     } finally {
       setSavingToDocs(false);
     }
@@ -180,6 +196,8 @@ export function StepSummary() {
           win.document.close();
           win.focus();
           win.print();
+        } else {
+          setExportError("Prohlížeč zablokoval nové okno pro tisk. Povolte vyskakovací okna a zkuste to znovu.");
         }
       }
     }, 600);

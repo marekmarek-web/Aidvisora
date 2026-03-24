@@ -4,10 +4,17 @@ import { getContactsList } from "@/app/actions/contacts";
 import { NotesVisionBoard } from "./NotesVisionBoard";
 
 export default async function NotesPage() {
-  const [notes, contactsList] = await Promise.all([
-    getMeetingNotesForBoard(),
-    getContactsList(),
-  ]);
+  let notes: Awaited<ReturnType<typeof getMeetingNotesForBoard>> = [];
+  let contactsList: Awaited<ReturnType<typeof getContactsList>> = [];
+  try {
+    [notes, contactsList] = await Promise.all([
+      getMeetingNotesForBoard(),
+      getContactsList(),
+    ]);
+  } catch {
+    notes = [];
+    contactsList = [];
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full">
