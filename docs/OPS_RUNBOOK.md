@@ -111,6 +111,34 @@ V repu je manuální setup podle [sentry-for-ai `sentry-nextjs-sdk/SKILL.md`](ht
 | SENTRY_DSN | ❌ | Sentry jen server/edge (volitelný override) |
 | SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT | ❌ | Upload source maps při buildu |
 
+### Stripe (předplatné workspace)
+
+| Proměnná | Popis |
+|----------|--------|
+| `STRIPE_SECRET_KEY` | Secret API key (stejný režim test/live jako ceny) |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret z webhooku mířícího na `/api/stripe/webhook` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Publishable key (volitelné pro budoucí Stripe.js) |
+| `STRIPE_PRICE_STARTER_MONTHLY` / `_YEARLY` | Price ID (`price_…`) ze Stripe Products |
+| `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY` | Stejně |
+| `STRIPE_PRICE_TEAM_MONTHLY` / `_YEARLY` | Stejně |
+| `STRIPE_TRIAL_PERIOD_DAYS` | Zkušební dny před první fakturací (výchozí 14; `0` = bez trial) |
+| `STRIPE_PRICE_ID` | Legacy: jedna cena, jen pokud **není** nastavená žádná `STRIPE_PRICE_*_*` |
+
+**Důležité:** Price ID z test režimu nefungují s `sk_live_…` a naopak. Webhook URL musí být plná cesta, např. `https://www.aidvisora.cz/api/stripe/webhook`.
+
+### Document Processing (Adobe PDF Services)
+
+| Proměnná | Povinné | Popis |
+|----------|---------|--------|
+| `DOCUMENT_PROCESSING_PROVIDER` | ❌ | `"adobe"` / `"disabled"` / `"none"` (výchozí `"none"`) |
+| `DOCUMENT_PROCESSING_ENABLED` | ❌ | `"true"` zapne processing pipeline |
+| `DOCUMENT_EXTRACT_ENABLED` | ❌ | `"true"` zapne strukturovanou extrakci (stojí extra Adobe transakce) |
+| `ADOBE_PDF_SERVICES_CLIENT_ID` | ❌ | Adobe PDF Services client ID (povinné když provider=adobe) |
+| `ADOBE_PDF_SERVICES_CLIENT_SECRET` | ❌ | Adobe PDF Services client secret |
+| `ADOBE_PDF_SERVICES_REGION` | ❌ | Adobe region (výchozí `"ew1"`) |
+
+**Bez Adobe credentials systém funguje normálně** – upload, viewer a AI review s fallback kvalitou. Adobe je volitelný enhancement.
+
 ## Backup
 
 - **Automatické**: Supabase provádí denní zálohy (viz Supabase Dashboard → Database → Backups)

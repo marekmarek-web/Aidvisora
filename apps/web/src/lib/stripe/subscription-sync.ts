@@ -24,14 +24,23 @@ export async function upsertSubscriptionFromStripe(
   tenantId: string,
   sub: Stripe.Subscription
 ): Promise<void> {
+  const metaLabel = sub.metadata?.plan_label?.trim();
+  const planFromMeta =
+    metaLabel ||
+    (sub.metadata?.plan_tier && sub.metadata?.plan_interval
+      ? `${sub.metadata.plan_tier} (${sub.metadata.plan_interval})`
+      : null);
+
   const item = sub.items.data[0];
   const price = item?.price;
-  const plan =
+  const planFromPrice =
     price && typeof price !== "string"
       ? (price.nickname || price.id)
       : typeof price === "string"
         ? price
         : "unknown";
+
+  const plan = planFromMeta || planFromPrice;
 
   const endSec = item?.current_period_end;
   const currentPeriodEnd =

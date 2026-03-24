@@ -2,6 +2,7 @@ import "server-only";
 
 import { db, tenants, subscriptions, eq, desc } from "db";
 import type { WorkspaceBillingSnapshot } from "./billing-types";
+import { getCheckoutCatalogSnapshot } from "./price-catalog";
 import { isStripeCheckoutAvailable, isStripePortalAvailable } from "./server";
 
 export type { WorkspaceBillingSnapshot } from "./billing-types";
@@ -45,5 +46,6 @@ export async function getWorkspaceBillingSnapshot(params: {
     currentPeriodEnd: latestSubRow?.currentPeriodEnd?.toISOString() ?? null,
     plan: latestSubRow?.plan ?? null,
     canManage: roleName === "Admin" || roleName === "Director",
+    checkoutCatalog: getCheckoutCatalogSnapshot(),
   };
 }

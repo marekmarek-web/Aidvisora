@@ -1273,7 +1273,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <WorkspaceStripeBilling billing={initial.billing} billingContext="setup" showTitle={false} />
                 ) : (
                   <p className="text-sm text-slate-500">
-                    Správa předplatného vyžaduje nastavení Stripe na serveru (např. STRIPE_SECRET_KEY, STRIPE_PRICE_ID) a databázovou migraci pro billing.
+                    Správa předplatného vyžaduje Stripe na serveru (STRIPE_SECRET_KEY + STRIPE_PRICE_*_* nebo STRIPE_PRICE_ID) a migraci{" "}
+                    <code className="text-xs bg-slate-100 px-1 rounded">add_stripe_workspace_billing.sql</code>.
                   </p>
                 )}
               </div>
