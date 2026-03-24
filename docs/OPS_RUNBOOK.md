@@ -21,9 +21,15 @@
 
 V repu je `apps/web/vercel.json` s polem `crons` – po deployi zkontroluj **Vercel → Project → Cron Jobs**, že se zobrazily (na některých plánech může být cron placený).
 
-**Kde nastavit `CRON_SECRET`:** Vercel → tvůj projekt → **Settings** → **Environment Variables** → přidej `CRON_SECRET` (dlouhý náhodný řetězec), scope **Production** (a případně Preview). Stejnou hodnotu musí route ověřit přes hlavičku `Authorization: Bearer <CRON_SECRET>` – Vercel u naplánovaných cronů často posílá tuto hlavičku automaticky, pokud je proměnná nastavená; jinak zkus ručně z terminálu:
+**Kde nastavit `CRON_SECRET`:** Vercel → tvůj projekt → **Settings** → **Environment Variables** → přidej `CRON_SECRET` (dlouhý náhodný řetězec, např. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`), scope **Production** (a případně Preview). Stejnou hodnotu musí route ověřit přes hlavičku `Authorization: Bearer <CRON_SECRET>` – Vercel u naplánovaných cronů **posílá tuto hlavičku automaticky**, pokud je proměnná nastavená.
 
+**Pozn.:** Cursor / Vercel MCP nemá nástroj na zápis env proměnných – musíš to doplnit v dashboardu, nebo po `vercel login` z kořene projektu webu:  
+`vercel env add CRON_SECRET` → vyber Production (a případně Preview) → vlož hodnotu.
+
+Ověření ručně z terminálu:  
 `curl -H "Authorization: Bearer TVUJ_CRON_SECRET" "https://tvoje-domena.cz/api/cron/fa-followup"`
+
+**Nenastavuj ručně** env `VERCEL_GIT_COMMIT_SHA` (nebo ho smaž) – Vercel si commit SHA doplňuje sám; literál může rozházet Sentry release.
 
 ---
 
@@ -54,7 +60,13 @@ V repu je `apps/web/vercel.json` s polem `crons` – po deployi zkontroluj **Ver
 | `NEXT_PUBLIC_SENTRY_DSN` | DSN z Sentry (prohlížeč + fallback na serveru) |
 | `SENTRY_DSN` | volitelně stejný DSN jen pro server (jinak stačí public) |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | volitelně pro upload source maps při `next build` / na Vercelu |
-| ostatní | viz tabulka výše v tomto dokumentu |
+| `RESEND_API_KEY` | Resend → API Keys (tajné) |
+| `RESEND_FROM_EMAIL` | Fallback odesílatele; pro přihlášeného poradce se často generuje **From** z jména + domény (viz níže) |
+| `RESEND_FROM_DOMAIN` | Např. `aidvisora.cz` – doména ověřená v Resend pro tvar `jmeno.prijmeni.xxxxxx@aidvisora.cz` (jinak se bere z `RESEND_FROM_EMAIL`) |
+| `RESEND_REPLY_TO` | Globální fallback pro **Reply-To**; u akcí přihlášeného poradce má přednost e-mail z profilu / Supabase účtu |
+| ostatní | viz tabulka „Env proměnné (production)“ níže |
+
+**E-maily (From / Reply-To):** U přihlášeného poradce aplikace sestaví **From** jako zobrazované jméno + adresa `jmeno.prijmeni.<suffix>@RESEND_FROM_DOMAIN` (suffix z userId kvůli jednoznačnosti), pokud je doména známa. **Reply-To** = `user_profiles.email` → jinak Supabase **user.email** → jinak `RESEND_REPLY_TO`. Cron **service-reminders** (bez přihlášeného uživatele): **Reply-To** = `tenants.notification_email`, pak `RESEND_REPLY_TO`. Viz [`advisor-mail-headers.ts`](../apps/web/src/lib/email/advisor-mail-headers.ts).
 
 4. Po změně env často stačí **Redeploy** posledního deploye (Deployments → … → Redeploy).
 
@@ -90,6 +102,9 @@ V repu je manuální setup podle [sentry-for-ai `sentry-nextjs-sdk/SKILL.md`](ht
 | CRON_SECRET | ⚠️ | Potřeba pro cron endpointy |
 | INTEGRATIONS_ENCRYPTION_KEY | ⚠️ | Šifrování OAuth tokenů |
 | RESEND_API_KEY | ⚠️ | E-mailové notifikace |
+| RESEND_FROM_EMAIL | ⚠️ | Ověřený odesílatel v Resend |
+| RESEND_REPLY_TO | ❌ | Globální fallback Reply-To |
+| RESEND_FROM_DOMAIN | ❌ | Doména pro generovaný From (`jmeno.prijmeni…@domain`) |
 | GOOGLE_CLIENT_ID | ⚠️ | Google OAuth integrace |
 | GOOGLE_CLIENT_SECRET | ⚠️ | Google OAuth integrace |
 | NEXT_PUBLIC_SENTRY_DSN | ❌ | Sentry v prohlížeči (+ server fallback) |

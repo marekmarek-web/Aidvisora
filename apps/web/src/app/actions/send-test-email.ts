@@ -1,6 +1,7 @@
 "use server";
 
 import { sendResendEmail } from "@/lib/email/resend-client";
+import { loadAdvisorMailHeadersForCurrentUser } from "@/lib/email/advisor-mail-headers";
 
 /**
  * Send a test "Hello World" email via Resend.
@@ -9,11 +10,13 @@ import { sendResendEmail } from "@/lib/email/resend-client";
  * Set RESEND_API_KEY in .env.local (e.g. from Resend dashboard).
  */
 export async function sendTestEmail(to: string = "mrcreaw@gmail.com") {
+  const headers = await loadAdvisorMailHeadersForCurrentUser();
   const result = await sendResendEmail({
-    from: "onboarding@resend.dev",
+    from: headers.from,
+    replyTo: headers.replyTo,
     to,
     subject: "Hello World",
-    html: '<p>Congrats on sending your <strong>first email</strong>!</p>',
+    html: "<p>Test Resend – zkontroluj <strong>From</strong> (personalizace) a <strong>Reply-To</strong> (profil / RESEND_REPLY_TO).</p>",
   });
 
   if (result.ok) {

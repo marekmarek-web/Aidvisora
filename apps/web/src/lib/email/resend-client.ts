@@ -11,6 +11,7 @@
  */
 
 import { Resend } from "resend";
+import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 
 const getResend = (): Resend | null => {
   const apiKey = process.env.RESEND_API_KEY;
@@ -23,6 +24,8 @@ const defaultFrom = () =>
 
 export type SendResendOptions = {
   from?: string;
+  /** Odpovědi na tuto adresu (např. firemní mail poradce). Jinak se použije `RESEND_REPLY_TO`. */
+  replyTo?: string;
   to: string | string[];
   subject: string;
   html: string;
@@ -46,12 +49,14 @@ export async function sendResendEmail(
   }
 
   try {
+    const replyTo = resolveResendReplyTo(options.replyTo);
     const { data, error } = await resend.emails.send({
       from: options.from ?? defaultFrom(),
       to: options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
+      ...(replyTo ? { replyTo } : {}),
     });
 
     if (error) {

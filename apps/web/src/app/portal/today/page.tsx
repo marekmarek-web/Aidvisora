@@ -1,11 +1,13 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
 import { getDashboardKpis } from "@/app/actions/dashboard";
 import { getServiceRecommendationsForDashboard } from "@/app/actions/service-engine";
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
 import { listFinancialAnalyses } from "@/app/actions/financial-analyses";
 import { getProductionSummary } from "@/app/actions/production";
 import { getBusinessPlanWidgetData } from "@/app/actions/business-plan";
+import { getContactsCount } from "@/app/actions/contacts";
+import { requireAuth, getCachedSupabaseUser } from "@/lib/auth/require-auth";
+import { perfLog } from "@/lib/perf-log";
 import { DashboardEditable } from "./DashboardEditable";
 import { LinesAndDotsLoader } from "@/app/components/LinesAndDotsLoader";
 
@@ -35,15 +37,17 @@ const FALLBACK_KPIS = {
   opportunitiesInStep3And4: [],
 } as Awaited<ReturnType<typeof getDashboardKpis>>;
 
-async function DashboardContent() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const advisorName = (user?.user_metadata?.full_name as string | undefined) ?? null;
-
+async function DashboardLoaded({
+  advisorName,
+  perfStart,
+}: {
+  advisorName: string | null;
+  perfStart: number;
+}) {
   let productionError: string | null = null;
   const [kpis, serviceRecommendations, notes, analyses, production, businessPlanWidgetData] = await Promise.all([
     getDashboardKpis().catch((e) => {
-      console.error("[DashboardContent] getDashboardKpis", e);
+      console.error("[DashboardLoaded] getDashboardKpis", e);
       return FALLBACK_KPIS;
     }),
     getServiceRecommendationsForDashboard(10).catch(() => []),
@@ -55,6 +59,7 @@ async function DashboardContent() {
     }),
     getBusinessPlanWidgetData().catch(() => null),
   ]);
+  perfLog("portal/today", perfStart);
   return (
     <DashboardEditable
       kpis={kpis}
@@ -69,10 +74,40 @@ async function DashboardContent() {
   );
 }
 
+async function DashboardGate() {
+  const perfStart = Date.now();
+  await requireAuth();
+  const contactCount = await getContactsCount();
+  const user = await getCachedSupabaseUser();
+  const advisorName = (user?.user_metadata?.full_name as string | undefined) ?? null;
+
+  if (contactCount === 0) {
+    perfLog("portal/today-empty-tenant", perfStart);
+    return (
+      <DashboardEditable
+        kpis={FALLBACK_KPIS}
+        serviceRecommendations={[]}
+        initialNotes={[]}
+        advisorName={advisorName}
+        initialAnalyses={[]}
+        productionSummary={null}
+        productionError={null}
+        businessPlanWidgetData={null}
+      />
+    );
+  }
+
+  return (
+    <Suspense fallback={<DashboardLoader />}>
+      <DashboardLoaded advisorName={advisorName} perfStart={perfStart} />
+    </Suspense>
+  );
+}
+
 export default function TodayPage() {
   return (
     <Suspense fallback={<DashboardLoader />}>
-      <DashboardContent />
+      <DashboardGate />
     </Suspense>
   );
 }

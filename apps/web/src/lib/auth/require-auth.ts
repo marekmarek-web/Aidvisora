@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership, getDemoClientContactId } from "./get-membership";
 import type { RoleName } from "./get-membership";
@@ -29,6 +31,20 @@ function getDemoAuthContext(): AuthContext {
     contactId: null,
   };
 }
+
+/** Deduped within one RSC/request; use from server components and server actions. */
+export const getCachedSupabaseUser = cache(async (): Promise<User | null> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});
+
+/** Deduped per userId within one RSC/request. */
+export const getCachedMembership = cache(async (userId: string) => {
+  return getMembership(userId);
+});
 
 /** Use in Server Components and Server Actions. Gets session, then membership; redirects to /login if unauthenticated, throws if no tenant membership. */
 export async function requireAuth(): Promise<AuthContext> {
@@ -62,7 +78,7 @@ export async function requireAuth(): Promise<AuthContext> {
     if (allowDevBypass) {
       try {
         const uid = devUserId!.trim();
-        const m = await getMembership(uid);
+        const m = await getCachedMembership(uid);
         if (m) {
           return {
             userId: uid,
@@ -78,14 +94,11 @@ export async function requireAuth(): Promise<AuthContext> {
     }
     return getDemoAuthContext();
   }
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedSupabaseUser();
   if (!user) {
     redirect("/");
   }
-  const m = await getMembership(user.id);
+  const m = await getCachedMembership(user.id);
   if (!m) {
     redirect("/register/complete");
   }
@@ -132,7 +145,7 @@ export async function requireAuthInAction(): Promise<AuthContext> {
     if (allowDevBypass) {
       try {
         const uid = devUserId!.trim();
-        const m = await getMembership(uid);
+        const m = await getCachedMembership(uid);
         if (m) {
           return {
             userId: uid,
@@ -148,14 +161,11 @@ export async function requireAuthInAction(): Promise<AuthContext> {
     }
     return getDemoAuthContext();
   }
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedSupabaseUser();
   if (!user) {
     throw new Error("Unauthorized");
   }
-  const m = await getMembership(user.id);
+  const m = await getCachedMembership(user.id);
   if (!m) {
     redirect("/register/complete");
   }

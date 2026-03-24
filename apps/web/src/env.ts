@@ -12,6 +12,10 @@ const serverSchema = z.object({
   NEXT_PUBLIC_SENTRY_ENVIRONMENT: z.string().min(1).optional(),
   INTEGRATIONS_ENCRYPTION_KEY: z.string().min(16).optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
+  /** Odpovědi na tento e-mail (např. firemní poradce); From zůstane z ověřené domény. */
+  RESEND_REPLY_TO: z.string().min(3).optional(),
+  /** Doména pro generovaný From (např. aidvisora.cz); jinak se parsuje z RESEND_FROM_EMAIL. */
+  RESEND_FROM_DOMAIN: z.string().min(3).optional(),
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   NEXT_PUBLIC_SKIP_AUTH: z.enum(["true", "false", ""]).optional(),

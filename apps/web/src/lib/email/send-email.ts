@@ -7,12 +7,15 @@
  */
 
 import { db, notificationLog } from "db";
+import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 
 export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
   from?: string;
+  /** Reply-To (jinak env `RESEND_REPLY_TO`). */
+  replyTo?: string;
 }
 
 export interface SendResult {
@@ -28,6 +31,7 @@ async function sendViaResend(payload: EmailPayload): Promise<SendResult> {
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not set" };
 
   try {
+    const replyTo = resolveResendReplyTo(payload.replyTo);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -39,6 +43,7 @@ async function sendViaResend(payload: EmailPayload): Promise<SendResult> {
         to: [payload.to],
         subject: payload.subject,
         html: payload.html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 
@@ -59,6 +64,7 @@ async function sendViaConsole(payload: EmailPayload): Promise<SendResult> {
     to: payload.to,
     subject: payload.subject,
     from: payload.from ?? FROM_DEFAULT,
+    replyTo: resolveResendReplyTo(payload.replyTo),
     htmlLength: payload.html.length,
   });
   return { ok: true, messageId: `console-${Date.now()}` };

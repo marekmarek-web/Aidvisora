@@ -6,6 +6,7 @@ import { advisorPreferences } from "db";
 import { eq, and } from "db";
 import { getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 
 const AVATAR_MAX_SIZE = 3 * 1024 * 1024; // 3 MB
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -344,21 +345,32 @@ export async function setNotificationPrefs(prefs: NotificationPrefs): Promise<vo
   if (error) throw new Error(error.message);
 }
 
-export async function sendNotificationEmail(to: string, subject: string, html: string): Promise<boolean> {
+export async function sendNotificationEmail(
+  to: string,
+  subject: string,
+  html: string,
+  options?: { replyTo?: string; from?: string }
+): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("[sendNotificationEmail] RESEND_API_KEY not set, skipping email");
     return false;
   }
   try {
+    const replyTo = resolveResendReplyTo(options?.replyTo);
+    const from =
+      options?.from?.trim() ||
+      process.env.RESEND_FROM_EMAIL ||
+      "Aidvisora <noreply@aidvisora.cz>";
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || "Aidvisora <noreply@aidvisora.cz>",
+        from,
         to: [to],
         subject,
         html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
     return res.ok;

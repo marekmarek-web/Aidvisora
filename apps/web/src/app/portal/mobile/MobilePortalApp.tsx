@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCachedSupabaseUser } from "@/lib/auth/require-auth";
 import { getDashboardKpis, type DashboardKpis } from "@/app/actions/dashboard";
 import { getTasksCounts, getTasksList, type TaskCounts, type TaskRow } from "@/app/actions/tasks";
 import { getContactsList, type ContactRow } from "@/app/actions/contacts";
@@ -24,10 +24,7 @@ const EMPTY_KPIS: DashboardKpis = {
 const EMPTY_COUNTS: TaskCounts = { all: 0, today: 0, week: 0, overdue: 0, completed: 0 };
 
 export async function MobilePortalApp() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedSupabaseUser();
   const advisorName = (user?.user_metadata?.full_name as string | undefined) ?? "Poradce";
 
   let dashboardKpis: DashboardKpis = EMPTY_KPIS;

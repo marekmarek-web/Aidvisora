@@ -6,6 +6,7 @@ import { db } from "db";
 import { contracts, contacts, unsubscribeTokens } from "db";
 import { eq, and } from "db";
 import { getPaymentAccountForContract } from "./payment-accounts";
+import { loadAdvisorMailHeadersForCurrentUser } from "@/lib/email/advisor-mail-headers";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export type PaymentInstruction = {
@@ -99,7 +100,6 @@ export async function sendPaymentPdfToClient(contactId: string): Promise<{ ok: t
     const pdfBuffer = await generatePaymentPdfBuffer(contactId);
     const Resend = (await import("resend")).Resend;
     const resend = new Resend(apiKey);
-    const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const unsubToken = crypto.randomUUID().replace(/-/g, "");
     await db.insert(unsubscribeTokens).values({
@@ -108,12 +108,14 @@ export async function sendPaymentPdfToClient(contactId: string): Promise<{ ok: t
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
     const unsubLink = `${baseUrl}/client/unsubscribe?token=${unsubToken}`;
+    const mail = await loadAdvisorMailHeadersForCurrentUser();
     const { error } = await resend.emails.send({
-      from,
+      from: mail.from,
       to: contact.email,
       subject: "Platební instrukce – Aidvisora",
       html: `<p>Dobrý den, ${contact.firstName} ${contact.lastName},</p><p>v příloze naleznete platební instrukce.</p><p><a href="${unsubLink}">Odhlásit se z notifikací</a></p>`,
       attachments: [{ filename: "platebni-instrukce.pdf", content: pdfBuffer }],
+      ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true };

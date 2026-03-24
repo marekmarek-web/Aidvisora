@@ -1,7 +1,7 @@
 "use client";
 // @ts-nocheck — komponenta 1:1 z main page.txt (původně JS), typy doplněny později
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   Activity, AlertTriangle, Archive, ArrowRight, ArrowUpRight,
@@ -111,168 +111,145 @@ const DEMO_VIDEO_URL =
     ? process.env.NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL
     : "";
 
-/** Scénář 1: dokument → další krok (původní interaktivní flow) */
-const DocumentScenario = () => {
+// --- INTERAKTIVNÍ AI SANDBOX (zjednodušený náhled AI review v aplikaci) ---
+const AiSandbox = () => {
   const [status, setStatus] = useState("idle");
+
   const handleDemo = () => {
     setStatus("scanning");
     setTimeout(() => setStatus("result"), 2500);
   };
-  return (
-    <div className="min-h-[320px] md:min-h-[380px] flex flex-col justify-center relative">
-      {status === "idle" && (
-        <div className="text-center animate-in fade-in zoom-in duration-300 px-2">
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border border-white/10">
-            <FileText size={28} className="text-slate-400" />
-          </div>
-          <h4 className="text-white font-bold mb-2 text-sm md:text-base">Klient nahraje podklad</h4>
-          <p className="text-sm text-slate-400 mb-6 max-w-xs mx-auto">
-            Simulace nahrání PDF smlouvy — systém naváže údaje na kartu klienta a navrhne další krok.
-          </p>
-          <button
-            type="button"
-            onClick={handleDemo}
-            className="min-h-[44px] px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 inline-flex items-center gap-2 mx-auto"
-          >
-            <UploadCloud size={16} /> Nahrát ukázkový dokument
-          </button>
-        </div>
-      )}
-      {status === "scanning" && (
-        <div className="text-center animate-in fade-in duration-300">
-          <div className="w-20 h-20 relative mx-auto mb-6">
-            <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
-            <FileText size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-400" />
-          </div>
-          <p className="text-sm font-bold text-white">Zpracovávám dokument…</p>
-        </div>
-      )}
-      {status === "result" && (
-        <div className="animate-in slide-in-from-bottom-8 fade-in duration-500 px-1">
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 mb-4 flex items-start gap-3">
-            <CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-emerald-300 mb-1">Podklad uložen</p>
-              <p className="text-xs text-emerald-400/80">Navrhuji úkol: prověřit mezeru v invaliditě a domluvit doplnění.</p>
-            </div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 text-left text-sm">
-            <div className="flex justify-between border-b border-white/10 pb-2">
-              <span className="text-xs text-slate-400">Pojistná částka</span>
-              <span className="font-bold text-white">2 500 000 Kč</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setStatus("idle")}
-              className="w-full min-h-[44px] py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors"
-            >
-              Zkusit znovu
-            </button>
-          </div>
-        </div>
-      )}
+
+  const row = (label: string, value: string) => (
+    <div className="flex justify-between gap-3 text-xs sm:text-sm">
+      <span className="text-slate-500 shrink-0">{label}</span>
+      <span className="text-slate-200 text-right font-medium break-words">{value}</span>
     </div>
   );
-};
 
-/** Scénář 2: posun v pipeline (statická ukázka + stejná animace jako v modulu) */
-const PipelineScenario = () => (
-  <div className="min-h-[320px] md:min-h-[380px] flex flex-col justify-center px-2">
-    <p className="text-center text-sm text-slate-400 mb-4">
-      Příležitost přesouváte mezi fázemi — systém drží historii a úkoly u obchodu.
-    </p>
-    <div className="bg-[#10152e] rounded-2xl p-4 border border-white/10 relative overflow-hidden h-[220px] flex gap-3 max-w-md mx-auto w-full">
-      <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-      <div className="w-1/2 flex flex-col gap-2 relative z-10">
-        <div className="text-[10px] font-black uppercase text-slate-500">Příprava</div>
-        <div className="bg-white/5 border border-white/10 p-3 rounded-xl animate-move-across w-full">
-          <div className="flex justify-between mb-1">
-            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">Hypotéka</span>
-          </div>
-          <div className="text-xs font-bold text-white">Rodina Dvořákova</div>
-        </div>
-      </div>
-      <div className="w-1/2 flex flex-col gap-2 relative z-10 border-l border-white/5 pl-3">
-        <div className="text-[10px] font-black uppercase text-slate-500">Podpisy</div>
-        <div className="border border-dashed border-indigo-500/40 rounded-xl h-[72px] flex items-center justify-center text-[10px] text-indigo-400 font-bold">
-          Cíl
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-/** Scénář 3: portál → follow-up */
-const PortalScenario = () => {
-  const [step, setStep] = useState(0);
   return (
-    <div className="min-h-[320px] md:min-h-[380px] flex flex-col justify-center px-2">
-      <p className="text-center text-sm text-slate-400 mb-4">
-        Klient zadá požadavek v portálu — u vás vznikne notifikace a úkol.
-      </p>
-      <div className="bg-[#f8fafc] rounded-2xl border border-slate-200 p-4 max-w-sm mx-auto w-full">
-        <div className="h-10 bg-white border-b border-slate-200 rounded-t-lg flex items-center px-3 mb-3">
-          <span className="font-bold text-indigo-600 text-sm">Klientský portál</span>
+    <div className="aspect-[4/5] md:aspect-square max-w-[500px] mx-auto bg-[#060918]/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] p-5 md:p-6 relative overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs font-semibold text-slate-300 font-jakarta tracking-wide">AI review · ukázka</span>
         </div>
-        {step === 0 ? (
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="w-full min-h-[44px] py-3 bg-indigo-600 text-white rounded-lg text-sm font-bold"
-          >
-            Odeslat požadavek (nová hypotéka)
-          </button>
-        ) : (
-          <div className="space-y-3 animate-in fade-in">
-            <div className="bg-slate-900 text-white p-3 rounded-xl flex items-center gap-2 text-xs">
-              <Bell size={16} className="text-amber-400 shrink-0" />
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Nový úkol</p>
-                <p className="font-bold">Klient žádá o hypotéku — zavolejte do 24 h</p>
-              </div>
+        <div className="flex gap-1.5 opacity-50">
+          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center min-h-0 relative">
+        {status === "idle" && (
+          <div className="text-center animate-in fade-in zoom-in duration-300 px-1">
+            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10">
+              <FileText size={28} className="text-slate-400" />
             </div>
+            <h4 className="text-white font-bold mb-2 text-[15px]">Vyzkoušejte AI review smlouvy</h4>
+            <p className="text-sm text-slate-400 mb-7 max-w-[280px] mx-auto leading-relaxed">
+              Kliknutím spustíte ukázkové zpracování PDF dokumentu.
+            </p>
             <button
               type="button"
-              onClick={() => setStep(0)}
-              className="text-xs text-indigo-600 font-bold underline min-h-[44px] py-2"
+              onClick={handleDemo}
+              className="min-h-[44px] px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center gap-2 mx-auto"
             >
-              Zkusit znovu
+              <UploadCloud size={16} /> Nahrát ukázkovou smlouvu
             </button>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
 
-const WORKFLOW_DEMO_TABS = [
-  { id: "doc", label: "Dokument → další krok" },
-  { id: "pipe", label: "Obchod v pipeline" },
-  { id: "portal", label: "Portál → follow-up" },
-] as const;
+        {status === "scanning" && (
+          <div className="flex flex-col items-center justify-center animate-in fade-in duration-300 px-4 py-8">
+            <p className="text-sm text-slate-300 text-center animate-pulse">Čtu dokument…</p>
+          </div>
+        )}
 
-const WorkflowDemo = () => {
-  const [tab, setTab] = useState(0);
-  return (
-    <div className="max-w-[520px] mx-auto bg-[#060918]/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-[0_0_50px_rgba(99,102,241,0.12)] p-4 md:p-6 relative overflow-hidden flex flex-col">
-      <div className="flex flex-wrap justify-center gap-2 mb-4 pb-4 border-b border-white/10">
-        {WORKFLOW_DEMO_TABS.map((t, i) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(i)}
-            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors ${
-              tab === i ? "bg-indigo-600 text-white" : "bg-white/5 text-slate-300 hover:bg-white/10"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {status === "result" && (
+          <div className="animate-in fade-in duration-300 flex flex-col min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 -mr-1 space-y-3 text-left">
+            {/* A — stav / soubor */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Review dokumentu</p>
+              <p className="text-sm font-medium text-white truncate" title="Smlouva_o_ŽP_2025.pdf">
+                Smlouva_o_ŽP_2025.pdf
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[11px] text-slate-500">Stav:</span>
+                <span className="text-[11px] font-mono text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded">extracted</span>
+                <span className="text-[11px] text-slate-600">·</span>
+                <span className="text-[11px] font-mono text-amber-400/90 bg-amber-500/10 px-2 py-0.5 rounded">pending</span>
+              </div>
+            </div>
+
+            {/* B — rozpoznané údaje */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5 space-y-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rozpoznané údaje</p>
+              <div className="space-y-2 pt-0.5">
+                {row("Instituce", "Allianz pojišťovna a.s.")}
+                {row("Typ produktu", "životní pojištění")}
+                {row("Klient", "Jan Novák")}
+                {row("Číslo smlouvy", "ZP-2025-004821")}
+              </div>
+            </div>
+
+            {/* C — vyžaduje kontrolu */}
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3.5 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">Vyžaduje kontrolu</p>
+              <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside marker:text-amber-500/60">
+                <li>chybí e-mail</li>
+                <li>chybí telefon</li>
+                <li>ověřit přiřazení ke klientovi</li>
+              </ul>
+            </div>
+
+            {/* Návrhové akce */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Návrhové akce</p>
+              <ul className="text-xs text-slate-400 space-y-1.5">
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
+                  Vytvořit klienta
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
+                  Vytvořit smlouvu v CRM
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
+                  Úkol ze smlouvy
+                </li>
+              </ul>
+            </div>
+
+            {/* Spodní akce + reset ukázky */}
+            <div className="flex flex-col gap-2 pt-1 pb-1">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="min-h-[40px] flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10 transition-colors"
+                >
+                  Otevřít detail
+                </button>
+                <button
+                  type="button"
+                  className="min-h-[40px] flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/15 transition-colors"
+                >
+                  Schválit
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatus("idle")}
+                className="text-center text-[11px] text-slate-500 hover:text-slate-400 py-2 transition-colors"
+              >
+                Spustit ukázku znovu
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {tab === 0 && <DocumentScenario />}
-      {tab === 1 && <PipelineScenario />}
-      {tab === 2 && <PortalScenario />}
     </div>
   );
 };
@@ -440,26 +417,26 @@ const InteractiveMindmap = () => {
 
 // --- MOCK DATA REVIEWS (Pro nekonečný pás) ---
 const REVIEWS = [
-  { id: 1, text: "Konečně mám klienty, úkoly a dokumenty na jednom místě — ne v pěti Excelech a chatech.", author: "Martin Dvořák", role: "Finanční poradce", initials: "MD" },
-  { id: 2, text: "Sběr podkladů přes portál nám ušetřil spoustu e-mailů a telefonátů. Klient ví, kam má nahrát OP.", author: "Lucie Černá", role: "Týmová manažerka", initials: "LČ" },
-  { id: 3, text: "Pipeline vidím na první pohled. Už se mi nestává, že mi obchod „vyšuměl“ někde mezi schůzkou a podpisem.", author: "Petr Nový", role: "Wealth Manager", initials: "PN" },
-  { id: 4, text: "Přestal jsem lovit soubory v mailu. U klienta je historie a podklady pořád po ruce.", author: "Jana Malá", role: "Nezávislá poradkyně", initials: "JM" },
-  { id: 5, text: "Jako manažer potřebuji vidět aktivitu týmu, ne jen měsíční Excel. Tady mám přehled bez ručního skládání.", author: "Karel Svoboda", role: "Ředitel pobočky", initials: "KS" },
+  { id: 1, text: "Od chvíle, co používám Aidvisoru, mi každé ráno vidím priority a na koho se zaměřit. Konečně přehled.", author: "Martin Dvořák", role: "Finanční poradce", initials: "MD" },
+  { id: 2, text: "Klientská zóna výrazně zjednodušila sběr podkladů i komunikaci s klienty.", author: "Lucie Černá", role: "Týmová manažerka", initials: "LČ" },
+  { id: 3, text: "Komplexní finanční plán dělám teď za zlomek času. Generování PDF reportu mám na jedno kliknutí.", author: "Petr Nový", role: "Wealth Manager", initials: "PN" },
+  { id: 4, text: "Už žádný nepořádek v Excelu. Automatické napojení na kalendář a pipeline vizualizace mi zachránila desítky hodin měsíčně.", author: "Jana Malá", role: "Nezávislá poradkyně", initials: "JM" },
+  { id: 5, text: "Skvělá podpora a okamžitý přehled nad produkcí týmu. Pro manažery je to silný nástroj.", author: "Karel Svoboda", role: "Ředitel pobočky", initials: "KS" },
 ];
 
 const FAQS = [
-  { id: 1, q: "Je Aidvisora jen CRM?", a: "Ne. Je to pracovní systém: klient, dokumenty, úkoly, portál a obchodní tok jsou propojené. CRM je jen jedna část." },
-  { id: 2, q: "Co když máme data v Excelu nebo jinde?", a: "Základní import zvládnete z Excelu nebo CSV. Pomůžeme s napárováním a přechodem, abyste nestrávili týdny přepisováním." },
-  { id: 3, q: "Jak to vnímá klient?", a: "Dostane jednoduchý portál pro požadavky a podklady. Vy řešíte věci v systému — působí to srozumitelně a profesionálně." },
-  { id: 4, q: "Kde je umělá inteligence?", a: "Jako pomocník: například u práce s dokumenty nebo návrhu dalšího kroku. Rozhodnutí a odpovědnost jsou vždy u poradce." },
-  { id: 5, q: "Je to pro tým i pro jednotlivce?", a: "Ano. Samostatný poradce získá pořádek v jedné aplikaci, tým sdílená data a role." },
-  { id: 6, q: "Kde běží data?", a: "V bezpečném prostředí v EU. Můžete pracovat s exporty, souhlasy a auditní stopou podle potřeby vaší praxe." },
-  { id: 7, q: "Jak rychle začnu?", a: "Účet založíte za pár minut. U týmů záleží na importu a nastavení rolí — postupně vás provedeme." },
-  { id: 8, q: "Jde to napojit na kalendář?", a: "Ano, Google Kalendář je klíčové napojení pro schůzky a termíny. Další integrace rozšiřujeme podle zpětné vazby." },
+  { id: 1, q: "Umí to importovat existující data?", a: "Ano. Základní import klientů zvládnete z Excelu nebo CSV. S daty vám pomůžeme tak, aby byl přechod z původního systému co nejrychlejší." },
+  { id: 2, q: "Je to vhodné pro celý tým?", a: "Ano. Aidvisora je vhodná pro samostatné poradce i týmy. Umožňuje pracovat s různými rolemi, sdíleným přehledem a navazujícími workflow." },
+  { id: 3, q: "Jak funguje klientská zóna?", a: "Klient přes svůj portál zadá požadavek, nahraje podklady nebo napíše zprávu. Poradce dostane upozornění a vše řeší v navazujícím procesu uvnitř aplikace." },
+  { id: 4, q: "Co přesně AI umí a neumí?", a: "AI pomáhá s prioritami, follow-upy a čtením vybraných údajů z dokumentů. Finální kontrola a rozhodnutí jsou vždy na poradci. Aidvisora bez potvrzení uživatele nemění klientská data." },
+  { id: 5, q: "Kde jsou uložená data?", a: "Data ukládáme v bezpečném prostředí v rámci EU. Systém podporuje auditní stopu akcí, práci se souhlasy a export dat." },
+  { id: 6, q: "Jak dlouho trvá nasazení?", a: "Základní účet založíte během několika minut. U týmů záleží na rozsahu nastavení, importu dat a onboarding procesu." },
+  { id: 7, q: "Dá se to propojit s Google / Outlook / e-mailem?", a: "Google Kalendář je klíčová integrace pro práci se schůzkami a termíny. E-mailové notifikace a automatické zprávy lze řešit přes specializovaného poskytovatele. Další napojení budeme rozšiřovat postupně." }
 ];
 
 export default function PremiumLandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [activeSecurityFeature, setActiveSecurityFeature] = useState('none');
   const [isAnnualPricing, setIsAnnualPricing] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -472,11 +449,34 @@ export default function PremiumLandingPage() {
     }
   }, []);
 
+  // --- STAV PRO MINI KALKULAČKU ---
+  const [miniCalcInvest, setMiniCalcInvest] = useState(5000);
+  const [miniCalcYears, setMiniCalcYears] = useState(15);
+  
+  // --- STAV PRO ROI KALKULAČKU ---
+  const [roiClients, setRoiClients] = useState(150);
+  const [roiAdmin, setRoiAdmin] = useState(12);
+  const [roiTeam, setRoiTeam] = useState(1);
+
+  const futureValue = useMemo(() => {
+    const r = 0.07 / 12;
+    const n = miniCalcYears * 12;
+    const val = miniCalcInvest * ((Math.pow(1 + r, n) - 1) / r);
+    return Math.round(val);
+  }, [miniCalcInvest, miniCalcYears]);
+
+  // Výpočet ROI
+  const roiSavedHours = useMemo(() => Math.round(roiAdmin * 0.4 * roiTeam * 4), [roiAdmin, roiTeam]); // 40% času ušetřeno, * 4 týdny = měsíčně
+  const roiExtraDeals = useMemo(() => Math.round(roiClients * 0.05 * roiTeam), [roiClients, roiTeam]); // 5% nárůst obchodů díky follow-ups za rok
+  const roiValue = useMemo(() => (roiSavedHours * 1000) + Math.round((roiExtraDeals * 15000) / 12), [roiSavedHours, roiExtraDeals]); // Odhad 1000Kč/hod a 15k z obchodu
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
   return (
     <div className="min-h-screen bg-[#0a0f29] font-inter text-slate-300 selection:bg-indigo-500 selection:text-white overflow-x-hidden relative">
@@ -627,7 +627,7 @@ export default function PremiumLandingPage() {
           <div className="hidden lg:flex items-center gap-6 xl:gap-8 font-inter font-medium text-sm text-slate-400">
             <a href="#hlavni-workflow" className="hover:text-white transition-colors">Workflow</a>
             <a href="#demo-video" className="hover:text-white transition-colors">Demo</a>
-            <a href="#moduly" className="hover:text-white transition-colors">Moduly</a>
+            <a href="#aplikace" className="hover:text-white transition-colors">Moduly</a>
             <a href="#pro-koho" className="hover:text-white transition-colors">Pro koho</a>
             <a href="#cenik" className="hover:text-white transition-colors">Ceník</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
@@ -667,8 +667,9 @@ export default function PremiumLandingPage() {
                 <span className="text-xs font-bold text-slate-300">Pro finanční poradce a týmy</span>
               </div>
 
-              <h1 className="hero-anim delay-100 font-jakarta text-4xl sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-7xl font-extrabold tracking-tight text-white leading-[1.1] mb-6">
-                Přestaňte řídit poradenství přes Excel, e-mail a WhatsApp.
+              <h1 className="hero-anim delay-100 font-jakarta text-4xl sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-7xl font-extrabold tracking-tight text-glow-shimmer leading-[1.1] mb-6 hyphens-none">
+                Přestaňte řídit poradenství přes Excel,{" "}
+                <span className="whitespace-nowrap">e-mail</span> a WhatsApp.
               </h1>
 
               <p className="hero-anim delay-200 font-inter text-lg md:text-xl text-slate-400 max-w-2xl mb-8 leading-relaxed lg:mx-0 mx-auto">
@@ -735,251 +736,151 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
-      {/* --- 3 BOLESTI --- */}
-      <section id="bolesti" className="py-20 md:py-28 relative bg-[#0a0f29] border-t border-white/5">
-        <div className="max-w-[1100px] mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-14">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-                Co v praxi nejvíc ubíjí čas i obchod
-              </h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Většina poradců to zná: data v tabulkách a IK přehledech, dokumenty v e-mailu a chatu, follow-upy na papírku.
-              </p>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Roztříštěná data",
-                body: "Klienti a historie jsou v Excelu, poznámkách a WhatsAppu — nikdo nemá jednu pravdu.",
-                icon: Database,
-              },
-              {
-                title: "Podklady a dokumenty",
-                body: "Soubory lítají mailem, chybí verze a hned po schůzce znovu sháníte totéž.",
-                icon: FileUp,
-              },
-              {
-                title: "Úkoly a obchod",
-                body: "Pipeline je v hlavě, follow-upy padají a klient má pocit, že „se to zase ztratilo“.",
-                icon: KanbanSquare,
-              },
-            ].map((card) => {
-              const Icon = card.icon;
-              return (
-                <ScrollReveal key={card.title}>
-                  <div className="h-full rounded-[24px] border border-white/10 bg-white/5 p-6 md:p-8 flex flex-col">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center mb-4 border border-indigo-500/30">
-                      <Icon size={24} />
-                    </div>
-                    <h3 className="font-jakarta text-xl font-bold text-white mb-2">{card.title}</h3>
-                    <p className="text-slate-400 text-sm leading-relaxed flex-1">{card.body}</p>
-                  </div>
-                </ScrollReveal>
-              );
-            })}
-          </div>
+      {/* --- NEKONEČNÝ PÁS RECENZÍ (Marquee) --- */}
+      <section className="py-12 border-y border-white/10 bg-white/5 relative z-10 backdrop-blur-sm overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 mb-8 text-center">
+             <h3 className="font-jakarta text-sm uppercase tracking-[0.2em] text-slate-400 font-bold">Poradci, kteří už neztrácejí čas</h3>
         </div>
-      </section>
 
-      {/* --- HLAVNÍ WORKFLOW (4 kroky) --- */}
-      <section id="hlavni-workflow" className="py-20 md:py-28 relative bg-[#060918] border-t border-white/10">
-        <div className="max-w-[1100px] mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-14">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">
-                Od požadavku nebo dokumentu k dotaženému obchodu
-              </h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Jeden tok místo pěti nástrojů. Bez přepisování mezi systémy.
-              </p>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                step: "1",
-                title: "Klient nebo podklad",
-                desc: "Požadavek z portálu nebo nahrání dokumentu — vše se váže ke kartě klienta.",
-                icon: FileText,
-              },
-              {
-                step: "2",
-                title: "Přehled a úkol",
-                desc: "Vidíte souvislosti, termíny a co je blokované. Vznikne jasný další krok.",
-                icon: CheckSquare,
-              },
-              {
-                step: "3",
-                title: "Obchod v pipeline",
-                desc: "Příležitost držíte v řádu od přípravy po podpis — nic nezůstane „někde bokem“.",
-                icon: KanbanSquare,
-              },
-              {
-                step: "4",
-                title: "Servis a komunikace",
-                desc: "Klient má srozumitelné rozhraní, vy máte historii a kontrolu — působíte spolehlivě.",
-                icon: Headset,
-              },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <ScrollReveal key={s.step}>
-                  <div className="relative rounded-[24px] border border-white/10 bg-[#0a0f29]/80 p-6 h-full flex flex-col">
-                    <span className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Krok {s.step}</span>
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-indigo-300 mb-3">
-                      <Icon size={20} />
-                    </div>
-                    <h3 className="font-jakarta font-bold text-white text-lg mb-2">{s.title}</h3>
-                    <p className="text-slate-400 text-sm leading-relaxed">{s.desc}</p>
+        <div className="relative w-full overflow-hidden flex">
+          {/* Levý a pravý fade effect pro plynulý okraj */}
+          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-[#0a0f29] to-transparent z-10"></div>
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-[#0a0f29] to-transparent z-10"></div>
+          
+          <div className="animate-marquee gap-6 px-3">
+            {/* Duplikujeme pole, aby marquee běželo nekonečně a plynule */}
+            {[...REVIEWS, ...REVIEWS].map((review, idx) => (
+              <div key={idx} className="w-[350px] bg-white/5 border border-white/10 p-6 rounded-[24px] flex-shrink-0 flex flex-col">
+                <div className="flex text-amber-400 mb-4"><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/></div>
+                <p className="text-slate-300 text-sm leading-relaxed mb-6 flex-1">"{review.text}"</p>
+                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-300 text-xs border border-indigo-500/30">
+                    {review.initials}
                   </div>
-                </ScrollReveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* --- DEMO VIDEO --- */}
-      <section id="demo-video" className="py-20 md:py-28 relative bg-[#0a0f29] border-t border-white/5">
-        <div className="max-w-[900px] mx-auto px-6 text-center">
-          <ScrollReveal>
-            <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Krátké demo (cca 1 minuta)</h2>
-            <p className="text-lg text-slate-400 mb-10 max-w-2xl mx-auto">
-              Jak vypadá běžná práce v Aidvisoře — klient, dokumenty, úkoly a obchod.
-            </p>
-          </ScrollReveal>
-          <ScrollReveal delay={100}>
-            <div className="relative w-full aspect-video rounded-[24px] overflow-hidden border border-white/10 bg-black/40 shadow-[0_0_60px_rgba(99,102,241,0.15)]">
-              {DEMO_VIDEO_URL ? (
-                <iframe
-                  title="Demo Aidvisora"
-                  src={DEMO_VIDEO_URL}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gradient-to-br from-[#060918] to-[#0a0f29]">
-                  <Play size={48} className="text-white/80 mb-4" />
-                  <p className="text-slate-400 text-sm mb-6 max-w-md">
-                    Sem vložte URL videa (např. YouTube embed nebo soubor). Nastavte proměnnou{" "}
-                    <code className="text-indigo-300 text-xs">NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL</code>.
-                  </p>
-                  <span className="inline-flex min-h-[44px] items-center px-6 py-3 rounded-full bg-white/10 text-white text-sm font-bold">
-                    Přehrát demo
-                  </span>
+                  <div>
+                    <p className="text-white font-bold text-xs">{review.author}</p>
+                    <p className="text-slate-500 text-[10px] uppercase tracking-wider">{review.role}</p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* --- INTERAKTIVNÍ UKÁZKA --- */}
-      <section id="ukazka-workflow" className="py-20 md:py-28 relative bg-[#060918] border-t border-white/10">
-        <div className="max-w-[1100px] mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-12">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Vyzkoušejte si tři situace z praxe</h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Ne celý systém — jen to, co denně bolí nejvíc.
-              </p>
-            </div>
-          </ScrollReveal>
-          <WorkflowDemo />
-        </div>
-      </section>
-
-      {/* --- PROČ AIDVISORA --- */}
-      <section id="proc-aidvisora" className="py-20 md:py-28 relative bg-[#0a0f29] border-t border-white/5">
-        <div className="max-w-[1100px] mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-14">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Proč to dává smysl</h2>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {[
-              {
-                title: "Jeden přehled o klientovi",
-                desc: "Kontakt, domácnost, dokumenty a stav obchodu na jedné kartě.",
-                icon: User,
-              },
-              {
-                title: "Méně ruční administrativy",
-                desc: "Méně hledání v mailech a tabulkách, více času na schůzky a doporučení.",
-                icon: Clock,
-              },
-              {
-                title: "Dotahování obchodu",
-                desc: "Follow-upy a fáze pipeline jsou vidět — nejen „evidence kontaktu“.",
-                icon: BarChart3,
-              },
-              {
-                title: "Lepší dojem u klienta",
-                desc: "Portál a struktura komunikace působí jako u pořádné firmy, ne jako chaotický inbox.",
-                icon: Star,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <ScrollReveal key={item.title}>
-                  <div className="flex gap-4 p-6 rounded-[24px] border border-white/10 bg-white/5 h-full">
-                    <div className="shrink-0 w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300">
-                      <Icon size={22} />
-                    </div>
-                    <div>
-                      <h3 className="font-jakarta font-bold text-white text-lg mb-1">{item.title}</h3>
-                      <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* --- MODULY (KOMPAKTNÍ + VÝBRANÉ VIZUÁLY) --- */}
-      <section id="moduly" className="py-32 relative bg-[#060918]">
-        <div className="max-w-[1400px] mx-auto px-6 space-y-24 md:space-y-32 border-t border-white/10 pt-20">
+      {/* --- EVOLUCE PRAXE (Srovnání Dnes vs S Aidvisorou) --- */}
+      <section id="hlavni-workflow" className="py-24 relative overflow-hidden bg-[#060918] scroll-mt-24">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-indigo-500/10 rounded-[100%] blur-[120px] pointer-events-none"></div>
+        
+        <div className="max-w-[1200px] mx-auto px-6 relative z-10">
+          <ScrollReveal>
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest mb-6">
+                <ArrowRight size={14} className="text-indigo-400"/> Jak to vypadá v praxi
+              </div>
+              <h2 className="font-jakarta text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
+                Rozdíl v <span className="text-glow-shimmer">každodenní práci.</span>
+              </h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                Starý způsob: data v Excelu a e-mailech. S Aidvisorou: přehled klientů, úkolů a dokumentů na jednom místě.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
+            
+            {/* STARÝ ZPŮSOB */}
+            <ScrollReveal delay={100} direction="right" className="w-full lg:w-[45%]">
+              <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 md:p-10 relative overflow-hidden h-full grayscale-[0.3] opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/5 rounded-full blur-3xl"></div>
+                
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-800">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 shadow-inner">
+                    <Archive size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-jakarta text-2xl font-bold text-slate-300">Běžná praxe</h3>
+                    <p className="text-sm font-medium text-slate-500">Ztráta času a roztříštěná data</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    { icon: FileText, text: 'Klientská data ve 3 různých Excelech' },
+                    { icon: MessageSquare, text: 'Dokumenty ztracené v e-mailech a chatu' },
+                    { icon: Clock, text: 'Hodiny ručního přepisování smluv' },
+                    { icon: AlertTriangle, text: 'Ztracené follow-upy a výročí' },
+                  ].map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-800/30 border border-slate-700/50">
+                        <div className="p-2 bg-slate-800 rounded-lg text-slate-500"><Icon size={18}/></div>
+                        <span className="text-slate-400 font-medium line-through decoration-rose-500/30">{item.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ŠIPKA / TRANSFORMACE */}
+            <ScrollReveal delay={200} className="hidden lg:flex flex-col items-center justify-center relative z-20 w-[10%]">
+              <div className="w-16 h-16 rounded-full bg-[#060918] border border-slate-800 flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.3)]">
+                <ArrowRight size={28} className="text-indigo-400" />
+              </div>
+              {/* Animovaná linka */}
+              <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -z-10 w-[200px] h-[2px] bg-gradient-to-r from-slate-800 via-indigo-500 to-emerald-500 opacity-50"></div>
+            </ScrollReveal>
+
+            {/* NOVÝ STANDARD (AIDVISORA) */}
+            <ScrollReveal delay={300} direction="left" className="w-full lg:w-[45%]">
+              <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/30 rounded-[32px] p-8 md:p-10 relative overflow-hidden h-full shadow-[0_0_60px_rgba(99,102,241,0.15)] transform lg:scale-105">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]"></div>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-400"></div>
+                
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-indigo-500/20 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <Sparkles size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-jakarta text-2xl font-bold text-white">S Aidvisorou</h3>
+                    <p className="text-sm font-bold text-indigo-300">Všechna klientská data, dokumenty a úkoly na jednom místě.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 relative z-10">
+                  {[
+                    { icon: Database, text: 'Všechna klientská data na jednom místě', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+                    { icon: ShieldCheck, text: 'Šifrovaný portál pro sdílení dokumentů', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                    { icon: Bot, text: 'AI pomáhá vyčíst údaje z nahraných PDF a navrhuje další krok.', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+                    { icon: Bell, text: 'Systém vás upozorní na blokátory, termíny a follow-upy.', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+                  ].map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border ${item.bg} backdrop-blur-sm transition-transform hover:scale-[1.02]`}>
+                        <div className={`p-2 rounded-lg bg-white/5 ${item.color}`}><Icon size={18}/></div>
+                        <span className="text-slate-100 font-bold text-sm leading-tight">{item.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </ScrollReveal>
+
+          </div>
+        </div>
+      </section>
+
+      {/* --- SCROLL STORYTELLING: NÁSTROJE APLIKACE --- */}
+      <section id="aplikace" className="py-32 relative bg-[#060918]">
+        <div className="max-w-[1400px] mx-auto px-6 space-y-40 border-t border-white/10 pt-20">
           
           <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Co všechno v systému je</h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Moduly na jednom místě — bez skákání mezi tabulkami, e-mailem a poznámkami. Níže si můžete rozkliknout dva typické pohledy a dole najdete pokročilejší nástroje.
-              </p>
+            <div className="text-center mb-20">
+              <h2 className="font-jakarta text-4xl md:text-6xl font-bold text-white mb-6">Jedna platforma pro každodenní práci.</h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">Aidvisora je webová aplikace, kde se prolínají klienti, schůzky, obchody a dokumenty. Bez roztříštěných tabulek a e-mailů.</p>
             </div>
           </ScrollReveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { t: "Klienti a domácnosti", d: "Kmen, vztahy a situace na jednom místě.", i: Users },
-              { t: "Dokumenty a podklady", d: "Ukládání, stav a návaznost na úkoly.", i: FileText },
-              { t: "Úkoly a follow-upy", d: "Co je dnes důležité a co po termínu.", i: CheckSquare },
-              { t: "Obchodní pipeline", d: "Od první poptávky po podpis.", i: KanbanSquare },
-              { t: "Klientský portál", d: "Požadavky a podklady bez e-mailového ping-pongu.", i: Smartphone },
-              { t: "Schůzky a kalendář", d: "Termíny napojené na práci s klientem.", i: CalendarDays },
-              { t: "Kalkulačky a výstupy", d: "Čísla a reporty pro schůzku — bez přepisování do zvláštních souborů.", i: Calculator },
-              { t: "Tým a role", d: "Společná data a role — když pracujete ve více lidech.", i: Building },
-            ].map((m) => {
-              const I = m.i;
-              return (
-                <ScrollReveal key={m.t}>
-                  <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-2">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-300">
-                      <I size={20} />
-                    </div>
-                    <h3 className="font-jakarta font-bold text-white text-sm">{m.t}</h3>
-                    <p className="text-slate-400 text-xs leading-relaxed">{m.d}</p>
-                  </div>
-                </ScrollReveal>
-              );
-            })}
-          </div>
 
           {/* 1. KALENDÁŘ A ÚKOLY */}
           <div className="flex flex-col lg:flex-row items-center gap-16">
@@ -987,7 +888,7 @@ export default function PremiumLandingPage() {
               <div className="w-14 h-14 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/30"><CalendarDays size={28}/></div>
               <h3 className="font-jakarta text-4xl font-bold text-white leading-tight">Kalendář a úkoly na jednom místě.</h3>
               <p className="text-lg text-slate-400 leading-relaxed">
-                Kalendář s týdenní mřížkou a boční agendou: schůzky, úkoly a připomínky u klienta na jednom pohledu. Synchronizace s Google Kalendářem.
+                Náš moderní kalendář není jen doplněk. Je to plnohodnotný nástroj s přetahováním, týdenní mřížkou a bočním panelem agendy, kam vám AI chystá úkoly na daný den.
               </p>
               <ul className="space-y-3 pt-4">
                 <li className="flex items-center gap-3 text-slate-300"><CheckCircle2 size={18} className="text-indigo-500"/> Obousměrná synchronizace (Google, MS)</li>
@@ -1070,68 +971,190 @@ export default function PremiumLandingPage() {
             </ScrollReveal>
           </div>
 
-          <div className="pt-12 border-t border-white/10">
-            <ScrollReveal>
-              <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-10">
-                Doplňkové nástroje pro hlubší práci
+          {/* 3. MINDMAPY (INTERAKTIVNÍ, SVĚTLÝ DESIGN) */}
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <ScrollReveal className="lg:w-1/2 space-y-6" direction="right">
+              <div className="w-14 h-14 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center mb-6 border border-orange-500/30"><Network size={28}/></div>
+              <h3 className="font-jakarta text-4xl font-bold text-white leading-tight">Struktura portfolia rodiny na jednom plátně.</h3>
+              <p className="text-lg text-slate-400 leading-relaxed">
+                Interaktivní mindmapa umožňuje vizualizovat vztahy a portfolio rodiny. Uzly lze přidávat a přesouvat.
               </p>
             </ScrollReveal>
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              <div className="flex flex-col lg:flex-row items-start gap-8">
-                <ScrollReveal className="lg:w-2/5 space-y-4 w-full">
-                  <div className="w-12 h-12 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center border border-orange-500/30">
-                    <Network size={24} />
-                  </div>
-                  <h3 className="font-jakarta text-2xl font-bold text-white leading-tight">Mindmapa portfolia</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    Přehled rodiny a produktů na plátně — doplňuje kartu klienta, nenahrazuje ji.
-                  </p>
-                </ScrollReveal>
-                <ScrollReveal className="flex-1 w-full min-h-[280px]">
-                  <div className="bg-[#f8fafc] rounded-[24px] border border-slate-200 relative overflow-hidden h-[280px] lg:h-[320px]">
-                    <div className="absolute inset-0 mindmap-dots pointer-events-none"></div>
-                    <InteractiveMindmap />
-                  </div>
-                </ScrollReveal>
+
+            <ScrollReveal className="lg:w-1/2 w-full" direction="left">
+              <div className="bg-[#f8fafc] rounded-[32px] border border-slate-200 shadow-[0_0_50px_rgba(99,102,241,0.05)] relative overflow-hidden h-[400px]">
+                <div className="absolute inset-0 mindmap-dots pointer-events-none"></div>
+                {/* Interaktivní komponenta s uzly (Nyní světlá s Plus tlačítkem) */}
+                <InteractiveMindmap />
               </div>
-              <div className="flex flex-col lg:flex-row items-start gap-8">
-                <ScrollReveal className="lg:w-2/5 space-y-4 w-full">
-                  <div className="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center border border-purple-500/30">
-                    <Users size={24} />
-                  </div>
-                  <h3 className="font-jakarta text-2xl font-bold text-white leading-tight">Přehled pro vedení týmu</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    Aktivita, schůzky a produkce — když potřebujete řídit více lidí v jedné firmě.
-                  </p>
-                </ScrollReveal>
-                <ScrollReveal className="flex-1 w-full">
-                  <div className="bg-[#f8fafc] rounded-[24px] border border-white/10 relative overflow-hidden min-h-[280px] p-5 flex flex-col gap-3">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                      <h4 className="font-bold text-slate-800 text-sm">Týmový přehled</h4>
-                      <div className="text-xs bg-white border border-slate-200 px-2 py-1 rounded-lg text-slate-600 font-bold">Měsíc</div>
-                    </div>
-                    <div className="flex items-end gap-2 h-20 pt-2 border-b border-slate-200">
-                      <div className="w-1/5 bg-slate-200 h-[30%] rounded-t-sm"></div>
-                      <div className="w-1/5 bg-slate-200 h-[60%] rounded-t-sm"></div>
-                      <div className="w-1/5 bg-slate-200 h-[40%] rounded-t-sm"></div>
-                      <div className="w-1/5 bg-indigo-400 h-[90%] rounded-t-sm"></div>
-                      <div className="w-1/5 bg-slate-200 h-[50%] rounded-t-sm"></div>
-                    </div>
-                    <div className="bg-indigo-600/90 text-white p-3 rounded-xl text-xs font-bold flex items-center gap-2">
-                      <BarChart3 size={16} /> Souhrn produkce a schůzek za tým
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-xl flex items-center gap-2 text-xs text-red-800">
-                      <AlertTriangle size={14} className="text-red-500 shrink-0" />
-                      <span>
-                        <strong>Jan Svoboda:</strong> bez schůzky 14 dní
-                      </span>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              </div>
-            </div>
+            </ScrollReveal>
           </div>
 
+          {/* 4. FINANČNÍ ANALÝZY A FUNKČNÍ MINI KALKULAČKA */}
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <ScrollReveal className="lg:w-1/2 w-full order-2 lg:order-1" direction="right">
+              <div className="bg-[#10152e] rounded-[32px] p-8 border border-white/10 shadow-[0_0_50px_rgba(16,185,129,0.1)] relative overflow-hidden h-[400px] flex flex-col justify-between">
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+                
+                <div className="relative z-10 flex justify-between items-end mb-2">
+                  <div>
+                    <span className="block text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Pravidelná investice</span>
+                    <span className="text-white font-black text-2xl sm:text-3xl">{formatNumber(miniCalcInvest)} Kč</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Doba</span>
+                    <span className="text-white font-black text-xl">{miniCalcYears} let</span>
+                  </div>
+                </div>
+
+                <div className="relative z-10 w-full mb-6 space-y-4">
+                   <div>
+                     <input type="range" className="modern-slider" min="1000" max="25000" step="500" value={miniCalcInvest} onChange={(e) => setMiniCalcInvest(Number(e.target.value))} />
+                   </div>
+                   <div>
+                     <input type="range" className="modern-slider" min="5" max="35" step="1" value={miniCalcYears} onChange={(e) => setMiniCalcYears(Number(e.target.value))} />
+                   </div>
+                </div>
+
+                <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm text-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2 block">Budoucí hodnota (Při 7% p.a.)</span>
+                  <div className="text-4xl sm:text-5xl font-black text-white mb-2">{formatNumber(futureValue)} <span className="text-xl sm:text-2xl text-slate-500">Kč</span></div>
+                  <button className="mt-4 px-4 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors w-full">Vložit do PDF Reportu</button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal className="lg:w-1/2 space-y-6 order-1 lg:order-2" direction="left">
+              <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/30"><Calculator size={28}/></div>
+              <h3 className="font-jakarta text-4xl font-bold text-white leading-tight">Od dat k finančnímu plánu a PDF reportu.</h3>
+              <p className="text-lg text-slate-400 leading-relaxed">
+                Zkuste si zahýbat posuvníky vedle! Naše integrované investiční a hypoteční kalkulačky tvoří základ analýzy. Systém vás provede sběrem dat a vygeneruje přehledný PDF report.
+              </p>
+            </ScrollReveal>
+          </div>
+
+          {/* 5. TÝMOVÝ PŘEHLED */}
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <ScrollReveal className="lg:w-1/2 space-y-6" direction="right">
+              <div className="w-14 h-14 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/30"><Users size={28}/></div>
+              <h3 className="font-jakarta text-4xl font-bold text-white leading-tight">Kompletní přehled pro vedení</h3>
+              <p className="text-lg text-slate-400 leading-relaxed">
+                Řídíte tým poradců nebo asistentek? Aidvisora vám dává okamžitý vhled do jejich aktivity, schůzek a uzavřené produkce.
+              </p>
+            </ScrollReveal>
+            
+            <ScrollReveal className="lg:w-1/2 w-full" direction="left">
+              <div className="bg-[#f8fafc] rounded-[24px] border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative overflow-hidden h-[400px] p-6 flex flex-col gap-4">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                  <h4 className="font-bold text-slate-800">Týmový přehled</h4>
+                  <div className="text-xs bg-white border border-slate-200 px-3 py-1 rounded-lg text-slate-600 font-bold">Měsíc</div>
+                </div>
+                <div className="flex items-end gap-2 h-24 pt-4 border-b border-slate-200 pb-2">
+                  <div className="w-1/5 bg-slate-200 h-[30%] rounded-t-sm"></div>
+                  <div className="w-1/5 bg-slate-200 h-[60%] rounded-t-sm"></div>
+                  <div className="w-1/5 bg-slate-200 h-[40%] rounded-t-sm"></div>
+                  <div className="w-1/5 bg-indigo-400 h-[90%] rounded-t-sm"></div>
+                  <div className="w-1/5 bg-slate-200 h-[50%] rounded-t-sm"></div>
+                </div>
+                <div className="bg-purple-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Sparkles size={16}/> <span className="text-sm font-bold">AI Shrnutí týmu</span></div>
+                  <button className="text-xs bg-white text-purple-700 px-3 py-1.5 rounded-lg font-bold">Generovat</button>
+                </div>
+                <div className="bg-red-50 border border-red-100 p-3 rounded-xl flex items-center gap-3">
+                  <AlertTriangle size={16} className="text-red-500 shrink-0"/>
+                  <span className="text-sm text-red-800 font-medium"><strong>Jan Svoboda:</strong> Žádná evidovaná schůzka za 14 dní.</span>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+
+        </div>
+      </section>
+
+      {/* --- TYPICKÝ DEN (Workflow Storytelling) --- */}
+      <section id="workflow" className="py-32 relative bg-[#0a0f29] border-t border-white/5 scroll-mt-24">
+        <div id="demo-video" className="sr-only" aria-hidden="true" />
+        <div className="max-w-[1000px] mx-auto px-6">
+          <ScrollReveal>
+            <div className="text-center mb-24">
+              <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-4">Váš nový pracovní den.</h2>
+              <p className="text-xl text-slate-400">Jak může vypadat váš pracovní den s Aidvisorou.</p>
+            </div>
+          </ScrollReveal>
+
+          <div className="relative">
+            <div className="absolute left-[28px] md:left-1/2 top-0 bottom-0 w-[2px] bg-white/10 md:-translate-x-1/2 rounded-full overflow-hidden">
+               <div className="timeline-glow"></div>
+            </div>
+
+            <ScrollReveal className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-24 group">
+              <div className="hidden md:block md:w-5/12 text-right pr-12">
+                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Ranní káva a brífing</h3>
+                 <p className="text-slate-400">AI Asistent projde vaše data a sestaví seznam priorit. Ukáže vám, komu končí fixace a na co se dnes soustředit.</p>
+              </div>
+              <div className="absolute left-0 md:left-1/2 w-14 h-14 bg-[#0a0f29] border-4 border-slate-800 rounded-full flex items-center justify-center md:-translate-x-1/2 z-10 shadow-[0_0_20px_rgba(251,191,36,0.2)] group-hover:border-amber-500 transition-colors">
+                <Sunrise className="text-amber-500" size={24} />
+              </div>
+              <div className="w-full pl-20 md:pl-0 md:w-5/12 md:text-left md:pl-12">
+                 <SpotlightCard className="p-6">
+                   <div className="flex items-center gap-3 mb-3"><Bot className="text-purple-400" size={20}/><span className="text-sm font-bold text-white">AI Brífing (08:00)</span></div>
+                   <p className="text-sm text-slate-400 italic">"Dobré ráno! Dnes máte 3 schůzky. Klient Petr Malý slaví narozeniny a rodině Novákově chybí podpis na smlouvě."</p>
+                 </SpotlightCard>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-24 group">
+              <div className="w-full pl-20 md:pl-0 md:w-5/12 md:text-right md:pr-12 order-2 md:order-1">
+                 <SpotlightCard className="p-6">
+                   <div className="flex items-center gap-3 mb-3"><Briefcase className="text-blue-400" size={20}/><span className="text-sm font-bold text-white">Schůzka s klientem (11:00)</span></div>
+                   <div className="space-y-2">
+                     <div className="h-2 w-full bg-white/10 rounded-full"></div>
+                     <div className="h-2 w-3/4 bg-white/10 rounded-full"></div>
+                   </div>
+                 </SpotlightCard>
+              </div>
+              <div className="absolute left-0 md:left-1/2 w-14 h-14 bg-[#0a0f29] border-4 border-slate-800 rounded-full flex items-center justify-center md:-translate-x-1/2 z-10 shadow-[0_0_20px_rgba(59,130,246,0.2)] group-hover:border-blue-500 transition-colors order-1 md:order-2">
+                <Sun className="text-blue-500" size={24} />
+              </div>
+              <div className="hidden md:block md:w-5/12 text-left pl-12 order-3">
+                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Schůzky na kliknutí</h3>
+                 <p className="text-slate-400">Otevřete interaktivní kalkulačku, vytvoříte s klientem vizuální finanční plán a jedním kliknutím vygenerujete PDF report.</p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-24 group">
+              <div className="hidden md:block md:w-5/12 text-right pr-12">
+                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Klientská zóna pracuje za vás</h3>
+                 <p className="text-slate-400">Zatímco jste na obědě, klient vám přes svůj portál sám bezpečně nahraje chybějící občanku a napíše rychlý dotaz do chatu.</p>
+              </div>
+              <div className="absolute left-0 md:left-1/2 w-14 h-14 bg-[#0a0f29] border-4 border-slate-800 rounded-full flex items-center justify-center md:-translate-x-1/2 z-10 shadow-[0_0_20px_rgba(16,185,129,0.2)] group-hover:border-emerald-500 transition-colors">
+                <Smartphone className="text-emerald-500" size={24} />
+              </div>
+              <div className="w-full pl-20 md:pl-0 md:w-5/12 md:text-left md:pl-12">
+                 <SpotlightCard className="p-6 border-emerald-500/30">
+                   <div className="flex items-center gap-3 mb-3"><Bell className="text-emerald-400" size={20}/><span className="text-sm font-bold text-white">Nová notifikace (14:30)</span></div>
+                   <p className="text-sm text-slate-300">Klient <strong className="text-white">Jan Novák</strong> nahrál soubor "Obcanka.pdf" a píše novou zprávu.</p>
+                 </SpotlightCard>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal className="relative flex flex-col md:flex-row items-start md:items-center justify-between group">
+              <div className="w-full pl-20 md:pl-0 md:w-5/12 md:text-right md:pr-12 order-2 md:order-1">
+                 <SpotlightCard className="p-6">
+                   <div className="flex items-center justify-between"><span className="text-sm font-bold text-white">Úkoly hotovy</span><span className="text-indigo-400 font-black">100%</span></div>
+                   <div className="h-1.5 w-full bg-white/10 rounded-full mt-3"><div className="h-full bg-indigo-500 rounded-full w-full"></div></div>
+                 </SpotlightCard>
+              </div>
+              <div className="absolute left-0 md:left-1/2 w-14 h-14 bg-[#0a0f29] border-4 border-slate-800 rounded-full flex items-center justify-center md:-translate-x-1/2 z-10 shadow-[0_0_20px_rgba(99,102,241,0.2)] group-hover:border-indigo-500 transition-colors order-1 md:order-2">
+                <Moon className="text-indigo-500" size={24} />
+              </div>
+              <div className="hidden md:block md:w-5/12 text-left pl-12 order-3">
+                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Čistý stůl</h3>
+                 <p className="text-slate-400">Přesouváte obchody v Kanbanu, delegujete úkoly na asistentku a odcházíte s čistou hlavou. Přehled úkolů a obchodů máte v jednom místě, nic nepřeskočí.</p>
+              </div>
+            </ScrollReveal>
+
+          </div>
         </div>
       </section>
 
@@ -1140,10 +1163,8 @@ export default function PremiumLandingPage() {
         <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-20">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Pro koho je Aidvisora</h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Od samostatného poradce po broker pool — stejný princip: pořádek u klienta, obchodu a podkladů.
-              </p>
+              <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-4">Aplikace, která se vám přizpůsobí.</h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">Ať jste samostatný poradce, nebo řídíte tým. Aidvisora má nástroje pro různé role.</p>
             </div>
           </ScrollReveal>
 
@@ -1153,10 +1174,10 @@ export default function PremiumLandingPage() {
               <SpotlightCard className="p-8 h-full flex flex-col">
                 <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 mb-6"><User size={24}/></div>
                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Samostatný poradce</h3>
-                <p className="text-slate-400 mb-6 leading-relaxed">Když máte klienty v tabulce, maily a hlavě zároveň, je čas dát tomu jeden systém.</p>
+                <p className="text-slate-400 mb-6 leading-relaxed">Administrativa vám požírá čas, který byste mohli věnovat obchodu a rodině.</p>
                 <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Nejvíc používáte</span>
-                  <p className="text-sm text-slate-300 font-medium"><strong className="text-white">Pipeline</strong>, <strong className="text-white">portál</strong> a <strong className="text-white">dokumenty</strong> u klienta.</p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Klíčový modul</span>
+                  <p className="text-sm text-slate-300 font-medium">Automatizace s <strong className="text-white">AI Asistentem</strong> a vizuální <strong className="text-white">Pipeline</strong>.</p>
                 </div>
               </SpotlightCard>
             </ScrollReveal>
@@ -1165,10 +1186,10 @@ export default function PremiumLandingPage() {
               <SpotlightCard className="p-8 h-full flex flex-col">
                 <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-purple-400 mb-6"><Users size={24}/></div>
                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Tým / Manažer</h3>
-                <p className="text-slate-400 mb-6 leading-relaxed">Potřebujete vidět aktivitu a obchody bez skládání reportů z Excelu každý měsíc znovu.</p>
+                <p className="text-slate-400 mb-6 leading-relaxed">Ztrácíte přehled o tom, na čem vaši lidé pracují, a excelové reporty produkce jsou věčně neaktuální.</p>
                 <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Nejvíc používáte</span>
-                  <p className="text-sm text-slate-300 font-medium">Sdílené pohledy, <strong className="text-white">přehled schůzek a produkce</strong> v kontextu týmu.</p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Klíčový modul</span>
+                  <p className="text-sm text-slate-300 font-medium">Sdílené pohledy a <strong className="text-white">KPI Produkce</strong> v reálném čase.</p>
                 </div>
               </SpotlightCard>
             </ScrollReveal>
@@ -1177,10 +1198,10 @@ export default function PremiumLandingPage() {
               <SpotlightCard className="p-8 h-full flex flex-col">
                 <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400 mb-6"><CheckSquare size={24}/></div>
                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Asistentka / Backoffice</h3>
-                <p className="text-slate-400 mb-6 leading-relaxed">Méně „pošlete mi OP do mailu“ — klient nahraje sám do portálu, vy vidíte stav u úkolu.</p>
+                <p className="text-slate-400 mb-6 leading-relaxed">Lovíte podklady z mailů a zpráv a ručně urgujete klienty, ať vám pošlou OP.</p>
                 <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Nejvíc používáte</span>
-                  <p className="text-sm text-slate-300 font-medium"><strong className="text-white">Klientský portál</strong> a úkoly navázané na podklady.</p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Klíčový modul</span>
+                  <p className="text-sm text-slate-300 font-medium"><strong className="text-white">Klientská Zóna</strong> pro bezpečné nahrávání do trezoru.</p>
                 </div>
               </SpotlightCard>
             </ScrollReveal>
@@ -1189,50 +1210,14 @@ export default function PremiumLandingPage() {
               <SpotlightCard className="p-8 h-full flex flex-col">
                 <div className="w-12 h-12 bg-rose-500/20 rounded-xl flex items-center justify-center text-rose-400 mb-6"><Building size={24}/></div>
                 <h3 className="font-jakarta text-2xl font-bold text-white mb-2">Firma / Broker pool</h3>
-                <p className="text-slate-400 mb-6 leading-relaxed">Chcete, aby lidé systém reálně používali — a aby šlo sladit přístupy a pravidla napříč firmou.</p>
+                <p className="text-slate-400 mb-6 leading-relaxed">Potřebujete zajistit 100% soulad s GDPR a mít nástroj, který lidé reálně rádi používají.</p>
                 <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Nejvíc používáte</span>
-                  <p className="text-sm text-slate-300 font-medium"><strong className="text-white">Role</strong>, oddělení dat podle organizací a soulad s procesy.</p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 block">Klíčový modul</span>
+                  <p className="text-sm text-slate-300 font-medium"><strong className="text-white">Multi-tenant architektura</strong> s pokročilým řízením rolí.</p>
                 </div>
               </SpotlightCard>
             </ScrollReveal>
 
-          </div>
-        </div>
-      </section>
-
-      {/* --- REFERENCE (MARQUEE) --- */}
-      <section className="py-12 border-y border-white/10 bg-white/5 relative z-10 backdrop-blur-sm overflow-hidden" aria-label="Reference od poradců">
-        <div className="max-w-[1400px] mx-auto px-6 mb-8 text-center">
-          <h3 className="font-jakarta text-sm uppercase tracking-[0.2em] text-slate-400 font-bold">
-            Co říkají poradci a řízení týmů
-          </h3>
-        </div>
-        <div className="relative w-full overflow-hidden flex">
-          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-[#0a0f29] to-transparent z-10"></div>
-          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-[#0a0f29] to-transparent z-10"></div>
-          <div className="animate-marquee gap-6 px-3">
-            {[...REVIEWS, ...REVIEWS].map((review, idx) => (
-              <div key={idx} className="w-[350px] bg-white/5 border border-white/10 p-6 rounded-[24px] flex-shrink-0 flex flex-col">
-                <div className="flex text-amber-400 mb-4">
-                  <Star size={14} className="fill-current" />
-                  <Star size={14} className="fill-current" />
-                  <Star size={14} className="fill-current" />
-                  <Star size={14} className="fill-current" />
-                  <Star size={14} className="fill-current" />
-                </div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6 flex-1">&quot;{review.text}&quot;</p>
-                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/10">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-300 text-xs border border-indigo-500/30">
-                    {review.initials}
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-xs">{review.author}</p>
-                    <p className="text-slate-500 text-[10px] uppercase tracking-wider">{review.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -1242,10 +1227,8 @@ export default function PremiumLandingPage() {
         <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-20">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Poradce v systému, klient v portálu</h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Vy řídíte obchod a vztahy. Klient má jednoduchý digitální servis — požadavek nebo podklad se okamžitě promítne do vašeho úkolu a workflow.
-              </p>
+              <h2 className="font-jakarta text-4xl md:text-6xl font-bold text-white mb-6">Dva světy. Jedna platforma.</h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">Vy řídíte obchod a vztahy. Klient má jednoduchý digitální servis. Když něco potřebuje, zadá požadavek v portálu a vám se okamžitě vytvoří navazující krok.</p>
             </div>
           </ScrollReveal>
 
@@ -1305,36 +1288,288 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
-      {/* --- FAQ (před ceníkem) --- */}
-      <section id="faq" className="py-24 bg-[#060918] border-t border-white/10">
-        <div className="max-w-[800px] mx-auto px-6">
+      {/* --- AI ASISTENT & DŮVĚRYHODNOST --- */}
+      <section id="ai-asistent" className="py-32 relative overflow-hidden bg-[#060918] scroll-mt-24">
+        <div id="ukazka-workflow" className="sr-only" aria-hidden="true" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0"></div>
+        
+        <div className="max-w-[1400px] mx-auto px-6 relative z-10 border-t border-white/10 pt-20">
           <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="font-jakarta text-3xl md:text-4xl font-bold text-white mb-4">Často kladené dotazy</h2>
-              <p className="text-slate-400">O práci s daty, klientem a nasazení.</p>
+            <div className="bg-white/5 border border-white/10 rounded-[48px] p-8 md:p-16 lg:p-24 backdrop-blur-md flex flex-col lg:flex-row items-center gap-16 shadow-2xl mb-16">
+              
+              <div className="lg:w-1/2">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold uppercase tracking-widest mb-8">
+                  <Bot size={16} /> Pomocník se smlouvou, ne místo vás
+                </div>
+                <h2 className="font-jakarta text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
+                  AI, která pomůže se <span className="text-glow-shimmer">smlouvou a dalším krokem.</span>
+                </h2>
+                <p className="text-base md:text-lg text-slate-400 mb-10 md:mb-12 leading-relaxed max-w-xl">
+                  Přečte PDF s vámi na mysli: vytáhne klíčové údaje, upozorní na mezery a navrhne, co ověřit. Rozhodujete vy — nic se nemění bez vašeho potvrzení.
+                </p>
+
+                <div className="space-y-3 md:space-y-4">
+                  {[
+                    {
+                      icon: Activity,
+                      title: "Mezery v krytí",
+                      desc: "Krátce ukáže, kde může chybět pojistné krytí nebo pozornost při schůzce.",
+                    },
+                    {
+                      icon: FileText,
+                      title: "Údaje ze smlouvy",
+                      desc: "Hlavní částky a typ produktu z PDF přehledně k doplnění nebo kontrole u klienta.",
+                    },
+                    {
+                      icon: Bell,
+                      title: "Úkoly a priority",
+                      desc: "Připomene follow-upy a termíny v kontextu klienta — bez přebírání vaší práce.",
+                    },
+                  ].map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-start gap-4 p-4 md:p-5 rounded-2xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10"
+                      >
+                        <div className="mt-0.5 bg-purple-500/20 p-3 rounded-xl text-purple-400 border border-purple-500/30 shrink-0">
+                          <Icon size={20} />
+                        </div>
+                        <div className="min-w-0 pt-0.5">
+                          <h4 className="text-white font-bold text-base md:text-lg mb-1.5">{item.title}</h4>
+                          <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="lg:w-1/2 w-full">
+                 <AiSandbox />
+              </div>
+
             </div>
           </ScrollReveal>
 
-          <div className="space-y-4 max-w-3xl mx-auto">
-            {FAQS.map((faq) => (
-              <ScrollReveal key={faq.id} delay={100}>
-                <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all">
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
-                    className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-2xl min-h-[44px]"
-                  >
-                    <span className="font-bold text-white pr-4">{faq.q}</span>
-                    <ChevronDown size={20} className={`text-slate-400 shrink-0 transition-transform duration-200 ${openFaq === faq.id ? "rotate-180" : ""}`} />
-                  </button>
-                  {openFaq === faq.id && (
-                    <div className="px-6 pb-5 pt-0">
-                      <p className="text-slate-400 leading-relaxed text-sm max-w-prose animate-in fade-in slide-in-from-top-2 duration-200">{faq.a}</p>
-                    </div>
-                  )}
+          {/* AI TRUST LAYER */}
+          <ScrollReveal delay={200}>
+            <div className="max-w-4xl mx-auto text-center border border-white/10 bg-white/5 rounded-3xl p-10">
+               <h3 className="font-jakarta text-2xl font-bold text-white mb-3">AI navrhuje, <span className="text-purple-400">poradce rozhoduje.</span></h3>
+               <p className="text-slate-400 mb-8 max-w-xl mx-auto">Věříme, že umělá inteligence je užitečný pomocník, ale u peněz má poslední slovo vždy člověk. Proto jsme nastavili jasná pravidla.</p>
+               
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                  <div className="flex flex-col gap-2">
+                    <CheckCircle2 size={24} className="text-emerald-400 mb-2"/>
+                    <h4 className="font-bold text-white">Lidská kontrola</h4>
+                    <p className="text-sm text-slate-400">AI nikdy nemění klientská data bez vašeho výslovného souhlasu na 1 klik.</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Search size={24} className="text-emerald-400 mb-2"/>
+                    <h4 className="font-bold text-white">Auditovatelnost</h4>
+                    <p className="text-sm text-slate-400">Vždy přesně víte, z jakého dokumentu a věty AI daný údaj vyčetla.</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Lock size={24} className="text-emerald-400 mb-2"/>
+                    <h4 className="font-bold text-white">Bezpečné zpracování</h4>
+                    <p className="text-sm text-slate-400">Data z PDF se po analýze nikde netrénují a zůstávají v uzavřeném sandboxu.</p>
+                  </div>
+               </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* --- INFRASTRUKTURA A BEZPEČNOST (Interaktivní Jádro) --- */}
+      <section id="infrastruktura" className="py-32 relative overflow-hidden bg-[#060918]">
+        <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-24">
+          <ScrollReveal>
+            <div className="text-center mb-24">
+              <h2 className="font-jakarta text-4xl md:text-6xl font-bold text-white mb-6">Moderní a bezpečná infrastruktura.</h2>
+              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+                Data v bezpečném prostředí v EU. Aplikace běží v cloudu, máte k ní přístup odkudkoli a připravenost pro audity.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* Interaktivní komponenta s Jádrem */}
+          <div className="flex flex-col lg:flex-row items-center gap-16 relative">
+            <ScrollReveal className="lg:w-1/3 flex justify-center relative" direction="right">
+              <div className={`relative w-64 h-64 flex items-center justify-center transition-all duration-700
+                  ${activeSecurityFeature === 'gdpr' ? 'drop-shadow-[0_0_60px_rgba(52,211,153,0.5)]' : 
+                    activeSecurityFeature === 'cloud' ? 'drop-shadow-[0_0_60px_rgba(59,130,246,0.5)]' : 
+                    activeSecurityFeature === 'rbac' ? 'drop-shadow-[0_0_60px_rgba(168,85,247,0.5)]' : 
+                    'drop-shadow-[0_0_40px_rgba(255,255,255,0.1)]'}
+              `}>
+                <div className={`absolute inset-0 rounded-full blur-[60px] transition-colors duration-700 opacity-60
+                   ${activeSecurityFeature === 'gdpr' ? 'bg-emerald-500' : 
+                     activeSecurityFeature === 'cloud' ? 'bg-blue-500' : 
+                     activeSecurityFeature === 'rbac' ? 'bg-purple-500' : 'bg-slate-700'}
+                `}></div>
+                
+                <div className={`w-40 h-40 bg-[#0a0f29] rounded-full border-4 flex items-center justify-center relative z-10 transition-colors duration-700 shadow-inner
+                   ${activeSecurityFeature === 'gdpr' ? 'border-emerald-500' : 
+                     activeSecurityFeature === 'cloud' ? 'border-blue-500' : 
+                     activeSecurityFeature === 'rbac' ? 'border-purple-500' : 'border-slate-600'}
+                `}>
+                   {activeSecurityFeature === 'gdpr' ? <Lock size={48} className="text-emerald-400" /> : 
+                    activeSecurityFeature === 'cloud' ? <Server size={48} className="text-blue-400" /> : 
+                    activeSecurityFeature === 'rbac' ? <Users size={48} className="text-purple-400" /> : 
+                    <ShieldCheck size={48} className="text-slate-400" />}
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <div className="lg:w-2/3 flex flex-col gap-6 relative z-10 w-full">
+              <ScrollReveal delay={100} direction="left" className="w-full">
+                <div 
+                  onMouseEnter={() => setActiveSecurityFeature('gdpr')}
+                  onMouseLeave={() => setActiveSecurityFeature('none')}
+                  className="p-8 rounded-[32px] bg-white/5 border border-white/10 hover:bg-white/10 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4 mb-3">
+                    <Lock size={24} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-bold text-xl text-white">Ochrana dat a GDPR</h3>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed text-lg pl-10">Kompletní evidence souhlasů, automatický audit log všech akcí v systému a jednoduchý export dat na žádost klienta. Data jsou v EU.</p>
                 </div>
               </ScrollReveal>
-            ))}
+
+              <ScrollReveal delay={200} direction="left" className="w-full">
+                <div 
+                  onMouseEnter={() => setActiveSecurityFeature('cloud')}
+                  onMouseLeave={() => setActiveSecurityFeature('none')}
+                  className="p-8 rounded-[32px] bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4 mb-3">
+                    <Server size={24} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-bold text-xl text-white">Škálovatelný Cloud</h3>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed text-lg pl-10">Zapomeňte na instalace. Aplikace běží na zabezpečených serverech, je bleskově rychlá a přístupná odkudkoliv, i z mobilu či tabletu.</p>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={300} direction="left" className="w-full">
+                <div 
+                  onMouseEnter={() => setActiveSecurityFeature('rbac')}
+                  onMouseLeave={() => setActiveSecurityFeature('none')}
+                  className="p-8 rounded-[32px] bg-white/5 border border-white/10 hover:bg-white/10 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4 mb-3">
+                    <Users size={24} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-bold text-xl text-white">Izolace a Role (RBAC)</h3>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed text-lg pl-10">Precizní řízení přístupů (Manažer, Poradce, Asistent). Každá firma má svůj izolovaný datový prostor (Multi-tenant architektura).</p>
+                </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- NOVÉ: ROI KALKULAČKA --- */}
+      <section id="roi-kalkulacka" className="py-24 relative overflow-hidden bg-[#060918]">
+        <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Kolik vám Aidvisora vrátí?</h2>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">Vyplňte parametry praxe a podívejte se na odhad úspor času a příležitostí.</p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white/5 border border-white/10 rounded-[40px] p-8 md:p-12">
+            {/* Vstupy */}
+            <ScrollReveal direction="right" className="space-y-8">
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="text-sm font-bold text-slate-300">Počet klientů v kmeni (na poradce)</label>
+                  <span className="text-xl font-black text-indigo-400">{roiClients}</span>
+                </div>
+                <input type="range" min="50" max="500" step="10" value={roiClients} onChange={(e) => setRoiClients(Number(e.target.value))} className="w-full modern-slider" />
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="text-sm font-bold text-slate-300">Hodin administrativy týdně (na poradce)</label>
+                  <span className="text-xl font-black text-indigo-400">{roiAdmin} hod.</span>
+                </div>
+                <input type="range" min="2" max="40" step="1" value={roiAdmin} onChange={(e) => setRoiAdmin(Number(e.target.value))} className="w-full modern-slider" />
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="text-sm font-bold text-slate-300">Velikost týmu (poradců)</label>
+                  <span className="text-xl font-black text-indigo-400">{roiTeam}</span>
+                </div>
+                <input type="range" min="1" max="50" step="1" value={roiTeam} onChange={(e) => setRoiTeam(Number(e.target.value))} className="w-full modern-slider" />
+              </div>
+            </ScrollReveal>
+
+            {/* Výstupy */}
+            <ScrollReveal direction="left" className="flex flex-col justify-center bg-[#0a0f29] rounded-[24px] p-8 border border-indigo-500/30 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl"></div>
+              
+              <div className="space-y-6 relative z-10">
+                <div>
+                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Ušetřený čas s AI (Měsíčně)</span>
+                  <div className="text-3xl font-black text-white">{roiSavedHours} <span className="text-lg text-slate-400">hodin</span></div>
+                  <p className="text-xs text-emerald-400 mt-1">Snížení administrativy o 40 %</p>
+                </div>
+                <div className="w-full h-px bg-white/10"></div>
+                <div>
+                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Nové příležitosti z follow-upů (Ročně)</span>
+                  <div className="text-3xl font-black text-white">+{roiExtraDeals} <span className="text-lg text-slate-400">obchodů</span></div>
+                  <p className="text-xs text-emerald-400 mt-1">Zvýšení konverze o 5 % díky hlídání termínů</p>
+                </div>
+                <div className="w-full h-px bg-white/10"></div>
+                <div>
+                  <span className="block text-xs font-black uppercase tracking-widest text-indigo-300 mb-1">Hodnota vrácená do byznysu (Měsíčně)*</span>
+                  <div className="text-4xl md:text-5xl font-black text-emerald-400">{formatNumber(roiValue)} <span className="text-2xl text-slate-400">Kč</span></div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+          <p className="text-center text-[10px] text-slate-500 mt-6">*Odhad kalkuluje hodnotu ušetřené hodiny (1 000 Kč) a průměrnou provizi z jednoho zachráněného obchodu (15 000 Kč).</p>
+        </div>
+      </section>
+
+      {/* --- INTEGRACE --- */}
+      <section id="integrace" className="py-24 relative overflow-hidden bg-[#060918]">
+        <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24 text-center">
+          <ScrollReveal>
+            <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Napojení na nástroje, které dává smysl používat každý den</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-16 leading-relaxed">
+              Aidvisora není uzavřený systém. Klíčové workflow propojuje s nástroji, které poradci reálně používají při plánování, komunikaci a práci s dokumenty.
+            </p>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+             <ScrollReveal delay={100}>
+               <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
+                 <Calendar size={40} className="text-blue-400 mb-4 shrink-0" />
+                 <h4 className="font-bold text-white text-lg mb-2">Google Kalendář</h4>
+                 <p className="text-sm text-slate-400">Obousměrná synchronizace schůzek a termínů, aby měl poradce i tým vždy aktuální přehled.</p>
+               </div>
+             </ScrollReveal>
+             <ScrollReveal delay={200}>
+               <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
+                 <Mail size={40} className="text-rose-400 mb-4 shrink-0" />
+                 <h4 className="font-bold text-white text-lg mb-2">E-mailové notifikace</h4>
+                 <p className="text-sm text-slate-400">Systémové e-maily, upozornění, přání a další automatické zprávy klientům.</p>
+               </div>
+             </ScrollReveal>
+             <ScrollReveal delay={300}>
+               <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
+                 <FileText size={40} className="text-amber-400 mb-4 shrink-0" />
+                 <h4 className="font-bold text-white text-lg mb-2">PDF a dokumenty</h4>
+                 <p className="text-sm text-slate-400">Sdílení, generování výstupů a práce s dokumenty v návaznosti na klientský proces.</p>
+               </div>
+             </ScrollReveal>
+             <ScrollReveal delay={400}>
+               <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
+                 <Network size={40} className="text-slate-400 mb-4 shrink-0" />
+                 <h4 className="font-bold text-white text-lg mb-2">Další integrace připravujeme</h4>
+                 <p className="text-sm text-slate-400">Napojení rozšiřujeme postupně podle priorit poradců a týmů.</p>
+               </div>
+             </ScrollReveal>
           </div>
         </div>
       </section>
@@ -1344,8 +1579,8 @@ export default function PremiumLandingPage() {
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollReveal>
              <div className="text-center mb-16">
-               <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Férové a transparentní ceny</h2>
-               <p className="text-lg text-slate-400 max-w-2xl mx-auto">Tarif podle rozsahu praxe. Můžete přejít na vyšší nebo nižší plán.</p>
+               <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Férové a transparentní ceny.</h2>
+               <p className="text-xl text-slate-400 max-w-2xl mx-auto">Vyberte si tarif podle toho, jak velký je váš byznys. Můžete kdykoliv přejít na vyšší nebo nižší plán.</p>
                
                <div className="inline-flex bg-white/5 border border-white/10 rounded-full p-1 mt-10">
                  <button className={`px-6 py-2.5 rounded-full text-sm font-bold ${!isAnnualPricing ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`} onClick={() => setIsAnnualPricing(false)}>Měsíčně</button>
@@ -1369,7 +1604,7 @@ export default function PremiumLandingPage() {
                  <ul className="space-y-4">
                    <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={18} className="text-indigo-400"/> 1 uživatel</li>
                    <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={18} className="text-indigo-400"/> Neomezená Pipeline a Kalendář</li>
-                   <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={18} className="text-indigo-400"/> Základní nápověda u dokumentů</li>
+                   <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={18} className="text-indigo-400"/> Základní AI Asistent</li>
                  </ul>
                </div>
              </ScrollReveal>
@@ -1390,7 +1625,7 @@ export default function PremiumLandingPage() {
                      <li className="flex items-center gap-3 text-white text-sm font-medium"><Check size={18} className="text-indigo-400"/> Vše ze Starteru</li>
                      <li className="flex items-center gap-3 text-white text-sm font-medium"><Check size={18} className="text-emerald-400"/> Klientská zóna (Pro klienty)</li>
                      <li className="flex items-center gap-3 text-white text-sm font-medium"><Check size={18} className="text-emerald-400"/> Finanční analýzy a Kalkulačky</li>
-                     <li className="flex items-center gap-3 text-white text-sm font-medium"><Check size={18} className="text-emerald-400"/> Pokročilejší práce s dokumenty a PDF</li>
+                     <li className="flex items-center gap-3 text-white text-sm font-medium"><Check size={18} className="text-emerald-400"/> Pokročilé AI a extrakce PDF</li>
                    </ul>
                  </div>
                </div>
@@ -1416,13 +1651,13 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
-      {/* --- ONBOARDING / JAK ZAČÍT --- */}
+      {/* --- NOVÉ: ONBOARDING / JAK ZAČÍT --- */}
       <section id="jak-zacit" className="py-24 relative overflow-hidden bg-[#060918]">
         <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24 text-center">
           <ScrollReveal>
-            <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Začněte bez složité migrace</h2>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-16 leading-relaxed">
-              Pomůžeme s importem z Excelu a prvním nastavením portálu a rolí.
+            <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Začnete bez složité migrace.</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-16 leading-relaxed">
+              Přechod na nový systém nemusí být složitý. Pomůžeme vám s importem dat i prvním nastavením tak, abyste mohli začít pracovat co nejdříve.
             </p>
           </ScrollReveal>
 
@@ -1452,130 +1687,38 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
-      {/* --- INTEGRACE --- */}
-      <section id="integrace" className="py-24 relative overflow-hidden bg-[#060918]">
-        <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24 text-center">
+      {/* --- FAQ SEKCE --- */}
+      <section id="faq" className="py-24 bg-[#060918] border-t border-white/10">
+        <div className="max-w-[800px] mx-auto px-6">
           <ScrollReveal>
-            <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">Napojení na kalendář a běžnou práci</h2>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-16 leading-relaxed">
-              Schůzky a notifikace navazují na klienta a úkoly — bez zbytečného přepisování mezi aplikacemi.
-            </p>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-            <ScrollReveal delay={100}>
-              <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
-                <Calendar size={40} className="text-blue-400 mb-4 shrink-0" />
-                <h4 className="font-bold text-white text-lg mb-2">Google Kalendář</h4>
-                <p className="text-sm text-slate-400">Obousměrná synchronizace schůzek a termínů, aby měl poradce i tým vždy aktuální přehled.</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={200}>
-              <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
-                <Mail size={40} className="text-rose-400 mb-4 shrink-0" />
-                <h4 className="font-bold text-white text-lg mb-2">E-mailové notifikace</h4>
-                <p className="text-sm text-slate-400">Systémové e-maily, upozornění, přání a další automatické zprávy klientům.</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={300}>
-              <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
-                <FileText size={40} className="text-amber-400 mb-4 shrink-0" />
-                <h4 className="font-bold text-white text-lg mb-2">PDF a dokumenty</h4>
-                <p className="text-sm text-slate-400">Sdílení, generování výstupů a práce s dokumenty v návaznosti na klientský proces.</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={400}>
-              <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center hover:bg-white/10 transition-colors h-full text-center">
-                <Network size={40} className="text-slate-400 mb-4 shrink-0" />
-                <h4 className="font-bold text-white text-lg mb-2">Další integrace připravujeme</h4>
-                <p className="text-sm text-slate-400">Napojení rozšiřujeme postupně podle priorit poradců a týmů.</p>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* --- AI + BEZPEČNOST (SLUČENÁ SEKCE) --- */}
-      <section id="duvera-a-bezpecnost" className="py-24 md:py-32 relative overflow-hidden bg-[#060918] border-t border-white/10">
-        <div className="max-w-[1100px] mx-auto px-6">
-          <ScrollReveal>
-            <div className="text-center mb-14">
-              <h2 className="font-jakarta text-3xl md:text-5xl font-bold text-white mb-4">
-                Pomoc u dokumentů. Odpovědnost u vás.
-              </h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Systém může navrhnout další krok nebo vyčíst údaj ze smlouvy — rozhodnutí a komunikace s klientem jsou vždy na vás. Data běží v prostředí vhodném pro práci s osobními údaji, s rolemi a auditem.
-              </p>
+            <div className="text-center mb-16">
+              <h2 className="font-jakarta text-4xl font-bold text-white mb-4">Často kladené dotazy</h2>
+              <p className="text-slate-400">Vše, co potřebujete vědět před spuštěním.</p>
             </div>
           </ScrollReveal>
 
-          <div className="grid lg:grid-cols-2 gap-10 mb-12">
-            <ScrollReveal>
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 md:p-8 h-full">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-xs font-bold mb-4">
-                  <FileText size={14} /> Praktická pomoc
+          <div className="space-y-4 max-w-3xl mx-auto">
+            {FAQS.map((faq) => (
+              <ScrollReveal key={faq.id} delay={100}>
+                <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all">
+                  <button 
+                    onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
+                    className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-2xl"
+                  >
+                    <span className="font-bold text-white pr-4">{faq.q}</span>
+                    <ChevronDown size={20} className={`text-slate-400 shrink-0 transition-transform duration-200 ${openFaq === faq.id ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openFaq === faq.id && (
+                    <div className="px-6 pb-5 pt-0">
+                      <p className="text-slate-400 leading-relaxed text-sm max-w-prose animate-in fade-in slide-in-from-top-2 duration-200">
+                        {faq.a}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <ul className="space-y-4 text-sm text-slate-300">
-                  <li className="flex gap-3">
-                    <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={18} />
-                    <span>Návrh dalšího kroku nebo upozornění na termín z kontextu klienta a dokumentů.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={18} />
-                    <span>Nápověda při čtení vybraných údajů z nahraných podkladů — vždy s možností úpravy.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={18} />
-                    <span>
-                      Ukázku práce s dokumentem si můžete vyzkoušet v sekci{" "}
-                      <a href="#ukazka-workflow" className="text-indigo-300 hover:text-white underline underline-offset-2">
-                        interaktivní demo
-                      </a>
-                      .
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={100}>
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 md:p-8 h-full">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs font-bold mb-4">
-                  <ShieldCheck size={14} /> Data a provoz
-                </div>
-                <ul className="space-y-5">
-                  <li className="flex gap-3">
-                    <Lock className="text-emerald-400 shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <p className="font-bold text-white text-sm mb-1">Ochrana a GDPR</p>
-                      <p className="text-slate-400 text-sm">Evidence souhlasů, auditní záznamy akcí, export na žádost klienta. Data v EU.</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <Server className="text-blue-400 shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <p className="font-bold text-white text-sm mb-1">Cloudový provoz</p>
-                      <p className="text-slate-400 text-sm">Bez instalace — přístup z prohlížeče, včetně tabletu a mobilu.</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <Users className="text-purple-400 shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <p className="font-bold text-white text-sm mb-1">Role a izolace</p>
-                      <p className="text-slate-400 text-sm">Manažer, poradce, asistent — každá organizace má vlastní datový prostor.</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </ScrollReveal>
+              </ScrollReveal>
+            ))}
           </div>
-
-          <ScrollReveal delay={150}>
-            <div className="text-center border border-white/10 bg-white/5 rounded-2xl p-6 md:p-8">
-              <p className="text-slate-300 text-sm md:text-base max-w-2xl mx-auto">
-                <strong className="text-white">Navrhuje systém, potvrzujete vy.</strong> Klientská data se nemění bez vašeho kroku. U citlivých údajů z dokumentů máte přehled, odkud údaj pochází.
-              </p>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
 
@@ -1584,25 +1727,19 @@ export default function PremiumLandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-900/20 pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <ScrollReveal>
-            <h2 className="font-jakarta text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-6">
-              Začněte mít poradenství pod kontrolou
+            <h2 className="font-jakarta text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-6">
+              Portál Aidvisora
             </h2>
-            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Zkuste Aidvisoru zdarma a uvidíte, jestli vám sedí tok klient → dokument → úkol → obchod.
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+              Přihlaste se do pracovního prostředí – CRM, klientská zóna, kalendář a dokumenty na jednom místě.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
               <Link
-                href="/prihlaseni?register=1"
+                href="/prihlaseni"
                 className="w-full sm:w-auto px-10 py-5 bg-white text-[#0a0f29] rounded-full text-lg font-bold tracking-wide shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-105 transition-all text-center min-h-[44px] flex items-center justify-center gap-2"
               >
-                Vyzkoušet zdarma <ArrowRight size={18} />
+                Otevřít portál <ArrowRight size={18} />
               </Link>
-              <a
-                href="#demo-video"
-                className="w-full sm:w-auto px-10 py-5 bg-white/10 text-white border border-white/20 rounded-full text-lg font-bold hover:bg-white/15 transition-all text-center min-h-[44px] flex items-center justify-center gap-2"
-              >
-                <Play size={18} /> Přehrát demo
-              </a>
             </div>
             <p className="mt-8 text-slate-500 text-sm max-w-xl mx-auto">
               Zvolte roli poradce nebo klienta na stránce přihlášení.
@@ -1614,14 +1751,14 @@ export default function PremiumLandingPage() {
       {/* --- FOOTER (ROZŠÍŘENÝ O SEO A PRÁVNÍ ODKAZY) --- */}
       <footer className="bg-[#060918] text-slate-500 py-16 px-6 border-t border-white/10">
         <ScrollReveal>
-          <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
+          <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-16">
             
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
                 <img src="/Aidvisora logo A.png" alt="" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
                 <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
               </Link>
-              <p className="text-sm max-w-sm leading-relaxed mb-6">Pracovní systém pro finanční poradce — klient, dokumenty, úkoly a obchod v jednom toku.</p>
+              <p className="text-sm max-w-sm leading-relaxed mb-6">Pracovní systém pro finanční poradce a týmy. CRM, klientská zóna a workflow na jednom místě.</p>
               <p className="text-xs">
                 <a href="mailto:podpora@aidvisora.cz" className="hover:text-white transition-colors">podpora@aidvisora.cz</a>
               </p>
@@ -1630,32 +1767,44 @@ export default function PremiumLandingPage() {
             <div>
               <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Produkt</h4>
               <ul className="space-y-4 text-sm">
-                <li><a href="#moduly" className="hover:text-white transition-colors">Moduly</a></li>
+                <li><a href="#aplikace" className="hover:text-white transition-colors">Vlastnosti CRM</a></li>
                 <li><a href="#klientska-zona" className="hover:text-white transition-colors">Klientská zóna</a></li>
                 <li><Link href="/prihlaseni" className="hover:text-white transition-colors">Portál Aidvisora</Link></li>
-                <li><a href="#hlavni-workflow" className="hover:text-white transition-colors">Workflow</a></li>
-                <li><a href="#duvera-a-bezpecnost" className="hover:text-white transition-colors">Data a důvěra</a></li>
+                <li><a href="#ai-asistent" className="hover:text-white transition-colors">AI Asistent</a></li>
                 <li><a href="#cenik" className="hover:text-white transition-colors">Ceník a tarify</a></li>
                 <li><a href="#integrace" className="hover:text-white transition-colors">Integrace</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Na stránce</h4>
+              <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Use Cases (SEO)</h4>
               <ul className="space-y-4 text-sm">
-                <li><a href="#bolesti" className="hover:text-white transition-colors">Kde to bolí</a></li>
-                <li><a href="#proc-aidvisora" className="hover:text-white transition-colors">Proč Aidvisora</a></li>
-                <li><a href="#demo-video" className="hover:text-white transition-colors">Demo video</a></li>
-                <li><a href="#faq" className="hover:text-white transition-colors">Časté dotazy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">CRM pro poradce</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Klientská zóna pro poradce</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">AI pro finance</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pipeline pro hypotéky</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Digitální správa klientů</a></li>
               </ul>
             </div>
 
             <div>
-               <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Právní</h4>
+              <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Blog & Návody</h4>
+              <ul className="space-y-4 text-sm">
+                <li><a href="#" className="hover:text-white transition-colors">Jak digitalizovat praxi</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Jak zvýšit follow-up rate</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Využití AI v poradenství</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Průvodce klientskou zónou</a></li>
+              </ul>
+            </div>
+
+            <div>
+               <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Právní a Bezpečnost</h4>
                <ul className="space-y-4 text-sm">
                 <li><Link href="/terms" className="hover:text-white transition-colors">Obchodní podmínky</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Zásady ochrany (GDPR)</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Cookies</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Nastavení Cookies</Link></li>
+                <li><a href="#" className="hover:text-white transition-colors">SLA a Onboarding Support</a></li>
+                <li><a href="#" className="hover:text-emerald-400 transition-colors flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Status systému</a></li>
               </ul>
             </div>
 

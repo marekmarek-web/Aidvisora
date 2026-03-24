@@ -7,6 +7,7 @@ import { contacts } from "db";
 import { eq, and, lte, isNotNull, isNull } from "db";
 import { sendEmail } from "@/lib/email/send-email";
 import { serviceReminderTemplate } from "@/lib/email/templates";
+import { loadAdvisorMailHeadersForCurrentUser } from "@/lib/email/advisor-mail-headers";
 
 /**
  * Process service reminders: find contacts with upcoming/due service,
@@ -44,6 +45,8 @@ export async function processServiceReminders(): Promise<{
   const errors: string[] = [];
   let sent = 0;
 
+  const headers = await loadAdvisorMailHeadersForCurrentUser();
+
   for (const c of dueContacts) {
     const contactName = `${c.firstName} ${c.lastName}`;
 
@@ -58,6 +61,8 @@ export async function processServiceReminders(): Promise<{
         to: c.email,
         subject: template.subject,
         html: template.html,
+        from: headers.from,
+        replyTo: headers.replyTo,
       });
       if (result.ok) {
         sent++;

@@ -3,103 +3,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { getMembership } from "@/lib/auth/get-membership";
+import { provisionWorkspaceIfNeeded } from "@/lib/auth/ensure-workspace";
+import type { EnsureMembershipResult } from "@/lib/auth/ensure-workspace";
 import { db } from "db";
 import { tenants, roles, memberships, clientContacts, clientInvitations, contacts, userProfiles, advisorPreferences } from "db";
 import { eq, and, ne, gt, inArray } from "db";
 
-export type EnsureMembershipResult =
-  | { ok: true; redirectTo: string }
-  | { ok: false; error: string; redirectTo?: string };
-
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
-  try {
-    let supabase;
-    try {
-      supabase = await createClient();
-    } catch (e) {
-      const m = e instanceof Error ? e.message : String(e);
-      return { ok: false, error: m || "Chyba připojení k Supabase." };
-    }
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return { ok: false, error: "Nejprve se přihlaste.", redirectTo: "/" };
-    }
-    const existing = await getMembership(user.id);
-    if (existing) {
-      const redirectTo = existing.roleName === "Client" ? "/client" : "/portal/today";
-      return { ok: true, redirectTo };
-    }
-    const email = user.email ?? "";
-    const slug =
-      email.replace(/@.*/, "").replace(/[^a-z0-9]/gi, "-").toLowerCase().slice(0, 20) ||
-      "workspace";
-    const [tenant] = await db
-      .insert(tenants as any)
-      .values({
-        name: "Můj workspace",
-        slug: slug + "-" + Math.random().toString(36).slice(2, 8),
-      })
-      .returning({ id: tenants.id, slug: tenants.slug } as any);
-    if (!tenant) return { ok: false, error: "Nepodařilo se vytvořit workspace." };
-    const [adminRole] = await db
-      .insert(roles as any)
-      .values({ tenantId: tenant.id, name: "Admin" })
-      .returning({ id: roles.id } as any);
-    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Advisor" }).returning({ id: roles.id } as any);
-    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Manager" }).returning({ id: roles.id } as any);
-    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Director" }).returning({ id: roles.id } as any);
-    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Viewer" }).returning({ id: roles.id } as any);
-    await db.insert(roles as any).values({ tenantId: tenant.id, name: "Client" }).returning({ id: roles.id } as any);
-    if (!adminRole) return { ok: false, error: "Nepodařilo se vytvořit roli." };
-    await db.insert(memberships as any).values({
-      tenantId: tenant.id,
-      userId: user.id,
-      roleId: adminRole.id,
-    });
-    return { ok: true, redirectTo: "/portal/today" };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("relation") && msg.includes("does not exist")) {
-      return {
-        ok: false,
-        error: "V databázi chybí tabulky. V repozitáři spusť: pnpm db:apply-schema (s DATABASE_URL na tento Supabase projekt).",
-      };
-    }
-    if (msg.includes("connection") || msg.includes("ECONNREFUSED") || msg.includes("timeout")) {
-      return {
-        ok: false,
-        error: "Nepodařilo se připojit k databázi. Zkontrolujte DATABASE_URL na Vercelu a že Supabase projekt běží.",
-      };
-    }
-    if (msg.includes("authentication") || msg.includes("password")) {
-      return {
-        ok: false,
-        error: "Chyba přihlášení k databázi. Zkontrolujte heslo v DATABASE_URL na Vercelu.",
-      };
-    }
-    if (msg.includes("SUPABASE") || msg.includes("supabase") || msg.includes("NEXT_PUBLIC")) {
-      return {
-        ok: false,
-        error: "Chybí nebo je špatně nastavená proměnná Supabase na Vercelu (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY).",
-      };
-    }
-    if (msg.includes("DATABASE_URL")) {
-      return {
-        ok: false,
-        error: "Na Vercelu v Environment Variables přidej DATABASE_URL (celý connection string z Supabase → Database).",
-      };
-    }
-    if (msg.includes("MaxClients") || msg.includes("max clients") || msg.toLowerCase().includes("pool")) {
-      return {
-        ok: false,
-        error: "Server je momentálně přetížen. Zkuste to za minutu znovu.",
-      };
-    }
-    return { ok: false, error: msg || "Nepodařilo se dokončit registraci." };
-  }
+  return provisionWorkspaceIfNeeded();
 }
 
 /** Vytvoří pozvánku do Client Zone a vrátí odkaz. E-mail se odešle v EPIC 7 (Resend). */
