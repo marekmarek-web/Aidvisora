@@ -2,6 +2,11 @@ import type { ExtractedContractSchema } from "./extraction-schemas";
 import type { DraftActionBase } from "./review-queue";
 import type { DocumentReviewEnvelope } from "./document-review-types";
 import { resolveDocumentSchema } from "./document-schema-router";
+import {
+  computeDraftPremiums,
+  computeDraftPremiumsFromEnvelope,
+  pickFirstAmount,
+} from "./contract-draft-premiums";
 
 export { findClientCandidates } from "./client-matching";
 export type { ClientMatchingContext } from "./client-matching";
@@ -65,6 +70,9 @@ export function buildCreateClientDraft(extracted: ExtractedContractSchema): Draf
 }
 
 export function buildCreateContractDraft(extracted: ExtractedContractSchema): DraftActionBase {
+  const primary = String(extracted.documentType ?? "");
+  const segment = resolveSegmentFromType(primary || "life_insurance_contract");
+  const { premiumAmount, premiumAnnual } = computeDraftPremiums(segment, extracted);
   return {
     type: "create_contract",
     label: "Vytvořit smlouvu v CRM",
@@ -75,6 +83,9 @@ export function buildCreateContractDraft(extracted: ExtractedContractSchema): Dr
       effectiveDate: extracted.effectiveDate,
       expirationDate: extracted.expirationDate,
       documentType: extracted.documentType,
+      segment,
+      premiumAmount,
+      premiumAnnual,
     },
   };
 }
@@ -165,7 +176,16 @@ function toLegacyProjection(envelope: DocumentReviewEnvelope): ExtractedContract
       address: String(fieldValue(envelope, "address") ?? ""),
     },
     paymentDetails: {
-      amount: fieldValue(envelope, "loanAmount") as number | string | undefined,
+      amount:
+        pickFirstAmount(
+          fieldValue(envelope, "regularAmount"),
+          fieldValue(envelope, "premium"),
+          fieldValue(envelope, "monthlyPremium"),
+          fieldValue(envelope, "annualPremium"),
+          fieldValue(envelope, "loanAmount"),
+          fieldValue(envelope, "installmentAmount"),
+          fieldValue(envelope, "amount")
+        ) ?? undefined,
       currency: String(fieldValue(envelope, "currency") ?? ""),
       frequency: String(fieldValue(envelope, "paymentFrequency") ?? ""),
       iban: String(fieldValue(envelope, "ibanMasked") ?? fieldValue(envelope, "iban") ?? ""),
@@ -260,6 +280,21 @@ export function buildAllDraftActions(
     actions.push(buildCreateClientDraft(legacy));
   }
   if (requested.includes("create_or_update_contract_record")) {
+    const pt = maybeEnvelope.documentClassification.primaryType;
+    const segment = resolveSegmentFromType(pt);
+    const premiums = computeDraftPremiumsFromEnvelope(maybeEnvelope, segment);
+    const inst = String(
+      fieldValue(maybeEnvelope, "insurer") ??
+        fieldValue(maybeEnvelope, "lender") ??
+        fieldValue(maybeEnvelope, "bankName") ??
+        ""
+    ).trim();
+    const eff = String(
+      fieldValue(maybeEnvelope, "policyStartDate") ??
+        fieldValue(maybeEnvelope, "disbursementDate") ??
+        fieldValue(maybeEnvelope, "effectiveDate") ??
+        ""
+    ).trim();
     actions.push({
       type: "create_or_update_contract_record",
       label: "Vytvořit nebo aktualizovat smlouvu",
@@ -267,7 +302,12 @@ export function buildAllDraftActions(
         contractNumber: fieldValue(maybeEnvelope, "contractNumber") ?? fieldValue(maybeEnvelope, "existingPolicyNumber"),
         productName: fieldValue(maybeEnvelope, "productName"),
         lifecycleStatus: maybeEnvelope.documentClassification.lifecycleStatus,
-        segment: resolveSegmentFromType(maybeEnvelope.documentClassification.primaryType),
+        segment,
+        institutionName: inst || null,
+        effectiveDate: eff || null,
+        documentType: pt,
+        premiumAmount: premiums.premiumAmount,
+        premiumAnnual: premiums.premiumAnnual,
       },
     });
   }
