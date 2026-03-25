@@ -61,7 +61,7 @@ import {
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
 import { AiSupportButton } from "@/app/client/AiSupportButton";
-import type { ClientMobileInitialData } from "./ClientMobileApp";
+import type { ClientMobileInitialData } from "./client-mobile-initial-data";
 
 type TabId = "home" | "messages" | "documents" | "requests" | "menu";
 
