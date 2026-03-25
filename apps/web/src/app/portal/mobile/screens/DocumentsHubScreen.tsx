@@ -314,6 +314,12 @@ function DocumentDetailPanel({
           <span className="text-xs text-slate-500">Zdroj</span>
           <span className="text-xs font-bold text-slate-900">{getSourceLabel(doc.uploadSource)}</span>
         </div>
+        {doc.sizeBytes ? (
+          <div className="flex items-center justify-between py-3 px-0.5">
+            <span className="text-xs text-slate-500">Velikost</span>
+            <span className="text-xs font-bold text-slate-900">{formatSize(doc.sizeBytes)}</span>
+          </div>
+        ) : null}
         {doc.pageCount ? (
           <div className="flex items-center justify-between py-3 px-0.5">
             <span className="text-xs text-slate-500">Počet stran</span>

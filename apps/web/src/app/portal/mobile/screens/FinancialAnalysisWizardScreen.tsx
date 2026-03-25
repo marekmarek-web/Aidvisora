@@ -7,6 +7,7 @@ import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { loadFromStorage, clearStorage } from "@/lib/analyses/financial/saveLoad";
 import { FinancialAnalysisLayout } from "@/app/portal/analyses/financial/components/FinancialAnalysisLayout";
 import { getFinancialAnalysis } from "@/app/actions/financial-analyses";
+import { humanizeAdvisorActionError } from "@/lib/ui/humanize-action-error";
 
 function withTimeout<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
   return Promise.race([
@@ -47,11 +48,13 @@ export function FinancialAnalysisWizardScreen() {
   const loadFromFile = useFinancialAnalysisStore((s) => s.loadFromFile);
 
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error" | "timeout">("idle");
+  const [loadErrorHint, setLoadErrorHint] = useState<string | null>(null);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
 
   const retryLoad = useCallback(() => {
     setLoadState("idle");
+    setLoadErrorHint(null);
     setReloadNonce((n) => n + 1);
   }, []);
 
@@ -60,6 +63,7 @@ export function FinancialAnalysisWizardScreen() {
     const fromImport = searchParams.get("fromImport");
     if (id) {
       setLoadState("loading");
+      setLoadErrorHint(null);
       withTimeout(getFinancialAnalysis(id))
         .catch(async (err) => {
           if (err?.message === "Timeout") {
@@ -84,14 +88,17 @@ export function FinancialAnalysisWizardScreen() {
               setLoadState("ok");
             } catch (e) {
               console.error("[FinancialAnalysisWizardScreen] failed to hydrate analysis payload", e);
+              setLoadErrorHint(humanizeAdvisorActionError(e, "Data analýzy jsou poškozená nebo nekompatibilní."));
               setLoadState("error");
             }
           } else {
+            setLoadErrorHint("Analýza nebyla nalezena nebo k ní nemáte přístup.");
             setLoadState("error");
           }
         })
         .catch((err) => {
           console.error("[FinancialAnalysisWizardScreen] getFinancialAnalysis failed", err);
+          setLoadErrorHint(humanizeAdvisorActionError(err, "Analýzu se nepodařilo načíst."));
           setLoadState(err?.message === "Timeout" ? "timeout" : "error");
         });
       return;
@@ -190,7 +197,11 @@ export function FinancialAnalysisWizardScreen() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 text-center gap-3">
         <p className="text-slate-700 font-medium">Analýzu se nepodařilo načíst.</p>
-        <p className="text-slate-500 text-sm">Zkontrolujte připojení nebo zkuste začít novou analýzu.</p>
+        {loadErrorHint ? (
+          <p className="text-slate-600 text-sm max-w-md">{loadErrorHint}</p>
+        ) : (
+          <p className="text-slate-500 text-sm">Zkontrolujte připojení nebo zkuste začít novou analýzu.</p>
+        )}
         <Link
           href="/portal/analyses/financial"
           className="min-h-[44px] inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"

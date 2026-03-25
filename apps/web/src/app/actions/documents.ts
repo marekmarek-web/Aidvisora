@@ -24,6 +24,8 @@ export type DocumentRow = {
   aiInputSource: string | null;
   pageCount: number | null;
   isScanLike: boolean | null;
+  /** Velikost souboru v bytech (DB `size_bytes`). */
+  sizeBytes: number | null;
 };
 
 const documentSelectFields = {
@@ -40,6 +42,7 @@ const documentSelectFields = {
   aiInputSource: documents.aiInputSource,
   pageCount: documents.pageCount,
   isScanLike: documents.isScanLike,
+  sizeBytes: documents.sizeBytes,
 } as const;
 
 export async function listDocuments(): Promise<(DocumentRow & { contactName?: string | null })[]> {
@@ -70,6 +73,7 @@ export async function listDocuments(): Promise<(DocumentRow & { contactName?: st
     aiInputSource: r.aiInputSource,
     pageCount: r.pageCount,
     isScanLike: r.isScanLike,
+    sizeBytes: r.sizeBytes ?? null,
     contactName: r.contactFirstName && r.contactLastName
       ? `${r.contactFirstName} ${r.contactLastName}`
       : r.contactFirstName || r.contactLastName || null,

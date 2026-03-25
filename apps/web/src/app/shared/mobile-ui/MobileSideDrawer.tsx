@@ -23,6 +23,7 @@ import {
   UsersRound,
   UserPlus,
   Zap,
+  ScanLine,
 } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
@@ -95,6 +96,9 @@ function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSec
       : []),
     ...(hasPermission(roleName, "documents:read")
       ? [{ href: "/portal/documents", label: "Dokumenty", Icon: FileText } as DrawerNavItem]
+      : []),
+    ...(hasPermission(roleName, "documents:read")
+      ? [{ href: "/portal/scan", label: "Skenovat dokument", Icon: ScanLine } as DrawerNavItem]
       : []),
     ...(hasPermission(roleName, "contacts:write")
       ? [{ href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3 } as DrawerNavItem]
@@ -169,14 +173,34 @@ export function MobileSideDrawer({
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prevOverflow = body.style.overflow;
+    const prevPosition = body.style.position;
+    const prevTop = body.style.top;
+    const prevLeft = body.style.left;
+    const prevRight = body.style.right;
+    const prevWidth = body.style.width;
+
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      body.style.overflow = prevOverflow;
+      body.style.position = prevPosition;
+      body.style.top = prevTop;
+      body.style.left = prevLeft;
+      body.style.right = prevRight;
+      body.style.width = prevWidth;
+      window.scrollTo(0, scrollY);
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
@@ -186,10 +210,15 @@ export function MobileSideDrawer({
   const widthClass = deviceClass === "tablet" ? "w-[320px]" : "w-[min(85vw,320px)]";
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-row" role="dialog" aria-modal="true" aria-label="Menu">
+    <div
+      className="fixed inset-0 z-[100] flex min-h-0 flex-row overscroll-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu"
+    >
       <aside
         className={cx(
-          "h-full bg-white shadow-xl flex flex-col border-r border-slate-100 animate-in slide-in-from-left duration-300 ease-out shrink-0",
+          "flex h-full min-h-0 min-w-0 flex-col border-r border-slate-100 bg-white shadow-xl animate-in slide-in-from-left duration-300 ease-out shrink-0",
           widthClass
         )}
       >
@@ -210,7 +239,7 @@ export function MobileSideDrawer({
 
         {searchSlot ? <div className="px-3 py-2 border-b border-slate-100">{searchSlot}</div> : null}
 
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+        <nav className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-3 space-y-5">
           {sections.map((sec) => (
             <div key={sec.id}>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 mb-2">{sec.title}</p>

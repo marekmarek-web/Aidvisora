@@ -219,41 +219,43 @@ function PortalShellInner({
                 </button>
               )}
             </div>
-            {/* From sm: show all. Below sm: overflow menu */}
+            {/* sm+: full header actions. Below sm: Nový is inline (Safari iPhone) so Scan is not buried under ⋮ */}
             <div className="hidden sm:flex items-center gap-2 shrink-0">
               <QuickNewMenu />
               <NotificationBell />
               <UserMenu />
             </div>
-            <div className="relative sm:hidden shrink-0">
-              <button
-                type="button"
-                onClick={() => setOverflowOpen((o) => !o)}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
-                aria-label="Další akce"
-                aria-expanded={overflowOpen}
-              >
-                <MoreVertical size={22} />
-              </button>
-              {overflowOpen && (
-                <>
-                  <div className="fixed inset-0 z-overlay" aria-hidden onClick={() => setOverflowOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-dropdown w-56 py-1 bg-white border border-slate-200 rounded-xl shadow-xl">
-                    <div className="px-3 py-2 border-b border-slate-100">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Akce</span>
-                    </div>
-                    <div className="py-1" onClick={() => setOverflowOpen(false)}>
-                      <QuickNewMenu />
-                      <div className="flex items-center gap-2 px-3 py-2">
-                        <NotificationBell />
+            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+              <QuickNewMenu />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOverflowOpen((o) => !o)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                  aria-label="Další akce"
+                  aria-expanded={overflowOpen}
+                >
+                  <MoreVertical size={22} />
+                </button>
+                {overflowOpen && (
+                  <>
+                    <div className="fixed inset-0 z-overlay" aria-hidden onClick={() => setOverflowOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-dropdown w-56 py-1 bg-white border border-slate-200 rounded-xl shadow-xl">
+                      <div className="px-3 py-2 border-b border-slate-100">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Další</span>
                       </div>
-                      <div className="px-2">
-                        <UserMenu />
+                      <div className="py-1" onClick={() => setOverflowOpen(false)}>
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <NotificationBell />
+                        </div>
+                        <div className="px-2">
+                          <UserMenu />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </header>
           <div className="flex-1 flex min-h-0 wp-app-content pb-[var(--safe-area-bottom)]">

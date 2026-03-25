@@ -417,7 +417,7 @@ export function PortalSidebar({
           width: isMobileState ? "min(85vw, 280px)" : `${effectiveWidth}px`,
         }}
       >
-        {/* Header – collapsed: jen symbol (Advisora logo A); expanded: jen velké logo (Aidvisora logo big) */}
+        {/* Header – collapsed: symbol A; expanded: logos/Aidvisora logo.png → public/logos */}
         <div
           className={[
             "h-20 flex items-center justify-between px-5 flex-shrink-0",
@@ -440,7 +440,7 @@ export function PortalSidebar({
             ) : (
               <img
                 key="logo-big"
-                src="/Aidvisora logo.png"
+                src="/logos/Aidvisora%20logo.png"
                 alt="Aidvisora"
                 className="h-16 max-h-16 w-auto max-w-full object-contain object-left flex-shrink-0"
                 style={sidebarTheme === "gradient" ? { filter: "brightness(0) invert(1)" } : undefined}

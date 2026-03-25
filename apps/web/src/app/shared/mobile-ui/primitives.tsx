@@ -22,8 +22,8 @@ export function MobileAppShell({
     <div
       className={cx(
         "min-h-screen bg-slate-50 text-slate-900 flex flex-col",
-        deviceClass === "phone" && "pb-[calc(80px+var(--safe-area-bottom))]",
-        deviceClass === "tablet" && "pb-[calc(64px+var(--safe-area-bottom))]",
+        deviceClass === "phone" && "pb-[calc(96px+var(--safe-area-bottom))]",
+        deviceClass === "tablet" && "pb-[calc(72px+var(--safe-area-bottom))]",
         deviceClass === "desktop" && "pb-0",
         className
       )}
@@ -69,18 +69,78 @@ export function MobileHeader({
   );
 }
 
+function NavTabButton({
+  item,
+  active,
+  deviceClass,
+  onSelect,
+}: {
+  item: { id: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: number };
+  active: boolean;
+  deviceClass: DeviceClass;
+  onSelect: (id: string) => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(item.id)}
+      aria-label={item.label}
+      aria-current={active ? "page" : undefined}
+      className={cx(
+        "min-h-[44px] rounded-xl transition-colors duration-150",
+        deviceClass === "tablet"
+          ? "flex items-center gap-2 px-4 py-1.5 text-sm font-bold"
+          : "flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
+        active ? "text-indigo-700 bg-indigo-50" : "text-slate-500 hover:text-slate-700"
+      )}
+    >
+      <div className="relative flex-shrink-0">
+        {createElement(Icon, { size: deviceClass === "tablet" ? 18 : 20 })}
+        {item.badge && item.badge > 0 ? (
+          <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">
+            {item.badge > 9 ? "9+" : item.badge}
+          </span>
+        ) : null}
+      </div>
+      <span className={deviceClass === "tablet" ? "" : "truncate max-w-[56px]"}>{item.label}</span>
+    </button>
+  );
+}
+
 export function MobileBottomNav({
   items,
   activeId,
   onSelect,
   deviceClass = "phone",
+  centerFab,
 }: {
   items: Array<{ id: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: number }>;
   /** When null, no tab is shown as active (e.g. deep-linked tool routes). */
   activeId: string | null;
   onSelect: (id: string) => void;
   deviceClass?: DeviceClass;
+  /** Center “+” — same quick-new affordance as desktop header (4 surrounding tabs). */
+  centerFab?: { onClick: () => void; ariaLabel?: string };
 }) {
+  const useFab = Boolean(centerFab) && items.length === 4;
+  const left = useFab ? items.slice(0, 2) : items;
+  const right = useFab ? items.slice(2, 4) : [];
+
+  const fabButton = centerFab ? (
+    <button
+      type="button"
+      onClick={centerFab.onClick}
+      aria-label={centerFab.ariaLabel ?? "Nový – rychlé akce"}
+      className={cx(
+        "rounded-full bg-[#1a1c2e] text-white shadow-lg shadow-indigo-950/20 flex items-center justify-center active:scale-95 transition-transform border-4 border-white shrink-0",
+        deviceClass === "tablet" ? "w-12 h-12 -translate-y-1" : "w-14 h-14 -translate-y-2"
+      )}
+    >
+      <Plus size={deviceClass === "tablet" ? 22 : 26} strokeWidth={2.5} className="shrink-0" />
+    </button>
+  ) : null;
+
   return (
     <nav
       className={cx(
@@ -88,44 +148,69 @@ export function MobileBottomNav({
         "pb-[max(0.5rem,var(--safe-area-bottom))]"
       )}
     >
-      <div
-        className={cx(
-          deviceClass === "tablet"
-            ? "flex justify-around px-6 py-1.5 max-w-3xl mx-auto"
-            : "grid grid-cols-5 gap-1 px-2 py-2"
-        )}
-      >
-        {items.map((item) => {
-          const Icon = item.icon;
-          const active = activeId != null && item.id === activeId;
-          return (
-            <button
+      {useFab && deviceClass === "phone" ? (
+        <div className="grid grid-cols-5 gap-0.5 px-1 pt-1 pb-2 items-end max-w-lg mx-auto">
+          {left.map((item) => (
+            <NavTabButton
               key={item.id}
-              type="button"
-              onClick={() => onSelect(item.id)}
-              aria-label={item.label}
-              aria-current={active ? "page" : undefined}
-              className={cx(
-                "min-h-[44px] rounded-xl transition-colors duration-150",
-                deviceClass === "tablet"
-                  ? "flex items-center gap-2 px-4 py-1.5 text-sm font-bold"
-                  : "flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
-                active ? "text-indigo-700 bg-indigo-50" : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              <div className="relative flex-shrink-0">
-                {createElement(Icon, { size: deviceClass === "tablet" ? 18 : 20 })}
-                {item.badge && item.badge > 0 ? (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">
-                    {item.badge > 9 ? "9+" : item.badge}
-                  </span>
-                ) : null}
-              </div>
-              <span className={deviceClass === "tablet" ? "" : "truncate max-w-[60px]"}>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
+              item={item}
+              active={activeId != null && item.id === activeId}
+              deviceClass={deviceClass}
+              onSelect={onSelect}
+            />
+          ))}
+          <div className="flex justify-center pb-0.5">{fabButton}</div>
+          {right.map((item) => (
+            <NavTabButton
+              key={item.id}
+              item={item}
+              active={activeId != null && item.id === activeId}
+              deviceClass={deviceClass}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      ) : useFab && (deviceClass === "tablet" || deviceClass === "desktop") ? (
+        <div className="flex items-end justify-between gap-2 px-4 pt-1 pb-2 max-w-3xl mx-auto">
+          {left.map((item) => (
+            <NavTabButton
+              key={item.id}
+              item={item}
+              active={activeId != null && item.id === activeId}
+              deviceClass={deviceClass === "desktop" ? "tablet" : deviceClass}
+              onSelect={onSelect}
+            />
+          ))}
+          <div className="flex justify-center px-1 pb-0.5">{fabButton}</div>
+          {right.map((item) => (
+            <NavTabButton
+              key={item.id}
+              item={item}
+              active={activeId != null && item.id === activeId}
+              deviceClass={deviceClass === "desktop" ? "tablet" : deviceClass}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          className={cx(
+            deviceClass === "tablet"
+              ? "flex justify-around px-6 py-1.5 max-w-3xl mx-auto"
+              : "grid grid-cols-5 gap-1 px-2 py-2"
+          )}
+        >
+          {items.map((item) => (
+            <NavTabButton
+              key={item.id}
+              item={item}
+              active={activeId != null && item.id === activeId}
+              deviceClass={deviceClass}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
     </nav>
   );
 }

@@ -84,6 +84,7 @@ import { MobileShellErrorBoundary } from "@/app/shared/mobile-ui/MobileShellErro
 import { ToastProvider } from "@/app/components/Toast";
 import { PortalFeedbackLauncher } from "@/app/portal/PortalFeedbackLauncher";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { QuickNewMobileSheet } from "./QuickNewMobileSheet";
 import { HouseholdsListMobileScreen } from "./screens/HouseholdsListMobileScreen";
 import { MessagesMobileScreen } from "./screens/MessagesMobileScreen";
 import { NotesMobileScreen } from "./screens/NotesMobileScreen";
@@ -127,7 +128,7 @@ const ActionCenterScreen = dynamic(
   { loading: () => <RouteLoadingSkeleton /> },
 );
 
-type TabId = "home" | "tasks" | "clients" | "pipeline" | "ai" | "none";
+type TabId = "home" | "tasks" | "clients" | "pipeline" | "none";
 type TaskFilter = "all" | "today" | "week" | "overdue" | "completed";
 
 /** Bottom navigation highlight only for primary tabs; other routes use `none`. */
@@ -136,7 +137,6 @@ function pathnameToBottomTab(pathname: string): TabId {
   if (pathname.startsWith("/portal/tasks")) return "tasks";
   if (pathname.startsWith("/portal/contacts")) return "clients";
   if (pathname.startsWith("/portal/pipeline")) return "pipeline";
-  if (pathname.startsWith("/portal/ai")) return "ai";
   return "none";
 }
 
@@ -246,7 +246,6 @@ function resolveHeaderMeta(
   if (tab === "tasks") return { title: "Úkoly", subtitle };
   if (tab === "clients") return { title: "Klienti", subtitle };
   if (tab === "pipeline") return { title: "Pipeline", subtitle };
-  if (tab === "ai") return { title: "AI Asistent", subtitle };
   return { title: "Aidvisora", subtitle };
 }
 
@@ -323,6 +322,7 @@ export function MobilePortalClient({
   });
   const [opportunityDetailOpen, setOpportunityDetailOpen] = useState(false);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
+  const [quickNewOpen, setQuickNewOpen] = useState(false);
 
   const selectedContactId = parseContactIdFromPath(pathname);
   const selectedOpportunityPathId = parseOpportunityIdFromPath(pathname);
@@ -428,7 +428,6 @@ export function MobilePortalClient({
     else if (next === "tasks") router.push("/portal/tasks");
     else if (next === "clients") router.push("/portal/contacts");
     else if (next === "pipeline") router.push("/portal/pipeline");
-    else if (next === "ai") router.push("/portal/ai");
     else return;
     setTab(next);
   }
@@ -584,7 +583,6 @@ export function MobilePortalClient({
     { id: "tasks", label: "Úkoly", icon: CheckSquare, badge: taskCounts.overdue > 0 ? taskCounts.overdue : undefined },
     { id: "clients", label: "Klienti", icon: Users },
     { id: "pipeline", label: "Pipeline", icon: Briefcase },
-    { id: "ai", label: "AI", icon: Sparkles, badge: notificationBadgeCount > 0 ? notificationBadgeCount : undefined },
   ];
 
   /** Exactly one screen mounts per render — no more overlapping conditionals. */
@@ -1131,11 +1129,20 @@ export function MobilePortalClient({
         )}
       </FullscreenSheet>
 
+      <QuickNewMobileSheet open={quickNewOpen} onClose={() => setQuickNewOpen(false)} />
+
       <MobileBottomNav
         items={navItems}
         activeId={tab === "none" ? null : tab}
         onSelect={(id) => navigateTab(id as TabId)}
         deviceClass={deviceClass}
+        centerFab={{
+          onClick: () => {
+            setDrawerOpen(false);
+            setQuickNewOpen(true);
+          },
+          ariaLabel: "Nový – rychlé akce",
+        }}
       />
     </MobileAppShell>
     <PortalFeedbackLauncher variant="mobile" />

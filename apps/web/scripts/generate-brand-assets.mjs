@@ -1,7 +1,8 @@
 /**
- * Builds Capacitor `assets/*` and web icons from repo root `logos/aidvisora-mark.png`.
+ * Builds Capacitor `assets/*` and web icons from repo root `logos/Aidvisora favicon.png`.
  */
 import { mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -9,27 +10,37 @@ import sharp from "sharp";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.join(__dirname, "..");
 const monorepoRoot = path.join(webRoot, "..", "..");
-const sourcePath = path.join(monorepoRoot, "logos", "aidvisora-mark.png");
+const sourcePath = path.join(monorepoRoot, "logos", "Aidvisora favicon.png");
 const assetsDir = path.join(webRoot, "assets");
 const publicDir = path.join(webRoot, "public");
 
 const black = { r: 0, g: 0, b: 0, alpha: 1 };
+const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
 
 async function main() {
+  if (!existsSync(sourcePath)) {
+    console.error("Missing source image:", sourcePath);
+    process.exit(1);
+  }
+
   await mkdir(assetsDir, { recursive: true });
 
   const iconSize = 1024;
-  const logoMax = 880;
+  const logoMax = 900;
   const logoBuf = await sharp(sourcePath)
     .resize(logoMax, logoMax, { fit: "inside", withoutEnlargement: true })
     .toBuffer();
 
+  // App / PWA icon: centered on transparent 1024² (matches favicon artwork).
   await sharp({
-    create: { width: iconSize, height: iconSize, channels: 4, background: black },
+    create: { width: iconSize, height: iconSize, channels: 4, background: transparent },
   })
     .composite([{ input: logoBuf, gravity: "center" }])
     .png()
     .toFile(path.join(assetsDir, "icon-only.png"));
+
+  // @capacitor/assets expects `assets/icon.png` (1024).
+  await sharp(path.join(assetsDir, "icon-only.png")).png().toFile(path.join(assetsDir, "icon.png"));
 
   const splashSize = 2732;
   const splashSide = Math.round(splashSize * 0.35);
@@ -50,7 +61,9 @@ async function main() {
 
   await sharp(path.join(assetsDir, "icon-only.png")).resize(180, 180).png().toFile(path.join(publicDir, "apple-touch-icon.png"));
 
-  console.log("Wrote assets/icon-only.png, splash.png, splash-dark.png, public/favicon.png, public/apple-touch-icon.png");
+  console.log(
+    "Wrote assets/icon.png, icon-only.png, splash*.png, public/favicon.png, public/apple-touch-icon.png (run pnpm cap:assets for WebP + native icons)",
+  );
 }
 
 main().catch((e) => {

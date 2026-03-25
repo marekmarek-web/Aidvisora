@@ -41,7 +41,12 @@ export function FinancialAnalysisStepper() {
               >
                 {isCompleted ? <Check className="w-5 h-5" /> : stepNum}
               </div>
-              <span className={clsx("text-xs font-bold uppercase tracking-wider mt-2 hidden md:block", isActive ? "text-slate-800" : "text-slate-400")}>
+              <span
+                className={clsx(
+                  "text-[9px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wider mt-1.5 sm:mt-2 text-center leading-tight max-w-[3.25rem] sm:max-w-[5.5rem] line-clamp-2 sm:line-clamp-3",
+                  isActive ? "text-slate-800" : "text-slate-400"
+                )}
+              >
                 {title}
               </span>
             </button>

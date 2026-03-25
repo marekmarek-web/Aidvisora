@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition } from "react";
+import { useState, useMemo, useEffect, useTransition, useRef, useCallback } from "react";
 import {
   Users,
   Calendar,
@@ -73,8 +73,8 @@ function QuickMoveSheet({
       <p className="text-sm font-bold text-slate-800 mb-3 truncate">{opp.title}</p>
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Vyberte fázi</p>
       <div className="space-y-1.5 max-h-[min(60vh,420px)] overflow-y-auto">
-        {stages.map((stage, stageIdx) => {
-          const theme = getPipelineColumnTheme(stageIdx);
+        {stages.map((stage) => {
+          const theme = getPipelineColumnTheme(stage.sortOrder);
           return (
             <button
               key={stage.id}
@@ -310,8 +310,8 @@ function OpportunityDetailSheet({
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Posunout do fáze</p>
             <div className="space-y-1.5">
-              {stages.map((stage, stageIdx) => {
-                const theme = getPipelineColumnTheme(stageIdx);
+              {stages.map((stage) => {
+                const theme = getPipelineColumnTheme(stage.sortOrder);
                 return (
                   <button
                     key={stage.id}
@@ -365,6 +365,8 @@ export interface PipelineScreenProps {
   onPipelineRefresh: () => void;
 }
 
+const LONG_PRESS_MS = 520;
+
 export function PipelineScreen({
   pipeline,
   deviceClass,
@@ -376,6 +378,28 @@ export function PipelineScreen({
 }: PipelineScreenProps) {
   const [selectedOpp, setSelectedOpp] = useState<OppSelected | null>(null);
   const [quickMoveOpp, setQuickMoveOpp] = useState<OppSelected | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const startLongPressForMove = useCallback(
+    (row: OppSelected) => {
+      clearLongPressTimer();
+      longPressTriggeredRef.current = false;
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        longPressTimerRef.current = null;
+        setQuickMoveOpp(row);
+      }, LONG_PRESS_MS);
+    },
+    [clearLongPressTimer]
+  );
 
   const totalDeals = useMemo(() => pipeline.reduce((s, st) => s + st.opportunities.length, 0), [pipeline]);
   const totalValue = useMemo(
@@ -410,7 +434,7 @@ export function PipelineScreen({
 
       <div className={cx("grid gap-3", isTablet ? "grid-cols-2" : "grid-cols-1")}>
         {pipeline.map((stage, stageIdx) => {
-          const theme = getPipelineColumnTheme(stageIdx);
+          const theme = getPipelineColumnTheme(stage.sortOrder);
           const stageValue = stage.opportunities.reduce(
             (s, o) => s + (o.expectedValue ? Number(o.expectedValue) : 0),
             0
@@ -471,8 +495,18 @@ export function PipelineScreen({
                     >
                       <button
                         type="button"
-                        onClick={() => setSelectedOpp(rowSelected)}
-                        className="flex-1 min-w-0 text-left p-3.5 active:bg-slate-50/80 transition-colors"
+                        onPointerDown={() => startLongPressForMove(rowSelected)}
+                        onPointerUp={clearLongPressTimer}
+                        onPointerCancel={clearLongPressTimer}
+                        onPointerLeave={clearLongPressTimer}
+                        onClick={() => {
+                          if (longPressTriggeredRef.current) {
+                            longPressTriggeredRef.current = false;
+                            return;
+                          }
+                          setSelectedOpp(rowSelected);
+                        }}
+                        className="flex-1 min-w-0 text-left p-3.5 active:bg-slate-50/80 transition-colors touch-manipulation"
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <p className="text-sm font-bold text-slate-900 leading-snug flex-1">{opp.title}</p>

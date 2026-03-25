@@ -57,6 +57,8 @@ export function MindmapView({ initial }: MindmapViewProps) {
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  /** Side panel only after double-tap / double-click / menu „Upravit“ / chip Upravit (not single tap). */
+  const [sidePanelNodeId, setSidePanelNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (interactionMode !== "connect") setConnectSourceId(null);
@@ -115,6 +117,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
   }, [nodes, viewport.zoom, updateViewport]);
 
   const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null;
+  const sidePanelNode = sidePanelNodeId ? nodes.find((n) => n.id === sidePanelNodeId) ?? null : null;
 
   const handleCopyNodeData = useCallback(() => {
     if (!selectedNode) return;
@@ -146,9 +149,9 @@ export function MindmapView({ initial }: MindmapViewProps) {
     [edges, nodes]
   );
 
-  const handleNodeSelectFromCanvas = useCallback(
-    (id: string | null) => {
-      if (interactionMode === "connect" && id) {
+  const handleNodeTap = useCallback(
+    (id: string) => {
+      if (interactionMode === "connect") {
         if (!connectSourceId) {
           setConnectSourceId(id);
           return;
@@ -161,15 +164,27 @@ export function MindmapView({ initial }: MindmapViewProps) {
         setConnectSourceId(null);
         setInteractionMode("select");
         setSelectedNodeId(null);
+        setSidePanelNodeId(null);
         return;
       }
       setSelectedNodeId(id);
+      setSidePanelNodeId(null);
     },
     [interactionMode, connectSourceId, addEdge, setSelectedNodeId]
   );
 
+  const handleNodeOpenEditor = useCallback(
+    (id: string) => {
+      if (interactionMode === "connect") return;
+      setSelectedNodeId(id);
+      setSidePanelNodeId(id);
+    },
+    [interactionMode, setSelectedNodeId]
+  );
+
   const handleCanvasBackgroundClick = useCallback(() => {
     setSelectedNodeId(null);
+    setSidePanelNodeId(null);
     if (interactionMode === "connect") setConnectSourceId(null);
   }, [interactionMode, setSelectedNodeId]);
 
@@ -177,6 +192,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
     (node: MindmapNode, action: NodeItemMenuAction) => {
       if (action === "edit") {
         setSelectedNodeId(node.id);
+        setSidePanelNodeId(node.id);
         return;
       }
       if (action === "delete") {
@@ -186,6 +202,8 @@ export function MindmapView({ initial }: MindmapViewProps) {
         }
         if (!window.confirm("Opravdu smazat tento uzel?")) return;
         deleteNode(node.id);
+        setSelectedNodeId((s) => (s === node.id ? null : s));
+        setSidePanelNodeId((s) => (s === node.id ? null : s));
         return;
       }
       if (action === "duplicate") {
@@ -207,7 +225,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
         );
       }
     },
-    [addNode, deleteNode, findParentId, setSelectedNodeId]
+    [addNode, deleteNode, findParentId, setSelectedNodeId, setSidePanelNodeId]
   );
 
   const handleExportPng = useCallback(async () => {
@@ -348,7 +366,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               Vyberte cílový uzel pro spojení…
             </div>
           ) : null}
-          {!selectedNode && (
+          {!sidePanelNode && (
             <div className="absolute top-3 right-3 z-10 md:top-4 md:right-4">
               <button
                 type="button"
@@ -362,7 +380,10 @@ export function MindmapView({ initial }: MindmapViewProps) {
                 <>
                   <div className="fixed inset-0 z-40" aria-hidden onClick={() => setInfoPopoverOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-white rounded-xl shadow-xl border border-slate-200 z-50 text-left text-sm text-slate-600">
-                    <p>Klikněte na uzel pro zobrazení detailu. Nebo použijte nástroje vlevo pro přidání kategorie či položky.</p>
+                    <p>
+                      Klepnutím vyberete uzel, tažením ho přesunete. Dvojité klepnutí nebo tlačítko Upravit otevře detail. Režim
+                      spojení: nástroj vlevo, pak dva uzly.
+                    </p>
                   </div>
                 </>
               )}
@@ -375,7 +396,8 @@ export function MindmapView({ initial }: MindmapViewProps) {
             selectedNodeId={selectedNodeId}
             onViewportChange={updateViewport}
             onNodePositionChange={updateNodePosition}
-            onNodeSelect={handleNodeSelectFromCanvas}
+            onNodeTap={handleNodeTap}
+            onNodeOpenEditor={handleNodeOpenEditor}
             onCanvasClick={handleCanvasBackgroundClick}
             renderNode={(node, opts) =>
               renderNodeByType(node, {
@@ -385,6 +407,17 @@ export function MindmapView({ initial }: MindmapViewProps) {
               })
             }
           />
+          {isMobile && selectedNode && !sidePanelNodeId && interactionMode === "select" ? (
+            <div className="fixed bottom-[max(5.5rem,env(safe-area-inset-bottom,0)+4.5rem)] left-1/2 -translate-x-1/2 z-[56] pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setSidePanelNodeId(selectedNode.id)}
+                className="min-h-[48px] px-6 rounded-2xl bg-indigo-600 text-white text-sm font-black shadow-lg active:scale-[0.98] transition-transform"
+              >
+                Upravit uzel
+              </button>
+            </div>
+          ) : null}
           <MindmapToolbar
             mode={interactionMode}
             onModeChange={setInteractionMode}
@@ -435,20 +468,21 @@ export function MindmapView({ initial }: MindmapViewProps) {
             </>
           ) : null}
         </div>
-        {selectedNode && (
+        {sidePanelNode && (
         <div className="fixed inset-0 z-50 md:relative md:inset-auto md:z-auto md:w-80 md:shrink-0 flex flex-col">
           <MindmapSidePanel
-            key={selectedNode.id}
-            node={selectedNode}
+            key={sidePanelNode.id}
+            node={sidePanelNode}
             entityType={initial.entityType}
             entityId={initial.entityId}
-            onClose={() => setSelectedNodeId(null)}
+            onClose={() => setSidePanelNodeId(null)}
             onUpdateNode={updateNode}
             onDeleteNode={(id) => {
               deleteNode(id);
               setSelectedNodeId(null);
+              setSidePanelNodeId(null);
             }}
-            fullscreenOnMobile={!!selectedNode}
+            fullscreenOnMobile={!!sidePanelNode}
             onCopyNodeData={handleCopyNodeData}
             onPasteNodeData={handlePasteNodeData}
             hasClipboard={nodeClipboard != null}

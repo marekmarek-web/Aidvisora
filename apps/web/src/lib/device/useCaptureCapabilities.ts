@@ -6,12 +6,12 @@ import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import {
   type CaptureFormFactor,
   type CaptureTier,
-  getCaptureFormFactorFromWidth,
+  getCaptureFormFactorForScan,
 } from "./capture-capabilities";
 
 function readFormFactor(): CaptureFormFactor {
   if (typeof window === "undefined") return "mobile";
-  return getCaptureFormFactorFromWidth(window.innerWidth);
+  return getCaptureFormFactorForScan(window.innerWidth);
 }
 
 /**

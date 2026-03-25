@@ -181,9 +181,9 @@ export function FinancialAnalysisLayout() {
   }
 
   return (
-    <div className="flex-grow flex flex-col items-center pt-6 pb-20 px-3 sm:px-4">
-      <section className="w-full max-w-4xl mb-6 text-center">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+    <div className="flex-grow flex flex-col items-center pt-4 sm:pt-6 pb-[max(6rem,env(safe-area-inset-bottom))] sm:pb-20 px-3 sm:px-4 min-h-0">
+      <section className="w-full max-w-4xl mb-4 sm:mb-6 text-center px-1">
+        <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
           Finanční analýza
         </h1>
       </section>
@@ -194,14 +194,14 @@ export function FinancialAnalysisLayout() {
         <PersonalFALinkBanner />
       </div>
 
-      <div className="w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 md:p-10 mb-20 shadow-lg">
+      <div className="w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-3 sm:p-6 md:p-10 mb-8 sm:mb-20 shadow-lg flex flex-col min-h-0">
         <FinancialAnalysisToolbar />
 
-        <div className="min-h-[320px]">
+        <div className="min-h-[min(50vh,320px)] sm:min-h-[320px] flex-1 min-h-0 overflow-x-hidden">
           {StepComponent && <StepComponent />}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 pt-8 border-t border-slate-200 mt-8">
+        <div className="sticky bottom-0 z-[5] -mx-3 sm:mx-0 mt-4 sm:mt-8 pt-4 pb-2 sm:pb-0 sm:pt-8 border-t border-slate-200 bg-white/95 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 px-1 sm:px-0">
           <button
             type="button"
             onClick={() => prevStep()}

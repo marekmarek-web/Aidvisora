@@ -78,7 +78,7 @@ function ItemCard({
     <button
       type="button"
       onClick={onTap}
-      className="w-full text-left bg-white rounded-xl border border-slate-200 px-4 py-3 min-h-[60px] active:bg-slate-50 transition-colors shadow-sm"
+      className="w-full text-left bg-white rounded-2xl border border-slate-200/90 border-l-[4px] border-l-indigo-500 pl-3.5 pr-4 py-3.5 min-h-[64px] active:bg-slate-50/90 active:scale-[0.99] transition-all shadow-[0_2px_14px_-3px_rgba(15,23,42,0.1)] touch-manipulation"
     >
       <div className="flex items-center gap-2">
         {item.contactName && (
@@ -93,9 +93,9 @@ function ItemCard({
           </span>
         )}
         <span className="flex-1 min-w-0">
-          <span className="font-semibold text-sm text-slate-800 truncate block">{item.name}</span>
+          <span className="font-bold text-[15px] text-slate-900 leading-snug truncate block">{item.name}</span>
           {item.contactName && item.contactName !== item.name && (
-            <span className="text-xs text-slate-500 truncate block">{item.contactName}</span>
+            <span className="text-xs text-slate-500 truncate block mt-0.5 font-medium">{item.contactName}</span>
           )}
         </span>
       </div>
@@ -132,23 +132,32 @@ function GroupSection({
   const [collapsed, setCollapsed] = useState(group.collapsed);
 
   return (
-    <div className="mb-4">
-      <button
-        type="button"
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center gap-2 px-1 py-2 min-h-[44px]"
-      >
-        <span
-          className="w-3 h-3 rounded-sm shrink-0"
-          style={{ backgroundColor: group.color }}
-        />
-        <span className="font-bold text-sm text-slate-800 flex-1 text-left">{group.name}</span>
-        <span className="text-xs text-slate-500 mr-1">{items.length}</span>
-        {collapsed ? <ChevronRight size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-      </button>
+    <div className="mb-5">
+      <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white overflow-hidden shadow-sm">
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full flex items-center gap-3 px-3 py-3 min-h-[48px]"
+        >
+          <span
+            className="w-3.5 h-3.5 rounded-md shrink-0 ring-2 ring-white shadow-sm"
+            style={{ backgroundColor: group.color }}
+          />
+          <div className="flex-1 min-w-0 text-left">
+            <span className="font-black text-sm text-slate-900 block truncate">{group.name}</span>
+            {group.subtitle ? (
+              <span className="text-[11px] text-slate-500 font-semibold truncate block">{group.subtitle}</span>
+            ) : null}
+          </div>
+          <span className="text-xs font-black text-slate-600 bg-white/90 border border-slate-200 px-2 py-0.5 rounded-lg tabular-nums">
+            {items.length}
+          </span>
+          {collapsed ? <ChevronRight size={18} className="text-slate-400 shrink-0" /> : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+        </button>
+      </div>
 
       {!collapsed && (
-        <div className="space-y-2 mt-1">
+        <div className="space-y-2.5 mt-2.5 pl-0.5">
           {items.length === 0 && (
             <p className="text-xs text-slate-400 text-center py-3">Žádné položky</p>
           )}

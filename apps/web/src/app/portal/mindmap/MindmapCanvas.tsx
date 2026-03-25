@@ -3,10 +3,21 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MindmapNode, MindmapEdge, ViewportState } from "./types";
 
+const DRAG_THRESHOLD_PX = 10;
+const DOUBLE_TAP_MS = 320;
+
 function getCanvasSize() {
   if (typeof window === "undefined") return 5000;
   return window.innerWidth < 768 ? 3000 : 5000;
 }
+
+type DragCandidate = {
+  nodeId: string;
+  startClientX: number;
+  startClientY: number;
+  offsetX: number;
+  offsetY: number;
+};
 
 type MindmapCanvasProps = {
   nodes: MindmapNode[];
@@ -15,7 +26,10 @@ type MindmapCanvasProps = {
   selectedNodeId: string | null;
   onViewportChange: (v: Partial<ViewportState>) => void;
   onNodePositionChange: (id: string, x: number, y: number) => void;
-  onNodeSelect: (id: string | null) => void;
+  /** Single tap / click end without drag — selection only (no editor). */
+  onNodeTap: (id: string) => void;
+  /** Double tap (touch) or double click (mouse) — open editor. */
+  onNodeOpenEditor: (id: string) => void;
   onCanvasClick: () => void;
   renderNode: (node: MindmapNode, opts: { isDragging: boolean; isSelected: boolean }) => React.ReactNode;
 };
@@ -27,7 +41,8 @@ export function MindmapCanvas({
   selectedNodeId,
   onViewportChange,
   onNodePositionChange,
-  onNodeSelect,
+  onNodeTap,
+  onNodeOpenEditor,
   onCanvasClick,
   renderNode,
 }: MindmapCanvasProps) {
@@ -37,32 +52,50 @@ export function MindmapCanvas({
   const startPosRef = useRef({ x: 0, y: 0 });
   const pinchRef = useRef<{ dist: number; zoom: number; midX: number; midY: number } | null>(null);
   const [canvasSize] = useState(getCanvasSize);
+  const dragCandidateRef = useRef<DragCandidate | null>(null);
+  const lastTapRef = useRef<{ nodeId: string; t: number } | null>(null);
+  /** So window pointer listeners attach when only a ref (drag candidate) is set. */
+  const [pointerSession, setPointerSession] = useState(false);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, nodeId?: string) => {
       if (e.button !== 0) return;
       if (nodeId) {
         e.stopPropagation();
-        setDraggingNodeId(nodeId);
         const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          startPosRef.current = {
-            x: (e.clientX - viewport.pan.x) / viewport.zoom - node.x,
-            y: (e.clientY - viewport.pan.y) / viewport.zoom - node.y,
-          };
-        }
-        onNodeSelect(nodeId);
+        if (!node) return;
+        dragCandidateRef.current = {
+          nodeId,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          offsetX: (e.clientX - viewport.pan.x) / viewport.zoom - node.x,
+          offsetY: (e.clientY - viewport.pan.y) / viewport.zoom - node.y,
+        };
+        setPointerSession(true);
       } else {
+        dragCandidateRef.current = null;
         setIsPanning(true);
+        setPointerSession(true);
         startPosRef.current = { x: e.clientX - viewport.pan.x, y: e.clientY - viewport.pan.y };
         onCanvasClick();
       }
     },
-    [nodes, viewport, onNodeSelect, onCanvasClick]
+    [nodes, viewport, onCanvasClick]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      const cand = dragCandidateRef.current;
+      if (cand && !draggingNodeId) {
+        const dx = e.clientX - cand.startClientX;
+        const dy = e.clientY - cand.startClientY;
+        if (Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
+          setDraggingNodeId(cand.nodeId);
+          startPosRef.current = { x: cand.offsetX, y: cand.offsetY };
+          dragCandidateRef.current = null;
+        }
+        return;
+      }
       if (draggingNodeId) {
         const newX = (e.clientX - viewport.pan.x) / viewport.zoom - startPosRef.current.x;
         const newY = (e.clientY - viewport.pan.y) / viewport.zoom - startPosRef.current.y;
@@ -79,23 +112,52 @@ export function MindmapCanvas({
     [viewport, onViewportChange, onNodePositionChange, draggingNodeId, isPanning]
   );
 
+  const finishNodePointer = useCallback(
+    (nodeId: string) => {
+      const now = Date.now();
+      const last = lastTapRef.current;
+      if (last && last.nodeId === nodeId && now - last.t < DOUBLE_TAP_MS) {
+        lastTapRef.current = null;
+        onNodeOpenEditor(nodeId);
+      } else {
+        lastTapRef.current = { nodeId, t: now };
+        onNodeTap(nodeId);
+      }
+    },
+    [onNodeTap, onNodeOpenEditor]
+  );
+
   const handlePointerUp = useCallback(() => {
-    setDraggingNodeId(null);
+    if (draggingNodeId) {
+      setDraggingNodeId(null);
+      dragCandidateRef.current = null;
+      setPointerSession(false);
+      setIsPanning(false);
+      return;
+    }
+    const cand = dragCandidateRef.current;
+    if (cand) {
+      dragCandidateRef.current = null;
+      finishNodePointer(cand.nodeId);
+    }
     setIsPanning(false);
-  }, []);
+    setPointerSession(false);
+  }, [draggingNodeId, finishNodePointer]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => handlePointerMove(e as unknown as React.PointerEvent);
     const onUp = () => handlePointerUp();
-    if (draggingNodeId || isPanning) {
+    if (draggingNodeId || isPanning || pointerSession) {
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
       return () => {
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
       };
     }
-  }, [draggingNodeId, isPanning, handlePointerMove, handlePointerUp]);
+  }, [draggingNodeId, isPanning, pointerSession, handlePointerMove, handlePointerUp]);
 
   const ZOOM_MIN = 0.4;
   const ZOOM_MAX = 2;
@@ -229,6 +291,10 @@ export function MindmapCanvas({
             <div
               key={node.id}
               onPointerDown={(e) => handlePointerDown(e, node.id)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onNodeOpenEditor(node.id);
+              }}
               style={{
                 position: "absolute",
                 transform: `translate(${node.x}px, ${node.y}px)`,
