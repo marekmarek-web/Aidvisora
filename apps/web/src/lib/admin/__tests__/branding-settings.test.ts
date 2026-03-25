@@ -41,7 +41,7 @@ describe("branding-settings", () => {
   describe("DEFAULT_BRANDING", () => {
     it("has expected default values", async () => {
       const { DEFAULT_BRANDING } = await import("../branding-settings");
-      expect(DEFAULT_BRANDING.appNameVariant).toBe("WePlan");
+      expect(DEFAULT_BRANDING.appNameVariant).toBe("Aidvisora");
       expect(DEFAULT_BRANDING.accentColor).toBe("#3B82F6");
       expect(DEFAULT_BRANDING.defaultTone).toBe("professional");
       expect(DEFAULT_BRANDING.assistantDisplayName).toBeTruthy();

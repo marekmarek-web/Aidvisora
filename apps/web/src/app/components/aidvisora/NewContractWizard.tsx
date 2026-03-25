@@ -7,8 +7,8 @@ import {
   createContract,
 } from "@/app/actions/contracts";
 import { updateDocument } from "@/app/actions/documents";
-import { ProductPicker } from "@/app/components/weplan/ProductPicker";
-import type { ProductPickerValue } from "@/app/components/weplan/ProductPicker";
+import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
+import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 import { segmentLabel } from "@/app/lib/segment-labels";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";

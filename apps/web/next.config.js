@@ -9,8 +9,8 @@ const nextMajor = Number.parseInt(nextVersion.split(".")[0] || "0", 10);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Monorepo: lockfile lives at repo root (advisor-crm). Parent folder (e.g. WePlan) may
-  // have another pnpm-lock.yaml — pin tracing root so Next does not infer the wrong root.
+  // Monorepo: lockfile lives at git repo root (project name e.g. aidvisora). A parent folder
+  // on disk may contain another pnpm-lock.yaml — pin tracing root so Next does not infer the wrong root.
   outputFileTracingRoot: path.join(__dirname, "..", ".."),
   reactStrictMode: true,
   transpilePackages: ["db"],

@@ -1,4 +1,4 @@
-# PRD – Advisor CRM MVP
+# PRD – Aidvisora MVP
 
 ## Scope MVP
 

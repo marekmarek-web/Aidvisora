@@ -108,7 +108,7 @@ function parseKurzyRows(
 export class KurzyRateProvider implements RateProvider {
   async fetchMortgageRates(): Promise<NormalizedOffer[]> {
     const response = await fetch(KURZY_MORTGAGE_URL, {
-      headers: { "User-Agent": "AidvisorRatesBot/1.0" },
+      headers: { "User-Agent": "AidvisoraRatesBot/1.0" },
       cache: "no-store",
     });
     if (!response.ok) {
@@ -125,7 +125,7 @@ export class KurzyRateProvider implements RateProvider {
 
   async fetchLoanRates(): Promise<NormalizedOffer[]> {
     const response = await fetch(KURZY_LOAN_URL, {
-      headers: { "User-Agent": "AidvisorRatesBot/1.0" },
+      headers: { "User-Agent": "AidvisoraRatesBot/1.0" },
       cache: "no-store",
     });
     if (!response.ok) {

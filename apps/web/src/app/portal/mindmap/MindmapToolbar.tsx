@@ -17,14 +17,14 @@ export function MindmapToolbar({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className="absolute left-3 top-[4.5rem] md:left-6 md:top-6 flex flex-col gap-3 z-50">
-      <div className="bg-white/90 backdrop-blur-xl p-2 rounded-2xl shadow-xl border border-slate-200 flex flex-col gap-1">
+    <div className="absolute left-3 bottom-20 md:bottom-auto md:left-6 md:top-6 flex flex-col md:flex-col gap-3 z-50">
+      <div className="bg-white/90 backdrop-blur-xl p-2 rounded-2xl shadow-xl border border-slate-200 flex md:flex-col flex-row gap-1">
         <button
           type="button"
           onClick={() => onModeChange("select")}
           className={cx(
-            "p-3 rounded-xl transition-colors",
-            mode === "select" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+            "p-3 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center",
+            mode === "select" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 active:bg-slate-100 active:text-slate-800"
           )}
           title="Nástroj pro výběr"
         >
@@ -37,8 +37,8 @@ export function MindmapToolbar({
           type="button"
           onClick={() => onModeChange("connect")}
           className={cx(
-            "p-3 rounded-xl transition-colors",
-            mode === "connect" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+            "p-3 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center",
+            mode === "connect" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 active:bg-slate-100 active:text-slate-800"
           )}
           title="Spojování uzlů (Link)"
         >
@@ -47,11 +47,11 @@ export function MindmapToolbar({
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </button>
-        <div className="w-10 h-px bg-slate-200 mx-auto my-1" />
+        <div className="md:w-10 md:h-px w-px h-6 bg-slate-200 mx-auto my-0.5 md:my-1" />
         <button
           type="button"
           onClick={onOpenSettings}
-          className="p-3 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+          className="p-3 rounded-xl text-slate-400 active:bg-slate-100 active:text-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           title="Nastavení mapy"
         >
           <Settings size={20} />

@@ -1,11 +1,26 @@
 /**
- * Portal board state persistence (demo) – localStorage key weplan_portal_state_v1.
+ * Portal board state persistence (demo). Legacy keys: weplan_portal_state_v1 / v2.
  */
 
 import type { Board, Column } from "@/app/components/monday/types";
 import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
+const STORAGE_KEY = "aidvisora_portal_state_v2";
 
-const STORAGE_KEY = "weplan_portal_state_v2";
+function migratePortalStorageKeys(): void {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem(STORAGE_KEY) != null) return;
+  const v2 = localStorage.getItem("weplan_portal_state_v2");
+  if (v2 != null) {
+    localStorage.setItem(STORAGE_KEY, v2);
+    localStorage.removeItem("weplan_portal_state_v2");
+    return;
+  }
+  const v1 = localStorage.getItem("weplan_portal_state_v1");
+  if (v1 != null) {
+    localStorage.setItem(STORAGE_KEY, v1);
+    localStorage.removeItem("weplan_portal_state_v1");
+  }
+}
 
 function mergeColumnsWithDefaults(saved: Column[]): Column[] {
   const byId = new Map(saved.map((c) => [c.id, c]));
@@ -26,6 +41,7 @@ export function loadPortalState(fallbackBoard: Board): PortalState {
       activeViewId: fallbackBoard.views[0]?.id ?? "v1",
     };
   }
+  migratePortalStorageKeys();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return { board: fallbackBoard, hiddenColumnIds: [], activeViewId: fallbackBoard.views[0]?.id ?? "v1" };

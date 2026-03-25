@@ -29,7 +29,6 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingSkeleton,
   MobileCard,
   MobileSection,
 } from "@/app/shared/mobile-ui/primitives";
@@ -277,12 +276,40 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
     });
   }
 
-  if (pending && !plan && !progressResult) return <LoadingSkeleton rows={4} />;
+  if (pending && !plan && !progressResult) {
+    return (
+      <div className="min-h-[50vh] space-y-0 pb-6">
+        <div className="h-28 bg-gradient-to-br from-[#0a0f29] to-indigo-950 animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 flex gap-2 bg-white border-b border-slate-100">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-8 w-20 rounded-xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="px-4 pt-3 grid grid-cols-3 gap-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="px-4 mt-3 space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const hasPlanData = plan !== null || progressResult !== null;
 
   return (
-    <div className="pb-6">
+    <>
       {error ? <ErrorState title={error} onRetry={loadData} /> : null}
-
+      <div
+        className={cx(
+          "pb-6",
+          pending && hasPlanData && "opacity-60 pointer-events-none transition-opacity duration-200"
+        )}
+      >
       {/* Hero */}
       <div className="bg-gradient-to-br from-[#0a0f29] to-indigo-950 px-4 pt-4 pb-5">
         <div className="flex items-start justify-between gap-3">
@@ -447,6 +474,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
           </div>
         )}
       </MobileSection>
+      </div>
 
       {/* ====== BOTTOM SHEETS ====== */}
 
@@ -570,6 +598,6 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
           </button>
         </div>
       </BottomSheet>
-    </div>
+    </>
   );
 }

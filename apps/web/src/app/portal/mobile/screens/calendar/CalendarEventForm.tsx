@@ -17,7 +17,9 @@ import { ContactSearchInput } from "@/app/components/ContactSearchInput";
 import {
   CALENDAR_EVENT_CATEGORIES,
   EVENT_STATUSES,
+  type EventCategoryId,
 } from "@/app/portal/calendar/event-categories";
+import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
 
 export interface EventFormData {
@@ -69,9 +71,14 @@ const EVENT_PILL_STYLES: Record<string, { active: string; inactive: string }> = 
 
 const PRIMARY_TYPES = ["schuzka", "telefonat", "kafe", "mail", "ukol", "priorita"];
 
+const SECONDARY_TYPES: EventCategoryId[] = CALENDAR_EVENT_CATEGORIES.filter(
+  (t) => !PRIMARY_TYPES.includes(t.id),
+).map((t) => t.id);
+
 export type OpportunityOption = { id: string; title: string; contactId: string | null };
 
 export function CalendarEventForm({
+  deviceClass = "phone",
   initial,
   contacts,
   opportunities,
@@ -80,6 +87,7 @@ export function CalendarEventForm({
   onSave,
   onClose,
 }: {
+  deviceClass?: DeviceClass;
   initial: EventFormData & { id?: string };
   contacts: ContactRow[];
   opportunities: OpportunityOption[];
@@ -99,12 +107,20 @@ export function CalendarEventForm({
     return initial;
   });
   const [validationErrors, setValidationErrors] = useState<{ title?: boolean; startAt?: boolean }>({});
+  const [showMoreTypes, setShowMoreTypes] = useState(() =>
+    SECONDARY_TYPES.includes(initial.eventType as EventCategoryId),
+  );
   const { keyboardInset } = useKeyboardAware();
+  const largeScreen = deviceClass === "tablet" || deviceClass === "desktop";
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
+
+  useEffect(() => {
+    setShowMoreTypes(SECONDARY_TYPES.includes(initial.eventType as EventCategoryId));
+  }, [initial.eventType, initial.id]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,7 +144,23 @@ export function CalendarEventForm({
   );
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+    <div
+      className={
+        largeScreen
+          ? "fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4"
+          : "fixed inset-0 z-[100] flex flex-col bg-white"
+      }
+      role="presentation"
+      onClick={largeScreen ? onClose : undefined}
+    >
+      <div
+        className={
+          largeScreen
+            ? "flex max-h-[min(92vh,820px)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-2xl sm:rounded-2xl"
+            : "flex min-h-0 flex-1 flex-col"
+        }
+        onClick={(e) => e.stopPropagation()}
+      >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <h2 className="text-sm font-black text-slate-900">
@@ -176,6 +208,43 @@ export function CalendarEventForm({
               );
             })}
           </div>
+          {showMoreTypes ? (
+            <div className="flex flex-wrap gap-2">
+              {CALENDAR_EVENT_CATEGORIES.filter((t) => SECONDARY_TYPES.includes(t.id)).map((t) => {
+                const isActive = form.eventType === t.id;
+                const ps = EVENT_PILL_STYLES[t.id] ?? {
+                  active: "bg-slate-700 text-white shadow-lg",
+                  inactive: "bg-slate-100 text-slate-600",
+                };
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        eventType: t.id,
+                        reminderMinutes: t.id === "ukol" || t.id === "priorita" ? 15 : 30,
+                      }))
+                    }
+                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-[0.97] ${
+                      isActive ? ps.active : ps.inactive
+                    }`}
+                  >
+                    <span>{t.icon}</span>
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowMoreTypes((v) => !v)}
+            className="text-left text-xs font-bold text-indigo-600 underline-offset-2 hover:underline"
+          >
+            {showMoreTypes ? "Méně typů…" : "Další typy…"}
+          </button>
 
           <input
             value={form.title}
@@ -377,6 +446,7 @@ export function CalendarEventForm({
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

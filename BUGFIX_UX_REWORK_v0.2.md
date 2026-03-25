@@ -1,4 +1,4 @@
-# WePlan v0.2 – Bugfix & UX Rework – dodání
+# Aidvisora v0.2 – Bugfix & UX Rework – dodání
 
 ## 1) BOARD
 
@@ -33,7 +33,7 @@
 ### 1f) Sticky první sloupec, scroll jen tabulka
 - **Kde:**  
   - `apps/web/src/app/components/monday/BoardTable.tsx` – kontejner s tabulkou má `pl-4` (odsazení zleva).  
-  - `apps/web/src/styles/weplan-monday.css` – `.monday-sticky-first-col` a `.monday-sticky-corner` mají `box-shadow: 2px 0 6px -2px rgba(...)` aby při horizontálním scrollu nevznikal layout shift.
+  - `apps/web/src/styles/aidvisora-monday.css` – `.monday-sticky-first-col` a `.monday-sticky-corner` mají `box-shadow: 2px 0 6px -2px rgba(...)` aby při horizontálním scrollu nevznikal layout shift.
 - **Test:** Board s více sloupci → horizontální scroll jen v oblasti tabulky, první sloupec zůstává vlevo s odsazením, nezatahuje celou stránku.
 
 ---
@@ -77,7 +77,7 @@
 - **Test:** Kontakt → záložka Přehled → v sekci „Pokrytí produktů“ klik na „Obchody →“. Otevře se záložka Obchody téhož kontaktu.
 
 ### 4b) Jednotný design gridů
-- **Kde:** `apps/web/src/styles/weplan-monday.css`
+- **Kde:** `apps/web/src/styles/aidvisora-monday.css`
 - **Změny:** Přidány třídy **`.wp-grid-card`** (border, border-radius, background, shadow) a **`.wp-grid-header-row`** (header řádek). Design tokeny: `--monday-radius`, `--monday-border`, `--monday-shadow`. Komponenty (Board, tabulky) už používají `monday-*` třídy; nové gridové sekce lze sjednotit přidáním `wp-grid-card` / `wp-grid-header-row`.
 - **Test:** Vizuální konzistence – karty a tabulky s jednotným radius a stínem.
 
@@ -110,7 +110,7 @@
 - `apps/web/src/app/components/monday/BoardTable.tsx` – 1f pl-4
 - `apps/web/src/app/components/monday/CellProduct.tsx` – 1c ProductPicker v popoveru
 - `apps/web/src/app/components/TooltipBlurListener.tsx` – 1e, 3c `.wp-dropdown` výjimka
-- `apps/web/src/styles/weplan-monday.css` – 1f sticky shadow, 4b wp-grid-card, wp-grid-header-row
+- `apps/web/src/styles/aidvisora-monday.css` – 1f sticky shadow, 4b wp-grid-card, wp-grid-header-row
 - `apps/web/src/app/portal/tasks/page.tsx` – 2a, 2b selectCls a pill styling
 - `apps/web/src/app/portal/PortalCalendarView.tsx` – 3a event card, 3b Pracovní týden
 - `apps/web/src/app/actions/board.ts` – výchozí „Jméno klienta“, bez BJ (již bylo)

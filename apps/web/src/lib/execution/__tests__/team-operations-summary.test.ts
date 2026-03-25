@@ -8,8 +8,8 @@ vi.mock("db", () => {
     self.set = fn;
     self.where = fn;
     self.groupBy = vi.fn().mockResolvedValue([
-      { assignedTo: "adv1", count: 3, avgAge: 55.2 },
-      { assignedTo: "adv2", count: 1, avgAge: 12.0 },
+      { uploadedBy: "adv1", count: 3, avgAge: 55.2 },
+      { uploadedBy: "adv2", count: 1, avgAge: 12.0 },
     ]);
     self.limit = vi.fn().mockResolvedValue([]);
     self.innerJoin = vi.fn().mockImplementation(() => self);
@@ -20,7 +20,7 @@ vi.mock("db", () => {
       select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue(chain()) }),
       update: vi.fn().mockReturnValue(chain()),
     },
-    contractUploadReviews: { tenantId: "tenant_id", assignedTo: "assigned_to", createdAt: "created_at", id: "id" },
+    contractUploadReviews: { tenantId: "tenant_id", uploadedBy: "uploaded_by", createdAt: "created_at", id: "id" },
     tasks: { id: "id", tenantId: "tenant_id", assignedTo: "assigned_to" },
     eq: vi.fn(),
     and: vi.fn(),

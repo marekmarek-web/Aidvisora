@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { formatDateLocal } from "./date-utils";
+import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 
-const QUICK_NOTES_STORAGE_KEY = "weplan_calendar_quick_notes";
+const QUICK_NOTES_STORAGE_KEY = "aidvisora_calendar_quick_notes";
 
 const MONTH_NAMES = [
   "Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
@@ -16,6 +17,7 @@ function QuickNotes() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    migrateLocalStorageKey("weplan_calendar_quick_notes", QUICK_NOTES_STORAGE_KEY);
     try {
       const raw = window.localStorage.getItem(QUICK_NOTES_STORAGE_KEY);
       setValue(raw ?? "");

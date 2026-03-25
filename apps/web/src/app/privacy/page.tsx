@@ -5,7 +5,7 @@ export default function PrivacyPage() {
       <div className="prose prose-sm max-w-none space-y-4">
         <h2 className="text-lg font-semibold mt-2">1. Správce údajů</h2>
         <p>
-          Správcem osobních údajů je společnost provozující službu Aidvisor (dále „Správce“), v rozsahu uvedeném ve
+          Správcem osobních údajů je společnost provozující službu Aidvisora (dále „Správce“), v rozsahu uvedeném ve
           smlouvě nebo v nastavení vašeho účtu. V kontextu klientské zóny mohou být údaje zpracovávány též vaším
           finančním poradcem jako samostatným správcem nebo společným správcem podle konkrétního vztahu.
         </p>
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold mt-6">3. Účel a právní základ</h2>
         <p>
-          Údaje zpracováváme za účelem poskytování služby Aidvisor, plnění smlouvy, komunikace s uživateli,
+          Údaje zpracováváme za účelem poskytování služby Aidvisora, plnění smlouvy, komunikace s uživateli,
           zajištění bezpečnosti, evidence dokumentů v rámci oprávnění a plnění právních povinností. Právní základem je
           plnění smlouvy, oprávněný zájem (bezpečnost, zlepšování služby) nebo souhlas, pokud je vyžadován.
         </p>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold mt-6">6. Kontakt</h2>
         <p>
-          Ohledně osobních údajů nás kontaktujte prostřednictvím e-mailu uvedeného v aplikaci nebo na webu Aidvisor, nebo
+          Ohledně osobních údajů nás kontaktujte prostřednictvím e-mailu uvedeného v aplikaci nebo na webu Aidvisora, nebo
           svého poradce, pokud se údaje týkají klientské zóny.
         </p>
 

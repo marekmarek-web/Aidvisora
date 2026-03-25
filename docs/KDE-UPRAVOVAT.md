@@ -1,4 +1,4 @@
-# Kde co upravovat (Advisor CRM)
+# Kde co upravovat (Aidvisora)
 
 V Next.js není jeden soubor `index.html`. Obsah se skládá z komponent a layoutů.
 

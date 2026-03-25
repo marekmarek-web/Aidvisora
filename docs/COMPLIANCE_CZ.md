@@ -2,7 +2,7 @@
 
 ## GDPR
 
-- **Správce:** poradenská firma (tenant). **Zpracovatel:** provozovatel aplikace (Advisor CRM). DPA šablona v `/legal/DPA_template.md`. DPIA šablona v `/legal/DPIA_template.md`.
+- **Správce:** poradenská firma (tenant). **Zpracovatel:** provozovatel aplikace (Aidvisora). DPA šablona v `/legal/DPA_template.md`. DPIA šablona v `/legal/DPIA_template.md`.
 - **Funkce:** evidence účelů (processing_purposes), souhlasy (consents), retence (retention_months). Export osobních dat klienta (JSON + PDF). Workflow žádosti o výmaz (evidence + výmaz/anonymizace).
 
 ## Distribuce pojištění (IDD)

@@ -9,7 +9,7 @@ final class ShareItem {
 }
 
 final class ShareViewController: UIViewController {
-    private let appGroupId = "group.cz.aidvisor.app"
+    private let appGroupId = "group.cz.aidvisora.app"
     private let appScheme = "aidvisor://share"
     private var shareItems: [ShareItem] = []
 

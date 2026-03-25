@@ -24,7 +24,6 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingSkeleton,
   MobileCard,
   MobileSection,
   StatusBadge,
@@ -452,7 +451,28 @@ export function ClientProfileScreen({
     });
   }, [contactId]);
 
-  if (pending && !contact) return <LoadingSkeleton rows={4} />;
+  if (pending && !contact) {
+    return (
+      <div className="min-h-[50vh] space-y-0">
+        <div className="h-36 bg-gradient-to-br from-slate-800 to-indigo-900 animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 w-10 rounded-xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="px-4 flex gap-2 mb-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-9 flex-1 rounded-xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="px-4 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (error) return <ErrorState title={error} />;
   if (!contact) return <EmptyState title="Klient nebyl nalezen" />;
 

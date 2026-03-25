@@ -296,7 +296,7 @@ export function MobilePortalClient({
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
   const [pipeline, setPipeline] = useState<StageWithOpportunities[]>(initialPipeline);
-  const [, startTransition] = useTransition();
+  const [shellPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
 
@@ -631,7 +631,15 @@ export function MobilePortalClient({
     if (onTeamOverviewRoute) return <TeamOverviewScreen deviceClass={deviceClass} />;
     if (onSetupRoute) return <SettingsProfileScreen advisorName={advisorName} />;
     if (onNotificationsRoute) return <NotificationsInboxScreen onBadgeCountChange={setNotificationBadgeCount} />;
-    if (onCalendarRoute) return <CalendarScreen contacts={contacts} deviceClass={deviceClass} canWriteCalendar={canWriteCalendar} />;
+    if (onCalendarRoute)
+      return (
+        <CalendarScreen
+          contacts={contacts}
+          deviceClass={deviceClass}
+          canWriteCalendar={canWriteCalendar}
+          onOpenGlobalAppMenu={() => setDrawerOpen(true)}
+        />
+      );
     if (onAiRoute) return <AiAssistantChatScreen />;
     if (onDocumentsRoute) return <DocumentsHubScreen deviceClass={deviceClass} />;
     if (onProductionRoute) return <ProductionScreen deviceClass={deviceClass} />;
@@ -686,6 +694,7 @@ export function MobilePortalClient({
           taskFilter={taskFilter}
           contacts={contacts}
           deviceClass={deviceClass}
+          refreshing={shellPending}
           onFilterChange={(next) => {
             setTaskFilter(next);
             refreshTasks(next);
@@ -702,6 +711,7 @@ export function MobilePortalClient({
           contacts={contacts}
           selectedContactId={selectedContactId}
           deviceClass={deviceClass}
+          refreshing={shellPending}
           onSelectContact={(id) => router.push(`/portal/contacts/${id}`)}
           onOpenNewContact={() => setClientCreateOpen(true)}
           onTaskWizard={(contactId) => {
@@ -721,6 +731,7 @@ export function MobilePortalClient({
         <PipelineScreen
           pipeline={pipeline}
           deviceClass={deviceClass}
+          refreshing={shellPending}
           onMoveOpportunity={onOpportunityMove}
           contactOptions={pipelineContactOptions}
           onOpenContact={(id) => router.push(`/portal/contacts/${id}`)}
@@ -851,7 +862,7 @@ export function MobilePortalClient({
 
       <MobileScreen
         key={pathname}
-        className={`page-enter${onCalendarRoute ? " flex min-h-0 flex-1 flex-col px-0 !space-y-0 pt-2" : ""}`}
+        className={`page-enter${onCalendarRoute ? " !min-h-0 flex flex-1 flex-col px-0 !space-y-0 pt-2" : ""}`}
       >
         {error ? <ErrorState title={error} onRetry={() => { refreshTasks(taskFilter); refreshContacts(); refreshPipeline(); }} /> : null}
 

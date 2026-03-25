@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ProductPicker } from "@/app/components/weplan/ProductPicker";
-import type { ProductPickerValue } from "@/app/components/weplan/ProductPicker";
+import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
+import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 
 interface CellProductProps {
   value: string;

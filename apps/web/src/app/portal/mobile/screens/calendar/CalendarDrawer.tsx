@@ -2,6 +2,8 @@
 
 import { Calendar, ChevronRight, Menu, Settings2, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
+import type { ContactRow } from "@/app/actions/contacts";
+import { ContactSearchInput } from "@/app/components/ContactSearchInput";
 import { CALENDAR_EVENT_CATEGORIES } from "@/app/portal/calendar/event-categories";
 import type { CalendarViewMode } from "./calendar-utils";
 import { startOfDayLocal, startOfWeekLocal, viewModeLabel } from "./calendar-utils";
@@ -29,6 +31,9 @@ export function CalendarDrawer({
   googleConnected,
   onSyncCalendar,
   syncBusy,
+  contacts,
+  contactFilterId,
+  onContactFilterChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -47,6 +52,9 @@ export function CalendarDrawer({
   googleConnected?: boolean;
   onSyncCalendar?: () => void;
   syncBusy?: boolean;
+  contacts: ContactRow[];
+  contactFilterId: string;
+  onContactFilterChange: (id: string) => void;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -190,6 +198,27 @@ export function CalendarDrawer({
               onClose();
             }}
           />
+
+          <div>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Klient</p>
+            <p className="mb-2 text-xs text-slate-500">Zobrazí jen události navázané na vybraného klienta.</p>
+            <ContactSearchInput
+              value={contactFilterId}
+              contacts={contacts}
+              onChange={onContactFilterChange}
+              placeholder="Všichni klienti…"
+              className="min-h-[48px] w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+            {contactFilterId ? (
+              <button
+                type="button"
+                onClick={() => onContactFilterChange("")}
+                className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600"
+              >
+                Zrušit filtr klienta
+              </button>
+            ) : null}
+          </div>
 
           <div>
             <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Filtry typů</p>

@@ -32,7 +32,7 @@ import {
 import { getAgeFromBirthDate, getRiskLabel, computePlanTotalMonthly } from './incomeProtection';
 import { getGrowthChartData } from './charts';
 
-/* Aidvisor / WePlan theme: --wp-text #1f1c2e, --wp-text-muted #4a4a4a, --wp-border #e9ebf0, --wp-accent #0073ea, --wp-bg #f3f6fd, --wp-font Source Sans 3 */
+/* Aidvisora theme: --wp-text #1f1c2e, --wp-text-muted #4a4a4a, --wp-border #e9ebf0, --wp-accent #0073ea, --wp-bg #f3f6fd, --wp-font Source Sans 3 */
 export const PDF_STYLES = `
 @page { size: A4; margin: 10mm; }
 .pdf {

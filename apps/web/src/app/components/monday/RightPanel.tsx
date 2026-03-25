@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ProductPicker } from "@/app/components/weplan/ProductPicker";
-import type { ProductPickerValue } from "@/app/components/weplan/ProductPicker";
+import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
+import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
 import { segmentLabel } from "@/app/lib/segment-labels";

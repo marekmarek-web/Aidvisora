@@ -1,4 +1,4 @@
-# Předpoklady a výchozí rozhodnutí (Advisor CRM MVP)
+# Předpoklady a výchozí rozhodnutí (Aidvisora MVP)
 
 Dokument zachycuje výchozí rozhodnutí pro věci, které v zadání nejsou explicitně specifikované.
 
@@ -91,7 +91,7 @@ Dokument zachycuje výchozí rozhodnutí pro věci, které v zadání nejsou exp
 
 ## Board views
 
-- MVP: stav boardu (sloupce, šířky, pořadí, skupiny, filtry) uložen v `localStorage` (`weplan_portal_state_v1`).
+- MVP: stav boardu (sloupce, šířky, pořadí, skupiny, filtry) uložen v `localStorage` (`aidvisora_portal_state_v2`; legacy `weplan_portal_state_v1` / `v2` se při načtení migrují).
 - Phase 2: tabulka `board_views` v DB (tenant_id, user_id, columns_config JSON). Schéma připraveno v `supabase-schema.sql`.
 
 ## Co je mimo scope MVP

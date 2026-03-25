@@ -8,13 +8,13 @@ import {
   deleteContract,
 } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
-import { ProductPicker } from "@/app/components/weplan/ProductPicker";
-import type { ProductPickerValue } from "@/app/components/weplan/ProductPicker";
+import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
+import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 import { segmentLabel } from "@/app/lib/segment-labels";
-import { ZpRatingBadge } from "@/app/components/weplan/ZpRatingBadge";
+import { ZpRatingBadge } from "@/app/components/aidvisora/ZpRatingBadge";
 import { EUCS_ZP_DISCLAIMER } from "@/data/insurance-ratings";
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
-import { NewContractWizard } from "@/app/components/weplan/NewContractWizard";
+import { NewContractWizard } from "@/app/components/aidvisora/NewContractWizard";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { FileText } from "lucide-react";

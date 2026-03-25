@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Loader2, Search } from "lucide-react";
 import { globalSearch, type SearchResult } from "@/app/actions/search";
 
-const EMPTY: SearchResult = { contacts: [], contracts: [], opportunities: [], events: [] };
+const EMPTY: SearchResult = { contacts: [], contracts: [], opportunities: [], events: [], households: [], notes: [], docs: [] };
 
 export function MobileGlobalSearchOverlay({
   open,
@@ -80,7 +80,10 @@ export function MobileGlobalSearchOverlay({
     results.contacts.length +
       results.contracts.length +
       results.opportunities.length +
-      results.events.length >
+      results.events.length +
+      results.households.length +
+      results.notes.length +
+      results.docs.length >
     0;
 
   return (
@@ -165,6 +168,66 @@ export function MobileGlobalSearchOverlay({
                     className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
                   >
                     {o.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {results.households.length > 0 ? (
+          <section>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Domácnosti</h3>
+            <ul className="space-y-1">
+              {results.households.map((h) => (
+                <li key={h.id}>
+                  <button
+                    type="button"
+                    onClick={() => go(`/portal/households/${h.id}`)}
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                  >
+                    {h.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {results.docs.length > 0 ? (
+          <section>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Dokumenty</h3>
+            <ul className="space-y-1">
+              {results.docs.map((d) => (
+                <li key={d.id}>
+                  <button
+                    type="button"
+                    onClick={() => go(`/portal/documents?doc=${d.id}`)}
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                  >
+                    {d.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {results.notes.length > 0 ? (
+          <section>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Zápisky</h3>
+            <ul className="space-y-1">
+              {results.notes.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => go(`/portal/notes?noteId=${n.id}`)}
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                  >
+                    {n.domain}
+                    <span className="block text-xs font-normal text-slate-500">
+                      {new Date(n.meetingAt).toLocaleDateString("cs-CZ")}
+                    </span>
                   </button>
                 </li>
               ))}

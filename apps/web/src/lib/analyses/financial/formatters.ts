@@ -80,6 +80,45 @@ export function exportFilename(clientName: string): string {
   return `financni-plan-${safe}-${date}.json`;
 }
 
+/** Remove characters invalid in common OS filenames. Keeps spaces and Czech letters. */
+export function sanitizeForFilename(name: string): string {
+  return (name || '')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export type FinancialAnalysisReportFilenameOptions = {
+  /** If true, append date as DDMMYYYY (CZ). Default false — title is only „Finanční analýza - Jméno“. */
+  includeDate?: boolean;
+};
+
+/**
+ * Title / filename stem for FA HTML export and PDF print dialog, e.g.
+ * "Finanční analýza - Jan Novák". Optional: "… - 24032025" when includeDate is true.
+ */
+export function financialAnalysisReportTitle(
+  clientName: string,
+  options?: FinancialAnalysisReportFilenameOptions,
+): string {
+  const raw = (clientName || '').trim() || 'Klient';
+  const sanitized = sanitizeForFilename(raw);
+  const base = `Finanční analýza - ${sanitized}`;
+  if (!options?.includeDate) return base;
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ddmmyyyy = `${pad(d.getDate())}${pad(d.getMonth() + 1)}${d.getFullYear()}`;
+  return `${base} - ${ddmmyyyy}`;
+}
+
+export function financialAnalysisReportFilename(
+  clientName: string,
+  ext: 'html',
+  options?: FinancialAnalysisReportFilenameOptions,
+): string {
+  return `${financialAnalysisReportTitle(clientName, options)}.${ext}`;
+}
+
 /** Product display names (screenshot/reference: CREIF, PENTA, ATRIS, ETF World, Fidelity 2040, Conseq Globální). */
 export const PRODUCT_NAMES: Record<string, string> = {
   creif: 'CREIF',

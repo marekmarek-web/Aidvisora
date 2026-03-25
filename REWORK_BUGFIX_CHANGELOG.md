@@ -40,7 +40,7 @@
 
 - Board: Jméno klienta, Nový řádek, Přidat skupinu, Plan rozděleno, Přejmenovat nástěnku, Změnit typ, Číslo/Datum/Produkt, Upravit štítky.
 - Toolbar: Filtrovat, Seřadit, Skrýt, Seskupit.
-- Pills / zaoblení: `--monday-pill-radius: 8px` a `rounded-lg` (8px) v `weplan-monday.css` a u status pillů; progress v ProductCoverageGrid používá `rounded-lg`.
+- Pills / zaoblení: `--monday-pill-radius: 8px` a `rounded-lg` (8px) v `aidvisora-monday.css` a u status pillů; progress v ProductCoverageGrid používá `rounded-lg`.
 
 ---
 

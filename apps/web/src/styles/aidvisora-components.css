@@ -230,7 +230,7 @@
   margin: var(--wp-space-1) 0;
 }
 
-/* Jednotný vzhled dropdownů (alias pro .wp-dropdown z weplan-monday). Panel size = obsah. */
+/* Jednotný vzhled dropdownů (alias pro .wp-dropdown z aidvisora-monday). Panel size = obsah. */
 .wp-dropdown {
   min-width: 160px;
   width: max-content;

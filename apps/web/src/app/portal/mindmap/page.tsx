@@ -1,13 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMindmap, listRecentClientMaps, listStandaloneMaps } from "@/app/actions/mindmap";
 import type { MindmapState, ClientMapItem, FreeMapItem } from "@/app/actions/mindmap";
-import { MindmapView } from "./MindmapView";
 import { MindmapListClient } from "./MindmapListClient";
+
+const MindmapView = dynamic(
+  () => import("./MindmapView").then((m) => m.MindmapView),
+  {
+    loading: () => (
+      <div className="flex flex-1 min-h-[50vh] items-center justify-center text-slate-500 text-sm">Načítání mapy…</div>
+    ),
+  },
+);
 
 export default function MindmapPage() {
   const router = useRouter();

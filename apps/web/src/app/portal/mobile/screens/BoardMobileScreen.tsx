@@ -1,12 +1,39 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
-import { getOrCreateBoardView } from "@/app/actions/board";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  MoreHorizontal,
+  Plus,
+  Search,
+  User,
+  X,
+} from "lucide-react";
+import {
+  getOrCreateBoardView,
+  createBoardItem,
+  updateBoardItem,
+  deleteBoardItems,
+} from "@/app/actions/board";
 import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
-import { PortalBoardView } from "@/app/portal/PortalBoardView";
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
-import { ErrorState, LoadingSkeleton } from "@/app/shared/mobile-ui/primitives";
+import {
+  getStatusLabels,
+  getStatusById,
+  STATUS_LABELS_UPDATED_EVENT,
+  type StatusLabel,
+} from "@/app/lib/status-labels";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  BottomSheet,
+  FloatingActionButton,
+} from "@/app/shared/mobile-ui/primitives";
+import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 
 function mergeColumnsWithDefaults(saved: Column[]): Column[] {
   const byId = new Map(saved.map((c) => [c.id, c]));
@@ -17,16 +44,160 @@ function mergeColumnsWithDefaults(saved: Column[]): Column[] {
   });
 }
 
+function StatusPill({ value, labels }: { value: string; labels: StatusLabel[] }) {
+  if (!value || value === "") return <span className="text-xs text-slate-400">—</span>;
+  const sl = getStatusById(labels, value);
+  return (
+    <span
+      className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full text-white truncate max-w-[80px]"
+      style={{ backgroundColor: sl.color }}
+    >
+      {sl.label}
+    </span>
+  );
+}
+
+function ItemCard({
+  item,
+  columns,
+  labels,
+  onTap,
+}: {
+  item: Item;
+  columns: Column[];
+  labels: StatusLabel[];
+  onTap: () => void;
+}) {
+  const statusCols = columns.filter((c) => c.type === "status" && !c.hidden);
+  const filledStatuses = statusCols.filter((c) => {
+    const val = item.cells[c.id];
+    return val && val !== "";
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="w-full text-left bg-white rounded-xl border border-slate-200 px-4 py-3 min-h-[60px] active:bg-slate-50 transition-colors shadow-sm"
+    >
+      <div className="flex items-center gap-2">
+        {item.contactName && (
+          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+            {item.contactName
+              .split(" ")
+              .map((w) => w[0])
+              .filter(Boolean)
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)}
+          </span>
+        )}
+        <span className="flex-1 min-w-0">
+          <span className="font-semibold text-sm text-slate-800 truncate block">{item.name}</span>
+          {item.contactName && item.contactName !== item.name && (
+            <span className="text-xs text-slate-500 truncate block">{item.contactName}</span>
+          )}
+        </span>
+      </div>
+      {filledStatuses.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {filledStatuses.slice(0, 5).map((col) => (
+            <div key={col.id} className="flex items-center gap-1">
+              <span className="text-[10px] text-slate-500">{col.title}:</span>
+              <StatusPill value={String(item.cells[col.id] ?? "")} labels={labels} />
+            </div>
+          ))}
+          {filledStatuses.length > 5 && (
+            <span className="text-[10px] text-slate-400">+{filledStatuses.length - 5}</span>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
+function GroupSection({
+  group,
+  items,
+  columns,
+  labels,
+  onItemTap,
+}: {
+  group: Group;
+  items: Item[];
+  columns: Column[];
+  labels: StatusLabel[];
+  onItemTap: (item: Item) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(group.collapsed);
+
+  return (
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center gap-2 px-1 py-2 min-h-[44px]"
+      >
+        <span
+          className="w-3 h-3 rounded-sm shrink-0"
+          style={{ backgroundColor: group.color }}
+        />
+        <span className="font-bold text-sm text-slate-800 flex-1 text-left">{group.name}</span>
+        <span className="text-xs text-slate-500 mr-1">{items.length}</span>
+        {collapsed ? <ChevronRight size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+      </button>
+
+      {!collapsed && (
+        <div className="space-y-2 mt-1">
+          {items.length === 0 && (
+            <p className="text-xs text-slate-400 text-center py-3">Žádné položky</p>
+          )}
+          {items.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              columns={columns}
+              labels={labels}
+              onTap={() => onItemTap(item)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BoardMobileScreen() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const viewIdFromQuery = searchParams.get("viewId");
+  const itemIdFromQuery = searchParams.get("item");
+  const deviceClass = useDeviceClass();
 
   const [board, setBoard] = useState<Board | undefined>(undefined);
   const [dbViewId, setDbViewId] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemGroup, setNewItemGroup] = useState("");
+  const [savePending, startSaveTransition] = useTransition();
 
   useEffect(() => {
+    setStatusLabels(getStatusLabels());
+    const handler = () => setStatusLabels(getStatusLabels());
+    window.addEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
+  }, []);
+
+  const loadBoard = useCallback(() => {
     startTransition(async () => {
       setError(null);
       try {
@@ -35,7 +206,8 @@ export function BoardMobileScreen() {
         setDbViewId(id);
 
         const savedColumns: Column[] = (data.view.columnsConfig as Column[]) ?? [];
-        const columns = savedColumns.length > 0 ? mergeColumnsWithDefaults(savedColumns) : [...DEFAULT_BOARD_COLUMNS];
+        const columns =
+          savedColumns.length > 0 ? mergeColumnsWithDefaults(savedColumns) : [...DEFAULT_BOARD_COLUMNS];
         const groupConfigs = (data.view.groupsConfig ?? []) as Array<{
           id: string;
           name: string;
@@ -64,30 +236,353 @@ export function BoardMobileScreen() {
             .map((i) => i.id),
         }));
 
-        const orphanItems = data.items.filter((i) => !groupConfigs.some((g) => g.id === i.groupId));
+        const orphanItems = data.items.filter(
+          (i) => !groupConfigs.some((g) => g.id === i.groupId)
+        );
         if (orphanItems.length > 0 && groups.length > 0) {
           groups[0].itemIds.push(...orphanItems.map((i) => i.id));
         }
 
-        setBoard({
-          id,
-          name: data.view.name,
-          views: [{ id: "v1", name: data.view.name, columns }],
-          groups,
-          items,
-        });
+        setBoard({ id, name: data.view.name, views: [{ id: "v1", name: data.view.name, columns }], groups, items });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Board se nepodařilo načíst.");
       }
     });
   }, [viewIdFromQuery]);
 
-  if (pending && !board) return <LoadingSkeleton variant="card" rows={4} />;
-  if (error) return <ErrorState title={error} onRetry={() => window.location.reload()} />;
+  useEffect(() => {
+    loadBoard();
+  }, [loadBoard]);
+
+  useEffect(() => {
+    if (itemIdFromQuery && board) {
+      const item = board.items[itemIdFromQuery];
+      if (item) {
+        setSelectedItem(item);
+        setDetailOpen(true);
+      }
+    }
+  }, [itemIdFromQuery, board]);
+
+  const columns = board?.views[0]?.columns ?? DEFAULT_BOARD_COLUMNS;
+  const statusCols = columns.filter((c) => c.type === "status" && !c.hidden);
+
+  const allItems = board ? Object.values(board.items) : [];
+  const filteredItems = searchQuery.trim()
+    ? allItems.filter((item) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.contactName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      )
+    : null;
+
+  function handleItemTap(item: Item) {
+    setSelectedItem(item);
+    setDetailOpen(true);
+  }
+
+  function handleCreateItem() {
+    if (!dbViewId || !newItemName.trim() || !newItemGroup) return;
+    startSaveTransition(async () => {
+      try {
+        await createBoardItem(dbViewId, { name: newItemName.trim(), groupId: newItemGroup });
+        setNewItemName("");
+        setCreateOpen(false);
+        loadBoard();
+      } catch {
+        /* retry from UI */
+      }
+    });
+  }
+
+  function handleMoveItem(targetGroupId: string) {
+    if (!selectedItem) return;
+    startSaveTransition(async () => {
+      try {
+        await updateBoardItem(selectedItem.id, { groupId: targetGroupId });
+        setMoveOpen(false);
+        setDetailOpen(false);
+        setSelectedItem(null);
+        loadBoard();
+      } catch {
+        /* retry from UI */
+      }
+    });
+  }
+
+  function handleDeleteItem() {
+    if (!selectedItem) return;
+    if (!confirm("Opravdu chcete smazat tuto položku?")) return;
+    startSaveTransition(async () => {
+      try {
+        await deleteBoardItems([selectedItem.id]);
+        setDetailOpen(false);
+        setSelectedItem(null);
+        loadBoard();
+      } catch {
+        /* retry from UI */
+      }
+    });
+  }
+
+  function handleStatusChange(columnId: string, newValue: string) {
+    if (!selectedItem) return;
+    startSaveTransition(async () => {
+      try {
+        const updatedCells = { ...selectedItem.cells, [columnId]: newValue };
+        await updateBoardItem(selectedItem.id, { cells: updatedCells });
+        setSelectedItem({ ...selectedItem, cells: updatedCells });
+        loadBoard();
+      } catch {
+        /* retry from UI */
+      }
+    });
+  }
+
+  if (pending && !board) {
+    return (
+      <div className="min-h-[calc(100dvh-8rem)]">
+        <LoadingSkeleton variant="card" rows={4} />
+      </div>
+    );
+  }
+  if (error) return <ErrorState title={error} onRetry={loadBoard} />;
+  if (!board) return null;
+
+  const isTablet = deviceClass === "tablet" || deviceClass === "desktop";
+  const totalItems = Object.keys(board.items).length;
 
   return (
-    <div className="-mx-4 -mt-4 flex-1 flex flex-col min-h-[65vh] overflow-hidden">
-      <PortalBoardView dbViewId={dbViewId} initialBoard={board} />
+    <div className="-mx-4 -mt-4 flex flex-col min-h-[calc(100dvh-8rem)]">
+      {/* Search bar */}
+      <div className="px-4 pt-3 pb-2 border-b border-slate-200 bg-white shrink-0">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder={`Hledat v boardu (${totalItems} položek)…`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Board content */}
+      <div className={`flex-1 overflow-y-auto px-4 py-3 ${isTablet ? "columns-2 gap-4" : ""}`}>
+        {filteredItems ? (
+          filteredItems.length === 0 ? (
+            <p className="text-center text-sm text-slate-500 py-8">Nic nenalezeno pro &quot;{searchQuery}&quot;</p>
+          ) : (
+            <div className="space-y-2">
+              {filteredItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  columns={columns}
+                  labels={statusLabels}
+                  onTap={() => handleItemTap(item)}
+                />
+              ))}
+            </div>
+          )
+        ) : totalItems === 0 ? (
+          <EmptyState
+            title="Board je prázdný"
+            description="Přidejte první položku pomocí tlačítka +."
+            action={
+              <button
+                type="button"
+                className="min-h-[44px] rounded-xl bg-indigo-600 text-white px-4 text-sm font-semibold"
+                onClick={() => {
+                  setNewItemGroup(board.groups[0]?.id ?? "");
+                  setCreateOpen(true);
+                }}
+              >
+                Přidat položku
+              </button>
+            }
+          />
+        ) : (
+          board.groups.map((group) => {
+            const groupItems = group.itemIds
+              .map((id) => board.items[id])
+              .filter(Boolean);
+            return (
+              <GroupSection
+                key={group.id}
+                group={group}
+                items={groupItems}
+                columns={columns}
+                labels={statusLabels}
+                onItemTap={handleItemTap}
+              />
+            );
+          })
+        )}
+      </div>
+
+      {/* FAB */}
+      <FloatingActionButton
+        icon={Plus}
+        label="Přidat"
+        onClick={() => {
+          setNewItemGroup(board.groups[0]?.id ?? "");
+          setNewItemName("");
+          setCreateOpen(true);
+        }}
+      />
+
+      {/* Detail sheet */}
+      <BottomSheet
+        open={detailOpen && !!selectedItem}
+        onClose={() => { setDetailOpen(false); setSelectedItem(null); }}
+        title={selectedItem?.name ?? "Detail"}
+      >
+        {selectedItem && (
+          <div className="space-y-4 pb-4">
+            {selectedItem.contactName && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedItem.contactId) {
+                    router.push(`/portal/contacts/${selectedItem.contactId}`);
+                  }
+                }}
+                className="flex items-center gap-2 text-sm text-indigo-600 font-semibold min-h-[44px] active:opacity-70"
+              >
+                <User size={16} />
+                {selectedItem.contactName}
+              </button>
+            )}
+
+            {/* Status cells */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Produkty</p>
+              {statusCols.map((col) => {
+                const val = String(selectedItem.cells[col.id] ?? "");
+                return (
+                  <div key={col.id} className="flex items-center justify-between min-h-[44px]">
+                    <span className="text-sm text-slate-700 font-medium">{col.title}</span>
+                    <select
+                      value={val}
+                      onChange={(e) => handleStatusChange(col.id, e.target.value)}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-800 bg-white min-h-[36px] min-w-[110px]"
+                    >
+                      <option value="">—</option>
+                      {statusLabels.map((sl) => (
+                        <option key={sl.id} value={sl.id}>{sl.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setMoveOpen(true)}
+                className="w-full min-h-[44px] rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 active:bg-slate-50"
+              >
+                Přesunout do skupiny…
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteItem}
+                disabled={savePending}
+                className="w-full min-h-[44px] rounded-xl border border-rose-200 text-sm font-semibold text-rose-600 active:bg-rose-50 disabled:opacity-50"
+              >
+                Smazat položku
+              </button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* Move sheet */}
+      <BottomSheet
+        open={moveOpen}
+        onClose={() => setMoveOpen(false)}
+        title="Přesunout do skupiny"
+      >
+        <div className="space-y-2 pb-4">
+          {board.groups.map((group) => {
+            const currentGroupId = board.groups.find((g) =>
+              g.itemIds.includes(selectedItem?.id ?? "")
+            )?.id;
+            const isCurrent = group.id === currentGroupId;
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => handleMoveItem(group.id)}
+                disabled={isCurrent || savePending}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl min-h-[48px] text-left transition-colors ${
+                  isCurrent
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-white border border-slate-200 active:bg-slate-50"
+                }`}
+              >
+                <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: group.color }} />
+                <span className="text-sm font-medium text-slate-800 flex-1">{group.name}</span>
+                {isCurrent && <span className="text-[10px] text-slate-400">aktuální</span>}
+                <span className="text-xs text-slate-500">{group.itemIds.length}</span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+
+      {/* Create sheet */}
+      <BottomSheet
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Nová položka"
+      >
+        <div className="space-y-4 pb-4">
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1">Název</label>
+            <input
+              type="text"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              placeholder="Jméno klienta / název…"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1">Skupina</label>
+            <select
+              value={newItemGroup}
+              onChange={(e) => setNewItemGroup(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm min-h-[44px]"
+            >
+              {board.groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateItem}
+            disabled={savePending || !newItemName.trim()}
+            className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold active:bg-indigo-700 disabled:opacity-50"
+          >
+            {savePending ? "Ukládám…" : "Vytvořit"}
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

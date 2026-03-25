@@ -19,7 +19,7 @@ export type BrandingConfig = {
 export const DEFAULT_BRANDING: BrandingConfig = {
   logoUrl: undefined,
   accentColor: "#3B82F6",
-  appNameVariant: "WePlan",
+  appNameVariant: "Aidvisora",
   portalHeaderText: "Klientský portál",
   assistantDisplayName: "AI Asistent",
   emailSignature: undefined,

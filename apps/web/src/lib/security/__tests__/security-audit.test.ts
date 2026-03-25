@@ -16,8 +16,6 @@ vi.mock("db", () => ({
   and: vi.fn((...args: unknown[]) => ({ and: args })),
   desc: vi.fn((a: unknown) => ({ desc: a })),
   gte: vi.fn((a: unknown, b: unknown) => ({ gte: [a, b] })),
-}));
-vi.mock("drizzle-orm", () => ({
   like: vi.fn((a: unknown, b: unknown) => ({ like: [a, b] })),
 }));
 

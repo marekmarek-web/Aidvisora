@@ -18,7 +18,7 @@ export async function buildPdfFromImages(
   if (options?.documentName) {
     pdfDoc.setTitle(options.documentName);
   }
-  pdfDoc.setProducer("Aidvisor Scanner");
+  pdfDoc.setProducer("Aidvisora Scanner");
   pdfDoc.setCreationDate(new Date());
 
   for (const pageFile of pages) {

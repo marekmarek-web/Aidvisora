@@ -163,6 +163,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     if (!trimmed && files.length === 0) return;
 
     startTransition(async () => {
+      setSendError(null);
       try {
         if (files.length > 0) {
           const formData = new FormData();
@@ -177,7 +178,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         const data = await getMessages(selectedContactId);
         setMsgs(data);
         loadConversations();
-      } catch {}
+      } catch (e) {
+        setSendError(e instanceof Error ? e.message : "Zprávu se nepodařilo odeslat.");
+      }
     });
   }
 

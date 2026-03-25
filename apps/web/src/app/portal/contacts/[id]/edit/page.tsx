@@ -8,7 +8,7 @@ import { getHouseholdForContact, getHouseholdsList, setContactHousehold } from "
 import { ArrowLeft, Flag, User, Home, RefreshCw } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
-import { AddressAutocomplete, type AddressComponents } from "@/app/components/weplan/AddressAutocomplete";
+import { AddressAutocomplete, type AddressComponents } from "@/app/components/aidvisora/AddressAutocomplete";
 
 export default function EditContactPage() {
   const router = useRouter();

@@ -2,10 +2,10 @@
 
 ## Když po pushi na GitHub **Vercel vůbec nespustí build**
 
-Zkontroluj v [vercel.com](https://vercel.com) u projektu (např. `advisorcrm-web`):
+Zkontroluj v [vercel.com](https://vercel.com) u svého projektu Aidvisora:
 
 1. **Settings → Git**
-   - Je připojený **správný repozitář** (`marekmarek-web/advisorcrm` nebo jaký používáte)?
+   - Je připojený **správný GitHub repozitář** (tvůj fork / `aidvisora` apod.)?
    - **Production Branch** = větev, do které pushujete (typicky `main`).
 
 2. **Settings → General → Root Directory**

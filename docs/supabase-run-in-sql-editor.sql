@@ -1,4 +1,4 @@
--- Advisor CRM – celé schéma pro Supabase
+-- Aidvisora – celé schéma pro Supabase
 -- Spusť v Supabase: SQL Editor → New query → vlož tento soubor → Run
 -- (CREATE TABLE IF NOT EXISTS = bezpečné opakované spuštění)
 

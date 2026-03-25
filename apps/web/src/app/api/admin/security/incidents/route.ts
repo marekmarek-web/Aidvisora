@@ -7,7 +7,28 @@ import {
   canAccessSecurityConsole,
   canManageIncidents,
 } from "@/lib/admin/admin-permissions";
-import { createIncident, listIncidents, type IncidentSeverity } from "@/lib/security/incident-service";
+import {
+  createIncident,
+  listIncidents,
+  type IncidentSeverity,
+  type IncidentStatus,
+} from "@/lib/security/incident-service";
+
+const VALID_INCIDENT_STATUSES: readonly IncidentStatus[] = [
+  "open",
+  "investigating",
+  "mitigated",
+  "resolved",
+  "closed",
+];
+
+function parseStatusQueryParam(raw: string | null): IncidentStatus[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const allowed = new Set<string>(VALID_INCIDENT_STATUSES);
+  const filtered = parts.filter((s): s is IncidentStatus => allowed.has(s));
+  return filtered.length ? filtered : undefined;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +47,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50") || 50));
   const severity = url.searchParams.get("severity") as IncidentSeverity | null;
-  const status = url.searchParams.get("status");
-
-  const statusList = status ? (status.split(",").filter(Boolean) as IncidentStatus[]) : undefined;
+  const statusList = parseStatusQueryParam(url.searchParams.get("status"));
 
   const incidents = await listIncidents(membership.tenantId, {
     limit,

@@ -298,11 +298,8 @@ export function NotificationsInboxScreen({
   return (
     <>
       {error ? <ErrorState title={error} onRetry={load} /> : null}
-      {pending && conversations.length === 0 && notificationLog.length === 0 ? (
-        <LoadingSkeleton rows={3} />
-      ) : null}
 
-      {/* Tabs + search */}
+      {/* Tabs + search — always visible during initial load */}
       <MobileSection>
         <FilterChips
           value={view}
@@ -323,6 +320,10 @@ export function NotificationsInboxScreen({
           placeholder={view === "inbox" ? "Hledat konverzaci…" : "Hledat notifikaci…"}
         />
       </MobileSection>
+
+      {pending && conversations.length === 0 && notificationLog.length === 0 ? (
+        <LoadingSkeleton rows={3} />
+      ) : null}
 
       {/* Inbox view */}
       {view === "inbox" ? (

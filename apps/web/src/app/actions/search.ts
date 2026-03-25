@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { db } from "db";
-import { contacts, contracts, opportunities, events } from "db";
+import { contacts, contracts, opportunities, events, households, meetingNotes, documents } from "db";
 import { eq, and, or, sql } from "db";
 
 export type SearchResult = {
@@ -10,18 +10,21 @@ export type SearchResult = {
   contracts: Array<{ id: string; label: string; contactId: string }>;
   opportunities: Array<{ id: string; title: string }>;
   events: Array<{ id: string; title: string; startAt: Date }>;
+  households: Array<{ id: string; name: string }>;
+  notes: Array<{ id: string; domain: string; meetingAt: Date; contactId: string | null }>;
+  docs: Array<{ id: string; name: string; contactId: string | null }>;
 };
 
 export async function globalSearch(query: string): Promise<SearchResult> {
   const trimmed = query.trim();
   if (!trimmed) {
-    return { contacts: [], contracts: [], opportunities: [], events: [] };
+    return { contacts: [], contracts: [], opportunities: [], events: [], households: [], notes: [], docs: [] };
   }
 
   const auth = await requireAuthInAction();
   const pattern = `%${trimmed}%`;
 
-  const [contactRows, contractRows, opportunityRows, eventRows] =
+  const [contactRows, contractRows, opportunityRows, eventRows, householdRows, noteRows, docRows] =
     await Promise.all([
       db
         .select({
@@ -93,6 +96,48 @@ export async function globalSearch(query: string): Promise<SearchResult> {
           ),
         )
         .limit(5),
+
+      db
+        .select({ id: households.id, name: households.name })
+        .from(households)
+        .where(
+          and(
+            eq(households.tenantId, auth.tenantId),
+            sql`${households.name} ILIKE ${pattern}`,
+          ),
+        )
+        .limit(5),
+
+      db
+        .select({
+          id: meetingNotes.id,
+          domain: meetingNotes.domain,
+          meetingAt: meetingNotes.meetingAt,
+          contactId: meetingNotes.contactId,
+        })
+        .from(meetingNotes)
+        .where(
+          and(
+            eq(meetingNotes.tenantId, auth.tenantId),
+            sql`${meetingNotes.domain} ILIKE ${pattern}`,
+          ),
+        )
+        .limit(5),
+
+      db
+        .select({
+          id: documents.id,
+          name: documents.name,
+          contactId: documents.contactId,
+        })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.tenantId, auth.tenantId),
+            sql`${documents.name} ILIKE ${pattern}`,
+          ),
+        )
+        .limit(5),
     ]);
 
   return {
@@ -110,5 +155,8 @@ export async function globalSearch(query: string): Promise<SearchResult> {
     })),
     opportunities: opportunityRows,
     events: eventRows,
+    households: householdRows,
+    notes: noteRows,
+    docs: docRows,
   };
 }

@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 function bridgeHtml(deepLink: string) {
   const intentUrl = deepLink
     .replace("aidvisora://", "intent://")
-    .concat("#Intent;scheme=aidvisora;package=cz.aidvisor.app;end");
+    .concat("#Intent;scheme=aidvisora;package=cz.aidvisora.app;end");
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

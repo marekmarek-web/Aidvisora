@@ -1,5 +1,7 @@
 import type { FinancialAnalysisData } from '../types';
+import { financialAnalysisReportTitle } from '../formatters';
 import type { ReportTheme, BuildPremiumReportOptions, SectionCtx } from './types';
+import { esc } from './helpers';
 import { ELEGANT_CSS, ELEGANT_FONTS } from './themes/elegant';
 import { MODERN_CSS, MODERN_FONTS } from './themes/modern';
 import { renderSidebar } from './sections/sidebar';
@@ -87,7 +89,7 @@ export function buildPremiumReportHTML(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Finanční analýza — ${data.client?.name ?? 'Klient'} | Aidvisora</title>
+  <title>${esc(financialAnalysisReportTitle(data.client?.name ?? 'Klient'))}</title>
   ${themeFonts}
   <style>${themeCSS}</style>
 </head>

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Aidvisor</string>
+        <string>Aidvisora</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,7 +22,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>cz.aidvisor.app</string>
+			<string>cz.aidvisora.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>aidvisor</string>
@@ -59,9 +59,9 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Aidvisor potrebuje pristup ke kamere pro porizeni fotografie dokumentu.</string>
+	<string>Aidvisora potrebuje pristup ke kamere pro porizeni fotografie dokumentu.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Aidvisor potrebuje pristup k fotkam pro vyber dokumentu z galerie.</string>
+	<string>Aidvisora potrebuje pristup k fotkam pro vyber dokumentu z galerie.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

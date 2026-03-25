@@ -10,8 +10,11 @@ import {
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
 import { MasterDetailLayout } from "@/app/shared/mobile-ui/MobileLayouts";
+import { VirtualizedColumn } from "@/app/shared/mobile-ui/VirtualizedColumn";
 import { ClientProfileScreen } from "./ClientProfileScreen";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+
+const CONTACT_LIST_VIRTUAL_THRESHOLD = 24;
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -148,6 +151,8 @@ interface ContactsScreenProps {
   contacts: ContactRow[];
   selectedContactId: string | null;
   deviceClass: DeviceClass;
+  /** Shell transition (e.g. refresh) — suppress empty-state flash while data may be stale. */
+  refreshing?: boolean;
   onSelectContact: (contactId: string) => void;
   onOpenNewContact: () => void;
   onTaskWizard: (contactId: string) => void;
@@ -159,6 +164,7 @@ export function ContactsScreen({
   contacts,
   selectedContactId,
   deviceClass,
+  refreshing = false,
   onSelectContact,
   onOpenNewContact,
   onTaskWizard,
@@ -200,22 +206,42 @@ export function ContactsScreen({
         </button>
       </div>
 
-      {filtered.length === 0 ? (
+      {!refreshing && filtered.length === 0 ? (
         <EmptyState
           title="Žádní klienti"
           description={search ? "Žádné výsledky hledání." : "Zatím nemáte žádné kontakty."}
         />
-      ) : (
-        filtered.map((c) => (
-          <ContactCard
-            key={c.id}
-            contact={c}
-            onSelect={() => onSelectContact(c.id)}
-            onTaskWizard={() => onTaskWizard(c.id)}
-            isActive={selectedContactId === c.id && deviceClass === "tablet"}
-          />
-        ))
-      )}
+      ) : filtered.length > 0 ? (
+        <VirtualizedColumn
+          count={filtered.length}
+          estimateSize={132}
+          enabled={filtered.length >= CONTACT_LIST_VIRTUAL_THRESHOLD}
+          fallback={filtered.map((c) => (
+            <ContactCard
+              key={c.id}
+              contact={c}
+              onSelect={() => onSelectContact(c.id)}
+              onTaskWizard={() => onTaskWizard(c.id)}
+              isActive={selectedContactId === c.id && deviceClass === "tablet"}
+            />
+          ))}
+        >
+          {(index) => {
+            const c = filtered[index];
+            if (!c) return null;
+            return (
+              <div className="pb-3">
+                <ContactCard
+                  contact={c}
+                  onSelect={() => onSelectContact(c.id)}
+                  onTaskWizard={() => onTaskWizard(c.id)}
+                  isActive={selectedContactId === c.id && deviceClass === "tablet"}
+                />
+              </div>
+            );
+          }}
+        </VirtualizedColumn>
+      ) : null}
     </div>
   );
 

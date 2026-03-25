@@ -61,7 +61,7 @@ export function MobileHeader({
         <div className="min-w-0 flex items-center gap-2">{left}</div>
         <div className="min-w-0 flex-1">
           <h1 className={cx("font-black truncate text-center", deviceClass === "tablet" ? "text-lg" : "text-base")}>{title}</h1>
-          {subtitle ? <p className="text-[11px] text-slate-500 text-center truncate">{subtitle}</p> : null}
+          <p className="text-[11px] text-slate-500 text-center truncate">{subtitle || "\u00A0"}</p>
         </div>
         <div className="min-w-0 flex items-center justify-end gap-2">{right}</div>
       </div>
@@ -131,7 +131,7 @@ export function MobileBottomNav({
 }
 
 export function MobileScreen({ children, className }: { children: ReactNode } & ClassName) {
-  return <main className={cx("px-4 pt-4 pb-6 space-y-4", className)}>{children}</main>;
+  return <main className={cx("relative min-h-[calc(100dvh-10rem)] px-4 pt-4 pb-6 space-y-4", className)}>{children}</main>;
 }
 
 export function MobileSection({ title, action, children, className }: { title?: string; action?: ReactNode; children: ReactNode } & ClassName) {

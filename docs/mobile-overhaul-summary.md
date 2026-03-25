@@ -44,7 +44,7 @@ Shrnutí implementace podle plánu v `.cursor/plans/mobile_ux_responsiveness_ove
 
 - **Soubor:** `apps/web/src/app/lib/breakpoints.ts` – `MD_BREAKPOINT_PX = 768`, `LG_BREAKPOINT_PX = 1024`, helpery `mediaBelowMd`, `mediaMdUp`, `mediaBelowLg`.
 - **Tailwind:** v `tailwind.config.ts` nebyly měněny výchozí screens; v kódu se používá `md:` (768px). PortalSidebar stále používá `(max-width: 767px)` pro mobil (pod 768px) – konzistentní s Tailwind md.
-- **Theme:** `weplan-theme.css` – `--wp-mobile: 768px`, proměnné pro délky animací a `prefer-reduced-motion`.
+- **Theme:** `aidvisora-theme.css` – `--wp-mobile: 768px`, proměnné pro délky animací a `prefer-reduced-motion`.
 
 ### Z-index vrstvy
 
@@ -85,12 +85,12 @@ Shrnutí implementace podle plánu v `.cursor/plans/mobile_ux_responsiveness_ove
 - `docs/mobile-audit.md` – audit
 - `docs/mobile-overhaul-summary.md` – tento soubor
 - `apps/web/src/app/lib/breakpoints.ts` – nový
-- `apps/web/src/styles/weplan-theme.css` – z-index, breakpoint, motion vars
+- `apps/web/src/styles/aidvisora-theme.css` – z-index, breakpoint, motion vars
 - `apps/web/tailwind.config.ts` – zIndex extend
 - `apps/web/src/app/components/BaseModal.tsx` – mobileVariant, useIsMobile, fullScreen/sheet
 - `apps/web/src/app/components/StickyBottomCTA.tsx` – nový
 - `apps/web/src/app/components/Toast.tsx` – pozice na mobilu, z-toast, touch target zavřít
-- `apps/web/src/app/components/weplan/NewClientWizard.tsx` – mobileVariant, StickyBottomCTA, grid-cols-1 md:grid-cols-2
+- `apps/web/src/app/components/aidvisora/NewClientWizard.tsx` – mobileVariant, StickyBottomCTA, grid-cols-1 md:grid-cols-2
 - `apps/web/src/app/portal/PortalShell.tsx` – mobilní search overlay, overflow menu, isDesktop/isMobile, z-index, safe-area AI
 - `apps/web/src/app/portal/PortalSidebar.tsx` – z-drawer-overlay, z-drawer-panel
 - `apps/web/src/app/portal/PortalCalendarView.tsx` – z-modal
@@ -103,4 +103,4 @@ Shrnutí implementace podle plánu v `.cursor/plans/mobile_ux_responsiveness_ove
 - `apps/web/src/app/components/list-page/ListPageHeader.tsx` – touch targety pro akce
 - `apps/web/src/app/components/list-page/ListPageToolbar.tsx` – touch targety pro leftSlot
 
-Acceptance criteria z plánu jsou splněna v rozsahu této implementace: mobilní použitelnost vylepšena, hlavní workflow ovladatelné, breakpointy a z-index sjednoceny, modaly na mobilu full-screen/sheet, list kontakty jako karty, topbar s search overlay a overflow menu, sticky CTA u wizardu a review, toast a AI bez překryvu a se safe area, desktop zachován, vizuál z weplan-theme zachován.
+Acceptance criteria z plánu jsou splněna v rozsahu této implementace: mobilní použitelnost vylepšena, hlavní workflow ovladatelné, breakpointy a z-index sjednoceny, modaly na mobilu full-screen/sheet, list kontakty jako karty, topbar s search overlay a overflow menu, sticky CTA u wizardu a review, toast a AI bez překryvu a se safe area, desktop zachován, vizuál z aidvisora-theme zachován.

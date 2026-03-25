@@ -15,7 +15,7 @@ import {
   ListPageNoResults,
 } from "@/app/components/list-page";
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
-import { NewHouseholdWizard } from "@/app/components/weplan/NewHouseholdWizard";
+import { NewHouseholdWizard } from "@/app/components/aidvisora/NewHouseholdWizard";
 import { useToast } from "@/app/components/Toast";
 
 const ROLE_LABELS: Record<string, string> = {

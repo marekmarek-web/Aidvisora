@@ -1,7 +1,16 @@
+import dynamic from "next/dynamic";
 import { getOrCreateBoardView } from "@/app/actions/board";
 import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
-import { PortalBoardView } from "../PortalBoardView";
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
+
+const PortalBoardView = dynamic(
+  () => import("../PortalBoardView").then((m) => m.PortalBoardView),
+  {
+    loading: () => (
+      <div className="flex flex-1 items-center justify-center p-8 text-slate-500 text-sm">Načítání boardu…</div>
+    ),
+  },
+);
 
 /** Sloučí sloupce z API s výchozím setem – nikdy nezobrazíme jen „Jméno klienta“, vždy kompletní sloupce. */
 function mergeColumnsWithDefaults(saved: Column[]): Column[] {

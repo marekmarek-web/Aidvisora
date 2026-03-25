@@ -73,7 +73,7 @@ Dokumentace změn provedených v rámci kompletního upgrade kalendáře na hlav
 | `apps/web/src/app/portal/calendar/calendar-settings.ts` | currentTimeLineColor, currentTimeLineWidth |
 | `apps/web/src/app/portal/PortalCalendarView.tsx` | Refaktor: day view, WeekDayGrid, CalendarContextPanel, QuickEventForm, event-categories, rozšířený modal a popover |
 | `apps/web/src/app/components/calendar/CalendarSettingsModal.tsx` | Sekce čára aktuálního času |
-| `apps/web/src/styles/weplan-calendar.css` | Styly pro context panel, quick form, week-day grid, current time line, wp-cal-event--muted |
+| `apps/web/src/styles/aidvisora-calendar.css` | Styly pro context panel, quick form, week-day grid, current time line, wp-cal-event--muted |
 | `docs/CHANGELOG-calendar-upgrade.md` | **Nový** – tento dokument |
 
 ---

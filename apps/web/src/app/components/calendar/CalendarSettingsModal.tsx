@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Calendar, X, Check } from "lucide-react";
+import { StepWizard } from "@/app/shared/mobile-ui/primitives";
 import type { CalendarSettings, CalendarPresetId, CalendarFontSize } from "@/app/portal/calendar/calendar-settings";
 import { getPresetSettings, ensureAccentLight } from "@/app/portal/calendar/calendar-settings";
 import { CALENDAR_EVENT_CATEGORIES } from "@/app/portal/calendar/event-categories";
@@ -38,6 +39,8 @@ export interface CalendarSettingsModalProps {
   onSave: (settings: CalendarSettings) => void;
   /** Fullscreen stepper-friendly layout for mobile portal. */
   layout?: "center" | "fullscreen";
+  /** When true with fullscreen layout, show 3-step wizard (mobile calendar). */
+  stepper?: boolean;
 }
 
 export function CalendarSettingsModal({
@@ -46,12 +49,18 @@ export function CalendarSettingsModal({
   initialSettings,
   onSave,
   layout = "center",
+  stepper = false,
 }: CalendarSettingsModalProps) {
   const [form, setForm] = useState<CalendarSettings>({ ...initialSettings });
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     if (open) setForm({ ...initialSettings });
   }, [open, initialSettings]);
+
+  useEffect(() => {
+    if (open) setStep(1);
+  }, [open]);
 
   const handlePresetChange = (presetId: CalendarPresetId) => {
     const next = getPresetSettings(presetId);
@@ -68,6 +77,11 @@ export function CalendarSettingsModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const inStepper = layout === "fullscreen" && stepper;
+    if (inStepper && step < 3) {
+      setStep((s) => Math.min(3, s + 1));
+      return;
+    }
     const toSave: CalendarSettings = {
       ...form,
       accentLight: form.accentLight || ensureAccentLight(form.accent),
@@ -79,6 +93,8 @@ export function CalendarSettingsModal({
   if (!open) return null;
 
   const fullscreen = layout === "fullscreen";
+  const showStepper = fullscreen && stepper;
+  const totalSteps = 3;
 
   return (
     <div
@@ -140,10 +156,17 @@ export function CalendarSettingsModal({
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="p-8 overflow-y-auto cal-settings-scroll space-y-10 flex-1">
+          <div className="p-6 sm:p-8 overflow-y-auto cal-settings-scroll space-y-10 flex-1">
+            {showStepper ? (
+              <StepWizard step={step} total={totalSteps}>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                  Krok {step} / {totalSteps}
+                </p>
+              </StepWizard>
+            ) : null}
 
             {/* Predvolby */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${showStepper && step !== 1 ? "hidden" : ""}`}>
               <h3 className="text-sm font-bold text-slate-800">Předvolby</h3>
               <div className="flex flex-wrap gap-2">
                 {PRESET_OPTIONS.map((t) => (
@@ -162,7 +185,7 @@ export function CalendarSettingsModal({
             </div>
 
             {/* Barva zvyrazneni */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${showStepper && step !== 1 ? "hidden" : ""}`}>
               <h3 className="text-sm font-bold text-slate-800">Barva zvýraznění</h3>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-3">
@@ -191,7 +214,7 @@ export function CalendarSettingsModal({
             </div>
 
             {/* Cisla a format */}
-            <div className="space-y-5">
+            <div className={`space-y-5 ${showStepper && step !== 2 ? "hidden" : ""}`}>
               <h3 className="text-sm font-bold text-slate-800">Čísla a formát</h3>
               <div className="space-y-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">První den týdne</p>
@@ -230,7 +253,7 @@ export function CalendarSettingsModal({
             </div>
 
             {/* Velikost pisma */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${showStepper && step !== 2 ? "hidden" : ""}`}>
               <h3 className="text-sm font-bold text-slate-800">Velikost písma v kalendáři</h3>
               <div className="flex flex-wrap gap-2">
                 {FONT_SIZE_OPTIONS.map((s) => (
@@ -249,7 +272,7 @@ export function CalendarSettingsModal({
             </div>
 
             {/* Cara aktualniho casu */}
-            <div className="space-y-3">
+            <div className={`space-y-3 ${showStepper && step !== 2 ? "hidden" : ""}`}>
               <h3 className="text-sm font-bold text-slate-800">Čára aktuálního času</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
@@ -278,7 +301,7 @@ export function CalendarSettingsModal({
             </div>
 
             {/* Barvy typu udalosti */}
-            <div className="space-y-4 pt-2">
+            <div className={`space-y-4 pt-2 ${showStepper && step !== 3 ? "hidden" : ""}`}>
               <div>
                 <h3 className="text-sm font-bold text-slate-800">Barvy typů událostí</h3>
                 <p className="text-xs font-medium text-slate-500 mt-1">Vyberte barvu z palety. Klik na stejnou barvu zruší výběr (výchozí barva typu).</p>
@@ -326,19 +349,53 @@ export function CalendarSettingsModal({
 
           {/* Footer */}
           <div className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8 sm:py-5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              Zrušit
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-8 py-2.5 bg-[#0060ff] text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-[#0050d0] transition-colors"
-            >
-              <Check size={16} /> Uložit
-            </button>
+            {showStepper ? (
+              <>
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep((s) => Math.max(1, s - 1))}
+                    className="mr-auto px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    Zpět
+                  </button>
+                ) : (
+                  <span className="mr-auto" />
+                )}
+                {step < totalSteps ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep((s) => Math.min(totalSteps, s + 1))}
+                    className="px-8 py-2.5 bg-[#0060ff] text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-[#0050d0] transition-colors"
+                  >
+                    Pokračovat
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-8 py-2.5 bg-[#0060ff] text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-[#0050d0] transition-colors"
+                  >
+                    <Check size={16} /> Uložit
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                >
+                  Zrušit
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-[#0060ff] text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-[#0050d0] transition-colors"
+                >
+                  <Check size={16} /> Uložit
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>

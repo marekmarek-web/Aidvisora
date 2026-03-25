@@ -20,7 +20,6 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingSkeleton,
   MobileCard,
   MobileSection,
   StatusBadge,
@@ -275,13 +274,18 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
   }, [summary]);
 
   return (
-    <div className="pb-6">
+    <>
       {error ? <ErrorState title={error} onRetry={loadData} /> : null}
-
+      <div
+        className={cx(
+          "pb-6",
+          pending && summary && "opacity-60 pointer-events-none transition-opacity duration-200"
+        )}
+      >
       {/* Summary hero */}
       {summary ? <SummaryBar summary={summary} /> : null}
       {pending && !summary ? (
-        <div className="h-28 bg-gradient-to-br from-[#0a0f29] to-indigo-950 animate-pulse" />
+        <div className="h-28 bg-gradient-to-br from-[#0a0f29] to-indigo-950 animate-pulse rounded-b-2xl" />
       ) : null}
 
       {/* Period selector */}
@@ -307,7 +311,20 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
         </div>
       </div>
 
-      {pending && !summary ? <LoadingSkeleton rows={4} /> : null}
+      {pending && !summary ? (
+        <div className="min-h-[50vh] px-4 pt-3 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+            ))}
+          </div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Content */}
       {summary ? (
@@ -365,6 +382,7 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
           />
         </MobileSection>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }

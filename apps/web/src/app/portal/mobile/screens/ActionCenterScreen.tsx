@@ -43,12 +43,12 @@ type ActionCenterItem = {
 
 type FilterType = "all" | "urgent" | "reminders" | "reviews" | "escalations";
 
-const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
-  { value: "all", label: "Vše" },
-  { value: "urgent", label: "Urgentní" },
-  { value: "reminders", label: "Připomínky" },
-  { value: "reviews", label: "Review" },
-  { value: "escalations", label: "Eskalace" },
+const FILTER_OPTIONS: { id: FilterType; label: string }[] = [
+  { id: "all", label: "Vše" },
+  { id: "urgent", label: "Urgentní" },
+  { id: "reminders", label: "Připomínky" },
+  { id: "reviews", label: "Review" },
+  { id: "escalations", label: "Eskalace" },
 ];
 
 function getIcon(type: ActionCenterItemType) {
@@ -62,7 +62,7 @@ function getIcon(type: ActionCenterItemType) {
   }
 }
 
-function getSeverityVariant(severity: string): "success" | "warning" | "danger" | "neutral" {
+function getSeverityTone(severity: string): "success" | "warning" | "danger" | "neutral" | "info" {
   switch (severity) {
     case "urgent": return "danger";
     case "warning": return "warning";
@@ -139,16 +139,18 @@ export function ActionCenterScreen({
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {filtered.length === 0 ? (
           <EmptyState
-            icon={<CheckCircle2 className="w-10 h-10 text-green-500" />}
+            icon={CheckCircle2}
             title="Vše vyřízeno"
             description="Nemáte žádné čekající akce."
           />
         ) : (
           filtered.map((item) => (
-            <MobileCard
+            <div
               key={item.id}
+              className={onNavigate ? "cursor-pointer rounded-2xl" : undefined}
               onClick={() => onNavigate?.(item.deepLink)}
             >
+            <MobileCard pressable>
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">{getIcon(item.type)}</div>
                 <div className="flex-1 min-w-0">
@@ -156,7 +158,7 @@ export function ActionCenterScreen({
                     <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {item.title}
                     </span>
-                    <StatusBadge variant={getSeverityVariant(item.severity)}>
+                    <StatusBadge tone={getSeverityTone(item.severity)}>
                       {item.severity === "urgent" ? "Urgentní" : item.severity === "warning" ? "Varování" : "Info"}
                     </StatusBadge>
                   </div>
@@ -182,6 +184,7 @@ export function ActionCenterScreen({
                 <ChevronRight className="w-4 h-4 text-gray-400 mt-1 shrink-0" />
               </div>
             </MobileCard>
+            </div>
           ))
         )}
       </div>

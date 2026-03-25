@@ -13,20 +13,13 @@ import {
   type EventRow,
 } from "@/app/actions/events";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
-import { CalendarSettingsModal } from "@/app/components/calendar/CalendarSettingsModal";
 import { formatDateLocal } from "@/app/portal/calendar/date-utils";
 import {
   DEFAULT_SETTINGS,
   saveCalendarSettings,
 } from "@/app/portal/calendar/calendar-settings";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
-import {
-  BottomSheet,
-  ErrorState,
-  FloatingActionButton,
-  Toast,
-  useToast,
-} from "@/app/shared/mobile-ui/primitives";
+import { ErrorState, FloatingActionButton, Toast, useToast } from "@/app/shared/mobile-ui/primitives";
 import { CalendarAgendaView } from "./CalendarAgendaView";
 import { CalendarDayTasksStrip } from "./CalendarDayTasksStrip";
 import { CalendarDrawer } from "./CalendarDrawer";
@@ -38,6 +31,8 @@ import {
   type OpportunityOption,
 } from "./CalendarEventForm";
 import { CalendarGridSkeleton } from "./CalendarGridSkeleton";
+import { CalendarSearch } from "./CalendarSearch";
+import { CalendarSettingsWizard } from "./CalendarSettingsWizard";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarTimeGrid } from "./CalendarTimeGrid";
 import {
@@ -122,6 +117,7 @@ export function CalendarScreen({
   const [searchQuery, setSearchQuery] = useState("");
 
   const [hiddenEventTypes, setHiddenEventTypes] = useState<Set<string>>(() => new Set());
+  const [contactFilterId, setContactFilterId] = useState("");
   const [optimisticDeleteIds, setOptimisticDeleteIds] = useState<Set<string>>(() => new Set());
 
   const [selectedEvent, setSelectedEvent] = useState<EventRow | null>(null);
@@ -188,17 +184,22 @@ export function CalendarScreen({
     [events, optimisticDeleteIds],
   );
 
+  const eventsFilteredByContact = useMemo(() => {
+    if (!contactFilterId.trim()) return eventsAfterOptimistic;
+    return eventsAfterOptimistic.filter((e) => e.contactId === contactFilterId);
+  }, [eventsAfterOptimistic, contactFilterId]);
+
   const eventsByDate = useMemo(() => {
-    const built = buildEventsByDate(eventsAfterOptimistic);
+    const built = buildEventsByDate(eventsFilteredByContact);
     return filterEventsByDateMap(built, hiddenEventTypes);
-  }, [eventsAfterOptimistic, hiddenEventTypes]);
+  }, [eventsFilteredByContact, hiddenEventTypes]);
 
   const visibleDayKeys = useMemo(() => visibleDays.map((d) => formatDateLocal(d)), [visibleDays]);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
-    return eventsAfterOptimistic
+    return eventsFilteredByContact
       .filter((ev) => visibleDayKeys.includes(formatDateLocal(new Date(ev.startAt))))
       .filter((ev) => !hiddenEventTypes.has(ev.eventType ?? "schuzka"))
       .filter((ev) => {
@@ -207,7 +208,7 @@ export function CalendarScreen({
         return title.includes(q) || contact.includes(q);
       })
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  }, [eventsAfterOptimistic, visibleDayKeys, hiddenEventTypes, searchQuery]);
+  }, [eventsFilteredByContact, visibleDayKeys, hiddenEventTypes, searchQuery]);
 
   const contactForSelected = useMemo(() => {
     if (!selectedEvent?.contactId) return null;
@@ -489,23 +490,25 @@ export function CalendarScreen({
         refreshing={refreshing}
       />
 
-      {googleConnected === false ? (
-        <div className="mx-3 mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950">
-          <span>Google Kalendář není připojen.</span>
-          <a
-            href="/api/integrations/google-calendar/connect"
-            className="text-indigo-600 underline underline-offset-2"
-          >
-            Připojit
-          </a>
-        </div>
-      ) : null}
-      {googleConnected === true && googleEmail ? (
-        <div className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-bold text-emerald-900">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-          <span className="truncate">Google: {googleEmail}</span>
-        </div>
-      ) : null}
+      <div className="mx-3 mb-2 min-h-[40px]">
+        {googleConnected === false ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950">
+            <span>Google Kalendář není připojen.</span>
+            <a
+              href="/api/integrations/google-calendar/connect"
+              className="text-indigo-600 underline underline-offset-2"
+            >
+              Připojit
+            </a>
+          </div>
+        ) : null}
+        {googleConnected === true && googleEmail ? (
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-bold text-emerald-900">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+            <span className="truncate">Google: {googleEmail}</span>
+          </div>
+        ) : null}
+      </div>
 
       <CalendarDayTasksStrip
         dateStr={formatDateLocal(anchorDate)}
@@ -522,28 +525,36 @@ export function CalendarScreen({
             Načítám agendu…
           </div>
         )
-      ) : showGrid ? (
-        <CalendarTimeGrid
-          visibleDays={visibleDays}
-          eventsByDate={eventsByDate}
-          todayStr={todayStr}
-          firstDayOfWeek={firstDayOfWeek}
-          deviceClass={dc}
-          settings={settings}
-          selectedEventId={selectedEventId}
-          onSlotClick={onSlotClick}
-          onEventClick={onEventClick}
-          scrollSignal={scrollSignal}
-        />
       ) : (
-        <CalendarAgendaView
-          visibleDays={visibleDays}
-          eventsByDate={eventsByDate}
-          todayStr={todayStr}
-          selectedEventId={selectedEventId}
-          settings={settings}
-          onEventClick={onEventClick}
-        />
+        <div
+          className={
+            refreshing && !loading ? "opacity-50 transition-opacity duration-200" : "transition-opacity duration-200"
+          }
+        >
+          {showGrid ? (
+            <CalendarTimeGrid
+              visibleDays={visibleDays}
+              eventsByDate={eventsByDate}
+              todayStr={todayStr}
+              firstDayOfWeek={firstDayOfWeek}
+              deviceClass={dc}
+              settings={settings}
+              selectedEventId={selectedEventId}
+              onSlotClick={onSlotClick}
+              onEventClick={onEventClick}
+              scrollSignal={scrollSignal}
+            />
+          ) : (
+            <CalendarAgendaView
+              visibleDays={visibleDays}
+              eventsByDate={eventsByDate}
+              todayStr={todayStr}
+              selectedEventId={selectedEventId}
+              settings={settings}
+              onEventClick={onEventClick}
+            />
+          )}
+        </div>
       )}
 
       {canWriteCalendar && !formOpen ? (
@@ -568,13 +579,16 @@ export function CalendarScreen({
         googleConnected={googleConnected === true}
         onSyncCalendar={handleGoogleSync}
         syncBusy={syncBusy}
+        contacts={contacts}
+        contactFilterId={contactFilterId}
+        onContactFilterChange={setContactFilterId}
       />
 
-      <CalendarSettingsModal
+      <CalendarSettingsWizard
+        deviceClass={dc}
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         initialSettings={settings ?? DEFAULT_SETTINGS}
-        layout={dc === "tablet" || dc === "desktop" ? "center" : "fullscreen"}
         onSave={(next) => {
           saveCalendarSettings(next);
           setSettings(next);
@@ -582,47 +596,19 @@ export function CalendarScreen({
         }}
       />
 
-      <BottomSheet open={searchOpen} onClose={() => setSearchOpen(false)} title="Hledat v kalendáři">
-        <div className="space-y-3">
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Název nebo klient…"
-            className="min-h-[48px] w-full rounded-xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            autoFocus
-          />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            V aktuálně načteném období ({visibleDayKeys[0] ?? ""} – {visibleDayKeys[visibleDayKeys.length - 1] ?? ""})
-          </p>
-          <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
-            {searchQuery.trim() && searchResults.length === 0 ? (
-              <li className="py-6 text-center text-sm text-slate-500">Žádná shoda</li>
-            ) : null}
-            {searchResults.map((ev) => (
-              <li key={ev.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onEventClick(ev);
-                    setSearchOpen(false);
-                    setSearchQuery("");
-                  }}
-                  className="flex w-full min-h-[52px] flex-col items-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-left active:bg-slate-50"
-                >
-                  <span className="font-bold text-slate-900">{ev.title}</span>
-                  <span className="text-xs text-slate-500">
-                    {formatDateLocal(new Date(ev.startAt))}{" "}
-                    {ev.allDay
-                      ? "· celý den"
-                      : `· ${new Date(ev.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </BottomSheet>
+      <CalendarSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        results={searchResults}
+        rangeLabel={`${visibleDayKeys[0] ?? ""} – ${visibleDayKeys[visibleDayKeys.length - 1] ?? ""}`}
+        onPickEvent={(ev) => {
+          onEventClick(ev);
+          setSearchOpen(false);
+          setSearchQuery("");
+        }}
+      />
 
       {selectedEvent && !formOpen ? (
         <CalendarEventDetail
@@ -647,6 +633,7 @@ export function CalendarScreen({
 
       {formOpen && formInitial ? (
         <CalendarEventForm
+          deviceClass={dc}
           initial={formInitial}
           contacts={contacts}
           opportunities={opportunities}

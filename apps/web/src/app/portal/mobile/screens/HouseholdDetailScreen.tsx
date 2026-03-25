@@ -34,7 +34,6 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingSkeleton,
   MobileCard,
   MobileSection,
   StatusBadge,
@@ -223,14 +222,36 @@ export function HouseholdDetailScreen({
     }
   }
 
-  if (pending && !detail) return <LoadingSkeleton rows={3} />;
+  if (pending && !detail) {
+    return (
+      <div className="min-h-[50vh] space-y-0">
+        <div className="h-32 bg-gradient-to-br from-slate-800 to-slate-900 animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 flex gap-2 border-b border-slate-100 bg-white">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-8 flex-1 rounded-xl bg-slate-200/70 animate-pulse max-w-[100px]" />
+          ))}
+        </div>
+        <div className="px-4 pt-3 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (error) return <ErrorState title={error} onRetry={reload} />;
   if (!detail) return <EmptyState title="Domácnost nebyla nalezena" />;
 
   const householdName = detail.icon ? `${detail.icon} ${detail.name}` : detail.name;
 
   return (
-    <div className="pb-6">
+    <>
+    <div
+      className={cx(
+        "pb-6",
+        pending && detail && "opacity-60 pointer-events-none transition-opacity duration-200"
+      )}
+    >
       {/* Hero */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-5">
         <div className="flex items-start gap-3">
@@ -412,6 +433,7 @@ export function HouseholdDetailScreen({
           )}
         </MobileSection>
       ) : null}
+    </div>
 
       {/* Edit household */}
       <BottomSheet
@@ -503,6 +525,6 @@ export function HouseholdDetailScreen({
           </button>
         </div>
       </BottomSheet>
-    </div>
+    </>
   );
 }

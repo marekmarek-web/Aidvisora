@@ -5,10 +5,10 @@ import { getContactsCount } from "@/app/actions/contacts";
 import { PortalShell } from "./PortalShell";
 import { MobilePortalApp } from "./mobile/MobilePortalApp";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
-import "@/styles/weplan-monday.css";
+import "@/styles/aidvisora-monday.css";
 import "@/styles/board.css";
 import "@/styles/monday.css";
-import "@/styles/weplan-calendar.css";
+import "@/styles/aidvisora-calendar.css";
 
 /** Portal je vždy dynamický – vyžaduje auth a DB, neprerenderovat při buildu. */
 export const dynamic = "force-dynamic";

@@ -1,4 +1,4 @@
-package cz.aidvisor.app;
+package cz.aidvisora.app;
 
 import com.getcapacitor.BridgeActivity;
 

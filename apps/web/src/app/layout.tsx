@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
-import "../styles/weplan-theme.css";
-import "../styles/weplan-components.css";
+import "../styles/aidvisora-theme.css";
+import "../styles/aidvisora-components.css";
 import { TooltipBlurListener } from "./components/TooltipBlurListener";
 import { NativeOAuthDeepLinkBridge } from "./components/NativeOAuthDeepLinkBridge";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -20,10 +20,18 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  manifest: "/site.webmanifest",
   title: "Aidvisora – pracovní systém pro finanční poradce",
   description:
     "CRM, klientská zóna a workflow pro finanční poradce. Klienti, dokumenty, schůzky a úkoly na jednom místě — méně administrativy, více přehledu.",
-  icons: { icon: "/favicon.png", apple: "/favicon.png" },
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/icon-192.webp", sizes: "192x192", type: "image/webp" },
+      { url: "/icons/icon-512.webp", sizes: "512x512", type: "image/webp" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "Aidvisora – pracovní systém pro finanční poradce",
     description:

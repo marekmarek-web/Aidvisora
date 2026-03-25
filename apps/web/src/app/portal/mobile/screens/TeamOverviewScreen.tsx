@@ -32,7 +32,6 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingSkeleton,
   MobileCard,
   MobileSection,
   StatusBadge,
@@ -237,12 +236,45 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
     });
   }
 
-  if (pending && !kpis) return <LoadingSkeleton rows={4} />;
+  if (pending && !kpis) {
+    return (
+      <div className="min-h-[50vh] space-y-0 pb-6">
+        <div className="h-28 bg-gradient-to-br from-slate-800 to-slate-900 animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-white/80 border-b border-slate-100">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="px-4 py-3 space-y-2 bg-white border-b border-slate-100">
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-16 rounded-xl bg-slate-200/70 animate-pulse shrink-0" />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-20 rounded-xl bg-slate-200/70 animate-pulse shrink-0" />
+            ))}
+          </div>
+        </div>
+        <div className="px-4 pt-3 space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="pb-6">
+    <>
       {error ? <ErrorState title={error} onRetry={reload} /> : null}
-
+      <div
+        className={cx(
+          "pb-6",
+          pending && kpis && "opacity-60 pointer-events-none transition-opacity duration-200"
+        )}
+      >
       {/* Hero */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-5">
         <div className="flex items-start justify-between gap-3">
@@ -399,6 +431,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
           )}
         </MobileSection>
       ) : null}
+      </div>
 
       {/* Action sheet */}
       <BottomSheet
@@ -441,6 +474,6 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
           ) : null}
         </div>
       </BottomSheet>
-    </div>
+    </>
   );
 }

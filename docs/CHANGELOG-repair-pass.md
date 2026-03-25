@@ -106,7 +106,7 @@ Dokument shrnuje provedené opravy podle plánu „CRM repair pass (problém →
 - `packages/db/src/schema/contracts.ts`
 - `apps/web/src/app/lib/segment-labels.ts`
 - `apps/web/src/app/dashboard/contacts/[id]/ContractsSection.tsx`
-- `apps/web/src/app/components/weplan/ProductPicker.tsx`
+- `apps/web/src/app/components/aidvisora/ProductPicker.tsx`
 
 **Databázové přehledy (UI)**
 - `apps/web/src/app/portal/analyses/page.tsx`

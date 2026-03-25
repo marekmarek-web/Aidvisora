@@ -3,7 +3,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MindmapNode, MindmapEdge, ViewportState } from "./types";
 
-const CANVAS_SIZE = 5000;
+function getCanvasSize() {
+  if (typeof window === "undefined") return 5000;
+  return window.innerWidth < 768 ? 3000 : 5000;
+}
 
 type MindmapCanvasProps = {
   nodes: MindmapNode[];
@@ -32,6 +35,8 @@ export function MindmapCanvas({
   const [isPanning, setIsPanning] = useState(false);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const startPosRef = useRef({ x: 0, y: 0 });
+  const pinchRef = useRef<{ dist: number; zoom: number; midX: number; midY: number } | null>(null);
+  const [canvasSize] = useState(getCanvasSize);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, nodeId?: string) => {
@@ -122,6 +127,56 @@ export function MindmapCanvas({
     return () => el.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    function dist(a: Touch, b: Touch) {
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function handleTouchStart(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const d = dist(e.touches[0], e.touches[1]);
+        const rect = el!.getBoundingClientRect();
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        pinchRef.current = { dist: d, zoom: viewport.zoom, midX, midY };
+      }
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault();
+        const d = dist(e.touches[0], e.touches[1]);
+        const scale = d / pinchRef.current.dist;
+        const newZoom = Math.min(Math.max(pinchRef.current.zoom * scale, ZOOM_MIN), ZOOM_MAX);
+        if (newZoom === viewport.zoom) return;
+        const { midX, midY } = pinchRef.current;
+        const pointX = (midX - viewport.pan.x) / viewport.zoom;
+        const pointY = (midY - viewport.pan.y) / viewport.zoom;
+        onViewportChange({
+          zoom: newZoom,
+          pan: { x: midX - pointX * newZoom, y: midY - pointY * newZoom },
+        });
+      }
+    }
+
+    function handleTouchEnd() {
+      pinchRef.current = null;
+    }
+
+    el.addEventListener("touchstart", handleTouchStart, { passive: false });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("touchend", handleTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [viewport, onViewportChange]);
+
   const renderEdges = () => {
     return edges.map((edge) => {
       const source = nodes.find((n) => n.id === edge.sourceId);
@@ -150,6 +205,7 @@ export function MindmapCanvas({
         backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 0)",
         backgroundSize: "32px 32px",
         cursor: draggingNodeId ? "grabbing" : isPanning ? "grabbing" : "grab",
+        touchAction: "none",
       }}
       onPointerDown={(e) => handlePointerDown(e)}
     >
@@ -162,8 +218,8 @@ export function MindmapCanvas({
       >
         <svg
           className="absolute overflow-visible pointer-events-none"
-          width={CANVAS_SIZE}
-          height={CANVAS_SIZE}
+          width={canvasSize}
+          height={canvasSize}
           style={{ zIndex: 0 }}
         >
           {renderEdges()}
@@ -179,6 +235,10 @@ export function MindmapCanvas({
                 marginLeft: getNodeOffsetX(node.type),
                 marginTop: -50,
                 cursor: "grab",
+                padding: "8px",
+                margin: "-8px",
+                minWidth: "44px",
+                minHeight: "44px",
               }}
             >
               {renderNode(node, {

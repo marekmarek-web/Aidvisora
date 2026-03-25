@@ -92,7 +92,6 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     } catch (e) {
       console.error("[push] checkPermissions failed", e);
       setPermissionState("prompt");
-      setError(e instanceof Error ? e.message : "Push oprávnění se nepodařilo zkontrolovat.");
     }
   }, [isSupported]);
 
@@ -114,10 +113,10 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     try {
       await PushNotifications.register();
     } catch (e) {
-      registrationRequestedRef.current = false;
       const message = e instanceof Error ? e.message : "Push registrace selhala.";
       setError(message);
       console.error("[push] register failed", e);
+      // Keep registrationRequestedRef true so the "granted" effect does not retry in a tight loop
     }
   }, [isSupported]);
 
@@ -125,54 +124,62 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     if (!isSupported) return;
     void syncPermissions();
 
-    const onRegistration = PushNotifications.addListener("registration", (newToken: Token) => {
-      const tokenValue = newToken.value;
-      setToken(tokenValue);
-      setError(null);
-      localStorage.setItem(PUSH_TOKEN_STORAGE_KEY, tokenValue);
-      void registerTokenOnBackend(tokenValue, platform);
-    }).catch((e) => {
-      console.error("[push] registration listener attach failed", e);
-      setError(e instanceof Error ? e.message : "Push registrace není k dispozici.");
-    });
+    let cancelled = false;
+    const handles: Array<{ remove: () => void | Promise<void> }> = [];
 
-    const onRegistrationError = PushNotifications.addListener("registrationError", (registrationError) => {
-      setError(registrationError.error);
-    }).catch((e) => {
-      console.error("[push] registrationError listener attach failed", e);
-    });
+    const setupListeners = async () => {
+      try {
+        const [
+          onRegistration,
+          onRegistrationError,
+          onNotificationReceived,
+          onNotificationAction,
+        ] = await Promise.all([
+          PushNotifications.addListener("registration", (newToken: Token) => {
+            const tokenValue = newToken.value;
+            setToken(tokenValue);
+            setError(null);
+            localStorage.setItem(PUSH_TOKEN_STORAGE_KEY, tokenValue);
+            void registerTokenOnBackend(tokenValue, platform);
+          }),
+          PushNotifications.addListener("registrationError", (registrationError) => {
+            setError(registrationError.error);
+          }),
+          PushNotifications.addListener("pushNotificationReceived", (notification) => {
+            onReceivedRef.current?.(notification);
+          }),
+          PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+            onActionRef.current?.(action);
+          }),
+        ]);
 
-    const onNotificationReceived = PushNotifications.addListener("pushNotificationReceived", (notification) => {
-      onReceivedRef.current?.(notification);
-    }).catch((e) => {
-      console.error("[push] pushNotificationReceived listener attach failed", e);
-    });
+        if (cancelled) {
+          await Promise.all(
+            [onRegistration, onRegistrationError, onNotificationReceived, onNotificationAction].map((h) =>
+              typeof h.remove === "function" ? Promise.resolve(h.remove()) : Promise.resolve()
+            )
+          );
+          return;
+        }
 
-    const onNotificationAction = PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-      onActionRef.current?.(action);
-    }).catch((e) => {
-      console.error("[push] pushNotificationActionPerformed listener attach failed", e);
-    });
+        handles.push(onRegistration, onRegistrationError, onNotificationReceived, onNotificationAction);
+      } catch (e) {
+        console.error("[push] addListener setup failed", e);
+        setError(e instanceof Error ? e.message : "Push plugin není k dispozici.");
+      }
+    };
+
+    void setupListeners();
 
     return () => {
-      const detach = (p: Promise<unknown>) => {
-        void p
-          .then((listener) => {
-            if (
-              listener &&
-              typeof listener === "object" &&
-              "remove" in listener &&
-              typeof (listener as { remove?: unknown }).remove === "function"
-            ) {
-              void (listener as { remove: () => void | Promise<void> }).remove();
-            }
-          })
-          .catch(() => {});
-      };
-      detach(onRegistration);
-      detach(onRegistrationError);
-      detach(onNotificationReceived);
-      detach(onNotificationAction);
+      cancelled = true;
+      for (const h of handles) {
+        try {
+          void h.remove();
+        } catch (removeErr) {
+          console.error("[push] listener remove failed", removeErr);
+        }
+      }
     };
   }, [isSupported, platform, syncPermissions]);
 

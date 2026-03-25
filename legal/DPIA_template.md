@@ -1,6 +1,6 @@
 # Šablona DPIA (Posouzení dopadu na ochranu osobních údajů)
 
-**Pro:** Zavedení / provoz aplikace Advisor CRM (zpracování OÚ klientů poradenských firem).
+**Pro:** Zavedení / provoz aplikace Aidvisora (zpracování OÚ klientů poradenských firem).
 
 **Kroky:**
 

@@ -39,7 +39,7 @@ Fix the existing board in place. Do not delete, hide, simplify, or replace colum
 - **ColumnHeader.tsx**
   - Resize handle zůstává `right: 0` + `translateX(50%)`. Díky pevné šířce tabulky a sloupců sedí přesně na hraně sloupce. Přidán `aria-label`.
 
-- **weplan-monday.css**
+- **aidvisora-monday.css**
   - `.monday-td-fullcell`: `height: 44px`, `min-height: 44px`, aby status buňka měla konstantní výšku a vnitřek (barva) vyplnil celou buňku.
   - `.monday-td > div` a `.monday-td > div > button`: `width: 100%`, `height: 100%` pro plné vyplnění buňky statusem.
 

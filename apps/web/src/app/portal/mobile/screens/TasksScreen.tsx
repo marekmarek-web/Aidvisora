@@ -23,7 +23,10 @@ import {
   SearchBar,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import { VirtualizedColumn } from "@/app/shared/mobile-ui/VirtualizedColumn";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+
+const TASK_LIST_VIRTUAL_THRESHOLD = 25;
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -158,12 +161,95 @@ function TaskDetailSheet({
   );
 }
 
+function TaskRowCard({
+  task,
+  todayStr,
+  onToggleTask,
+  onSelectTask,
+}: {
+  task: TaskRow;
+  todayStr: string;
+  onToggleTask: (task: TaskRow) => void;
+  onSelectTask: (task: TaskRow) => void;
+}) {
+  const isDone = Boolean(task.completedAt);
+  const { label, isOverdue, isToday } = getDateLabel(task.dueDate, todayStr);
+  return (
+    <MobileCard
+      className={cx("p-0 overflow-hidden", isOverdue && !isDone && "border-rose-200")}
+    >
+      <div className="flex items-stretch gap-0">
+        <button
+          type="button"
+          onClick={() => onToggleTask(task)}
+          className={cx(
+            "w-14 flex-shrink-0 flex items-center justify-center transition-colors",
+            isDone
+              ? "bg-emerald-50 text-emerald-500"
+              : isOverdue
+                ? "bg-rose-50 text-rose-300"
+                : "bg-slate-50 text-slate-300"
+          )}
+          aria-label={isDone ? "Znovu otevřít" : "Označit jako hotovo"}
+        >
+          {isDone ? (
+            <CheckCircle2 size={22} className="text-emerald-500" />
+          ) : (
+            <Circle size={22} />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectTask(task)}
+          className="flex-1 min-w-0 p-3.5 text-left"
+        >
+          <p
+            className={cx(
+              "text-sm font-bold leading-snug",
+              isDone ? "line-through text-slate-400" : "text-slate-900"
+            )}
+          >
+            {task.title}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {task.dueDate ? (
+              <span
+                className={cx(
+                  "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
+                  isOverdue && !isDone
+                    ? "text-rose-500"
+                    : isToday && !isDone
+                      ? "text-amber-500"
+                      : "text-slate-400"
+                )}
+              >
+                <CalendarDays size={10} />
+                {label}
+              </span>
+            ) : null}
+            {task.contactName ? (
+              <StatusBadge tone="info">{task.contactName}</StatusBadge>
+            ) : null}
+          </div>
+        </button>
+
+        <div className="flex items-center pr-3 text-slate-300">
+          <ChevronRight size={16} />
+        </div>
+      </div>
+    </MobileCard>
+  );
+}
+
 interface TasksScreenProps {
   tasks: TaskRow[];
   taskCounts: TaskCounts;
   taskFilter: TaskFilter;
   contacts: ContactRow[];
   deviceClass: DeviceClass;
+  /** Shell transition (e.g. refresh) — suppress empty-state flash while data may be stale. */
+  refreshing?: boolean;
   onFilterChange: (filter: TaskFilter) => void;
   onToggleTask: (task: TaskRow) => void;
   onDeleteTask: (taskId: string) => void;
@@ -175,6 +261,7 @@ export function TasksScreen({
   taskCounts,
   taskFilter,
   deviceClass,
+  refreshing = false,
   onFilterChange,
   onToggleTask,
   onDeleteTask,
@@ -240,90 +327,42 @@ export function TasksScreen({
       ) : null}
 
       {/* Task list */}
-      {filtered.length === 0 ? (
+      {!refreshing && filtered.length === 0 ? (
         <EmptyState
           title="Žádné úkoly"
           description={search ? "Žádné výsledky hledání." : "V tomto filtru nejsou žádné položky."}
         />
-      ) : (
-        filtered.map((task) => {
-          const isDone = Boolean(task.completedAt);
-          const { label, isOverdue, isToday } = getDateLabel(task.dueDate, todayStr);
-          return (
-            <MobileCard
+      ) : filtered.length > 0 ? (
+        <VirtualizedColumn
+          count={filtered.length}
+          estimateSize={118}
+          enabled={filtered.length >= TASK_LIST_VIRTUAL_THRESHOLD}
+          fallback={filtered.map((task) => (
+            <TaskRowCard
               key={task.id}
-              className={cx(
-                "p-0 overflow-hidden",
-                isOverdue && !isDone && "border-rose-200"
-              )}
-            >
-              <div className="flex items-stretch gap-0">
-                {/* Complete toggle button on left edge */}
-                <button
-                  type="button"
-                  onClick={() => onToggleTask(task)}
-                  className={cx(
-                    "w-14 flex-shrink-0 flex items-center justify-center transition-colors",
-                    isDone
-                      ? "bg-emerald-50 text-emerald-500"
-                      : isOverdue
-                        ? "bg-rose-50 text-rose-300"
-                        : "bg-slate-50 text-slate-300"
-                  )}
-                  aria-label={isDone ? "Znovu otevřít" : "Označit jako hotovo"}
-                >
-                  {isDone ? (
-                    <CheckCircle2 size={22} className="text-emerald-500" />
-                  ) : (
-                    <Circle size={22} />
-                  )}
-                </button>
-
-                {/* Task body */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedTask(task)}
-                  className="flex-1 min-w-0 p-3.5 text-left"
-                >
-                  <p
-                    className={cx(
-                      "text-sm font-bold leading-snug",
-                      isDone ? "line-through text-slate-400" : "text-slate-900"
-                    )}
-                  >
-                    {task.title}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {task.dueDate ? (
-                      <span
-                        className={cx(
-                          "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
-                          isOverdue && !isDone
-                            ? "text-rose-500"
-                            : isToday && !isDone
-                              ? "text-amber-500"
-                              : "text-slate-400"
-                        )}
-                      >
-                        <CalendarDays size={10} />
-                        {label}
-                      </span>
-                    ) : null}
-                    {task.contactName ? (
-                      <StatusBadge tone="info">{task.contactName}</StatusBadge>
-                    ) : null}
-                  </div>
-                </button>
-
-                {/* Chevron */}
-                <div className="flex items-center pr-3 text-slate-300">
-                  <ChevronRight size={16} />
-                </div>
+              task={task}
+              todayStr={todayStr}
+              onToggleTask={onToggleTask}
+              onSelectTask={setSelectedTask}
+            />
+          ))}
+        >
+          {(index) => {
+            const task = filtered[index];
+            if (!task) return null;
+            return (
+              <div className="pb-3">
+                <TaskRowCard
+                  task={task}
+                  todayStr={todayStr}
+                  onToggleTask={onToggleTask}
+                  onSelectTask={setSelectedTask}
+                />
               </div>
-            </MobileCard>
-          );
-        })
-      )}
+            );
+          }}
+        </VirtualizedColumn>
+      ) : null}
 
       {/* Task detail bottom sheet */}
       {selectedTask ? (

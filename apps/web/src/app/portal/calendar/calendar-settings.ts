@@ -1,7 +1,9 @@
 /**
  * Calendar settings: type, defaults, presets, load/save to localStorage.
- * Key: weplan_calendar_settings
+ * Key: aidvisora_calendar_settings (legacy: weplan_calendar_settings).
  */
+
+import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 
 export type CalendarPresetId = "default" | "minimal" | "contrast";
 
@@ -25,7 +27,7 @@ export interface CalendarSettings {
   eventTypeColors?: Record<string, string>;
 }
 
-const STORAGE_KEY = "weplan_calendar_settings";
+const STORAGE_KEY = "aidvisora_calendar_settings";
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -77,6 +79,7 @@ export const CALENDAR_PRESETS: Record<CalendarPresetId, CalendarSettings> = {
 
 export function loadCalendarSettings(): CalendarSettings {
   if (typeof window === "undefined") return { ...DEFAULT_SETTINGS };
+  migrateLocalStorageKey("weplan_calendar_settings", STORAGE_KEY);
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };

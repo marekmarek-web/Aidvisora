@@ -12,14 +12,14 @@
    - **Application type:** Web application
    - **Name:** např. „Aidvisora Web“
    - **Authorized JavaScript origins** (odkud se spouští přihlášení – **bez cesty, bez lomítka na konci**):
-     - Produkce: `https://tvuj-projekt.vercel.app` (např. `https://advisorcrm-web.vercel.app`)
+     - Produkce: `https://tvuj-projekt.vercel.app` (např. `https://aidvisora-xxx.vercel.app`)
      - Vývoj: `http://localhost:3000`
    - **Authorized redirect URIs** (kam Google pošle uživatele – zde **celá callback URL**):
      - `https://paoayamrcanxhsvkmdni.supabase.co/auth/v1/callback`  
      (bez lomítka na konci; pro jiný projekt zkopíruj z Supabase → Authentication → Providers → Google → „Callback URL“.)
 6. **Create** → zobrazí se **Client ID** a **Client Secret**. Nech si je (Client Secret zobrazíš jen jednou).
 
-**Chyba „Invalid Origin: URIs must not contain a path or end with /“:** Pole **Authorized JavaScript origins** smí obsahovat jen doménu (např. `https://advisorcrm-web.vercel.app`), **ne** cestu ani `/auth/v1/callback`. Callback URL patří **jen** do **Authorized redirect URIs**.
+**Chyba „Invalid Origin: URIs must not contain a path or end with /“:** Pole **Authorized JavaScript origins** smí obsahovat jen doménu (např. `https://tvuj-projekt.vercel.app`), **ne** cestu ani `/auth/v1/callback`. Callback URL patří **jen** do **Authorized redirect URIs**.
 
 ### V Supabase
 
@@ -33,7 +33,7 @@
 
 Přihlášení přes Google už v kódu je (tlačítko „Přihlásit se přes Google“). Po uložení v Supabase bude fungovat.
 
-**Produkce:** V Supabase → **Authentication** → **URL Configuration** musí být v **Redirect URLs** tvoje app URL (např. `https://advisorcrm-web.vercel.app/**`), aby Supabase po přihlášení přes Google věděl, kam uživatele poslat.
+**Produkce:** V Supabase → **Authentication** → **URL Configuration** musí být v **Redirect URLs** tvoje app URL (např. `https://tvuj-projekt.vercel.app/**`), aby Supabase po přihlášení přes Google věděl, kam uživatele poslat.
 
 ---
 
@@ -46,7 +46,7 @@ Přihlášení přes Google už v kódu je (tlačítko „Přihlásit se přes G
 3. Zapiš **Identifier** (budeš ho dávat do Supabase jako Service ID).
 4. Zaškrtni **Sign in with Apple** → **Configure**:
    - **Primary App ID:** vyber svou aplikaci (nebo vytvoř App ID).
-   - **Domains:** tvoje doména (např. `advisorcrm-web.vercel.app`).
+   - **Domains:** tvoje doména (např. `tvuj-projekt.vercel.app` nebo `www.aidvisora.cz`).
    - **Return URLs:** např. `https://paoayamrcanxhsvkmdni.supabase.co/auth/v1/callback` (callback z Supabase → Providers → Apple).
 5. V **Keys** vytvoř nový klíč, zaškrtni **Sign in with Apple** → **Configure** (vyber App ID) → stáhni `.p8` soubor (jen jednou) a zapiš **Key ID** a **Services ID**.
 

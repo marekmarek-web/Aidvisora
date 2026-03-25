@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { COVERAGE_CATEGORIES } from "@/app/lib/segment-hierarchy";
 import type { CoverageCategory, SegmentItem } from "@/app/lib/segment-hierarchy";
+import { migrateLocalStoragePrefix } from "@/lib/storage/migrate-weplan-local-storage";
 
 export type CoverageStatus = "done" | "in_progress" | "none";
 
@@ -41,10 +42,18 @@ function StatusIcon({ status }: { status: CoverageStatus }) {
   );
 }
 
-const STORAGE_KEY_PREFIX = "weplan_coverage_";
+const STORAGE_KEY_PREFIX = "aidvisora_coverage_";
+
+let coverageStorageMigrated = false;
+function ensureCoverageStorageMigrated(): void {
+  if (typeof window === "undefined" || coverageStorageMigrated) return;
+  coverageStorageMigrated = true;
+  migrateLocalStoragePrefix("weplan_coverage_", STORAGE_KEY_PREFIX);
+}
 
 function loadManualStatus(contactId: string): Record<string, CoverageStatus> {
   if (typeof window === "undefined") return {};
+  ensureCoverageStorageMigrated();
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PREFIX + contactId);
     if (!raw) return {};
@@ -57,9 +66,10 @@ function loadManualStatus(contactId: string): Record<string, CoverageStatus> {
 
 function saveManualStatus(contactId: string, data: Record<string, CoverageStatus>) {
   try {
+    ensureCoverageStorageMigrated();
     localStorage.setItem(STORAGE_KEY_PREFIX + contactId, JSON.stringify(data));
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("weplan_coverage_updated", { detail: contactId }));
+      window.dispatchEvent(new CustomEvent("aidvisora_coverage_updated", { detail: contactId }));
     }
   } catch {}
 }
@@ -84,7 +94,7 @@ function nextStatus(s: CoverageStatus): CoverageStatus {
   return CYCLE[(i + 1) % CYCLE.length];
 }
 
-const COVERAGE_UPDATED_EVENT = "weplan_coverage_updated";
+const COVERAGE_UPDATED_EVENT = "aidvisora_coverage_updated";
 
 /** Kompaktní karta „Celkové pokrytí portfolia“ – počet hotovo / řeší se / nic. Data ze stejného localStorage jako ProductCoverageGrid. */
 export function CoverageSummaryCard({ contactId }: { contactId: string }) {

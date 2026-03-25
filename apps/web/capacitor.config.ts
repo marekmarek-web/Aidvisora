@@ -4,7 +4,7 @@ const serverUrl = process.env.CAPACITOR_SERVER_URL?.trim() || "https://www.aidvi
 const isHttpServer = /^http:\/\//i.test(serverUrl);
 
 const config: CapacitorConfig = {
-  appId: "cz.aidvisor.app", // TODO: replace with final production bundle id.
+  appId: "cz.aidvisora.app",
   appName: "Aidvisora",
   webDir: "capacitor-app",
   server: {

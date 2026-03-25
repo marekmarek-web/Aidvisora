@@ -6,7 +6,7 @@ Jednotný design systém aplikace Aidvisora (dashboard-inspired). Všechny styly
 
 ## 1. Design tokeny
 
-Zdroj: `apps/web/src/styles/weplan-theme.css` (`:root`).
+Zdroj: `apps/web/src/styles/aidvisora-theme.css` (`:root`).
 
 ### Barvy
 | Token | Popis | Výchozí |
@@ -48,7 +48,7 @@ Staré tokeny `--monday-*` jsou aliasy na `--wp-*` (např. `--monday-bg`, `--mon
 
 ## 2. Komponentní primitives
 
-Zdroj: `apps/web/src/styles/weplan-components.css`. Cíl: ~80 % UI sjednotit těmito třídami.
+Zdroj: `apps/web/src/styles/aidvisora-components.css`. Cíl: ~80 % UI sjednotit těmito třídami.
 
 | Třída | Použití |
 |-------|--------|
@@ -91,7 +91,7 @@ Zdroj: `apps/web/src/styles/weplan-components.css`. Cíl: ~80 % UI sjednotit tě
 ## 4. Výjimky
 
 - **AI asistent** (floating tlačítko a search bar v pravém dolním rohu) může mít vlastní vizuální styl pro odlišení od hlavní aplikace; nemusí striktně používat `.wp-btn` / tokeny.
-- **Board** zůstává „dense grid“ (Monday-like): sticky header, první sloupec, malé fonty. Používá `weplan-monday.css` a tokeny `--monday-*` (aliasy na `--wp-*`). Status buňky a dropdowny jsou sjednoceny s design systémem (`.wp-pill`, `.wp-popover`).
+- **Board** zůstává „dense grid“ (Monday-like): sticky header, první sloupec, malé fonty. Používá `aidvisora-monday.css` a tokeny `--monday-*` (aliasy na `--wp-*`). Status buňky a dropdowny jsou sjednoceny s design systémem (`.wp-pill`, `.wp-popover`).
 
 ---
 
@@ -101,7 +101,7 @@ V root layoutu (`apps/web/src/app/layout.tsx`):
 
 1. `globals.css`  
 2. `monday.css`  
-3. `weplan-theme.css`  
-4. `weplan-components.css`  
+3. `aidvisora-theme.css`  
+4. `aidvisora-components.css`  
 
 Tím se tokeny a komponenty aplikují globálně a přepíší staré monday tokeny tam, kde jsou aliasy.

@@ -35,6 +35,7 @@ import { getServiceCtaHref } from "@/lib/service-engine/cta";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import type { ProductionSummary } from "@/app/actions/production";
+import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 import { CalendarWidget } from "@/app/components/calendar/CalendarWidget";
 import { MessengerPreview } from "@/app/components/dashboard/MessengerPreview";
 import { DashboardCard } from "@/app/components/dashboard/DashboardCard";
@@ -56,7 +57,7 @@ import {
   type WidgetColorId,
 } from "./dashboard-config";
 
-const STORAGE_KEY = "weplan_dashboard_widgets";
+const STORAGE_KEY = "aidvisora_dashboard_widgets";
 
 interface DashboardConfig {
   order: WidgetId[];
@@ -68,6 +69,7 @@ function loadConfig(): DashboardConfig {
   if (typeof window === "undefined") {
     return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] };
   }
+  migrateLocalStorageKey("weplan_dashboard_widgets", STORAGE_KEY);
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] };

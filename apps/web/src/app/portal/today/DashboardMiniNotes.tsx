@@ -4,9 +4,10 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Pin, GripVertical, Plus, FileText, ChevronRight } from "lucide-react";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
+import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 
-const STORAGE_POSITIONS_KEY = "weplan_dashboard_mini_notes_positions";
-const STORAGE_PINNED_KEY = "weplan_dashboard_mini_notes_pinned";
+const STORAGE_POSITIONS_KEY = "aidvisora_dashboard_mini_notes_positions";
+const STORAGE_PINNED_KEY = "aidvisora_dashboard_mini_notes_pinned";
 
 type Position = { x: number; y: number; z: number };
 
@@ -38,6 +39,7 @@ function getDomainStyle(domain: string): string {
 
 function loadPositions(): Record<string, Position> {
   if (typeof window === "undefined") return {};
+  migrateLocalStorageKey("weplan_dashboard_mini_notes_positions", STORAGE_POSITIONS_KEY);
   try {
     const raw = localStorage.getItem(STORAGE_POSITIONS_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -48,6 +50,7 @@ function loadPositions(): Record<string, Position> {
 
 function loadPinned(): Set<string> {
   if (typeof window === "undefined") return new Set();
+  migrateLocalStorageKey("weplan_dashboard_mini_notes_pinned", STORAGE_PINNED_KEY);
   try {
     const raw = localStorage.getItem(STORAGE_PINNED_KEY);
     const arr = raw ? JSON.parse(raw) : [];

@@ -20,7 +20,7 @@ znamená to, že Vercel neumí vyřešit hostname přímého připojení k Supab
    ```
    Důležité: host je **`aws-0-<region>.pooler.supabase.com`**, ne `db.xxx.supabase.co`.
 6. Nahraď v něm `[YOUR-PASSWORD]` skutečným heslem databáze (stejné jako u Direct).
-7. Na **Vercelu**: Project **advisorcrm-web** → **Settings** → **Environment Variables**.
+7. Na **Vercelu**: otevři svůj projekt → **Settings** → **Environment Variables**.
 8. Uprav proměnnou **DATABASE_URL**: vlož tam zkopírovaný connection string (Session pooler) a ulož.
 9. Po změně env spusť **Redeploy** posledního deploymentu (Deployments → ⋮ u posledního → Redeploy), aby se nová `DATABASE_URL` načetla.
 

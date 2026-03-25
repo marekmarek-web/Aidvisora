@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Download, Upload, Phone, Mail, CheckSquare, ArrowRight, MessageSquare, Tags, UserCog } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
-import { NewClientWizard } from "@/app/components/weplan/NewClientWizard";
+import { NewClientWizard } from "@/app/components/aidvisora/NewClientWizard";
 import { useToast } from "@/app/components/Toast";
 import {
   ListPageShell,

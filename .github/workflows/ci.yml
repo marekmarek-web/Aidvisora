@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  # Minimal placeholders so Next.js / env bootstrap can run in CI (no real DB).
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key-placeholder-not-used-in-ci
+  SUPABASE_SERVICE_ROLE_KEY: service-role-placeholder-not-used-in-ci-build
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: cd ../.. && pnpm install --frozen-lockfile
+      - name: Unit tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+      - name: E2E smoke
+        run: pnpm test:e2e
+        env:
+          CI: "true"

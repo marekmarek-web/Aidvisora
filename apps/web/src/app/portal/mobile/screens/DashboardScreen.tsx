@@ -125,9 +125,10 @@ function AiAssistantWidget() {
       </div>
 
       {loading ? (
-        <div className="animate-pulse space-y-2">
+        <div className="animate-pulse space-y-2 min-h-[72px]">
           <div className="h-4 bg-white/10 rounded w-3/4" />
           <div className="h-4 bg-white/10 rounded w-1/2" />
+          <div className="h-4 bg-white/10 rounded w-5/6" />
         </div>
       ) : summary?.assistantSummaryText ? (
         <>
@@ -305,9 +306,10 @@ function ProductionWidget({
   }
   if (!productionSummary) {
     return (
-      <div className="animate-pulse space-y-3 py-4">
-        <div className="h-6 bg-slate-200 rounded w-3/4 mx-auto" />
-        <div className="h-8 bg-slate-100 rounded w-1/2 mx-auto" />
+      <div className="animate-pulse space-y-3 py-2 min-h-[80px] flex flex-col justify-center">
+        <div className="h-3 bg-slate-200 rounded w-2/3 mx-auto" />
+        <div className="h-8 bg-slate-200 rounded-lg w-3/4 mx-auto" />
+        <div className="h-3 bg-slate-100 rounded w-1/2 mx-auto" />
       </div>
     );
   }
@@ -568,11 +570,19 @@ function MessagesWidget() {
   }, []);
 
   if (loading) {
-    return <div className="animate-pulse h-10 bg-slate-100 rounded w-1/2 my-2" />;
+    return (
+      <div className="flex items-center gap-3 min-h-[52px] py-1">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse shrink-0" />
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className="h-6 bg-slate-100 rounded-lg w-16 animate-pulse" />
+          <div className="h-3 bg-slate-100 rounded w-32 animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="py-1">
+    <div className="py-1 min-h-[52px]">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
           <MessageSquare size={20} />
@@ -723,91 +733,105 @@ export function DashboardScreen({
         </div>
       </MobileSection>
 
-      {/* Widget Grid */}
+      {/* Widget Grid — min-heights reduce layout shift as async widgets resolve */}
       <div className={cx("grid gap-3", isTablet ? "grid-cols-2" : "grid-cols-1")}>
         {/* AI Assistant -- spans full width on tablet */}
-        <div className={isTablet ? "col-span-2" : ""}>
+        <div className={cx("min-h-[140px]", isTablet ? "col-span-2" : "")}>
           <AiAssistantWidget />
         </div>
 
-        <WidgetCard
-          icon={CheckSquare}
-          title="Moje úkoly"
-          href="/portal/tasks"
-          iconColor="text-amber-500"
-          borderColor="border-t-4 border-t-emerald-500"
-        >
-          <TasksWidget kpis={kpis} />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={CheckSquare}
+            title="Moje úkoly"
+            href="/portal/tasks"
+            iconColor="text-amber-500"
+            borderColor="border-t-4 border-t-emerald-500"
+          >
+            <TasksWidget kpis={kpis} />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={Briefcase}
-          title="Aktivní obchody"
-          href="/portal/pipeline"
-          iconColor="text-purple-500"
-          borderColor="border-t-4 border-t-blue-500"
-        >
-          <ActiveDealsWidget kpis={kpis} />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={Briefcase}
+            title="Aktivní obchody"
+            href="/portal/pipeline"
+            iconColor="text-purple-500"
+            borderColor="border-t-4 border-t-blue-500"
+          >
+            <ActiveDealsWidget kpis={kpis} />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={TrendingUp}
-          title="Produkce"
-          href="/portal/production"
-          iconColor="text-indigo-400"
-          borderColor="border-t-4 border-t-blue-500"
-        >
-          <ProductionWidget
-            productionSummary={productionSummary}
-            productionError={productionError}
-          />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={TrendingUp}
+            title="Produkce"
+            href="/portal/production"
+            iconColor="text-indigo-400"
+            borderColor="border-t-4 border-t-blue-500"
+          >
+            <ProductionWidget
+              productionSummary={productionSummary}
+              productionError={productionError}
+            />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={Target}
-          title="Plnění plánu"
-          href="/portal/business-plan"
-          iconColor="text-blue-500"
-          borderColor="border-t-4 border-t-blue-500"
-        >
-          <BusinessPlanWidget data={businessPlanWidgetData} />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={Target}
+            title="Plnění plánu"
+            href="/portal/business-plan"
+            iconColor="text-blue-500"
+            borderColor="border-t-4 border-t-blue-500"
+          >
+            <BusinessPlanWidget data={businessPlanWidgetData} />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={AlertCircle}
-          title="Péče o klienty"
-          href="/portal/contacts"
-          iconColor="text-violet-500"
-          borderColor="border-t-4 border-t-violet-500"
-        >
-          <ClientCareWidget
-            serviceRecommendations={serviceRecommendations}
-            kpis={kpis}
-          />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={AlertCircle}
+            title="Péče o klienty"
+            href="/portal/contacts"
+            iconColor="text-violet-500"
+            borderColor="border-t-4 border-t-violet-500"
+          >
+            <ClientCareWidget
+              serviceRecommendations={serviceRecommendations}
+              kpis={kpis}
+            />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={FileText}
-          title="Finanční analýzy"
-          href="/portal/analyses"
-          iconColor="text-blue-600"
-          borderColor="border-t-4 border-t-slate-400"
-        >
-          <FinancialAnalysesWidget analyses={initialAnalyses} />
-        </WidgetCard>
+        <div className="min-h-[120px]">
+          <WidgetCard
+            icon={FileText}
+            title="Finanční analýzy"
+            href="/portal/analyses"
+            iconColor="text-blue-600"
+            borderColor="border-t-4 border-t-slate-400"
+          >
+            <FinancialAnalysesWidget analyses={initialAnalyses} />
+          </WidgetCard>
+        </div>
 
-        <WidgetCard
-          icon={MessageSquare}
-          title="Zprávy"
-          href="/portal/messages"
-          iconColor="text-emerald-500"
-          borderColor="border-t-4 border-t-emerald-500"
-        >
-          <MessagesWidget />
-        </WidgetCard>
+        <div className="min-h-[60px]">
+          <WidgetCard
+            icon={MessageSquare}
+            title="Zprávy"
+            href="/portal/messages"
+            iconColor="text-emerald-500"
+            borderColor="border-t-4 border-t-emerald-500"
+          >
+            <MessagesWidget />
+          </WidgetCard>
+        </div>
 
         {/* Notes -- spans full width on tablet */}
-        <div className={isTablet ? "col-span-2" : ""}>
+        <div className={cx("min-h-[120px]", isTablet ? "col-span-2" : "")}>
           <WidgetCard
             icon={StickyNote}
             title="Zápisky"

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Home, ChevronRight, Plus } from "lucide-react";
+import { Home, ChevronRight, Plus, Search, X } from "lucide-react";
 import { createHousehold, getHouseholdsList, type HouseholdRow } from "@/app/actions/households";
 import {
   BottomSheet,
@@ -20,10 +20,17 @@ export function HouseholdsListMobileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return rows;
+    const q = searchQuery.trim().toLowerCase();
+    return rows.filter((h) => h.name.toLowerCase().includes(q));
+  }, [rows, searchQuery]);
 
   const refresh = useCallback(() => {
     startTransition(async () => {
@@ -70,7 +77,26 @@ export function HouseholdsListMobileScreen() {
 
   return (
     <div className="space-y-3">
-      <MobileSection title={`Domácnosti (${rows.length})`}>
+      {/* Search */}
+      {rows.length > 0 && (
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Hledat domácnosti…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+          />
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400">
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
+      <MobileSection title={`Domácnosti (${filteredRows.length})`}>
         {rows.length === 0 ? (
           <EmptyState
             title="Žádné domácnosti"
@@ -88,8 +114,12 @@ export function HouseholdsListMobileScreen() {
               </button>
             }
           />
+        ) : filteredRows.length === 0 ? (
+          <p className="text-center text-sm text-slate-500 py-6">
+            Nic nenalezeno pro &quot;{searchQuery}&quot;
+          </p>
         ) : (
-          rows.map((h) => (
+          filteredRows.map((h) => (
             <MobileCard key={h.id} className="p-0">
               <button
                 type="button"

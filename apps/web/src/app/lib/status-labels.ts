@@ -1,10 +1,14 @@
 /**
- * Status labels for board status column. Persisted in localStorage (weplan_labels).
+ * Status labels for board status column. Persisted in localStorage (aidvisora_labels).
  */
+
+import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 
 export type StatusLabel = { id: string; label: string; color: string };
 
-const STORAGE_KEY = "weplan_labels";
+export const STATUS_LABELS_UPDATED_EVENT = "aidvisora_labels_updated";
+
+const STORAGE_KEY = "aidvisora_labels";
 
 export const DEFAULT_STATUS_OPTIONS: StatusLabel[] = [
   { id: "hotovo", label: "Hotovo", color: "#00c875" },
@@ -18,6 +22,7 @@ export const DEFAULT_STATUS_OPTIONS: StatusLabel[] = [
 
 export function getStatusLabels(): StatusLabel[] {
   if (typeof window === "undefined") return [...DEFAULT_STATUS_OPTIONS];
+  migrateLocalStorageKey("weplan_labels", STORAGE_KEY);
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [...DEFAULT_STATUS_OPTIONS];
@@ -50,7 +55,7 @@ export function setStatusLabels(labels: StatusLabel[]): void {
       .slice(0, 50);
     if (sanitized.length === 0) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
-    window.dispatchEvent(new CustomEvent("weplan_labels_updated"));
+    window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
   } catch {
     // ignore
   }

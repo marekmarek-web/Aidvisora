@@ -127,6 +127,7 @@ export function NotesVisionBoard({
 }) {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q") ?? "";
+  const noteIdFromQuery = searchParams.get("noteId");
   const [notes, setNotes] = useState(initialNotes);
   const [positions, setPositions] = useState<Record<string, BoardPosition>>(() => {
     if (typeof window === "undefined") return {};
@@ -233,6 +234,29 @@ export function NotesVisionBoard({
     const fresh = await getMeetingNotesForBoard();
     setNotes(fresh);
   }
+
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (noteIdFromQuery && notes.length > 0 && !deepLinkHandled.current) {
+      const target = notes.find((n) => n.id === noteIdFromQuery);
+      if (target) {
+        const c = target.content;
+        const meetingAt = target.meetingAt instanceof Date ? target.meetingAt : new Date(target.meetingAt);
+        setFormData({
+          title: contentTitle(c),
+          client: target.contactId ?? "",
+          date: meetingAt.toISOString().slice(0, 10),
+          time: meetingAt.toISOString().slice(11, 16),
+          type: target.domain || "hypo",
+          content: contentBody(c),
+          recommendation: contentRecommendation(c),
+        });
+        setEditingId(target.id);
+        setIsModalOpen(true);
+        deepLinkHandled.current = true;
+      }
+    }
+  }, [noteIdFromQuery, notes]);
 
   const handleOpenNew = () => {
     const today = new Date().toISOString().slice(0, 10);
@@ -364,26 +388,24 @@ export function NotesVisionBoard({
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          {!isMobile && (
-            <button
-              type="button"
-              disabled={aiLoading || notes.length === 0}
-              onClick={async () => {
-                setAiLoading(true);
-                try {
-                  const result = await summarizeMeetingNotes();
-                  setAiSummary(result);
-                } catch {
-                  setAiSummary("Sumarizace se nezdařila.");
-                } finally {
-                  setAiLoading(false);
-                }
-              }}
-              className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 hover:shadow-md rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-            >
-              <Sparkles size={16} className="text-amber-500" /> {aiLoading ? "Zpracovávám…" : "AI Sumarizace"}
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={aiLoading || notes.length === 0}
+            onClick={async () => {
+              setAiLoading(true);
+              try {
+                const result = await summarizeMeetingNotes();
+                setAiSummary(result);
+              } catch {
+                setAiSummary("Sumarizace se nezdařila.");
+              } finally {
+                setAiLoading(false);
+              }
+            }}
+            className="flex items-center gap-2 px-2 py-2 md:px-3 bg-amber-50 text-amber-700 border border-amber-200 active:shadow-md rounded-xl text-xs md:text-sm font-bold transition-all disabled:opacity-50 min-h-[44px]"
+          >
+            <Sparkles size={16} className="text-amber-500" /> <span className="hidden sm:inline">{aiLoading ? "Zpracovávám…" : "AI Sumarizace"}</span><span className="sm:hidden">{aiLoading ? "…" : "AI"}</span>
+          </button>
           <button
             type="button"
             onClick={handleOpenNew}

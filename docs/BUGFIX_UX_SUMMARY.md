@@ -1,4 +1,4 @@
-# Souhrn oprav: Bugfixy a UX – advisor-crm
+# Souhrn oprav: Bugfixy a UX – Aidvisora
 
 Dokumentace ke každému bodu: root cause, co bylo opraveno, kde, zachování live napojení.
 

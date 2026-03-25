@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import {
   Sparkles,
   Send,
@@ -9,9 +9,13 @@ import {
   CheckSquare,
   User,
   FileText,
+  Paperclip,
+  Mail,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { EmptyState, LoadingSkeleton, MobileCard } from "@/app/shared/mobile-ui/primitives";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -195,9 +199,51 @@ function TypingIndicator() {
 /*  Main screen                                                        */
 /* ------------------------------------------------------------------ */
 
+const SESSION_KEY = "aidvisora_ai_chat_session";
+
+function migrateAiChatSession(): void {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+    const old = sessionStorage.getItem("weplan_ai_chat_session");
+    if (old) {
+      sessionStorage.setItem(SESSION_KEY, old);
+      sessionStorage.removeItem("weplan_ai_chat_session");
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 let msgIdCounter = 0;
 function nextId() {
   return `msg-${++msgIdCounter}`;
+}
+
+function persistSession(messages: ChatMessage[]) {
+  try {
+    migrateAiChatSession();
+    const serializable = messages.slice(-50).map((m) => ({
+      ...m,
+      timestamp: m.timestamp.toISOString(),
+    }));
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(serializable));
+  } catch {}
+}
+
+function loadSession(): ChatMessage[] {
+  try {
+    migrateAiChatSession();
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<ChatMessage & { timestamp: string }>;
+    return parsed.map((m) => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export function AiAssistantChatScreen() {
@@ -205,33 +251,44 @@ export function AiAssistantChatScreen() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [draftEmail, setDraftEmail] = useState<string | null>(null);
+  const [draftCopied, setDraftCopied] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
   const [, startTransition] = useTransition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function scrollToBottom() {
+  useEffect(() => {
+    const restored = loadSession();
+    if (restored.length > 0) setMessages(restored);
+  }, []);
+
+  useEffect(() => {
+    persistSession(messages);
+  }, [messages]);
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isTyping, scrollToBottom]);
 
-  /** iOS: keep latest messages visible when the on-screen keyboard resizes the visual viewport. */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const vv = window.visualViewport;
     if (!vv) return;
-    const bump = () => {
-      requestAnimationFrame(() => scrollToBottom());
-    };
+    const bump = () => requestAnimationFrame(scrollToBottom);
     vv.addEventListener("resize", bump);
     vv.addEventListener("scroll", bump);
     return () => {
       vv.removeEventListener("resize", bump);
       vv.removeEventListener("scroll", bump);
     };
-  }, []);
+  }, [scrollToBottom]);
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
@@ -290,6 +347,85 @@ export function AiAssistantChatScreen() {
     });
   }
 
+  async function handleFileUpload() {
+    if (files.length === 0) return;
+    setIsTyping(true);
+    setError(null);
+
+    const userMsg: ChatMessage = {
+      id: nextId(),
+      role: "user",
+      text: `📎 ${files.map((f) => f.name).join(", ")}`,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("file", f));
+      const uploadRes = await fetch("/api/documents/upload", { method: "POST", body: formData });
+      if (!uploadRes.ok) throw new Error("Upload selhal");
+      const uploadData = await uploadRes.json();
+      const docName = uploadData?.name ?? files[0]?.name ?? "soubor";
+
+      const chatRes = await fetch("/api/ai/assistant/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: `Analyzuj nahraný soubor: ${docName}` }),
+      });
+      const chatData = await chatRes.json();
+
+      const assistantMsg: ChatMessage = {
+        id: nextId(),
+        role: "assistant",
+        text: chatData.message ?? `Soubor ${docName} byl nahrán.`,
+        timestamp: new Date(),
+        suggestedActions: chatData.suggestedActions ?? [],
+        referencedEntities: chatData.referencedEntities ?? [],
+        warnings: chatData.warnings ?? [],
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nahrání souboru selhalo.");
+    } finally {
+      setFiles([]);
+      setIsTyping(false);
+    }
+  }
+
+  async function handleDraftEmail() {
+    setDraftLoading(true);
+    setDraftEmail(null);
+    setDraftCopied(false);
+    try {
+      const lastClientRef = messages
+        .flatMap((m) => m.referencedEntities ?? [])
+        .filter((e) => e.type === "client")
+        .pop();
+      const clientId = lastClientRef?.id ?? "";
+      const res = await fetch("/api/ai/assistant/draft-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clientId, context: "follow_up" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Draft email selhal");
+      setDraftEmail(data.draft ?? data.email ?? "Nepodařilo se vygenerovat e-mail.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Draft email selhal.");
+    } finally {
+      setDraftLoading(false);
+    }
+  }
+
+  function copyDraft() {
+    if (!draftEmail) return;
+    navigator.clipboard.writeText(draftEmail).then(() => {
+      setDraftCopied(true);
+      setTimeout(() => setDraftCopied(false), 2000);
+    }).catch(() => {});
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -300,6 +436,8 @@ export function AiAssistantChatScreen() {
   function clearChat() {
     setMessages([]);
     setError(null);
+    setDraftEmail(null);
+    try { sessionStorage.removeItem(SESSION_KEY); } catch {}
     inputRef.current?.focus();
   }
 
@@ -307,13 +445,10 @@ export function AiAssistantChatScreen() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* ---- Message list ---- */}
+      {/* Message list */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-
-        {/* Empty state / starters */}
         {isEmpty ? (
           <div className="space-y-6 pt-4">
-            {/* Intro */}
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mx-auto shadow-lg">
                 <Sparkles size={26} className="text-white" />
@@ -324,7 +459,6 @@ export function AiAssistantChatScreen() {
               </p>
             </div>
 
-            {/* Quick starters */}
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
                 Rychlé otázky
@@ -334,7 +468,7 @@ export function AiAssistantChatScreen() {
                   key={starter.label}
                   type="button"
                   onClick={() => void sendMessage(starter.label)}
-                  className="w-full text-left min-h-[48px] flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors"
+                  className="w-full text-left min-h-[48px] flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-2xl active:border-indigo-200 active:bg-indigo-50/40 transition-colors"
                 >
                   <span className="text-xl flex-shrink-0">{starter.emoji}</span>
                   <span className="text-sm font-semibold text-slate-700 flex-1">{starter.label}</span>
@@ -345,22 +479,52 @@ export function AiAssistantChatScreen() {
           </div>
         ) : null}
 
-        {/* Messages */}
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} />
         ))}
 
-        {/* Typing indicator */}
         {isTyping ? <TypingIndicator /> : null}
 
-        {/* Scroll anchor */}
+        {/* Draft email panel */}
+        {draftEmail ? (
+          <div className="bg-white border border-indigo-200 rounded-2xl p-4 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-indigo-700">
+                <Mail size={16} />
+                Draft e-mail
+              </div>
+              <button type="button" onClick={() => setDraftEmail(null)} className="p-1 text-slate-400 min-h-[36px] min-w-[36px] flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+            <pre className="text-xs text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-xl p-3 max-h-[300px] overflow-y-auto">{draftEmail}</pre>
+            <button
+              type="button"
+              onClick={copyDraft}
+              className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 min-h-[36px] px-3 rounded-lg active:bg-indigo-50"
+            >
+              {draftCopied ? <Check size={14} /> : <Copy size={14} />}
+              {draftCopied ? "Zkopírováno!" : "Kopírovat do schránky"}
+            </button>
+          </div>
+        ) : null}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ---- Input bar ---- */}
-      <div className="flex-shrink-0 border-t border-slate-200 bg-white px-3 pt-3 pb-[max(0.75rem,var(--safe-area-bottom))]">
+      {/* Input bar */}
+      <div className="flex-shrink-0 border-t border-slate-200 bg-white px-3 pt-2 pb-[max(0.75rem,var(--safe-area-bottom))]">
         {!isEmpty ? (
-          <div className="flex justify-end mb-2">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={handleDraftEmail}
+              disabled={draftLoading || isTyping}
+              className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 min-h-[28px] px-2 disabled:opacity-50"
+            >
+              <Mail size={11} />
+              {draftLoading ? "Generuji…" : "Draft e-mail"}
+            </button>
             <button
               type="button"
               onClick={clearChat}
@@ -371,7 +535,41 @@ export function AiAssistantChatScreen() {
           </div>
         ) : null}
 
+        {files.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {files.map((f, i) => (
+              <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-lg flex items-center gap-1 max-w-[200px]">
+                <Paperclip size={12} className="shrink-0" />
+                <span className="truncate">{f.name}</span>
+                <button type="button" onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 ml-0.5" aria-label="Odstranit">×</button>
+              </span>
+            ))}
+            <button type="button" onClick={handleFileUpload} disabled={isTyping} className="text-xs font-bold text-indigo-600 px-2 py-1 rounded-lg bg-indigo-50 min-h-[28px] disabled:opacity-50">
+              Nahrát a analyzovat
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="sr-only"
+            accept=".pdf,.doc,.docx,image/*,.csv"
+            onChange={(e) => {
+              const added = Array.from(e.target.files ?? []);
+              setFiles((prev) => prev.concat(added));
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-11 h-11 rounded-2xl border border-slate-200 flex items-center justify-center flex-shrink-0 text-slate-500 active:bg-slate-100"
+            aria-label="Nahrát soubor"
+          >
+            <Paperclip size={18} />
+          </button>
           <textarea
             ref={inputRef}
             rows={1}
@@ -381,7 +579,7 @@ export function AiAssistantChatScreen() {
               e.target.style.height = "auto";
               e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
-            onFocus={() => requestAnimationFrame(() => scrollToBottom())}
+            onFocus={() => requestAnimationFrame(scrollToBottom)}
             onKeyDown={handleKeyDown}
             placeholder="Napište zprávu…"
             disabled={isTyping}

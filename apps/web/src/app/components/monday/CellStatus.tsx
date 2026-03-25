@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
-import { getStatusLabels, getStatusById as getLabelById } from "@/app/lib/status-labels";
+import { getStatusLabels, getStatusById as getLabelById, STATUS_LABELS_UPDATED_EVENT } from "@/app/lib/status-labels";
 import { EditLabelsEditor } from "./EditLabelsEditor";
 
 /** @deprecated Use getStatusLabels() from @/app/lib/status-labels for default list */
@@ -51,8 +51,8 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
 
   useEffect(() => {
     const handler = () => setOptions(getStatusLabels());
-    window.addEventListener("weplan_labels_updated", handler);
-    return () => window.removeEventListener("weplan_labels_updated", handler);
+    window.addEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
   }, []);
 
   const updateDropdownPosition = useCallback(() => {

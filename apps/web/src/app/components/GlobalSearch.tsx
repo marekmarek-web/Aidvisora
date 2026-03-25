@@ -9,6 +9,9 @@ const EMPTY: SearchResult = {
   contracts: [],
   opportunities: [],
   events: [],
+  households: [],
+  notes: [],
+  docs: [],
 };
 
 export type GlobalSearchHandle = { open: () => void };

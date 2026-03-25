@@ -3,6 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PRODUCTION_DOMAIN = "https://www.aidvisora.cz";
 
+/** Legacy Vercel preview hostnames → redirect traffic to canonical production (comma-separated in env). */
+function legacyVercelHosts(): string[] {
+  const raw = process.env.AIDVISORA_LEGACY_VERCEL_HOSTS?.trim();
+  if (raw) return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return ["advisorcrm-web.vercel.app"];
+}
+
 export async function proxy(request: NextRequest) {
   const normalizeNext = (raw: string | null, fallback: string) => {
     if (!raw || !raw.startsWith("/")) return fallback;
@@ -18,7 +25,7 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/integrations/") &&
     request.nextUrl.pathname.endsWith("/callback") &&
     request.nextUrl.searchParams.has("code");
-  if (host.includes("advisorcrm-web.vercel.app") && !isAuthCallbackWithCode && !isGoogleOAuthCallbackWithCode) {
+  if (legacyVercelHosts().some((h) => host.includes(h)) && !isAuthCallbackWithCode && !isGoogleOAuthCallbackWithCode) {
     const path = request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("code") ? "/auth/callback" : request.nextUrl.pathname;
     const url = new URL(path + request.nextUrl.search, PRODUCTION_DOMAIN);
     return NextResponse.redirect(url);

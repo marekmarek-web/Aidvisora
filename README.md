@@ -13,9 +13,19 @@ CRM pro finanční poradce v ČR – MVP dle specifikace (domácnosti, pipeline,
 
 1. **Klonovat a závislosti**
    ```bash
-   cd advisor-crm
+   cd aidvisora   # název složky po klonování = název repozitáře na GitHubu
    pnpm install
    ```
+
+   **Máš starou cestu typu `Desktop\WePlan\advisor-crm`?** Git na to nehlíží — můžeš složku klidně přejmenovat nebo přesunout. Zavři Cursor/IDE, pak např. v PowerShellu z nadřazené složky:
+
+   ```powershell
+   # příklad: celý projekt přesunout a přejmenovat
+   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\Desktop\Aidvisora" | Out-Null
+   Move-Item -Path "$env:USERPROFILE\Desktop\WePlan\advisor-crm" -Destination "$env:USERPROFILE\Desktop\Aidvisora\aidvisora"
+   ```
+
+   Potom v editoru **Open Folder** → `...\Aidvisora\aidvisora`. V kořeni repa spusť znovu `pnpm install` jen pokud se změnil disk nebo node_modules. Remote zůstává (`git remote -v`).
 
 2. **Supabase**
    - Vytvořte projekt na [supabase.com](https://supabase.com).
@@ -62,7 +72,7 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 
 1. **Vercel**
    - Jděte na [vercel.com](https://vercel.com), přihlaste se (ideálně přes GitHub).
-   - **Add New** → **Project** → vyberte repozitář **marekmarek-web/advisorcrm**.
+   - **Add New** → **Project** → vyberte váš GitHub repozitář (Aidvisora).
    - **Root Directory:** klikněte **Edit** a zvolte **`apps/web`** (aplikace je v monorepu).
    - Nechte **Build Command** a **Output** na automatických hodnotách (v `apps/web` je už `vercel.json` s `installCommand` pro monorepo).
 
@@ -82,7 +92,7 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
    V Supabase Dashboard → **Authentication → URL Configuration** přidej do **Redirect URLs** tvou produkční adresu (např. `https://tvuj-projekt.vercel.app/**`).
 
 4. **Deploy**
-   Klikni **Deploy**. Po úspěšném buildu bude aplikace dostupná na adrese typu `https://advisorcrm-xxx.vercel.app`. Další push do `main` na GitHubu spustí automatický redeploy.
+   Klikni **Deploy**. Po úspěšném buildu bude aplikace dostupná na adrese typu `https://<projekt>.vercel.app`. Další push do `main` na GitHubu spustí automatický redeploy.
 
 **Jiné hosty (Netlify, Railway, atd.):** Build z monorepa: z kořene `pnpm install && pnpm --filter web build`, výstup Next.js je v `apps/web/.next`. Spuštění: `pnpm --filter web start` (nebo `node apps/web/.next/standalone/...` pokud máš `output: 'standalone'` v `next.config.js`).
 
@@ -96,7 +106,7 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 3. **DATABASE_URL na Vercelu:** Musí být **celý** connection string, např.  
    `postgresql://postgres:TvojeHeslo@db.paoayamrcanxhsvkmdni.supabase.co:5432/postgres`  
    Pro Vercel je vhodný **connection pooler** (Supabase → Project Settings → Database → Connection string → **Transaction** pooler, port 6543). Na konec můžeš přidat `?sslmode=require` (nebo kód to doplní sám).
-4. **Redirect URLs:** Supabase → Authentication → URL Configuration → Redirect URLs musí obsahovat tvou produkční adresu, např. `https://advisorcrm-web.vercel.app/**`.
+4. **Redirect URLs:** Supabase → Authentication → URL Configuration → Redirect URLs musí obsahovat tvou produkční adresu, např. `https://<tvuj-projekt>.vercel.app/**`.
 
 **„Nepodařilo se dokončit registraci“ po přihlášení:** Účet v Supabase máš, ale při přesměrování na dokončení se vytváří workspace v databázi. Chyba znamená, že Vercel se nedostane k DB. Zkontroluj: (1) Na Vercelu je nastavená **DATABASE_URL** (celý connection string na tvůj Supabase projekt). (2) V Supabase jsou vytvořené tabulky – spusť v SQL Editoru skript z `docs/supabase-run-in-sql-editor.sql`. (3) Vercel → Deployments → poslední deploy → **Runtime Logs** / **Functions** – tam uvidíš přesnou chybovou hlášku.
 
@@ -113,7 +123,7 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 - `docs/` – PRD, ASSUMPTIONS, ROADMAP, DATA_MODEL, API, SECURITY, COMPLIANCE_CZ, UI_POLICY
 - `legal/` – DPA a DPIA šablony
 
-**UI reference:** V kořeni repozitáře složka `portal/` – soubor `portal reference (board layout)` slouží jako vizuální reference pro Monday-like board (sloupce, pickery, layout). Logika a data jsou v advisor-crm.
+**UI reference:** V kořeni repozitáře složka `portal/` – soubor `portal reference (board layout)` slouží jako vizuální reference pro Monday-like board (sloupce, pickery, layout). Logika a data jsou v tomto monorepu (Aidvisora).
 
 ## Akceptační kritéria MVP
 

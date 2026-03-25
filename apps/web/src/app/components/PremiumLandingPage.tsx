@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Activity, AlertTriangle, Archive, ArrowRight, ArrowUpRight,
   BarChart3, Bell, Bot, Briefcase, Building, Calculator, Calendar, 
@@ -613,7 +614,7 @@ export default function PremiumLandingPage() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav py-4 shadow-2xl shadow-black/50" : "bg-transparent py-6"}`}>
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-            <img src="/Aidvisora logo A.png" alt="" width={40} height={40} fetchPriority="high" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
+            <Image src="/Aidvisora logo A.png" alt="" width={40} height={40} priority className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
             <span className="font-jakarta font-bold text-2xl tracking-tight text-white hidden sm:inline">Aidvisora</span>
           </Link>
 
@@ -1818,7 +1819,7 @@ export default function PremiumLandingPage() {
             
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
-                <img src="/Aidvisora logo A.png" alt="" width={40} height={40} loading="lazy" decoding="async" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
+                <Image src="/Aidvisora logo A.png" alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
                 <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
               </Link>
               <p className="text-sm max-w-sm leading-relaxed mb-6">Pracovní systém pro finanční poradce a týmy. CRM, klientská zóna a workflow na jednom místě.</p>

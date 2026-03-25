@@ -4,12 +4,12 @@ export default function TermsPage() {
       <h1 className="text-2xl font-bold mb-6">Obchodní podmínky</h1>
       <div className="prose prose-sm max-w-none space-y-4">
         <p>
-          Tyto obchodní podmínky upravují vztah mezi poskytovatelem služby Aidvisor (dále „Poskytovatel") a uživatelem
+          Tyto obchodní podmínky upravují vztah mezi poskytovatelem služby Aidvisora (dále „Poskytovatel") a uživatelem
           platformy (dále „Uživatel").
         </p>
         <h2 className="text-lg font-semibold mt-6">1. Předmět služby</h2>
         <p>
-          Aidvisor je platforma pro správu klientského portfolia finančních poradců. Poskytovatel zajišťuje technický
+          Aidvisora je platforma pro správu klientského portfolia finančních poradců. Poskytovatel zajišťuje technický
           provoz platformy a zpracování dat v souladu s platnými právními předpisy.
         </p>
         <h2 className="text-lg font-semibold mt-6">2. Registrace a přístup</h2>

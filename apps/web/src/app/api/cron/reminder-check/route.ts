@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       .select({
         id: contractUploadReviews.id,
         tenantId: contractUploadReviews.tenantId,
-        assignedTo: contractUploadReviews.assignedTo,
+        assignedTo: contractUploadReviews.uploadedBy,
         ageHours: sql<number>`extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600`,
       })
       .from(contractUploadReviews)

@@ -320,6 +320,8 @@ function OpportunityDetailSheet({
 export interface PipelineScreenProps {
   pipeline: StageWithOpportunities[];
   deviceClass: DeviceClass;
+  /** Shell transition (e.g. refresh) — suppress empty-state flash while data may be stale. */
+  refreshing?: boolean;
   onMoveOpportunity: (oppId: string, toStageId: string) => void;
   contactOptions: Array<{ id: string; label: string }>;
   onOpenContact: (contactId: string) => void;
@@ -329,6 +331,7 @@ export interface PipelineScreenProps {
 export function PipelineScreen({
   pipeline,
   deviceClass,
+  refreshing = false,
   onMoveOpportunity,
   contactOptions,
   onOpenContact,
@@ -349,10 +352,10 @@ export function PipelineScreen({
 
   return (
     <div className="space-y-4">
-      {pipeline.length === 0 ? (
+      {!refreshing && pipeline.length === 0 ? (
         <EmptyState title="Pipeline je prázdná" description="Začněte přidáním prvního případu." />
       ) : null}
-      {pipeline.length === 0 ? null : (
+      {pipeline.length === 0 && !refreshing ? null : (
         <>
       <div className="flex gap-3">
         <MobileCard className="flex-1 p-3 text-center">

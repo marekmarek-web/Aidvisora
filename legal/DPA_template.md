@@ -1,10 +1,10 @@
 # Smlouva o zpracování osobních údajů (DPA) – šablona
 
-**Účel:** Smlouva mezi správcem (poradenská firma / tenant) a zpracovatelem (provozovatel Advisor CRM) dle čl. 28 GDPR.
+**Účel:** Smlouva mezi správcem (poradenská firma / tenant) a zpracovatelem (provozovatel Aidvisora) dle čl. 28 GDPR.
 
 **Základní body:**
 
-1. **Předmět** – Zpracovatel zpracovává OÚ jménem Správce v rámci poskytování aplikace Advisor CRM (hosting, údržba, zálohy).
+1. **Předmět** – Zpracovatel zpracovává OÚ jménem Správce v rámci poskytování aplikace Aidvisora (hosting, údržba, zálohy).
 
 2. **Účel a prostředky** – Zpracování dle dokumentovaných účelů (processing_purposes) a instrukcí Správce. Technická a organizační opatření dle přílohy (šifrování, přístup, audit log).
 

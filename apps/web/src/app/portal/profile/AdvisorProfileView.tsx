@@ -273,7 +273,7 @@ export function AdvisorProfileView({
   };
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
-  const bookingLink = "weplan.cz/rezervace"; // placeholder
+  const bookingLink = "www.aidvisora.cz/rezervace"; // placeholder
 
   const handleCopyLink = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

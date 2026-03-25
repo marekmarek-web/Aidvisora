@@ -21,9 +21,16 @@ export function mapPushNotificationToRoute(notification: PushNotificationSchema)
     return leadId ? `/portal/pipeline/${encodeURIComponent(leadId)}` : "/portal/pipeline";
   }
 
-  if (type === "NEW_DOCUMENT") {
+  if (type === "NEW_DOCUMENT" || type === "DOCUMENT_UPLOADED") {
+    const docId = pickId(data, ["documentId", "relatedEntityId"]);
+    if (docId) return `/portal/documents?doc=${encodeURIComponent(docId)}`;
     const contactId = pickId(data, ["contactId", "clientId"]);
-    return contactId ? `/portal/contacts/${encodeURIComponent(contactId)}` : "/portal/today";
+    return contactId ? `/portal/contacts/${encodeURIComponent(contactId)}` : "/portal/documents";
+  }
+
+  if (type === "HOUSEHOLD") {
+    const householdId = pickId(data, ["householdId", "relatedEntityId"]);
+    return householdId ? `/portal/households/${encodeURIComponent(householdId)}` : "/portal/households";
   }
 
   if (type === "CLIENT_REQUEST") {
@@ -39,8 +46,9 @@ export function mapPushNotificationToRoute(notification: PushNotificationSchema)
     return requestId ? `/portal/contracts/review/${encodeURIComponent(requestId)}` : "/portal/today";
   }
 
-  if (type === "NEW_MESSAGE") {
-    return "/portal/messages";
+  if (type === "NEW_MESSAGE" || type === "MESSAGE") {
+    const contactId = pickId(data, ["contactId", "relatedEntityId"]);
+    return contactId ? `/portal/messages?contact=${encodeURIComponent(contactId)}` : "/portal/messages";
   }
 
   if (type === "REVIEW_WAITING") {

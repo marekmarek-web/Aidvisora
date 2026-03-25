@@ -19,10 +19,10 @@ Fix all dropdown/context menus so the popover panel sizes to content only. Do no
 
 ## Co bylo změněno
 
-### 1. Globální styly (weplan-monday.css, weplan-components.css)
+### 1. Globální styly (aidvisora-monday.css, aidvisora-components.css)
 
 - **`.wp-dropdown`**: přidáno `width: max-content`, `max-width: min(400px, 100vw)`, `box-sizing: border-box`. Panel je jen tak široký, jak vyžaduje obsah (s respektem k `min-width`), a nepřesáhne viewport.
-- **`.wp-popover`, `.wp-menu`**: stejné úpravy v weplan-components.css.
+- **`.wp-popover`, `.wp-menu`**: stejné úpravy v aidvisora-components.css.
 
 Všechny dropdowny používající třídu `.wp-dropdown` nebo `.wp-popover` (BoardHeader view dropdown, GroupHeaderRow, CellProduct, UserMenu, ne‑portálové menu v ColumnHeader) se nyní velikostí řídí obsahem.
 
@@ -53,8 +53,8 @@ Všechny dropdowny používající třídu `.wp-dropdown` nebo `.wp-popover` (Bo
 
 | Soubor | Změna |
 |--------|--------|
-| `weplan-monday.css` | `.wp-dropdown`: width: max-content, max-width, box-sizing |
-| `weplan-components.css` | `.wp-popover`, `.wp-menu`, `.wp-dropdown`: width: max-content, max-width, box-sizing |
+| `aidvisora-monday.css` | `.wp-dropdown`: width: max-content, max-width, box-sizing |
+| `aidvisora-components.css` | `.wp-popover`, `.wp-menu`, `.wp-dropdown`: width: max-content, max-width, box-sizing |
 | `ColumnHeader.tsx` | Portálový panel: w-max, max-w, self-start |
 | `CellStatus.tsx` | Oba portály (dropdown + note): w-max, max-w, self-start |
 | `BoardTable.tsx` | Menu skupiny: w-max, max-w |

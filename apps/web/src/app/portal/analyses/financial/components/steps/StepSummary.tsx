@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { selectNetWorth, selectTotalTargetCapital, selectPortfolioFv } from "@/lib/analyses/financial/selectors";
 import { buildReportHTML } from "@/lib/analyses/financial/report";
-import { formatCzk, safeNameForFile } from "@/lib/analyses/financial/formatters";
+import { formatCzk, financialAnalysisReportFilename } from "@/lib/analyses/financial/formatters";
 import { uploadDocument } from "@/app/actions/documents";
 import { setFinancialAnalysisLastExportedAt } from "@/app/actions/financial-analyses";
 import { getAdvisorReportBranding } from "@/app/actions/preferences";
@@ -128,9 +128,7 @@ export function StepSummary() {
     try {
       let html = await generateHTML();
       html = await embedLocalImages(html);
-      const safe = safeNameForFile(clientName);
-      const date = new Date().toISOString().split("T")[0];
-      const filename = `financni-report-${safe}-${date}.html`;
+      const filename = financialAnalysisReportFilename(clientName, "html");
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -166,9 +164,7 @@ export function StepSummary() {
     setSavingToDocs(true);
     try {
       const html = await generateHTML();
-      const safe = safeNameForFile(clientName);
-      const date = new Date().toISOString().split("T")[0];
-      const filename = `financni-report-${safe}-${date}.html`;
+      const filename = financialAnalysisReportFilename(clientName, "html");
       const blob = new Blob([html], { type: "text/html" });
       const file = new File([blob], filename, { type: "text/html" });
       const formData = new FormData();

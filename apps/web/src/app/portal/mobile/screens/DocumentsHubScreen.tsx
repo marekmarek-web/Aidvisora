@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   FileText,
   Image,
@@ -553,6 +554,10 @@ export function DocumentsHubScreen({
 }: {
   deviceClass?: DeviceClass;
 }) {
+  const searchParams = useSearchParams();
+  const docIdFromQuery = searchParams.get("doc");
+  const deepLinkHandled = useRef(false);
+
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -575,6 +580,17 @@ export function DocumentsHubScreen({
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (docIdFromQuery && docs.length > 0 && !deepLinkHandled.current) {
+      const target = docs.find((d) => d.id === docIdFromQuery);
+      if (target) {
+        setSelectedDoc(target);
+        setDetailOpen(true);
+        deepLinkHandled.current = true;
+      }
+    }
+  }, [docIdFromQuery, docs]);
 
   const filtered = useMemo(() => {
     let list = docs;
