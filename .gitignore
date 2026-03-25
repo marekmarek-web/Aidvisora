@@ -8,6 +8,8 @@ dist
 .env.sentry-build-plugin
 # Google OAuth client secret (nikdy necommitujte)
 client_secret*.json
+# Firebase Android config (API keys); keep under android/app/ per docs
+apps/web/google-services.json
 *.log
 .DS_Store
 .vercel
