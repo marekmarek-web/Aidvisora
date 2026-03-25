@@ -44,9 +44,9 @@ export async function getBacklogMetrics(
     const { db, contractUploadReviews, reminders, escalationEvents, eq, and, sql } = await import("db");
 
     const [reviewStats] = await db.select({
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('extracted','review_required'))::int`,
-      applyPending: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'approved')::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'blocked_for_apply')::int`,
+      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+      applyPending: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
+      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
     }).from(contractUploadReviews)
       .where(eq(contractUploadReviews.tenantId, scope.tenantId));
 
@@ -113,7 +113,7 @@ export async function getAgingBuckets(
   const buckets: AgingBucket[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, sql } = await import("db");
+    const { db, contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
 
     const [reviewBucket] = await db.select({
       h0_24: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 < 24)::int`,
@@ -121,7 +121,13 @@ export async function getAgingBuckets(
       d3_7: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 between 72 and 168)::int`,
       d7plus: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 > 168)::int`,
     }).from(contractUploadReviews)
-      .where(sql`${contractUploadReviews.tenantId} = ${tenantId} and ${contractUploadReviews.status} in ('extracted','review_required','approved','blocked_for_apply')`);
+      .where(and(
+        eq(contractUploadReviews.tenantId, tenantId),
+        or(
+          inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
+          inArray(contractUploadReviews.reviewStatus, ["approved", "rejected"]),
+        ),
+      ));
 
     if (reviewBucket) {
       buckets.push({

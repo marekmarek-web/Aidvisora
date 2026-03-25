@@ -55,13 +55,13 @@ export async function getTeamAnalyticsSummary(
     const { db, contractUploadReviews, clientPaymentSetups, reminders, escalationEvents, auditLog, eq, and, inArray, sql } = await import("db");
 
     const userFilter = scope.visibleUserIds.length > 0
-      ? inArray(contractUploadReviews.assignedTo, scope.visibleUserIds)
+      ? inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds)
       : eq(contractUploadReviews.tenantId, scope.tenantId);
 
     const [reviewStats] = await db.select({
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('extracted','review_required'))::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'blocked_for_apply')::int`,
-      applyBacklog: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'approved')::int`,
+      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+      applyBacklog: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
       avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, scope.tenantId), userFilter));
@@ -117,17 +117,17 @@ export async function getTeamMemberComparison(
     if (scope.visibleUserIds.length === 0) return members;
 
     const stats = await db.select({
-      userId: contractUploadReviews.assignedTo,
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('extracted','review_required'))::int`,
+      userId: contractUploadReviews.uploadedBy,
+      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
       avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
       total: sql<number>`count(*)::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
     }).from(contractUploadReviews)
       .where(and(
         eq(contractUploadReviews.tenantId, scope.tenantId),
-        inArray(contractUploadReviews.assignedTo, scope.visibleUserIds),
+        inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
       ))
-      .groupBy(contractUploadReviews.assignedTo);
+      .groupBy(contractUploadReviews.uploadedBy);
 
     for (const s of stats) {
       if (!s.userId) continue;
@@ -153,20 +153,23 @@ export async function getTeamHeatmapData(
   const entries: HeatmapEntry[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, and, inArray, sql } = await import("db");
+    const { db, contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
 
     if (scope.visibleUserIds.length === 0) return entries;
 
     const perUser = await db.select({
-      userId: contractUploadReviews.assignedTo,
+      userId: contractUploadReviews.uploadedBy,
       count: sql<number>`count(*)::int`,
     }).from(contractUploadReviews)
       .where(and(
         eq(contractUploadReviews.tenantId, scope.tenantId),
-        inArray(contractUploadReviews.assignedTo, scope.visibleUserIds),
-        sql`${contractUploadReviews.status} in ('extracted','review_required','blocked_for_apply')`,
+        inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
+        or(
+          inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
+          eq(contractUploadReviews.reviewStatus, "rejected"),
+        ),
       ))
-      .groupBy(contractUploadReviews.assignedTo);
+      .groupBy(contractUploadReviews.uploadedBy);
 
     for (const row of perUser) {
       if (!row.userId) continue;

@@ -4,8 +4,7 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc } from "db";
-import { like } from "drizzle-orm";
+import { db, auditLog, eq, and, desc, like } from "db";
 import type { RoleName } from "@/lib/auth/get-membership";
 
 export type DocumentAccessPurpose = "preview" | "download" | "export" | "processing" | "review";

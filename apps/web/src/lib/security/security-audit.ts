@@ -5,8 +5,7 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc, gte } from "db";
-import { like } from "drizzle-orm";
+import { db, auditLog, eq, and, desc, gte, like } from "db";
 
 export type SecurityEventType =
   | "auth_failure"

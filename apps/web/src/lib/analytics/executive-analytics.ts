@@ -60,10 +60,10 @@ export async function getExecutiveKPIs(
 
     const [docStats] = await db.select({
       total: sql<number>`count(*)::int`,
-      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('approved','applied','review_completed'))::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'blocked_for_apply')::int`,
-      avgApplyTime: sql<number>`coalesce(avg(extract(epoch from (${contractUploadReviews.updatedAt} - ${contractUploadReviews.createdAt})) / 3600) filter (where ${contractUploadReviews.status} = 'applied'), 0)::float`,
+      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} in ('approved','applied','rejected'))::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
+      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+      avgApplyTime: sql<number>`coalesce(avg(extract(epoch from (${contractUploadReviews.updatedAt} - ${contractUploadReviews.createdAt})) / 3600) filter (where ${contractUploadReviews.reviewStatus} = 'applied'), 0)::float`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)));
 
@@ -76,7 +76,7 @@ export async function getExecutiveKPIs(
 
     const [paymentStats] = await db.select({
       total: sql<number>`count(*)::int`,
-      portalReady: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'applied')::int`,
+      portalReady: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
     }).from(clientPaymentSetups)
       .where(eq(clientPaymentSetups.tenantId, tenantId));
     if (paymentStats && paymentStats.total > 0) {
@@ -122,12 +122,12 @@ export async function getExecutiveFunnel(
 
     const [counts] = await db.select({
       total: sql<number>`count(*)::int`,
-      preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.status} not in ('uploading','upload_failed'))::int`,
+      preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} <> 'uploaded')::int`,
       classified: sql<number>`count(*) filter (where ${contractUploadReviews.detectedDocumentType} is not null)::int`,
-      extracted: sql<number>`count(*) filter (where ${contractUploadReviews.status} not in ('uploading','upload_failed','preprocessing'))::int`,
-      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('review_completed','approved','applied'))::int`,
-      approved: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('approved','applied'))::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
+      extracted: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required','failed'))::int`,
+      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} in ('approved','applied','rejected'))::int`,
+      approved: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} in ('approved','applied'))::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)));
 
@@ -163,8 +163,8 @@ export async function getExecutiveTrends(
     const rows = await db.select({
       date: sql<string>`${sql.raw(truncFn)} ${contractUploadReviews.createdAt})::date::text`,
       total: sql<number>`count(*)::int`,
-      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('review_completed','approved','applied'))::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
+      reviewed: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} in ('approved','applied','rejected'))::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)))
       .groupBy(sql`${sql.raw(truncFn)} ${contractUploadReviews.createdAt})`);

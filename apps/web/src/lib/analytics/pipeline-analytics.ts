@@ -53,12 +53,12 @@ export async function getPipelineMetrics(
 
     const [stats] = await db.select({
       total: sql<number>`count(*)::int`,
-      preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.status} not in ('uploading','upload_failed'))::int`,
+      preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} <> 'uploaded')::int`,
       classified: sql<number>`count(*) filter (where ${contractUploadReviews.detectedDocumentType} is not null)::int`,
-      extracted: sql<number>`count(*) filter (where ${contractUploadReviews.status} not in ('uploading','upload_failed','preprocessing','extraction_failed'))::int`,
-      extractionFailed: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'extraction_failed')::int`,
-      reviewRequired: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'review_required')::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'blocked_for_apply')::int`,
+      extracted: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required','failed'))::int`,
+      extractionFailed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'failed')::int`,
+      reviewRequired: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'review_required')::int`,
+      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)));
 
@@ -90,13 +90,13 @@ export async function getPipelineBreakdown(
     const groupCol = dimension === "documentType"
       ? contractUploadReviews.detectedDocumentType
       : dimension === "advisor"
-        ? contractUploadReviews.assignedTo
+        ? contractUploadReviews.uploadedBy
         : contractUploadReviews.detectedDocumentType;
 
     const rows = await db.select({
       value: groupCol,
       total: sql<number>`count(*)::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
       avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
     }).from(contractUploadReviews)
       .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)))

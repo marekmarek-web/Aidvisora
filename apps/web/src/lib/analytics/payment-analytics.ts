@@ -42,8 +42,8 @@ export async function getPaymentMetrics(
 
     const [stats] = await db.select({
       total: sql<number>`count(*)::int`,
-      blocked: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'blocked')::int`,
-      applied: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'applied')::int`,
+      blocked: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'review_required')::int`,
+      applied: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
       awaiting: sql<number>`count(*) filter (where ${clientPaymentSetups.needsHumanReview} = true)::int`,
     }).from(clientPaymentSetups)
       .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
@@ -78,9 +78,9 @@ export async function getPaymentQualityBreakdown(
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const [stats] = await db.select({
-      missingIban: sql<number>`count(*) filter (where (${clientPaymentSetups.extractedData}->>'accountNumber') is null or (${clientPaymentSetups.extractedData}->>'accountNumber') = '')::int`,
-      missingVs: sql<number>`count(*) filter (where (${clientPaymentSetups.extractedData}->>'variableSymbol') is null or (${clientPaymentSetups.extractedData}->>'variableSymbol') = '')::int`,
-      missingAmount: sql<number>`count(*) filter (where (${clientPaymentSetups.extractedData}->>'amount') is null or (${clientPaymentSetups.extractedData}->>'amount') = '')::int`,
+      missingIban: sql<number>`count(*) filter (where (coalesce(${clientPaymentSetups.iban}, '') = '' and coalesce(${clientPaymentSetups.accountNumber}, '') = ''))::int`,
+      missingVs: sql<number>`count(*) filter (where coalesce(${clientPaymentSetups.variableSymbol}, '') = '')::int`,
+      missingAmount: sql<number>`count(*) filter (where ${clientPaymentSetups.amount} is null)::int`,
     }).from(clientPaymentSetups)
       .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
 

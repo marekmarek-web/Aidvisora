@@ -4,8 +4,7 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc } from "db";
-import { like } from "drizzle-orm";
+import { db, auditLog, eq, and, desc, like } from "db";
 
 export type ConfigChangeEntry = {
   id: string;

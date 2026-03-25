@@ -99,7 +99,11 @@ export async function getDeliveryStatus(
     }).from(executionActions)
       .where(and(eq(executionActions.id, executionId), eq(executionActions.tenantId, tenantId)))
       .limit(1);
-    return row ?? null;
+    if (!row) return null;
+    return {
+      status: row.status,
+      failureCode: row.failureCode ?? undefined,
+    };
   } catch {
     return null;
   }

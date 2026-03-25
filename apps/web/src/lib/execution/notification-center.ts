@@ -3,6 +3,8 @@
  * Unified advisor-facing notification surface.
  */
 
+import type { PushEventType } from "@/lib/push/events";
+
 export type NotificationSeverity = "info" | "warning" | "urgent";
 export type NotificationStatus = "unread" | "read" | "dismissed" | "archived";
 export type NotificationChannel = "in_app" | "push" | "email_digest";
@@ -90,8 +92,8 @@ export async function emitNotification(
   return notification;
 }
 
-function mapNotificationTypeToPushType(type: string): string {
-  const mapping: Record<string, string> = {
+function mapNotificationTypeToPushType(type: string): PushEventType {
+  const mapping: Record<string, PushEventType> = {
     review_waiting: "REVIEW_WAITING",
     payment_blocked: "PAYMENT_BLOCKED",
     reminder_due: "REMINDER_DUE",

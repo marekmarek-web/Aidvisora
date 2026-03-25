@@ -36,18 +36,18 @@ export async function getTeamOperationsSummary(
 
     const reviewStats = await db
       .select({
-        assignedTo: contractUploadReviews.assignedTo,
+        uploadedBy: contractUploadReviews.uploadedBy,
         count: sql<number>`count(*)::int`,
         avgAge: sql<number>`COALESCE(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
       })
       .from(contractUploadReviews)
       .where(eq(contractUploadReviews.tenantId, tenantId))
-      .groupBy(contractUploadReviews.assignedTo);
+      .groupBy(contractUploadReviews.uploadedBy);
 
     for (const stat of reviewStats) {
-      if (!stat.assignedTo) continue;
+      if (!stat.uploadedBy) continue;
       advisorMetrics.push({
-        advisorId: stat.assignedTo,
+        advisorId: stat.uploadedBy,
         pendingReviews: stat.count,
         blockedPaymentSetups: 0,
         followUpBacklog: 0,
@@ -88,7 +88,7 @@ export async function reassignReview(
   try {
     const { db, contractUploadReviews, eq, and } = await import("db");
     await db.update(contractUploadReviews).set({
-      assignedTo: toAdvisorId,
+      uploadedBy: toAdvisorId,
     }).where(and(
       eq(contractUploadReviews.id, reviewId),
       eq(contractUploadReviews.tenantId, tenantId),

@@ -51,11 +51,11 @@ export async function getAdvisorSummary(
     const { db, contractUploadReviews, clientPaymentSetups, tasks, reminders, communicationDrafts, escalationEvents, eq, and, sql } = await import("db");
 
     const [reviewCounts] = await db.select({
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.status} in ('extracted','review_required'))::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'blocked_for_apply')::int`,
-      applyReady: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'approved')::int`,
+      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+      applyReady: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
     }).from(contractUploadReviews)
-      .where(and(eq(contractUploadReviews.tenantId, tenantId), eq(contractUploadReviews.assignedTo, userId)));
+      .where(and(eq(contractUploadReviews.tenantId, tenantId), eq(contractUploadReviews.uploadedBy, userId)));
 
     if (reviewCounts) {
       summary.pendingReviews = reviewCounts.pending;
@@ -120,11 +120,11 @@ export async function getAdvisorPerformance(
     const [docStats] = await db.select({
       total: sql<number>`count(*)::int`,
       avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.status} = 'applied')::int`,
+      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
     }).from(contractUploadReviews)
       .where(and(
         eq(contractUploadReviews.tenantId, tenantId),
-        eq(contractUploadReviews.assignedTo, userId),
+        eq(contractUploadReviews.uploadedBy, userId),
         gte(contractUploadReviews.createdAt, windowStart),
       ));
     if (docStats) {
@@ -185,16 +185,16 @@ export async function getAdvisorBottlenecks(
     const { db, contractReviewCorrections, eq, and, sql } = await import("db");
 
     const corrections = await db.select({
-      correctedFields: contractReviewCorrections.correctedFields,
+      correctedFieldValues: contractReviewCorrections.correctedFieldValues,
     }).from(contractReviewCorrections)
       .where(and(eq(contractReviewCorrections.tenantId, tenantId), eq(contractReviewCorrections.correctedBy, userId)))
       .limit(200);
 
     const fieldCounts = new Map<string, number>();
     for (const c of corrections) {
-      const fields = c.correctedFields as string[] | null;
-      if (fields) {
-        for (const f of fields) {
+      const values = c.correctedFieldValues as Record<string, unknown> | null;
+      if (values && typeof values === "object") {
+        for (const f of Object.keys(values)) {
           fieldCounts.set(f, (fieldCounts.get(f) ?? 0) + 1);
         }
       }

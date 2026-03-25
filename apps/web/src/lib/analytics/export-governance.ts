@@ -47,14 +47,14 @@ export async function logExport(
   format: "csv" | "json",
 ): Promise<void> {
   try {
-    const { auditLog } = await import("@/lib/audit");
-    await auditLog({
+    const { logAudit } = await import("@/lib/audit");
+    await logAudit({
       tenantId,
       userId,
       action: `export:${reportType}`,
       entityType: "report",
       entityId: reportType,
-      metadata: { format, exportedAt: new Date().toISOString() },
+      meta: { format, exportedAt: new Date().toISOString() },
     });
   } catch { /* best-effort */ }
 }

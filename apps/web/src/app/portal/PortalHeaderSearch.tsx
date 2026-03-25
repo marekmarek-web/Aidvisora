@@ -10,6 +10,9 @@ const EMPTY_RESULTS: SearchResult = {
   contracts: [],
   opportunities: [],
   events: [],
+  households: [],
+  notes: [],
+  docs: [],
 };
 
 export type PortalHeaderSearchHandle = { focus: () => void };

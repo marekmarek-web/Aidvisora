@@ -132,7 +132,7 @@ export async function executeAction(
     action: `execution:${action.actionType}`,
     entityType: "execution_action",
     entityId: executionId,
-    metadata: { status: fullAction.status, sourceType: action.sourceType },
+    meta: { status: fullAction.status, sourceType: action.sourceType },
   });
 
   return fullAction;
