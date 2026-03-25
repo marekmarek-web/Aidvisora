@@ -170,6 +170,7 @@ export function MobileSideDrawer({
     () => buildSections(showTeamOverview, roleName),
     [showTeamOverview, roleName]
   );
+  const showDrawerScanShortcut = hasPermission(roleName, "documents:read");
 
   useEffect(() => {
     if (!open) return;
@@ -238,6 +239,19 @@ export function MobileSideDrawer({
         </div>
 
         {searchSlot ? <div className="px-3 py-2 border-b border-slate-100">{searchSlot}</div> : null}
+
+        {showDrawerScanShortcut ? (
+          <div className="px-3 pt-2 pb-2 border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => onNavigate("/portal/scan")}
+              className="w-full flex items-center justify-center gap-2 min-h-[48px] rounded-2xl border border-indigo-200 bg-indigo-50/80 text-indigo-900 text-sm font-black active:scale-[0.99] transition-transform"
+            >
+              <ScanLine size={20} className="shrink-0 text-indigo-600" aria-hidden />
+              Sken dokumentu
+            </button>
+          </div>
+        ) : null}
 
         <nav className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-3 space-y-5">
           {sections.map((sec) => (

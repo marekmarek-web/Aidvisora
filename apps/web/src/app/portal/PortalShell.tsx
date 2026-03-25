@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Sparkles, Search, MoreVertical } from "lucide-react";
+import { Sparkles, Search, MoreVertical, ScanLine } from "lucide-react";
+import Link from "next/link";
 import { PortalSidebar, PORTAL_SIDEBAR_COLLAPSED_PX } from "./PortalSidebar";
 import { PortalHeaderSearch, type PortalHeaderSearchHandle } from "./PortalHeaderSearch";
 import { QuickNewMenu } from "./QuickNewMenu";
@@ -15,6 +16,7 @@ import { PortalFeedbackLauncher } from "./PortalFeedbackLauncher";
 import { useShareIntent } from "@/lib/share/useShareIntent";
 import { usePushNotifications } from "@/lib/push/usePushNotifications";
 import { mapPushNotificationToRoute } from "@/lib/push/routing";
+import { useCaptureCapabilities } from "@/lib/device/useCaptureCapabilities";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -149,6 +151,7 @@ function PortalShellInner({
     },
   });
   const { open: aiDrawerOpen, setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
+  const { showScanInQuickMenu } = useCaptureCapabilities();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
 
@@ -219,15 +222,23 @@ function PortalShellInner({
                 </button>
               )}
             </div>
-            {/* sm+: full header actions. Below sm: Nový is inline (Safari iPhone) so Scan is not buried under ⋮ */}
-            <div className="hidden sm:flex items-center gap-2 shrink-0">
+            {/* sm+: bell + user beside Nový. Below sm: Nový + optional Sken + ⋮ so nothing is only under overflow */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <QuickNewMenu />
-              <NotificationBell />
-              <UserMenu />
-            </div>
-            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
-              <QuickNewMenu />
-              <div className="relative">
+              {showScanInQuickMenu ? (
+                <Link
+                  href="/portal/scan"
+                  className="sm:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] transition-transform"
+                  aria-label="Skenovat dokument"
+                >
+                  <ScanLine size={22} aria-hidden />
+                </Link>
+              ) : null}
+              <div className="hidden sm:flex items-center gap-2">
+                <NotificationBell />
+                <UserMenu />
+              </div>
+              <div className="relative sm:hidden">
                 <button
                   type="button"
                   onClick={() => setOverflowOpen((o) => !o)}
