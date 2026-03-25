@@ -257,6 +257,38 @@ export function AiAssistantDrawer() {
       }
       const reviewId = uploadData.id as string;
       setUploadPhase("processing");
+      // Pipeline běží na POST /process (upload jen uloží soubor).
+      const procRes = await fetch(`/api/contracts/review/${reviewId}/process`, { method: "POST" });
+      const procJson = (await procRes.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        id?: string;
+        processingStatus?: string;
+        confidence?: number;
+      };
+      if (!procRes.ok) {
+        const hint = typeof procJson.code === "string" ? ` (${procJson.code})` : "";
+        setUploadError((procJson.error ?? "Zpracování smlouvy selhalo.") + hint);
+        setMessages((prev) => prev.slice(0, -1));
+        setUploadPhase("idle");
+        return;
+      }
+      if (typeof procJson.error === "string" && procJson.processingStatus == null) {
+        const hint = typeof procJson.code === "string" ? ` (${procJson.code})` : "";
+        setUploadError(procJson.error + hint);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `${procJson.error} Otevřete review pro detail nebo zkuste znovu.`,
+            reviewId,
+            draftActions: [],
+            clientMatchCandidates: [],
+          },
+        ]);
+        setUploadPhase("idle");
+        return;
+      }
       const detailRes = await fetch(`/api/contracts/review/${reviewId}`);
       const detail = await detailRes.json();
       if (!detailRes.ok) {
@@ -264,7 +296,7 @@ export function AiAssistantDrawer() {
           ...prev,
           {
             role: "assistant",
-            content: `Smlouva byla nahrána. Stav: ${uploadData.processingStatus ?? "—"}. Otevřete review pro další kroky.`,
+            content: `Smlouva byla nahrána a zpracována. Otevřete review pro další kroky.`,
             reviewId,
             draftActions: [],
             clientMatchCandidates: [],

@@ -522,6 +522,10 @@ export function ContractsReviewScreen({
         const res = await fetch("/api/contracts/upload", { method: "POST", body: form });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || "Nahrání smlouvy selhalo.");
+        const reviewId = json?.id as string | undefined;
+        if (reviewId) {
+          await fetch(`/api/contracts/review/${reviewId}/process`, { method: "POST" });
+        }
         await fetchList();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Nahrání smlouvy selhalo.");
