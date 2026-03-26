@@ -156,24 +156,24 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
 
   return (
     <>
-      <div className="min-h-screen bg-slate-100 pb-24">
+      <div className="min-h-screen bg-[color:var(--wp-surface-muted)] pb-24">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-slate-200 px-4 sm:px-6 md:px-8 py-3 md:py-4 flex items-center justify-between gap-2">
+        <header className="sticky top-0 z-30 bg-[color:var(--wp-surface-card)]/90 backdrop-blur-sm border-b border-[color:var(--wp-surface-card-border)] px-4 sm:px-6 md:px-8 py-3 md:py-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 min-w-0">
             <Link
               href="/portal/households"
-              className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors shrink-0 min-h-[44px] items-center md:min-h-0"
+              className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:text-indigo-600 transition-colors shrink-0 min-h-[44px] items-center md:min-h-0"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               <span className="hidden sm:inline">Zpět na domácnosti</span>
             </Link>
-            <span className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" aria-hidden />
-            <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 min-w-0 truncate" aria-label="Breadcrumb">
-              <Link href="/portal" className="hover:text-slate-600 truncate hidden md:inline">Databáze</Link>
+            <span className="w-px h-5 bg-[color:var(--wp-surface-card-border)] shrink-0 hidden sm:block" aria-hidden />
+            <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] min-w-0 truncate" aria-label="Breadcrumb">
+              <Link href="/portal" className="hover:text-[color:var(--wp-text-secondary)] truncate hidden md:inline">Databáze</Link>
               <span aria-hidden className="opacity-50 hidden md:inline">/</span>
-              <Link href="/portal/households" className="hover:text-slate-600 truncate">Domácnosti</Link>
+              <Link href="/portal/households" className="hover:text-[color:var(--wp-text-secondary)] truncate">Domácnosti</Link>
               <span aria-hidden className="opacity-50">/</span>
-              <span className="text-slate-800 normal-case tracking-normal truncate">{household.name}</span>
+              <span className="text-[color:var(--wp-text)] normal-case tracking-normal truncate">{household.name}</span>
             </nav>
           </div>
           {!isMobile && (
@@ -190,7 +190,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               <button
                 type="button"
                 onClick={() => setHeaderMenuOpen((o) => !o)}
-                className="min-w-[44px] min-h-[44px] rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50"
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                 aria-label="Menu"
               >
                 <span className="text-lg font-bold">⋯</span>
@@ -198,11 +198,11 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               {headerMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
-                  <div className="absolute right-0 top-full mt-1 py-2 min-w-[220px] bg-white rounded-xl shadow-xl border border-slate-200 z-50">
+                  <div className="absolute right-0 top-full mt-1 py-2 min-w-[220px] bg-[color:var(--wp-surface-card)] rounded-xl shadow-xl border border-[color:var(--wp-surface-card-border)] z-50">
                     <Link
                       href={`/portal/mindmap?householdId=${household.id}`}
                       onClick={() => setHeaderMenuOpen(false)}
-                      className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 min-h-[44px]"
+                      className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       Strategická mapa
@@ -224,7 +224,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
         </header>
 
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
-          <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
               <div className="flex items-center gap-6 min-w-0">
                 <div className="relative shrink-0">
@@ -232,7 +232,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                     type="button"
                     onClick={() => setIconPickerOpen((o) => !o)}
                     disabled={pending}
-                    className="w-20 h-20 rounded-[24px] bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center text-slate-400 shadow-inner hover:text-indigo-600 transition-colors disabled:opacity-50"
+                    className="flex h-20 w-20 items-center justify-center rounded-[24px] border border-[color:var(--wp-border-strong)] bg-gradient-to-br from-[color:var(--wp-surface-muted)] to-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-tertiary)] shadow-inner transition-colors hover:text-indigo-600 disabled:opacity-50"
                     aria-label="Změnit ikonu domácnosti"
                   >
                     {household.icon ? <HouseholdIconDisplay iconId={household.icon} /> : <Share2 size={30} />}
@@ -244,26 +244,26 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                       <input
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        className="rounded-xl border border-slate-200 px-3 py-2 font-semibold text-base md:text-lg max-w-full w-full sm:w-auto min-w-[180px] md:min-w-[220px]"
+                        className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2 font-semibold text-base md:text-lg max-w-full w-full sm:w-auto min-w-[180px] md:min-w-[220px]"
                         autoFocus
                         required
                       />
                       <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
                         {pending ? "…" : "Uložit"}
                       </button>
-                      <button type="button" onClick={() => { setRenaming(false); setNewName(household.name); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 min-h-[44px]">
+                      <button type="button" onClick={() => { setRenaming(false); setNewName(household.name); }} className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
                         Zrušit
                       </button>
                     </form>
                   ) : (
                     <>
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight truncate">{household.name}</h1>
+                        <h1 className="text-2xl md:text-3xl font-black text-[color:var(--wp-text)] tracking-tight truncate">{household.name}</h1>
                         <span className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-amber-200">Domácnost</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
+                      <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-[color:var(--wp-text-secondary)]">
                         <span className="flex items-center gap-1.5"><MapPin size={14} /> Detail domácnosti</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <span className="h-1 w-1 rounded-full bg-[color:var(--wp-text-tertiary)]" />
                         <span>
                           {household.members.length} {household.members.length === 1 ? "člen" : household.members.length >= 2 && household.members.length <= 4 ? "členové" : "členů"}
                         </span>
@@ -283,19 +283,19 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 >
                   Strategická mapa
                 </Link>
-                <div className="flex items-center gap-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-8 bg-[color:var(--wp-surface-muted)] p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
                   <div>
-                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Společný majetek (AUM)</span>
+                    <span className="block text-[10px] font-black text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-1">Společný majetek (AUM)</span>
                     <span className="text-2xl font-black text-indigo-600">—</span>
                   </div>
-                  <div className="w-px h-10 bg-slate-200" />
+                  <div className="w-px h-10 bg-[color:var(--wp-surface-card-border)]" />
                   <div>
-                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <span className="block text-[10px] font-black text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-1 flex items-center gap-1">
                       Health Score <Activity size={10} />
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="text-2xl font-black text-emerald-500">—</span>
-                      <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden" />
+                      <div className="w-16 h-1.5 bg-[color:var(--wp-surface-card-border)] rounded-full overflow-hidden" />
                     </div>
                   </div>
                 </div>
@@ -303,8 +303,8 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
             </div>
 
             {iconPickerOpen && (
-              <div className="mt-6 pt-6 border-t border-slate-100">
-                <p className="text-sm font-medium text-slate-700 mb-2">Ikona domácnosti</p>
+              <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Ikona domácnosti</p>
                 <HouseholdIconPicker value={household.icon} onChange={(id) => handleIconChange(id)} disabled={pending} />
               </div>
             )}
@@ -315,9 +315,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
             {/* Left column: Members + Documents */}
             <div className="xl:col-span-2 space-y-6 min-w-0">
               {/* Members */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 border-b border-slate-100">
-                  <h2 className="text-xl font-black text-slate-900">Členové domácnosti</h2>
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 border-b border-[color:var(--wp-surface-card-border)]">
+                  <h2 className="text-xl font-black text-[color:var(--wp-text)]">Členové domácnosti</h2>
                   {!addingMember && (
                     <button
                       type="button"
@@ -331,12 +331,12 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 </div>
 
                 {addingMember && (
-                  <form onSubmit={handleAddMember} className="p-4 sm:p-6 bg-slate-50 border-b border-slate-100 space-y-3">
+                  <form onSubmit={handleAddMember} className="p-4 sm:p-6 bg-[color:var(--wp-surface-muted)] border-b border-[color:var(--wp-surface-card-border)] space-y-3">
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setAddMode("select")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "select" ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                      <button type="button" onClick={() => setAddMode("select")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "select" ? "bg-indigo-600 text-white" : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)]"}`}>
                         Vybrat existující
                       </button>
-                      <button type="button" onClick={() => setAddMode("new")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "new" ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                      <button type="button" onClick={() => setAddMode("new")} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${addMode === "new" ? "bg-indigo-600 text-white" : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)]"}`}>
                         Vytvořit nový kontakt
                       </button>
                     </div>
@@ -356,7 +356,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                             placeholder="Jméno"
                             value={newFirstName}
                             onChange={(e) => setNewFirstName(e.target.value)}
-                            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
+                            className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
                             required
                           />
                           <input
@@ -364,7 +364,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                             placeholder="Příjmení"
                             value={newLastName}
                             onChange={(e) => setNewLastName(e.target.value)}
-                            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
+                            className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2.5 text-sm flex-1 min-w-[120px] min-h-[44px]"
                             required
                           />
                         </>
@@ -382,7 +382,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                       <button
                         type="button"
                         onClick={() => { setAddingMember(false); setMemberContactId(""); setNewFirstName(""); setNewLastName(""); setAddMode("select"); }}
-                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 min-h-[44px]"
+                        className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                       >
                         Zrušit
                       </button>
@@ -392,18 +392,18 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
 
                 <div className="p-4 sm:p-6">
                   {household.members.length === 0 && !addingMember ? (
-                    <p className="text-sm text-slate-500">Žádní členové.</p>
+                    <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádní členové.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {household.members.map((m) => (
-                        <div key={m.id} className="bg-white p-5 rounded-[24px] border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col group">
+                        <div key={m.id} className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col group">
                           <div className="flex items-start justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3 min-w-0">
                               <div
                                 className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-sm border-2 border-white shadow-sm shrink-0 ${
                                   isChildMember({ role: m.role, birthDate: (m as { birthDate?: string | null }).birthDate })
                                     ? "bg-amber-100 text-amber-700"
-                                    : "bg-slate-800 text-white"
+                                    : "bg-[#1e293b] text-white"
                                 }`}
                                 aria-hidden
                               >
@@ -420,19 +420,19 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                                       ? "bg-indigo-50 text-indigo-700"
                                       : m.role === "child"
                                       ? "bg-amber-100 text-amber-700"
-                                      : "bg-slate-100 text-slate-600"
+                                      : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                                   }`}
                                 >
                                   {roleLabel(m.role)}
                                 </span>
-                                <h3 className="font-bold text-lg text-slate-900 leading-none truncate">{m.firstName} {m.lastName}</h3>
+                                <h3 className="font-bold text-lg text-[color:var(--wp-text)] leading-none truncate">{m.firstName} {m.lastName}</h3>
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(m.id)}
                               disabled={pending}
-                              className="text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-2 rounded-lg disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              className="text-[color:var(--wp-text-tertiary)] hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-2 rounded-lg disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                               title="Odebrat z domácnosti"
                               aria-label="Odebrat z domácnosti"
                             >
@@ -441,27 +441,27 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                           </div>
                           <div className="space-y-1.5 mb-5">
                             {m.email && (
-                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 truncate">
-                                <Mail size={14} className="text-slate-400 shrink-0" aria-hidden />
+                              <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">
+                                <Mail size={14} className="text-[color:var(--wp-text-tertiary)] shrink-0" aria-hidden />
                                 <span className="truncate">{m.email}</span>
                               </div>
                             )}
                             {m.phone && (
-                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                <Phone size={14} className="text-slate-400 shrink-0" aria-hidden />
+                              <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--wp-text-secondary)]">
+                                <Phone size={14} className="text-[color:var(--wp-text-tertiary)] shrink-0" aria-hidden />
                                 <span>{m.phone}</span>
                               </div>
                             )}
-                            {!m.email && !m.phone && <span className="text-xs font-bold text-slate-400">—</span>}
+                            {!m.email && !m.phone && <span className="text-xs font-bold text-[color:var(--wp-text-tertiary)]">—</span>}
                           </div>
-                          <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <div className="mt-auto pt-4 border-t border-[color:var(--wp-surface-card-border)] flex items-center justify-between gap-2">
                             <div>
-                              <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Osobní AUM</span>
-                              <span className="text-sm font-black text-slate-800">—</span>
+                              <span className="block text-[9px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-0.5">Osobní AUM</span>
+                              <span className="text-sm font-black text-[color:var(--wp-text)]">—</span>
                             </div>
                             <Link
                               href={`/portal/contacts/${m.contactId}`}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-black uppercase tracking-widest rounded-xl transition-colors border border-slate-200 hover:border-indigo-200 min-h-[44px]"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-indigo-50 text-[color:var(--wp-text-secondary)] hover:text-indigo-700 text-xs font-black uppercase tracking-widest rounded-xl transition-colors border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 min-h-[44px]"
                             >
                               Profil 360°
                               <ChevronRight size={14} />
@@ -475,17 +475,17 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               </div>
 
               {/* Rodinné dokumenty a poznámky */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-4 sm:px-6 py-4 border-b border-slate-100">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[color:var(--wp-text-secondary)] px-4 sm:px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]">
                   Rodinné dokumenty a poznámky
                 </h3>
                 <div className="p-4 sm:p-6">
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center text-center text-slate-500 bg-slate-50/50 mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mb-2 text-slate-400" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  <div className="border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl p-6 sm:p-8 flex flex-col items-center justify-center text-center text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)]/50 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mb-2 text-[color:var(--wp-text-tertiary)]" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     <p className="text-sm font-semibold">Společné dokumenty – připravujeme</p>
                     <p className="text-xs mt-1">SJM, oddací listy, společná daňová přiznání…</p>
                   </div>
-                  <p className="text-sm text-slate-500 mb-3">Zápisky a dokumenty najdete u profilů členů.</p>
+                  <p className="text-sm text-[color:var(--wp-text-secondary)] mb-3">Zápisky a dokumenty najdete u profilů členů.</p>
                   {household.members.length > 0 && (
                     <ul className="space-y-2">
                       {household.members.slice(0, 5).map((m) => (
@@ -504,26 +504,26 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
             {/* Right column: Goals, Opportunities, Financial, Delete */}
             <div className="xl:col-span-1 space-y-6">
               {/* Společné cíle – empty state */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
+                  <h3 className="font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                     <Target size={18} className="text-amber-500" />
                     Společné cíle
                   </h3>
-                  <button type="button" className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+                  <button type="button" className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
                     <Plus size={16} />
                   </button>
                 </div>
                 <div className="p-6">
-                  <p className="text-sm text-slate-500 mb-2">Žádné cíle.</p>
-                  <p className="text-xs text-slate-400">Cíle domácnosti budou dostupné v budoucí verzi.</p>
+                  <p className="text-sm text-[color:var(--wp-text-secondary)] mb-2">Žádné cíle.</p>
+                  <p className="text-xs text-[color:var(--wp-text-tertiary)]">Cíle domácnosti budou dostupné v budoucí verzi.</p>
                 </div>
               </div>
 
               {/* Aktuální obchody */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
+                  <h3 className="font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                     <Briefcase size={18} className="text-indigo-500" />
                     Aktuální obchody
                   </h3>
@@ -531,7 +531,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 <div className="p-4 space-y-3">
                   {opportunities.length === 0 ? (
                     <>
-                      <p className="text-sm text-slate-500">Žádné otevřené obchody.</p>
+                      <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné otevřené obchody.</p>
                       <Link href="/portal/pipeline" className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:underline">
                         Pipeline
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -543,7 +543,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                         <Link
                           key={o.id}
                           href={`/portal/pipeline/${o.id}`}
-                          className="block p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-indigo-100 transition-all group"
+                          className="block p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card)] hover:shadow-sm hover:border-indigo-100 transition-all group"
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
@@ -558,14 +558,17 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                                 .join("") || "??")
                                 .split("")
                                 .map((initialChar, idx) => (
-                                  <div key={`${o.id}-${idx}`} className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[8px] font-black border border-white">
+                                  <div
+                                  key={`${o.id}-${idx}`}
+                                  className="flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--wp-surface-card)] bg-[#1e293b] text-[8px] font-black text-white"
+                                >
                                     {initialChar}
                                   </div>
                                 ))}
                             </div>
                           </div>
-                          <h4 className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">{o.title}</h4>
-                          <p className="text-xs text-slate-500 mt-1">{o.contactName}</p>
+                          <h4 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors">{o.title}</h4>
+                          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{o.contactName}</p>
                         </Link>
                       ))}
                       <Link
@@ -579,7 +582,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                   )}
                   <Link
                     href="/portal/pipeline"
-                    className="flex items-center justify-center gap-2 w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors min-h-[44px]"
+                    className="flex items-center justify-center gap-2 w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors min-h-[44px]"
                   >
                     <Plus size={14} />
                     Nový obchod pro rodinu
@@ -588,9 +591,9 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               </div>
 
               {/* Finanční analýzy */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-100">
-                  <h3 className="font-bold text-slate-900">Finanční analýzy</h3>
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]">
+                  <h3 className="font-bold text-[color:var(--wp-text)]">Finanční analýzy</h3>
                   <Link
                     href={`/portal/analyses/financial?householdId=${household.id}`}
                     className="inline-flex items-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2.5 text-sm font-semibold hover:bg-amber-600 transition-colors min-h-[44px]"
@@ -601,17 +604,17 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                 </div>
                 <div className="p-4 sm:p-6">
                   {analysesLoading ? (
-                    <p className="text-sm text-slate-500">Načítám…</p>
+                    <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>
                   ) : analysesList.length === 0 ? (
-                    <p className="text-sm text-slate-500">Žádné analýzy. Vytvořte novou.</p>
+                    <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné analýzy. Vytvořte novou.</p>
                   ) : (
                     <ul className="space-y-2">
                       {analysesList.map((a) => (
-                        <li key={a.id} className="flex items-center justify-between gap-2 py-2 border-b border-slate-50 last:border-0">
-                          <span className="text-sm text-slate-700">
+                        <li key={a.id} className="flex items-center justify-between gap-2 py-2 border-b border-[color:var(--wp-surface-card-border)]/50 last:border-0">
+                          <span className="text-sm text-[color:var(--wp-text-secondary)]">
                             {a.status === "draft" ? "Rozpracováno" : a.status === "completed" ? "Dokončeno" : a.status === "exported" ? "Exportováno" : a.status}
                           </span>
-                          <span className="text-xs text-slate-400">{new Date(a.updatedAt).toLocaleDateString("cs-CZ")}</span>
+                          <span className="text-xs text-[color:var(--wp-text-tertiary)]">{new Date(a.updatedAt).toLocaleDateString("cs-CZ")}</span>
                           <Link href={`/portal/analyses/financial?id=${a.id}`} className="text-sm font-semibold text-amber-600 hover:underline min-h-[44px] flex items-center">
                             Otevřít
                           </Link>
@@ -633,7 +636,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
               type="button"
               onClick={handleDeleteHousehold}
               disabled={pending}
-              className="px-6 py-3 bg-white text-rose-600 border border-rose-100 rounded-2xl shadow-lg shadow-rose-900/5 font-black text-xs uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-2 min-h-[44px] disabled:opacity-50"
+              className="px-6 py-3 bg-[color:var(--wp-surface-card)] text-rose-600 border border-rose-100 rounded-2xl shadow-lg shadow-rose-900/5 font-black text-xs uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-2 min-h-[44px] disabled:opacity-50"
             >
               <Trash2 size={16} />
               Smazat domácnost

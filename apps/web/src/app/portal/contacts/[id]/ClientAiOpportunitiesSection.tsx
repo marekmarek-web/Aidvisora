@@ -32,16 +32,16 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
   if (!hasAnyData && opportunities.length === 0) {
     return (
       <div
-        className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-6"
+        className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-6"
         style={{ borderRadius: "var(--wp-radius-lg, 24px)" }}
       >
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100">
             <Zap size={16} className="text-indigo-600" aria-hidden />
           </div>
-          <h2 className="text-lg font-bold text-slate-900">AI příležitosti</h2>
+          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">AI příležitosti</h2>
         </div>
-        <p className="text-sm text-slate-600 mb-4">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
           Pro doporučení doplňte údaje o klientovi. Založte finanční analýzu nebo přidejte první schůzku.
         </p>
         <div className="flex flex-wrap gap-3">
@@ -53,7 +53,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
           </Link>
           <Link
             href={`/portal/calendar?contactId=${contactId}&newEvent=1`}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
           >
             Naplánovat schůzku
           </Link>
@@ -65,16 +65,16 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
   if (opportunities.length === 0) {
     return (
       <div
-        className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-6"
+        className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-6"
         style={{ borderRadius: "var(--wp-radius-lg, 24px)" }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">
-            <Zap size={16} className="text-slate-500" aria-hidden />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[color:var(--wp-surface-muted)]">
+            <Zap size={16} className="text-[color:var(--wp-text-secondary)]" aria-hidden />
           </div>
-          <h2 className="text-lg font-bold text-slate-900">AI příležitosti</h2>
+          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">AI příležitosti</h2>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">
           Momentálně nemáme konkrétní doporučení. Pravidelně kontrolujte schůzky a servisní termíny.
         </p>
       </div>
@@ -87,7 +87,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
 
   return (
     <div
-      className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"
+      className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden"
       style={{ borderRadius: "var(--wp-radius-lg, 24px)" }}
     >
       <div className="p-6 space-y-6">
@@ -95,7 +95,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100">
             <Zap size={16} className="text-indigo-600" aria-hidden />
           </div>
-          <h2 className="text-lg font-bold text-slate-900">AI příležitosti a další krok</h2>
+          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">AI příležitosti a další krok</h2>
         </div>
 
         {/* Next best action card */}
@@ -104,10 +104,10 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 mb-1">
               Další nejlepší krok
             </p>
-            <h3 className="text-base font-bold text-slate-900 mb-1">
+            <h3 className="text-base font-bold text-[color:var(--wp-text)] mb-1">
               {nextBestAction.title}
             </h3>
-            <p className="text-sm text-slate-600 mb-3">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mb-3">
               {nextBestAction.explanation}
             </p>
             {nextBestAction.scope === "household" && nextBestAction.householdName && (
@@ -130,7 +130,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
         {/* Other opportunities */}
         {others.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Další příležitosti</h3>
+            <h3 className="text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-3">Další příležitosti</h3>
             <ul className="space-y-3">
               {visibleOthers.map((o) => (
                 <OpportunityCard
@@ -177,9 +177,9 @@ function OpportunityCard({
   const priorityLabel = PRIORITY_BADGE[opportunity.priority];
 
   return (
-    <li className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+    <li className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-4">
       <div className="flex flex-wrap items-center gap-2 mb-1">
-        <span className="text-xs font-medium text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded">
+        <span className="text-xs font-medium text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card-border)]/80 px-2 py-0.5 rounded">
           {priorityLabel}
         </span>
         {opportunity.confidence === "low" && (
@@ -193,17 +193,17 @@ function OpportunityCard({
           </span>
         )}
       </div>
-      <h4 className="text-sm font-semibold text-slate-900">{opportunity.title}</h4>
-      <p className="text-sm text-slate-600 mt-0.5">{opportunity.explanation}</p>
+      <h4 className="text-sm font-semibold text-[color:var(--wp-text)]">{opportunity.title}</h4>
+      <p className="text-sm text-[color:var(--wp-text-secondary)] mt-0.5">{opportunity.explanation}</p>
       <button
         type="button"
         onClick={() => setShowWhy(!showWhy)}
-        className="mt-2 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 min-h-[32px]"
+        className="mt-2 flex items-center gap-1 text-xs text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)] min-h-[32px]"
       >
         <Info size={12} aria-hidden /> {showWhy ? "Skrýt proč" : "Proč"}
       </button>
       {showWhy && (
-        <ul className="mt-2 pl-4 text-xs text-slate-500 space-y-0.5">
+        <ul className="mt-2 pl-4 text-xs text-[color:var(--wp-text-secondary)] space-y-0.5">
           {opportunity.sourceSignals.map((s, i) => (
             <li key={i}>{s.label}</li>
           ))}
@@ -224,7 +224,7 @@ function OpportunityCard({
 function SourceSignalsInline({ signals }: { signals: AiOpportunity["sourceSignals"] }) {
   if (signals.length === 0) return null;
   return (
-    <p className="text-xs text-slate-500">
+    <p className="text-xs text-[color:var(--wp-text-secondary)]">
       Proč: {signals.map((s) => s.label).join(" · ")}
     </p>
   );

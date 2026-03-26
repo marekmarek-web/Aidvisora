@@ -55,9 +55,9 @@ export function OpportunityTabLayout({
   }, []);
 
   return (
-    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px] sm:min-h-[600px]">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden flex flex-col min-h-[400px] sm:min-h-[600px]">
       <div
-        className="flex items-center border-b border-slate-100 px-2 sm:px-4 pt-2 overflow-x-auto hide-scrollbar bg-slate-50/50"
+        className="flex items-center border-b border-[color:var(--wp-surface-card-border)] px-2 sm:px-4 pt-2 overflow-x-auto hide-scrollbar bg-[color:var(--wp-surface-muted)]/50"
         role="tablist"
         aria-label="Záložky obchodu"
       >
@@ -71,7 +71,7 @@ export function OpportunityTabLayout({
             className={`min-h-[44px] px-4 sm:px-6 py-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap touch-manipulation ${
               activeId === id
                 ? "text-indigo-600"
-                : "text-slate-400 hover:text-slate-800"
+                : "text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"
             }`}
           >
             {TAB_LABELS[id]}

@@ -81,7 +81,7 @@ export function FinancialAnalysisToolbar() {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 pb-6 mb-6 border-b border-slate-200">
+    <div className="flex flex-wrap items-center justify-end gap-3 pb-6 mb-6 border-b border-[color:var(--wp-surface-card-border)]">
       <button
         type="button"
         onClick={handleSave}
@@ -93,7 +93,7 @@ export function FinancialAnalysisToolbar() {
         <span>{saving ? "…" : "Uložit"}</span>
       </button>
       {hasCrmContext ? (
-        <span className="text-xs text-slate-500 hidden sm:inline">Propojeno s klientem / domácností</span>
+        <span className="text-xs text-[color:var(--wp-text-secondary)] hidden sm:inline">Propojeno s klientem / domácností</span>
       ) : (
         <button
           type="button"
@@ -107,7 +107,7 @@ export function FinancialAnalysisToolbar() {
       )}
       <Link
         href="/portal/analyses"
-        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2 font-semibold text-slate-700"
+        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)]"
         title="Otevřít jinou analýzu"
       >
         <List className="w-4 h-4" />
@@ -116,13 +116,13 @@ export function FinancialAnalysisToolbar() {
       <button
         type="button"
         onClick={handleExportJson}
-        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2 font-semibold text-slate-700"
+        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)]"
         title="Záloha do souboru (JSON)"
       >
         <Download className="w-4 h-4" />
         <span className="hidden sm:inline">Export JSON</span>
       </button>
-      <label className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
+      <label className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)] cursor-pointer">
         <FolderOpen className="w-4 h-4" />
         <span className="hidden sm:inline">Načíst ze souboru</span>
         <input

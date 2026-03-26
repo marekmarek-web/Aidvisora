@@ -144,26 +144,26 @@ function DocumentCard({
       onClick={onClick}
       className={cx(
         "w-full text-left border rounded-xl overflow-hidden transition-colors",
-        active ? "ring-2 ring-indigo-300 border-indigo-300" : "border-slate-200"
+        active ? "ring-2 ring-indigo-300 border-indigo-300" : "border-[color:var(--wp-surface-card-border)]"
       )}
     >
       <div className="p-3.5">
         <div className="flex items-start gap-3">
           <div className={cx(
             "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-            isImage ? "bg-purple-50" : isPdf ? "bg-rose-50" : "bg-slate-100"
+            isImage ? "bg-purple-50" : isPdf ? "bg-rose-50" : "bg-[color:var(--wp-surface-muted)]"
           )}>
             <FileIcon size={18} className={cx(
-              isImage ? "text-purple-500" : isPdf ? "text-rose-500" : "text-slate-500"
+              isImage ? "text-purple-500" : isPdf ? "text-rose-500" : "text-[color:var(--wp-text-secondary)]"
             )} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-slate-900 truncate">{doc.name}</p>
-              <ChevronRight size={14} className="text-slate-300 flex-shrink-0" />
+              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{doc.name}</p>
+              <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
             </div>
             {doc.contactName ? (
-              <p className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
+              <p className="text-[10px] text-[color:var(--wp-text-secondary)] mt-0.5 flex items-center gap-1">
                 <User size={9} /> {doc.contactName}
               </p>
             ) : null}
@@ -178,7 +178,7 @@ function DocumentCard({
                 <StatusBadge tone={proc.tone}>{proc.label}</StatusBadge>
               </div>
               {doc.isScanLike ? (
-                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 rounded px-1 py-0.5 flex items-center gap-0.5">
+                <span className="text-[9px] font-bold text-[color:var(--wp-text-tertiary)] bg-[color:var(--wp-surface-muted)] rounded px-1 py-0.5 flex items-center gap-0.5">
                   <ScanLine size={8} /> Sken
                 </span>
               ) : null}
@@ -187,20 +187,20 @@ function DocumentCard({
                   <Eye size={8} /> Klient
                 </span>
               ) : null}
-              <span className="text-[10px] text-slate-400 ml-auto">
+              <span className="text-[10px] text-[color:var(--wp-text-tertiary)] ml-auto">
                 {formatRelativeDate(doc.createdAt)}
               </span>
             </div>
             {doc.tags?.length ? (
               <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                <Tag size={9} className="text-slate-300" />
+                <Tag size={9} className="text-[color:var(--wp-text-tertiary)]" />
                 {doc.tags.slice(0, 3).map((tag) => (
                   <span key={tag} className="text-[9px] font-bold text-indigo-600 bg-indigo-50 rounded px-1 py-0.5">
                     {tag}
                   </span>
                 ))}
                 {doc.tags.length > 3 ? (
-                  <span className="text-[9px] text-slate-400">+{doc.tags.length - 3}</span>
+                  <span className="text-[9px] text-[color:var(--wp-text-tertiary)]">+{doc.tags.length - 3}</span>
                 ) : null}
               </div>
             ) : null}
@@ -276,7 +276,7 @@ function DocumentDetailPanel({
       {/* Hero */}
       <MobileCard className="p-4 bg-gradient-to-br from-[#0a0f29] to-indigo-900 border-0 rounded-xl">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center flex-shrink-0">
             <FileIcon size={22} className="text-indigo-300" />
           </div>
           <div className="flex-1 min-w-0">
@@ -285,7 +285,7 @@ function DocumentDetailPanel({
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full min-h-[40px] rounded-lg border border-white/30 bg-white/10 text-white text-sm font-bold px-2 py-1.5"
+                className="w-full min-h-[40px] rounded-lg border border-white/30 bg-[color:var(--wp-surface-card)]/10 text-white text-sm font-bold px-2 py-1.5"
                 placeholder="Název dokumentu"
               />
             ) : (
@@ -305,43 +305,43 @@ function DocumentDetailPanel({
       </MobileCard>
 
       {/* Meta */}
-      <MobileCard className="divide-y divide-slate-100 py-0">
+      <MobileCard className="divide-y divide-[color:var(--wp-surface-card-border)] py-0">
         <div className="flex items-center justify-between py-3 px-0.5">
-          <span className="text-xs text-slate-500">Typ</span>
-          <span className="text-xs font-bold text-slate-900">{doc.mimeType || "Neznámý"}</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Typ</span>
+          <span className="text-xs font-bold text-[color:var(--wp-text)]">{doc.mimeType || "Neznámý"}</span>
         </div>
         <div className="flex items-center justify-between py-3 px-0.5">
-          <span className="text-xs text-slate-500">Zdroj</span>
-          <span className="text-xs font-bold text-slate-900">{getSourceLabel(doc.uploadSource)}</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Zdroj</span>
+          <span className="text-xs font-bold text-[color:var(--wp-text)]">{getSourceLabel(doc.uploadSource)}</span>
         </div>
         {doc.sizeBytes ? (
           <div className="flex items-center justify-between py-3 px-0.5">
-            <span className="text-xs text-slate-500">Velikost</span>
-            <span className="text-xs font-bold text-slate-900">{formatSize(doc.sizeBytes)}</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)]">Velikost</span>
+            <span className="text-xs font-bold text-[color:var(--wp-text)]">{formatSize(doc.sizeBytes)}</span>
           </div>
         ) : null}
         {doc.pageCount ? (
           <div className="flex items-center justify-between py-3 px-0.5">
-            <span className="text-xs text-slate-500">Počet stran</span>
-            <span className="text-xs font-bold text-slate-900">{doc.pageCount}</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)]">Počet stran</span>
+            <span className="text-xs font-bold text-[color:var(--wp-text)]">{doc.pageCount}</span>
           </div>
         ) : null}
         <div className="flex items-center justify-between py-3 px-0.5">
-          <span className="text-xs text-slate-500">Nahráno</span>
-          <span className="text-xs font-bold text-slate-900">
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Nahráno</span>
+          <span className="text-xs font-bold text-[color:var(--wp-text)]">
             {doc.createdAt.toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
           </span>
         </div>
         <div className="flex items-center justify-between py-3 px-0.5">
-          <span className="text-xs text-slate-500">Processing</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Processing</span>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500">{doc.processingStage || "—"}</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)]">{doc.processingStage || "—"}</span>
             <StatusBadge tone={proc.tone}>{proc.label}</StatusBadge>
           </div>
         </div>
         {doc.aiInputSource && doc.aiInputSource !== "none" ? (
           <div className="flex items-center justify-between py-3 px-0.5">
-            <span className="text-xs text-slate-500">AI vstup</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)]">AI vstup</span>
             <StatusBadge tone="info">{doc.aiInputSource}</StatusBadge>
           </div>
         ) : null}
@@ -349,14 +349,14 @@ function DocumentDetailPanel({
 
       {/* Tags */}
       <MobileCard className="p-3.5">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tagy</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Tagy</p>
         {editMode ? (
           <>
             <textarea
               value={editTags}
               onChange={(e) => setEditTags(e.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-sm"
               placeholder="např. smlouva, 2024, hypotéka (čárkou oddělené)"
             />
             {saveError ? <p className="text-xs text-rose-600 font-semibold mt-2">{saveError}</p> : null}
@@ -370,7 +370,7 @@ function DocumentDetailPanel({
                   setSaveError(null);
                 }}
                 disabled={savingMeta}
-                className="min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-600"
+                className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
               >
                 Zrušit
               </button>
@@ -393,13 +393,13 @@ function DocumentDetailPanel({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-500">Žádné tagy — použijte Upravit.</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">Žádné tagy — použijte Upravit.</p>
         )}
       </MobileCard>
 
       {/* Actions */}
       <MobileCard className="p-3.5">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2.5">
           Akce
         </p>
         <div className="space-y-2">
@@ -424,7 +424,7 @@ function DocumentDetailPanel({
               });
             }}
             disabled={pending || savingMeta}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-700 flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] flex items-center justify-center gap-2"
           >
             <Pencil size={14} /> {editMode ? "Zavřít úpravy" : "Upravit název a tagy"}
           </button>
@@ -432,7 +432,7 @@ function DocumentDetailPanel({
             type="button"
             onClick={onToggleVisibility}
             disabled={pending}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-700 flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] flex items-center justify-center gap-2"
           >
             {doc.visibleToClient ? <EyeOff size={14} /> : <Eye size={14} />}
             {doc.visibleToClient ? "Skrýt pro klienta" : "Zobrazit klientovi"}
@@ -450,7 +450,7 @@ function DocumentDetailPanel({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(false)}
-                className="min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-600"
+                className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
               >
                 Zrušit
               </button>
@@ -491,7 +491,7 @@ function UploadSheet({
   return (
     <BottomSheet open={open} onClose={onClose} title="Nahrát dokument">
       <div className="space-y-3">
-        <p className="text-xs text-slate-500">PDF nebo obrázek (max 20 MB).</p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)]">PDF nebo obrázek (max 20 MB).</p>
         {showMultiPageScan ? (
           <button
             type="button"
@@ -520,9 +520,9 @@ function UploadSheet({
               }}
             />
           </label>
-          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-slate-300 bg-slate-50/50 cursor-pointer">
-            <Image size={22} className="text-slate-600" />
-            <span className="text-xs font-bold text-slate-700">Galerie</span>
+          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)]/50 cursor-pointer">
+            <Image size={22} className="text-[color:var(--wp-text-secondary)]" />
+            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Galerie</span>
             <input
               type="file"
               accept="image/*"
@@ -533,9 +533,9 @@ function UploadSheet({
               }}
             />
           </label>
-          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-slate-300 bg-slate-50/50 cursor-pointer">
-            <FileText size={22} className="text-slate-600" />
-            <span className="text-xs font-bold text-slate-700">PDF soubor</span>
+          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)]/50 cursor-pointer">
+            <FileText size={22} className="text-[color:var(--wp-text-secondary)]" />
+            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">PDF soubor</span>
             <input
               type="file"
               accept="application/pdf"
@@ -546,9 +546,9 @@ function UploadSheet({
               }}
             />
           </label>
-          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-slate-300 bg-slate-50/50 cursor-pointer">
-            <FolderOpen size={22} className="text-slate-600" />
-            <span className="text-xs font-bold text-slate-700">Jakýkoli soubor</span>
+          <label className="flex flex-col items-center justify-center gap-1.5 min-h-[80px] rounded-xl border border-dashed border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)]/50 cursor-pointer">
+            <FolderOpen size={22} className="text-[color:var(--wp-text-secondary)]" />
+            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Jakýkoli soubor</span>
             <input
               type="file"
               accept="application/pdf,image/*"
@@ -563,7 +563,7 @@ function UploadSheet({
         {busy ? (
           <div className="flex items-center justify-center gap-2 py-2">
             <Loader2 size={16} className="animate-spin text-indigo-600" />
-            <span className="text-xs font-bold text-slate-600">Nahrávám…</span>
+            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Nahrávám…</span>
           </div>
         ) : null}
       </div>
@@ -716,12 +716,12 @@ export function DocumentsHubScreen({
       {error ? <ErrorState title={error} onRetry={load} /> : null}
 
       {/* Header */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100 space-y-2">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FolderOpen size={18} className="text-indigo-600" />
-            <h2 className="text-base font-black text-slate-900">Dokumenty</h2>
-            <span className="text-[11px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-lg">
+            <h2 className="text-base font-black text-[color:var(--wp-text)]">Dokumenty</h2>
+            <span className="text-[11px] font-black text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-1.5 py-0.5 rounded-lg">
               {docs.length}
             </span>
           </div>
@@ -730,9 +730,9 @@ export function DocumentsHubScreen({
               type="button"
               onClick={load}
               disabled={pending}
-              className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center"
+              className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center"
             >
-              <RefreshCw size={14} className={cx("text-slate-500", pending && "animate-spin")} />
+              <RefreshCw size={14} className={cx("text-[color:var(--wp-text-secondary)]", pending && "animate-spin")} />
             </button>
           </div>
         </div>
@@ -763,7 +763,7 @@ export function DocumentsHubScreen({
       {/* Content */}
       {isTablet ? (
         <div className="grid grid-cols-2 gap-0 h-[calc(100vh-13rem)]">
-          <div className="border-r border-slate-100 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="border-r border-[color:var(--wp-surface-card-border)] overflow-y-auto px-4 py-3 space-y-2">
             {filtered.map((doc) => (
               <DocumentCard
                 key={doc.id}

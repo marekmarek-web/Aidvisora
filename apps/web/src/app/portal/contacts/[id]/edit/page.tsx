@@ -197,25 +197,25 @@ export default function EditContactPage() {
     );
   }
 
-  const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 min-h-[44px]";
+  const inputCls = "w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-3 text-sm text-[color:var(--wp-text)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 min-h-[44px]";
 
   return (
     <div className="min-h-0 flex flex-col">
       {/* Topbar: zpět, nadpis, CTA – sticky na mobilu */}
-      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10 shadow-sm">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={`/portal/contacts/${id}`}
-            className="flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-slate-900 min-h-[44px] items-center"
+            className="flex items-center gap-1.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] min-h-[44px] items-center"
           >
             <ArrowLeft size={18} /> Zpět na profil
           </Link>
-          <h1 className="text-lg font-black text-slate-900 truncate">Upravit kontakt</h1>
+          <h1 className="text-lg font-black text-[color:var(--wp-text)] truncate">Upravit kontakt</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href={`/portal/contacts/${id}`}
-            className="rounded-xl px-4 py-2.5 text-sm font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 min-h-[44px] flex items-center"
+            className="rounded-xl px-4 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center"
           >
             Zrušit
           </Link>
@@ -239,13 +239,13 @@ export default function EditContactPage() {
           )}
 
           {/* Karta: Základní údaje */}
-          <section className="rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900 mb-6">Základní údaje</h2>
+          <section className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 md:p-8 shadow-sm">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-6">Základní údaje</h2>
             <div className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Profilová fotka</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Profilová fotka</label>
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="w-24 h-24 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400 text-2xl font-bold shrink-0">
+                  <div className="w-24 h-24 rounded-2xl bg-[color:var(--wp-surface-muted)] overflow-hidden flex items-center justify-center text-[color:var(--wp-text-tertiary)] text-2xl font-bold shrink-0">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -254,7 +254,7 @@ export default function EditContactPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <label className="cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 min-h-[44px] w-fit">
+                      <label className="cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] w-fit">
                         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={onAvatarChange} disabled={avatarUploading} />
                         {avatarUploading ? "Nahrávám…" : "Nahrát fotku"}
                       </label>
@@ -274,38 +274,38 @@ export default function EditContactPage() {
                               setAvatarError(e instanceof Error ? e.message : "Odstranění fotky se nezdařilo");
                             }
                           }}
-                          className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 min-h-[44px]"
+                          className="px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                         >
                           Odstranit fotku
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500">JPEG, PNG, WebP nebo GIF, max 3 MB</p>
+                    <p className="text-[11px] text-[color:var(--wp-text-secondary)]">JPEG, PNG, WebP nebo GIF, max 3 MB</p>
                     {avatarError && <p className="text-xs text-red-600">{avatarError}</p>}
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Jméno *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Jméno *</label>
                   <input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} required className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Příjmení *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Příjmení *</label>
                   <input value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} required className={inputCls} />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Titul</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Titul</label>
                 <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className={inputCls} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Datum narození</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Datum narození</label>
                   <input type="date" value={form.birthDate} onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Rodné číslo / osobní ID</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Rodné číslo / osobní ID</label>
                   <input value={form.personalId} onChange={(e) => setForm((f) => ({ ...f, personalId: e.target.value }))} className={inputCls} />
                 </div>
               </div>
@@ -313,19 +313,19 @@ export default function EditContactPage() {
           </section>
 
           {/* Karta: Kontaktní údaje */}
-          <section className="rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900 mb-6">Kontaktní údaje</h2>
+          <section className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 md:p-8 shadow-sm">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-6">Kontaktní údaje</h2>
             <div className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">E-mail</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">E-mail</label>
                 <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" className={inputCls} />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Telefon</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Telefon</label>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className={inputCls} />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Vyhledat adresu</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Vyhledat adresu</label>
                 <AddressAutocomplete
                   value={addressSearch}
                   onChange={setAddressSearch}
@@ -344,16 +344,16 @@ export default function EditContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Ulice</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Ulice</label>
                 <input value={form.street} onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))} className={inputCls} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Město</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Město</label>
                   <input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">PSČ</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">PSČ</label>
                   <input value={form.zip} onChange={(e) => setForm((f) => ({ ...f, zip: e.target.value }))} className={inputCls} />
                 </div>
               </div>
@@ -361,15 +361,15 @@ export default function EditContactPage() {
           </section>
 
           {/* Karta: Segmentace a vazby */}
-          <section className="rounded-[24px] border border-slate-100 bg-white p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900 mb-6">Segmentace a vazby</h2>
+          <section className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 md:p-8 shadow-sm">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-6">Segmentace a vazby</h2>
             <div className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Štítky (oddělené čárkou)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Štítky (oddělené čárkou)</label>
                 <input value={form.tags} onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))} placeholder="např. VIP, rodina" className={inputCls} />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Fáze životního cyklu</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Fáze životního cyklu</label>
                 <CustomDropdown
                   value={form.lifecycleStage}
                   onChange={(id) => setForm((f) => ({ ...f, lifecycleStage: id }))}
@@ -385,7 +385,7 @@ export default function EditContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Priorita</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Priorita</label>
                 <CustomDropdown
                   value={form.priority}
                   onChange={(id) => setForm((f) => ({ ...f, priority: id }))}
@@ -401,11 +401,11 @@ export default function EditContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Doporučil / zdroj</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Doporučil / zdroj</label>
                 <input value={form.referralSource} onChange={(e) => setForm((f) => ({ ...f, referralSource: e.target.value }))} placeholder="např. web, doporučení" className={inputCls} />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Doporučen od (kontakt)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Doporučen od (kontakt)</label>
                 <CustomDropdown
                   value={form.referralContactId}
                   onChange={(id) => setForm((f) => ({ ...f, referralContactId: id }))}
@@ -415,7 +415,7 @@ export default function EditContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Domácnost</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Domácnost</label>
                 <CustomDropdown
                   value={form.householdId}
                   onChange={(id) => setForm((f) => ({ ...f, householdId: id }))}
@@ -425,7 +425,7 @@ export default function EditContactPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Servisní cyklus (měsíce)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Servisní cyklus (měsíce)</label>
                 <CustomDropdown
                   value={form.serviceCycleMonths}
                   onChange={(id) => setForm((f) => ({ ...f, serviceCycleMonths: id }))}
@@ -441,11 +441,11 @@ export default function EditContactPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Poslední servis</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Poslední servis</label>
                   <input type="date" value={form.lastServiceDate} onChange={(e) => setForm((f) => ({ ...f, lastServiceDate: e.target.value }))} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Příští servis</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Příští servis</label>
                   <input type="date" value={form.nextServiceDue} onChange={(e) => setForm((f) => ({ ...f, nextServiceDue: e.target.value }))} className={inputCls} />
                 </div>
               </div>
@@ -455,14 +455,14 @@ export default function EditContactPage() {
           {/* Archivace */}
           <section className="rounded-[24px] border border-amber-200 bg-amber-50/50 p-6 md:p-8">
             <h2 className="text-lg font-black text-amber-800 mb-2">Archivace kontaktu</h2>
-            <p className="text-sm text-slate-600 mb-5">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mb-5">
               Archivovaný kontakt zmizí ze seznamu, ale data (smlouvy, obchody, dokumenty, analýzy) zůstanou zachována a kontakt lze kdykoli obnovit.
             </p>
             <button
               type="button"
               onClick={onArchiveClick}
               disabled={deleting}
-              className="rounded-xl px-5 py-2.5 text-sm font-bold border border-amber-300 text-amber-800 bg-white hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+              className="rounded-xl px-5 py-2.5 text-sm font-bold border border-amber-300 text-amber-800 bg-[color:var(--wp-surface-card)] hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
             >
               {deleting ? "Archivuji…" : "Archivovat kontakt"}
             </button>
@@ -470,23 +470,23 @@ export default function EditContactPage() {
 
           {showArchiveDialog && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
-                <h3 className="text-lg font-black text-slate-900">Opravdu archivovat?</h3>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+                <h3 className="text-lg font-black text-[color:var(--wp-text)]">Opravdu archivovat?</h3>
                 {depCounts && (
-                  <div className="text-sm text-slate-600 space-y-1">
+                  <div className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                     {depCounts.contracts > 0 && <p>Smlouvy: <strong>{depCounts.contracts}</strong></p>}
                     {depCounts.opportunities > 0 && <p>Obchody: <strong>{depCounts.opportunities}</strong></p>}
                     {depCounts.documents > 0 && <p>Dokumenty: <strong>{depCounts.documents}</strong></p>}
                     {depCounts.tasks > 0 && <p>Úkoly: <strong>{depCounts.tasks}</strong></p>}
                     {depCounts.analyses > 0 && <p>Finanční analýzy: <strong>{depCounts.analyses}</strong></p>}
-                    <p className="pt-2 text-slate-500">Vše zůstane zachováno. Kontakt půjde kdykoli obnovit.</p>
+                    <p className="pt-2 text-[color:var(--wp-text-secondary)]">Vše zůstane zachováno. Kontakt půjde kdykoli obnovit.</p>
                   </div>
                 )}
                 <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowArchiveDialog(false)}
-                    className="rounded-xl px-4 py-2.5 text-sm font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 min-h-[44px]"
+                    className="rounded-xl px-4 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                   >
                     Zrušit
                   </button>

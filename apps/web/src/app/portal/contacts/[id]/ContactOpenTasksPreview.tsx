@@ -20,14 +20,14 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between">
+          <h3 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <CheckCircle size={18} className="text-emerald-500" /> Otevřené úkoly
           </h3>
         </div>
         <div className="p-4">
-          <p className="text-sm text-slate-400">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-tertiary)]">Načítám…</p>
         </div>
       </div>
     );
@@ -35,14 +35,14 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
 
   if (tasks.length === 0) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between">
+          <h3 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <CheckCircle size={18} className="text-emerald-500" /> Otevřené úkoly
           </h3>
         </div>
         <div className="p-4">
-          <p className="text-sm text-slate-500">Žádné otevřené úkoly.</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné otevřené úkoly.</p>
           <Link
             href="#ukoly"
             className="mt-3 inline-flex items-center min-h-[44px] text-sm font-medium text-indigo-600 hover:underline"
@@ -55,14 +55,14 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
   }
 
   return (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-        <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between">
+        <h3 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
           <CheckCircle size={18} className="text-emerald-500" /> Otevřené úkoly
         </h3>
         <Link
           href="#ukoly"
-          className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors min-h-[44px] min-w-[44px]"
+          className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] transition-colors min-h-[44px] min-w-[44px]"
           aria-label="Přidat úkol"
         >
           <span className="text-lg leading-none">+</span>
@@ -73,15 +73,15 @@ export function ContactOpenTasksPreview({ contactId }: { contactId: string }) {
           <Link
             key={task.id}
             href="#ukoly"
-            className="flex gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group min-h-[44px]"
+            className="flex gap-3 p-3 rounded-xl hover:bg-[color:var(--wp-surface-muted)] transition-colors cursor-pointer group min-h-[44px]"
           >
-            <span className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 group-hover:border-emerald-400 text-transparent flex-shrink-0 transition-colors flex items-center justify-center">
+            <span className="mt-0.5 w-5 h-5 rounded-md border-2 border-[color:var(--wp-border-strong)] group-hover:border-emerald-400 text-transparent flex-shrink-0 transition-colors flex items-center justify-center">
               <CheckCircle size={12} className="stroke-[3]" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-800 mb-1 leading-snug truncate">{task.title}</p>
+              <p className="text-sm font-bold text-[color:var(--wp-text)] mb-1 leading-snug truncate">{task.title}</p>
               {task.dueDate && (
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded inline-block bg-slate-100 text-slate-600">
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded inline-block bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
                   {new Date(task.dueDate + "T00:00:00").toLocaleDateString("cs-CZ")}
                 </span>
               )}

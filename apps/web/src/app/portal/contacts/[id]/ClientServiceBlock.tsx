@@ -34,7 +34,7 @@ function statusBadgeClass(status: ServiceStatus["status"]): string {
     case "missing":
       return "bg-amber-100 text-amber-800 border-amber-200";
     default:
-      return "bg-slate-100 text-slate-600 border-slate-200";
+      return "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]";
   }
 }
 
@@ -47,7 +47,7 @@ function urgencyBorderClass(urgency: string): string {
     case "upcoming":
       return "border-l-blue-400";
     default:
-      return "border-l-slate-300";
+      return "border-l-[color:var(--wp-border-strong)]";
   }
 }
 
@@ -71,14 +71,14 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
   if (loading) {
     return (
       <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Wrench className="text-slate-400" size={20} />
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+            <Wrench className="text-[color:var(--wp-text-tertiary)]" size={20} />
             Servis a doporučení
           </h2>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-500">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>
         </div>
       </div>
     );
@@ -87,14 +87,14 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
   if (error || !data) {
     return (
       <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Wrench className="text-slate-400" size={20} />
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+            <Wrench className="text-[color:var(--wp-text-tertiary)]" size={20} />
             Servis a doporučení
           </h2>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-600">{error ?? "Chyba načtení."}</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">{error ?? "Chyba načtení."}</p>
         </div>
       </div>
     );
@@ -107,9 +107,9 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
 
   return (
     <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-50">
-        <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-          <Wrench className="text-slate-400" size={20} />
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+          <Wrench className="text-[color:var(--wp-text-tertiary)]" size={20} />
           Servis a doporučení
         </h2>
       </div>
@@ -126,12 +126,12 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
             {status.label ?? SERVICE_STATUS_LABELS[status.status]}
           </span>
           {status.lastServiceDate && (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">
               Poslední servis: {new Date(status.lastServiceDate).toLocaleDateString("cs-CZ")}
             </span>
           )}
           {status.nextServiceDue && (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">
               Příští servis: {new Date(status.nextServiceDue).toLocaleDateString("cs-CZ")}
             </span>
           )}
@@ -139,16 +139,16 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
 
         {/* Empty / no data */}
         {hasNoData && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 flex flex-col gap-3">
-            <p className="text-sm text-slate-600 flex items-start gap-2">
-              <Info size={18} className="text-slate-400 shrink-0 mt-0.5" />
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-5 flex flex-col gap-3">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] flex items-start gap-2">
+              <Info size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0 mt-0.5" />
               Nemáme dost údajů pro servisní doporučení. Doplněním servisního cyklu nebo
               naplánováním první schůzky pomůžete engine lépe vyhodnocovat.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
                 href={`/portal/contacts/${contactId}/edit`}
-                className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
+                className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
               >
                 Doplnit servisní cyklus
               </Link>
@@ -166,7 +166,7 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
         {/* No active signals but has data */}
         {hasNoSignals && !hasNoData && (
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-5">
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">
               Servis v pořádku.
               {status.nextServiceDue && (
                 <> Příští doporučený servis: {new Date(status.nextServiceDue).toLocaleDateString("cs-CZ")}.</>
@@ -175,7 +175,7 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
             {status.nextServiceDue && (
               <Link
                 href={`/portal/calendar?contactId=${contactId}&newEvent=1`}
-                className="mt-3 min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-white text-emerald-800 text-sm font-semibold shadow-sm hover:bg-emerald-50 transition-colors"
+                className="mt-3 min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-[color:var(--wp-surface-card)] text-emerald-800 text-sm font-semibold shadow-sm hover:bg-emerald-50 transition-colors"
               >
                 <Calendar size={16} />
                 Naplánovat schůzku
@@ -187,12 +187,12 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
         {/* Missing next service date hint */}
         {!hasNoData && status.status === "missing" && activeRecs.length === 0 && status.lastServiceDate && (
           <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-5 flex flex-col gap-3">
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">
               Doporučujeme doplnit datum příštího servisu.
             </p>
             <Link
               href={`/portal/contacts/${contactId}/edit`}
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-200 bg-white text-amber-800 text-sm font-semibold shadow-sm hover:bg-amber-50 transition-colors w-fit"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-200 bg-[color:var(--wp-surface-card)] text-amber-800 text-sm font-semibold shadow-sm hover:bg-amber-50 transition-colors w-fit"
             >
               Upravit kontakt
             </Link>
@@ -207,22 +207,22 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
               return (
                 <li
                   key={rec.id}
-                  className={`rounded-xl border border-slate-100 bg-slate-50/30 pl-4 border-l-4 ${urgencyBorderClass(rec.urgency)} overflow-hidden`}
+                  className={`rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 pl-4 border-l-4 ${urgencyBorderClass(rec.urgency)} overflow-hidden`}
                 >
                   <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-bold text-slate-900">{rec.title}</h3>
+                        <h3 className="font-bold text-[color:var(--wp-text)]">{rec.title}</h3>
                         {rec.isHouseholdLevel && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 text-xs font-semibold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-xs font-semibold">
                             <Users size={12} />
                             Domácnost
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-600 mt-1">{rec.explanation}</p>
+                      <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">{rec.explanation}</p>
                       {rec.dueDate && (
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">
                           Termín: {new Date(rec.dueDate).toLocaleDateString("cs-CZ")}
                         </p>
                       )}

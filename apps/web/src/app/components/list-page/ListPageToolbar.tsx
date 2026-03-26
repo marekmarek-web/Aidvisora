@@ -15,7 +15,7 @@ export function ListPageToolbar({
 }) {
   return (
     <div
-      className={`bg-white p-2 md:p-2 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 ${className}`}
+      className={`flex flex-col justify-between gap-3 rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 shadow-sm md:flex-row md:items-center md:gap-4 ${className}`}
     >
       {leftSlot != null && (
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin px-1 min-w-0 shrink-0 py-1 [&_button]:min-h-[44px] [&_button]:shrink-0 md:[&_button]:min-h-0">

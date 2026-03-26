@@ -37,7 +37,7 @@ export function MortgageCtaCards() {
             <Link
               key={card.href}
               href={card.href}
-              className="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-[#fde047]/30 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-[#fbbf24]/30 min-h-[44px]"
+              className="group bg-[color:var(--wp-surface-card)] hover:bg-gradient-to-br hover:from-white hover:to-[#fde047]/30 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-[color:var(--wp-surface-card-border)] hover:border-[#fbbf24]/30 min-h-[44px]"
             >
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#0a0f29] text-white group-hover:bg-[#fbbf24] transition-colors duration-300">
                 <Icon className="w-8 h-8" />
@@ -45,7 +45,7 @@ export function MortgageCtaCards() {
               <h4 className="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">
                 {card.title}
               </h4>
-              <p className="text-slate-500 group-hover:text-slate-700 text-sm transition-colors duration-300">
+              <p className="text-[color:var(--wp-text-secondary)] group-hover:text-[color:var(--wp-text-secondary)] text-sm transition-colors duration-300">
                 {card.description}
               </p>
             </Link>

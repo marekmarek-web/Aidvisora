@@ -95,13 +95,13 @@ export function CalendarWidget({
         <div className="flex justify-between items-center">
           <Link
             href="/portal/calendar"
-            className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors"
+            className="text-sm font-bold text-[color:var(--wp-text-secondary)] hover:text-indigo-600 transition-colors"
           >
             Kalendář
           </Link>
           <Link
             href="/portal/calendar"
-            className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-slate-100 transition-colors border border-slate-200 min-w-[44px] min-h-[44px]"
+            className="w-10 h-10 rounded-2xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] flex items-center justify-center hover:bg-[color:var(--wp-surface-muted)] transition-colors border border-[color:var(--wp-surface-card-border)] min-w-[44px] min-h-[44px]"
             aria-label="Otevřít kalendář"
           >
             <CalendarIcon size={18} />
@@ -119,7 +119,7 @@ export function CalendarWidget({
       >
         <div
           className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl transform translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700 ${
-            isDark ? "bg-aidv-accent-purple/25" : "bg-white/10"
+            isDark ? "bg-aidv-accent-purple/25" : "bg-[color:var(--wp-surface-card)]/10"
           }`}
           aria-hidden
         />
@@ -135,7 +135,7 @@ export function CalendarWidget({
           type="button"
           onClick={onNewActivity}
           className={`absolute bottom-6 right-6 w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all ${
-            isDark ? "bg-white text-aidv-dashboard-cta" : "bg-white text-indigo-600"
+            isDark ? "bg-[color:var(--wp-surface-card)] text-aidv-dashboard-cta" : "bg-[color:var(--wp-surface-card)] text-indigo-600"
           }`}
           aria-label="Nová aktivita"
         >
@@ -147,20 +147,20 @@ export function CalendarWidget({
       <div>
         <h3
           className={`text-xs font-black uppercase tracking-widest mb-4 ${
-            isDark ? "text-aidv-text-muted-on-dark" : "text-slate-400"
+            isDark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-tertiary)]"
           }`}
         >
           Agenda
         </h3>
         <div
           className={`space-y-4 relative pl-4 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 ${
-            isDark ? "before:bg-white/15" : "before:bg-slate-100"
+            isDark ? "before:bg-[color:var(--wp-surface-card)]/15" : "before:bg-[color:var(--wp-surface-muted)]"
           }`}
         >
           {loading ? (
-            <p className={`text-sm pl-14 ${isDark ? "text-aidv-text-muted-on-dark" : "text-slate-500"}`}>Načítám…</p>
+            <p className={`text-sm pl-14 ${isDark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-secondary)]"}`}>Načítám…</p>
           ) : events.length === 0 ? (
-            <p className={`text-sm pl-14 ${isDark ? "text-aidv-text-muted-on-dark" : "text-slate-500"}`}>Žádné nadcházející události.</p>
+            <p className={`text-sm pl-14 ${isDark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-secondary)]"}`}>Žádné nadcházející události.</p>
           ) : (
             events.map((ev) => {
               const start = new Date(ev.startAt);
@@ -179,16 +179,16 @@ export function CalendarWidget({
                   >
                     <EventIcon eventType={typeId} />
                   </div>
-                  <div className="w-[calc(100%-3rem)] ml-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
+                  <div className="w-[calc(100%-3rem)] ml-4 p-4 rounded-2xl bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-sm hover:border-indigo-200 transition-colors">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
                         {formatTimeShort(start)}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400">{formatDateShort(start)}</span>
+                      <span className="text-[10px] font-bold text-[color:var(--wp-text-tertiary)]">{formatDateShort(start)}</span>
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm">{ev.title}</h4>
-                    <p className="text-xs font-medium text-slate-500 mt-1">{ev.contactName ?? "—"}</p>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1">{getRelativeTime(start)}</p>
+                    <h4 className="font-bold text-[color:var(--wp-text)] text-sm">{ev.title}</h4>
+                    <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-1">{ev.contactName ?? "—"}</p>
+                    <p className="text-[10px] font-bold text-[color:var(--wp-text-tertiary)] mt-1">{getRelativeTime(start)}</p>
                   </div>
                 </Link>
               );

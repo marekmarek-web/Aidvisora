@@ -24,14 +24,14 @@ export function WizardFooter({
 }) {
   const handleBack = isFirstStep ? onClose : onBack;
   return (
-    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between relative z-10 shrink-0">
+    <div className="relative z-10 flex shrink-0 items-center justify-between border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-8 py-5">
       <button
         type="button"
         onClick={handleBack}
-        className={`px-5 py-2.5 font-bold text-sm rounded-xl transition-all flex items-center gap-2 min-h-[44px] ${
+        className={`flex min-h-[44px] items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
           isFirstStep
-            ? "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-            : "text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 shadow-sm"
+            ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-raised)] hover:text-[color:var(--wp-text-secondary)]"
+            : "border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] shadow-sm hover:bg-[color:var(--wp-surface-muted)]"
         }`}
       >
         {!isFirstStep && <ArrowLeft size={16} />}

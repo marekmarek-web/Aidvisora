@@ -53,11 +53,11 @@ function ProcessingProgress({ stepHint }: { stepHint?: string }) {
         </div>
       </div>
       <div>
-        <p className="text-xl font-black text-slate-800 mb-1">
+        <p className="text-xl font-black text-[color:var(--wp-text)] mb-1">
           {label}
           {dots}
         </p>
-        <p className="text-sm text-slate-500 font-medium max-w-md">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium max-w-md">
           AI čte dokument a extrahuje data. U delších PDF nebo se skenem to může trvat i 1–2 minuty. Po dokončení
           uvidíte v detailu rozklad času (předzpracování vs. AI). Stránka se automaticky aktualizuje.
         </p>
@@ -69,7 +69,7 @@ function ProcessingProgress({ stepHint }: { stepHint?: string }) {
           return (
             <div
               key={s.key}
-              className={`h-1.5 rounded-full transition-all duration-700 ${active ? "w-8 bg-indigo-500" : "w-4 bg-slate-200"}`}
+              className={`h-1.5 rounded-full transition-all duration-700 ${active ? "w-8 bg-indigo-500" : "w-4 bg-[color:var(--wp-surface-card-border)]"}`}
             />
           );
         })}
@@ -361,8 +361,8 @@ export default function ContractReviewDetailPage() {
           OCR
         </div>
         <div>
-          <h1 className="text-xl font-black text-slate-900 mb-2">Dokument je uložen — čeká na OCR</h1>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <h1 className="text-xl font-black text-[color:var(--wp-text)] mb-2">Dokument je uložen — čeká na OCR</h1>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
             Soubor vypadá jako sken nebo obrázek bez dostatečného textu pro AI Review. Zapněte Adobe / OCR pipeline v
             nastavení, nebo nahrajte PDF s textovou vrstvou. Náhled souboru můžete použít hned.
           </p>
@@ -388,7 +388,7 @@ export default function ContractReviewDetailPage() {
         <button
           type="button"
           onClick={() => router.push("/portal/contracts/review")}
-          className="text-sm font-semibold text-slate-500"
+          className="text-sm font-semibold text-[color:var(--wp-text-secondary)]"
         >
           Zpět na seznam
         </button>
@@ -401,7 +401,7 @@ export default function ContractReviewDetailPage() {
       <div className="flex items-center justify-center h-[80vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-sm font-bold text-slate-500">Načítám AI extrakci…</p>
+          <p className="text-sm font-bold text-[color:var(--wp-text-secondary)]">Načítám AI extrakci…</p>
         </div>
       </div>
     );
@@ -416,7 +416,7 @@ export default function ContractReviewDetailPage() {
               <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           </div>
-          <p className="text-sm font-bold text-slate-800">{error ?? "Dokument nenalezen."}</p>
+          <p className="text-sm font-bold text-[color:var(--wp-text)]">{error ?? "Dokument nenalezen."}</p>
           <button onClick={handleBack} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
             Zpět na seznam
           </button>

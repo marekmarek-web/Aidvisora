@@ -185,7 +185,7 @@ export function MortgageAmortSection({
   if (!stats) return null;
 
   return (
-    <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6 md:p-7">
+    <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6 md:p-7">
       <div className="mb-6">
         <h3 className="text-base sm:text-lg font-bold text-[#0d1f4e] mb-1">
           Analýza splácení — kolik skutečně ušetříte splacením po {pivot} letech?
@@ -222,11 +222,11 @@ export function MortgageAmortSection({
           type="button"
           onClick={toggleEarly}
           className={`inline-flex items-center gap-2 py-1.5 px-3 rounded-full border-[1.5px] text-xs font-medium transition-all ${
-            showEarly ? "border-[#059669] bg-white" : "border-[#cbd5e1] bg-white"
+            showEarly ? "border-[#059669] bg-[color:var(--wp-surface-card)]" : "border-[#cbd5e1] bg-[color:var(--wp-surface-card)]"
           }`}
         >
           <div className={`w-[30px] h-4 rounded-full relative transition-colors ${showEarly ? "bg-[#059669]" : "bg-[#cbd5e1]"}`}>
-            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${showEarly ? "translate-x-[14px]" : "translate-x-0.5"}`} />
+            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-[color:var(--wp-surface-card)] shadow-sm transition-transform ${showEarly ? "translate-x-[14px]" : "translate-x-0.5"}`} />
           </div>
           <span className="text-[#0d1f4e]">Předčasné splacení</span>
         </button>

@@ -35,7 +35,7 @@ export default function MindmapStandalonePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
-        <p className="text-slate-500 font-medium">Načítám mapu…</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium">Načítám mapu…</p>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export default function MindmapStandalonePage() {
   if (!state) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
-        <p className="text-slate-500">Mapa nenalezena.</p>
+        <p className="text-[color:var(--wp-text-secondary)]">Mapa nenalezena.</p>
         <Link href="/portal/mindmap" className="ml-2 text-indigo-600 hover:underline text-sm">
           Výběr map
         </Link>

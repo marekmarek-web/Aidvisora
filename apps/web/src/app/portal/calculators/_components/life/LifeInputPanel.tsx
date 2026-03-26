@@ -59,7 +59,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
     id === "age" ? `${lim.max} ${unit}` : `${formatCurrency(lim.max)} ${unit}`;
 
   return (
-    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
 
       {INPUT_GROUPS.map(({ id, label, unit }, idx) => {
         const lim = LIMITS[id];
@@ -119,7 +119,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
               max={LIMITS.children.max}
               value={state.children}
               onChange={(e) => update({ children: clamp(parseInt(e.target.value, 10) || 0, LIMITS.children.min, LIMITS.children.max) })}
-              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-[#cbd5e1] bg-white px-4 py-2 font-bold text-[#0d1f4e] outline-none focus:ring-2 focus:ring-[#2563eb]"
+              className="min-h-[44px] w-full rounded-[10px] border-[1.5px] border-[#cbd5e1] bg-[color:var(--wp-surface-card)] px-4 py-2 font-bold text-[#0d1f4e] outline-none focus:ring-2 focus:ring-[#2563eb]"
             />
           </div>
           <div>
@@ -130,7 +130,7 @@ export function LifeInputPanel({ state, onStateChange }: LifeInputPanelProps) {
               className={`min-h-[44px] w-full rounded-[10px] border-[1.5px] py-2 font-semibold transition-all ${
                 state.hasSpouse
                   ? "bg-[#0d1f4e] border-[#0d1f4e] text-white"
-                  : "bg-white border-[#cbd5e1] text-[#475569] hover:border-[#2563eb]"
+                  : "bg-[color:var(--wp-surface-card)] border-[#cbd5e1] text-[#475569] hover:border-[#2563eb]"
               }`}
               aria-pressed={state.hasSpouse}
             >

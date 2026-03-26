@@ -254,20 +254,20 @@ export function MindmapView({ initial }: MindmapViewProps) {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8fafc] text-slate-800 overflow-hidden pb-[env(safe-area-inset-bottom)]">
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 md:px-6 py-3 z-50 flex items-center justify-between gap-2 shadow-sm shrink-0">
+    <div className="h-screen flex flex-col bg-[#f8fafc] text-[color:var(--wp-text)] overflow-hidden pb-[env(safe-area-inset-bottom)]">
+      <header className="bg-[color:var(--wp-surface-card)]/90 backdrop-blur-md border-b border-[color:var(--wp-surface-card-border)] px-4 md:px-6 py-3 z-50 flex items-center justify-between gap-2 shadow-sm shrink-0">
         <div className="flex items-center gap-2 md:gap-6 min-w-0">
           {initial.entityType === "standalone" && (
             <Link
               href="/portal/mindmap"
-              className="text-slate-500 hover:text-slate-800 text-sm font-medium shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center md:min-h-0 md:min-w-0 md:flex-initial"
+              className="text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] text-sm font-medium shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center md:min-h-0 md:min-w-0 md:flex-initial"
             >
               ← <span className="hidden sm:inline">Výběr map</span>
             </Link>
           )}
-          <div className="h-4 w-px bg-slate-200 hidden md:block" />
+          <div className="h-4 w-px bg-[color:var(--wp-surface-card-border)] hidden md:block" />
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="font-bold text-slate-900 truncate text-base md:text-lg">
+            <h1 className="font-bold text-[color:var(--wp-text)] truncate text-base md:text-lg">
               {initial.entityType === "standalone" ? initial.entityName : `Mapování: ${initial.entityName}`}
             </h1>
             <span
@@ -305,7 +305,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               </button>
               <button
                 type="button"
-                className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
+                className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                 title="Export"
               >
                 <Download size={16} />
@@ -317,7 +317,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((o) => !o)}
-                className="min-w-[44px] min-h-[44px] rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50"
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                 aria-label="Menu"
               >
                 <span className="text-lg font-bold">⋯</span>
@@ -325,7 +325,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               {mobileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMobileMenuOpen(false)} aria-hidden />
-                  <div className="absolute right-0 top-full mt-1 py-2 min-w-[200px] bg-white rounded-xl shadow-xl border border-slate-200 z-50">
+                  <div className="absolute right-0 top-full mt-1 py-2 min-w-[200px] bg-[color:var(--wp-surface-card)] rounded-xl shadow-xl border border-[color:var(--wp-surface-card-border)] z-50">
                     {dirty && (
                       <button
                         type="button"
@@ -339,7 +339,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                     <button
                       type="button"
                       onClick={handleAiStrategyStub}
-                      className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 flex items-center gap-2 min-h-[44px] active:bg-slate-50"
+                      className="w-full text-left px-4 py-3 text-sm font-medium text-[color:var(--wp-text-secondary)] flex items-center gap-2 min-h-[44px] active:bg-[color:var(--wp-surface-muted)]"
                     >
                       <Sparkles size={16} className="text-amber-600" /> AI Návrh strategie
                     </button>
@@ -347,7 +347,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                       type="button"
                       onClick={() => void handleExportPng()}
                       disabled={exportBusy}
-                      className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 flex items-center gap-2 min-h-[44px] disabled:opacity-50 active:bg-slate-50"
+                      className="w-full text-left px-4 py-3 text-sm font-medium text-[color:var(--wp-text-secondary)] flex items-center gap-2 min-h-[44px] disabled:opacity-50 active:bg-[color:var(--wp-surface-muted)]"
                     >
                       <Download size={16} /> {exportBusy ? "Export…" : "Export"}
                     </button>
@@ -371,7 +371,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               <button
                 type="button"
                 onClick={() => setInfoPopoverOpen((o) => !o)}
-                className="w-9 h-9 rounded-full border border-slate-200 bg-white/90 backdrop-blur flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-700 shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:w-8 md:h-8"
+                className="w-9 h-9 rounded-full border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text-secondary)] shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:w-8 md:h-8"
                 aria-label="Nápověda"
               >
                 <Info size={18} />
@@ -379,7 +379,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               {infoPopoverOpen && (
                 <>
                   <div className="fixed inset-0 z-40" aria-hidden onClick={() => setInfoPopoverOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-white rounded-xl shadow-xl border border-slate-200 z-50 text-left text-sm text-slate-600">
+                  <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-[color:var(--wp-surface-card)] rounded-xl shadow-xl border border-[color:var(--wp-surface-card-border)] z-50 text-left text-sm text-[color:var(--wp-text-secondary)]">
                     <p>
                       Klepnutím vyberete uzel, tažením ho přesunete. Dvojité klepnutí nebo tlačítko Upravit otevře detail. Režim
                       spojení: nástroj vlevo, pak dva uzly.
@@ -440,9 +440,9 @@ export function MindmapView({ initial }: MindmapViewProps) {
                 aria-label="Zavřít nastavení"
                 onClick={() => setSettingsOpen(false)}
               />
-              <div className="fixed left-4 bottom-24 md:left-24 md:bottom-auto md:top-28 z-[61] w-[min(calc(100vw-2rem),280px)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Mapa</p>
-                <p className="text-sm font-bold text-slate-900 mb-3 truncate" title={initial.entityName}>
+              <div className="fixed left-4 bottom-24 md:left-24 md:bottom-auto md:top-28 z-[61] w-[min(calc(100vw-2rem),280px)] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-xl">
+                <p className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Mapa</p>
+                <p className="text-sm font-bold text-[color:var(--wp-text)] mb-3 truncate" title={initial.entityName}>
                   {initial.entityName}
                 </p>
                 <div className="flex flex-col gap-2">
@@ -459,7 +459,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                   <button
                     type="button"
                     onClick={() => setSettingsOpen(false)}
-                    className="min-h-[44px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold active:scale-[0.98]"
+                    className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-bold active:scale-[0.98]"
                   >
                     Zavřít
                   </button>

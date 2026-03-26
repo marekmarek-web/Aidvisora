@@ -79,16 +79,16 @@ export function GoogleCalendarAvailability() {
     }
   }, [dateFrom, dateTo, durationMinutes]);
 
-  const labelClass = "block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1";
+  const labelClass = "block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1";
   const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 min-h-[44px]";
+    "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] min-h-[44px]";
 
   return (
-    <div className="mt-6 pt-4 border-t border-slate-100">
-      <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+    <div className="mt-6 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+      <h4 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-3 flex items-center gap-2">
         <CalendarClock size={14} aria-hidden /> Volné termíny
       </h4>
-      <p className="text-sm text-slate-600 mb-4">
+      <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
         Zadejte rozsah dat a délku schůzky. Zobrazí se volné sloty (po–pá 8:00–18:00 v vaší časové zóně).
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -142,15 +142,15 @@ export function GoogleCalendarAvailability() {
         </p>
       )}
       {slots.length > 0 && (
-        <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+        <div className="rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
             Nalezeno {slots.length} volných slotů
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto" role="list">
             {slots.map((slot, i) => (
-              <li key={`${slot.start}-${i}`} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-100">
+              <li key={`${slot.start}-${i}`} className="flex items-center gap-2 p-2 rounded-lg bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)]">
                 <Calendar size={14} className="text-indigo-500 shrink-0" aria-hidden />
-                <span className="text-sm font-medium text-slate-800">
+                <span className="text-sm font-medium text-[color:var(--wp-text)]">
                   {formatSlotDate(slot.start)} {formatSlotTime(slot.start)} – {formatSlotTime(slot.end)}
                 </span>
               </li>
@@ -159,7 +159,7 @@ export function GoogleCalendarAvailability() {
         </div>
       )}
       {!loading && slots.length === 0 && !error && (
-        <p className="text-sm text-slate-500 font-medium">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium">
           {hasSearched ? "V zadaném období nebyly nalezeny žádné volné sloty." : "Klikněte na „Zobrazit volné termíny“ pro načtení slotů."}
         </p>
       )}

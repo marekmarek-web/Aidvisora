@@ -74,17 +74,17 @@ export function NodeRendererCategory({ node, isDragging, isSelected, onAddChild 
   const Icon = ICON_MAP[iconName] ?? FileText;
   return (
     <div
-      className={`bg-white p-5 rounded-2xl shadow-lg border border-slate-200 w-64 flex items-center gap-4 group transition-transform ${isDragging ? "scale-105" : ""} relative rounded-2xl ${isSelected ? selectedRing : ""}`}
+      className={`bg-[color:var(--wp-surface-card)] p-5 rounded-2xl shadow-lg border border-[color:var(--wp-surface-card-border)] w-64 flex items-center gap-4 group transition-transform ${isDragging ? "scale-105" : ""} relative rounded-2xl ${isSelected ? selectedRing : ""}`}
     >
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border ${boxClass}`}>
         <Icon size={24} />
       </div>
-      <h3 className="font-bold text-slate-800 text-lg leading-tight flex-1">{node.title}</h3>
+      <h3 className="font-bold text-[color:var(--wp-text)] text-lg leading-tight flex-1">{node.title}</h3>
       {onAddChild && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(node.id, "item"); }}
-          className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-slate-200 text-slate-600 rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 shadow-md"
+          className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 shadow-md"
         >
           <Plus size={16} />
         </button>
@@ -100,26 +100,26 @@ export function NodeRendererItem({ node, isDragging, isSelected, onItemMenu }: N
   const isPlanned = status === "planned";
   return (
     <div
-      className={`bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border transition-all w-56 group
-        ${isDragging ? "shadow-xl scale-105 border-indigo-300" : "border-slate-200 hover:border-slate-300 hover:shadow-md"}
+      className={`bg-[color:var(--wp-surface-card)]/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border transition-all w-56 group
+        ${isDragging ? "shadow-xl scale-105 border-indigo-300" : "border-[color:var(--wp-surface-card-border)] hover:border-[color:var(--wp-border-strong)] hover:shadow-md"}
         ${isPlanned ? "border-dashed border-2 opacity-80" : ""}
         ${isSelected ? selectedRing : ""}
       `}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Produkt</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Produkt</span>
         {onItemMenu ? (
           <details className="relative" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-            <summary className="list-none cursor-pointer text-slate-400 hover:text-indigo-600 p-1 rounded-lg hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <summary className="list-none cursor-pointer text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 p-1 rounded-lg hover:bg-[color:var(--wp-surface-muted)] [&::-webkit-details-marker]:hidden">
               <MoreHorizontal size={14} />
             </summary>
             <div
-              className="absolute right-0 top-full mt-1 z-[60] min-w-[140px] rounded-xl border border-slate-200 bg-white py-1 shadow-xl text-left"
+              className="absolute right-0 top-full mt-1 z-[60] min-w-[140px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-1 shadow-xl text-left"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"
+                className="w-full px-3 py-2 text-left text-xs font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                 onClick={(e) => {
                   e.stopPropagation();
                   onItemMenu(node, "edit");
@@ -130,7 +130,7 @@ export function NodeRendererItem({ node, isDragging, isSelected, onItemMenu }: N
               </button>
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"
+                className="w-full px-3 py-2 text-left text-xs font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                 onClick={(e) => {
                   e.stopPropagation();
                   onItemMenu(node, "duplicate");
@@ -153,17 +153,17 @@ export function NodeRendererItem({ node, isDragging, isSelected, onItemMenu }: N
             </div>
           </details>
         ) : (
-          <span className="text-slate-200">
+          <span className="text-white/80">
             <MoreHorizontal size={14} />
           </span>
         )}
       </div>
-      <h4 className="font-bold text-slate-800 text-[15px] mb-1 leading-tight">{node.title}</h4>
+      <h4 className="font-bold text-[color:var(--wp-text)] text-[15px] mb-1 leading-tight">{node.title}</h4>
       <div className={`text-sm font-bold ${value.includes("-") ? "text-rose-600" : "text-emerald-600"}`}>
         {value}
       </div>
       {detail && (
-        <div className="text-xs text-slate-500 font-medium mt-2 pt-2 border-t border-slate-100">
+        <div className="text-xs text-[color:var(--wp-text-secondary)] font-medium mt-2 pt-2 border-t border-[color:var(--wp-surface-card-border)]">
           {detail}
         </div>
       )}
@@ -222,9 +222,9 @@ export function renderNodeByType(
       return <NodeRendererGoal {...props} />;
     default:
       return (
-        <div className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 w-52 ${opts.isSelected ? selectedRing : ""}`}>
-          <span className="text-[10px] font-bold uppercase text-slate-400">{node.type}</span>
-          <h4 className="font-bold text-slate-800 text-sm mt-1">{node.title}</h4>
+        <div className={`bg-[color:var(--wp-surface-card)] p-4 rounded-2xl shadow-sm border border-[color:var(--wp-surface-card-border)] w-52 ${opts.isSelected ? selectedRing : ""}`}>
+          <span className="text-[10px] font-bold uppercase text-[color:var(--wp-text-tertiary)]">{node.type}</span>
+          <h4 className="font-bold text-[color:var(--wp-text)] text-sm mt-1">{node.title}</h4>
         </div>
       );
   }

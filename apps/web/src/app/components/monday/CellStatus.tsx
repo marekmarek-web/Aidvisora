@@ -118,7 +118,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
   const current = getLabelById(options, isEmpty ? "hotovo" : value);
   const displayLabel = isEmpty ? "" : current.label;
   const bgColor = isEmpty ? EMPTY_BG : current.color;
-  const textClass = isEmpty ? "text-slate-500" : "text-white font-bold";
+  const textClass = isEmpty ? "text-[color:var(--wp-text-secondary)]" : "text-white font-bold";
 
   const dropdownContent = open && typeof document !== "undefined" && (
     <div
@@ -135,7 +135,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
       }}
     >
       <div className="board-context-menu-inner">
-        <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-200/60 mb-1">
+        <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)]/60 mb-1">
           Stav – klikni pro změnu
         </div>
         {[...options, { id: "", label: "Vymazat (Prázdné)", color: EMPTY_BG }].map((opt) => (
@@ -150,7 +150,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
             className="board-context-item flex items-center gap-3"
           >
             <span
-              className="w-4 h-4 shrink-0 rounded-sm border border-slate-200"
+              className="w-4 h-4 shrink-0 rounded-sm border border-[color:var(--wp-surface-card-border)]"
               style={{ backgroundColor: opt.color }}
             />
             <span>{opt.label}</span>
@@ -158,7 +158,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
         ))}
         {onNoteChange && (
           <>
-            <div className="h-px bg-slate-200/60 my-1" />
+            <div className="h-px bg-[color:var(--wp-surface-card-border)]/60 my-1" />
             <button
               type="button"
               onClick={() => {
@@ -171,14 +171,14 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
             </button>
           </>
         )}
-        <div className="h-px bg-slate-200/60 my-1" />
+        <div className="h-px bg-[color:var(--wp-surface-card-border)]/60 my-1" />
         <button
           type="button"
           onClick={() => {
             setOpen(false);
             setShowEditLabels(true);
           }}
-          className="board-context-item text-slate-500"
+          className="board-context-item text-[color:var(--wp-text-secondary)]"
         >
           Upravit štítky (vlastní stavy)
         </button>
@@ -196,16 +196,16 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
         transform: "translateX(-50%)",
       }}
     >
-      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Poznámka ke stavu</label>
+      <label className="block text-[11px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1">Poznámka ke stavu</label>
       <textarea
         autoFocus
         value={noteDraft}
         onChange={(e) => setNoteDraft(e.target.value)}
         placeholder="Volitelná poznámka..."
-        className="w-full min-h-[80px] px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-monday-blue resize-y"
+        className="w-full min-h-[80px] px-2 py-1.5 text-sm border border-[color:var(--wp-surface-card-border)] rounded focus:outline-none focus:ring-1 focus:ring-monday-blue resize-y"
       />
       <div className="flex justify-end gap-2 mt-2">
-        <button type="button" onClick={() => setNoteOpen(false)} className="px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded">Zrušit</button>
+        <button type="button" onClick={() => setNoteOpen(false)} className="px-2 py-1 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded">Zrušit</button>
         <button type="button" onClick={() => { onNoteChange(noteDraft); setNoteOpen(false); }} className="px-2 py-1 text-sm bg-monday-blue text-white rounded hover:opacity-90">Uložit</button>
       </div>
     </div>
@@ -221,13 +221,13 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
           setOpen((o) => !o);
           (e.currentTarget as HTMLButtonElement).blur();
         }}
-        className={`w-full h-full flex items-center justify-center text-sm font-semibold tracking-wide cursor-pointer transition-all duration-200 border-0 ${fullCell ? "min-h-[44px] h-full status-pill rounded-[var(--radius-sm)]" : "wp-pill min-h-[24px] text-[12px] font-bold"} ${textClass} ${isEmpty && fullCell ? "hover:bg-[#d4d4d4] hover:text-slate-600" : ""} ${!isEmpty && fullCell ? "hover:opacity-95" : ""}`}
+        className={`w-full h-full flex items-center justify-center text-sm font-semibold tracking-wide cursor-pointer transition-all duration-200 border-0 ${fullCell ? "min-h-[44px] h-full status-pill rounded-[var(--radius-sm)]" : "wp-pill min-h-[24px] text-[12px] font-bold"} ${textClass} ${isEmpty && fullCell ? "hover:bg-[#d4d4d4] hover:text-[color:var(--wp-text-secondary)]" : ""} ${!isEmpty && fullCell ? "hover:opacity-95" : ""}`}
         style={{ backgroundColor: bgColor }}
         title={displayLabel ? `Status: ${displayLabel}. Klikni pro změnu.` : "Klikni a vyber stav (Hotovo, Rozděláno, …)"}
       >
         <span className="flex items-center justify-center gap-1">
           {fullCell && isEmpty ? (
-            <Plus size={18} className="text-slate-400" />
+            <Plus size={18} className="text-[color:var(--wp-text-tertiary)]" />
           ) : (
             displayLabel
           )}

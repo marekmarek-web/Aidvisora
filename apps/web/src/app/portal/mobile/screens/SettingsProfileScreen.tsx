@@ -75,24 +75,24 @@ function SettingsRow({
       onClick={onClick}
       className={cx(
         "w-full min-h-[52px] flex items-center gap-3 px-0 py-2 text-left transition-colors",
-        danger ? "text-rose-600" : "text-slate-800"
+        danger ? "text-rose-600" : "text-[color:var(--wp-text)]"
       )}
     >
       {Icon ? (
         <div className={cx(
           "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-          danger ? "bg-rose-50 text-rose-500" : "bg-slate-100 text-slate-500"
+          danger ? "bg-rose-50 text-rose-500" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
         )}>
           <Icon size={17} />
         </div>
       ) : null}
       <div className="flex-1 min-w-0">
-        <p className={cx("text-sm font-bold truncate", danger ? "text-rose-600" : "text-slate-800")}>
+        <p className={cx("text-sm font-bold truncate", danger ? "text-rose-600" : "text-[color:var(--wp-text)]")}>
           {label}
         </p>
-        {sublabel ? <p className="text-xs text-slate-500 mt-0.5">{sublabel}</p> : null}
+        {sublabel ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">{sublabel}</p> : null}
       </div>
-      {right ?? <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />}
+      {right ?? <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />}
     </button>
   );
 }
@@ -106,10 +106,10 @@ function SettingsSection({
 }) {
   return (
     <div className="px-1">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 mt-4 first:mt-0">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 mt-4 first:mt-0">
         {title}
       </p>
-      <MobileCard className="divide-y divide-slate-100 py-0 px-4">
+      <MobileCard className="divide-y divide-[color:var(--wp-surface-card-border)] py-0 px-4">
         {children}
       </MobileCard>
     </div>
@@ -370,7 +370,7 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
 
       {/* Profile hero card */}
       <MobileSection>
-        <MobileCard className="bg-gradient-to-br from-slate-50 to-white">
+        <MobileCard className="bg-gradient-to-br from-[color:var(--wp-surface-muted)] to-[color:var(--wp-surface-card)]">
           <div className="flex items-center gap-4">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
@@ -382,8 +382,8 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
                   <span className="text-xl font-black text-indigo-600">{initials}</span>
                 )}
               </div>
-              <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center cursor-pointer shadow-sm">
-                <Camera size={13} className="text-slate-500" />
+              <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-[color:var(--wp-surface-card)] border-2 border-[color:var(--wp-surface-card-border)] rounded-full flex items-center justify-center cursor-pointer shadow-sm">
+                <Camera size={13} className="text-[color:var(--wp-text-secondary)]" />
                 <input
                   type="file"
                   accept="image/*"
@@ -393,8 +393,8 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
               </label>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-base font-black text-slate-900 truncate">{displayName}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Poradce · Advisor</p>
+              <p className="text-base font-black text-[color:var(--wp-text)] truncate">{displayName}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">Poradce · Advisor</p>
               <button
                 type="button"
                 onClick={() => setProfileOpen(true)}
@@ -440,14 +440,14 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
           href="/api/integrations/google-calendar/connect"
           className="w-full min-h-[52px] flex items-center gap-3 px-0 py-2 text-left"
         >
-          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <Calendar size={17} className="text-slate-500" />
+          <div className="w-9 h-9 rounded-xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center flex-shrink-0">
+            <Calendar size={17} className="text-[color:var(--wp-text-secondary)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800">Google Calendar</p>
-            <p className="text-xs text-slate-500 mt-0.5">Propojit kalendář a schůzky</p>
+            <p className="text-sm font-bold text-[color:var(--wp-text)]">Google Calendar</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">Propojit kalendář a schůzky</p>
           </div>
-          <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+          <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
         </a>
         <SettingsRow
           icon={Smartphone}
@@ -509,55 +509,55 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
       <BottomSheet open={profileOpen} onClose={() => setProfileOpen(false)} title="Osobní údaje">
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Jméno a příjmení
             </label>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               placeholder="Jan Novák"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
                 Telefon
               </label>
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 placeholder="+420 …"
                 type="tel"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
                 IČO
               </label>
               <input
                 value={ico}
                 onChange={(e) => setIco(e.target.value)}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 placeholder="12345678"
               />
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Společnost / adresa
             </label>
             <input
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               placeholder="Název firmy nebo adresa"
             />
           </div>
           {supervisorOptions.length > 0 ? (
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
                 Nadřízený
               </label>
               <CustomDropdown
@@ -606,21 +606,21 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
                   [item.key]: !prev[item.key],
                 }))
               }
-              className="w-full min-h-[52px] rounded-xl border border-slate-200 px-3 text-left flex items-center justify-between gap-3"
+              className="w-full min-h-[52px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-left flex items-center justify-between gap-3"
             >
               <div>
-                <p className="text-sm font-bold text-slate-800">{item.label}</p>
-                <p className="text-xs text-slate-500">{item.sub}</p>
+                <p className="text-sm font-bold text-[color:var(--wp-text)]">{item.label}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)]">{item.sub}</p>
               </div>
               <div
                 className={cx(
                   "w-11 h-6 rounded-full transition-colors flex items-center flex-shrink-0",
-                  notificationPrefs[item.key] ? "bg-indigo-600" : "bg-slate-200"
+                  notificationPrefs[item.key] ? "bg-indigo-600" : "bg-[color:var(--wp-surface-card-border)]"
                 )}
               >
                 <div
                   className={cx(
-                    "w-5 h-5 rounded-full bg-white shadow-sm transition-transform mx-0.5",
+                    "w-5 h-5 rounded-full bg-[color:var(--wp-surface-card)] shadow-sm transition-transform mx-0.5",
                     notificationPrefs[item.key] ? "translate-x-5" : "translate-x-0"
                   )}
                 />
@@ -644,14 +644,14 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Nové heslo"
           />
           <input
             type="password"
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Potvrzení hesla"
           />
           {password && passwordConfirm && password !== passwordConfirm ? (
@@ -680,14 +680,14 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
           <input
             value={reportPhone}
             onChange={(e) => setReportPhone(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Telefon do reportu"
             type="tel"
           />
           <input
             value={reportWebsite}
             onChange={(e) => setReportWebsite(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Web do reportu"
             type="url"
           />
@@ -708,7 +708,7 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
         title="Odhlásit se"
       >
         <div className="space-y-3">
-          <p className="text-sm text-slate-600">Opravdu se chcete odhlásit z aplikace Aidvisora?</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Opravdu se chcete odhlásit z aplikace Aidvisora?</p>
           <a
             href="/"
             className="w-full min-h-[48px] rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center justify-center gap-2"
@@ -718,7 +718,7 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
           <button
             type="button"
             onClick={() => setLogoutOpen(false)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-700"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
           >
             Zrušit
           </button>

@@ -109,7 +109,22 @@
   --wp-input-bg: #f8fafc;
   --wp-input-border: #e2e8f0;
   --wp-input-text: var(--wp-text);
-  --wp-profile-menu-width: 14rem;
+  --wp-profile-menu-width: 18rem;
+
+  /* Obsahová plocha uvnitř hlavního panelu (scroll) – light: průhledná = stejný glass jako panel */
+  --wp-main-scroll-bg: transparent;
+  /* Modal / dialog – shodně s dropdown surface hierarchy */
+  --wp-modal-surface: var(--wp-dropdown-surface);
+  --wp-modal-border: var(--wp-dropdown-border);
+  --wp-modal-shadow: var(--wp-dropdown-shadow);
+  /* Pravý panel (sidecalendar) – alias na --wp-sc-* */
+  --wp-right-panel-bg: var(--wp-sc-panel-bg);
+  --wp-right-panel-border: var(--wp-sc-panel-border);
+  --wp-right-panel-shadow: var(--wp-sc-panel-shadow);
+  /* Interakce (univerzální hover na řádcích / tile) */
+  --wp-state-hover-overlay: rgba(15, 23, 42, 0.055);
+  --wp-state-selected-bg: var(--wp-nav-active-bg);
+  --wp-focus-ring-color: rgba(99, 102, 241, 0.45);
 
   /* Aidvisora – hero navy / dark surfaces (sidebar, calendar panel, „Dnes“ karta) */
   --aidv-hero-navy: #0a0f29;
@@ -249,6 +264,30 @@
 }
 
 /**
+ * Shadcn UI (HSL bez hsl()) – sladění s WePlan tokeny v light módu.
+ * Načítá se po globals.css a přepisuje --background/--card/… pro konzistenci s portálem.
+ */
+:root {
+  --background: 228 56% 97%;
+  --foreground: 245 24% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 245 24% 16%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 215 25% 35%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 215 16% 45%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 245 24% 16%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 90%;
+  --input: 214 32% 91%;
+  --ring: 239 84% 67%;
+}
+
+/**
  * Globální tmavý motiv (next-themes: class "dark" na <html>).
  * Zaměřeno na shell tokeny; postupně doplňovat komponenty mimo portál.
  */
@@ -282,10 +321,12 @@
   --wp-sidebar-card-bg: rgba(15, 21, 40, 0.8);
   --wp-sidebar-card-border: rgba(255, 255, 255, 0.1);
   --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
-  --wp-main-panel-bg: rgba(6, 9, 24, 0.6);
-  --wp-main-panel-border: rgba(255, 255, 255, 0.1);
-  --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
-  --wp-main-panel-backdrop-blur: 16px;
+  /* Neprůhledný hlavní panel – žádný „filtr“ přes canvas */
+  --wp-main-panel-bg: #0c1222;
+  --wp-main-panel-border: rgba(255, 255, 255, 0.12);
+  --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+  --wp-main-panel-backdrop-blur: 0px;
+  --wp-main-scroll-bg: #0c1222;
   --wp-canvas-dot-color: rgba(255, 255, 255, 0.03);
 
   --wp-sidebar-search-bg: rgba(17, 24, 54, 0.6);
@@ -343,6 +384,9 @@
   --wp-input-bg: rgba(17, 24, 54, 0.65);
   --wp-input-border: rgba(255, 255, 255, 0.1);
   --wp-input-text: #f1f5f9;
+  --wp-state-hover-overlay: rgba(255, 255, 255, 0.06);
+  --wp-state-selected-bg: var(--wp-nav-active-bg);
+  --wp-focus-ring-color: rgba(165, 180, 252, 0.55);
 
   --aidv-create-bg: #1e293b;
   --aidv-create-bg-hover: #334155;

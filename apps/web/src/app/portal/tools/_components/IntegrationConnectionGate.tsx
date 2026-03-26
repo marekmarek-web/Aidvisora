@@ -54,7 +54,7 @@ export function IntegrationConnectionGate({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 text-sm text-[color:var(--wp-text-secondary)]">
         Načítám stav propojení…
       </div>
     );
@@ -63,10 +63,10 @@ export function IntegrationConnectionGate({
   if (!status?.connected) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <h2 className="text-lg font-bold text-slate-900">
+        <h2 className="text-lg font-bold text-[color:var(--wp-text)]">
           {provider === "gmail" ? "Gmail není připojený" : "Google Drive není připojený"}
         </h2>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)]">
           Pro práci v tomto workspace je potřeba nejdřív propojit váš Google účet.
         </p>
         {status?.error ? <p className="mt-2 text-sm text-amber-700">{status.error}</p> : null}
@@ -76,7 +76,7 @@ export function IntegrationConnectionGate({
           </CreateActionButton>
           <Link
             href={`/portal/setup?tab=integrace&provider=${provider === "gmail" ? "gmail" : "google-drive"}`}
-            className="min-h-[44px] rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700"
+            className="min-h-[44px] rounded-xl border border-[color:var(--wp-border-strong)] px-4 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)]"
           >
             Otevřít Integrace
           </Link>
@@ -87,7 +87,7 @@ export function IntegrationConnectionGate({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+      <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">
         Připojeno jako {status.email ?? "Google účet"}
       </p>
       {children}

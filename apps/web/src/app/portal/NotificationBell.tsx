@@ -13,7 +13,7 @@ export function NotificationBell() {
   return (
     <Link
       href="/portal/notifications"
-      className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full p-2.5 text-[color:var(--wp-text-muted)] transition-colors hover:bg-[color:var(--wp-link-hover-bg)] hover:text-[color:var(--wp-text)] dark:hover:bg-white/10 dark:hover:text-slate-200"
+      className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full p-2.5 text-[color:var(--wp-text-muted)] transition-colors hover:bg-[color:var(--wp-link-hover-bg)] hover:text-[color:var(--wp-text)] dark:hover:bg-white/10 dark:hover:text-white/90"
       title="Oznámení – zprávy od klientů, kalendář, úkoly, poznámky"
       aria-label={count != null && count > 0 ? `Oznámení, ${count > 99 ? "99+" : count} nepřečtených` : "Oznámení"}
     >

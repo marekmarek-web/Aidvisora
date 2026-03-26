@@ -38,7 +38,7 @@ export function DashboardCalendarSidePanel({
       {drawerOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-drawer-overlay bg-black/40 lg:hidden"
+          className="fixed inset-0 z-drawer-overlay bg-[color:var(--wp-overlay-scrim)] lg:hidden"
           aria-label="Zavřít panel"
           onClick={onClose}
         />

@@ -385,8 +385,8 @@ export function NotesVisionBoard({
             <FileText size={20} />
           </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-base md:text-lg text-slate-900 tracking-tight leading-none truncate" style={{ color: "var(--wp-text)" }}>Zápisky</h1>
-            <p className="text-[11px] font-bold tracking-wider uppercase leading-none mt-0.5 hidden md:block" style={{ color: "var(--wp-text-muted)" }}>Nástěnka zápisků</p>
+            <h1 className="truncate text-base font-bold leading-none tracking-tight text-[color:var(--wp-text)] md:text-lg">Zápisky</h1>
+            <p className="mt-0.5 hidden text-[11px] font-bold uppercase leading-none tracking-wider text-[color:var(--wp-text-muted)] md:block">Nástěnka zápisků</p>
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -437,11 +437,11 @@ export function NotesVisionBoard({
         <main className="flex-1 overflow-auto min-h-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {filteredNotes.length === 0 ? (
             <div className="p-6 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-slate-100">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[color:var(--wp-surface-muted)]">
                 <FileText size={28} className="text-aidv-create" />
               </div>
-              <h2 className="text-lg font-bold text-slate-800 mb-2">Žádné zápisky</h2>
-              <p className="text-slate-500 text-sm mb-6">Vytvořte zápisek nebo přepněte na Board.</p>
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)] mb-2">Žádné zápisky</h2>
+              <p className="text-[color:var(--wp-text-secondary)] text-sm mb-6">Vytvořte zápisek nebo přepněte na Board.</p>
               <CreateActionButton type="button" onClick={handleOpenNew}>
                 Nový zápisek
               </CreateActionButton>
@@ -462,22 +462,22 @@ export function NotesVisionBoard({
                           {design.icon}
                           {DOMAINS.find((d) => d.value === note.domain)?.label ?? note.domain}
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-[color:var(--wp-text-tertiary)]">
                           <Calendar size={12} />
                           {formatDateCZ(note.meetingAt)}
                         </div>
                       </div>
-                      <h3 className="font-bold text-slate-800 text-base leading-tight mb-2">
+                      <h3 className="font-bold text-[color:var(--wp-text)] text-base leading-tight mb-2">
                         {contentTitle(note.content)}
                       </h3>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-                          <User size={12} className="text-slate-500" />
+                        <div className="w-6 h-6 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center border border-[color:var(--wp-surface-card-border)]">
+                          <User size={12} className="text-[color:var(--wp-text-secondary)]" />
                         </div>
-                        <span className="text-sm font-medium text-slate-600">{note.contactName}</span>
+                        <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">{note.contactName}</span>
                       </div>
-                      <p className="text-[13px] text-slate-600 leading-relaxed line-clamp-2">
-                        {contentBody(note.content) || <span className="text-slate-400 italic">Bez obsahu…</span>}
+                      <p className="text-[13px] text-[color:var(--wp-text-secondary)] leading-relaxed line-clamp-2">
+                        {contentBody(note.content) || <span className="text-[color:var(--wp-text-tertiary)] italic">Bez obsahu…</span>}
                       </p>
                     </button>
                   </li>
@@ -491,17 +491,17 @@ export function NotesVisionBoard({
       <main
         ref={boardRef}
         className={`flex-1 relative overflow-auto notes-dot-grid cursor-crosshair min-h-0 ${
-          isMobile && mobileTab === "board" ? "max-h-[55vh] rounded-xl mx-4 border border-slate-200" : ""
+          isMobile && mobileTab === "board" ? "max-h-[55vh] rounded-xl mx-4 border border-[color:var(--wp-surface-card-border)]" : ""
         } ${isMobile && mobileTab === "feed" ? "hidden" : ""}`}
       >
         {notes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-auto flex max-w-md flex-col items-center rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-10 text-center shadow-2xl backdrop-blur-xl">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-slate-100">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-[color:var(--wp-surface-muted)]">
                 <FileText size={40} className="text-aidv-create" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-3">Plátno je prázdné</h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[color:var(--wp-text)] mb-3">Plátno je prázdné</h2>
+              <p className="text-[color:var(--wp-text-secondary)] mb-8 leading-relaxed">
                 Všechny zápisky ze schůzek můžete mít zde jako karty a libovolně je přesouvat.
               </p>
               <CreateActionButton type="button" onClick={handleOpenNew} className="px-8 py-4 shadow-xl">
@@ -513,7 +513,7 @@ export function NotesVisionBoard({
 
         {filteredNotes.length === 0 && notes.length > 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-slate-500 font-medium">Žádné zápisky neodpovídají hledání.</p>
+            <p className="text-[color:var(--wp-text-secondary)] font-medium">Žádné zápisky neodpovídají hledání.</p>
           </div>
         )}
 
@@ -543,12 +543,12 @@ export function NotesVisionBoard({
               `}
             >
               <div className="flex items-center justify-between rounded-t-2xl border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/90 px-4 py-2.5">
-                <GripHorizontal size={18} className="text-slate-300" />
+                <GripHorizontal size={18} className="text-[color:var(--wp-text-tertiary)]" />
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={(e) => handleOpenEdit(note, e)}
-                    className="p-1.5 rounded-full text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
+                    className="p-1.5 rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] hover:text-indigo-600 hover:shadow-sm transition-all"
                     title="Upravit zápisek"
                   >
                     <Edit2 size={14} />
@@ -556,7 +556,7 @@ export function NotesVisionBoard({
                   <button
                     type="button"
                     onClick={(e) => togglePin(note.id, e)}
-                    className={`p-1.5 rounded-full transition-all ${pos.pinned ? "bg-amber-100 text-amber-600 shadow-sm" : "text-slate-400 hover:bg-white hover:text-slate-600 hover:shadow-sm"}`}
+                    className={`p-1.5 rounded-full transition-all ${pos.pinned ? "bg-amber-100 text-amber-600 shadow-sm" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] hover:text-[color:var(--wp-text-secondary)] hover:shadow-sm"}`}
                     title="Připnout"
                   >
                     <Pin size={14} className={pos.pinned ? "fill-current" : ""} />
@@ -569,23 +569,23 @@ export function NotesVisionBoard({
                     {design.icon}
                     {DOMAINS.find((d) => d.value === note.domain)?.label ?? note.domain}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[color:var(--wp-text-tertiary)]">
                     <Calendar size={12} />
                     {formatDateCZ(note.meetingAt)}
                   </div>
                 </div>
-                <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2 pr-2">
+                <h3 className="font-bold text-[color:var(--wp-text)] text-lg leading-tight mb-2 pr-2">
                   {contentTitle(note.content)}
                 </h3>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-                    <User size={12} className="text-slate-500" />
+                  <div className="w-6 h-6 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center border border-[color:var(--wp-surface-card-border)]">
+                    <User size={12} className="text-[color:var(--wp-text-secondary)]" />
                   </div>
-                  <span className="text-sm font-bold text-slate-600">{note.contactName}</span>
+                  <span className="text-sm font-bold text-[color:var(--wp-text-secondary)]">{note.contactName}</span>
                 </div>
-                <div className="border-t border-slate-100 pt-3 space-y-3">
-                  <p className="text-[13px] text-slate-600 leading-relaxed font-medium">
-                    {contentBody(note.content) || <span className="text-slate-400 italic">Bez obsahu…</span>}
+                <div className="border-t border-[color:var(--wp-surface-card-border)] pt-3 space-y-3">
+                  <p className="text-[13px] text-[color:var(--wp-text-secondary)] leading-relaxed font-medium">
+                    {contentBody(note.content) || <span className="text-[color:var(--wp-text-tertiary)] italic">Bez obsahu…</span>}
                   </p>
                   {contentRecommendation(note.content) && (
                     <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-3">
@@ -605,28 +605,28 @@ export function NotesVisionBoard({
       </main>
 
       {aiSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden border border-slate-100">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]">
+              <h2 className="font-bold text-lg text-[color:var(--wp-text)] flex items-center gap-2">
                 <Sparkles size={18} className="text-amber-500" /> AI Sumarizace
               </h2>
               <button
                 type="button"
                 onClick={() => setAiSummary(null)}
-                className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-raised)]"
               >
                 <X size={16} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
-              <pre className="whitespace-pre-wrap text-sm text-slate-700 font-medium leading-relaxed">{aiSummary}</pre>
+              <pre className="whitespace-pre-wrap text-sm text-[color:var(--wp-text-secondary)] font-medium leading-relaxed">{aiSummary}</pre>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] flex justify-end">
               <button
                 type="button"
                 onClick={() => setAiSummary(null)}
-                className="px-5 py-2.5 rounded-xl font-bold text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all min-h-[44px]"
+                className="px-5 py-2.5 rounded-xl font-bold text-sm border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-all min-h-[44px]"
               >
                 Zavřít
               </button>
@@ -636,38 +636,38 @@ export function NotesVisionBoard({
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex justify-end bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-[color:var(--wp-surface-card)] w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-8 py-6 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80">
               <div>
-                <h2 className="font-bold text-xl text-slate-800">
+                <h2 className="font-bold text-xl text-[color:var(--wp-text)]">
                   {editingId ? "Upravit zápisek" : "Nový zápisek"}
                 </h2>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">Zápisky</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Zápisky</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-11 h-11 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors shadow-sm"
+                className="w-11 h-11 rounded-full bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors shadow-sm"
               >
                 <X size={18} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto notes-no-scrollbar px-8 py-6 space-y-8">
               <div className="space-y-5">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Základní info</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)] pb-2">Základní info</h3>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Název zápisku *</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Název zápisku *</label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Např. Úvodní schůzka k hypotéce"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Kontakt / Klient (nepovinné)</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Kontakt / Klient (nepovinné)</label>
                   <CustomDropdown
                     value={formData.client}
                     onChange={(id) => setFormData({ ...formData, client: id })}
@@ -678,26 +678,26 @@ export function NotesVisionBoard({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Datum schůzky</label>
+                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Datum schůzky</label>
                     <input
                       type="date"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+                      className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Čas</label>
+                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Čas</label>
                     <input
                       type="time"
                       value={formData.time}
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+                      className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Doména (Typ)</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Doména (Typ)</label>
                   <div className="grid grid-cols-2 gap-2">
                     {DOMAINS.map((d) => (
                       <button
@@ -705,7 +705,7 @@ export function NotesVisionBoard({
                         type="button"
                         onClick={() => setFormData({ ...formData, type: d.value })}
                         className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-center gap-2
-                          ${formData.type === d.value ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300"}`}
+                          ${formData.type === d.value ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:border-indigo-300"}`}
                       >
                         {d.label}
                       </button>
@@ -714,36 +714,36 @@ export function NotesVisionBoard({
                 </div>
               </div>
               <div className="space-y-5">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Obsah schůzky</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)] pb-2">Obsah schůzky</h3>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Klíčové body (Obsah)</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Klíčové body (Obsah)</label>
                   <textarea
                     rows={5}
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     placeholder="Co se na schůzce probíralo..."
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none leading-relaxed"
+                    className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none leading-relaxed"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Další kroky / Doporučení</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Další kroky / Doporučení</label>
                   <textarea
                     rows={3}
                     value={formData.recommendation}
                     onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
                     placeholder="Úkoly pro klienta nebo pro vás..."
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400 resize-none leading-relaxed"
+                    className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400 resize-none leading-relaxed"
                   />
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+            <div className="p-6 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center justify-between gap-3">
               {editingId ? (
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={saving}
-                  className="flex items-center justify-center w-12 h-12 bg-white border border-red-200 text-red-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm disabled:opacity-50"
+                  className="flex items-center justify-center w-12 h-12 bg-[color:var(--wp-surface-card)] border border-red-200 text-red-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm disabled:opacity-50"
                   title="Smazat zápisek"
                 >
                   <Trash2 size={18} />
@@ -752,7 +752,7 @@ export function NotesVisionBoard({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                  className="px-6 py-3.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm"
                 >
                   Zrušit
                 </button>

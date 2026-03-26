@@ -73,7 +73,7 @@ function getAvatarColor(name: string) {
 function AnalysisProgressBar({ progress }: { progress?: number }) {
   const pct = Math.max(0, Math.min(100, progress ?? 0));
   return (
-    <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+    <div className="mt-2 h-1.5 bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
       <div
         className={cx("h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-indigo-500")}
         style={{ width: `${pct}%` }}
@@ -225,15 +225,15 @@ export function HouseholdDetailScreen({
   if (pending && !detail) {
     return (
       <div className="min-h-[50vh] space-y-0">
-        <div className="h-32 bg-gradient-to-br from-slate-800 to-slate-900 animate-pulse rounded-b-2xl" />
-        <div className="px-4 py-3 flex gap-2 border-b border-slate-100 bg-white">
+        <div className="h-32 bg-gradient-to-br from-[#1e293b] to-[#0f172a] animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 flex gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-8 flex-1 rounded-xl bg-slate-200/70 animate-pulse max-w-[100px]" />
+            <div key={i} className="h-8 flex-1 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse max-w-[100px]" />
           ))}
         </div>
         <div className="px-4 pt-3 space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-20 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
       </div>
@@ -253,9 +253,9 @@ export function HouseholdDetailScreen({
       )}
     >
       {/* Hero */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-5">
+      <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] px-4 pt-4 pb-5">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 flex items-center justify-center flex-shrink-0">
             <Home size={22} className="text-white/80" />
           </div>
           <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ export function HouseholdDetailScreen({
                 type="button"
                 onClick={openEditSheet}
                 disabled={deleteBusy}
-                className="flex items-center gap-1 text-[11px] font-black text-white/90 bg-white/15 px-2.5 py-1.5 rounded-lg min-h-[36px] border border-white/20"
+                className="flex items-center gap-1 text-[11px] font-black text-white/90 bg-[color:var(--wp-surface-card)]/15 px-2.5 py-1.5 rounded-lg min-h-[36px] border border-white/20"
               >
                 <Pencil size={12} /> Upravit
               </button>
@@ -279,13 +279,13 @@ export function HouseholdDetailScreen({
               </button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded-lg">
                 <Users size={11} /> {detail.members.length} {detail.members.length === 1 ? "člen" : detail.members.length < 5 ? "členové" : "členů"}
               </span>
-              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded-lg">
                 <Briefcase size={11} /> {opportunities.length} obchodů
               </span>
-              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+              <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded-lg">
                 <BarChart2 size={11} /> {analyses.length} analýz
               </span>
             </div>
@@ -294,7 +294,7 @@ export function HouseholdDetailScreen({
       </div>
 
       {/* Tab bar */}
-      <div className="px-4 py-2 bg-white border-b border-slate-100 sticky top-0 z-10">
+      <div className="px-4 py-2 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] sticky top-0 z-10">
         <FilterChips
           value={tab}
           onChange={(id) => setTab(id as HouseholdTab)}
@@ -339,17 +339,17 @@ export function HouseholdDetailScreen({
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900">{fullName}</p>
+                      <p className="text-sm font-bold text-[color:var(--wp-text)]">{fullName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {member.role ? (
-                          <span className="text-[11px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-lg border border-slate-200">
+                          <span className="text-[11px] font-bold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] px-1.5 py-0.5 rounded-lg border border-[color:var(--wp-surface-card-border)]">
                             {member.role}
                           </span>
                         ) : null}
                         {member.email ? (
-                          <span className="text-[11px] text-slate-400 truncate">{member.email}</span>
+                          <span className="text-[11px] text-[color:var(--wp-text-tertiary)] truncate">{member.email}</span>
                         ) : member.phone ? (
-                          <span className="text-[11px] text-slate-400">{member.phone}</span>
+                          <span className="text-[11px] text-[color:var(--wp-text-tertiary)]">{member.phone}</span>
                         ) : null}
                       </div>
                     </div>
@@ -377,14 +377,14 @@ export function HouseholdDetailScreen({
           ) : (
             opportunities.map((opp) => (
               <MobileCard key={opp.id} className="p-3.5">
-                <p className="text-sm font-bold text-slate-900">{opp.title}</p>
+                <p className="text-sm font-bold text-[color:var(--wp-text)]">{opp.title}</p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   {opp.stageName ? (
                     <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
                       {opp.stageName}
                     </span>
                   ) : null}
-                  <span className="text-[11px] text-slate-500">{opp.contactName}</span>
+                  <span className="text-[11px] text-[color:var(--wp-text-secondary)]">{opp.contactName}</span>
                 </div>
               </MobileCard>
             ))
@@ -405,11 +405,11 @@ export function HouseholdDetailScreen({
                 <MobileCard key={analysis.id} className="p-3.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">
+                      <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                         {analysis.analysisTypeLabel || "Finanční analýza"}
                       </p>
                       {analysis.clientName ? (
-                        <p className="text-xs text-slate-500 mt-0.5">{analysis.clientName}</p>
+                        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">{analysis.clientName}</p>
                       ) : null}
                       <AnalysisProgressBar progress={progress} />
                     </div>
@@ -421,7 +421,7 @@ export function HouseholdDetailScreen({
                       {isDone ? "hotovo" : analysis.status === "draft" ? "návrh" : "probíhá"}
                     </StatusBadge>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-2">
+                  <p className="text-[11px] text-[color:var(--wp-text-tertiary)] mt-2">
                     {new Date(analysis.createdAt).toLocaleDateString("cs-CZ")}
                     {analysis.lastExportedAt
                       ? ` · Export ${new Date(analysis.lastExportedAt).toLocaleDateString("cs-CZ")}`
@@ -443,28 +443,28 @@ export function HouseholdDetailScreen({
       >
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Ikona (emoji, volitelné)
             </label>
             <input
               type="text"
               value={editIcon}
               onChange={(e) => setEditIcon(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               placeholder="🏠"
               maxLength={8}
               disabled={editBusy}
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Název
             </label>
             <input
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               disabled={editBusy}
             />
           </div>
@@ -488,7 +488,7 @@ export function HouseholdDetailScreen({
       >
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Kontakt
             </label>
             <CustomDropdown
@@ -505,13 +505,13 @@ export function HouseholdDetailScreen({
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Role
             </label>
             <input
               value={newMemberRole}
               onChange={(e) => setNewMemberRole(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               placeholder="Např. partner, dítě, rodič"
             />
           </div>

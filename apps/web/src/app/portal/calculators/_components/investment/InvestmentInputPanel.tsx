@@ -37,7 +37,7 @@ export function InvestmentInputPanel({
     Math.min(INVESTMENT_DEFAULTS.yearsMax, Math.max(INVESTMENT_DEFAULTS.yearsMin, v));
 
   return (
-    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
 
       {/* Počáteční vklad */}
       <div className="mb-0">
@@ -140,7 +140,7 @@ export function InvestmentInputPanel({
           <svg className="w-4 h-4 text-[#2563eb] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-[color:var(--wp-text-secondary)]">
             <strong className="mb-0.5 block text-[#0d1f4e]">{profileTitle}</strong>
             <span>{profileDescription}</span>
           </div>

@@ -165,7 +165,7 @@ export function InvestmentBacktestChart({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/70 p-4 sm:p-5">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
             <h3 className="flex items-center gap-3 text-xl font-bold text-[#0a0f29] md:text-2xl">
@@ -174,7 +174,7 @@ export function InvestmentBacktestChart({
               </svg>
               Simulace historického vývoje
             </h3>
-            <p className="mt-2 text-sm text-slate-600 sm:text-base">
+            <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)] sm:text-base">
               Jak by dopadla vaše investice{" "}
               <span className="font-bold text-[#0B3A7A]">{monthlyFormatted}</span>{" "}
               měsíčně, kdybyste začali v roce{" "}
@@ -186,23 +186,23 @@ export function InvestmentBacktestChart({
             Reálná tržní data 1995–2024
           </div>
         </div>
-        <p className="text-sm leading-relaxed text-slate-500">
+        <p className="text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
           Historická simulace ukazuje, jak by se investice vyvíjela při zachování dlouhodobé strategie i v obdobích krizí a poklesů trhu.
         </p>
       </div>
 
-      <div className="w-full overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 sm:p-3">
+      <div className="w-full overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 sm:p-3">
         <div className="h-[360px] w-full sm:h-[440px] lg:h-[500px]">
           <ReactApexChart options={options} series={apexSeries} type="area" height="100%" />
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">
             Posunout v čase (Start investice)
           </span>
-          <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-bold text-[#0a0f29]">
+          <span className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-base font-bold text-[#0a0f29]">
             Rok {startYear}
           </span>
         </div>
@@ -219,7 +219,7 @@ export function InvestmentBacktestChart({
           }}
           aria-label="Startovní rok backtestu"
         />
-        <div className="mt-3 flex justify-between text-[11px] font-bold uppercase tracking-wide text-slate-400">
+        <div className="mt-3 flex justify-between text-[11px] font-bold uppercase tracking-wide text-[color:var(--wp-text-tertiary)]">
           <span>1995</span>
           <span>2008</span>
           <span>2019</span>

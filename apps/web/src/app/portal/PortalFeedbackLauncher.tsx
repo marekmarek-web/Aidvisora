@@ -65,7 +65,7 @@ export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "des
         type="button"
         onClick={() => setOpen(true)}
         title="Nahlásit bug nebo návrh"
-        className={`fixed ${positionClass} min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-white border-2 border-slate-200 text-slate-700 shadow-md hover:bg-slate-50 hover:border-indigo-300 active:scale-95 transition-all`}
+        className={`fixed ${positionClass} min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-[color:var(--wp-surface-card)] border-2 border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] shadow-md hover:bg-[color:var(--wp-surface-muted)] hover:border-indigo-300 active:scale-95 transition-all`}
         aria-label="Zpětná vazba"
       >
         <Bug size={22} className="text-indigo-600" />
@@ -78,15 +78,15 @@ export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "des
           aria-modal="true"
           aria-labelledby="portal-feedback-title"
         >
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-              <h2 id="portal-feedback-title" className="text-base font-bold text-slate-900">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] shrink-0">
+              <h2 id="portal-feedback-title" className="text-base font-bold text-[color:var(--wp-text)]">
                 Zpětná vazba
               </h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-lg hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Zavřít"
               >
                 <X size={20} />
@@ -98,7 +98,7 @@ export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "des
                   type="button"
                   onClick={() => setCategory("bug")}
                   className={`min-h-[44px] rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 ${
-                    category === "bug" ? "border-rose-400 bg-rose-50 text-rose-900" : "border-slate-200 text-slate-600"
+                    category === "bug" ? "border-rose-400 bg-rose-50 text-rose-900" : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   <Bug size={16} /> Nahlásit bug
@@ -107,40 +107,40 @@ export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "des
                   type="button"
                   onClick={() => setCategory("idea")}
                   className={`min-h-[44px] rounded-xl border-2 text-sm font-bold flex items-center justify-center gap-2 ${
-                    category === "idea" ? "border-amber-400 bg-amber-50 text-amber-950" : "border-slate-200 text-slate-600"
+                    category === "idea" ? "border-amber-400 bg-amber-50 text-amber-950" : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   <Lightbulb size={16} /> Návrh zlepšení
                 </button>
               </div>
               <label className="block">
-                <span className="text-xs font-bold text-slate-500">Předmět</span>
+                <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Předmět</span>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={200}
-                  className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-slate-200 rounded-xl text-sm"
+                  className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm"
                   placeholder="Stručně (např. Kalendář se neuloží)"
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-bold text-slate-500">Popis</span>
+                <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Popis</span>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   maxLength={8000}
                   rows={5}
-                  className="mt-1 w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-y min-h-[120px]"
+                  className="mt-1 w-full px-3 py-2.5 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm resize-y min-h-[120px]"
                   placeholder="Co se stalo, co očekáváte, kroky k reprodukci…"
                 />
               </label>
             </div>
-            <div className="p-4 border-t border-slate-100 flex gap-2 shrink-0">
+            <div className="p-4 border-t border-[color:var(--wp-surface-card-border)] flex gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex-1 min-h-[44px] rounded-xl border border-slate-200 font-bold text-sm text-slate-700"
+                className="flex-1 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] font-bold text-sm text-[color:var(--wp-text-secondary)]"
               >
                 Zrušit
               </button>

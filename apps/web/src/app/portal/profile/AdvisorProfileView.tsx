@@ -119,8 +119,8 @@ export function AdvisorProfileView({
   if (!initial) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[280px] px-4 text-center">
-        <p className="text-slate-600 font-medium">Profil není k dispozici.</p>
-        <p className="text-sm text-slate-500 mt-1">Zkuste obnovit stránku nebo se vrátit později.</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium">Profil není k dispozici.</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">Zkuste obnovit stránku nebo se vrátit později.</p>
       </div>
     );
   }
@@ -329,33 +329,33 @@ export function AdvisorProfileView({
   };
 
   const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 placeholder:font-medium min-h-[44px]";
+    "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] placeholder:font-medium min-h-[44px]";
 
   const initials = [parsed.firstName, parsed.lastName].map((s) => s[0]).filter(Boolean).join("").toUpperCase() || "?";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-12 md:pb-20">
+    <div className="min-h-screen bg-[#f8fafc] text-[color:var(--wp-text)] pb-12 md:pb-20">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* Top nav – uvnitř portálu, konzistentní s breadcrumbs */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 md:px-8 py-4 sticky top-0 z-40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <header className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-md border-b border-[color:var(--wp-surface-card-border)] px-4 sm:px-6 md:px-8 py-4 sticky top-0 z-40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-6 min-w-0">
           <Link
             href="/portal"
-            className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors shrink-0"
+            className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shrink-0"
           >
             <ArrowLeft size={16} aria-hidden /> Zpět na nástěnku
           </Link>
-          <div className="w-px h-6 bg-slate-200 hidden sm:block" aria-hidden />
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 min-w-0 truncate">
+          <div className="w-px h-6 bg-[color:var(--wp-surface-card-border)] hidden sm:block" aria-hidden />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-tertiary)] min-w-0 truncate">
             <Link href="/portal/setup" className="hover:text-indigo-600 transition-colors">
               Nastavení CRM
             </Link>
             <span className="opacity-30">/</span>
-            <span className="text-slate-800">Můj profil</span>
+            <span className="text-[color:var(--wp-text)]">Můj profil</span>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -388,7 +388,7 @@ export function AdvisorProfileView({
           </div>
         )}
         {/* Hlavička profilu */}
-        <div className="bg-white rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
+        <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[32px] p-6 sm:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 z-10 text-center md:text-left">
             <div className="relative group">
               <label className="block cursor-pointer">
@@ -399,7 +399,7 @@ export function AdvisorProfileView({
                     initials
                   )}
                 </div>
-                <div className="absolute inset-0 bg-slate-900/40 rounded-2xl sm:rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] rounded-2xl sm:rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <Camera size={24} className="text-white mb-0.5" aria-hidden />
                   <span className="text-[9px] font-black uppercase text-white">Nahrát fotku</span>
                 </div>
@@ -412,7 +412,7 @@ export function AdvisorProfileView({
                 />
               </label>
               {advisorAvatarUploading && (
-                <p className="text-xs text-slate-500 mt-1 text-center">Nahrávám…</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1 text-center">Nahrávám…</p>
               )}
               {advisorAvatarError && (
                 <p className="text-xs text-red-600 mt-1 text-center max-w-[100px]">{advisorAvatarError}</p>
@@ -425,29 +425,29 @@ export function AdvisorProfileView({
               </div>
             </div>
             <div className="pt-0 md:pt-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-1">
+              <h1 className="text-2xl sm:text-3xl font-black text-[color:var(--wp-text)] tracking-tight mb-1">
                 {firstName || lastName ? `${firstName} ${lastName}`.trim() || "—" : "Můj profil"}
               </h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-indigo-100">
                   {initial.roleName}
                 </span>
-                <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-slate-200">
+                <span className="px-3 py-1 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-[10px] font-black uppercase tracking-widest rounded-md border border-[color:var(--wp-surface-card-border)]">
                   {initial.tenantName}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 w-full md:w-auto justify-center">
+          <div className="flex items-center gap-4 sm:gap-6 bg-[color:var(--wp-surface-muted)] p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] w-full md:w-auto justify-center">
             <div className="text-center">
-              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              <span className="block text-[10px] font-black text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-1">
                 Aktivní klienti
               </span>
-              <span className="text-xl sm:text-2xl font-black text-slate-900">—</span>
+              <span className="text-xl sm:text-2xl font-black text-[color:var(--wp-text)]">—</span>
             </div>
-            <div className="w-px h-10 bg-slate-200" aria-hidden />
+            <div className="w-px h-10 bg-[color:var(--wp-surface-card-border)]" aria-hidden />
             <div className="text-center">
-              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              <span className="block text-[10px] font-black text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-1">
                 Spravované AUM
               </span>
               <span className="text-xl sm:text-2xl font-black text-indigo-600">—</span>
@@ -456,14 +456,14 @@ export function AdvisorProfileView({
         </div>
 
         {/* Taby */}
-        <div className="flex items-center gap-4 sm:gap-8 border-b border-slate-200 px-2 overflow-x-auto hide-scrollbar">
+        <div className="flex items-center gap-4 sm:gap-8 border-b border-[color:var(--wp-surface-card-border)] px-2 overflow-x-auto hide-scrollbar">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as TabId)}
               className={`pb-4 text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap min-h-[44px] flex items-end
-                ${activeTab === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-800"}
+                ${activeTab === tab.id ? "text-indigo-600" : "text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"}
               `}
             >
               {tab.label}
@@ -479,14 +479,14 @@ export function AdvisorProfileView({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 space-y-6">
             {/* Osobní a firemní údaje */}
-            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 sm:px-8 py-5 border-b border-slate-50">
-                <h2 className="text-lg font-black text-slate-900">Základní informace</h2>
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                <h2 className="text-lg font-black text-[color:var(--wp-text)]">Základní informace</h2>
               </div>
               <div className="p-6 sm:p-8 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       Jméno
                     </label>
                     <input
@@ -498,7 +498,7 @@ export function AdvisorProfileView({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       Příjmení
                     </label>
                     <input
@@ -512,26 +512,26 @@ export function AdvisorProfileView({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       E-mail (pro přihlášení)
                     </label>
                     <div className="relative">
-                      <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                       <input
                         type="email"
                         value={initial.email}
                         readOnly
-                        className={`${inputClass} pl-11 bg-slate-100 text-slate-500 cursor-not-allowed border-transparent`}
+                        className={`${inputClass} pl-11 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] cursor-not-allowed border-transparent`}
                         aria-readonly
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       Telefon
                     </label>
                     <div className="relative">
-                      <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                       <input
                         type="tel"
                         value={phone}
@@ -545,11 +545,11 @@ export function AdvisorProfileView({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       Web
                     </label>
                     <div className="relative">
-                      <Globe size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <Globe size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                       <input
                         type="url"
                         value={website}
@@ -562,7 +562,7 @@ export function AdvisorProfileView({
                   </div>
                   {(initial.roleName === "Advisor" || initial.roleName === "Manager" || initial.roleName === "Director") && (
                     <div>
-                      <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                         Nadřízený
                       </label>
                       <CustomDropdown
@@ -581,13 +581,13 @@ export function AdvisorProfileView({
                     </div>
                   )}
                 </div>
-                <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="pt-6 border-t border-[color:var(--wp-surface-card-border)] grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       IČO
                     </label>
                     <div className="relative">
-                      <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                       <input
                         type="text"
                         value={ico}
@@ -598,11 +598,11 @@ export function AdvisorProfileView({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                       Sídlo / Korespondenční adresa
                     </label>
                     <div className="relative">
-                      <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                       <input
                         type="text"
                         value={address}
@@ -617,14 +617,14 @@ export function AdvisorProfileView({
             </div>
 
             {/* Zabezpečení účtu */}
-            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex items-center gap-2">
-                <Key size={18} className="text-slate-400 shrink-0" />
-                <h2 className="text-lg font-black text-slate-900">Zabezpečení účtu</h2>
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-2">
+                <Key size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                <h2 className="text-lg font-black text-[color:var(--wp-text)]">Zabezpečení účtu</h2>
               </div>
               <form onSubmit={handleUpdatePassword} className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                     Nové heslo
                   </label>
                   <input
@@ -637,7 +637,7 @@ export function AdvisorProfileView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
                     Potvrdit nové heslo
                   </label>
                   <input
@@ -663,7 +663,7 @@ export function AdvisorProfileView({
                   <button
                     type="submit"
                     disabled={passwordSaving}
-                    className="px-5 py-2.5 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px] disabled:opacity-60"
+                    className="px-5 py-2.5 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px] disabled:opacity-60"
                   >
                     {passwordSaving ? "Ukládám…" : "Aktualizovat heslo"}
                   </button>
@@ -683,12 +683,12 @@ export function AdvisorProfileView({
               <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">
                 Pošlete tento odkaz klientům, aby si mohli sami naplánovat schůzku přímo do vašeho kalendáře.
               </p>
-              <div className="bg-white/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
+              <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
                 <span className="text-xs font-medium truncate opacity-90">{bookingLink}</span>
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
+                  className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center hover:bg-[color:var(--wp-surface-card)]/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
                   title="Kopírovat odkaz"
                 >
                   {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
@@ -703,17 +703,17 @@ export function AdvisorProfileView({
             </div>
 
             {/* Logo do reportu PDF */}
-            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-50 flex items-center gap-2">
-                <FileText size={18} className="text-slate-400 shrink-0" aria-hidden />
-                <h3 className="font-black text-slate-900">Pro report PDF</h3>
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-2">
+                <FileText size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" aria-hidden />
+                <h3 className="font-black text-[color:var(--wp-text)]">Pro report PDF</h3>
               </div>
               <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-[color:var(--wp-text-secondary)]">
                   Logo se zobrazí na titulní stránce finančního reportu. Telefon a web z této stránky se použijí v záhlaví a zápatí.
                 </p>
                 <label className="block cursor-pointer">
-                  <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors min-h-[44px]">
+                  <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold text-[color:var(--wp-text-secondary)] transition-colors min-h-[44px]">
                     {reportLogoUploading ? "Nahrávám…" : "Nahrát logo"}
                   </span>
                   <input
@@ -730,12 +730,12 @@ export function AdvisorProfileView({
                   </p>
                 )}
                 {reportLogoUrl && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">Náhled</p>
+                  <div className="pt-2 border-t border-[color:var(--wp-surface-card-border)]">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Náhled</p>
                     <img
                       src={reportLogoUrl}
                       alt=""
-                      className="max-h-20 w-auto object-contain rounded-lg border border-slate-200 bg-slate-50"
+                      className="max-h-20 w-auto object-contain rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]"
                     />
                   </div>
                 )}
@@ -743,15 +743,15 @@ export function AdvisorProfileView({
             </div>
 
             {/* Licence */}
-            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-50">
-                <h3 className="font-black text-slate-900">Licence a oprávnění</h3>
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                <h3 className="font-black text-[color:var(--wp-text)]">Licence a oprávnění</h3>
               </div>
               <div className="p-4 space-y-3">
                 {MOCK_LICENSES.map((lic, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3"
+                    className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3"
                   >
                     <div
                       className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
@@ -765,9 +765,9 @@ export function AdvisorProfileView({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{lic.name}</h4>
+                      <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
                       <p
-                        className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-slate-400" : "text-amber-600"}`}
+                        className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}
                       >
                         Platnost do: {lic.expiry}
                       </p>
@@ -778,12 +778,12 @@ export function AdvisorProfileView({
                   href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                  className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   Vyhledat v registru ČNB
                 </a>
-                <div className="mt-4 p-3 rounded-xl border border-slate-100 bg-slate-50">
-                  <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                <div className="mt-4 p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
                     Následné vzdělávání (termín)
                   </label>
                   <input
@@ -797,9 +797,9 @@ export function AdvisorProfileView({
             </div>
 
             {/* Připojené účty */}
-            <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-50">
-                <h3 className="font-black text-slate-900">Připojené účty</h3>
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                <h3 className="font-black text-[color:var(--wp-text)]">Připojené účty</h3>
               </div>
               <div className="p-4 space-y-3">
                 {PROFILE_INTEGRATIONS.map((integration) => {
@@ -814,30 +814,30 @@ export function AdvisorProfileView({
                           : "Připojeno"
                         : "Nepřipojeno";
                   const statusClass = status.loading
-                    ? "text-slate-400"
+                    ? "text-[color:var(--wp-text-tertiary)]"
                     : status.error
                       ? "text-amber-600"
                       : status.connected
                         ? "text-emerald-600"
-                        : "text-slate-400";
+                        : "text-[color:var(--wp-text-tertiary)]";
 
                   return (
                   <Link
                     key={integration.id}
                     href={integration.href}
-                    className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
+                    className="p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-muted)] flex items-center justify-center shrink-0">
                         <GoogleIcon />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-slate-800">{integration.name}</h4>
+                        <h4 className="text-sm font-bold text-[color:var(--wp-text)]">{integration.name}</h4>
                         <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
                       </div>
                     </div>
                     {status.connected ? (
-                      <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                      <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
                     ) : (
                       <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 min-h-[44px] inline-flex items-center">
                         Připojit
@@ -863,12 +863,12 @@ export function AdvisorProfileView({
                 <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">
                   Pošlete tento odkaz klientům, aby si mohli sami naplánovat schůzku přímo do vašeho kalendáře.
                 </p>
-                <div className="bg-white/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
+                <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
                   <span className="text-xs font-medium truncate opacity-90">{bookingLink}</span>
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
+                    className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center hover:bg-[color:var(--wp-surface-card)]/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
                     title="Kopírovat odkaz"
                   >
                     {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
@@ -889,9 +889,9 @@ export function AdvisorProfileView({
         {activeTab === "integrace" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex items-center justify-between flex-wrap gap-3">
-                  <h2 className="text-lg font-black text-slate-900">Připojené účty</h2>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+                <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between flex-wrap gap-3">
+                  <h2 className="text-lg font-black text-[color:var(--wp-text)]">Připojené účty</h2>
                   <Link
                     href="/portal/setup"
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors min-h-[44px]"
@@ -912,29 +912,29 @@ export function AdvisorProfileView({
                             : "Připojeno"
                           : "Nepřipojeno";
                     const statusClass = status.loading
-                      ? "text-slate-400"
+                      ? "text-[color:var(--wp-text-tertiary)]"
                       : status.error
                         ? "text-amber-600"
                         : status.connected
                           ? "text-emerald-600"
-                          : "text-slate-400";
+                          : "text-[color:var(--wp-text-tertiary)]";
 
                     return (
                     <Link
                       key={integration.id}
                       href={integration.href}
-                      className="p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
+                      className="p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-muted)] flex items-center justify-center shrink-0">
                           <GoogleIcon />
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-slate-800">{integration.name}</h4>
+                          <h4 className="text-sm font-bold text-[color:var(--wp-text)]">{integration.name}</h4>
                           <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                      <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
                     </Link>
                     );
                   })}
@@ -942,19 +942,19 @@ export function AdvisorProfileView({
               </div>
             </div>
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-50">
-                  <h3 className="font-black text-slate-900">Licence a oprávnění</h3>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h3 className="font-black text-[color:var(--wp-text)]">Licence a oprávnění</h3>
                 </div>
                 <div className="p-4 space-y-3">
                   {MOCK_LICENSES.map((lic, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+                    <div key={idx} className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3">
                       <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
                         {lic.status === "valid" ? <CheckCircle size={12} strokeWidth={3} aria-hidden /> : <AlertCircle size={12} strokeWidth={3} aria-hidden />}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{lic.name}</h4>
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-slate-400" : "text-amber-600"}`}>
+                        <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}>
                           Platnost do: {lic.expiry}
                         </p>
                       </div>
@@ -964,7 +964,7 @@ export function AdvisorProfileView({
                     href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                    className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                   >
                     Vyhledat v registru ČNB
                   </a>
@@ -975,12 +975,12 @@ export function AdvisorProfileView({
         )}
 
         {activeTab === "notifikace" && (
-          <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-8">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-8">
             <div className="flex items-center gap-3 mb-4">
-              <Bell size={24} className="text-slate-400" />
-              <h2 className="text-lg font-black text-slate-900">Notifikace a oznámení</h2>
+              <Bell size={24} className="text-[color:var(--wp-text-tertiary)]" />
+              <h2 className="text-lg font-black text-[color:var(--wp-text)]">Notifikace a oznámení</h2>
             </div>
-            <p className="text-slate-600 text-sm mb-6 max-w-xl">
+            <p className="text-[color:var(--wp-text-secondary)] text-sm mb-6 max-w-xl">
               Přehled odeslaných e-mailů, notifikací a zpráv od klientů. Nastavení kanálů a šablon najdete v Nastavení.
             </p>
             <Link
@@ -993,12 +993,12 @@ export function AdvisorProfileView({
         )}
 
         {activeTab === "fakturace" && (
-          <div className="bg-white rounded-2xl sm:rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-8">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-8">
             <div className="flex items-center gap-3 mb-4">
-              <FileText size={24} className="text-slate-400" />
-              <h2 className="text-lg font-black text-slate-900">Smlouvy a fakturace</h2>
+              <FileText size={24} className="text-[color:var(--wp-text-tertiary)]" />
+              <h2 className="text-lg font-black text-[color:var(--wp-text)]">Smlouvy a fakturace</h2>
             </div>
-            <p className="text-slate-600 text-sm mb-6 max-w-xl">
+            <p className="text-[color:var(--wp-text-secondary)] text-sm mb-6 max-w-xl">
               Přehled smluv, plateb a produkce. Smlouvy podle období a produkční reporty.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -1010,14 +1010,14 @@ export function AdvisorProfileView({
               </Link>
               <Link
                 href="/portal/production"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors min-h-[44px]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] transition-colors min-h-[44px]"
               >
                 <BarChart3 size={18} /> Produkce
               </Link>
             </div>
 
             {initial.billing ? (
-              <div className="mt-8 pt-8 border-t border-slate-100">
+              <div className="mt-8 pt-8 border-t border-[color:var(--wp-surface-card-border)]">
                 <WorkspaceStripeBilling billing={initial.billing} billingContext="profile" />
               </div>
             ) : null}

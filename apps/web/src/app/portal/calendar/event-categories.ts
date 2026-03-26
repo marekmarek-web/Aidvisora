@@ -32,15 +32,15 @@ export const CALENDAR_EVENT_CATEGORIES: EventCategory[] = [
   { id: "schuzka", label: "Schůzka", icon: "📅", color: "#579bfc", calClass: "wp-cal-event--primary", tailwindClass: "bg-indigo-100 text-indigo-800 border-indigo-300" },
   { id: "telefonat", label: "Telefonát", icon: "📞", color: "#fdab3d", calClass: "wp-cal-event--warning", tailwindClass: "bg-blue-50 text-blue-700 border-blue-200" },
   { id: "kafe", label: "Kafe", icon: "☕", color: "#ff642e", calClass: "wp-cal-event--danger", tailwindClass: "bg-amber-50 text-amber-700 border-amber-200" },
-  { id: "mail", label: "E-mail", icon: "✉️", color: "#a25ddc", calClass: "wp-cal-event--info", tailwindClass: "bg-slate-100 text-slate-700 border-slate-200" },
+  { id: "mail", label: "E-mail", icon: "✉️", color: "#a25ddc", calClass: "wp-cal-event--info", tailwindClass: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" },
   { id: "ukol", label: "Úkol", icon: "✅", color: "#00c875", calClass: "wp-cal-event--success", tailwindClass: "bg-emerald-100 text-emerald-800 border-emerald-300" },
   { id: "priorita", label: "Priorita", icon: "⭐", color: "#e5534b", calClass: "wp-cal-event--danger", tailwindClass: "bg-rose-50 text-rose-700 border-rose-200" },
   { id: "servis", label: "Servis", icon: "🔧", color: "#00a86b", calClass: "wp-cal-event--success", tailwindClass: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  { id: "interni", label: "Interní blok", icon: "🏢", color: "#6b7280", calClass: "wp-cal-event--muted", tailwindClass: "bg-slate-100 text-slate-700 border-slate-200" },
+  { id: "interni", label: "Interní blok", icon: "🏢", color: "#6b7280", calClass: "wp-cal-event--muted", tailwindClass: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" },
   { id: "administrativa", label: "Administrativa", icon: "📋", color: "#6366f1", calClass: "wp-cal-event--info", tailwindClass: "bg-amber-50 text-amber-700 border-amber-200" },
   { id: "review", label: "Review", icon: "📊", color: "#0ea5e9", calClass: "wp-cal-event--info", tailwindClass: "bg-sky-100 text-sky-800 border-sky-300" },
   { id: "followup", label: "Follow-up", icon: "🔄", color: "#8b5cf6", calClass: "wp-cal-event--info", tailwindClass: "bg-violet-100 text-violet-800 border-violet-300" },
-  { id: "osobni", label: "Osobní blok", icon: "👤", color: "#64748b", calClass: "wp-cal-event--muted", tailwindClass: "bg-slate-100 text-slate-600 border-slate-200" },
+  { id: "osobni", label: "Osobní blok", icon: "👤", color: "#64748b", calClass: "wp-cal-event--muted", tailwindClass: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" },
 ];
 
 const byId = new Map<string, EventCategory>(

@@ -4,7 +4,7 @@
 export function SkeletonLine({ className }: { className?: string }) {
   return (
     <div
-      className={`wp-skeleton-line h-3 rounded-full bg-slate-200 overflow-hidden ${className ?? ""}`}
+      className={`wp-skeleton-line h-3 overflow-hidden rounded-full bg-[color:var(--wp-surface-card-border)] ${className ?? ""}`}
       aria-hidden
     />
   );
@@ -17,7 +17,7 @@ export function SkeletonCard({ className }: { className?: string }) {
       className={`grid grid-cols-[auto_1fr] gap-3 p-4 ${className ?? ""}`}
       aria-hidden
     >
-      <div className="wp-skeleton-avatar h-10 w-10 rounded-full bg-slate-200 overflow-hidden shrink-0" />
+      <div className="wp-skeleton-avatar h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[color:var(--wp-surface-card-border)]" />
       <div className="space-y-2">
         <SkeletonLine className="w-3/4" />
         <SkeletonLine className="w-1/2" />
@@ -50,7 +50,7 @@ export function SkeletonTableRow({
 export function SkeletonBlock({ className }: { className?: string }) {
   return (
     <div
-      className={`wp-skeleton-line rounded bg-slate-200 overflow-hidden ${className ?? ""}`}
+      className={`wp-skeleton-line overflow-hidden rounded bg-[color:var(--wp-surface-card-border)] ${className ?? ""}`}
       aria-hidden
     />
   );

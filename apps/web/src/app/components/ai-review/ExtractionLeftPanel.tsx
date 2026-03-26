@@ -75,7 +75,7 @@ function ConfidenceBadge({
 function fieldInputClass(status: FieldStatus) {
   const map: Record<FieldStatus, string> = {
     success:
-      "border-slate-200 bg-slate-50 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-100 text-slate-900",
+      "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-100 text-[color:var(--wp-text)]",
     warning:
       "border-amber-300 bg-amber-50 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-100 text-amber-900",
     error:
@@ -134,7 +134,7 @@ function SectionNav({ onScrollTo }: { onScrollTo: (id: string) => void }) {
         <button
           key={s.id}
           onClick={() => onScrollTo(s.id)}
-          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors whitespace-nowrap"
         >
           {s.label}
         </button>
@@ -166,7 +166,7 @@ function FilterBar({
 }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <Filter size={14} className="text-slate-400" />
+      <Filter size={14} className="text-[color:var(--wp-text-tertiary)]" />
       {FILTERS.map((f) => {
         const count =
           f.value === "warning"
@@ -181,7 +181,7 @@ function FilterBar({
             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
               active === f.value
                 ? "bg-indigo-100 text-indigo-700"
-                : "text-slate-500 hover:bg-slate-100"
+                : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
             }`}
           >
             {f.label}
@@ -205,42 +205,42 @@ function DocumentMetaHeader({ doc }: { doc: ExtractionDocument }) {
           <FileText size={20} />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tight truncate">
+          <h1 className="text-xl md:text-2xl font-display font-black text-[color:var(--wp-text)] tracking-tight truncate">
             {doc.fileName}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-500 mt-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-[color:var(--wp-text-secondary)] mt-1">
             <span className="text-indigo-600">{doc.documentType}</span>
-            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+            <span className="h-1 w-1 rounded-full bg-[color:var(--wp-text-tertiary)]" />
             <span className="flex items-center gap-1">
               <User size={12} /> {doc.clientName}
             </span>
-            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+            <span className="h-1 w-1 rounded-full bg-[color:var(--wp-text-tertiary)]" />
             <span className="flex items-center gap-1">
               <Clock size={12} /> {doc.uploadTime}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-400 mt-1.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-[color:var(--wp-text-tertiary)] mt-1.5">
             <span>{doc.pageCount} stran</span>
-            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+            <span className="w-1 h-1 bg-[color:var(--wp-surface-card-border)] rounded-full" />
             <span>Zdroj: {doc.uploadSource}</span>
-            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+            <span className="w-1 h-1 bg-[color:var(--wp-surface-card-border)] rounded-full" />
             <span>Provider: {doc.extractionProvider}</span>
-            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+            <span className="w-1 h-1 bg-[color:var(--wp-surface-card-border)] rounded-full" />
             <span>Zpracováno: {doc.lastProcessedAt}</span>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-3 mt-3">
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl px-3 py-2 shadow-sm">
           <Activity size={14} className="text-indigo-500" />
-          <span className="text-xs font-black text-slate-700">
+          <span className="text-xs font-black text-[color:var(--wp-text-secondary)]">
             Celková jistota:{" "}
             <span className="text-indigo-600">{doc.globalConfidence}%</span>
           </span>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
-          <Eye size={14} className="text-slate-400" />
-          <span className="text-xs font-black text-slate-700">
+        <div className="flex items-center gap-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl px-3 py-2 shadow-sm">
+          <Eye size={14} className="text-[color:var(--wp-text-tertiary)]" />
+          <span className="text-xs font-black text-[color:var(--wp-text-secondary)]">
             Status: <span className="text-amber-600">K revizi</span>
           </span>
         </div>
@@ -254,11 +254,11 @@ function DocumentMetaHeader({ doc }: { doc: ExtractionDocument }) {
 function ExecutiveSummaryCard({ doc }: { doc: ExtractionDocument }) {
   const { diagnostics: d } = doc;
   return (
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm p-5 md:p-6">
-      <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-5 md:p-6">
+      <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3 flex items-center gap-2">
         <Info size={14} className="text-indigo-500" /> Shrnutí dokumentu
       </h3>
-      <p className="text-sm font-medium text-slate-700 leading-relaxed mb-4">
+      <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] leading-relaxed mb-4">
         {doc.executiveSummary}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -279,7 +279,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
     emerald: "bg-emerald-50 text-emerald-700",
   };
   return (
-    <div className={`rounded-xl px-3 py-2.5 ${bgMap[color] ?? "bg-slate-50 text-slate-700"}`}>
+    <div className={`rounded-xl px-3 py-2.5 ${bgMap[color] ?? "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"}`}>
       <div className="text-lg font-black">{value}</div>
       <div className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</div>
     </div>
@@ -322,7 +322,7 @@ function AIRecommendationsCard({
           {visible.map((rec) => (
             <div
               key={rec.id}
-              className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-indigo-100/50 shadow-sm"
+              className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-sm p-4 rounded-xl border border-indigo-100/50 shadow-sm"
             >
               <div className="flex items-start gap-3">
                 <RecIcon type={rec.type} />
@@ -330,10 +330,10 @@ function AIRecommendationsCard({
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {recTypeBadge(rec.type)}
                   </div>
-                  <p className="text-sm font-bold text-slate-800 leading-snug">
+                  <p className="text-sm font-bold text-[color:var(--wp-text)] leading-snug">
                     {rec.title}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1 leading-relaxed">
                     {rec.description}
                   </p>
                   {rec.linkedFieldIds.length > 0 && (
@@ -355,7 +355,7 @@ function AIRecommendationsCard({
                     </button>
                     <button
                       onClick={() => onDismiss(rec.id)}
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+                      className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Zahodit
                     </button>
@@ -374,7 +374,7 @@ function AIRecommendationsCard({
             {dismissed.map((rec) => (
               <div
                 key={rec.id}
-                className="flex items-center justify-between py-1.5 text-xs text-slate-400"
+                className="flex items-center justify-between py-1.5 text-xs text-[color:var(--wp-text-tertiary)]"
               >
                 <span className="truncate">{rec.title}</span>
                 <button
@@ -451,21 +451,21 @@ function ExtractionDiagnosticsCard({ doc }: { doc: ExtractionDocument }) {
   };
 
   return (
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-5 md:px-6 py-4 flex items-center justify-between text-left"
       >
-        <span className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+        <span className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] flex items-center gap-2">
           <Activity size={14} className="text-indigo-500" /> Diagnostika extrakce
         </span>
-        {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
+        {open ? <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" /> : <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />}
       </button>
       {open && (
-        <div className="px-5 md:px-6 pb-5 pt-0 border-t border-slate-100">
+        <div className="px-5 md:px-6 pb-5 pt-0 border-t border-[color:var(--wp-surface-card-border)]">
           <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 OCR kvalita
               </span>
               <p className={`font-bold ${ocrColor[d.ocrQuality]}`}>
@@ -473,22 +473,22 @@ function ExtractionDiagnosticsCard({ doc }: { doc: ExtractionDocument }) {
               </p>
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 Nevyřešená pole
               </span>
-              <p className="font-bold text-slate-800">{d.unresolvedFieldCount}</p>
+              <p className="font-bold text-[color:var(--wp-text)]">{d.unresolvedFieldCount}</p>
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 Konflikty hodnot
               </span>
-              <p className="font-bold text-slate-800">{d.conflictingValueCount}</p>
+              <p className="font-bold text-[color:var(--wp-text)]">{d.conflictingValueCount}</p>
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 Nečitelné strany
               </span>
-              <p className="font-bold text-slate-800">
+              <p className="font-bold text-[color:var(--wp-text)]">
                 {d.pagesWithoutReadableText.length === 0
                   ? "Žádné"
                   : d.pagesWithoutReadableText.join(", ")}
@@ -500,7 +500,7 @@ function ExtractionDiagnosticsCard({ doc }: { doc: ExtractionDocument }) {
               {d.notes.map((note, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2 text-xs text-slate-600"
+                  className="flex items-start gap-2 text-xs text-[color:var(--wp-text-secondary)]"
                 >
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1.5 shrink-0" />
                   {note}
@@ -545,7 +545,7 @@ function ExtractedFieldRow({
         field.status !== "success" ? "md:col-span-2" : ""
       } ${isActive ? "ring-2 ring-indigo-300 rounded-xl" : ""}`}
     >
-      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 ml-1 flex items-center justify-between gap-2">
+      <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2 ml-1 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="truncate">{field.label}</span>
           {isConfirmed && (
@@ -578,7 +578,7 @@ function ExtractedFieldRow({
             <button
               onClick={() => onConfirm(field.id)}
               title="Potvrdit hodnotu"
-              className="p-1.5 bg-white text-emerald-500 hover:text-emerald-700 rounded-md shadow-sm border border-slate-100"
+              className="p-1.5 bg-[color:var(--wp-surface-card)] text-emerald-500 hover:text-emerald-700 rounded-md shadow-sm border border-[color:var(--wp-surface-card-border)]"
             >
               <Check size={14} />
             </button>
@@ -587,7 +587,7 @@ function ExtractedFieldRow({
             <button
               onClick={() => onRevert(field.id)}
               title="Vrátit na AI návrh"
-              className="p-1.5 bg-white text-slate-400 hover:text-indigo-600 rounded-md shadow-sm border border-slate-100"
+              className="p-1.5 bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 rounded-md shadow-sm border border-[color:var(--wp-surface-card-border)]"
             >
               <RotateCcw size={14} />
             </button>
@@ -596,7 +596,7 @@ function ExtractedFieldRow({
             <button
               onClick={() => onRevert(field.id)}
               title="Zrušit potvrzení"
-              className="p-1.5 bg-white text-slate-400 hover:text-amber-600 rounded-md shadow-sm border border-slate-100"
+              className="p-1.5 bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-tertiary)] hover:text-amber-600 rounded-md shadow-sm border border-[color:var(--wp-surface-card-border)]"
             >
               <Edit2 size={14} />
             </button>
@@ -616,7 +616,7 @@ function ExtractedFieldRow({
       )}
 
       {field.sourceType && (
-        <div className="mt-1 ml-1 text-[10px] text-slate-400 flex items-center gap-2">
+        <div className="mt-1 ml-1 text-[10px] text-[color:var(--wp-text-tertiary)] flex items-center gap-2">
           <span>Zdroj: {field.sourceType.toUpperCase()}</span>
           {field.page && <span>Strana {field.page}</span>}
         </div>
@@ -665,15 +665,15 @@ function ExtractedGroupCard({
   if (filteredFields.length === 0 && filter !== "all") return null;
 
   return (
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full px-5 md:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between"
+        className="w-full px-5 md:px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-center justify-between"
       >
-        <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+        <h3 className="font-bold text-sm text-[color:var(--wp-text)] flex items-center gap-2">
           <GroupIcon size={16} className="text-indigo-500" />
           {group.name}
-          <span className="text-[10px] font-bold text-slate-400 normal-case tracking-normal">
+          <span className="text-[10px] font-bold text-[color:var(--wp-text-tertiary)] normal-case tracking-normal">
             {group.fields.length} polí
           </span>
         </h3>
@@ -689,9 +689,9 @@ function ExtractedGroupCard({
             </span>
           )}
           {isCollapsed ? (
-            <ChevronRight size={16} className="text-slate-400" />
+            <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
           ) : (
-            <ChevronDown size={16} className="text-slate-400" />
+            <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" />
           )}
         </div>
       </button>
@@ -743,7 +743,7 @@ function ExtraRecommendationsCard({
         {visible.map((rec) => (
           <div
             key={rec.id}
-            className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-emerald-100/50 shadow-sm"
+            className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-sm p-4 rounded-xl border border-emerald-100/50 shadow-sm"
           >
             <div className="flex items-start gap-3">
               <RecIcon type={rec.type} />
@@ -751,8 +751,8 @@ function ExtraRecommendationsCard({
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   {recTypeBadge(rec.type)}
                 </div>
-                <p className="text-sm font-bold text-slate-800">{rec.title}</p>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                <p className="text-sm font-bold text-[color:var(--wp-text)]">{rec.title}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1 leading-relaxed">
                   {rec.description}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -764,7 +764,7 @@ function ExtraRecommendationsCard({
                   </button>
                   <button
                     onClick={() => onDismiss(rec.id)}
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+                    className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] px-3 py-1.5 rounded-lg transition-colors"
                   >
                     Skrýt
                   </button>
@@ -819,7 +819,7 @@ export function ExtractionLeftPanel({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm px-4 md:px-6 lg:px-10 sticky top-0 z-10">
+      <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/80 backdrop-blur-sm px-4 md:px-6 lg:px-10 sticky top-0 z-10">
         <SectionNav onScrollTo={scrollToSection} />
       </div>
 

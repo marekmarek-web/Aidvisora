@@ -93,14 +93,14 @@ export function BriefingTabContent({ contactId }: Props) {
   return (
     <div className="space-y-8">
       {/* AI briefing (OpenAI prompt) – Připrav briefing */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
               <Sparkles size={20} className="text-indigo-500" />
               AI briefing (prompt)
             </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mt-0.5">
               Vygeneruje přípravu na schůzku z dat v CRM pomocí nakonfigurovaného OpenAI promptu.
             </p>
           </div>
@@ -125,31 +125,31 @@ export function BriefingTabContent({ contactId }: Props) {
             </p>
           )}
           {briefingText ? (
-            <div className="text-sm text-slate-700 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 border border-slate-100">
+            <div className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap rounded-xl bg-[color:var(--wp-surface-muted)] p-4 border border-[color:var(--wp-surface-card-border)]">
               {briefingText}
             </div>
           ) : !briefingLoading && (
-            <p className="text-sm text-slate-500 italic">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] italic">
               Klikněte na „Připrav briefing“ pro vygenerování přípravy na schůzku.
             </p>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
         <div className="p-6">
           <PreMeetingBriefPanel contactId={contactId} eventId={eventId} />
         </div>
       </div>
 
       {/* AI follow-up (OpenAI prompt) – Vygenerovat follow-up */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <FileText size={20} className="text-indigo-500" />
             AI follow-up (prompt)
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mt-0.5">
             Vygeneruje shrnutí a další kroky z poznámek ze schůzky pomocí nakonfigurovaného OpenAI promptu.
           </p>
         </div>
@@ -169,10 +169,10 @@ export function BriefingTabContent({ contactId }: Props) {
         </div>
       </div>
 
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900">Po schůzce</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Shrnutí a návrhy dalších kroků ze zápisků nebo poznámek.</p>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Po schůzce</h2>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mt-0.5">Shrnutí a návrhy dalších kroků ze zápisků nebo poznámek.</p>
         </div>
         <div className="p-6">
           <PostMeetingSummaryPanel
@@ -237,7 +237,7 @@ function AiFollowUpForm({
         value={followUpNotes}
         onChange={(e) => setFollowUpNotes(e.target.value)}
         placeholder="Vložte poznámky ze schůzky nebo načtěte z zápisku…"
-        className="w-full min-h-[120px] rounded-xl border border-slate-200 p-3 text-sm text-slate-800 placeholder:text-slate-400"
+        className="w-full min-h-[120px] rounded-xl border border-[color:var(--wp-surface-card-border)] p-3 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)]"
         rows={4}
       />
       <div className="flex flex-wrap items-center gap-2">
@@ -246,7 +246,7 @@ function AiFollowUpForm({
             type="button"
             onClick={loadNoteContent}
             disabled={loadingNote}
-            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
           >
             {loadingNote ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
             Načíst z zápisku
@@ -273,7 +273,7 @@ function AiFollowUpForm({
       )}
       {followUpText && (
         <>
-          <div className="text-sm text-slate-700 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 border border-slate-100 mt-2">
+          <div className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap rounded-xl bg-[color:var(--wp-surface-muted)] p-4 border border-[color:var(--wp-surface-card-border)] mt-2">
             {followUpText}
           </div>
           {followUpGenerationId && (

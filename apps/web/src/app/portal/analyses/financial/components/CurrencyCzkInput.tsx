@@ -61,9 +61,9 @@ export function CurrencyCzkInput({
           setFocused(false);
           commit();
         }}
-        className="w-full min-h-[40px] rounded-lg border border-slate-200 px-3 py-2 pr-20 text-sm"
+        className="w-full min-h-[40px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 py-2 pr-20 text-sm"
       />
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">{unitLabel}</span>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[color:var(--wp-text-tertiary)]">{unitLabel}</span>
     </div>
   );
 }

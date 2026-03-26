@@ -88,26 +88,26 @@ export function CalendarDrawer({
       <button
         type="button"
         aria-label="Zavřít menu kalendáře"
-        className="fixed inset-0 z-[95] bg-slate-900/40 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[95] bg-[color:var(--wp-overlay-scrim)] backdrop-blur-[2px]"
         onClick={onClose}
       />
       <aside
-        className="fixed inset-y-0 left-0 z-[96] flex w-[min(100%,380px)] max-w-[92vw] flex-col border-r border-slate-200 bg-white shadow-xl"
+        className="fixed inset-y-0 left-0 z-[96] flex w-[min(100%,380px)] max-w-[92vw] flex-col border-r border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label="Kalendář — navigace"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
               <Calendar size={18} />
             </div>
-            <span className="font-black text-slate-900">Kalendář</span>
+            <span className="font-black text-[color:var(--wp-text)]">Kalendář</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] min-w-[40px] rounded-lg border border-slate-200 text-sm font-bold text-slate-600"
+            className="min-h-[40px] min-w-[40px] rounded-lg border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
           >
             Hotovo
           </button>
@@ -115,7 +115,7 @@ export function CalendarDrawer({
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
           <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Zobrazení</p>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Zobrazení</p>
             <div className="grid grid-cols-2 gap-2">
               {viewOptions.map((opt) => (
                 <button
@@ -129,18 +129,18 @@ export function CalendarDrawer({
                     "min-h-[48px] rounded-xl border px-3 text-left text-xs font-bold transition-colors active:scale-[0.99]",
                     view === opt.id
                       ? "border-indigo-200 bg-indigo-50 text-indigo-800"
-                      : "border-slate-200 bg-white text-slate-800",
+                      : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)]",
                   )}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] text-slate-500">Aktivní: {viewModeLabel(view)}</p>
+            <p className="mt-2 text-[10px] text-[color:var(--wp-text-secondary)]">Aktivní: {viewModeLabel(view)}</p>
           </div>
 
           <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Rychlé přesuny</p>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Rychlé přesuny</p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -149,10 +149,10 @@ export function CalendarDrawer({
                   scrollSignalBump();
                   onClose();
                 }}
-                className="flex min-h-[48px] items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-bold text-slate-800 active:bg-slate-50"
+                className="flex min-h-[48px] items-center justify-between rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-left text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
               >
                 Přejít na dnes
-                <ChevronRight size={16} className="text-slate-400" />
+                <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
               </button>
               <button
                 type="button"
@@ -161,10 +161,10 @@ export function CalendarDrawer({
                   setAnchorDate(wk);
                   onClose();
                 }}
-                className="flex min-h-[48px] items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-bold text-slate-800 active:bg-slate-50"
+                className="flex min-h-[48px] items-center justify-between rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-left text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
               >
                 Začátek tohoto týdne
-                <ChevronRight size={16} className="text-slate-400" />
+                <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
               </button>
               <button
                 type="button"
@@ -172,7 +172,7 @@ export function CalendarDrawer({
                   onNavigatePeriod(-1);
                   onClose();
                 }}
-                className="flex min-h-[44px] items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-600"
+                className="flex min-h-[44px] items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-xs font-bold text-[color:var(--wp-text-secondary)]"
               >
                 ← Předchozí období
               </button>
@@ -182,7 +182,7 @@ export function CalendarDrawer({
                   onNavigatePeriod(1);
                   onClose();
                 }}
-                className="flex min-h-[44px] items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-600"
+                className="flex min-h-[44px] items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-xs font-bold text-[color:var(--wp-text-secondary)]"
               >
                 Následující období →
               </button>
@@ -200,20 +200,20 @@ export function CalendarDrawer({
           />
 
           <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Klient</p>
-            <p className="mb-2 text-xs text-slate-500">Zobrazí jen události navázané na vybraného klienta.</p>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Klient</p>
+            <p className="mb-2 text-xs text-[color:var(--wp-text-secondary)]">Zobrazí jen události navázané na vybraného klienta.</p>
             <ContactSearchInput
               value={contactFilterId}
               contacts={contacts}
               onChange={onContactFilterChange}
               placeholder="Všichni klienti…"
-              className="min-h-[48px] w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="min-h-[48px] w-full rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
             {contactFilterId ? (
               <button
                 type="button"
                 onClick={() => onContactFilterChange("")}
-                className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600"
+                className="mt-2 min-h-[44px] w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-xs font-bold text-[color:var(--wp-text-secondary)]"
               >
                 Zrušit filtr klienta
               </button>
@@ -221,8 +221,8 @@ export function CalendarDrawer({
           </div>
 
           <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Filtry typů</p>
-            <p className="mb-2 text-xs text-slate-500">Skryté typy se nezobrazí v mřížce ani v agendě.</p>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Filtry typů</p>
+            <p className="mb-2 text-xs text-[color:var(--wp-text-secondary)]">Skryté typy se nezobrazí v mřížce ani v agendě.</p>
             <div className="flex flex-col gap-1.5">
               {CALENDAR_EVENT_CATEGORIES.map((cat) => {
                 const hidden = hiddenEventTypes.has(cat.id);
@@ -233,19 +233,19 @@ export function CalendarDrawer({
                     onClick={() => toggleEventTypeHidden(cat.id)}
                     className={cx(
                       "flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm font-bold transition-colors active:scale-[0.99]",
-                      hidden ? "border-slate-200 bg-slate-100 text-slate-400 line-through" : "border-slate-200 bg-white text-slate-800",
+                      hidden ? "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)] line-through" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)]",
                     )}
                   >
                     <span>{cat.icon}</span>
                     <span className="flex-1">{cat.label}</span>
-                    <span className="text-[10px] font-bold uppercase text-slate-400">{hidden ? "Vypnuto" : "Zapnuto"}</span>
+                    <span className="text-[10px] font-bold uppercase text-[color:var(--wp-text-tertiary)]">{hidden ? "Vypnuto" : "Zapnuto"}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="space-y-2 border-t border-slate-100 pt-4">
+          <div className="space-y-2 border-t border-[color:var(--wp-surface-card-border)] pt-4">
             {onOpenGlobalAppMenu ? (
               <button
                 type="button"
@@ -253,9 +253,9 @@ export function CalendarDrawer({
                   onClose();
                   onOpenGlobalAppMenu();
                 }}
-                className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-bold text-slate-800 active:bg-slate-50"
+                className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-left text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
               >
-                <Menu size={18} className="text-slate-600" />
+                <Menu size={18} className="text-[color:var(--wp-text-secondary)]" />
                 Hlavní menu aplikace
               </button>
             ) : null}
@@ -273,9 +273,9 @@ export function CalendarDrawer({
             {!googleConnected ? (
               <a
                 href="/api/integrations/google-calendar/connect"
-                className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800"
+                className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-sm font-bold text-[color:var(--wp-text)]"
               >
-                <RefreshCw size={16} className="text-slate-500" />
+                <RefreshCw size={16} className="text-[color:var(--wp-text-secondary)]" />
                 Připojit Google kalendář
               </a>
             ) : null}
@@ -291,7 +291,7 @@ export function CalendarDrawer({
               </button>
             ) : null}
             {!onOpenGlobalAppMenu ? (
-              <p className="text-[10px] leading-relaxed text-slate-500">
+              <p className="text-[10px] leading-relaxed text-[color:var(--wp-text-secondary)]">
                 Globální menu je v horní liště portálu (ikona menu).
               </p>
             ) : null}

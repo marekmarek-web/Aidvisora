@@ -99,9 +99,9 @@ function getStatusConfig(status: string) {
     case "extracted":
       return { label: "Extrahováno", tone: "info" as const, Icon: Zap, bg: "bg-indigo-50", border: "border-l-indigo-500" };
     case "pending":
-      return { label: "Čeká", tone: "info" as const, Icon: Clock, bg: "bg-slate-50", border: "border-l-slate-400" };
+      return { label: "Čeká", tone: "info" as const, Icon: Clock, bg: "bg-[color:var(--wp-surface-muted)]", border: "border-l-[color:var(--wp-text-tertiary)]" };
     default:
-      return { label: "Nahráno", tone: "info" as const, Icon: Upload, bg: "bg-slate-50", border: "border-l-slate-400" };
+      return { label: "Nahráno", tone: "info" as const, Icon: Upload, bg: "bg-[color:var(--wp-surface-muted)]", border: "border-l-[color:var(--wp-text-tertiary)]" };
   }
 }
 
@@ -110,7 +110,7 @@ function ConfidenceBar({ value }: { value: number }) {
   const textColor = value >= 80 ? "text-emerald-700" : value >= 50 ? "text-amber-700" : "text-rose-700";
   return (
     <div className="flex items-center gap-2 mt-1.5">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+      <div className="flex-1 h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div className={cx("h-full rounded-full transition-all", color)} style={{ width: `${value}%` }} />
       </div>
       <span className={cx("text-[10px] font-black tabular-nums", textColor)}>{value}%</span>
@@ -149,18 +149,18 @@ function QueueCard({ item, onClick, active }: { item: ReviewListItem; onClick: (
         "w-full text-left border rounded-xl overflow-hidden border-l-4 transition-colors",
         cfg.border,
         cfg.bg,
-        active ? "ring-2 ring-indigo-300 border-indigo-300" : "border-slate-200"
+        active ? "ring-2 ring-indigo-300 border-indigo-300" : "border-[color:var(--wp-surface-card-border)]"
       )}
     >
       <div className="p-3.5">
         <div className="flex items-start gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-white/80 flex items-center justify-center flex-shrink-0 border border-slate-100">
-            <FileText size={16} className="text-slate-500" />
+          <div className="w-9 h-9 rounded-lg bg-[color:var(--wp-surface-card)]/80 flex items-center justify-center flex-shrink-0 border border-[color:var(--wp-surface-card-border)]">
+            <FileText size={16} className="text-[color:var(--wp-text-secondary)]" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-slate-900 truncate">{item.fileName}</p>
-              <ChevronRight size={14} className="text-slate-300 flex-shrink-0" />
+              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{item.fileName}</p>
+              <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
             </div>
             <div className="flex items-center gap-1.5 mt-1">
               <StatusIcon size={12} className={cx(
@@ -170,7 +170,7 @@ function QueueCard({ item, onClick, active }: { item: ReviewListItem; onClick: (
                 cfg.tone === "warning" ? "text-amber-500" : "text-indigo-500"
               )} />
               <StatusBadge tone={cfg.tone}>{cfg.label}</StatusBadge>
-              <span className="text-[10px] text-slate-400 ml-auto">{formatRelativeDate(item.createdAt)}</span>
+              <span className="text-[10px] text-[color:var(--wp-text-tertiary)] ml-auto">{formatRelativeDate(item.createdAt)}</span>
             </div>
             {typeof item.confidence === "number" ? (
               <ConfidenceBar value={item.confidence} />
@@ -227,7 +227,7 @@ function ReviewDetailPanel({
       {/* Hero */}
       <MobileCard className="p-4 bg-gradient-to-br from-[#0a0f29] to-indigo-900 border-0 rounded-xl">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center flex-shrink-0">
             <FileSearch size={22} className="text-indigo-300" />
           </div>
           <div className="flex-1 min-w-0">
@@ -242,7 +242,7 @@ function ReviewDetailPanel({
                   <span className="text-[10px] text-indigo-300">Confidence</span>
                   <span className="text-xs font-black text-white">{detail.confidence}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-[color:var(--wp-surface-card)]/20 overflow-hidden">
                   <div
                     className={cx(
                       "h-full rounded-full",
@@ -274,8 +274,8 @@ function ReviewDetailPanel({
       {detail.clientMatchCandidates?.length ? (
         <MobileCard className="p-3.5">
           <div className="flex items-center gap-2 mb-2.5">
-            <User size={14} className="text-slate-400" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <User size={14} className="text-[color:var(--wp-text-tertiary)]" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
               Nalezení klienti
             </p>
           </div>
@@ -293,25 +293,25 @@ function ReviewDetailPanel({
                     "w-full flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left",
                     isMatched
                       ? "border-emerald-300 bg-emerald-50"
-                      : "border-slate-200 hover:border-indigo-200"
+                      : "border-[color:var(--wp-surface-card-border)] hover:border-indigo-200"
                   )}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                    <User size={14} className="text-slate-500" />
+                  <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-muted)] flex items-center justify-center flex-shrink-0">
+                    <User size={14} className="text-[color:var(--wp-text-secondary)]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">
+                    <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                       {candidate.fullName || candidate.id}
                     </p>
                     {score !== null ? (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="w-12 h-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="w-12 h-1 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
                           <div
                             className={cx("h-full rounded-full", score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-400" : "bg-rose-400")}
                             style={{ width: `${score}%` }}
                           />
                         </div>
-                        <span className="text-[10px] text-slate-500">{score}%</span>
+                        <span className="text-[10px] text-[color:var(--wp-text-secondary)]">{score}%</span>
                       </div>
                     ) : null}
                   </div>
@@ -337,22 +337,22 @@ function ReviewDetailPanel({
       {extractedFields.length > 0 ? (
         <MobileCard className="p-3.5">
           <div className="flex items-center gap-2 mb-2.5">
-            <Zap size={14} className="text-slate-400" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Zap size={14} className="text-[color:var(--wp-text-tertiary)]" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
               Extrahovaná data ({extractedFields.length} polí)
             </p>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[color:var(--wp-surface-card-border)]">
             {extractedFields.slice(0, 12).map(([key, value]) => (
               <div key={key} className="flex items-center justify-between gap-2 py-2">
-                <span className="text-xs text-slate-500 truncate">{key}</span>
-                <span className="text-xs font-bold text-slate-900 text-right truncate max-w-[55%]">
+                <span className="text-xs text-[color:var(--wp-text-secondary)] truncate">{key}</span>
+                <span className="text-xs font-bold text-[color:var(--wp-text)] text-right truncate max-w-[55%]">
                   {typeof value === "object" ? JSON.stringify(value) : String(value)}
                 </span>
               </div>
             ))}
             {extractedFields.length > 12 ? (
-              <p className="text-[10px] text-slate-400 pt-2">
+              <p className="text-[10px] text-[color:var(--wp-text-tertiary)] pt-2">
                 …a dalších {extractedFields.length - 12} polí
               </p>
             ) : null}
@@ -364,14 +364,14 @@ function ReviewDetailPanel({
       {detail.draftActions?.length ? (
         <MobileCard className="p-3.5">
           <div className="flex items-center gap-2 mb-2">
-            <Shield size={14} className="text-slate-400" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Shield size={14} className="text-[color:var(--wp-text-tertiary)]" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
               Navrhované akce ({detail.draftActions.length})
             </p>
           </div>
           <div className="space-y-1.5">
             {detail.draftActions.slice(0, 6).map((action, i) => (
-              <div key={i} className="text-xs text-slate-600 bg-slate-50 rounded-lg px-2.5 py-2">
+              <div key={i} className="text-xs text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] rounded-lg px-2.5 py-2">
                 {typeof action === "object" && action !== null
                   ? JSON.stringify(action).slice(0, 80)
                   : String(action).slice(0, 80)}
@@ -391,7 +391,7 @@ function ReviewDetailPanel({
 
       {/* Decision buttons */}
       <MobileCard className="p-3.5">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2.5">
           Rozhodnutí
         </p>
         <div className="space-y-2">
@@ -404,7 +404,7 @@ function ReviewDetailPanel({
                 "min-h-[44px] rounded-xl border text-xs font-bold transition-colors",
                 status === "rejected"
                   ? "border-rose-300 bg-rose-50 text-rose-700"
-                  : "border-rose-200 bg-white text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                  : "border-rose-200 bg-[color:var(--wp-surface-card)] text-rose-700 hover:bg-rose-50 disabled:opacity-40"
               )}
             >
               <XCircle size={14} className="mx-auto mb-0.5" />
@@ -418,7 +418,7 @@ function ReviewDetailPanel({
                 "min-h-[44px] rounded-xl border text-xs font-bold transition-colors",
                 status === "approved" || status === "applied"
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                  : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
               )}
             >
               <CheckCircle2 size={14} className="mx-auto mb-0.5" />
@@ -609,11 +609,11 @@ export function ContractsReviewScreen({
       {error ? <ErrorState title={error} onRetry={fetchList} /> : null}
 
       {/* Header */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100 space-y-2">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileSearch size={18} className="text-indigo-600" />
-            <h2 className="text-base font-black text-slate-900">AI Review smluv</h2>
+            <h2 className="text-base font-black text-[color:var(--wp-text)]">AI Review smluv</h2>
             {pendingCount > 0 ? (
               <span className="text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-lg">
                 {pendingCount} k revizi
@@ -625,9 +625,9 @@ export function ContractsReviewScreen({
               type="button"
               onClick={() => startTransition(async () => { setError(null); await fetchList(); })}
               disabled={pending}
-              className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center"
+              className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center"
             >
-              <RefreshCw size={14} className={cx("text-slate-500", pending && "animate-spin")} />
+              <RefreshCw size={14} className={cx("text-[color:var(--wp-text-secondary)]", pending && "animate-spin")} />
             </button>
             <label className="flex items-center gap-1.5 min-h-[36px] rounded-xl bg-indigo-600 text-white px-3 text-xs font-bold cursor-pointer">
               <Upload size={14} />
@@ -669,7 +669,7 @@ export function ContractsReviewScreen({
       {isTablet ? (
         <div className="grid grid-cols-2 gap-0 h-[calc(100vh-12rem)]">
           {/* Master */}
-          <div className="border-r border-slate-100 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="border-r border-[color:var(--wp-surface-card-border)] overflow-y-auto px-4 py-3 space-y-2">
             {filtered.map((item) => (
               <QueueCard
                 key={item.id}

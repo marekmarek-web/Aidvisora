@@ -26,10 +26,10 @@ type CorrectionSummary = {
 
 function KpiCard({ label, value, subtext }: { label: string; value: string | number; subtext?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
-      {subtext ? <p className="mt-0.5 text-xs text-slate-500">{subtext}</p> : null}
+    <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)]">{label}</p>
+      <p className="mt-1 text-2xl font-black text-[color:var(--wp-text)]">{value}</p>
+      {subtext ? <p className="mt-0.5 text-xs text-[color:var(--wp-text-secondary)]">{subtext}</p> : null}
     </div>
   );
 }
@@ -64,7 +64,7 @@ export default function AIQualityDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-sm text-slate-500">Nacitam metriky...</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Nacitam metriky...</p>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function AIQualityDashboard() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-4 md:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-black text-slate-900">AI Extrakce — Kvalita pipeline</h1>
+        <h1 className="text-xl font-black text-[color:var(--wp-text)]">AI Extrakce — Kvalita pipeline</h1>
         <div className="flex gap-2">
           {[7, 30, 90].map((d) => (
             <button
@@ -81,7 +81,7 @@ export default function AIQualityDashboard() {
               className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
                 days === d
                   ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card-border)]"
               }`}
             >
               {d}d
@@ -93,7 +93,7 @@ export default function AIQualityDashboard() {
       {quality ? (
         <>
           <section>
-            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-600">KPI</h2>
+            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">KPI</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <KpiCard label="Celkem dokumentu" value={quality.totalDocuments} />
               <KpiCard label="Uspesne" value={quality.successCount} subtext={pct(quality.successRate)} />
@@ -104,13 +104,13 @@ export default function AIQualityDashboard() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-600">
+            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
               Podle typu dokumentu
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <tr className="border-b border-[color:var(--wp-surface-card-border)] text-left text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
                     <th className="py-2 pr-4">Typ</th>
                     <th className="py-2 pr-4">Celkem</th>
                     <th className="py-2 pr-4">OK</th>
@@ -122,8 +122,8 @@ export default function AIQualityDashboard() {
                   {Object.entries(quality.byDocumentType)
                     .sort(([, a], [, b]) => b.total - a.total)
                     .map(([type, counts]) => (
-                      <tr key={type} className="border-b border-slate-100">
-                        <td className="py-1.5 pr-4 font-medium text-slate-900">{type}</td>
+                      <tr key={type} className="border-b border-[color:var(--wp-surface-card-border)]">
+                        <td className="py-1.5 pr-4 font-medium text-[color:var(--wp-text)]">{type}</td>
                         <td className="py-1.5 pr-4">{counts.total}</td>
                         <td className="py-1.5 pr-4 text-emerald-700">{counts.success}</td>
                         <td className="py-1.5 pr-4 text-amber-700">{counts.review}</td>
@@ -136,15 +136,15 @@ export default function AIQualityDashboard() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-600">
+            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
               Podle vstupu
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {Object.entries(quality.byInputMode).map(([mode, counts]) => (
-                <div key={mode} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{mode}</p>
-                  <p className="mt-1 text-lg font-black text-slate-900">{counts.total}</p>
-                  <p className="text-[10px] text-slate-500">
+                <div key={mode} className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)]">{mode}</p>
+                  <p className="mt-1 text-lg font-black text-[color:var(--wp-text)]">{counts.total}</p>
+                  <p className="text-[10px] text-[color:var(--wp-text-secondary)]">
                     OK {counts.success} / Review {counts.review} / Fail {counts.failed}
                   </p>
                 </div>
@@ -154,7 +154,7 @@ export default function AIQualityDashboard() {
 
           {Object.keys(quality.topFailedSteps).length > 0 ? (
             <section>
-              <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-600">
+              <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
                 Top selhane kroky
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -170,12 +170,12 @@ export default function AIQualityDashboard() {
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-slate-500">Nepodarilo se nacist kvalitni metriky.</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Nepodarilo se nacist kvalitni metriky.</p>
       )}
 
       {corrections ? (
         <section>
-          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-600">
+          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
             Opravy ({corrections.totalCorrectedReviews} celkem)
           </h2>
           {Object.keys(corrections.topCorrectedFields).length > 0 ? (
@@ -192,14 +192,14 @@ export default function AIQualityDashboard() {
                         minWidth: "4px",
                       }}
                     />
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-[color:var(--wp-text-secondary)]">
                       {field} ({count})
                     </span>
                   </div>
                 ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Zatim zadne opravy.</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)]">Zatim zadne opravy.</p>
           )}
         </section>
       ) : null}

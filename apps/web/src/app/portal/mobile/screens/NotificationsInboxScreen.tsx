@@ -79,7 +79,7 @@ function getChannelIcon(channel: string) {
     case "email": return <Mail size={14} className="text-blue-500" />;
     case "push": return <Smartphone size={14} className="text-indigo-500" />;
     case "sms": return <MessageCircle size={14} className="text-emerald-500" />;
-    default: return <Bell size={14} className="text-slate-400" />;
+    default: return <Bell size={14} className="text-[color:var(--wp-text-tertiary)]" />;
   }
 }
 
@@ -93,7 +93,7 @@ function getStatusIcon(status: string) {
     case "pending":
       return <Clock size={14} className="text-amber-500" />;
     default:
-      return <CheckCircle2 size={14} className="text-slate-300" />;
+      return <CheckCircle2 size={14} className="text-[color:var(--wp-text-tertiary)]" />;
   }
 }
 
@@ -127,14 +127,14 @@ function ConversationCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className={cx("text-sm font-bold truncate", item.unread ? "text-slate-900" : "text-slate-700")}>
+            <p className={cx("text-sm font-bold truncate", item.unread ? "text-[color:var(--wp-text)]" : "text-[color:var(--wp-text-secondary)]")}>
               {item.contactName}
             </p>
-            <span className="text-[11px] text-slate-400 flex-shrink-0">
+            <span className="text-[11px] text-[color:var(--wp-text-tertiary)] flex-shrink-0">
               {formatRelativeTime(item.lastMessageAt)}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 truncate leading-relaxed">
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 truncate leading-relaxed">
             {item.lastMessage || "Bez obsahu"}
           </p>
 
@@ -146,7 +146,7 @@ function ConversationCard({
                   {item.unreadCount > 1 ? `${item.unreadCount} nových` : "Nová"}
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-[11px] text-slate-400 font-bold">
+                <span className="flex items-center gap-1 text-[11px] text-[color:var(--wp-text-tertiary)] font-bold">
                   <CheckCheck size={12} /> Přečteno
                 </span>
               )}
@@ -176,20 +176,20 @@ function NotificationLogCard({ item }: { item: NotificationRow }) {
     <MobileCard className="p-3.5">
       <div className="flex items-start gap-3">
         {/* Channel icon bubble */}
-        <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center flex-shrink-0">
           {getChannelIcon(item.channel)}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-bold text-slate-900 truncate leading-snug">
+            <p className="text-sm font-bold text-[color:var(--wp-text)] truncate leading-snug">
               {item.subject || item.template || "Notifikace"}
             </p>
             {getStatusIcon(item.status)}
           </div>
 
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-[11px] text-slate-500 font-bold">
+            <span className="text-[11px] text-[color:var(--wp-text-secondary)] font-bold">
               {item.recipient ?? "—"}
             </span>
             {item.contactName ? (
@@ -212,7 +212,7 @@ function NotificationLogCard({ item }: { item: NotificationRow }) {
             >
               {item.status}
             </span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[color:var(--wp-text-tertiary)]">
               {formatRelativeTime(item.sentAt)}
             </span>
           </div>
@@ -354,7 +354,7 @@ export function NotificationsInboxScreen({
                       }
                     });
                   }}
-                  className="text-[11px] font-bold text-indigo-700 min-h-[32px] px-2.5 rounded-lg border border-indigo-200 bg-white flex items-center gap-1 shrink-0"
+                  className="text-[11px] font-bold text-indigo-700 min-h-[32px] px-2.5 rounded-lg border border-indigo-200 bg-[color:var(--wp-surface-card)] flex items-center gap-1 shrink-0"
                 >
                   <RefreshCw size={11} /> Označit vše
                 </button>

@@ -51,14 +51,14 @@ export function InvestmentAllocationChart({ data }: InvestmentAllocationChartPro
         {data.labels.map((label, i) => (
           <div
             key={label}
-            className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-2.5 transition-colors hover:bg-slate-50"
+            className="flex items-center justify-between rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2.5 transition-colors hover:bg-[color:var(--wp-surface-muted)]"
           >
             <div className="flex items-center gap-3">
               <span
                 className="w-3 h-3 rounded-full shadow-sm shrink-0"
                 style={{ backgroundColor: data.colors[i] }}
               />
-              <span className="text-sm font-bold text-slate-700">{label}</span>
+              <span className="text-sm font-bold text-[color:var(--wp-text-secondary)]">{label}</span>
             </div>
             <span className="font-bold text-[#0a0f29]">{data.values[i]} %</span>
           </div>

@@ -48,7 +48,7 @@ export function EmbeddedInvestmentProjection({
 
   if (!hasInputs) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm">
+      <div className="flex items-center justify-center min-h-[300px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-sm">
         {emptyMessage}
       </div>
     );

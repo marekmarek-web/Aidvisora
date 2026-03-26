@@ -16,19 +16,19 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
       : "0,0";
 
   return (
-    <div className="relative overflow-hidden rounded-[20px] border border-slate-800 bg-[#0d1f4e] p-6 text-white shadow-[0_16px_48px_rgba(13,31,78,0.14),0_4px_12px_rgba(13,31,78,0.06)] md:p-7">
+    <div className="relative overflow-hidden rounded-[20px] border border-white/10 bg-[#0d1f4e] p-6 text-white shadow-[0_16px_48px_rgba(13,31,78,0.14),0_4px_12px_rgba(13,31,78,0.06)] md:p-7">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -ml-10 -mb-10" />
       </div>
 
-      <h3 className="relative z-10 mb-5 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-300">
+      <h3 className="relative z-10 mb-5 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--wp-text-tertiary)]">
         Výsledek
       </h3>
 
       <div className="space-y-6 relative z-10">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <div className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-300">
+        <div className="rounded-xl border border-white/10 bg-[color:var(--wp-surface-card)]/5 p-4">
+          <div className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--wp-text-tertiary)]">
             Chybí vám měsíčně
           </div>
           <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-emerald-300 tracking-tight">
@@ -36,15 +36,15 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+        <div className="rounded-xl border border-white/10 bg-[color:var(--wp-surface-card)]/5 p-2">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-slate-200">Nutno investovat dnes</span>
+            <span className="text-sm text-white/75">Nutno investovat dnes</span>
             <span className="text-lg sm:text-xl font-bold text-white">
               {formatCurrency(Math.round(result.monthlyInvestment))} Kč
             </span>
           </div>
           <div className="flex justify-between items-center border-t border-white/10 py-2">
-            <span className="text-sm text-slate-200">
+            <span className="text-sm text-white/75">
               Cílový majetek v 65 letech
             </span>
             <span className="text-lg sm:text-xl font-bold text-white">
@@ -66,7 +66,7 @@ export function PensionResultsPanel({ result, onCtaPrimary }: PensionResultsPane
               </svg>
             </button>
           )}
-          <p className="text-xs text-slate-300/80 mt-3 text-center leading-relaxed">
+          <p className="text-xs text-[color:var(--wp-text-tertiary)]/80 mt-3 text-center leading-relaxed">
             Výpočet předpokládá zhodnocení 7 % p.a. (akciové trhy).
           </p>
         </div>

@@ -48,10 +48,10 @@ export function MortgageBankOffers({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+        <h3 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight flex items-center gap-2">
           Srovnání nabídek trhu
         </h3>
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] bg-[color:var(--wp-surface-muted)] px-3 py-1.5 rounded-lg w-fit">
           Seřazeno od nejnižšího úroku
         </span>
       </div>
@@ -69,9 +69,9 @@ export function MortgageBankOffers({
         ))}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 text-xs text-slate-600 leading-relaxed">
+      <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3 sm:p-4 text-xs text-[color:var(--wp-text-secondary)] leading-relaxed">
         {updatedAt ? (
-          <p className="text-slate-500">
+          <p className="text-[color:var(--wp-text-secondary)]">
             Aktualizováno: {updatedAt.toLocaleDateString("cs-CZ")}{" "}
             {updatedAt.toLocaleTimeString("cs-CZ", {
               hour: "2-digit",
@@ -81,7 +81,7 @@ export function MortgageBankOffers({
             {sourceUrl ? ` · ${sourceUrl}` : ""}
           </p>
         ) : (
-          <p className="text-slate-500">Zdroj sazeb se aktualizuje průběžně.</p>
+          <p className="text-[color:var(--wp-text-secondary)]">Zdroj sazeb se aktualizuje průběžně.</p>
         )}
       </div>
     </div>
@@ -107,7 +107,7 @@ function BankOfferCard({
 
   return (
     <div
-      className="animate-fade-in bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col min-h-0"
+      className="animate-fade-in bg-[color:var(--wp-surface-card)] rounded-2xl border border-[color:var(--wp-surface-card-border)] p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col min-h-0"
       style={{ animationDelay: `${index * 70}ms` }}
     >
       <div className="flex flex-wrap items-center gap-2 mb-3 min-h-[22px]">
@@ -130,8 +130,8 @@ function BankOfferCard({
 
       <div className="flex items-center gap-3 mb-4">
         <div
-          className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 overflow-hidden border border-slate-200 ${
-            FALLBACK_BRAND_STYLES[offer.bank.id] ?? "bg-slate-100 text-slate-700"
+          className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 overflow-hidden border border-[color:var(--wp-surface-card-border)] ${
+            FALLBACK_BRAND_STYLES[offer.bank.id] ?? "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
           }`}
         >
           {showLogo ? (
@@ -147,24 +147,24 @@ function BankOfferCard({
           )}
         </div>
         <div className="min-w-0">
-          <h4 className="font-black text-slate-900 text-sm leading-tight truncate">
+          <h4 className="font-black text-[color:var(--wp-text)] text-sm leading-tight truncate">
             {offer.bank.name}
           </h4>
           <span className="text-xs font-bold text-indigo-600">
             {formatRate(offer.rate)} p.a.
           </span>
           {offer.apr != null ? (
-            <div className="text-[11px] text-slate-400 mt-0.5">RPSN {formatRate(offer.apr)}</div>
+            <div className="text-[11px] text-[color:var(--wp-text-tertiary)] mt-0.5">RPSN {formatRate(offer.apr)}</div>
           ) : null}
         </div>
       </div>
 
-      <div className="mt-auto pt-3 border-t border-slate-100 flex items-end justify-between gap-3 flex-wrap sm:flex-nowrap">
+      <div className="mt-auto pt-3 border-t border-[color:var(--wp-surface-card-border)] flex items-end justify-between gap-3 flex-wrap sm:flex-nowrap">
         <div className="min-w-0 flex-1">
-          <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+          <span className="block text-[9px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-0.5">
             Splátka
           </span>
-          <span className="font-black text-xl text-slate-900 break-all leading-none">
+          <span className="font-black text-xl text-[color:var(--wp-text)] break-all leading-none">
             {formatCurrency(offer.monthlyPayment)} Kč
           </span>
         </div>
@@ -177,7 +177,7 @@ function BankOfferCard({
             Chci nabídku
           </button>
         ) : (
-          <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0 flex-shrink-0" aria-hidden>
+          <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] shrink-0 flex-shrink-0" aria-hidden>
             <ChevronRight size={14} />
           </div>
         )}

@@ -259,6 +259,9 @@ export function PortalSidebar({
   }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
+  const sunActive = theme === "light" || (theme === "system" && resolvedTheme === "light");
+  const moonActive = theme === "dark" || (theme === "system" && resolvedTheme === "dark");
+  const systemActive = theme === "system";
 
   useEffect(() => {
     const order = loadOrderFromStorage();
@@ -343,12 +346,12 @@ export function PortalSidebar({
   const handleDragStart = useCallback((e: React.DragEvent, groupIdx: number, itemIdx: number) => {
     dragItemRef.current = { groupIdx, itemIdx };
     setTimeout(() => {
-      (e.target as HTMLElement).classList.add("opacity-40", "scale-[0.98]", "bg-slate-100");
+      (e.target as HTMLElement).classList.add("opacity-40", "scale-[0.98]", "bg-[color:var(--wp-surface-muted)]");
     }, 0);
   }, []);
 
   const handleDragEnd = useCallback((e: React.DragEvent) => {
-    (e.target as HTMLElement).classList.remove("opacity-40", "scale-[0.98]", "bg-slate-100");
+    (e.target as HTMLElement).classList.remove("opacity-40", "scale-[0.98]", "bg-[color:var(--wp-surface-muted)]");
     const from = dragItemRef.current;
     const to = dragOverRef.current;
     dragItemRef.current = null;
@@ -424,7 +427,7 @@ export function PortalSidebar({
         <div
           className={[
             "h-24 flex items-center justify-between flex-shrink-0 border-b px-5 md:px-6",
-            isDark ? "border-white/5" : "border-slate-200/50",
+            isDark ? "border-white/5" : "border-[color:var(--wp-surface-card-border)]/50",
           ].join(" ")}
         >
           <Link
@@ -462,8 +465,8 @@ export function PortalSidebar({
                     : [
                         "rounded-full border border-transparent",
                         isDark
-                          ? "text-slate-400 hover:bg-white/10 hover:text-white"
-                          : "text-slate-400 hover:bg-white/10 hover:text-slate-900",
+                          ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                          : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-[color:var(--wp-text)]",
                       ].join(" "),
                 ].join(" ")}
                 aria-label={collapsed ? "Rozbalit panel" : "Sbalit panel"}
@@ -473,7 +476,7 @@ export function PortalSidebar({
             )}
             <button
               onClick={() => setMobileOpen(false)}
-              className={`md:hidden p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors ${isDark ? "text-white hover:bg-white/10" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`md:hidden p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors ${isDark ? "text-white hover:bg-[color:var(--wp-surface-card)]/10" : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
               aria-label="Zavřít menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" viewBox="0 0 24 24">
@@ -521,14 +524,14 @@ export function PortalSidebar({
                     ? "mx-3 rounded-2xl border border-fuchsia-500/20 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/5 p-3 shadow-inner"
                     : "mx-3 rounded-2xl border border-purple-100/50 bg-gradient-to-b from-purple-50/50 to-indigo-50/30 p-3 shadow-inner"
                   : "px-3",
-                group.specialBg && collapsed ? (isDark ? "mx-2 rounded-2xl bg-white/10 py-2" : "mx-2 rounded-2xl bg-fuchsia-50/40 py-2") : "",
+                group.specialBg && collapsed ? (isDark ? "mx-2 rounded-2xl bg-[color:var(--wp-surface-card)]/10 py-2" : "mx-2 rounded-2xl bg-fuchsia-50/40 py-2") : "",
               ].join(" ")}
             >
               {!collapsed && (
                 <div className="relative z-10 mb-3 ml-3 flex items-center pt-1">
                   <h4
                     className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] ${
-                      group.specialBg ? (isDark ? "text-fuchsia-400" : "text-purple-600") : isDark ? "text-slate-400" : "text-slate-400"
+                      group.specialBg ? (isDark ? "text-fuchsia-400" : "text-purple-600") : isDark ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text-tertiary)]"
                     }`}
                   >
                     {group.specialBg && <Zap size={12} className="shrink-0 fill-amber-500/20 text-amber-500" />}
@@ -537,7 +540,7 @@ export function PortalSidebar({
                 </div>
               )}
               {collapsed && groupIdx !== 0 && !group.specialBg && (
-                <div className={`mx-auto mb-4 mt-2 h-px w-8 ${isDark ? "bg-white/10" : "bg-slate-200"}`} aria-hidden />
+                <div className={`mx-auto mb-4 mt-2 h-px w-8 ${isDark ? "bg-[color:var(--wp-surface-card)]/10" : "bg-[color:var(--wp-surface-card-border)]"}`} aria-hidden />
               )}
               <ul className="relative z-10 space-y-1.5">
                 {group.items.map((item, itemIdx) => {
@@ -568,10 +571,10 @@ export function PortalSidebar({
                             ${isDark
                               ? isActive
                                 ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
-                                : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
+                                : "border border-transparent text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/5 hover:text-white"
                               : isActive
                                 ? "border border-transparent bg-gradient-to-r from-fuchsia-600 to-indigo-600 font-bold text-white shadow-lg shadow-fuchsia-900/20"
-                                : "border border-transparent text-slate-500 hover:bg-slate-100/60 hover:text-slate-900"}
+                                : "border border-transparent text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]/60 hover:text-[color:var(--wp-text)]"}
                           `}
                           title={collapsed ? item.label : undefined}
                         >
@@ -612,12 +615,12 @@ export function PortalSidebar({
                           ${isDark
                             ? isActive
                               ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
-                              : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
+                              : "border border-transparent text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/5 hover:text-white"
                             : isActive
                               ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] font-bold text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
                               : item.isHighlighted
-                                ? "border border-transparent font-bold text-slate-700 hover:bg-slate-100/60 hover:text-slate-900"
-                                : "border border-transparent font-medium text-slate-500 hover:bg-slate-100/60 hover:text-slate-900"}
+                                ? "border border-transparent font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]/60 hover:text-[color:var(--wp-text)]"
+                                : "border border-transparent font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]/60 hover:text-[color:var(--wp-text)]"}
                         `}
                         title={collapsed ? item.label : undefined}
                       >
@@ -632,27 +635,27 @@ export function PortalSidebar({
                                 ? "text-[color:var(--wp-nav-active-text)]"
                                 : isDark
                                   ? "text-white"
-                                  : "text-slate-500 group-hover:text-indigo-600"
+                                  : "text-[color:var(--wp-text-secondary)] group-hover:text-indigo-600"
                             }`}
                             strokeWidth={isActive || item.isHighlighted ? 2.5 : 2}
                           />
                         </div>
                         {!collapsed && (
                           <span className={`ml-3 flex-1 text-left text-sm whitespace-nowrap tracking-wide ${
-                            isActive ? "text-white font-bold" : isDark ? "text-white font-semibold" : item.isHighlighted ? "font-bold text-slate-800" : "font-semibold"
+                            isActive ? "text-white font-bold" : isDark ? "text-white font-semibold" : item.isHighlighted ? "font-bold text-[color:var(--wp-text)]" : "font-semibold"
                           }`}>
                             {item.label}
                           </span>
                         )}
                         {!collapsed && badge != null && (
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full transition-colors mr-2 shrink-0 ${
-                            isDark ? "bg-white/20 text-white" : isActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
+                            isDark ? "bg-[color:var(--wp-surface-card)]/20 text-white" : isActive ? "bg-[color:var(--wp-surface-card)]/20 text-white" : "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
                           }`}>
                             {badge > 99 ? "99+" : badge}
                           </span>
                         )}
                         {!collapsed && (
-                          <GripVertical size={14} className={`hidden md:block ${isDark ? "text-white/30" : "text-slate-300"} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 ${badge == null ? "ml-auto" : ""}`} />
+                          <GripVertical size={14} className={`hidden md:block ${isDark ? "text-white/30" : "text-[color:var(--wp-text-tertiary)]"} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shrink-0 ${badge == null ? "ml-auto" : ""}`} />
                         )}
                       </Link>
                     </li>
@@ -662,13 +665,13 @@ export function PortalSidebar({
             </div>
           ))}
           {isLocalhost && (
-            <div className={`px-3 mt-4 pt-4 border-t ${isDark ? "border-white/10" : "border-slate-100"}`}>
+            <div className={`px-3 mt-4 pt-4 border-t ${isDark ? "border-white/10" : "border-[color:var(--wp-surface-card-border)]"}`}>
               <Link
                 href="/klientska-zona"
                 className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl min-h-[44px] transition-colors ${
                   isDark
-                    ? "text-white/90 hover:bg-white/10"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "text-white/90 hover:bg-[color:var(--wp-surface-card)]/10"
+                    : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                 }`}
                 title="Přihlásit se jako klient (localhost)"
               >
@@ -688,7 +691,7 @@ export function PortalSidebar({
           <div className="w-full px-5 py-4">
             <Link
               href="/portal/setup?tab=profil"
-              className={`flex items-center group cursor-pointer p-2 -m-2 rounded-xl transition-colors w-full max-w-full ${collapsed ? "justify-center" : "justify-between"} ${isDark ? "hover:bg-white/10" : "hover:bg-white"}`}
+              className={`flex items-center group cursor-pointer p-2 -m-2 rounded-xl transition-colors w-full max-w-full ${collapsed ? "justify-center" : "justify-between"} ${isDark ? "hover:bg-[color:var(--wp-surface-card)]/10" : "hover:bg-[color:var(--wp-surface-card)]"}`}
               title={collapsed ? (userName ?? userEmail ?? "Profil") : undefined}
             >
               <div className="flex items-center gap-3 overflow-hidden min-w-0">
@@ -697,13 +700,13 @@ export function PortalSidebar({
                 </div>
                 {!collapsed && (
                   <div className="min-w-0">
-                    <p className={`text-sm font-black truncate ${isDark ? "text-white" : "text-slate-900"}`}>{userName ?? userEmail ?? "Profil"}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${isDark ? "text-white/60" : "text-slate-400"}`}>AIDVISORA CRM V2.0</p>
+                    <p className={`text-sm font-black truncate ${isDark ? "text-white" : "text-[color:var(--wp-text)]"}`}>{userName ?? userEmail ?? "Profil"}</p>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${isDark ? "text-white/60" : "text-[color:var(--wp-text-tertiary)]"}`}>AIDVISORA CRM V2.0</p>
                   </div>
                 )}
               </div>
               {!collapsed && (
-                <MoreVertical size={16} className={`shrink-0 ${isDark ? "text-white/70 group-hover:text-white" : "text-slate-400 group-hover:text-slate-700"}`} />
+                <MoreVertical size={16} className={`shrink-0 ${isDark ? "text-white/70 group-hover:text-white" : "text-[color:var(--wp-text-tertiary)] group-hover:text-[color:var(--wp-text-secondary)]"}`} />
               )}
             </Link>
           </div>
@@ -720,25 +723,25 @@ export function PortalSidebar({
               />
             )}
             <div
-              className={`relative z-[50] inline-flex gap-0.5 rounded-full p-1.5 shadow-lg ${
-                isDark ? "bg-black/20 backdrop-blur-md border border-white/10" : "bg-slate-100 border border-slate-200"
+              className={`relative z-[50] inline-flex w-full max-w-[280px] gap-0.5 rounded-[20px] p-1.5 shadow-lg ${
+                isDark ? "bg-[#060918]/80 backdrop-blur-md border border-white/10" : "bg-wp-surface-muted border border-wp-surface-card-border"
               }`}
             >
-              <div className="relative">
+              <div className="relative flex min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => {
                     setPaletteOpen((o) => !o);
                     setZapOpen(false);
                   }}
-                  className={`p-2.5 rounded-full transition-colors duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                  className={`p-2.5 rounded-[14px] transition-colors duration-300 min-h-[44px] min-w-0 flex flex-1 items-center justify-center ${
                     paletteOpen
                       ? isDark
-                        ? "bg-white/20 text-white shadow-sm"
-                        : "bg-slate-200 text-slate-800 shadow-sm"
+                        ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm"
+                        : "bg-wp-surface-raised text-wp-text shadow-sm"
                       : isDark
-                        ? "text-white hover:bg-white/10"
-                        : "text-slate-500 hover:bg-slate-200"
+                        ? "text-white hover:bg-[color:var(--wp-surface-card)]/10"
+                        : "text-wp-text-tertiary hover:bg-wp-surface-raised"
                   }`}
                   title="Motiv"
                   aria-label="Motiv aplikace: světlý, tmavý nebo systém"
@@ -754,7 +757,7 @@ export function PortalSidebar({
                     <p
                       className={clsx(
                         "px-2 pb-1.5 text-[9px] font-black uppercase tracking-widest",
-                        isDark ? "text-white/50" : "text-slate-400",
+                        isDark ? "text-white/50" : "text-[color:var(--wp-text-tertiary)]",
                       )}
                     >
                       Motiv
@@ -762,7 +765,7 @@ export function PortalSidebar({
                     <div
                       className={clsx(
                         "flex w-full gap-0.5 rounded-full p-1",
-                        isDark ? "bg-black/25" : "bg-slate-200/80",
+                        isDark ? "bg-black/25" : "bg-[color:var(--wp-surface-card-border)]/80",
                       )}
                     >
                       <button
@@ -777,13 +780,13 @@ export function PortalSidebar({
                         }}
                         className={clsx(
                           "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          theme === "light"
+                          sunActive
                             ? isDark
-                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-white text-slate-900 shadow-md"
+                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                              : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-md"
                             : isDark
-                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
                         )}
                       >
                         <Sun
@@ -805,13 +808,13 @@ export function PortalSidebar({
                         }}
                         className={clsx(
                           "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          theme === "dark"
+                          moonActive
                             ? isDark
-                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-slate-900 text-white shadow-md"
+                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                              : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
                             : isDark
-                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
                         )}
                       >
                         <Moon size={18} aria-hidden />
@@ -828,13 +831,13 @@ export function PortalSidebar({
                         }}
                         className={clsx(
                           "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          theme === "system"
+                          systemActive
                             ? isDark
-                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-slate-900 text-white shadow-md"
+                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                              : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
                             : isDark
-                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
                         )}
                       >
                         <Monitor size={18} aria-hidden />
@@ -844,21 +847,25 @@ export function PortalSidebar({
                   </div>
                 )}
               </div>
-              <div className="relative">
+              <div
+                className={`mx-0.5 h-6 w-px shrink-0 self-center ${isDark ? "bg-[color:var(--wp-surface-card)]/10" : "bg-wp-surface-card-border"}`}
+                aria-hidden
+              />
+              <div className="relative flex min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => {
                     setZapOpen((o) => !o);
                     setPaletteOpen(false);
                   }}
-                  className={`p-2.5 rounded-full transition-colors duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                  className={`p-2.5 rounded-[14px] transition-colors duration-300 min-h-[44px] min-w-0 w-full flex flex-1 items-center justify-center ${
                     zapOpen
                       ? isDark
-                        ? "bg-white/20 text-white shadow-sm"
-                        : "bg-slate-200 text-slate-800 shadow-sm"
+                        ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm"
+                        : "bg-wp-surface-raised text-wp-text shadow-sm"
                       : isDark
-                        ? "text-white hover:bg-white/10"
-                        : "text-slate-500 hover:bg-slate-200"
+                        ? "text-white hover:bg-[color:var(--wp-surface-card)]/10"
+                        : "text-wp-text-tertiary hover:bg-wp-surface-raised"
                   }`}
                   title="Rychlé akce"
                   aria-label="Rychlé akce z postranního panelu"
@@ -872,7 +879,7 @@ export function PortalSidebar({
                     className={`absolute bottom-full left-1/2 z-[100] mb-2 max-h-[min(70vh,380px)] w-60 -translate-x-1/2 overflow-y-auto rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] py-2 shadow-2xl backdrop-blur-2xl pointer-events-auto`}
                   >
                     <p
-                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${isDark ? "text-white/50" : "text-slate-400"}`}
+                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${isDark ? "text-white/50" : "text-[color:var(--wp-text-tertiary)]"}`}
                     >
                       Rychlé akce
                     </p>
@@ -883,9 +890,7 @@ export function PortalSidebar({
                           href={item.href}
                           role="menuitem"
                           onClick={() => setZapOpen(false)}
-                          className={`group flex min-h-[44px] items-center gap-3 px-3 py-2.5 text-sm font-medium ${
-                            isDark ? "text-white/90 hover:bg-white/10" : "text-slate-700 hover:bg-slate-50"
-                          }`}
+                          className="group flex min-h-[44px] items-center gap-3 px-3 py-2.5 text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:text-white/90 dark:hover:bg-[color:var(--wp-surface-card)]/10"
                         >
                           <QuickNewItemIcon item={item} />
                           {item.label}
@@ -900,7 +905,7 @@ export function PortalSidebar({
 
         {onResize && !collapsed && (
           <div
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hidden md:block hover:bg-slate-200 active:bg-slate-300 transition-colors dark:hover:bg-white/15 dark:active:bg-white/25"
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hidden md:block hover:bg-[color:var(--wp-surface-card-border)] active:bg-[color:var(--wp-surface-card-border)] transition-colors dark:hover:bg-[color:var(--wp-surface-card)]/15 dark:active:bg-[color:var(--wp-surface-card)]/25"
             onMouseDown={(e) => {
               e.preventDefault();
               if (!onResize) return;

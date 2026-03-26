@@ -46,9 +46,9 @@ export function CompanyFALinkedPersonsSection() {
   if (!companyId || (personCount === 0 && analysisCount === 0)) return null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm">
-      <div className="flex flex-wrap items-center gap-2 text-slate-800">
-        <Users className="h-5 w-5 shrink-0 text-slate-600" />
+    <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-[color:var(--wp-text)]">
+        <Users className="h-5 w-5 shrink-0 text-[color:var(--wp-text-secondary)]" />
         <span>
           K této firmě jsou napojeny {personCount} {personCount === 1 ? "osoba" : "osoby"}.
           {analysisCount > 0 && (
@@ -78,7 +78,7 @@ export function CompanyFALinkedPersonsSection() {
                     {a.clientName ?? "Osobní analýza"} (aktualizováno {a.updatedAt ? new Date(a.updatedAt).toLocaleDateString("cs-CZ") : "—"})
                   </Link>
                   {"lastRefreshedFromSharedAt" in a && a.lastRefreshedFromSharedAt && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-[color:var(--wp-text-secondary)]">
                       Sync: {new Date(a.lastRefreshedFromSharedAt).toLocaleDateString("cs-CZ")}
                     </span>
                   )}

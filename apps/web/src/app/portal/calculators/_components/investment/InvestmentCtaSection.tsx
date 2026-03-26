@@ -41,7 +41,7 @@ export function InvestmentCtaSection({ onPrimaryCta }: InvestmentCtaSectionProps
             onClick={onPrimaryCta}
             className="group relative inline-block w-full sm:w-auto bg-gradient-to-r bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-5 px-8 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] overflow-hidden text-center"
           >
-            <div className="absolute top-0 left-0 w-full h-full bg-white/30 skew-x-[-20deg] animate-shimmer" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[color:var(--wp-surface-card)]/30 skew-x-[-20deg] animate-shimmer" />
             <div className="relative flex items-center justify-center gap-3 text-lg uppercase tracking-wider">
               Chci investiční plán
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,15 +63,15 @@ export function InvestmentCtaSection({ onPrimaryCta }: InvestmentCtaSectionProps
               <Link
                 key={card.href}
                 href={card.href}
-                className="group bg-white hover:bg-gradient-to-br hover:from-white hover:to-indigo-50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-slate-200 hover:border-indigo-200"
+                className="group bg-[color:var(--wp-surface-card)] hover:bg-gradient-to-br hover:from-white hover:to-indigo-50 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center h-full border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200"
               >
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-slate-800 text-white group-hover:bg-indigo-600 transition-colors duration-300">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#1e293b] text-white group-hover:bg-indigo-600 transition-colors duration-300">
                   <Icon className="w-8 h-8" />
                 </div>
                 <h4 className="text-lg font-bold text-[#0a0f29] mb-2 transition-colors duration-300">
                   {card.title}
                 </h4>
-                <p className="text-slate-500 group-hover:text-slate-700 text-sm transition-colors duration-300">
+                <p className="text-[color:var(--wp-text-secondary)] group-hover:text-[color:var(--wp-text-secondary)] text-sm transition-colors duration-300">
                   {card.description}
                 </p>
               </Link>

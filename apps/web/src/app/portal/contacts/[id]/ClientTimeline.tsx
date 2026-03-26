@@ -27,22 +27,22 @@ export function ClientTimeline({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm">
+        <h2 className="font-semibold text-[color:var(--wp-text)] mb-4 text-sm">
           Životní timeline
         </h2>
-        <p className="text-sm text-slate-500">Načítání…</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítání…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm">
+        <h2 className="font-semibold text-[color:var(--wp-text)] mb-4 text-sm">
           Životní timeline
         </h2>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
           Nepodařilo se načíst timeline.
         </p>
         <button
@@ -58,11 +58,11 @@ export function ClientTimeline({ contactId }: { contactId: string }) {
 
   if (events.length === 0) {
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm">
+        <h2 className="font-semibold text-[color:var(--wp-text)] mb-4 text-sm">
           Životní timeline
         </h2>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-6">
           Zatím zde nejsou žádné události. Životní timeline se naplní schůzkami,
           úkoly, obchody a dalšími kroky.
         </p>
@@ -91,8 +91,8 @@ export function ClientTimeline({ contactId }: { contactId: string }) {
   }
 
   return (
-    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm">
+      <h2 className="font-semibold text-[color:var(--wp-text)] mb-4 text-sm">
         Životní timeline
       </h2>
       <ClientTimelineFeed events={events} />

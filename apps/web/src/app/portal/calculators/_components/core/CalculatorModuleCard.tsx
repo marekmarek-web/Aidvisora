@@ -14,7 +14,7 @@ export function CalculatorModuleCard({
 }: CalculatorModuleCardProps) {
   return (
     <div
-      className={`rounded-[20px] border-[1.5px] border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:p-7 ${className}`.trim()}
+      className={`rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6 md:p-7 ${className}`.trim()}
     >
       {children}
     </div>

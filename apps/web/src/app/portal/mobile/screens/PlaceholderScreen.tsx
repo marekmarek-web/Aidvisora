@@ -20,9 +20,9 @@ export function PlaceholderScreen({
         <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 mx-auto flex items-center justify-center">
           <Icon size={28} className="text-indigo-600" />
         </div>
-        <h2 className="text-lg font-black text-slate-900">{title}</h2>
-        <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)]">{title}</h2>
+        <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">{description}</p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)]">
           Plná verze této sekce je dostupná v desktopovém prohlížeči. Mobilní rozhraní se doplňuje postupně.
         </p>
         <button

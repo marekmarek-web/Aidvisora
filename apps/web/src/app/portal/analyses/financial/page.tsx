@@ -117,12 +117,12 @@ export default function FinancialAnalysisPage() {
   const idParam = searchParams.get("id");
   if (showDraftPrompt) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-        <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl p-6 sm:p-8">
-          <h2 className="text-xl font-extrabold text-slate-900 mb-2">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4">
+        <div className="w-full max-w-lg rounded-2xl bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-xl p-6 sm:p-8">
+          <h2 className="text-xl font-extrabold text-[color:var(--wp-text)] mb-2">
             Máte rozpracovanou analýzu
           </h2>
-          <p className="text-sm text-slate-600 mb-6">
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mb-6">
             Chcete pokračovat v rozpracované verzi, nebo začít úplně novou analýzu?
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
@@ -145,7 +145,7 @@ export default function FinancialAnalysisPage() {
                 setShowDraftPrompt(false);
                 setLoadState("ok");
               }}
-              className="min-h-[44px] px-5 py-3 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50"
+              className="min-h-[44px] px-5 py-3 rounded-xl border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] font-semibold hover:bg-[color:var(--wp-surface-muted)]"
             >
               Začít znovu
             </button>
@@ -158,7 +158,7 @@ export default function FinancialAnalysisPage() {
   if (loadState === "loading" || (loadState === "idle" && idParam)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4">
-        <p className="text-slate-600">Načítání analýzy…</p>
+        <p className="text-[color:var(--wp-text-secondary)]">Načítání analýzy…</p>
       </div>
     );
   }
@@ -166,8 +166,8 @@ export default function FinancialAnalysisPage() {
   if (loadState === "timeout") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 text-center">
-        <p className="text-slate-700 font-medium mb-2">Načítání trvá příliš dlouho.</p>
-        <p className="text-slate-500 text-sm mb-4">Zkontrolujte připojení k internetu a zkuste to znovu.</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium mb-2">Načítání trvá příliš dlouho.</p>
+        <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">Zkontrolujte připojení k internetu a zkuste to znovu.</p>
         <button
           type="button"
           onClick={() => window.location.reload()}
@@ -182,8 +182,8 @@ export default function FinancialAnalysisPage() {
   if (loadState === "error") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 text-center">
-        <p className="text-slate-700 font-medium mb-2">Analýzu se nepodařilo načíst.</p>
-        <p className="text-slate-500 text-sm mb-4">Zkontrolujte připojení nebo zkuste začít novou analýzu.</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium mb-2">Analýzu se nepodařilo načíst.</p>
+        <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">Zkontrolujte připojení nebo zkuste začít novou analýzu.</p>
         <Link
           href="/portal/analyses/financial"
           className="min-h-[44px] px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"

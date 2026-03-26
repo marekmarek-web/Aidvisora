@@ -17,22 +17,22 @@ export function StepCompanyPeople() {
   const directors = payload.directors ?? [];
 
   return (
-    <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
+    <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-slate-800">Jednatelé</h3>
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)]">Jednatelé</h3>
         <button
           type="button"
           onClick={addDirector}
-          className="min-h-[44px] px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200"
+          className="min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] font-medium rounded-lg hover:bg-[color:var(--wp-surface-card-border)]"
         >
           Přidat jednatele
         </button>
       </div>
       <div className="space-y-4">
         {directors.map((d, i) => (
-          <div key={i} className="p-4 border border-slate-200 rounded-lg space-y-3">
+          <div key={i} className="p-4 border border-[color:var(--wp-surface-card-border)] rounded-lg space-y-3">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-slate-700">Jednatel {i + 1}</span>
+              <span className="font-medium text-[color:var(--wp-text-secondary)]">Jednatel {i + 1}</span>
               <button
                 type="button"
                 onClick={() => removeDirector(i)}
@@ -43,16 +43,16 @@ export function StepCompanyPeople() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label>
-                <span className="block text-sm text-slate-600 mb-1">Jméno</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Jméno</span>
                 <input
                   type="text"
                   value={d.name ?? ""}
                   onChange={(e) => setDirector(i, { name: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-sm text-slate-600 mb-1">Věk</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Věk</span>
                 <input
                   type="number"
                   min={0}
@@ -60,28 +60,28 @@ export function StepCompanyPeople() {
                   onChange={(e) =>
                     setDirector(i, { age: e.target.value === "" ? null : num(e.target.value, 0) })
                   }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-sm text-slate-600 mb-1">Podíl (%)</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Podíl (%)</span>
                 <input
                   type="number"
                   min={0}
                   max={100}
                   value={d.share ?? 100}
                   onChange={(e) => setDirector(i, { share: num(e.target.value, 100) })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-sm text-slate-600 mb-1">Čistý měsíční příjem (Kč)</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Čistý měsíční příjem (Kč)</span>
                 <input
                   type="number"
                   min={0}
                   value={d.netIncome ?? 0}
                   onChange={(e) => setDirector(i, { netIncome: num(e.target.value, 0) })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                 />
               </label>
               <label className="sm:col-span-2 flex items-center gap-2 min-h-[44px]">
@@ -89,22 +89,22 @@ export function StepCompanyPeople() {
                   type="checkbox"
                   checked={d.hasSpouse ?? false}
                   onChange={(e) => setDirector(i, { hasSpouse: e.target.checked })}
-                  className="rounded border-slate-300"
+                  className="rounded border-[color:var(--wp-border-strong)]"
                 />
-                <span className="text-sm text-slate-600">Manžel/ka</span>
+                <span className="text-sm text-[color:var(--wp-text-secondary)]">Manžel/ka</span>
               </label>
               <label>
-                <span className="block text-sm text-slate-600 mb-1">Počet dětí</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Počet dětí</span>
                 <input
                   type="number"
                   min={0}
                   value={d.childrenCount ?? 0}
                   onChange={(e) => setDirector(i, { childrenCount: num(e.target.value, 0) })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                  className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                 />
               </label>
               <label className="block w-full">
-                <span className="block text-sm text-slate-600 mb-1">Typ příjmu</span>
+                <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Typ příjmu</span>
                 <CustomDropdown
                   value={d.incomeType ?? "employee"}
                   onChange={(id) => setDirector(i, { incomeType: id as "employee" | "osvc" })}

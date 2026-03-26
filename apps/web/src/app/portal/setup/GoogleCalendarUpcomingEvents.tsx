@@ -36,11 +36,11 @@ function EventSkeleton() {
   return (
     <div className="space-y-3" role="status" aria-label="Načítám události">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex gap-3 p-3 rounded-xl bg-slate-50 animate-pulse">
-          <div className="w-10 h-10 rounded-lg bg-slate-200 shrink-0" />
+        <div key={i} className="flex gap-3 p-3 rounded-xl bg-[color:var(--wp-surface-muted)] animate-pulse">
+          <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card-border)] shrink-0" />
           <div className="flex-1 min-w-0 space-y-2">
-            <div className="h-4 w-3/4 rounded bg-slate-200" />
-            <div className="h-3 w-1/2 rounded bg-slate-100" />
+            <div className="h-4 w-3/4 rounded bg-[color:var(--wp-surface-card-border)]" />
+            <div className="h-3 w-1/2 rounded bg-[color:var(--wp-surface-muted)]" />
           </div>
         </div>
       ))}
@@ -136,8 +136,8 @@ export function GoogleCalendarUpcomingEvents() {
 
   if (loading) {
     return (
-      <div className="mt-4 pt-4 border-t border-slate-100">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Nadcházející události</h4>
+      <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+        <h4 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-3">Nadcházející události</h4>
         <EventSkeleton />
       </div>
     );
@@ -145,12 +145,12 @@ export function GoogleCalendarUpcomingEvents() {
 
   if (error) {
     return (
-      <div className="mt-4 pt-4 border-t border-slate-100">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Nadcházející události</h4>
+      <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+        <h4 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-3">Nadcházející události</h4>
         <p className="text-sm text-amber-700 font-medium flex items-center gap-2 mb-2">
           <AlertCircle size={16} className="shrink-0" aria-hidden /> {error}
         </p>
-        <button type="button" onClick={fetchEvents} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200">
+        <button type="button" onClick={fetchEvents} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)]">
           Zkusit znovu
         </button>
       </div>
@@ -347,20 +347,20 @@ export function GoogleCalendarUpcomingEvents() {
     }
   }, [buildIdempotencyKey, fetchEvents, toast]);
 
-  const labelClass = "block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1";
+  const labelClass = "block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1";
   const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 min-h-[44px]";
+    "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] min-h-[44px]";
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100">
+    <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Nadcházející události</h4>
+        <h4 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Nadcházející události</h4>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleSync}
             disabled={syncing}
-            className="min-h-[40px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            className="min-h-[40px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
           >
             {syncing ? "Synchronizuji…" : "Synchronizovat"}
           </button>
@@ -387,30 +387,30 @@ export function GoogleCalendarUpcomingEvents() {
       {(() => {
         const filtered = filterContactId ? events.filter((ev) => ev.contactId === filterContactId) : events;
         return filtered.length === 0 ? (
-        <p className="text-sm text-slate-500 font-medium">
+        <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium">
           {filterContactId ? "Žádné události pro vybraného klienta." : "Žádné nadcházející události."}
         </p>
       ) : (
         <ul className="space-y-2" role="list">
           {filtered.map((ev) => (
-            <li key={ev.id} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 items-start">
+            <li key={ev.id} className="flex gap-3 p-3 rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] items-start">
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 shrink-0" aria-hidden>
                 <Calendar size={18} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800 truncate">{ev.title}</p>
-                <p className="text-xs font-medium text-slate-500 mt-0.5">
+                <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{ev.title}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-0.5">
                   {formatEventDate(ev.start)}
                   {!ev.allDay && ` · ${formatEventTime(ev.start)}${ev.end ? ` – ${formatEventTime(ev.end)}` : ""}`}
                   {ev.allDay && " · celý den"}
                 </p>
                 {ev.location && (
-                  <p className="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-1 flex items-center gap-1">
                     <MapPin size={12} className="shrink-0" /> {ev.location}
                   </p>
                 )}
                 {ev.contactId && (ev.contactName || ev.contactId) && (
-                  <p className="text-xs font-medium text-slate-600 mt-1 flex items-center gap-1">
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-1 flex items-center gap-1">
                     <User size={12} className="shrink-0 text-indigo-500" />
                     <Link href={`/portal/contacts/${ev.contactId}`} className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">
                       {ev.contactName ?? "Klient"}
@@ -422,7 +422,7 @@ export function GoogleCalendarUpcomingEvents() {
                 <button
                   type="button"
                   onClick={() => openEdit(ev)}
-                  className="p-2 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-indigo-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card-border)] hover:text-indigo-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
                   title="Upravit událost"
                   aria-label="Upravit událost"
                 >
@@ -432,7 +432,7 @@ export function GoogleCalendarUpcomingEvents() {
                   type="button"
                   onClick={() => handleDelete(ev)}
                   disabled={deletingId === ev.id}
-                  className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-60"
+                  className="p-2 rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-red-50 hover:text-red-600 min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-60"
                   title="Smazat událost"
                   aria-label="Smazat událost"
                 >
@@ -536,8 +536,8 @@ export function GoogleCalendarUpcomingEvents() {
               />
             </div>
           </div>
-          <div className="px-5 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-            <button type="button" onClick={() => setCreateOpen(false)} disabled={createSaving} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60">
+          <div className="px-5 py-4 border-t border-[color:var(--wp-surface-card-border)] flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <button type="button" onClick={() => setCreateOpen(false)} disabled={createSaving} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60">
               Zrušit
             </button>
             <button type="submit" disabled={createSaving} className="wp-btn wp-btn-primary min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2">
@@ -550,7 +550,7 @@ export function GoogleCalendarUpcomingEvents() {
 
       <BaseModal open={editOpen} onClose={() => !editSaving && !editLoading && setEditOpen(false)} title="Upravit událost" maxWidth="md">
         {editLoading ? (
-          <div className="px-5 py-8 flex items-center justify-center gap-2 text-slate-500">
+          <div className="px-5 py-8 flex items-center justify-center gap-2 text-[color:var(--wp-text-secondary)]">
             <Loader2 size={20} className="animate-spin shrink-0" /> Načítám událost…
           </div>
         ) : (
@@ -616,8 +616,8 @@ export function GoogleCalendarUpcomingEvents() {
                 />
               </div>
             </div>
-            <div className="px-5 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-              <button type="button" onClick={() => setEditOpen(false)} disabled={editSaving} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60">
+            <div className="px-5 py-4 border-t border-[color:var(--wp-surface-card-border)] flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+              <button type="button" onClick={() => setEditOpen(false)} disabled={editSaving} className="wp-btn min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60">
                 Zrušit
               </button>
               <button type="submit" disabled={editSaving} className="wp-btn wp-btn-primary min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2">

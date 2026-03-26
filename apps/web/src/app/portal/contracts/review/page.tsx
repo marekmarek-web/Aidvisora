@@ -255,8 +255,8 @@ export default function ContractReviewListPage() {
               <Sparkles size={28} />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-1">Review smluv</h1>
-              <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
+              <h1 className="text-3xl font-black text-[color:var(--wp-text)] tracking-tight mb-1">Review smluv</h1>
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] max-w-xl leading-relaxed">
                 Seznam nahraných a zpracovaných smluv. Otevřete položku pro kontrolu a aplikaci do CRM.
               </p>
             </div>
@@ -268,8 +268,8 @@ export default function ContractReviewListPage() {
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => !uploading && fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-[32px] p-8 md:p-10 bg-white text-center cursor-pointer transition-all ${
-            uploading ? "border-slate-200 bg-slate-50/50 cursor-wait" : "border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/20"
+          className={`border-2 border-dashed rounded-[32px] p-8 md:p-10 bg-[color:var(--wp-surface-card)] text-center cursor-pointer transition-all ${
+            uploading ? "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 cursor-wait" : "border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/20"
           }`}
         >
           <input
@@ -286,10 +286,10 @@ export default function ContractReviewListPage() {
               <UploadCloud size={32} strokeWidth={1.5} />
             )}
           </div>
-          <h3 className="text-lg font-black text-slate-800 mb-2">
+          <h3 className="text-lg font-black text-[color:var(--wp-text)] mb-2">
             {uploading ? "Nahrávám…" : "Přetáhněte smlouvy sem"}
           </h3>
-          <p className="text-sm text-slate-500 font-medium mb-6">
+          <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium mb-6">
             {uploading
               ? "Zpracovávám dokument."
               : "nebo klikněte pro výběr souborů (PDF). Můžete také otevřít AI asistenta vpravo dole."}
@@ -315,7 +315,7 @@ export default function ContractReviewListPage() {
             <button
               type="button"
               onClick={() => { setError(null); load(); }}
-              className="px-4 py-2 rounded-xl bg-white border border-rose-200 text-rose-700 text-sm font-bold hover:bg-rose-50 transition-colors shrink-0"
+              className="px-4 py-2 rounded-xl bg-[color:var(--wp-surface-card)] border border-rose-200 text-rose-700 text-sm font-bold hover:bg-rose-50 transition-colors shrink-0"
             >
               Zkusit znovu
             </button>
@@ -323,15 +323,15 @@ export default function ContractReviewListPage() {
         )}
 
         {/* Filters - reference panel */}
-        <div className="bg-white p-3 md:p-4 rounded-[24px] border border-slate-100 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="bg-[color:var(--wp-surface-card)] p-3 md:p-4 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           <div className="relative flex-1 w-full max-w-md">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)]" />
             <input
               type="search"
               placeholder="Klient, číslo smlouvy, instituce…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-400 transition-colors"
+              className="w-full pl-11 pr-4 py-2.5 bg-[color:var(--wp-surface-muted)]/50 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:border-indigo-400 transition-colors"
             />
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -373,7 +373,7 @@ export default function ContractReviewListPage() {
               type="button"
               onClick={() => load()}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm"
             >
               <RefreshCw size={16} className={loading ? "animate-spin text-indigo-600" : ""} />
               Obnovit
@@ -382,11 +382,11 @@ export default function ContractReviewListPage() {
         </div>
 
         {/* List - cards */}
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-            <h2 className="font-black text-slate-800 text-sm flex items-center gap-2">
+        <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 flex items-center justify-between">
+            <h2 className="font-black text-[color:var(--wp-text)] text-sm flex items-center gap-2">
               Položky{" "}
-              <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-xs font-bold">
+              <span className="bg-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] px-2 py-0.5 rounded-md text-xs font-bold">
                 {items.length}
               </span>
             </h2>
@@ -396,14 +396,14 @@ export default function ContractReviewListPage() {
             {loading && items.length === 0 ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
                 <RefreshCw size={32} className="animate-spin text-indigo-500 mb-4" />
-                <p className="text-slate-500 font-medium">Načítám…</p>
+                <p className="text-[color:var(--wp-text-secondary)] font-medium">Načítám…</p>
               </div>
             ) : items.length === 0 ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-4">
+                <div className="w-16 h-16 bg-[color:var(--wp-surface-muted)] rounded-2xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-4">
                   <FileText size={32} />
                 </div>
-                <p className="text-slate-500 font-medium mb-4">
+                <p className="text-[color:var(--wp-text-secondary)] font-medium mb-4">
                   Žádné položky. Nahrajte smlouvu v AI asistentovi nebo výše.
                 </p>
                 <button
@@ -423,33 +423,33 @@ export default function ContractReviewListPage() {
                   return (
                     <div
                       key={row.id}
-                      className="p-6 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors flex flex-col xl:flex-row xl:items-start gap-6"
+                      className="p-6 border-b border-[color:var(--wp-surface-card-border)] last:border-0 hover:bg-[color:var(--wp-surface-muted)]/50 transition-colors flex flex-col xl:flex-row xl:items-start gap-6"
                     >
                       <div className="flex items-start gap-4 xl:w-[40%] min-w-0">
                         <div
                           className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-sm ${
-                            isDone ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-white border-slate-200 text-indigo-500"
+                            isDone ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-[color:var(--wp-surface-card)] border-[color:var(--wp-surface-card-border)] text-indigo-500"
                           }`}
                         >
                           {isDone ? <FileCheck size={24} /> : <FileText size={24} />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-slate-900 text-[15px] truncate mb-1">
+                          <h3 className="font-bold text-[color:var(--wp-text)] text-[15px] truncate mb-1">
                             {row.fileName}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
-                            <span className="text-slate-700">{fullName(row.extractedPayload)}</span>
-                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                          <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[color:var(--wp-text-secondary)]">
+                            <span className="text-[color:var(--wp-text-secondary)]">{fullName(row.extractedPayload)}</span>
+                            <span className="h-1 w-1 rounded-full bg-[color:var(--wp-text-tertiary)]" />
                             <span>{row.extractedPayload?.institutionName ?? "—"}</span>
-                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                            <span className="text-slate-400 font-medium">{formatUploadDate(row.createdAt)}</span>
+                            <span className="h-1 w-1 rounded-full bg-[color:var(--wp-text-tertiary)]" />
+                            <span className="text-[color:var(--wp-text-tertiary)] font-medium">{formatUploadDate(row.createdAt)}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex-1 xl:px-6 xl:border-l border-slate-100 min-w-0">
+                      <div className="flex-1 xl:px-6 xl:border-l border-[color:var(--wp-surface-card-border)] min-w-0">
                         {isProcessing(row) ? (
-                          <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
+                          <div className="flex items-center gap-3 text-sm font-medium text-[color:var(--wp-text-tertiary)]">
                             <div className="flex gap-1">
                               <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                               <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -474,16 +474,16 @@ export default function ContractReviewListPage() {
                                 <div
                                   key={idx}
                                   className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-2 ${
-                                    chip.alert ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-white border-slate-200 text-slate-700"
+                                    chip.alert ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-[color:var(--wp-surface-card)] border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
                                   }`}
                                 >
-                                  <span className="text-slate-400 font-medium">{chip.label}:</span>
+                                  <span className="text-[color:var(--wp-text-tertiary)] font-medium">{chip.label}:</span>
                                   <span>{chip.value}</span>
                                   {chip.alert && <AlertCircle size={14} className="text-amber-500" />}
                                 </div>
                               ))}
                               {insights.length === 0 && (
-                                <span className="text-xs text-slate-400">Žádná extrahovaná data</span>
+                                <span className="text-xs text-[color:var(--wp-text-tertiary)]">Žádná extrahovaná data</span>
                               )}
                             </div>
                           </div>
@@ -502,7 +502,7 @@ export default function ContractReviewListPage() {
                             type="button"
                             onClick={(e) => handleDeleteReview(e, row)}
                             disabled={deletingId === row.id}
-                            className="min-h-[44px] min-w-[44px] px-3 inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white text-rose-700 text-xs font-bold hover:bg-rose-50 transition-colors disabled:opacity-50"
+                            className="min-h-[44px] min-w-[44px] px-3 inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-[color:var(--wp-surface-card)] text-rose-700 text-xs font-bold hover:bg-rose-50 transition-colors disabled:opacity-50"
                             aria-label="Smazat položku revize"
                           >
                             {deletingId === row.id ? (
@@ -524,7 +524,7 @@ export default function ContractReviewListPage() {
                           {row.reviewStatus === "applied" && (
                             <Link
                               href={`/portal/contracts/review/${row.id}`}
-                              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[color:var(--wp-surface-muted)] transition-all shadow-sm"
                             >
                               Otevřít v CRM <ArrowRight size={14} />
                             </Link>

@@ -53,7 +53,7 @@ export function InvestmentResultsPanel({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </button>
-            <p className="text-xs text-slate-500 mt-4 text-center leading-relaxed opacity-60">
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-4 text-center leading-relaxed opacity-60">
               Historické výnosy nejsou zárukou budoucích. Výpočty jsou orientační.
             </p>
           </>

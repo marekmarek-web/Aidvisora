@@ -33,11 +33,11 @@ export function CompanyAnalysisStepper() {
                 className={clsx(
                   "w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] sm:min-w-[44px] rounded-full flex items-center justify-center font-semibold text-base border-2 transition-all",
                   isActive &&
-                    "border-primary text-primary bg-white shadow-[0_0_0_4px_rgba(var(--primary),0.2)]",
+                    "border-primary text-primary bg-[color:var(--wp-surface-card)] shadow-[0_0_0_4px_rgba(var(--primary),0.2)]",
                   isCompleted && "bg-primary border-primary text-primary-foreground",
                   !isActive &&
                     !isCompleted &&
-                    "border-slate-300 text-slate-500 bg-white"
+                    "border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)]"
                 )}
               >
                 {isCompleted ? <Check className="w-5 h-5" /> : stepNum}
@@ -45,7 +45,7 @@ export function CompanyAnalysisStepper() {
               <span
                 className={clsx(
                   "text-xs font-bold uppercase tracking-wider mt-2 hidden md:block",
-                  isActive ? "text-slate-800" : "text-slate-400"
+                  isActive ? "text-[color:var(--wp-text)]" : "text-[color:var(--wp-text-tertiary)]"
                 )}
               >
                 {title}

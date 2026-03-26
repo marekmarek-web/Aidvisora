@@ -136,9 +136,9 @@ export function CalendarEventForm({
     onSave(form, initial.id);
   }
 
-  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
+  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5 ml-1";
   const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400";
+    "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)]";
 
   const filteredOpportunities = opportunities.filter(
     (o) => !form.contactId || o.contactId === form.contactId,
@@ -148,8 +148,8 @@ export function CalendarEventForm({
     <div
       className={
         largeScreen
-          ? "fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4"
-          : "fixed inset-0 z-[100] flex flex-col bg-white"
+          ? "fixed inset-0 z-[100] flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] p-0 sm:items-center sm:p-4"
+          : "fixed inset-0 z-[100] flex flex-col bg-[color:var(--wp-surface-card)]"
       }
       role="presentation"
       onClick={largeScreen ? onClose : undefined}
@@ -157,23 +157,23 @@ export function CalendarEventForm({
       <div
         className={
           largeScreen
-            ? "flex max-h-[min(92vh,820px)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-2xl sm:rounded-2xl"
+            ? "flex max-h-[min(92vh,820px)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[24px] bg-[color:var(--wp-surface-card)] shadow-2xl sm:rounded-2xl"
             : "flex min-h-0 flex-1 flex-col"
         }
         onClick={(e) => e.stopPropagation()}
       >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-black text-slate-900">
+        <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
+          <h2 className="text-sm font-black text-[color:var(--wp-text)]">
             {initial.id ? "Upravit aktivitu" : "Nová aktivita"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Zavřít"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 transition-colors active:bg-slate-100"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] transition-colors active:bg-[color:var(--wp-surface-muted)]"
           >
-            <X size={16} className="text-slate-500" />
+            <X size={16} className="text-[color:var(--wp-text-secondary)]" />
           </button>
         </div>
 
@@ -185,8 +185,8 @@ export function CalendarEventForm({
             {CALENDAR_EVENT_CATEGORIES.filter((t) => PRIMARY_TYPES.includes(t.id)).map((t) => {
               const isActive = form.eventType === t.id;
               const ps = EVENT_PILL_STYLES[t.id] ?? {
-                active: "bg-slate-700 text-white shadow-lg",
-                inactive: "bg-slate-100 text-slate-600",
+                active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
+                inactive: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
               };
               return (
                 <button
@@ -214,8 +214,8 @@ export function CalendarEventForm({
               {CALENDAR_EVENT_CATEGORIES.filter((t) => SECONDARY_TYPES.includes(t.id)).map((t) => {
                 const isActive = form.eventType === t.id;
                 const ps = EVENT_PILL_STYLES[t.id] ?? {
-                  active: "bg-slate-700 text-white shadow-lg",
-                  inactive: "bg-slate-100 text-slate-600",
+                  active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
+                  inactive: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
                 };
                 return (
                   <button
@@ -254,24 +254,24 @@ export function CalendarEventForm({
               if (validationErrors.title) setValidationErrors((v) => ({ ...v, title: false }));
             }}
             placeholder="Název aktivity…"
-            className={`w-full border-0 border-b-2 bg-transparent py-3 text-xl font-black text-slate-900 outline-none transition-colors placeholder:text-slate-300 ${
-              validationErrors.title ? "border-red-400" : "border-slate-200 focus:border-indigo-500"
+            className={`w-full border-0 border-b-2 bg-transparent py-3 text-xl font-black text-[color:var(--wp-text)] outline-none transition-colors placeholder:text-[color:var(--wp-text-tertiary)] ${
+              validationErrors.title ? "border-red-400" : "border-[color:var(--wp-surface-card-border)] focus:border-indigo-500"
             }`}
             autoFocus
           />
 
-          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+          <div className="space-y-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4">
             <div className="flex items-center gap-2">
-              <Clock size={16} className="text-slate-400" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">Kdy</span>
+              <Clock size={16} className="text-[color:var(--wp-text-tertiary)]" />
+              <span className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Kdy</span>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-slate-600">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)]">
               <input
                 type="checkbox"
                 checked={form.allDay}
                 onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
               />
               Celý den
             </label>
@@ -390,7 +390,7 @@ export function CalendarEventForm({
                   className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors active:scale-[0.97] ${
                     (form.status || "scheduled") === s.id
                       ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600"
+                      : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   {s.label}
@@ -413,7 +413,7 @@ export function CalendarEventForm({
                   className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors active:scale-[0.97] ${
                     form.reminderMinutes === o.value
                       ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600"
+                      : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   {o.label}
@@ -429,11 +429,11 @@ export function CalendarEventForm({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-3 border-t border-slate-200 bg-white px-4 py-3">
+        <div className="flex items-center gap-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-200 text-sm font-bold text-slate-600 transition-colors active:scale-[0.98]"
+            className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] transition-colors active:scale-[0.98]"
           >
             Zrušit
           </button>

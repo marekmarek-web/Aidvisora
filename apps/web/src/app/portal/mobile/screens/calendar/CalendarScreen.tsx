@@ -521,7 +521,7 @@ export function CalendarScreen({
         showGrid ? (
           <CalendarGridSkeleton columnCount={skeletonCols} timeColWidth={skeletonTimeW} />
         ) : (
-          <div className="flex min-h-[200px] flex-1 items-center justify-center text-sm text-slate-500">
+          <div className="flex min-h-[200px] flex-1 items-center justify-center text-sm text-[color:var(--wp-text-secondary)]">
             Načítám agendu…
           </div>
         )

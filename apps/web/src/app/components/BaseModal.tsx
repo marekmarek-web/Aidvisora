@@ -128,15 +128,16 @@ export function BaseModal({
   const isFullScreen = useMobileLayout && mobileVariant === "fullScreen";
   const isSheet = useMobileLayout && mobileVariant === "sheet";
 
-  const backdropClass = "fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/40";
+  const backdropClass =
+    "fixed inset-0 z-modal flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4";
   const mobileBackdropClass = isFullScreen
-    ? "fixed inset-0 z-modal flex flex-col p-0 bg-white"
+    ? "fixed inset-0 z-modal flex flex-col bg-[color:var(--wp-surface-card)] p-0"
     : isSheet
-      ? "fixed inset-0 z-modal flex items-end justify-center p-0 bg-black/40"
+      ? "fixed inset-0 z-modal flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] p-0"
       : backdropClass;
 
   const panelBase =
-    "wp-modal-panel border border-slate-200 bg-white shadow-xl w-full overflow-hidden flex flex-col";
+    "wp-modal-panel flex w-full flex-col overflow-hidden border border-[color:var(--wp-modal-border)] bg-[color:var(--wp-modal-surface)] shadow-xl dark:shadow-black/40";
   const panelDesktop = `rounded-xl max-h-[90vh] ${maxWidthClass[maxWidth]}`;
   const panelMobile =
     isFullScreen
@@ -168,14 +169,14 @@ export function BaseModal({
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0 min-h-[44px]">
-            <h2 id="base-modal-title" className="font-semibold text-slate-800 text-sm">
+          <div className="flex min-h-[44px] shrink-0 items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
+            <h2 id="base-modal-title" className="text-sm font-semibold text-[color:var(--wp-text)]">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
               aria-label="Zavřít"
             >
               ×

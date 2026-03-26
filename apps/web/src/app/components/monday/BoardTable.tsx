@@ -118,7 +118,7 @@ export function BoardTable({
       />
       <div className="board-scroll overflow-auto flex-1 relative px-6 py-4">
         {loading && (
-          <div className="absolute inset-0 z-10 bg-white/80 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[color:var(--wp-surface-card)]/80">
             <table className="w-full border-collapse" style={{ minWidth: "max-content" }}>
               <thead>
                 <tr>
@@ -187,7 +187,7 @@ export function BoardTable({
                         e.stopPropagation();
                         setGroupMenuOpenId(groupMenuOpenId === group.id ? null : group.id);
                       }}
-                      className="p-1 rounded opacity-0 group-hover/header:opacity-100 hover:bg-slate-100 text-slate-500 text-sm"
+                      className="rounded p-1 text-sm text-[color:var(--wp-text-secondary)] opacity-0 group-hover/header:opacity-100 hover:bg-[color:var(--wp-surface-muted)]"
                     >
                       ⋯
                     </button>
@@ -203,9 +203,9 @@ export function BoardTable({
                 </div>
 
                 {!group.collapsed && (
-                  <div className="group-body border-l-2 bg-white" style={{ borderLeftColor: group.color }}>
+                  <div className="group-body border-l-2 bg-[color:var(--wp-surface-card)]" style={{ borderLeftColor: group.color }}>
                     <table
-                      className="monday-table text-left bg-white table-fixed"
+                      className="monday-table table-fixed bg-[color:var(--wp-surface-card)] text-left"
                       style={{ tableLayout: "fixed", width: totalTableWidth }}
                     >
                       <colgroup>
@@ -243,7 +243,7 @@ export function BoardTable({
                                   onAddColumnAfter={onAddColumnAfter}
                                   mondayStyle
                                 />
-                                {i === 0 && <span className="text-slate-300">|</span>}
+                                {i === 0 && <span className="text-[color:var(--wp-text-tertiary)]">|</span>}
                               </div>
                             </th>
                           ))}
@@ -272,12 +272,12 @@ export function BoardTable({
                           />
                         ))}
                         <tr>
-                          <td className="sticky-col bg-white border-r border-[var(--border-soft)] border-b border-[var(--border-soft)]">
+                          <td className="sticky-col border-b border-r border-[var(--border-soft)] bg-[color:var(--wp-surface-card)]">
                             <input
                               type="text"
                               placeholder="+ Přidat klienta"
                               onFocus={() => onAddItem(group.id)}
-                              className="w-full h-10 px-4 text-sm text-[var(--text-muted)] outline-none hover:bg-[var(--bg-cell-hover)] focus:bg-white transition-colors border-none box-border"
+                              className="box-border h-10 w-full border-none px-4 text-sm text-[var(--text-muted)] outline-none transition-colors hover:bg-[var(--bg-cell-hover)] focus:bg-[color:var(--wp-surface-card)]"
                             />
                           </td>
                           <td colSpan={visibleColumns.length - 1} className="bg-[var(--bg-header)] border-b border-[var(--border-soft)]" />
@@ -286,7 +286,7 @@ export function BoardTable({
                       </tbody>
                       <tfoot>
                         <tr className="border-t border-[var(--border-soft)]">
-                          <td className="sticky-col bg-white border-r border-[var(--border-soft)] p-1 align-top box-border" style={{ width: visibleColumns[0]?.width, minWidth: visibleColumns[0]?.width, maxWidth: visibleColumns[0]?.width }} />
+                          <td className="sticky-col box-border border-r border-[var(--border-soft)] bg-[color:var(--wp-surface-card)] p-1 align-top" style={{ width: visibleColumns[0]?.width, minWidth: visibleColumns[0]?.width, maxWidth: visibleColumns[0]?.width }} />
                           {visibleColumns.slice(1).map((col) => {
                             if (col.type !== "status" || !col.hasSummary) {
                               return <td key={col.id} className="p-1 border-r border-[var(--border-soft)] bg-[var(--bg-header)] box-border" style={{ width: col.width, minWidth: col.width, maxWidth: col.width }} />;
@@ -322,7 +322,7 @@ export function BoardTable({
               <button
                 type="button"
                 onClick={onAddGroup}
-                className="flex items-center gap-2 px-4 py-2.5 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg border-2 border-dashed border-slate-200 font-medium"
+                className="flex items-center gap-2 rounded-lg border-2 border-dashed border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-[13px] font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
               >
                 + Přidat skupinu
               </button>

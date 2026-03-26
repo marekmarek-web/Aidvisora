@@ -111,26 +111,26 @@ export function TeamCalendarModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="team-calendar-modal-title">
       <div
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden"
+        className="w-full max-w-md bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl border border-[color:var(--wp-surface-card-border)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 id="team-calendar-modal-title" className="text-lg font-bold text-slate-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]">
+          <h2 id="team-calendar-modal-title" className="text-lg font-bold text-[color:var(--wp-text)]">
             {type === "event" ? "Nová týmová událost" : "Nový týmový úkol"}
           </h2>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 min-w-[44px] min-h-[44px]" aria-label="Zavřít">
+          <button type="button" onClick={onClose} className="p-2 rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text-secondary)] min-w-[44px] min-h-[44px]" aria-label="Zavřít">
             <X className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Název *</label>
+            <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Název *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               placeholder={type === "event" ? "Porada, briefing…" : "Úkol pro tým…"}
               required
             />
@@ -139,41 +139,41 @@ export function TeamCalendarModal({
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Začátek</label>
+                  <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Začátek</label>
                   <input
                     type="datetime-local"
                     value={startAt}
                     onChange={(e) => setStartAt(e.target.value)}
-                    className="w-full min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                    className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Konec</label>
+                  <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Konec</label>
                   <input
                     type="datetime-local"
                     value={endAt}
                     onChange={(e) => setEndAt(e.target.value)}
-                    className="w-full min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                    className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Místo</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Místo</label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                  className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                   placeholder="Místnost, odkaz…"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Poznámka</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Poznámka</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                  className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                   placeholder="Volitelný popis"
                 />
               </div>
@@ -182,45 +182,45 @@ export function TeamCalendarModal({
           {type === "task" && (
             <>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Popis</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Popis</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                  className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                   placeholder="Volitelný popis úkolu"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Termín</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Termín</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-slate-900"
+                  className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-[color:var(--wp-text)]"
                 />
               </div>
             </>
           )}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Příjemci</label>
+            <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Příjemci</label>
             <div className="mb-2 flex flex-wrap gap-2">
-              <button type="button" onClick={() => applyPreset("all")} className="min-h-[36px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">Celý tým</button>
-              <button type="button" onClick={() => applyPreset("managers")} className="min-h-[36px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">Manažeři</button>
-              <button type="button" onClick={() => applyPreset("advisors")} className="min-h-[36px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">Poradci</button>
-              <button type="button" onClick={() => applyPreset("newcomers")} className="min-h-[36px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">Nováčci</button>
-              <button type="button" onClick={() => applyPreset("risky")} className="min-h-[36px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">Rizikoví</button>
+              <button type="button" onClick={() => applyPreset("all")} className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-2.5 py-1 text-xs text-[color:var(--wp-text-secondary)]">Celý tým</button>
+              <button type="button" onClick={() => applyPreset("managers")} className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-2.5 py-1 text-xs text-[color:var(--wp-text-secondary)]">Manažeři</button>
+              <button type="button" onClick={() => applyPreset("advisors")} className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-2.5 py-1 text-xs text-[color:var(--wp-text-secondary)]">Poradci</button>
+              <button type="button" onClick={() => applyPreset("newcomers")} className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-2.5 py-1 text-xs text-[color:var(--wp-text-secondary)]">Nováčci</button>
+              <button type="button" onClick={() => applyPreset("risky")} className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-2.5 py-1 text-xs text-[color:var(--wp-text-secondary)]">Rizikoví</button>
             </div>
-            <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-slate-200 p-3">
+            <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-[color:var(--wp-surface-card-border)] p-3">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={selectedIds.size === allIds.length} onChange={toggleAll} className="rounded border-slate-300" />
-                <span className="text-sm font-medium text-slate-700">Celý tým</span>
+                <input type="checkbox" checked={selectedIds.size === allIds.length} onChange={toggleAll} className="rounded border-[color:var(--wp-border-strong)]" />
+                <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Celý tým</span>
               </label>
               {members.map((m) => (
                 <label key={m.userId} className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={selectedIds.has(m.userId)} onChange={() => toggleOne(m.userId)} className="rounded border-slate-300" />
-                  <span className="text-sm text-slate-700">{displayName(m)}</span>
-                  <span className="text-xs text-slate-400">({m.roleName})</span>
+                  <input type="checkbox" checked={selectedIds.has(m.userId)} onChange={() => toggleOne(m.userId)} className="rounded border-[color:var(--wp-border-strong)]" />
+                  <span className="text-sm text-[color:var(--wp-text-secondary)]">{displayName(m)}</span>
+                  <span className="text-xs text-[color:var(--wp-text-tertiary)]">({m.roleName})</span>
                 </label>
               ))}
             </div>
@@ -229,7 +229,7 @@ export function TeamCalendarModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="flex-1 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
             >
               Zrušit
             </button>
@@ -262,7 +262,7 @@ export function TeamCalendarButtons({
       <button
         type="button"
         onClick={onOpenEvent}
-        className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+        className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] shadow-sm hover:bg-[color:var(--wp-surface-muted)]"
       >
         <CalendarPlus className="w-4 h-4" />
         Týmová událost
@@ -270,7 +270,7 @@ export function TeamCalendarButtons({
       <button
         type="button"
         onClick={onOpenTask}
-        className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+        className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] shadow-sm hover:bg-[color:var(--wp-surface-muted)]"
       >
         <CheckSquare className="w-4 h-4" />
         Týmový úkol

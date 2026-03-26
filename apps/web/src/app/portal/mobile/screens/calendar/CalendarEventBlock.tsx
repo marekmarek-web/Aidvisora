@@ -73,7 +73,7 @@ export function CalendarEventBlock({
         onClick();
       }}
       className={`absolute z-10 overflow-hidden rounded-lg border border-l-[3px] p-1 text-left shadow-sm transition-transform active:scale-[0.97] ${
-        useInlineColor ? "border-slate-300 text-slate-900" : style.tailwindClass
+        useInlineColor ? "border-[color:var(--wp-border-strong)] text-[color:var(--wp-text)]" : style.tailwindClass
       } ${isSelected ? "ring-2 ring-indigo-500 ring-offset-1 z-30" : ""}`}
       style={{
         top: topPx + 1,
@@ -128,7 +128,7 @@ export function CalendarAllDayChips({
             type="button"
             onClick={() => onEventClick(ev)}
             className={`truncate rounded-md border border-l-[3px] px-1.5 py-0.5 text-left text-[9px] font-bold shadow-sm active:scale-[0.98] ${
-              useInline ? "border-slate-200 text-slate-900" : style.tailwindClass
+              useInline ? "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text)]" : style.tailwindClass
             }`}
             style={
               useInline

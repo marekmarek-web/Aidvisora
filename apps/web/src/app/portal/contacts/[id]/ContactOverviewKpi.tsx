@@ -51,23 +51,23 @@ export function ContactOverviewKpi({ contactId }: { contactId: string }) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Osobní AUM</span>
-        <div className="text-xl font-black text-slate-900">{d.totalAnnual > 0 ? fmtCZK(d.totalAnnual) : "—"}</div>
+      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Osobní AUM</span>
+        <div className="text-xl font-black text-[color:var(--wp-text)]">{d.totalAnnual > 0 ? fmtCZK(d.totalAnnual) : "—"}</div>
       </div>
-      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Měs. investice</span>
+      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Měs. investice</span>
         <div className="text-xl font-black text-emerald-600">{fmtCZK(d.totalMonthly)}</div>
       </div>
-      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 flex items-center gap-1">
           Health Score <Activity size={12} aria-hidden />
         </span>
         <div className="text-xl font-black text-indigo-600">—</div>
       </div>
-      <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Klientem od</span>
-        <div className="text-xl font-black text-slate-900">{d.clientSince}</div>
+      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Klientem od</span>
+        <div className="text-xl font-black text-[color:var(--wp-text)]">{d.clientSince}</div>
       </div>
     </div>
   );

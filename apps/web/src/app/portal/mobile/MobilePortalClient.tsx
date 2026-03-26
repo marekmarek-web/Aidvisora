@@ -95,7 +95,7 @@ import ScanPage from "../scan/page";
 
 function RouteLoadingSkeleton() {
   return (
-    <div className="flex flex-1 min-h-[40vh] items-center justify-center px-4 text-slate-500 text-sm">
+    <div className="flex flex-1 min-h-[40vh] items-center justify-center px-4 text-[color:var(--wp-text-secondary)] text-sm">
       Načítání…
     </div>
   );
@@ -662,27 +662,27 @@ export function MobilePortalClient({
           ) : null}
           <div className="grid grid-cols-1 gap-2">
             <MobileCard>
-              <p className="text-sm font-bold text-slate-900">Gmail Workspace</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="text-sm font-bold text-[color:var(--wp-text)]">Gmail Workspace</p>
+              <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                 Na mobilu otevřete Gmail integraci přes Nastavení &gt; Integrace nebo desktop režim.
               </p>
               <button
                 type="button"
                 onClick={() => router.push("/portal/setup?tab=integrace&provider=gmail")}
-                className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-700 active:scale-[0.99] transition-transform"
+                className="mt-3 min-h-[44px] w-full rounded-xl border border-[color:var(--wp-border-strong)] text-sm font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.99] transition-transform"
               >
                 Otevřít Gmail integraci
               </button>
             </MobileCard>
             <MobileCard>
-              <p className="text-sm font-bold text-slate-900">Google Drive Workspace</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="text-sm font-bold text-[color:var(--wp-text)]">Google Drive Workspace</p>
+              <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                 Na mobilu otevřete Drive integraci přes Nastavení &gt; Integrace nebo desktop režim.
               </p>
               <button
                 type="button"
                 onClick={() => router.push("/portal/setup?tab=integrace&provider=google-drive")}
-                className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-700 active:scale-[0.99] transition-transform"
+                className="mt-3 min-h-[44px] w-full rounded-xl border border-[color:var(--wp-border-strong)] text-sm font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.99] transition-transform"
               >
                 Otevřít Drive integraci
               </button>
@@ -782,7 +782,7 @@ export function MobilePortalClient({
             <button
               type="button"
               onClick={handleHeaderBack}
-              className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform"
               aria-label="Zpět"
             >
               <ArrowLeft size={18} />
@@ -791,7 +791,7 @@ export function MobilePortalClient({
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform"
               aria-label="Otevřít menu"
             >
               <Menu size={20} />
@@ -803,7 +803,7 @@ export function MobilePortalClient({
             <button
               type="button"
               onClick={() => setGlobalSearchOpen(true)}
-              className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform"
               aria-label="Hledat"
             >
               <Search size={18} />
@@ -814,7 +814,7 @@ export function MobilePortalClient({
                 setDrawerOpen(false);
                 router.push("/portal/ai");
               }}
-              className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform text-indigo-600"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform text-indigo-600"
               aria-label="Zeptat se AI"
             >
               <Sparkles size={18} />
@@ -822,7 +822,7 @@ export function MobilePortalClient({
             <button
               type="button"
               onClick={() => router.push("/portal/notifications")}
-              className="relative min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform"
+              className="relative min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform"
               aria-label="Notifikace"
             >
               <Bell size={18} />
@@ -858,9 +858,9 @@ export function MobilePortalClient({
               setDrawerOpen(false);
               setGlobalSearchOpen(true);
             }}
-            className="w-full flex items-center gap-2 min-h-[44px] rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 text-left active:scale-[0.99] transition-transform"
+            className="w-full flex items-center gap-2 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 text-sm font-semibold text-[color:var(--wp-text-secondary)] text-left active:scale-[0.99] transition-transform"
           >
-            <Search size={16} className="shrink-0 text-slate-400" />
+            <Search size={16} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
             <span className="truncate">Hledat v CRM…</span>
           </button>
         }
@@ -893,26 +893,26 @@ export function MobilePortalClient({
         <StepWizard step={taskWizardStep} total={3}>
           {taskWizardStep === 1 ? (
             <div className="space-y-3">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Název</label>
+              <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Název</label>
               <input
                 type="text"
                 value={taskDraft.title}
                 onChange={(e) => setTaskDraft((prev) => ({ ...prev, title: e.target.value }))}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 placeholder="Např. Zavolat klientovi"
               />
-              <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Termín</label>
+              <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Termín</label>
               <input
                 type="date"
                 value={taskDraft.dueDate}
                 onChange={(e) => setTaskDraft((prev) => ({ ...prev, dueDate: e.target.value }))}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               />
             </div>
           ) : null}
           {taskWizardStep === 2 ? (
             <div className="space-y-3">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Klient</label>
+              <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Klient</label>
               <CustomDropdown
                 value={taskDraft.contactId}
                 onChange={(id) => setTaskDraft((prev) => ({ ...prev, contactId: id }))}
@@ -929,12 +929,12 @@ export function MobilePortalClient({
           ) : null}
           {taskWizardStep === 3 ? (
             <div className="space-y-3">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Popis</label>
+              <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Popis</label>
               <textarea
                 rows={4}
                 value={taskDraft.description}
                 onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-sm"
                 placeholder="Doplňte kontext…"
               />
             </div>
@@ -943,7 +943,7 @@ export function MobilePortalClient({
             <button
               type="button"
               onClick={() => (taskWizardStep > 1 ? setTaskWizardStep((s) => s - 1) : setTaskCreateOpen(false))}
-              className="flex-1 min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold"
+              className="flex-1 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold"
             >
               {taskWizardStep > 1 ? "Zpět" : "Zrušit"}
             </button>
@@ -965,7 +965,7 @@ export function MobilePortalClient({
       </BottomSheet>
 
       <BottomSheet open={clientCreateOpen} onClose={() => setClientCreateOpen(false)} title="Nový klient">
-        <p className="text-sm text-slate-600">Pro první vlnu je vytvoření klienta vedeno přes existující wizard.</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Pro první vlnu je vytvoření klienta vedeno přes existující wizard.</p>
         <button
           type="button"
           onClick={() => {
@@ -980,14 +980,14 @@ export function MobilePortalClient({
 
       <BottomSheet open={opportunityCreateOpen} onClose={() => setOpportunityCreateOpen(false)} title="Nová příležitost">
         <div className="space-y-3">
-          <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Název případu</label>
+          <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Název případu</label>
           <input
             type="text"
             value={opportunityDraft.title}
             onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, title: e.target.value }))}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
           />
-          <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Typ případu</label>
+          <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Typ případu</label>
           <CustomDropdown
             value={opportunityDraft.caseType}
             onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, caseType: id }))}
@@ -999,13 +999,13 @@ export function MobilePortalClient({
               { id: "jiné", label: "Jiné" },
             ]}
           />
-          <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Fáze</label>
+          <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Fáze</label>
           <CustomDropdown
             value={opportunityDraft.stageId}
             onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, stageId: id }))}
             options={stageOptions.map((stage) => ({ id: stage.id, label: stage.label }))}
           />
-          <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Klient</label>
+          <label className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)] block">Klient</label>
           <CustomDropdown
             value={opportunityDraft.contactId}
             onChange={(id) => setOpportunityDraft((prev) => ({ ...prev, contactId: id }))}
@@ -1024,13 +1024,13 @@ export function MobilePortalClient({
               placeholder="Hodnota"
               value={opportunityDraft.expectedValue}
               onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, expectedValue: e.target.value }))}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             />
             <input
               type="date"
               value={opportunityDraft.expectedCloseDate}
               onChange={(e) => setOpportunityDraft((prev) => ({ ...prev, expectedCloseDate: e.target.value }))}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             />
           </div>
           <CreateActionButton type="button" onClick={onOpportunityCreate} className="min-h-[44px] w-full" icon={null}>
@@ -1052,10 +1052,10 @@ export function MobilePortalClient({
         ) : (
           <div className="space-y-4">
             <MobileCard>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 Obchodní případ
               </p>
-              <p className="text-lg font-black text-slate-900 mt-1 leading-tight">
+              <p className="text-lg font-black text-[color:var(--wp-text)] mt-1 leading-tight">
                 {selectedOpportunity.title}
               </p>
               <div className="mt-3 min-h-[44px] flex items-center">
@@ -1067,7 +1067,7 @@ export function MobilePortalClient({
                     {selectedOpportunity.contactName}
                   </Link>
                 ) : (
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-[color:var(--wp-text-secondary)]">
                     {selectedOpportunity.contactName || "Bez klienta"}
                   </span>
                 )}
@@ -1081,20 +1081,20 @@ export function MobilePortalClient({
             <MobileCard>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                     Konečná cena
                   </p>
-                  <p className="text-base font-black text-slate-900 mt-1">
+                  <p className="text-base font-black text-[color:var(--wp-text)] mt-1">
                     {selectedOpportunity.expectedValue
                       ? `${Number(selectedOpportunity.expectedValue).toLocaleString("cs-CZ")} Kč`
                       : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                     Odhad uzavření
                   </p>
-                  <p className="text-base font-bold text-slate-800 mt-1">
+                  <p className="text-base font-bold text-[color:var(--wp-text)] mt-1">
                     {selectedOpportunity.expectedCloseDate
                       ? (() => {
                           const d = new Date(selectedOpportunity.expectedCloseDate!);
@@ -1109,7 +1109,7 @@ export function MobilePortalClient({
             </MobileCard>
 
             <MobileCard>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-black">
+              <p className="text-xs uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-black">
                 Posunout do fáze
               </p>
               <div className="mt-3 space-y-2">
@@ -1123,7 +1123,7 @@ export function MobilePortalClient({
                       className={`w-full min-h-[44px] rounded-xl border text-left px-3 text-sm font-semibold transition-colors touch-manipulation ${
                         active
                           ? "border-blue-600 bg-blue-50 text-blue-800"
-                          : "border-slate-200 text-slate-800 hover:bg-slate-50 active:bg-slate-100"
+                          : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] active:bg-[color:var(--wp-surface-muted)]"
                       }`}
                     >
                       {stage.label}

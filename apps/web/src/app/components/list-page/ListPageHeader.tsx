@@ -28,15 +28,15 @@ export function ListPageHeader({
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
       <div className="min-w-0">
-        <h1 className="text-xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2 md:gap-3 flex-wrap">
+        <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight text-[color:var(--wp-text)] md:gap-3 md:text-3xl">
           {title}
           {showBadge && (
-            <span className="px-2 py-0.5 md:px-2.5 bg-slate-100 text-slate-600 text-xs md:text-sm font-semibold rounded-lg border border-slate-200">
+            <span className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--wp-text-secondary)] md:px-2.5 md:text-sm">
               {badgeLabel}
             </span>
           )}
         </h1>
-        {subtitle && <p className="text-xs md:text-sm text-slate-500 mt-0.5 md:mt-1">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-xs text-[color:var(--wp-text-secondary)] md:mt-1 md:text-sm">{subtitle}</p>}
       </div>
       {actions != null && (
         <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0 [&_button]:min-h-[44px] md:[&_button]:min-h-0 [&_a]:min-h-[44px] md:[&_a]:min-h-0">

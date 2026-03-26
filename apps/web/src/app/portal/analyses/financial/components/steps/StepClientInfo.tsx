@@ -115,8 +115,8 @@ export function StepClientInfo() {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Osobní údaje</h2>
-          <p className="text-slate-500 mt-1">Základní údaje pro výpočet finančního plánu.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Osobní údaje</h2>
+          <p className="text-[color:var(--wp-text-secondary)] mt-1">Základní údaje pro výpočet finančního plánu.</p>
         </div>
         <div className="bg-blue-50 text-blue-800 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
           <User className="w-4 h-4" />
@@ -125,79 +125,79 @@ export function StepClientInfo() {
       </div>
 
       <div className="space-y-6">
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Hlavní klient</h3>
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-lg font-bold text-[color:var(--wp-text)] border-b border-[color:var(--wp-surface-card-border)] pb-2 mb-4">Hlavní klient</h3>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Jméno a příjmení</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Jméno a příjmení</label>
               <input
                 type="text"
                 value={client.name}
                 onChange={(e) => setClient({ name: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Datum narození</label>
               <input
                 type="text"
                 inputMode="numeric"
                 value={client.birthDate || ""}
                 onChange={(e) => handleBirthDateChange(e.target.value, (v) => setClient({ birthDate: v }))}
                 placeholder="dd.mm.rrrr"
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Věk</label>
-              <div className="w-full px-2 py-3 bg-slate-100 text-blue-800 font-bold text-center rounded-xl text-sm">
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Věk</label>
+              <div className="w-full px-2 py-3 bg-[color:var(--wp-surface-muted)] text-blue-800 font-bold text-center rounded-xl text-sm">
                 {age != null ? `${age} let` : "—"}
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Rodné číslo <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Rodné číslo <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
               <input
                 type="text"
                 value={client.birthNumber ?? ""}
                 onChange={(e) => setClient({ birthNumber: e.target.value })}
                 placeholder="Rodné číslo"
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             <div className="md:col-span-3">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Email <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
               <input
                 type="email"
                 value={client.email}
                 onChange={(e) => setClient({ email: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             <div className="md:col-span-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Telefon <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Telefon <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
               <input
                 type="tel"
                 value={client.phone}
                 onChange={(e) => setClient({ phone: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             <div className="md:col-span-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Povolání <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Povolání <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
               <input
                 type="text"
                 value={client.occupation}
                 onChange={(e) => setClient({ occupation: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             <div className="md:col-span-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Sporty <span className="text-slate-400 font-normal">(volitelné)</span></label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Sporty <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
               <input
                 type="text"
                 value={client.sports}
                 onChange={(e) => setClient({ sports: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
             </div>
           </div>
@@ -241,12 +241,12 @@ export function StepClientInfo() {
             <button
               type="button"
               onClick={() => setShowSyncDialog(true)}
-              className="min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+              className="flex min-h-[44px] items-center gap-2 rounded-xl bg-[color:var(--wp-button-bg)] px-5 py-2.5 font-semibold text-white transition-colors hover:bg-[color:var(--wp-primary-hover)]"
             >
               <Users className="w-4 h-4" />
               Synchronizovat celou rodinu do CRM
             </button>
-            <p className="text-xs text-slate-500">Vytvoří kontakty pro partnera, děti a domácnost.</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)]">Vytvoří kontakty pro partnera, děti a domácnost.</p>
           </div>
         )}
 
@@ -261,15 +261,15 @@ export function StepClientInfo() {
           />
         )}
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3">
+        <div className="bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center gap-3">
           <input
             type="checkbox"
             id="has-partner"
             checked={client.hasPartner}
             onChange={(e) => setClient({ hasPartner: e.target.checked })}
-            className="w-5 h-5 text-indigo-500 rounded border-slate-300 focus:ring-indigo-400"
+            className="w-5 h-5 text-indigo-500 rounded border-[color:var(--wp-border-strong)] focus:ring-indigo-400"
           />
-          <label htmlFor="has-partner" className="text-slate-700 font-bold cursor-pointer select-none">Přidat partnera / partnerku</label>
+          <label htmlFor="has-partner" className="text-[color:var(--wp-text-secondary)] font-bold cursor-pointer select-none">Přidat partnera / partnerku</label>
         </div>
 
         <div className="bg-amber-50/80 p-4 rounded-xl border border-amber-200 flex items-center gap-3">
@@ -278,96 +278,96 @@ export function StepClientInfo() {
             id="include-company"
             checked={includeCompany}
             onChange={(e) => setData({ includeCompany: e.target.checked })}
-            className="min-w-[20px] w-5 h-5 text-indigo-500 rounded border-slate-300 focus:ring-indigo-400"
+            className="min-w-[20px] w-5 h-5 text-indigo-500 rounded border-[color:var(--wp-border-strong)] focus:ring-indigo-400"
           />
-          <label htmlFor="include-company" className="text-slate-700 font-bold cursor-pointer select-none">
+          <label htmlFor="include-company" className="text-[color:var(--wp-text-secondary)] font-bold cursor-pointer select-none">
             Tato analýza zahrnuje i firmu (s.r.o.)
           </label>
         </div>
 
         {client.hasPartner && (
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+          <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
             <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-widest mb-4">Partner</h3>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Jméno partnera</label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Jméno partnera</label>
                 <input
                   type="text"
                   value={partner.name}
                   onChange={(e) => setPartner({ name: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Datum narození</label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Datum narození</label>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={partner.birthDate || ""}
                   onChange={(e) => handleBirthDateChange(e.target.value, (v) => setPartner({ birthDate: v }))}
                   placeholder="dd.mm.rrrr"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-1">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Věk</label>
-                <div className="w-full px-2 py-3 bg-slate-100 text-blue-800 font-bold text-center rounded-xl text-sm">
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Věk</label>
+                <div className="w-full px-2 py-3 bg-[color:var(--wp-surface-muted)] text-blue-800 font-bold text-center rounded-xl text-sm">
                   {partnerAge != null ? `${partnerAge} let` : "—"}
                 </div>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Rodné číslo <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Rodné číslo <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
                 <input
                   type="text"
                   value={partner.birthNumber ?? ""}
                   onChange={(e) => setPartner({ birthNumber: e.target.value })}
                   placeholder="Rodné číslo"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-3">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Email <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Email <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
                 <input
                   type="email"
                   value={partner.email ?? ""}
                   onChange={(e) => setPartner({ email: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Telefon <span className="text-slate-400 font-normal">(volitelné)</span></label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Telefon <span className="text-[color:var(--wp-text-tertiary)] font-normal">(volitelné)</span></label>
                 <input
                   type="tel"
                   value={partner.phone ?? ""}
                   onChange={(e) => setPartner({ phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Povolání partnera</label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Povolání partnera</label>
                 <input
                   type="text"
                   value={partner.occupation ?? ""}
                   onChange={(e) => setPartner({ occupation: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div className="md:col-span-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Sporty</label>
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Sporty</label>
                 <input
                   type="text"
                   value={partner.sports ?? ""}
                   onChange={(e) => setPartner({ sports: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
             </div>
           </div>
         )}
 
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <h3 className="text-lg font-bold text-slate-800">Děti</h3>
+            <h3 className="text-lg font-bold text-[color:var(--wp-text)]">Děti</h3>
             <button
               type="button"
               onClick={() => addChild()}
@@ -379,18 +379,18 @@ export function StepClientInfo() {
           </div>
           <div className="space-y-3">
             {children.length === 0 ? (
-              <div className="text-center py-6 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200 text-sm italic">
+              <div className="text-center py-6 text-[color:var(--wp-text-tertiary)] bg-[color:var(--wp-surface-card)] rounded-xl border border-dashed border-[color:var(--wp-surface-card-border)] text-sm italic">
                 Žádné děti zatím nepřidány.
               </div>
             ) : (
               children.map((child) => (
-                <div key={child.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div key={child.id} className="bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                   <input
                     type="text"
                     value={child.name}
                     onChange={(e) => updateChild(child.id, "name", e.target.value)}
                     placeholder="Jméno"
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg"
+                    className="flex-1 px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg"
                   />
                   <input
                     type="text"
@@ -398,9 +398,9 @@ export function StepClientInfo() {
                     value={child.birthDate || ""}
                     onChange={(e) => handleBirthDateChange(e.target.value, (v) => updateChild(child.id, "birthDate", v))}
                     placeholder="Datum narození"
-                    className="w-28 min-w-[100px] px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-28 min-w-[100px] px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg"
                   />
-                  <div className="text-sm text-slate-500 flex items-center min-w-[60px]">
+                  <div className="text-sm text-[color:var(--wp-text-secondary)] flex items-center min-w-[60px]">
                     {ageFromBirthYear(child.birthDate) != null ? `${ageFromBirthYear(child.birthDate)} let` : ""}
                   </div>
                   <input
@@ -408,14 +408,14 @@ export function StepClientInfo() {
                     value={child.birthNumber ?? ""}
                     onChange={(e) => updateChild(child.id, "birthNumber", e.target.value)}
                     placeholder="Rodné číslo"
-                    className="w-28 min-w-[100px] px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-28 min-w-[100px] px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg"
                   />
                   <input
                     type="text"
                     value={child.sports ?? ""}
                     onChange={(e) => updateChild(child.id, "sports", e.target.value)}
                     placeholder="Sporty"
-                    className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg"
+                    className="flex-1 min-w-0 px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg"
                   />
                   <button
                     type="button"

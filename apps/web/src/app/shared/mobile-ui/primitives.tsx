@@ -21,7 +21,7 @@ export function MobileAppShell({
   return (
     <div
       className={cx(
-        "min-h-screen bg-slate-50 text-slate-900 flex flex-col",
+        "flex min-h-screen flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
         deviceClass === "phone" && "pb-[calc(96px+var(--safe-area-bottom))]",
         deviceClass === "tablet" && "pb-[calc(72px+var(--safe-area-bottom))]",
         deviceClass === "desktop" && "pb-0",
@@ -50,7 +50,7 @@ export function MobileHeader({
   return (
     <header
       className={cx(
-        "sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200",
+        "sticky top-0 z-40 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
         "pt-[calc(var(--safe-area-top)+0.5rem)] pb-3",
         deviceClass === "phone" && "px-4",
         deviceClass === "tablet" && "px-6",
@@ -60,8 +60,15 @@ export function MobileHeader({
       <div className={cx("min-h-[44px] flex items-center justify-between gap-3", deviceClass === "tablet" && "max-w-3xl mx-auto")}>
         <div className="min-w-0 flex items-center gap-2">{left}</div>
         <div className="min-w-0 flex-1">
-          <h1 className={cx("font-black truncate text-center", deviceClass === "tablet" ? "text-lg" : "text-base")}>{title}</h1>
-          <p className="text-[11px] text-slate-500 text-center truncate">{subtitle || "\u00A0"}</p>
+          <h1
+            className={cx(
+              "truncate text-center font-black text-[color:var(--wp-text)]",
+              deviceClass === "tablet" ? "text-lg" : "text-base"
+            )}
+          >
+            {title}
+          </h1>
+          <p className="truncate text-center text-[11px] text-[color:var(--wp-text-secondary)]">{subtitle || "\u00A0"}</p>
         </div>
         <div className="min-w-0 flex items-center justify-end gap-2">{right}</div>
       </div>
@@ -92,7 +99,9 @@ function NavTabButton({
         deviceClass === "tablet"
           ? "flex items-center gap-2 px-4 py-1.5 text-sm font-bold"
           : "flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
-        active ? "text-indigo-700 bg-indigo-50" : "text-slate-500 hover:text-slate-700"
+        active
+          ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-200"
+          : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"
       )}
     >
       <div className="relative flex-shrink-0">
@@ -133,7 +142,7 @@ export function MobileBottomNav({
       onClick={centerFab.onClick}
       aria-label={centerFab.ariaLabel ?? "Nový – rychlé akce"}
       className={cx(
-        "rounded-full bg-aidv-create text-white shadow-lg shadow-indigo-950/20 flex items-center justify-center active:scale-95 transition-transform border-4 border-white shrink-0",
+        "flex shrink-0 items-center justify-center rounded-full border-4 border-[color:var(--wp-surface-card)] bg-aidv-create text-white shadow-lg shadow-indigo-950/20 transition-transform active:scale-95",
         deviceClass === "tablet" ? "w-12 h-12 -translate-y-1" : "w-14 h-14 -translate-y-2"
       )}
     >
@@ -144,7 +153,7 @@ export function MobileBottomNav({
   return (
     <nav
       className={cx(
-        "fixed bottom-0 inset-x-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur",
+        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur",
         "pb-[max(0.5rem,var(--safe-area-bottom))]",
         "pl-[max(0.25rem,env(safe-area-inset-left,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))]"
       )}
@@ -225,7 +234,7 @@ export function MobileSection({ title, action, children, className }: { title?: 
     <section className={cx("space-y-2", className)}>
       {title ? (
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs uppercase tracking-wider text-slate-500 font-black">{title}</h2>
+          <h2 className="text-xs uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-black">{title}</h2>
           {action}
         </div>
       ) : null}
@@ -238,7 +247,7 @@ export function MobileCard({ children, className, pressable }: { children: React
   return (
     <div
       className={cx(
-        "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm",
+        "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm",
         pressable && "transition-transform active:scale-[0.99] cursor-pointer",
         className
       )}
@@ -259,14 +268,14 @@ export function MetricCard({
 }) {
   return (
     <MobileCard className="p-3.5">
-      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-black">{label}</p>
       <p
         className={cx(
           "mt-1 text-xl font-black",
           tone === "success" && "text-emerald-700",
           tone === "warning" && "text-amber-700",
           tone === "danger" && "text-rose-700",
-          tone === "default" && "text-slate-900"
+          tone === "default" && "text-[color:var(--wp-text)]"
         )}
       >
         {value}
@@ -286,7 +295,7 @@ export function StatusBadge({
     <span
       className={cx(
         "inline-flex items-center px-2 py-0.5 rounded-lg border text-[10px] uppercase tracking-wider font-black",
-        tone === "neutral" && "bg-slate-100 text-slate-600 border-slate-200",
+        tone === "neutral" && "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]",
         tone === "success" && "bg-emerald-50 text-emerald-700 border-emerald-200",
         tone === "warning" && "bg-amber-50 text-amber-700 border-amber-200",
         tone === "danger" && "bg-rose-50 text-rose-700 border-rose-200",
@@ -313,7 +322,7 @@ export function SearchBar({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+      className="min-h-[44px] w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-sm font-medium text-[color:var(--wp-text)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-[color:var(--wp-header-input-focus-ring)]"
     />
   );
 }
@@ -342,14 +351,17 @@ export function FilterChips({
             className={cx(
               "min-h-[36px] whitespace-nowrap rounded-lg border px-3 text-xs font-bold transition-colors duration-150 active:scale-95",
               active && "bg-indigo-50 text-indigo-700 border-indigo-200",
-              !active && !warning && !danger && "bg-white text-slate-600 border-slate-200 hover:border-slate-300",
+              !active &&
+                !warning &&
+                !danger &&
+                "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:border-[color:var(--wp-border-strong)]",
               !active && warning && "bg-amber-50 text-amber-800 border-amber-200",
               !active && danger && "bg-rose-50 text-rose-800 border-rose-300"
             )}
           >
             {opt.label}
             {typeof opt.badge === "number" ? (
-              <span className="ml-1.5 text-slate-400">{opt.badge}</span>
+              <span className="ml-1.5 text-[color:var(--wp-text-tertiary)]">{opt.badge}</span>
             ) : null}
           </button>
         );
@@ -366,7 +378,7 @@ export function StickyActionBar({ children }: { children: ReactNode }) {
         "pointer-events-none"
       )}
     >
-      <div className="pointer-events-auto bg-white/95 backdrop-blur rounded-2xl border border-slate-200 shadow-lg p-3">
+      <div className="pointer-events-auto rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 shadow-lg backdrop-blur">
         {children}
       </div>
     </div>
@@ -436,13 +448,13 @@ function OverlayContainer({
       <button
         type="button"
         aria-label="Zavřít"
-        className="absolute inset-0 bg-slate-900/40 animate-in fade-in duration-200"
+        className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] animate-in fade-in duration-200"
         onClick={onClose}
       />
       {/* Panel */}
       <div
         className={cx(
-          "absolute left-0 right-0 bg-white border-t border-slate-200 shadow-2xl",
+          "absolute left-0 right-0 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl",
           "animate-in slide-in-from-bottom duration-300 ease-out",
           fullScreen
             ? "top-0 bottom-0 rounded-none pt-[var(--safe-area-top)] pb-[var(--safe-area-bottom)]"
@@ -469,13 +481,13 @@ export function BottomSheet({
   const labelId = `bs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <OverlayContainer open={open} onClose={onClose} labelId={labelId}>
-      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between gap-2">
         <h3 id={labelId} className="font-black text-sm">{title}</h3>
         <button
           type="button"
           onClick={onClose}
           aria-label="Zavřít panel"
-          className="min-h-[36px] min-w-[36px] rounded-lg border border-slate-200 grid place-items-center hover:bg-slate-50 transition-colors"
+          className="min-h-[36px] min-w-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] grid place-items-center hover:bg-[color:var(--wp-surface-muted)] transition-colors"
         >
           <X size={16} />
         </button>
@@ -499,13 +511,13 @@ export function FullscreenSheet({
   const labelId = `fs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <OverlayContainer open={open} onClose={onClose} fullScreen labelId={labelId}>
-      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between gap-2">
         <h3 id={labelId} className="font-black text-sm">{title}</h3>
         <button
           type="button"
           onClick={onClose}
           aria-label="Zavřít"
-          className="min-h-[36px] min-w-[36px] rounded-lg border border-slate-200 grid place-items-center hover:bg-slate-50 transition-colors"
+          className="min-h-[36px] min-w-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] grid place-items-center hover:bg-[color:var(--wp-surface-muted)] transition-colors"
         >
           <X size={16} />
         </button>
@@ -527,7 +539,7 @@ export function StepWizard({
   const pct = Math.max(0, Math.min(100, Math.round((step / Math.max(1, total)) * 100)));
   return (
     <div className="space-y-3">
-      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div className="h-full bg-indigo-600" style={{ width: `${pct}%` }} />
       </div>
       {children}
@@ -549,12 +561,12 @@ export function EmptyState({
   return (
     <MobileCard className="text-center py-10">
       <div className="flex justify-center mb-3">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-          {createElement(Icon, { size: 22, className: "text-slate-400" })}
+        <div className="w-12 h-12 rounded-2xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center">
+          {createElement(Icon, { size: 22, className: "text-[color:var(--wp-text-tertiary)]" })}
         </div>
       </div>
-      <p className="font-black text-slate-900">{title}</p>
-      {description ? <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">{description}</p> : null}
+      <p className="font-black text-[color:var(--wp-text)]">{title}</p>
+      {description ? <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1.5 leading-relaxed">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </MobileCard>
   );
@@ -603,7 +615,7 @@ export function LoadingSkeleton({ rows = 4, variant = "card" }: { rows?: number;
       {Array.from({ length: rows }).map((_, idx) => (
         <div
           key={idx}
-          className={cx("rounded-2xl bg-slate-200/70 animate-pulse", heights[idx % heights.length])}
+          className={cx("rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse", heights[idx % heights.length])}
         />
       ))}
     </div>
@@ -625,9 +637,9 @@ export function ClientSummaryCard({
 }) {
   return (
     <MobileCard>
-      <p className="text-lg font-black text-slate-900">{name}</p>
-      {email ? <p className="text-sm text-slate-600 mt-1">{email}</p> : null}
-      {phone ? <p className="text-sm text-slate-600">{phone}</p> : null}
+      <p className="text-lg font-black text-[color:var(--wp-text)]">{name}</p>
+      {email ? <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">{email}</p> : null}
+      {phone ? <p className="text-sm text-[color:var(--wp-text-secondary)]">{phone}</p> : null}
       {tags?.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {tags.slice(0, 4).map((tag) => (
@@ -655,9 +667,9 @@ export function HouseholdMemberCard({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 truncate">{name}</p>
-          <p className="text-xs text-slate-500">{role || "Člen domácnosti"}</p>
-          {subtitle ? <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p> : null}
+          <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{name}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">{role || "Člen domácnosti"}</p>
+          {subtitle ? <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-0.5">{subtitle}</p> : null}
         </div>
         {action}
       </div>
@@ -677,7 +689,7 @@ export function DocumentUploadCard({
   return (
     <MobileCard className="border-dashed">
       <p className="text-sm font-black">{title}</p>
-      {description ? <p className="text-xs text-slate-500 mt-1">{description}</p> : null}
+      {description ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}
     </MobileCard>
   );
@@ -709,8 +721,8 @@ export function DocumentStateCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-bold truncate">{fileName}</p>
-          <p className="text-xs text-slate-500 mt-1">{details ?? "Dokumentový workflow"}</p>
-          {typeof confidence === "number" ? <p className="text-xs text-slate-500 mt-1">Confidence: {confidence}%</p> : null}
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{details ?? "Dokumentový workflow"}</p>
+          {typeof confidence === "number" ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Confidence: {confidence}%</p> : null}
         </div>
         <StatusBadge tone={tone}>{status.replace("_", " ")}</StatusBadge>
       </div>
@@ -739,13 +751,13 @@ export function AnalysisCard({
         <p className="text-sm font-bold">{title}</p>
         <StatusBadge tone={tone}>{status}</StatusBadge>
       </div>
-      {subtitle ? <p className="text-xs text-slate-500 mt-1">{subtitle}</p> : null}
+      {subtitle ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{subtitle}</p> : null}
       {typeof progress === "number" ? (
         <div className="mt-3">
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
             <div className="h-full bg-indigo-600" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">{progress}%</p>
+          <p className="text-[11px] text-[color:var(--wp-text-secondary)] mt-1">{progress}%</p>
         </div>
       ) : null}
       {action ? <div className="mt-3">{action}</div> : null}
@@ -765,7 +777,7 @@ export function CalculatorCard({
   return (
     <MobileCard className="p-3.5">
       <p className="text-sm font-bold">{title}</p>
-      {description ? <p className="text-xs text-slate-500 mt-1">{description}</p> : null}
+      {description ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}
     </MobileCard>
   );
@@ -806,18 +818,18 @@ export function KPIProgressCard({
   return (
     <MobileCard className="p-3.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
+        <p className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)]">{label}</p>
         <StatusBadge tone={tone}>{pct}%</StatusBadge>
       </div>
-      <p className="mt-2 text-lg font-black text-slate-900">
+      <p className="mt-2 text-lg font-black text-[color:var(--wp-text)]">
         {actual.toLocaleString("cs-CZ")}
         {unit ? ` ${unit}` : ""}
       </p>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[color:var(--wp-text-secondary)]">
         Cíl: {target.toLocaleString("cs-CZ")}
         {unit ? ` ${unit}` : ""}
       </p>
-      <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+      <div className="mt-2 h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div className="h-full bg-indigo-600" style={{ width: `${pct}%` }} />
       </div>
     </MobileCard>
@@ -842,9 +854,9 @@ export function TeamMemberCard({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 truncate">{name}</p>
-          <p className="text-xs text-slate-500">{role || "Člen týmu"}</p>
-          {subtitle ? <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p> : null}
+          <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{name}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">{role || "Člen týmu"}</p>
+          {subtitle ? <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-0.5">{subtitle}</p> : null}
         </div>
         {riskLevel ? <StatusBadge tone={tone}>{riskLevel}</StatusBadge> : null}
       </div>
@@ -888,12 +900,12 @@ export function NotificationListItem({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <p className="text-sm font-bold text-[color:var(--wp-text)] flex items-center gap-2">
             {title}
             {unread ? <span className="inline-block h-2 w-2 rounded-full bg-indigo-600" /> : null}
           </p>
-          {body ? <p className="mt-1 text-xs text-slate-600">{body}</p> : null}
-          {meta ? <p className="mt-1 text-[11px] text-slate-400">{meta}</p> : null}
+          {body ? <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">{body}</p> : null}
+          {meta ? <p className="mt-1 text-[11px] text-[color:var(--wp-text-tertiary)]">{meta}</p> : null}
         </div>
         {action}
       </div>
@@ -912,8 +924,8 @@ export function SettingsGroupCard({
 }) {
   return (
     <MobileCard>
-      <p className="text-sm font-black text-slate-900">{title}</p>
-      {description ? <p className="text-xs text-slate-500 mt-1">{description}</p> : null}
+      <p className="text-sm font-black text-[color:var(--wp-text)]">{title}</p>
+      {description ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{description}</p> : null}
       <div className="mt-3 space-y-2">{children}</div>
     </MobileCard>
   );
@@ -932,7 +944,7 @@ export function ChatMessageBubble({
     <div className={cx("flex", own ? "justify-end" : "justify-start")}>
       <MobileCard className={cx("max-w-[85%] p-3", own && "bg-indigo-600 text-white border-indigo-700")}>
         <p className="text-sm leading-relaxed">{body}</p>
-        {timestamp ? <p className={cx("mt-1 text-[11px]", own ? "text-indigo-100" : "text-slate-400")}>{timestamp}</p> : null}
+        {timestamp ? <p className={cx("mt-1 text-[11px]", own ? "text-indigo-100" : "text-[color:var(--wp-text-tertiary)]")}>{timestamp}</p> : null}
       </MobileCard>
     </div>
   );
@@ -951,8 +963,8 @@ export function MobileDocumentItem({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 truncate">{title}</p>
-          {subtitle ? <p className="text-xs text-slate-500 mt-1">{subtitle}</p> : null}
+          <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{title}</p>
+          {subtitle ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{subtitle}</p> : null}
         </div>
         {action}
       </div>
@@ -975,8 +987,8 @@ export function RequestStatusCard({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900">{title}</p>
-          {description ? <p className="text-xs text-slate-500 mt-1">{description}</p> : null}
+          <p className="text-sm font-bold text-[color:var(--wp-text)]">{title}</p>
+          {description ? <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{description}</p> : null}
         </div>
         <StatusBadge tone={done ? "success" : "info"}>{statusLabel}</StatusBadge>
       </div>
@@ -992,9 +1004,9 @@ export function ProfileFieldRow({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">{label}</p>
-      <p className="text-sm font-semibold text-slate-900 mt-0.5">{value || "—"}</p>
+    <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2">
+      <p className="text-[10px] uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-black">{label}</p>
+      <p className="text-sm font-semibold text-[color:var(--wp-text)] mt-0.5">{value || "—"}</p>
     </div>
   );
 }

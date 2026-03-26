@@ -37,26 +37,26 @@ export function CalendarDayTasksStrip({
   if (!loading && open.length === 0) return null;
 
   return (
-    <div className="shrink-0 border-b border-slate-100 bg-slate-50/80 px-2 py-2">
+    <div className="shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 px-2 py-2">
       <button
         type="button"
         onClick={onOpenTasks}
-        className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm active:bg-slate-50"
+        className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-left shadow-sm active:bg-[color:var(--wp-surface-muted)]"
       >
         <CheckSquare size={18} className="shrink-0 text-indigo-600" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Úkoly v den</p>
-          <p className="truncate text-sm font-bold text-slate-800">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Úkoly v den</p>
+          <p className="truncate text-sm font-bold text-[color:var(--wp-text)]">
             {loading ? "Načítám…" : `${open.length} otevřených úkolů`}
           </p>
         </div>
-        <ChevronRight size={18} className="shrink-0 text-slate-400" />
+        <ChevronRight size={18} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
       </button>
       {!loading && open.length > 0 ? (
         <MobileCard className="mt-2 max-h-[140px] overflow-y-auto py-0">
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-[color:var(--wp-surface-card-border)]">
             {open.slice(0, 5).map((t) => (
-              <li key={t.id} className="px-3 py-2 text-sm font-semibold text-slate-800">
+              <li key={t.id} className="px-3 py-2 text-sm font-semibold text-[color:var(--wp-text)]">
                 {t.title}
               </li>
             ))}

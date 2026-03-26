@@ -32,7 +32,7 @@ export function CalculatorPageHeader({
             {title}
           </h1>
           {subtitle && (
-            <p className="text-[13px] sm:text-sm text-slate-600 mt-1 leading-relaxed">{subtitle}</p>
+            <p className="text-[13px] sm:text-sm text-[color:var(--wp-text-secondary)] mt-1 leading-relaxed">{subtitle}</p>
           )}
         </div>
         {actions ? <div className="flex shrink-0 md:pt-6">{actions}</div> : null}

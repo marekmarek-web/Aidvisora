@@ -18,7 +18,7 @@ export default async function NotesPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full">
-      <Suspense fallback={<div className="flex flex-1 items-center justify-center text-slate-500">Načítám…</div>}>
+      <Suspense fallback={<div className="flex flex-1 items-center justify-center text-[color:var(--wp-text-secondary)]">Načítám…</div>}>
         <NotesVisionBoard initialNotes={notes} contacts={contactsList} />
       </Suspense>
     </div>

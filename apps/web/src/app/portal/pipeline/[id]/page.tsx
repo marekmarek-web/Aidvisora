@@ -81,24 +81,24 @@ export default async function OpportunityDetailPage({
   const crumbNumber = opportunity.opportunityNumber;
 
   return (
-    <div className="min-h-screen bg-[#f4f7f9] font-sans text-slate-800 pb-20">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
+    <div className="min-h-screen bg-[#f4f7f9] font-sans text-[color:var(--wp-text)] pb-20">
+      <header className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-md border-b border-[color:var(--wp-surface-card-border)] px-4 sm:px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-wrap">
           <Link
             href="/portal/pipeline"
-            className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors min-h-[44px] min-w-[44px] -ml-2 px-2"
+            className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors min-h-[44px] min-w-[44px] -ml-2 px-2"
           >
             <ArrowLeft size={16} aria-hidden />
             <span className="hidden sm:inline">Zpět do pipeline</span>
             <span className="sm:hidden">Zpět</span>
           </Link>
-          <div className="w-px h-6 bg-slate-200 hidden sm:block" aria-hidden />
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 min-w-0">
+          <div className="w-px h-6 bg-[color:var(--wp-surface-card-border)] hidden sm:block" aria-hidden />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-tertiary)] min-w-0">
             <span>Obchody</span>
             <span className="opacity-30" aria-hidden>
               /
             </span>
-            <span className="text-slate-800 truncate">{crumbNumber}</span>
+            <span className="text-[color:var(--wp-text)] truncate">{crumbNumber}</span>
           </div>
         </div>
       </header>

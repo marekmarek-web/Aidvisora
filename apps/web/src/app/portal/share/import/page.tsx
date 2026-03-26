@@ -126,9 +126,9 @@ export default function ShareImportPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h1 className="text-lg font-semibold text-slate-900">Import sdílených dokumentů</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
+        <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Import sdílených dokumentů</h1>
+        <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
           Vyberte klienta a potvrďte nahrání dokumentů sdílených z jiné aplikace.
         </p>
       </div>
@@ -138,8 +138,8 @@ export default function ShareImportPage() {
 
       <ContactPicker value={selectedContact} onChange={setSelectedContact} />
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="share-doc-type">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+        <label className="mb-2 block text-sm font-medium text-[color:var(--wp-text-secondary)]" htmlFor="share-doc-type">
           Typ dokumentu
         </label>
         <input
@@ -147,10 +147,10 @@ export default function ShareImportPage() {
           value={documentType}
           onChange={(event) => setDocumentType(event.target.value)}
           placeholder="Např. smlouva, pojistka, faktura"
-          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          className="h-11 w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         />
 
-        <label className="mb-2 mt-3 block text-sm font-medium text-slate-700" htmlFor="share-note">
+        <label className="mb-2 mt-3 block text-sm font-medium text-[color:var(--wp-text-secondary)]" htmlFor="share-note">
           Poznámka
         </label>
         <textarea
@@ -158,19 +158,19 @@ export default function ShareImportPage() {
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder="Krátká poznámka k importu (volitelné)"
-          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          className="min-h-24 w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <h2 className="mb-2 text-sm font-medium text-slate-700">Sdílené soubory</h2>
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+        <h2 className="mb-2 text-sm font-medium text-[color:var(--wp-text-secondary)]">Sdílené soubory</h2>
         <div className="space-y-2">
           {uploadRows.map((row) => (
-            <div key={row.key} className="rounded-xl border border-slate-200 p-3">
+            <div key={row.key} className="rounded-xl border border-[color:var(--wp-surface-card-border)] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-slate-900">{row.file.name}</div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="truncate text-sm font-medium text-[color:var(--wp-text)]">{row.file.name}</div>
+                  <div className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                     {isImage(row.file) ? "Obrázek" : "PDF"} · {formatSize(row.file.size)}
                   </div>
                 </div>
@@ -182,7 +182,7 @@ export default function ShareImportPage() {
                         ? "bg-red-100 text-red-700"
                         : row.status === "uploading"
                           ? "bg-blue-100 text-blue-700"
-                          : "bg-slate-100 text-slate-600"
+                          : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   {row.status === "done"
@@ -195,7 +195,7 @@ export default function ShareImportPage() {
                 </span>
               </div>
 
-              <div className="mt-2 h-2 w-full overflow-hidden rounded bg-slate-100">
+              <div className="mt-2 h-2 w-full overflow-hidden rounded bg-[color:var(--wp-surface-muted)]">
                 <div className="h-full bg-blue-500 transition-all duration-150" style={{ width: `${row.progress}%` }} />
               </div>
 
@@ -205,7 +205,7 @@ export default function ShareImportPage() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+      <div className="sticky bottom-0 z-10 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 backdrop-blur">
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
@@ -213,7 +213,7 @@ export default function ShareImportPage() {
             onClick={() => {
               void startUpload(false);
             }}
-            className="h-11 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="h-11 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-[color:var(--wp-surface-card-border)]"
           >
             {isUploading ? "Nahrávám..." : "Nahrát dokumenty"}
           </button>
@@ -224,7 +224,7 @@ export default function ShareImportPage() {
             onClick={() => {
               void startUpload(true);
             }}
-            className="h-11 flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Zkusit znovu chybné
           </button>

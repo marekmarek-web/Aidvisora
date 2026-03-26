@@ -60,16 +60,16 @@ function getAvatarColor(name: string): string {
 }
 
 const SEGMENT_CONFIG: Record<string, { label: string; cls: string }> = {
-  lead: { label: "Lead", cls: "bg-slate-100 text-slate-600" },
+  lead: { label: "Lead", cls: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]" },
   prospect: { label: "Prospect", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
   client: { label: "Klient", cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
   vip: { label: "VIP", cls: "bg-violet-50 text-violet-700 border border-violet-200" },
-  former_client: { label: "Bývalý klient", cls: "bg-slate-100 text-slate-500" },
+  former_client: { label: "Bývalý klient", cls: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]" },
 };
 
 function SegmentBadge({ stage }: { stage?: string | null }) {
   if (!stage) return null;
-  const cfg = SEGMENT_CONFIG[stage] ?? { label: stage, cls: "bg-slate-100 text-slate-600" };
+  const cfg = SEGMENT_CONFIG[stage] ?? { label: stage, cls: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]" };
   return (
     <span className={cx("text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg", cfg.cls)}>
       {cfg.label}
@@ -128,8 +128,8 @@ function OverviewTab({
           ].map(({ icon: Icon, label, value }) => (
             <MobileCard key={label} className="p-3 text-center">
               <Icon size={16} className="text-indigo-500 mx-auto" />
-              <p className="text-xl font-black mt-1 text-slate-900">{value}</p>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{label}</p>
+              <p className="text-xl font-black mt-1 text-[color:var(--wp-text)]">{value}</p>
+              <p className="text-[10px] uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-bold">{label}</p>
             </MobileCard>
           ))}
         </div>
@@ -138,12 +138,12 @@ function OverviewTab({
       {/* Meta info */}
       {metaRows.length > 0 ? (
         <MobileSection title="Informace">
-          <MobileCard className="divide-y divide-slate-100 py-1 px-3">
+          <MobileCard className="divide-y divide-[color:var(--wp-surface-card-border)] py-1 px-3">
             {metaRows.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3 py-2.5">
-                <Icon size={15} className="text-slate-400 flex-shrink-0" />
-                <span className="text-xs text-slate-500 flex-shrink-0 w-28">{label}</span>
-                <span className="text-sm font-semibold text-slate-800 truncate">{value}</span>
+                <Icon size={15} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
+                <span className="text-xs text-[color:var(--wp-text-secondary)] flex-shrink-0 w-28">{label}</span>
+                <span className="text-sm font-semibold text-[color:var(--wp-text)] truncate">{value}</span>
               </div>
             ))}
           </MobileCard>
@@ -169,8 +169,8 @@ function OverviewTab({
           <MobileCard className="p-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Home size={15} className="text-slate-400" />
-                <p className="text-sm font-bold text-slate-900">{household.name}</p>
+                <Home size={15} className="text-[color:var(--wp-text-tertiary)]" />
+                <p className="text-sm font-bold text-[color:var(--wp-text)]">{household.name}</p>
               </div>
               <button
                 type="button"
@@ -257,17 +257,17 @@ function TasksTab({
                       ? "border-emerald-500 bg-emerald-500"
                       : isOverdue
                         ? "border-rose-400"
-                        : "border-slate-300"
+                        : "border-[color:var(--wp-border-strong)]"
                   )}
                 >
                   {task.completedAt ? <CheckCheck size={12} className="text-white" /> : null}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className={cx("text-sm font-bold", task.completedAt ? "line-through text-slate-400" : "text-slate-900")}>
+                  <p className={cx("text-sm font-bold", task.completedAt ? "line-through text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text)]")}>
                     {task.title}
                   </p>
                   {task.dueDate ? (
-                    <p className={cx("text-xs mt-0.5 font-semibold", isOverdue ? "text-rose-500" : "text-slate-500")}>
+                    <p className={cx("text-xs mt-0.5 font-semibold", isOverdue ? "text-rose-500" : "text-[color:var(--wp-text-secondary)]")}>
                       {isOverdue ? "Prošlé · " : ""}{task.dueDate}
                     </p>
                   ) : null}
@@ -308,9 +308,9 @@ function PipelineTab({ pipeline }: { pipeline: StageWithOpportunities[] }) {
               opp.expectedCloseDate && opp.expectedCloseDate < new Date().toISOString().slice(0, 10);
             return (
               <MobileCard key={opp.id} className="p-3.5">
-                <p className="text-sm font-bold text-slate-900">{opp.title}</p>
+                <p className="text-sm font-bold text-[color:var(--wp-text)]">{opp.title}</p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">
+                  <span className="text-[11px] font-bold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] px-1.5 py-0.5 rounded">
                     {opp.caseType}
                   </span>
                   {opp.expectedValue ? (
@@ -319,7 +319,7 @@ function PipelineTab({ pipeline }: { pipeline: StageWithOpportunities[] }) {
                     </span>
                   ) : null}
                   {opp.expectedCloseDate ? (
-                    <span className={cx("text-[11px] font-bold", isOverdue ? "text-rose-500" : "text-slate-400")}>
+                    <span className={cx("text-[11px] font-bold", isOverdue ? "text-rose-500" : "text-[color:var(--wp-text-tertiary)]")}>
                       {opp.expectedCloseDate}
                     </span>
                   ) : null}
@@ -362,7 +362,7 @@ function DocumentsTab({ documents }: { documents: DocumentRow[] }) {
           <div className="flex items-start gap-3">
             <span className="text-2xl flex-shrink-0">{getDocIcon(doc.mimeType)}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 truncate">{doc.name}</p>
+              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{doc.name}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {doc.processingStatus ? (
                   <StatusBadge
@@ -377,7 +377,7 @@ function DocumentsTab({ documents }: { documents: DocumentRow[] }) {
                     {doc.processingStatus}
                   </StatusBadge>
                 ) : null}
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-[color:var(--wp-text-tertiary)]">
                   {new Date(doc.createdAt).toLocaleDateString("cs-CZ")}
                 </span>
               </div>
@@ -454,20 +454,20 @@ export function ClientProfileScreen({
   if (pending && !contact) {
     return (
       <div className="min-h-[50vh] space-y-0">
-        <div className="h-36 bg-gradient-to-br from-slate-800 to-indigo-900 animate-pulse rounded-b-2xl" />
+        <div className="h-36 animate-pulse rounded-b-2xl bg-gradient-to-br from-[#1e293b] to-indigo-900" />
         <div className="px-4 py-3 flex gap-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-10 w-10 rounded-xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-10 w-10 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
         <div className="px-4 flex gap-2 mb-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-9 flex-1 rounded-xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-9 flex-1 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
         <div className="px-4 space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-20 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
       </div>
@@ -515,7 +515,7 @@ export function ClientProfileScreen({
                     ? "bg-rose-500/20 text-rose-300"
                     : contact.priority === "medium"
                       ? "bg-amber-500/20 text-amber-300"
-                      : "bg-white/10 text-white/60"
+                      : "bg-[color:var(--wp-surface-card)]/10 text-white/60"
                 )}>
                   {contact.priority === "high" ? "Vysoká priorita" : contact.priority === "medium" ? "Střední priorita" : contact.priority}
                 </span>
@@ -529,7 +529,7 @@ export function ClientProfileScreen({
           {contact.phone ? (
             <a
               href={`tel:${contact.phone}`}
-              className="min-h-[44px] rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
+              className="min-h-[44px] rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
             >
               <Phone size={16} />
               <span>Volat</span>
@@ -538,7 +538,7 @@ export function ClientProfileScreen({
           {contact.email ? (
             <a
               href={`mailto:${contact.email}`}
-              className="min-h-[44px] rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
+              className="min-h-[44px] rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
             >
               <Mail size={16} />
               <span>E-mail</span>
@@ -555,7 +555,7 @@ export function ClientProfileScreen({
           <button
             type="button"
             onClick={() => onOpenOpportunityWizard(contact.id)}
-            className="min-h-[44px] rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
+            className="min-h-[44px] rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold flex flex-col items-center justify-center gap-1"
           >
             <Briefcase size={16} />
             <span>Obchod</span>
@@ -564,7 +564,7 @@ export function ClientProfileScreen({
       </div>
 
       {/* Tab bar */}
-      <div className="px-4 py-2 bg-white border-b border-slate-100 sticky top-0 z-10">
+      <div className="px-4 py-2 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] sticky top-0 z-10">
         <FilterChips
           value={tab}
           onChange={(id) => setTab(id as ProfileTab)}

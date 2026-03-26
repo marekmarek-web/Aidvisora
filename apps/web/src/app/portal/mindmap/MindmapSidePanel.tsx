@@ -111,17 +111,17 @@ export function MindmapSidePanel({
     <div
       className={
         fullscreenOnMobile
-          ? "w-full h-full md:w-80 md:h-auto shrink-0 border-l border-slate-200 bg-white md:bg-white/95 backdrop-blur overflow-y-auto flex flex-col"
-          : "w-80 shrink-0 border-l border-slate-200 bg-white/95 backdrop-blur overflow-y-auto"
+          ? "w-full h-full md:w-80 md:h-auto shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] md:bg-[color:var(--wp-surface-card)]/95 backdrop-blur overflow-y-auto flex flex-col"
+          : "w-80 shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur overflow-y-auto"
       }
     >
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between shrink-0">
-          <h3 className="font-bold text-slate-900">Detail uzlu</h3>
+          <h3 className="font-bold text-[color:var(--wp-text)]">Detail uzlu</h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -m-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium md:py-1 md:px-0 md:mx-0"
+            className="p-2 -m-2 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg text-sm font-medium md:py-1 md:px-0 md:mx-0"
             aria-label="Zavřít"
           >
             {fullscreenOnMobile ? "✕ Zavřít" : "Zavřít"}
@@ -130,7 +130,7 @@ export function MindmapSidePanel({
 
         {/* Typ uzlu (read-only nebo změna) */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Typ</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Typ</label>
           {canEdit && !isCore ? (
             <CustomDropdown
               value={node.type}
@@ -147,13 +147,13 @@ export function MindmapSidePanel({
               icon={Tag}
             />
           ) : (
-            <p className="text-lg font-bold text-slate-900 mt-1">{node.type}</p>
+            <p className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{node.type}</p>
           )}
         </div>
 
         {/* Název – editovatelný */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Název</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Název</label>
           {canEdit ? (
             <input
               type="text"
@@ -161,16 +161,16 @@ export function MindmapSidePanel({
               onChange={(e) => setEditTitle(e.target.value)}
               onBlur={applyEdits}
               onKeyDown={(e) => e.key === "Enter" && applyEdits()}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-900"
+              className="mt-1 w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm font-bold text-[color:var(--wp-text)]"
             />
           ) : (
-            <h2 className="text-lg font-bold text-slate-900 mt-1">{node.title}</h2>
+            <h2 className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{node.title}</h2>
           )}
         </div>
 
         {/* Podnadpis */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Podnadpis</label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Podnadpis</label>
           {canEdit ? (
             <input
               type="text"
@@ -178,10 +178,10 @@ export function MindmapSidePanel({
               onChange={(e) => setEditSubtitle(e.target.value)}
               onBlur={applyEdits}
               placeholder="Volitelný popis"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600"
+              className="mt-1 w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm text-[color:var(--wp-text-secondary)]"
             />
           ) : (
-            <p className="text-sm text-slate-500 mt-1">{node.subtitle ?? "—"}</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">{node.subtitle ?? "—"}</p>
           )}
         </div>
 
@@ -199,7 +199,7 @@ export function MindmapSidePanel({
         {/* Metadata: hodnota, popis, progres (pro položku/cíl) */}
         {(node.type === "item" || node.type === "goal" || node.type === "category") && (
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hodnota a detail</h4>
+            <h4 className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Hodnota a detail</h4>
             {canEdit ? (
               <>
                 <input
@@ -208,7 +208,7 @@ export function MindmapSidePanel({
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={applyEdits}
                   placeholder="Hodnota (např. 0 Kč)"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm"
                 />
                 <textarea
                   value={editDetail}
@@ -216,11 +216,11 @@ export function MindmapSidePanel({
                   onBlur={applyEdits}
                   placeholder="Popis / poznámka"
                   rows={2}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-y"
+                  className="w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm resize-y"
                 />
                 {node.type === "goal" && (
                   <div>
-                    <label className="text-[10px] font-bold uppercase text-slate-400">Progres %</label>
+                    <label className="text-[10px] font-bold uppercase text-[color:var(--wp-text-tertiary)]">Progres %</label>
                     <input
                       type="number"
                       min={0}
@@ -228,13 +228,13 @@ export function MindmapSidePanel({
                       value={editProgress}
                       onChange={(e) => setEditProgress(Number(e.target.value))}
                       onBlur={applyEdits}
-                      className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="mt-1 w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm"
                     />
                   </div>
                 )}
               </>
             ) : (
-              <ul className="text-sm text-slate-700 space-y-1">
+              <ul className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                 {node.metadata?.value != null && <li><strong>Hodnota:</strong> {String(node.metadata.value)}</li>}
                 {node.metadata?.status != null && <li><strong>Stav:</strong> {String(node.metadata.status)}</li>}
                 {node.metadata?.progress != null && <li><strong>Progres:</strong> {Number(node.metadata.progress)} %</li>}
@@ -246,8 +246,8 @@ export function MindmapSidePanel({
 
         {node.metadata && Object.keys(node.metadata).length > 0 && (node.type !== "item" && node.type !== "goal" && node.type !== "category") && (
           <div>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Metadata</h4>
-            <ul className="text-sm text-slate-700 space-y-1">
+            <h4 className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-2">Metadata</h4>
+            <ul className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
               {node.metadata.value != null && <li><strong>Hodnota:</strong> {String(node.metadata.value)}</li>}
               {node.metadata.status != null && <li><strong>Stav:</strong> {String(node.metadata.status)}</li>}
               {node.metadata.progress != null && <li><strong>Progres:</strong> {Number(node.metadata.progress)} %</li>}
@@ -256,11 +256,11 @@ export function MindmapSidePanel({
         )}
 
         <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rychlé akce</h4>
+          <h4 className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-2">Rychlé akce</h4>
           <div className="flex flex-col gap-2">
             <Link
               href={entityHref}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)]"
             >
               <User size={16} />{" "}
               {entityType === "standalone" ? "Výběr map" : entityType === "household" ? "Otevřít domácnost" : "Otevřít klienta"}
@@ -268,7 +268,7 @@ export function MindmapSidePanel({
             {contractId && entityType === "contact" && (
               <Link
                 href={`/portal/contacts/${entityId}#smlouvy`}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)]"
               >
                 <FileText size={16} /> Smlouva
               </Link>
@@ -276,7 +276,7 @@ export function MindmapSidePanel({
             {opportunityId && (
               <Link
                 href={`/portal/pipeline/${opportunityId}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)]"
               >
                 <Briefcase size={16} /> Obchod
               </Link>
@@ -284,7 +284,7 @@ export function MindmapSidePanel({
             {taskId && (
               <Link
                 href="/portal/tasks"
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)]"
               >
                 <CheckSquare size={16} /> Úkol
               </Link>
@@ -293,7 +293,7 @@ export function MindmapSidePanel({
               <button
                 type="button"
                 onClick={() => onCopyNodeData()}
-                className="flex items-center gap-2 px-3 py-3 md:py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 min-h-[44px] md:min-h-0 text-left w-full"
+                className="flex items-center gap-2 px-3 py-3 md:py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] md:min-h-0 text-left w-full"
               >
                 <ClipboardCopy size={16} /> Zkopírovat data uzlu
               </button>
@@ -304,7 +304,7 @@ export function MindmapSidePanel({
                 onClick={() => onPasteNodeData()}
                 disabled={!hasClipboard}
                 title={!hasClipboard ? "Nejdřív zkopírujte data z jiného uzlu" : undefined}
-                className="flex items-center gap-2 px-3 py-3 md:py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 min-h-[44px] md:min-h-0 text-left w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                className="flex items-center gap-2 px-3 py-3 md:py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] md:min-h-0 text-left w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 <ClipboardPaste size={16} /> Vložit data uzlu
               </button>
@@ -314,7 +314,7 @@ export function MindmapSidePanel({
 
         {/* Smazat uzel */}
         {canEdit && onDeleteNode && !isCore && (
-          <div className="pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-[color:var(--wp-surface-card-border)]">
             <button
               type="button"
               onClick={() => {

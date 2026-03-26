@@ -83,9 +83,9 @@ function AlertCard({ alert }: { alert: TeamAlert }) {
           <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-slate-900">{alert.title}</p>
+          <p className="text-sm font-bold text-[color:var(--wp-text)]">{alert.title}</p>
           {alert.description ? (
-            <p className="text-xs text-slate-600 mt-0.5">{alert.description}</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">{alert.description}</p>
           ) : null}
         </div>
         <StatusBadge tone={alert.severity === "critical" ? "danger" : "warning"}>
@@ -116,7 +116,7 @@ function MemberCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-bold text-slate-900 truncate">{name}</p>
+            <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{name}</p>
             {riskLevel === "critical" ? (
               <AlertCircle size={14} className="text-rose-500 flex-shrink-0" />
             ) : riskLevel === "warning" ? (
@@ -125,23 +125,23 @@ function MemberCard({
               <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 truncate">{member.roleName}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 truncate">{member.roleName}</p>
         </div>
       </div>
 
       {metrics ? (
-        <div className="mt-3 grid grid-cols-3 gap-2 pt-2.5 border-t border-slate-100">
+        <div className="mt-3 grid grid-cols-3 gap-2 pt-2.5 border-t border-[color:var(--wp-surface-card-border)]">
           <div className="text-center">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Schůzky</p>
-            <p className="text-sm font-black text-slate-900 mt-0.5">{metrics.meetingsThisPeriod}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Schůzky</p>
+            <p className="text-sm font-black text-[color:var(--wp-text)] mt-0.5">{metrics.meetingsThisPeriod}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Produkce</p>
-            <p className="text-sm font-black text-slate-900 mt-0.5">{fmtCzk(metrics.productionThisPeriod)}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Produkce</p>
+            <p className="text-sm font-black text-[color:var(--wp-text)] mt-0.5">{fmtCzk(metrics.productionThisPeriod)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Pipeline</p>
-            <p className="text-sm font-black text-slate-900 mt-0.5">{fmtCzk(metrics.pipelineValue)}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Pipeline</p>
+            <p className="text-sm font-black text-[color:var(--wp-text)] mt-0.5">{fmtCzk(metrics.pipelineValue)}</p>
           </div>
         </div>
       ) : null}
@@ -239,27 +239,27 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
   if (pending && !kpis) {
     return (
       <div className="min-h-[50vh] space-y-0 pb-6">
-        <div className="h-28 bg-gradient-to-br from-slate-800 to-slate-900 animate-pulse rounded-b-2xl" />
-        <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-white/80 border-b border-slate-100">
+        <div className="h-28 bg-gradient-to-br from-[#1e293b] to-[#0f172a] animate-pulse rounded-b-2xl" />
+        <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-[color:var(--wp-surface-card)]/80 border-b border-[color:var(--wp-surface-card-border)]">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 rounded-xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-14 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
-        <div className="px-4 py-3 space-y-2 bg-white border-b border-slate-100">
+        <div className="px-4 py-3 space-y-2 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
           <div className="flex gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-16 rounded-xl bg-slate-200/70 animate-pulse shrink-0" />
+              <div key={i} className="h-8 w-16 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse shrink-0" />
             ))}
           </div>
           <div className="flex gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-20 rounded-xl bg-slate-200/70 animate-pulse shrink-0" />
+              <div key={i} className="h-8 w-20 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse shrink-0" />
             ))}
           </div>
         </div>
         <div className="px-4 pt-3 space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-16 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
       </div>
@@ -276,10 +276,10 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
         )}
       >
       {/* Hero */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-5">
+      <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] px-4 pt-4 pb-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
               Týmový přehled
             </p>
             <h2 className="text-base font-black text-white mt-1">
@@ -287,10 +287,10 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
             </h2>
             {kpis ? (
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+                <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded-lg">
                   <Users size={10} /> {kpis.memberCount} členů
                 </span>
-                <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-white/10 px-2 py-0.5 rounded-lg">
+                <span className="flex items-center gap-1 text-[11px] font-black text-white/70 bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded-lg">
                   <Activity size={10} /> {kpis.activeMemberCount} aktivních
                 </span>
                 {kpis.riskyMemberCount > 0 ? (
@@ -304,7 +304,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
           <button
             type="button"
             onClick={() => setActionOpen(true)}
-            className="flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold whitespace-nowrap"
+            className="flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold whitespace-nowrap"
           >
             <Target size={13} /> Týmová akce
           </button>
@@ -314,15 +314,15 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
         {kpis ? (
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Produkce</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Produkce</p>
               <p className="text-base font-black text-white mt-0.5">{fmtCzk(Math.round(kpis.productionThisPeriod))}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Schůzky</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Schůzky</p>
               <p className="text-base font-black text-white mt-0.5">{kpis.meetingsThisWeek}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Uzavřeno</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Uzavřeno</p>
               <p className="text-base font-black text-white mt-0.5">{kpis.closedDealsThisPeriod}</p>
             </div>
           </div>
@@ -330,7 +330,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
       </div>
 
       {/* Filters */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100 space-y-2">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] space-y-2">
         <div className="flex gap-2 overflow-x-auto">
           <FilterChips
             value={period}
@@ -379,7 +379,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
       ) : null}
 
       {/* Tabs */}
-      <div className="px-4 py-2 bg-white border-b border-slate-100">
+      <div className="px-4 py-2 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
         <FilterChips
           value={activeTab}
           onChange={(id) => setActiveTab(id as "members" | "alerts")}
@@ -452,14 +452,14 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
             type="text"
             value={actionTitle}
             onChange={(e) => setActionTitle(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Název akce"
           />
           <input
             type="date"
             value={actionDate}
             onChange={(e) => setActionDate(e.target.value)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
           />
           <button
             type="button"
@@ -470,7 +470,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
             Vytvořit pro {members.length} členů
           </button>
           {hierarchy.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center">Hierarchy není dostupná.</p>
+            <p className="text-xs text-[color:var(--wp-text-tertiary)] text-center">Hierarchy není dostupná.</p>
           ) : null}
         </div>
       </BottomSheet>

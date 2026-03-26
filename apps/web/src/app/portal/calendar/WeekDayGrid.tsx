@@ -87,8 +87,8 @@ export function WeekDayGrid({
   return (
     <div className="wp-cal-week-day-grid flex-1 flex flex-col overflow-hidden min-h-0">
       {/* Sticky header – na mobilu kompaktnější */}
-      <div className="flex border-b border-slate-100 bg-white/95 backdrop-blur-sm z-30 shrink-0 pr-1 sm:pr-2">
-        <div className="flex-shrink-0 border-r border-slate-50" style={{ width: timeColWidth }} aria-hidden />
+      <div className="flex border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur-sm z-30 shrink-0 pr-1 sm:pr-2">
+        <div className="flex-shrink-0 border-r border-[color:var(--wp-surface-card-border)]/50" style={{ width: timeColWidth }} aria-hidden />
         {weekDays.map((day) => {
           const ds = formatDateLocal(day);
           const isToday = ds === todayStr;
@@ -97,17 +97,17 @@ export function WeekDayGrid({
           return (
             <div
               key={ds}
-              className={`flex-1 flex flex-col items-center border-r border-slate-50 last:border-0 relative ${isMobile ? "py-1.5" : "py-3"}`}
+              className={`flex-1 flex flex-col items-center border-r border-[color:var(--wp-surface-card-border)]/50 last:border-0 relative ${isMobile ? "py-1.5" : "py-3"}`}
             >
               <span
-                className={`font-black uppercase mb-0.5 ${isMobile ? "text-[9px] tracking-wider" : "text-[10px] tracking-widest"} ${isToday ? "text-indigo-600" : "text-slate-400"}`}
+                className={`font-black uppercase mb-0.5 ${isMobile ? "text-[9px] tracking-wider" : "text-[10px] tracking-widest"} ${isToday ? "text-indigo-600" : "text-[color:var(--wp-text-tertiary)]"}`}
               >
                 {dayNames[dayIdx]}
               </span>
               <button
                 type="button"
                 onClick={() => onDaySelect?.(ds)}
-                className={`font-medium flex items-center justify-center rounded-full ${isMobile ? "text-base w-7 h-7" : "text-xl w-9 h-9"} ${isToday ? "bg-indigo-600 text-white shadow-md" : "text-slate-800"}`}
+                className={`font-medium flex items-center justify-center rounded-full ${isMobile ? "text-base w-7 h-7" : "text-xl w-9 h-9"} ${isToday ? "bg-indigo-600 text-white shadow-md" : "text-[color:var(--wp-text)]"}`}
               >
                 {day.getDate()}
               </button>
@@ -127,13 +127,13 @@ export function WeekDayGrid({
         >
           {/* Time column – width from timeColWidth */}
           <div
-            className="flex-shrink-0 border-r border-slate-50 bg-white relative z-10"
+            className="flex-shrink-0 border-r border-[color:var(--wp-surface-card-border)]/50 bg-[color:var(--wp-surface-card)] relative z-10"
             style={{ width: timeColWidth, height: totalHeight }}
           >
             {hours.map((h) => (
               <div
                 key={h}
-                className={`absolute right-1 sm:right-2 font-bold text-slate-400 ${isMobile ? "text-[9px]" : "text-[10px]"}`}
+                className={`absolute right-1 sm:right-2 font-bold text-[color:var(--wp-text-tertiary)] ${isMobile ? "text-[9px]" : "text-[10px]"}`}
                 style={{ top: (h - startHour) * pixelsPerHour - 10, height: pixelsPerHour }}
               >
                 {h}:00
@@ -154,7 +154,7 @@ export function WeekDayGrid({
             return (
               <div
                 key={ds}
-                className={`flex-1 border-r border-slate-50 relative ${isPast ? "wp-cal-striped-past opacity-80" : ""}`}
+                className={`flex-1 border-r border-[color:var(--wp-surface-card-border)]/50 relative ${isPast ? "wp-cal-striped-past opacity-80" : ""}`}
                 style={{ height: totalHeight }}
               >
                 {/* Click-to-add: hour cells with hover + Plus; gray past hours in today column */}
@@ -215,7 +215,7 @@ export function WeekDayGrid({
                         {ev.endAt && ` – ${formatTime(end)}`}
                       </div>
                       {ev.contactName && heightPx > 60 && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold opacity-90 truncate mt-2 bg-white/40 w-fit px-1.5 py-0.5 rounded">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold opacity-90 truncate mt-2 bg-[color:var(--wp-surface-card)]/40 w-fit px-1.5 py-0.5 rounded">
                           <User size={10} /> {ev.contactName}
                         </div>
                       )}

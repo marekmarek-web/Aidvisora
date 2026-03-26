@@ -133,7 +133,7 @@ export function ToolsHubScreen({
                     <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
                       <Icon size={16} className="text-indigo-600" />
                     </span>
-                    <span className="text-sm font-bold text-slate-800 leading-tight">{item.label}</span>
+                    <span className="text-sm font-bold text-[color:var(--wp-text)] leading-tight">{item.label}</span>
                   </button>
                 </MobileCard>
               );

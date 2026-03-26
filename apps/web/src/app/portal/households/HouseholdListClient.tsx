@@ -43,13 +43,13 @@ function MetricCard({
   colorClass: string;
 }) {
   return (
-    <div className="bg-white p-5 md:p-6 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm flex items-center gap-4">
+    <div className="bg-[color:var(--wp-surface-card)] p-5 md:p-6 rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] shadow-sm flex items-center gap-4">
       <div className={`w-12 h-12 md:w-14 md:h-14 rounded-[var(--wp-radius-sm)] flex items-center justify-center shrink-0 ${colorClass}`}>
         <Icon size={24} />
       </div>
       <div>
-        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{title}</h3>
-        <p className="text-xl md:text-2xl font-bold text-slate-900 leading-none">{value}</p>
+        <h3 className="text-[10px] font-bold text-[color:var(--wp-text-tertiary)] uppercase tracking-wider mb-0.5">{title}</h3>
+        <p className="text-xl md:text-2xl font-bold text-[color:var(--wp-text)] leading-none">{value}</p>
       </div>
     </div>
   );
@@ -151,13 +151,13 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
           />
           <button
             type="button"
-            className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-[var(--wp-radius-sm)] text-sm font-bold hover:bg-slate-100 transition-colors shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-[var(--wp-radius-sm)] text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shrink-0"
             title="Filtry (připraveno pro budoucí rozšíření)"
           >
             <Filter size={18} /> Filtry
           </button>
           {list.length > 0 && (
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-500 shrink-0">
+            <div className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-secondary)] shrink-0">
               Řadit:{" "}
               <button
                 type="button"
@@ -188,8 +188,8 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
               return (
                 <div
                   key={h.id}
-                  className={`bg-white rounded-[var(--wp-radius-sm)] border overflow-hidden transition-all duration-200 ${
-                    isExpanded ? "border-indigo-200 shadow-md" : "border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300"
+                  className={`bg-[color:var(--wp-surface-card)] rounded-[var(--wp-radius-sm)] border overflow-hidden transition-all duration-200 ${
+                    isExpanded ? "border-indigo-200 shadow-md" : "border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-[color:var(--wp-border-strong)]"
                   }`}
                 >
                   {/* Card header: click to expand */}
@@ -206,8 +206,8 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
                         <Home size={24} />
                       </div>
                       <div className="min-w-0">
-                        <h2 className="text-lg font-bold text-slate-900 truncate">{h.name}</h2>
-                        <p className="text-xs font-medium text-slate-500 mt-0.5">
+                        <h2 className="text-lg font-bold text-[color:var(--wp-text)] truncate">{h.name}</h2>
+                        <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-0.5">
                           {h.members.length === 0 ? "Žádní členové" : `${h.members.length} ${h.members.length === 1 ? "člen" : h.members.length >= 2 && h.members.length <= 4 ? "členové" : "členů"}`}
                         </p>
                       </div>
@@ -219,7 +219,7 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
                           {h.members.slice(0, 4).map((m, idx) => (
                             <div
                               key={m.id}
-                              className={`w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold shadow-sm ${m.role === "child" ? "bg-amber-100 text-amber-800" : "bg-slate-700 text-white"}`}
+                              className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-[color:var(--wp-surface-card)] text-xs font-bold shadow-sm ${m.role === "child" ? "bg-amber-100 text-amber-800" : "bg-[color:var(--wp-text-secondary)] text-white"}`}
                               style={{ zIndex: 10 - idx }}
                               title={`${m.firstName} ${m.lastName}`}
                             >
@@ -244,7 +244,7 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
                           Smazat
                         </button>
                         <span
-                          className={`p-2 rounded-[var(--wp-radius-xs)] transition-colors ${isExpanded ? "bg-indigo-50 text-indigo-600" : "text-slate-400 hover:bg-slate-100"}`}
+                          className={`p-2 rounded-[var(--wp-radius-xs)] transition-colors ${isExpanded ? "bg-indigo-50 text-indigo-600" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
                           aria-hidden
                         >
                           {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -255,26 +255,26 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
 
                   {/* Expanded: members + Přidat člena */}
                   {isExpanded && (
-                    <div className="border-t border-slate-100 bg-slate-50/50 p-4 md:p-6">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Členové domácnosti</h4>
+                    <div className="border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-4 md:p-6">
+                      <h4 className="text-xs font-bold text-[color:var(--wp-text-tertiary)] uppercase tracking-wider mb-4">Členové domácnosti</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {h.members.map((m) => (
                           <div
                             key={m.id}
-                            className="bg-white p-4 rounded-[var(--wp-radius-sm)] border border-slate-200 shadow-sm flex items-center gap-4 hover:border-slate-300 transition-colors"
+                            className="bg-[color:var(--wp-surface-card)] p-4 rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] shadow-sm flex items-center gap-4 hover:border-[color:var(--wp-border-strong)] transition-colors"
                           >
                             <div
                               className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                                m.role === "child" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"
+                                m.role === "child" ? "bg-amber-100 text-amber-800" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                               }`}
                             >
                               {m.role === "child" ? <Baby size={22} /> : getInitials(m)}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-slate-900 truncate">
+                              <p className="font-semibold text-[color:var(--wp-text)] truncate">
                                 {m.firstName} {m.lastName}
                               </p>
-                              <p className="text-xs font-medium text-slate-500">
+                              <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
                                 {m.role ? ROLE_LABELS[m.role] ?? m.role : "—"}
                               </p>
                             </div>
@@ -282,7 +282,7 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
                         ))}
                         <Link
                           href={`/portal/households/${h.id}`}
-                          className="border-2 border-dashed border-slate-200 rounded-[var(--wp-radius-sm)] flex flex-col items-center justify-center p-6 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all min-h-[100px]"
+                          className="border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-[var(--wp-radius-sm)] flex flex-col items-center justify-center p-6 text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all min-h-[100px]"
                         >
                           <Plus size={24} className="mb-2 shrink-0" />
                           <span className="text-xs font-bold uppercase tracking-wider">Přidat člena</span>

@@ -99,25 +99,25 @@ function MetricCard({
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <Icon size={15} className="text-slate-500" />
+          <div className="w-8 h-8 rounded-xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center flex-shrink-0">
+            <Icon size={15} className="text-[color:var(--wp-text-secondary)]" />
           </div>
-          <p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
+          <p className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)]">{label}</p>
         </div>
         <HealthBadge health={health} />
       </div>
-      <p className="text-xl font-black text-slate-900 tabular-nums">
+      <p className="text-xl font-black text-[color:var(--wp-text)] tabular-nums">
         {actual.toLocaleString("cs-CZ")}
-        {unit ? <span className="text-sm font-bold text-slate-500 ml-1">{unit}</span> : null}
+        {unit ? <span className="text-sm font-bold text-[color:var(--wp-text-secondary)] ml-1">{unit}</span> : null}
       </p>
       <div className="flex items-center justify-between mt-1">
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-[color:var(--wp-text-tertiary)]">
           Cíl: {target.toLocaleString("cs-CZ")}
           {unit ? ` ${unit}` : ""}
         </p>
-        <p className="text-[11px] font-black text-slate-600">{pct}%</p>
+        <p className="text-[11px] font-black text-[color:var(--wp-text-secondary)]">{pct}%</p>
       </div>
-      <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+      <div className="mt-2 h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div className={cx("h-full rounded-full transition-all", barColor)} style={{ width: `${pct}%` }} />
       </div>
     </MobileCard>
@@ -130,17 +130,17 @@ function VisionCard({ item }: { item: VisionDraft }) {
   return (
     <MobileCard className="p-3.5">
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-sm font-bold text-slate-900">{item.title}</p>
+        <p className="text-sm font-bold text-[color:var(--wp-text)]">{item.title}</p>
         <span
           className={cx(
             "text-[10px] font-black px-1.5 py-0.5 rounded-lg flex-shrink-0",
-            isDone ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-500"
+            isDone ? "bg-emerald-50 text-emerald-700" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
           )}
         >
           {pct}%
         </span>
       </div>
-      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-2 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div
           className={cx("h-full rounded-full transition-all", isDone ? "bg-emerald-500" : "bg-indigo-500")}
           style={{ width: `${pct}%` }}
@@ -281,19 +281,19 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
     return (
       <div className="min-h-[50vh] space-y-0 pb-6">
         <div className="h-28 bg-gradient-to-br from-[#0a0f29] to-indigo-950 animate-pulse rounded-b-2xl" />
-        <div className="px-4 py-3 flex gap-2 bg-white border-b border-slate-100">
+        <div className="px-4 py-3 flex gap-2 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-8 w-20 rounded-xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-8 w-20 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
         <div className="px-4 pt-3 grid grid-cols-3 gap-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-24 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
         <div className="px-4 mt-3 space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-16 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
           ))}
         </div>
       </div>
@@ -335,7 +335,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
           <button
             type="button"
             onClick={openTargets}
-            className="flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold"
+            className="flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold"
           >
             <Target size={13} /> Cíle
           </button>
@@ -343,7 +343,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
       </div>
 
       {/* Period filter */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
         <FilterChips
           value={periodType}
           onChange={(id) => setPeriodType(id as PeriodType)}
@@ -448,7 +448,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
           <button
             type="button"
             onClick={openVision}
-            className="flex items-center gap-1 text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg min-h-[32px]"
+            className="flex items-center gap-1 text-[11px] font-bold text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)] px-2.5 py-1 rounded-lg min-h-[32px]"
           >
             Upravit
           </button>
@@ -456,9 +456,9 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
       >
         {vision.length === 0 ? (
           <MobileCard className="border-dashed p-4 text-center">
-            <Sparkles size={20} className="text-slate-300 mx-auto mb-2" />
-            <p className="text-sm font-bold text-slate-500">Žádná vize</p>
-            <p className="text-xs text-slate-400 mt-1 mb-2">Přidejte dlouhodobé cíle.</p>
+            <Sparkles size={20} className="text-[color:var(--wp-text-tertiary)] mx-auto mb-2" />
+            <p className="text-sm font-bold text-[color:var(--wp-text-secondary)]">Žádná vize</p>
+            <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-1 mb-2">Přidejte dlouhodobé cíle.</p>
             <button
               type="button"
               onClick={openVision}
@@ -482,36 +482,36 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
       <BottomSheet open={targetsOpen} onClose={() => setTargetsOpen(false)} title="Upravit cíle">
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Produkce (Kč)
             </label>
             <input
               type="number"
               value={targetProduction}
               onChange={(e) => setTargetProduction(Number(e.target.value || 0))}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Schůzky (počet)
             </label>
             <input
               type="number"
               value={targetMeetings}
               onChange={(e) => setTargetMeetings(Number(e.target.value || 0))}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Noví klienti (počet)
             </label>
             <input
               type="number"
               value={targetNewClients}
               onChange={(e) => setTargetNewClients(Number(e.target.value || 0))}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             />
           </div>
           <button
@@ -527,7 +527,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
       <BottomSheet open={visionOpen} onClose={() => setVisionOpen(false)} title="Osobní vize">
         <div className="space-y-3">
           {visionDraft.map((item, idx) => (
-            <div key={`${item.id}-${idx}`} className="space-y-2 rounded-xl border border-slate-200 p-3">
+            <div key={`${item.id}-${idx}`} className="space-y-2 rounded-xl border border-[color:var(--wp-surface-card-border)] p-3">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -537,7 +537,7 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
                       prev.map((row, i) => (i === idx ? { ...row, title: e.target.value } : row))
                     )
                   }
-                  className="flex-1 min-h-[40px] rounded-xl border border-slate-200 px-3 text-sm"
+                  className="flex-1 min-h-[40px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                   placeholder="Název cíle"
                 />
                 <button
@@ -563,11 +563,11 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
                   }
                   className="flex-1"
                 />
-                <span className="text-xs font-black text-slate-600 w-10 text-right">
+                <span className="text-xs font-black text-[color:var(--wp-text-secondary)] w-10 text-right">
                   {item.progressPct}%
                 </span>
               </div>
-              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                 <div
                   className={cx(
                     "h-full rounded-full",

@@ -41,7 +41,7 @@ export function CompanyAnalysisLayout({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-slate-900">{companyName}</h2>
+        <h2 className="text-xl font-semibold text-[color:var(--wp-text)]">{companyName}</h2>
         <div className="flex items-center gap-3">
           {saveError && (
             <span className="text-sm text-red-600">{saveError}</span>
@@ -69,12 +69,12 @@ export function CompanyAnalysisLayout({
         {StepComponent && <StepComponent />}
       </div>
 
-      <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-200">
+      <div className="flex flex-wrap gap-3 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
         <button
           type="button"
           onClick={prevStep}
           disabled={currentStep <= 1}
-          className="min-h-[44px] px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+          className="min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] font-medium rounded-xl hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-50 disabled:pointer-events-none"
         >
           Zpět
         </button>

@@ -15,7 +15,7 @@ export function InvestmentStrategySwitcher({
 }: InvestmentStrategySwitcherProps) {
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
         Vyberte strategii
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -29,7 +29,7 @@ export function InvestmentStrategySwitcher({
               className={`group flex min-h-[44px] touch-manipulation items-center justify-center rounded-[10px] border-[1.5px] px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
                 isActive
                   ? "border-[#0d1f4e] bg-[#0d1f4e] text-white shadow-sm"
-                  : "border-slate-300 bg-white text-slate-600 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                  : "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
               }`}
               data-profile={index}
               aria-pressed={isActive}

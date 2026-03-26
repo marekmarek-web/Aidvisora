@@ -18,13 +18,13 @@ export function MindmapToolbar({
 }) {
   return (
     <div className="absolute left-3 bottom-20 md:bottom-auto md:left-6 md:top-6 flex flex-col md:flex-col gap-3 z-50">
-      <div className="bg-white/90 backdrop-blur-xl p-2 rounded-2xl shadow-xl border border-slate-200 flex md:flex-col flex-row gap-1">
+      <div className="bg-[color:var(--wp-surface-card)]/90 backdrop-blur-xl p-2 rounded-2xl shadow-xl border border-[color:var(--wp-surface-card-border)] flex md:flex-col flex-row gap-1">
         <button
           type="button"
           onClick={() => onModeChange("select")}
           className={cx(
             "p-3 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center",
-            mode === "select" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 active:bg-slate-100 active:text-slate-800"
+            mode === "select" ? "bg-indigo-50 text-indigo-600" : "text-[color:var(--wp-text-tertiary)] active:bg-[color:var(--wp-surface-muted)] active:text-[color:var(--wp-text)]"
           )}
           title="Nástroj pro výběr"
         >
@@ -38,7 +38,7 @@ export function MindmapToolbar({
           onClick={() => onModeChange("connect")}
           className={cx(
             "p-3 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center",
-            mode === "connect" ? "bg-indigo-50 text-indigo-600" : "text-slate-400 active:bg-slate-100 active:text-slate-800"
+            mode === "connect" ? "bg-indigo-50 text-indigo-600" : "text-[color:var(--wp-text-tertiary)] active:bg-[color:var(--wp-surface-muted)] active:text-[color:var(--wp-text)]"
           )}
           title="Spojování uzlů (Link)"
         >
@@ -47,11 +47,11 @@ export function MindmapToolbar({
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </button>
-        <div className="md:w-10 md:h-px w-px h-6 bg-slate-200 mx-auto my-0.5 md:my-1" />
+        <div className="md:w-10 md:h-px w-px h-6 bg-[color:var(--wp-surface-card-border)] mx-auto my-0.5 md:my-1" />
         <button
           type="button"
           onClick={onOpenSettings}
-          className="p-3 rounded-xl text-slate-400 active:bg-slate-100 active:text-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="p-3 rounded-xl text-[color:var(--wp-text-tertiary)] active:bg-[color:var(--wp-surface-muted)] active:text-[color:var(--wp-text)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           title="Nastavení mapy"
         >
           <Settings size={20} />

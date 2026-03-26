@@ -49,19 +49,19 @@ async function embedLocalImages(html: string): Promise<string> {
 function ThemeSelector({ value, onChange }: { value: ReportTheme; onChange: (t: ReportTheme) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Styl:</span>
-      <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
+      <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Styl:</span>
+      <div className="inline-flex rounded-lg border border-[color:var(--wp-surface-card-border)] overflow-hidden">
         <button
           type="button"
           onClick={() => onChange("elegant")}
-          className={`min-h-[44px] px-4 py-2 text-sm font-semibold transition-colors ${value === "elegant" ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+          className={`min-h-[44px] px-4 py-2 text-sm font-semibold transition-colors ${value === "elegant" ? "bg-[color:var(--wp-primary)] text-[color:var(--wp-link-active)]" : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
         >
           Elegant
         </button>
         <button
           type="button"
           onClick={() => onChange("modern")}
-          className={`min-h-[44px] px-4 py-2 text-sm font-semibold transition-colors ${value === "modern" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+          className={`min-h-[44px] px-4 py-2 text-sm font-semibold transition-colors ${value === "modern" ? "bg-blue-600 text-white" : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
         >
           Modern
         </button>
@@ -220,42 +220,42 @@ export function StepSummary() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Shrnutí</h2>
-        <p className="text-slate-500 mt-1">Přehled a export reportu.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Shrnutí</h2>
+        <p className="text-[color:var(--wp-text-secondary)] mt-1">Přehled a export reportu.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Klient</span>
-          <div className="text-lg font-bold text-slate-900 mt-1">{clientName || "\u2014"}</div>
+        <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-6 shadow-sm">
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Klient</span>
+          <div className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{clientName || "\u2014"}</div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Čisté jmění</span>
-          <div className="text-lg font-bold text-slate-900 mt-1">{formatCzk(netWorth)}</div>
+        <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-6 shadow-sm">
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Čisté jmění</span>
+          <div className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{formatCzk(netWorth)}</div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Cíle celkem</span>
+        <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-6 shadow-sm">
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Cíle celkem</span>
           <div className="text-lg font-bold text-indigo-700 mt-1">{formatCzk(totalGoals)}</div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Projekce portfolia (FV)</span>
-          <div className="text-lg font-bold text-slate-800 mt-1">{formatCzk(portfolioFv)}</div>
+        <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-6 shadow-sm">
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Projekce portfolia (FV)</span>
+          <div className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{formatCzk(portfolioFv)}</div>
         </div>
       </div>
 
       {(data.notes != null && String(data.notes).trim() !== "") && (
         <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-6 mb-8">
-          <h3 className="text-slate-800 font-bold mb-2 flex items-center gap-2">
+          <h3 className="text-[color:var(--wp-text)] font-bold mb-2 flex items-center gap-2">
             <StickyNote className="w-5 h-5 text-indigo-600" />
             Poznámky k analýze
           </h3>
-          <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">{data.notes}</pre>
+          <pre className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap font-sans">{data.notes}</pre>
         </div>
       )}
 
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+      <div className="bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h3 className="text-slate-800 font-bold flex items-center gap-2">
+          <h3 className="text-[color:var(--wp-text)] font-bold flex items-center gap-2">
             <FileText className="w-5 h-5 text-indigo-600" />
             Export reportu
           </h3>
@@ -281,7 +281,7 @@ export function StepSummary() {
             onClick={handlePrintReport}
             disabled={isPreparingPrint}
             aria-busy={isPreparingPrint}
-            className="min-h-[56px] flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-700 disabled:opacity-60 transition-colors"
+            className="flex min-h-[56px] items-center gap-3 rounded-xl bg-[color:var(--wp-button-bg)] px-5 py-3 font-bold text-white transition-colors hover:bg-[color:var(--wp-primary-hover)] disabled:opacity-60"
           >
             <Printer className="w-5 h-5 flex-shrink-0" />
             <div className="text-left">
@@ -297,7 +297,7 @@ export function StepSummary() {
               type="button"
               onClick={handleSaveReportToDocuments}
               disabled={savingToDocs}
-              className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] font-semibold hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-50 transition-colors"
             >
               <CloudUpload className="w-4 h-4" /> {savingToDocs ? "Ukládám\u2026" : "Uložit do dokumentů"}
             </button>
@@ -305,7 +305,7 @@ export function StepSummary() {
         </div>
         {exportError && <p className="text-sm text-red-600 mt-2" role="alert">{exportError}</p>}
         {!canSaveToDocuments && (data.householdId || data.clientId === undefined) && (
-          <p className="text-xs text-slate-500 mt-2">Pro uložení reportu do dokumentů otevřete analýzu z profilu klienta (s clientId).</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-2">Pro uložení reportu do dokumentů otevřete analýzu z profilu klienta (s clientId).</p>
         )}
       </div>
 

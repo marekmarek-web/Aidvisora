@@ -58,7 +58,7 @@ export default function NewContactPage() {
     }
   }
 
-  const inputCls = "w-full rounded-[6px] border border-monday-border bg-white px-3 py-2 text-sm text-monday-text focus:outline-none focus:ring-1 focus:ring-monday-blue";
+  const inputCls = "w-full rounded-[6px] border border-monday-border bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-monday-text focus:outline-none focus:ring-1 focus:ring-monday-blue";
 
   return (
     <div className="p-4 space-y-6">

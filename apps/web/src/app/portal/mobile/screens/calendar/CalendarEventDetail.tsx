@@ -88,12 +88,12 @@ function EventDetailBody({
 
   return (
     <div className="space-y-3">
-      <MobileCard className="divide-y divide-slate-100 px-4 py-0">
+      <MobileCard className="divide-y divide-[color:var(--wp-surface-card-border)] px-4 py-0">
         <div className="flex items-center gap-3 py-3">
-          <Clock size={15} className="shrink-0 text-slate-400" />
+          <Clock size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
           <div>
-            <p className="text-sm font-bold text-slate-900">{formatTimeRange(ev)}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm font-bold text-[color:var(--wp-text)]">{formatTimeRange(ev)}</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)]">
               {formatDate(ev)}
               {duration ? ` · ${duration}` : null}
             </p>
@@ -123,14 +123,14 @@ function EventDetailBody({
         {ev.contactName && ev.contactId ? (
           <div className="flex items-center justify-between gap-3 py-3">
             <div className="flex min-w-0 items-center gap-3">
-              <User size={15} className="shrink-0 text-slate-400" />
-              <p className="truncate text-sm font-bold text-slate-900">{ev.contactName}</p>
+              <User size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
+              <p className="truncate text-sm font-bold text-[color:var(--wp-text)]">{ev.contactName}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {contactPhone?.trim() ? (
                 <a
                   href={`tel:${contactPhone.replace(/\s/g, "")}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-indigo-600"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] text-indigo-600"
                   aria-label="Zavolat"
                 >
                   <Phone size={14} />
@@ -139,7 +139,7 @@ function EventDetailBody({
               {contactEmail?.trim() ? (
                 <a
                   href={`mailto:${contactEmail.trim()}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-indigo-600"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] text-indigo-600"
                   aria-label="Napsat e-mail"
                 >
                   <Mail size={14} />
@@ -159,14 +159,14 @@ function EventDetailBody({
         {ev.opportunityId ? (
           <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Briefcase size={15} className="shrink-0 text-slate-400" />
-              <p className="text-sm text-slate-700">Propojeno s obchodem</p>
+              <Briefcase size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
+              <p className="text-sm text-[color:var(--wp-text-secondary)]">Propojeno s obchodem</p>
             </div>
             {onOpenPipeline ? (
               <button
                 type="button"
                 onClick={onOpenPipeline}
-                className="min-h-[40px] rounded-lg border border-slate-200 px-3 text-xs font-bold text-indigo-600 active:bg-slate-50"
+                className="min-h-[40px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-xs font-bold text-indigo-600 active:bg-[color:var(--wp-surface-muted)]"
               >
                 Otevřít pipeline
               </button>
@@ -176,14 +176,14 @@ function EventDetailBody({
 
         {ev.location ? (
           <div className="flex items-center gap-3 py-3">
-            <MapPin size={15} className="shrink-0 text-slate-400" />
-            <p className="text-sm text-slate-700">{ev.location}</p>
+            <MapPin size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">{ev.location}</p>
           </div>
         ) : null}
 
         {ev.meetingLink ? (
           <div className="flex items-center gap-3 py-3">
-            <Video size={15} className="shrink-0 text-slate-400" />
+            <Video size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
             <a
               href={ev.meetingLink}
               target="_blank"
@@ -197,8 +197,8 @@ function EventDetailBody({
 
         {ev.reminderAt ? (
           <div className="flex items-center gap-3 py-3">
-            <Bell size={15} className="shrink-0 text-slate-400" />
-            <p className="text-sm text-slate-500">
+            <Bell size={15} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">
               Připomínka:{" "}
               {new Date(ev.reminderAt).toLocaleString("cs-CZ", {
                 day: "numeric",
@@ -213,10 +213,10 @@ function EventDetailBody({
 
       {ev.notes ? (
         <MobileCard className="p-3.5">
-          <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
             Poznámky
           </p>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{ev.notes}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">{ev.notes}</p>
         </MobileCard>
       ) : null}
 
@@ -226,7 +226,7 @@ function EventDetailBody({
             <button
               type="button"
               onClick={onEdit}
-              className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm transition-colors active:scale-[0.98]"
+              className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text-secondary)] shadow-sm transition-colors active:scale-[0.98]"
             >
               <Edit2 size={16} /> Upravit
             </button>
@@ -252,21 +252,21 @@ function EventDetailBody({
             <button
               type="button"
               onClick={onFollowUpEvent}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 transition-colors active:scale-[0.98]"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-xl border border-[color:var(--wp-surface-card-border)] text-xs font-bold text-[color:var(--wp-text-secondary)] transition-colors active:scale-[0.98]"
             >
               + Follow-up
             </button>
             <button
               type="button"
               onClick={onFollowUpTask}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 transition-colors active:scale-[0.98]"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-xl border border-[color:var(--wp-surface-card-border)] text-xs font-bold text-[color:var(--wp-text-secondary)] transition-colors active:scale-[0.98]"
             >
               + Úkol
             </button>
           </div>
         </>
       ) : (
-        <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs text-slate-600">
+        <p className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2 text-center text-xs text-[color:var(--wp-text-secondary)]">
           Nemáte oprávnění upravovat kalendář — zobrazení je jen pro čtení.
         </p>
       )}
@@ -326,24 +326,24 @@ export function CalendarEventDetail({
         <button
           type="button"
           aria-label="Zavřít detail"
-          className="fixed inset-0 z-[100] bg-slate-900/40 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-[color:var(--wp-overlay-scrim)] animate-in fade-in duration-200"
           onClick={onClose}
         />
         <aside
-          className="fixed right-0 top-0 z-[101] flex h-full w-full max-w-[360px] flex-col border-l border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-300 ease-out"
+          className="fixed right-0 top-0 z-[101] flex h-full w-full max-w-[360px] flex-col border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl animate-in slide-in-from-right duration-300 ease-out"
           role="dialog"
           aria-modal="true"
           aria-labelledby="cal-ev-detail-title"
         >
-          <div className="flex shrink-0 items-start justify-between gap-2 border-b border-slate-200 px-4 py-3">
-            <h2 id="cal-ev-detail-title" className="min-w-0 flex-1 font-black text-sm leading-snug text-slate-900">
+          <div className="flex shrink-0 items-start justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
+            <h2 id="cal-ev-detail-title" className="min-w-0 flex-1 font-black text-sm leading-snug text-[color:var(--wp-text)]">
               {ev.title}
             </h2>
             <button
               type="button"
               onClick={onClose}
               aria-label="Zavřít"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
             >
               <X size={16} />
             </button>

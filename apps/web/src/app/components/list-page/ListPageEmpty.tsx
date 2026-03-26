@@ -21,7 +21,7 @@ export function ListPageEmpty({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white overflow-hidden">
+    <div className="overflow-hidden rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
       <EmptyState
         icon={icon}
         title={title}

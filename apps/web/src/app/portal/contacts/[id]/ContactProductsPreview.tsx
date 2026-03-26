@@ -28,9 +28,9 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
     c.productName || c.partnerName || `Smlouva ${c.segment}`;
 
   return (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-        <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
           <Briefcase size={20} className="text-indigo-500" aria-hidden />
           Sjednané a rozjednané produkty
         </h2>
@@ -44,43 +44,43 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
       </div>
       <div className="p-4 space-y-3">
         {loading ? (
-          <p className="text-sm text-slate-400">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-tertiary)]">Načítám…</p>
         ) : loadError ? (
           <p className="text-sm text-red-600">{loadError}</p>
         ) : contracts.length === 0 ? (
-          <p className="text-sm text-slate-500">Žádné smlouvy.</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné smlouvy.</p>
         ) : (
           contracts.map((c) => (
             <Link
               key={c.id}
               href="#smlouvy"
-              className="p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all bg-slate-50/30 group flex flex-col md:flex-row md:items-center justify-between gap-4 min-h-[44px]"
+              className="p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 hover:shadow-md transition-all bg-[color:var(--wp-surface-muted)]/30 group flex flex-col md:flex-row md:items-center justify-between gap-4 min-h-[44px]"
             >
               <div className="flex items-center gap-4 min-w-0">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 text-indigo-600 border border-indigo-100">
                   <Briefcase size={20} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-slate-900 text-[15px] group-hover:text-indigo-600 transition-colors truncate">
+                  <h3 className="font-bold text-[color:var(--wp-text)] text-[15px] group-hover:text-indigo-600 transition-colors truncate">
                     {displayName(c)}
                   </h3>
-                  <p className="text-xs font-bold text-slate-500 truncate">
+                  <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">
                     {c.partnerName ?? "—"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 md:text-right">
                 {c.premiumAmount && (
-                  <span className="text-sm font-black text-slate-900">{c.premiumAmount}</span>
+                  <span className="text-sm font-black text-[color:var(--wp-text)]">{c.premiumAmount}</span>
                 )}
-                <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                <ChevronRight size={20} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
               </div>
             </Link>
           ))
         )}
         <Link
           href="#smlouvy&add=1"
-          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2 min-h-[44px]"
+          className="w-full py-4 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-2xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2 min-h-[44px]"
           onClick={(e) => {
             e.preventDefault();
             window.location.hash = "smlouvy&add=1";

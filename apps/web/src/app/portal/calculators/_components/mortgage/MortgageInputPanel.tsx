@@ -126,7 +126,7 @@ export function MortgageInputPanel({
   const ownResources = Math.max(0, result.propertyValue - state.loan);
 
   return (
-    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
 
       {/* ── Product selector ── */}
       <div className="mb-6 pb-5 border-b border-[#e2e8f0]">
@@ -161,7 +161,7 @@ export function MortgageInputPanel({
             className={`py-1.5 px-3.5 rounded-full border-[1.5px] text-xs font-medium transition-all min-h-[36px] touch-manipulation whitespace-nowrap ${
               state.type === "new"
                 ? "bg-[#0d1f4e] border-[#0d1f4e] text-white font-semibold"
-                : "bg-white border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
+                : "bg-[color:var(--wp-surface-card)] border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
             }`}
           >
             {isMortgage ? "Nová hypotéka" : "Nový úvěr"}
@@ -174,7 +174,7 @@ export function MortgageInputPanel({
               className={`py-1.5 px-3.5 rounded-full border-[1.5px] text-xs font-medium transition-all min-h-[36px] touch-manipulation whitespace-nowrap ${
                 (isMortgage ? state.mortgageType : state.loanType) === sub.id
                   ? "bg-[#0d1f4e] border-[#0d1f4e] text-white font-semibold"
-                  : "bg-white border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
+                  : "bg-[color:var(--wp-surface-card)] border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
               }`}
             >
               {sub.label}
@@ -186,7 +186,7 @@ export function MortgageInputPanel({
             className={`py-1.5 px-3.5 rounded-full border-[1.5px] text-xs font-medium transition-all min-h-[36px] touch-manipulation whitespace-nowrap ${
               state.type === "refi"
                 ? "bg-[#0d1f4e] border-[#0d1f4e] text-white font-semibold"
-                : "bg-white border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
+                : "bg-[color:var(--wp-surface-card)] border-[#cbd5e1] text-[#475569] hover:border-[#2563eb] hover:text-[#2563eb]"
             }`}
           >
             Refinancování

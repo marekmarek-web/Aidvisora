@@ -21,7 +21,7 @@ type UserMenuProps = {
 };
 
 const itemClass =
-  "flex w-full min-h-[44px] items-center px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10";
+  "flex w-full min-h-[44px] items-center px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)]";
 
 export function UserMenu({ variant = "default" }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -75,13 +75,13 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
     variant === "portalHeader"
       ? clsx(
           "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--wp-focus-ring-color)] focus-visible:ring-offset-2",
           "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-raised)] text-[color:var(--wp-text-secondary)] shadow-sm",
           "hover:scale-105 hover:bg-[color:var(--wp-surface-muted)] dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/15",
           "ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)]",
-          open && "ring-2 ring-indigo-500 ring-offset-2",
+          open && "ring-2 ring-[color:var(--wp-focus-ring-color)] ring-offset-2",
         )
-      : "flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
+      : "flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-wp-surface-muted text-sm font-medium text-wp-text-secondary hover:bg-wp-surface-raised focus:outline-none focus:ring-2 focus:ring-[color:var(--wp-focus-ring-color)] focus:ring-offset-2 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
 
   return (
     <div className="relative" ref={ref}>
@@ -97,7 +97,7 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
       </button>
       {open && (
         <div
-          className="absolute right-0 z-dropdown w-56 rounded-[24px] border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] py-2 shadow-2xl backdrop-blur-xl"
+          className="absolute right-0 z-dropdown min-w-[min(var(--wp-profile-menu-width),calc(100vw-2rem))] max-w-[calc(100vw-2rem)] rounded-[24px] border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] py-2 shadow-2xl backdrop-blur-xl"
           style={{
             top: "calc(100% + 12px)",
             boxShadow: "var(--wp-shadow-dropdown-strong, var(--wp-dropdown-shadow))",

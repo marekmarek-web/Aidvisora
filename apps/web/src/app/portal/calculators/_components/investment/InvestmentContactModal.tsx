@@ -77,7 +77,7 @@ export function InvestmentContactModal({
 
       if (res.ok) {
         if (submitBtn) {
-          submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-slate-900");
+          submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-[#050814]");
           submitBtn.classList.add("bg-green-600", "hover:bg-green-700");
           submitBtn.innerHTML = "Odesláno úspěšně";
         }
@@ -88,7 +88,7 @@ export function InvestmentContactModal({
           if (submitBtn) {
             setTimeout(() => {
               submitBtn.disabled = false;
-              submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-slate-900");
+              submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-[#050814]");
               submitBtn.classList.remove("bg-green-600", "hover:bg-green-700");
               submitBtn.innerHTML = originalHtml;
             }, 500);
@@ -99,12 +99,12 @@ export function InvestmentContactModal({
       }
     } catch {
       if (submitBtn) {
-        submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-slate-900");
+        submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-[#050814]");
         submitBtn.classList.add("bg-red-600", "hover:bg-red-700");
         submitBtn.innerHTML = "Chyba, zkuste to znovu";
         setTimeout(() => {
           submitBtn.disabled = false;
-          submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-slate-900");
+          submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-[#050814]");
           submitBtn.classList.remove("bg-red-600", "hover:bg-red-700");
           submitBtn.innerHTML = originalHtml;
         }, 3000);
@@ -125,7 +125,7 @@ export function InvestmentContactModal({
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div
           ref={contentRef}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 pointer-events-auto relative overflow-hidden"
+          className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 pointer-events-auto relative overflow-hidden"
           role="dialog"
           aria-modal
           aria-labelledby="modal-title"
@@ -133,18 +133,18 @@ export function InvestmentContactModal({
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-[#0a0f29] transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 z-10"
+            className="absolute top-4 right-4 text-[color:var(--wp-text-tertiary)] hover:text-[#0a0f29] transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--wp-surface-muted)] z-10"
             aria-label="Zavřít"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
-          <div className="bg-gradient-to-r from-slate-50 to-white px-8 py-8 border-b border-slate-100">
+          <div className="bg-gradient-to-r from-[color:var(--wp-surface-muted)] to-[color:var(--wp-surface-card)] px-8 py-8 border-b border-[color:var(--wp-surface-card-border)]">
             <h3 id="modal-title" className="text-2xl font-bold text-[#0a0f29] uppercase tracking-wide">
               Mám zájem o plán
             </h3>
-            <p className="text-sm text-slate-600 mt-2 flex items-center gap-2">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mt-2 flex items-center gap-2">
               <span className="text-indigo-500">●</span>
               <span>
                 Strategie: <strong className="text-[#0B3A7A]">{profileName}</strong>
@@ -154,7 +154,7 @@ export function InvestmentContactModal({
           <div className="p-8">
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1 uppercase tracking-tighter">
+                <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1 uppercase tracking-tighter">
                   E-mail <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -162,18 +162,18 @@ export function InvestmentContactModal({
                   name="email"
                   required
                   placeholder="vas@email.cz"
-                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none transition-shadow bg-slate-50 focus:bg-white"
+                  className="w-full border border-[color:var(--wp-border-strong)] rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none transition-shadow bg-[color:var(--wp-surface-muted)] focus:bg-[color:var(--wp-surface-card)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1 uppercase tracking-tighter">
-                  Telefon <span className="text-slate-400 font-normal normal-case">(nepovinné)</span>
+                <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1 uppercase tracking-tighter">
+                  Telefon <span className="text-[color:var(--wp-text-tertiary)] font-normal normal-case">(nepovinné)</span>
                 </label>
                 <input
                   type="tel"
                   name="telefon"
                   placeholder="+420 777 ..."
-                  className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none bg-slate-50 focus:bg-white"
+                  className="w-full border border-[color:var(--wp-border-strong)] rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-200 focus:border-transparent outline-none bg-[color:var(--wp-surface-muted)] focus:bg-[color:var(--wp-surface-card)]"
                 />
               </div>
               <div className="flex items-start gap-3 mt-2 bg-blue-50/50 p-3 rounded-lg">
@@ -182,15 +182,15 @@ export function InvestmentContactModal({
                   id="consent"
                   name="consent"
                   required
-                  className="mt-1 w-4 h-4 rounded border-slate-300 focus:ring-indigo-200 cursor-pointer"
+                  className="mt-1 w-4 h-4 rounded border-[color:var(--wp-border-strong)] focus:ring-indigo-200 cursor-pointer"
                 />
-                <label htmlFor="consent" className="text-xs text-slate-600 cursor-pointer select-none">
+                <label htmlFor="consent" className="text-xs text-[color:var(--wp-text-secondary)] cursor-pointer select-none">
                   Souhlasím se zpracováním osobních údajů pro účely vytvoření investičního plánu.
                 </label>
               </div>
               <button
                 type="submit"
-                className="w-full mt-8 bg-[#0a0f29] hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-[#0a0f29]/20 transition-all transform active:scale-95 flex items-center justify-center gap-2 text-lg uppercase tracking-wider"
+                className="w-full mt-8 bg-[#0a0f29] hover:bg-[#050814] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#0a0f29]/20 transition-all transform active:scale-95 flex items-center justify-center gap-2 text-lg uppercase tracking-wider"
               >
                 <span>Odeslat nezávazně</span>
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

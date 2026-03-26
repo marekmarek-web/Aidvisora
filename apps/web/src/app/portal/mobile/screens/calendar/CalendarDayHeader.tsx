@@ -21,8 +21,8 @@ export function CalendarDayHeader({
   const dayNames = getDayNames(firstDayOfWeek);
 
   return (
-    <div className="flex shrink-0 border-b border-slate-200 bg-white shadow-sm">
-      <div className="shrink-0 border-r border-slate-100" style={{ width: timeColWidth }} aria-hidden />
+    <div className="flex shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm">
+      <div className="shrink-0 border-r border-[color:var(--wp-surface-card-border)]" style={{ width: timeColWidth }} aria-hidden />
       {weekDays.map((day) => {
         const ds = formatDateLocal(day);
         const isToday = ds === todayStr;
@@ -33,14 +33,14 @@ export function CalendarDayHeader({
             <span
               className={`mb-1 font-black uppercase tracking-widest ${
                 compact ? "text-[9px]" : "text-[10px]"
-              } ${isToday ? "text-indigo-600" : "text-slate-400"}`}
+              } ${isToday ? "text-indigo-600" : "text-[color:var(--wp-text-tertiary)]"}`}
             >
               {dayNames[idx]}
             </span>
             <div
               className={`flex items-center justify-center rounded-full font-bold ${
                 compact ? "h-7 w-7 text-sm" : "h-8 w-8 text-base sm:h-9 sm:w-9"
-              } ${isToday ? "bg-indigo-600 text-white shadow-md" : "text-slate-700"}`}
+              } ${isToday ? "bg-indigo-600 text-white shadow-md" : "text-[color:var(--wp-text-secondary)]"}`}
             >
               {day.getDate()}
             </div>
@@ -50,8 +50,8 @@ export function CalendarDayHeader({
         return (
           <div
             key={ds}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center border-r border-slate-100 py-2 last:border-r-0 ${
-              isWeekend ? "bg-slate-50/50" : "bg-white"
+            className={`flex min-w-0 flex-1 flex-col items-center justify-center border-r border-[color:var(--wp-surface-card-border)] py-2 last:border-r-0 ${
+              isWeekend ? "bg-[color:var(--wp-surface-muted)]/50" : "bg-[color:var(--wp-surface-card)]"
             }`}
           >
             {onSelectDay ? (

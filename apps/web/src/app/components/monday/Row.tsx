@@ -53,7 +53,7 @@ function RowComponent({
 
   return (
     <tr
-      className={`group/row border-b border-monday-border ${hasPotential ? "bg-amber-50/70" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${mondayStyle ? "hover:bg-slate-50 transition-colors" : "monday-row-hover cursor-pointer"}`}
+      className={`group/row border-b border-monday-border ${hasPotential ? "bg-amber-50/70" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${mondayStyle ? "hover:bg-[color:var(--wp-surface-muted)] transition-colors" : "monday-row-hover cursor-pointer"}`}
       onClick={() => !mondayStyle && onOpenItem?.(item.id)}
       draggable={draggable}
       onDragStart={onDragStart}
@@ -67,7 +67,7 @@ function RowComponent({
         const isFirst = colIndex === 0;
         const cellValue = col.type === "item" ? item.name : item.cells[col.id];
         const tdClass = mondayStyle
-          ? `${isFirst ? "sticky-col px-4 py-2 bg-white group-hover/row:bg-slate-50 border-b border-r border-slate-200/60 z-10" : "monday-td relative"}`
+          ? `${isFirst ? "sticky-col px-4 py-2 bg-[color:var(--wp-surface-card)] group-hover/row:bg-[color:var(--wp-surface-muted)] border-b border-r border-[color:var(--wp-surface-card-border)]/60 z-10" : "monday-td relative"}`
           : `monday-cell-sep bg-monday-surface ${isFirst ? "monday-sticky-first-col bg-monday-surface pl-2" : ""}`;
 
         if (col.type === "item") {
@@ -176,11 +176,11 @@ function RowComponent({
         return null;
       })}
       {mondayStyle && (
-        <td className="px-4 py-2 text-center border-b border-slate-200/60 bg-white group-hover/row:bg-slate-50 box-border" style={{ width: actionColumnWidth, minWidth: actionColumnWidth, maxWidth: actionColumnWidth }}>
+        <td className="px-4 py-2 text-center border-b border-[color:var(--wp-surface-card-border)]/60 bg-[color:var(--wp-surface-card)] group-hover/row:bg-[color:var(--wp-surface-muted)] box-border" style={{ width: actionColumnWidth, minWidth: actionColumnWidth, maxWidth: actionColumnWidth }}>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onOpenItem?.(item.id); }}
-            className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors opacity-0 group-hover/row:opacity-100"
+            className="p-1.5 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-card-border)] rounded transition-colors opacity-0 group-hover/row:opacity-100"
             title="Otevřít"
           >
             <MessageSquare size={16} />

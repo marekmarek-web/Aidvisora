@@ -37,7 +37,7 @@ export function OpportunityOffersTab({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-4 sm:p-6">
+      <div className="rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-4 sm:p-6">
         <DocumentUploadZone
           contactId={contactId ?? undefined}
           opportunityId={opportunityId}
@@ -46,9 +46,9 @@ export function OpportunityOffersTab({
           onUploaded={() => load()}
         />
       </div>
-      {loading && <p className="text-sm font-medium text-slate-500">Načítání…</p>}
+      {loading && <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání…</p>}
       {!loading && list.length === 0 && (
-        <p className="text-sm font-medium text-slate-500 rounded-2xl border border-slate-100 bg-white p-5">
+        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5">
           Žádné přílohy. Nahrajte nabídku nebo objednávku výše.
         </p>
       )}
@@ -57,13 +57,13 @@ export function OpportunityOffersTab({
           {list.map((d) => (
             <li
               key={d.id}
-              className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm min-h-[56px]"
+              className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm min-h-[56px]"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
                   <FileText size={18} aria-hidden />
                 </div>
-                <span className="text-sm font-bold text-slate-800 truncate">{d.name}</span>
+                <span className="text-sm font-bold text-[color:var(--wp-text)] truncate">{d.name}</span>
               </div>
               <button
                 type="button"

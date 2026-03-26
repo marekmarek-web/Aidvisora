@@ -238,7 +238,7 @@ export default function CompanyAnalysesPage() {
   if (idParam && !loadedRow && !loadError) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <p className="text-slate-600">Načítání analýzy…</p>
+        <p className="text-[color:var(--wp-text-secondary)]">Načítání analýzy…</p>
       </div>
     );
   }
@@ -246,7 +246,7 @@ export default function CompanyAnalysesPage() {
   if (idParam && loadError) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <p className="text-slate-700 font-medium mb-2">{loadError}</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium mb-2">{loadError}</p>
         <Link
           href="/portal/analyses/company"
           className="min-h-[44px] inline-flex items-center px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:opacity-90"
@@ -283,26 +283,26 @@ export default function CompanyAnalysesPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">Firemní finanční analýzy</h1>
-      <p className="text-slate-600 mb-6">
+      <h1 className="text-2xl font-bold text-[color:var(--wp-text)] mb-2">Firemní finanční analýzy</h1>
+      <p className="text-[color:var(--wp-text-secondary)] mb-6">
         Import analýz z JSON (export z FA s.r.o. hlavní) nebo seznam uložených analýz.
       </p>
 
       <section className="mb-8">
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">Import JSON</h2>
+        <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Import JSON</h2>
         <input
           ref={fileInputRef}
           type="file"
           accept=".json"
           onChange={handleFileChange}
-          className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-semibold file:cursor-pointer hover:file:opacity-90"
+          className="block w-full text-sm text-[color:var(--wp-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-semibold file:cursor-pointer hover:file:opacity-90"
         />
       </section>
 
       {step === "personal_detected" && (
-        <section className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-800 mb-2">Osobní finanční analýza</h2>
-          <p className="text-slate-600 text-sm mb-4">
+        <section className="mb-8 p-6 bg-[color:var(--wp-surface-muted)] rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-2">Osobní finanční analýza</h2>
+          <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">
             Nahraný soubor je ve formátu osobní finanční analýzy. Můžete ji otevřít v modulu osobní FA, upravit a uložit do CRM.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -316,7 +316,7 @@ export default function CompanyAnalysesPage() {
             <button
               type="button"
               onClick={resetFlow}
-              className="min-h-[44px] px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50"
+              className="min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] rounded-xl hover:bg-[color:var(--wp-surface-muted)]"
             >
               Zrušit
             </button>
@@ -325,29 +325,29 @@ export default function CompanyAnalysesPage() {
       )}
 
       {step === "preview" && preview && normalizedPayload && (
-        <section className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Náhled importu</h2>
+        <section className="mb-8 p-6 bg-[color:var(--wp-surface-muted)] rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-4">Náhled importu</h2>
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-slate-600">Firma</p>
-              <p className="text-slate-900 font-medium">{preview.company.displayName}</p>
-              {preview.company.ico && <p className="text-sm text-slate-500">IČO: {preview.company.ico}</p>}
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Firma</p>
+              <p className="text-[color:var(--wp-text)] font-medium">{preview.company.displayName}</p>
+              {preview.company.ico && <p className="text-sm text-[color:var(--wp-text-secondary)]">IČO: {preview.company.ico}</p>}
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={createNewCompany}
                 onChange={(e) => setCreateNewCompany(e.target.checked)}
-                className="rounded border-slate-300"
+                className="rounded border-[color:var(--wp-border-strong)]"
               />
-              <span className="text-sm text-slate-700">Vytvořit novou firmu (nebo použít existující podle IČO)</span>
+              <span className="text-sm text-[color:var(--wp-text-secondary)]">Vytvořit novou firmu (nebo použít existující podle IČO)</span>
             </label>
             {!createNewCompany && preview.suggestedCompanyId && (
               <p className="text-sm text-green-700">Bude použita existující firma v systému.</p>
             )}
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-2">Jednatelé</p>
-              <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Jednatelé</p>
+              <ul className="list-disc list-inside text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                 {preview.directorsPreview.map((d) => (
                   <li key={d.index}>
                     {d.name}
@@ -368,14 +368,14 @@ export default function CompanyAnalysesPage() {
             <button
               type="button"
               onClick={openShellAndEdit}
-              className="min-h-[44px] px-6 py-3 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50"
+              className="min-h-[44px] px-6 py-3 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] font-medium rounded-xl hover:bg-[color:var(--wp-surface-muted)]"
             >
               Otevřít a upravit
             </button>
             <button
               type="button"
               onClick={resetFlow}
-              className="min-h-[44px] px-6 py-3 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50"
+              className="min-h-[44px] px-6 py-3 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] font-medium rounded-xl hover:bg-[color:var(--wp-surface-muted)]"
             >
               Zrušit
             </button>
@@ -397,7 +397,7 @@ export default function CompanyAnalysesPage() {
           <button
             type="button"
             onClick={resetFlow}
-            className="mt-4 min-h-[44px] px-4 py-2 bg-white border border-red-300 text-red-700 rounded-xl hover:bg-red-50"
+            className="mt-4 min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-card)] border border-red-300 text-red-700 rounded-xl hover:bg-red-50"
           >
             Zkusit znovu
           </button>
@@ -417,7 +417,7 @@ export default function CompanyAnalysesPage() {
           <button
             type="button"
             onClick={resetFlow}
-            className="ml-3 min-h-[44px] px-4 py-2 bg-white border border-green-300 text-green-700 rounded-xl hover:bg-green-50"
+            className="ml-3 min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-card)] border border-green-300 text-green-700 rounded-xl hover:bg-green-50"
           >
             Importovat další
           </button>
@@ -425,17 +425,17 @@ export default function CompanyAnalysesPage() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">Seznam firemních analýz</h2>
+        <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Seznam firemních analýz</h2>
         {listLoading ? (
-          <p className="text-slate-500 text-sm">Načítání…</p>
+          <p className="text-[color:var(--wp-text-secondary)] text-sm">Načítání…</p>
         ) : analyses.length === 0 ? (
-          <p className="text-slate-500 text-sm">Zatím žádné firemní analýzy. Nahrajte JSON nebo vytvořte novou.</p>
+          <p className="text-[color:var(--wp-text-secondary)] text-sm">Zatím žádné firemní analýzy. Nahrajte JSON nebo vytvořte novou.</p>
         ) : (
           <ul className="space-y-2">
             {analyses.map((a) => (
-              <li key={a.id} className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-800 font-medium">{a.companyName ?? "Firemní analýza"}</span>
-                <span className="text-xs text-slate-500">{a.status}</span>
+              <li key={a.id} className="flex items-center justify-between py-2 border-b border-[color:var(--wp-surface-card-border)]">
+                <span className="text-[color:var(--wp-text)] font-medium">{a.companyName ?? "Firemní analýza"}</span>
+                <span className="text-xs text-[color:var(--wp-text-secondary)]">{a.status}</span>
                 <Link
                   href={`/portal/analyses/company?id=${a.id}`}
                   className="text-sm text-primary font-medium hover:underline min-h-[44px] flex items-center"

@@ -208,7 +208,7 @@ export function AIReviewExtractionShell({
   }, [onApproveAndApply, state.editedFields]);
 
   return (
-    <div className="flex flex-col h-full min-h-[600px] bg-[#f8fafc] font-sans text-slate-800 overflow-hidden -m-4 md:-m-6">
+    <div className="flex flex-col h-full min-h-[600px] bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden -m-4 md:-m-6">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -301,7 +301,7 @@ export function AIReviewExtractionShell({
                   <Link
                     key={item.id}
                     href={item.href}
-                    className="px-3 py-1.5 rounded-lg bg-white border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -313,9 +313,9 @@ export function AIReviewExtractionShell({
       )}
 
       {doc.pipelineInsights && !isFailed && !isProcessing ? (
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 md:px-6">
+        <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 md:px-6">
           <div className="max-w-5xl mx-auto space-y-2">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-black uppercase tracking-widest text-slate-600">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
               {doc.pipelineInsights.extractionRoute ? (
                 <span>
                   Trasa:{" "}
@@ -325,18 +325,18 @@ export function AIReviewExtractionShell({
               {doc.pipelineInsights.normalizedPipelineClassification ? (
                 <span>
                   Typ:{" "}
-                  <span className="text-slate-900">{doc.pipelineInsights.normalizedPipelineClassification}</span>
+                  <span className="text-[color:var(--wp-text)]">{doc.pipelineInsights.normalizedPipelineClassification}</span>
                 </span>
               ) : null}
               {doc.pipelineInsights.preprocessStatus ? (
                 <span>
-                  Preprocess: <span className="text-slate-900">{doc.pipelineInsights.preprocessStatus}</span>
+                  Preprocess: <span className="text-[color:var(--wp-text)]">{doc.pipelineInsights.preprocessStatus}</span>
                 </span>
               ) : null}
               {typeof doc.pipelineInsights.preprocessDurationMs === "number" ? (
                 <span>
                   Předzpracování:{" "}
-                  <span className="text-slate-900">
+                  <span className="text-[color:var(--wp-text)]">
                     {(doc.pipelineInsights.preprocessDurationMs / 1000).toFixed(1)} s
                   </span>
                 </span>
@@ -344,7 +344,7 @@ export function AIReviewExtractionShell({
               {typeof doc.pipelineInsights.pipelineDurationMs === "number" ? (
                 <span>
                   AI pipeline:{" "}
-                  <span className="text-slate-900">
+                  <span className="text-[color:var(--wp-text)]">
                     {(doc.pipelineInsights.pipelineDurationMs / 1000).toFixed(1)} s
                   </span>
                 </span>
@@ -352,7 +352,7 @@ export function AIReviewExtractionShell({
               {doc.pipelineInsights.extractionSecondPass ? (
                 <span>
                   2. krok:{" "}
-                  <span className="text-slate-900">
+                  <span className="text-[color:var(--wp-text)]">
                     {doc.pipelineInsights.extractionSecondPass === "text"
                       ? "text (bez druhého PDF)"
                       : "PDF"}
@@ -417,11 +417,11 @@ export function AIReviewExtractionShell({
             ) : null}
             {doc.pipelineInsights.paymentPreview &&
             Object.keys(doc.pipelineInsights.paymentPreview).length > 0 ? (
-              <div className="rounded-xl border border-emerald-200 bg-white p-3 shadow-sm">
+              <div className="rounded-xl border border-emerald-200 bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
                 <h4 className="text-xs font-black uppercase tracking-widest text-emerald-900 mb-2">
                   Platební údaje (náhled)
                 </h4>
-                <dl className="grid grid-cols-1 gap-1.5 text-xs text-slate-700 sm:grid-cols-2">
+                <dl className="grid grid-cols-1 gap-1.5 text-xs text-[color:var(--wp-text-secondary)] sm:grid-cols-2">
                   {(
                     [
                       ["Komu (instituce)", doc.pipelineInsights.paymentPreview.institutionName],
@@ -446,8 +446,8 @@ export function AIReviewExtractionShell({
                     if (v == null || String(v).trim() === "") return null;
                     return (
                       <div key={k} className="flex flex-col gap-0.5">
-                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{k}</dt>
-                        <dd className="font-medium text-slate-900">{String(v)}</dd>
+                        <dt className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--wp-text-secondary)]">{k}</dt>
+                        <dd className="font-medium text-[color:var(--wp-text)]">{String(v)}</dd>
                       </div>
                     );
                   })}
@@ -464,13 +464,13 @@ export function AIReviewExtractionShell({
       ) : null}
 
       {/* Mobile tab switcher */}
-      <div className="lg:hidden flex border-b border-slate-200 bg-white">
+      <div className="lg:hidden flex border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
         <button
           onClick={() => dispatch({ type: "SET_SHOW_PDF_MOBILE", show: false })}
           className={`flex-1 py-3 text-xs font-black uppercase tracking-widest text-center transition-colors ${
             !state.showPdfOnMobile
               ? "text-indigo-600 border-b-2 border-indigo-600"
-              : "text-slate-500"
+              : "text-[color:var(--wp-text-secondary)]"
           }`}
         >
           <FileText size={14} className="inline-block mr-1.5 -mt-0.5" />
@@ -481,7 +481,7 @@ export function AIReviewExtractionShell({
           className={`flex-1 py-3 text-xs font-black uppercase tracking-widest text-center transition-colors ${
             state.showPdfOnMobile
               ? "text-indigo-600 border-b-2 border-indigo-600"
-              : "text-slate-500"
+              : "text-[color:var(--wp-text-secondary)]"
           }`}
         >
           <Eye size={14} className="inline-block mr-1.5 -mt-0.5" />
@@ -492,7 +492,7 @@ export function AIReviewExtractionShell({
       <main className="flex-1 flex overflow-hidden">
         {/* Left panel */}
         <section
-          className={`w-full lg:w-[55%] flex flex-col bg-[#f4f7f9] border-r border-slate-200 ${
+          className={`w-full lg:w-[55%] flex flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] ${
             state.showPdfOnMobile ? "hidden lg:flex" : "flex"
           }`}
         >
@@ -513,13 +513,13 @@ export function AIReviewExtractionShell({
           ) : (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center max-w-md">
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
-                  <FileText size={28} className="text-slate-400" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-[color:var(--wp-surface-muted)] rounded-2xl flex items-center justify-center">
+                  <FileText size={28} className="text-[color:var(--wp-text-tertiary)]" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-2">
                   {isFailed ? "Extrakce se nezdařila" : isProcessing ? "Zpracovávám…" : "Žádná data"}
                 </h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
+                <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
                   {isFailed
                     ? "AI nedokázala z dokumentu extrahovat data. Zkuste nahrát čitelnější verzi dokumentu nebo jiný formát."
                     : isProcessing
@@ -532,24 +532,24 @@ export function AIReviewExtractionShell({
 
           {/* Client match + actions at bottom of left panel */}
           {!doc.isApplied && (doc.clientMatchCandidates.length > 0 || canApproveReject || canApply) && hasData && (
-            <div className="border-t border-slate-200 bg-white p-4 md:p-6 space-y-4 shrink-0">
+            <div className="border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 md:p-6 space-y-4 shrink-0">
               {/* Client candidates */}
               {doc.clientMatchCandidates.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">
                     Kandidáti klientů
                   </h4>
                   <div className="space-y-2">
                     {doc.clientMatchCandidates.map((c) => (
                       <div
                         key={c.clientId}
-                        className="flex items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50"
+                        className="flex items-center justify-between gap-2 p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">
+                          <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                             {c.displayName ?? c.clientId}
                           </p>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-[10px] text-[color:var(--wp-text-secondary)]">
                             {Math.round(c.score * 100)}% · {c.reasons.join(", ")}
                           </p>
                         </div>
@@ -559,7 +559,7 @@ export function AIReviewExtractionShell({
                           className={`shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-colors min-h-[44px] ${
                             doc.matchedClientId === c.clientId
                               ? "bg-indigo-100 text-indigo-700"
-                              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                              : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                           }`}
                         >
                           {doc.matchedClientId === c.clientId ? (
@@ -572,7 +572,7 @@ export function AIReviewExtractionShell({
                   <button
                     onClick={onConfirmCreateNew}
                     disabled={!!actionLoading || doc.createNewClientConfirmed === "true"}
-                    className="mt-2 flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors min-h-[44px]"
+                    className="mt-2 flex items-center gap-2 text-xs font-bold text-[color:var(--wp-text-secondary)] hover:text-indigo-600 transition-colors min-h-[44px]"
                   >
                     <UserPlus size={14} />
                     {doc.createNewClientConfirmed === "true"
@@ -586,7 +586,7 @@ export function AIReviewExtractionShell({
                 <button
                   onClick={onConfirmCreateNew}
                   disabled={!!actionLoading || doc.createNewClientConfirmed === "true"}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors min-h-[44px]"
+                  className="flex items-center gap-2 text-xs font-bold text-[color:var(--wp-text-secondary)] hover:text-indigo-600 transition-colors min-h-[44px]"
                 >
                   <UserPlus size={14} />
                   {doc.createNewClientConfirmed === "true"
@@ -599,7 +599,7 @@ export function AIReviewExtractionShell({
 
           {/* Danger zone — delete */}
           {!doc.isApplied && (
-            <div className="border-t border-slate-200 bg-white px-4 md:px-6 py-3 shrink-0">
+            <div className="border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 md:px-6 py-3 shrink-0">
               <button
                 onClick={onDiscard}
                 disabled={actionLoading === "delete"}
@@ -645,22 +645,22 @@ export function AIReviewExtractionShell({
           onClick={() => setShowRejectModal(false)}
         >
           <div
-            className="rounded-2xl bg-white border border-slate-200 p-6 max-w-md w-full shadow-2xl"
+            className="rounded-2xl bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] p-6 max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Zamítnout extrakci</h3>
-            <label className="block text-sm text-slate-600 mt-2">Důvod (volitelné)</label>
+            <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-2">Zamítnout extrakci</h3>
+            <label className="block text-sm text-[color:var(--wp-text-secondary)] mt-2">Důvod (volitelné)</label>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={3}
-              className="w-full mt-1 rounded-xl border border-slate-200 p-3 text-sm min-h-[88px] focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 outline-none"
+              className="w-full mt-1 rounded-xl border border-[color:var(--wp-surface-card-border)] p-3 text-sm min-h-[88px] focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 outline-none"
               placeholder="Např. špatná smlouva, duplicita…"
             />
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setShowRejectModal(false)}
-                className="px-4 min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                className="px-4 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
               >
                 Zrušit
               </button>
@@ -687,18 +687,18 @@ export function AIReviewExtractionShell({
           onClick={() => setShowApplyConfirm(false)}
         >
           <div
-            className="rounded-2xl bg-white border border-slate-200 p-6 max-w-md w-full shadow-2xl"
+            className="rounded-2xl bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] p-6 max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Zapsat do CRM?</h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-2">Zapsat do CRM?</h3>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
               Návrhové akce (klient, smlouva, úkol…) budou zapsány do databáze. Tuto akci lze provést jen jednou.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowApplyConfirm(false)}
-                className="px-4 min-h-[44px] rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                className="px-4 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
               >
                 Zrušit
               </button>

@@ -58,7 +58,7 @@ export function CalendarEventAiActions({ contactId, eventId, eventNotes }: Props
           type="button"
           onClick={handlePreMeetingBriefing}
           disabled={briefLoading}
-          className="flex items-center justify-center gap-2 min-h-[44px] w-full py-2.5 px-3 text-sm font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition-colors disabled:opacity-60"
+          className="flex items-center justify-center gap-2 min-h-[44px] w-full py-2.5 px-3 text-sm font-bold text-indigo-700 bg-[color:var(--wp-surface-card)] hover:bg-indigo-50 border border-indigo-200 rounded-lg transition-colors disabled:opacity-60"
         >
           {briefLoading ? (
             <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -71,7 +71,7 @@ export function CalendarEventAiActions({ contactId, eventId, eventNotes }: Props
           type="button"
           onClick={handlePostMeetingFollowup}
           disabled={followUpLoading}
-          className="flex items-center justify-center gap-2 min-h-[44px] w-full py-2.5 px-3 text-sm font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition-colors disabled:opacity-60"
+          className="flex items-center justify-center gap-2 min-h-[44px] w-full py-2.5 px-3 text-sm font-bold text-indigo-700 bg-[color:var(--wp-surface-card)] hover:bg-indigo-50 border border-indigo-200 rounded-lg transition-colors disabled:opacity-60"
         >
           {followUpLoading ? (
             <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -89,7 +89,7 @@ export function CalendarEventAiActions({ contactId, eventId, eventNotes }: Props
       {briefText && (
         <div className="border-t border-indigo-100 pt-2">
           <p className="text-[10px] font-bold uppercase text-indigo-600 mb-1">Briefing</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{briefText}</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{briefText}</p>
         </div>
       )}
       {followUpError && (
@@ -100,7 +100,7 @@ export function CalendarEventAiActions({ contactId, eventId, eventNotes }: Props
       {followUpText && (
         <div className="border-t border-indigo-100 pt-2">
           <p className="text-[10px] font-bold uppercase text-indigo-600 mb-1">Follow-up</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{followUpText}</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{followUpText}</p>
         </div>
       )}
     </div>

@@ -3,10 +3,10 @@
  */
 
 export const wizardLabelClass =
-  "block text-sm font-bold text-slate-700 mb-2";
+  "block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2";
 
 export const wizardInputClass =
-  "w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all text-slate-800 placeholder:text-slate-300";
+  "w-full px-4 py-3.5 bg-[color:var(--wp-input-bg)] border border-[color:var(--wp-input-border)] rounded-xl text-sm font-medium outline-none focus:ring-4 focus:ring-[color:var(--wp-header-input-focus-ring)] focus:border-[color:var(--wp-header-input-focus-border)] transition-all text-[color:var(--wp-input-text)] placeholder:text-[color:var(--wp-text-tertiary)]";
 
 export const wizardInputWithIconClass = `${wizardInputClass} pl-11`;
 

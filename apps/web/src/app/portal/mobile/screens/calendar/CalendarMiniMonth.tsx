@@ -23,9 +23,9 @@ export function CalendarMiniMonth({
   const cells = Array.from({ length: 42 }, (_, i) => addDaysLocal(gridStart, i));
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3">
-      <p className="mb-2 text-center text-xs font-black uppercase tracking-widest text-slate-500">{label}</p>
-      <div className="mb-1 grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-slate-400">
+    <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-3">
+      <p className="mb-2 text-center text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">{label}</p>
+      <div className="mb-1 grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-[color:var(--wp-text-tertiary)]">
         {dayLabels.map((d) => (
           <span key={d}>{d}</span>
         ))}
@@ -42,14 +42,14 @@ export function CalendarMiniMonth({
               type="button"
               onClick={() => onPickDay(startOfDayLocal(d))}
               className={`flex h-9 min-h-[36px] items-center justify-center rounded-lg text-xs font-bold transition-colors active:scale-95 ${
-                !inMonth ? "text-slate-300" : "text-slate-700"
+                !inMonth ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text-secondary)]"
               } ${
                 isToday
                   ? "bg-indigo-600 text-white shadow-sm"
                   : isAnchor
                     ? "bg-indigo-100 text-indigo-800"
                     : inMonth
-                      ? "bg-white hover:bg-slate-100"
+                      ? "bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)]"
                       : ""
               }`}
             >

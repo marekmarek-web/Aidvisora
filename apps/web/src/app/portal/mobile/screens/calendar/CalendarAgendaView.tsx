@@ -49,8 +49,8 @@ export function CalendarAgendaView({
         className="flex min-h-[200px] flex-1 flex-col items-center justify-center px-6 pb-24 text-center"
         style={{ maxHeight: "min(720px, calc(100dvh - 220px))" }}
       >
-        <p className="text-sm font-bold text-slate-700">Žádné události v tomto týdnu</p>
-        <p className="mt-1 text-xs text-slate-500">Zkuste jiné období nebo přidejte aktivitu.</p>
+        <p className="text-sm font-bold text-[color:var(--wp-text-secondary)]">Žádné události v tomto týdnu</p>
+        <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">Zkuste jiné období nebo přidejte aktivitu.</p>
       </div>
     );
   }
@@ -70,7 +70,7 @@ export function CalendarAgendaView({
           );
           return (
             <section key={ds}>
-              <h3 className="sticky top-0 z-[1] mb-2 bg-white/95 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 backdrop-blur-sm">
+              <h3 className="sticky top-0 z-[1] mb-2 bg-[color:var(--wp-surface-card)]/95 py-1 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] backdrop-blur-sm">
                 {dayHeading(day, todayStr)}
               </h3>
               <ul className="space-y-2">
@@ -91,7 +91,7 @@ export function CalendarAgendaView({
                         type="button"
                         onClick={() => onEventClick(ev)}
                         className={`flex w-full min-h-[52px] items-start gap-3 rounded-2xl border border-l-[4px] p-3 text-left shadow-sm transition-transform active:scale-[0.99] ${
-                          useInline ? "border-slate-200 bg-white text-slate-900" : style.tailwindClass
+                          useInline ? "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)]" : style.tailwindClass
                         } ${selectedEventId === ev.id ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}
                         style={
                           useInline
@@ -99,11 +99,11 @@ export function CalendarAgendaView({
                             : undefined
                         }
                       >
-                        <div className={`shrink-0 font-bold text-slate-500 ${fontClass}`}>{timeLabel}</div>
+                        <div className={`shrink-0 font-bold text-[color:var(--wp-text-secondary)] ${fontClass}`}>{timeLabel}</div>
                         <div className="min-w-0 flex-1">
-                          <p className={`font-black text-slate-900 ${fontClass} line-clamp-2`}>{ev.title}</p>
+                          <p className={`font-black text-[color:var(--wp-text)] ${fontClass} line-clamp-2`}>{ev.title}</p>
                           {ev.contactName ? (
-                            <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-slate-600">
+                            <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-[color:var(--wp-text-secondary)]">
                               <User size={12} className="shrink-0" />
                               <span className="truncate">{ev.contactName}</span>
                             </p>

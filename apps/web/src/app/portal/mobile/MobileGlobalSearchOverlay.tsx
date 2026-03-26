@@ -87,23 +87,23 @@ export function MobileGlobalSearchOverlay({
     0;
 
   return (
-    <div className="fixed inset-0 z-[150] bg-white flex flex-col animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Hledání">
-      <div className="pt-[calc(var(--safe-area-top)+0.75rem)] px-3 pb-3 border-b border-slate-200 flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 min-h-[44px] rounded-xl border border-slate-200 bg-slate-50 px-3">
-          <Search size={18} className="text-slate-400 shrink-0" />
+    <div className="fixed inset-0 z-[150] bg-[color:var(--wp-surface-card)] flex flex-col animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Hledání">
+      <div className="pt-[calc(var(--safe-area-top)+0.75rem)] px-3 pb-3 border-b border-[color:var(--wp-surface-card-border)] flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3">
+          <Search size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
           <input
             ref={inputRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Hledat kontakty, smlouvy, případy…"
-            className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+            className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-[color:var(--wp-text)] outline-none placeholder:text-[color:var(--wp-text-tertiary)]"
           />
           {loading ? <Loader2 size={18} className="text-indigo-500 animate-spin shrink-0" /> : null}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center active:scale-95 transition-transform"
+          className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform"
           aria-label="Zavřít"
         >
           <X size={18} />
@@ -112,24 +112,24 @@ export function MobileGlobalSearchOverlay({
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {!value.trim() ? (
-          <p className="text-sm text-slate-500 text-center py-8">Začněte psát pro vyhledávání v CRM.</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] text-center py-8">Začněte psát pro vyhledávání v CRM.</p>
         ) : !loading && !hasAny ? (
-          <p className="text-sm text-slate-500 text-center py-8">Žádné výsledky.</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] text-center py-8">Žádné výsledky.</p>
         ) : null}
 
         {results.contacts.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Kontakty</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Kontakty</h3>
             <ul className="space-y-1">
               {results.contacts.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/contacts/${c.id}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {c.name}
-                    {c.email ? <span className="block text-xs font-normal text-slate-500">{c.email}</span> : null}
+                    {c.email ? <span className="block text-xs font-normal text-[color:var(--wp-text-secondary)]">{c.email}</span> : null}
                   </button>
                 </li>
               ))}
@@ -139,14 +139,14 @@ export function MobileGlobalSearchOverlay({
 
         {results.contracts.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Smlouvy</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Smlouvy</h3>
             <ul className="space-y-1">
               {results.contracts.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/contacts/${c.contactId}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {c.label}
                   </button>
@@ -158,14 +158,14 @@ export function MobileGlobalSearchOverlay({
 
         {results.opportunities.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Obchody</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Obchody</h3>
             <ul className="space-y-1">
               {results.opportunities.map((o) => (
                 <li key={o.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/pipeline/${o.id}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {o.title}
                   </button>
@@ -177,14 +177,14 @@ export function MobileGlobalSearchOverlay({
 
         {results.households.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Domácnosti</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Domácnosti</h3>
             <ul className="space-y-1">
               {results.households.map((h) => (
                 <li key={h.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/households/${h.id}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {h.name}
                   </button>
@@ -196,14 +196,14 @@ export function MobileGlobalSearchOverlay({
 
         {results.docs.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Dokumenty</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Dokumenty</h3>
             <ul className="space-y-1">
               {results.docs.map((d) => (
                 <li key={d.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/documents?doc=${d.id}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {d.name}
                   </button>
@@ -215,17 +215,17 @@ export function MobileGlobalSearchOverlay({
 
         {results.notes.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Zápisky</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Zápisky</h3>
             <ul className="space-y-1">
               {results.notes.map((n) => (
                 <li key={n.id}>
                   <button
                     type="button"
                     onClick={() => go(`/portal/notes?noteId=${n.id}`)}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {n.domain}
-                    <span className="block text-xs font-normal text-slate-500">
+                    <span className="block text-xs font-normal text-[color:var(--wp-text-secondary)]">
                       {new Date(n.meetingAt).toLocaleDateString("cs-CZ")}
                     </span>
                   </button>
@@ -237,14 +237,14 @@ export function MobileGlobalSearchOverlay({
 
         {results.events.length > 0 ? (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Události</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Události</h3>
             <ul className="space-y-1">
               {results.events.map((e) => (
                 <li key={e.id}>
                   <button
                     type="button"
                     onClick={() => go("/portal/calendar")}
-                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-800 active:bg-slate-50"
+                    className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
                     {e.title}
                   </button>

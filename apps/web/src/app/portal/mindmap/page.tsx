@@ -13,7 +13,7 @@ const MindmapView = dynamic(
   () => import("./MindmapView").then((m) => m.MindmapView),
   {
     loading: () => (
-      <div className="flex flex-1 min-h-[50vh] items-center justify-center text-slate-500 text-sm">Načítání mapy…</div>
+      <div className="flex flex-1 min-h-[50vh] items-center justify-center text-[color:var(--wp-text-secondary)] text-sm">Načítání mapy…</div>
     ),
   },
 );
@@ -70,7 +70,7 @@ export default function MindmapPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
-        <p className="text-slate-500 font-medium">Načítám mapu…</p>
+        <p className="text-[color:var(--wp-text-secondary)] font-medium">Načítám mapu…</p>
       </div>
     );
   }
@@ -99,7 +99,7 @@ export default function MindmapPage() {
   if (!state) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
-        <p className="text-slate-500">Žádná data.</p>
+        <p className="text-[color:var(--wp-text-secondary)]">Žádná data.</p>
       </div>
     );
   }

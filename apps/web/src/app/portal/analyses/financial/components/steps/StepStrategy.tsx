@@ -112,14 +112,14 @@ export function StepStrategy() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Investiční strategie</h2>
-        <p className="text-slate-500 mt-1">Profil rizika a alokace do produktů – projekce FV.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Investiční strategie</h2>
+        <p className="text-[color:var(--wp-text-secondary)] mt-1">Profil rizika a alokace do produktů – projekce FV.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-            <h3 className="text-slate-800 font-bold mb-4">Profil rizika</h3>
+          <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+            <h3 className="text-[color:var(--wp-text)] font-bold mb-4">Profil rizika</h3>
             <div className="flex flex-wrap gap-3 mb-4">
               {PROFILE_OPTIONS.map((o) => (
                 <button
@@ -129,7 +129,7 @@ export function StepStrategy() {
                   className={`min-h-[44px] px-5 py-2 rounded-xl font-semibold transition-colors ${
                     profile === o.value
                       ? "bg-indigo-500 text-white shadow"
-                      : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                      : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                   }`}
                 >
                   {o.label}
@@ -141,9 +141,9 @@ export function StepStrategy() {
                 type="checkbox"
                 checked={conservativeMode}
                 onChange={(e) => setConservativeMode(e.target.checked)}
-                className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400"
+                className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-500 focus:ring-indigo-400"
               />
-              <span className="text-sm font-semibold text-slate-700">Konzervativní režim (snížené výnosy v projekci)</span>
+              <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">Konzervativní režim (snížené výnosy v projekci)</span>
             </label>
             {(() => {
               const rentaGoal = data.goals?.find((g) => g.type === "renta" && (g.computed?.pmt ?? 0) > 0);
@@ -168,15 +168,15 @@ export function StepStrategy() {
           </div>
 
           <div>
-            <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+            <h3 className="text-[color:var(--wp-text)] font-bold mb-4 flex items-center gap-2">
               <PieChart className="w-5 h-5 text-indigo-600" />
               Produkty a částky
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {investments.map((inv) => (
-                <div key={inv.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div key={inv.id} className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-4 shadow-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className={`h-10 w-10 flex items-center justify-center rounded bg-slate-100 text-slate-600 font-bold text-sm shrink-0 ${FUND_LOGOS[inv.productKey] ? "hidden" : ""}`} data-fallback>
+                    <span className={`h-10 w-10 flex items-center justify-center rounded bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] font-bold text-sm shrink-0 ${FUND_LOGOS[inv.productKey] ? "hidden" : ""}`} data-fallback>
                       {getProductName(inv.productKey, inv.type).slice(0, 2).toUpperCase()}
                     </span>
                     {FUND_LOGOS[inv.productKey] ? (
@@ -190,11 +190,11 @@ export function StepStrategy() {
                         }}
                       />
                     ) : null}
-                    <div className="font-bold text-slate-800 text-sm flex-1 min-w-0">{getProductName(inv.productKey, inv.type)}</div>
+                    <div className="font-bold text-[color:var(--wp-text)] text-sm flex-1 min-w-0">{getProductName(inv.productKey, inv.type)}</div>
                   </div>
-                  <div className="text-xs text-slate-500 mb-2">{getTypeLabel(inv.type)}</div>
+                  <div className="text-xs text-[color:var(--wp-text-secondary)] mb-2">{getTypeLabel(inv.type)}</div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <label className="text-xs font-semibold text-slate-600">Zhodnocení:</label>
+                    <label className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Zhodnocení:</label>
                     <div className="min-w-[140px] flex-1">
                       <CustomDropdown
                         value={String(getSelectYield(inv.productKey, inv.annualRate))}
@@ -208,7 +208,7 @@ export function StepStrategy() {
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">
                         {inv.type === "lump" ? "Částka (Kč)" : "Měsíční vklad (Kč)"}
                       </label>
                       <input
@@ -217,12 +217,12 @@ export function StepStrategy() {
                         step={100}
                         value={inv.amount != null && Number.isFinite(inv.amount) ? Math.round(inv.amount) : ""}
                         onChange={(e) => updateInvestment(inv.productKey, inv.type, "amount", parseFloat(e.target.value) || 0)}
-                        className="w-full min-h-[44px] px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full min-h-[44px] px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                         placeholder="0"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">
                         Roky
                         {inv.type === "pension" && yearsToRetirement != null && (
                           <span className="text-indigo-500 ml-1 font-normal">(do důchodu: {pluralizeYears(yearsToRetirement)})</span>
@@ -235,11 +235,11 @@ export function StepStrategy() {
                         value={inv.years || ""}
                         placeholder={inv.type === "pension" && yearsToRetirement != null ? String(yearsToRetirement) : ""}
                         onChange={(e) => updateInvestment(inv.productKey, inv.type, "years", parseInt(e.target.value, 10) || 1)}
-                        className="w-full min-h-[44px] px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full min-h-[44px] px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                       />
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-slate-100 text-sm font-bold text-indigo-700">
+                  <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] text-sm font-bold text-indigo-700">
                     FV: {formatCzk(inv.computed?.fv ?? 0)}
                   </div>
                 </div>
@@ -247,9 +247,9 @@ export function StepStrategy() {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-slate-800 font-bold mb-2">Projekce vývoje</h3>
-            <p className="text-slate-500 text-sm mb-4">
+          <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6 shadow-sm">
+            <h3 className="text-[color:var(--wp-text)] font-bold mb-2">Projekce vývoje</h3>
+            <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">
               Odhadovaný vývoj hodnoty portfolia v čase při zvoleném profilu (stejná logika jako investiční kalkulačka).
             </p>
             <div className="min-h-[300px] w-full">
@@ -266,38 +266,38 @@ export function StepStrategy() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="sticky top-4 bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+          <div className="sticky top-4 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6 shadow-sm">
+            <h3 className="text-[color:var(--wp-text)] font-bold mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
               Shrnutí portfolia
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 text-sm">Celková FV (projekce)</span>
-                <span className="font-bold text-lg text-slate-900">{formatCzk(totals.totalFV)}</span>
+                <span className="text-[color:var(--wp-text-secondary)] text-sm">Celková FV (projekce)</span>
+                <span className="font-bold text-lg text-[color:var(--wp-text)]">{formatCzk(totals.totalFV)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Jednorázově vloženo</span>
-                <span className="font-semibold text-slate-700">{formatCzk(totals.totalLump)}</span>
+                <span className="text-[color:var(--wp-text-secondary)]">Jednorázově vloženo</span>
+                <span className="font-semibold text-[color:var(--wp-text-secondary)]">{formatCzk(totals.totalLump)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Měsíční vklady (součet)</span>
-                <span className="font-semibold text-slate-700">{formatCzk(totals.totalMonthly)}</span>
+                <span className="text-[color:var(--wp-text-secondary)]">Měsíční vklady (součet)</span>
+                <span className="font-semibold text-[color:var(--wp-text-secondary)]">{formatCzk(totals.totalMonthly)}</span>
               </div>
-              <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200">
-                <span className="text-slate-500">Celkem investováno</span>
-                <span className="font-semibold text-slate-700">{formatCzk(totals.totalInvested)}</span>
+              <div className="flex justify-between items-center text-sm pt-2 border-t border-[color:var(--wp-surface-card-border)]">
+                <span className="text-[color:var(--wp-text-secondary)]">Celkem investováno</span>
+                <span className="font-semibold text-[color:var(--wp-text-secondary)]">{formatCzk(totals.totalInvested)}</span>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Profil</span>
-              <div className="font-semibold text-slate-800 mt-1">{getStrategyProfileLabel(profile)}</div>
-              <div className="text-xs text-slate-500 mt-1">Očekávaný výnos: {Math.round(profileRate * 100)} % p.a.</div>
+            <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+              <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider">Profil</span>
+              <div className="font-semibold text-[color:var(--wp-text)] mt-1">{getStrategyProfileLabel(profile)}</div>
+              <div className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Očekávaný výnos: {Math.round(profileRate * 100)} % p.a.</div>
               {conservativeMode && (
                 <div className="text-xs text-indigo-700 mt-1">+ konzervativní režim (−2 %)</div>
               )}
               {yearsToRetirement != null && clientAge != null && (
-                <div className="text-xs text-slate-500 mt-1">Do důchodu: {pluralizeYears(yearsToRetirement)} (věk {clientAge})</div>
+                <div className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Do důchodu: {pluralizeYears(yearsToRetirement)} (věk {clientAge})</div>
               )}
             </div>
           </div>

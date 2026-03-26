@@ -151,22 +151,22 @@ function NewTaskModal({
       .map((o) => ({ id: o.id, label: o.title })),
   ];
 
-  const tLabelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
-  const tInputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all text-slate-800 placeholder:text-slate-400";
+  const tLabelClass = "block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5 ml-1";
+  const tInputClass = "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-emerald-300 rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)]";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 sm:p-6" onClick={onClose}>
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[500px] min-h-[500px] flex flex-col overflow-hidden border border-slate-100 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4 sm:p-6" onClick={onClose}>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] shadow-2xl w-full max-w-[500px] min-h-[500px] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="px-8 py-5 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/80">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
               <CheckSquare size={18} className="text-emerald-600" />
             </div>
-            <h2 className="text-lg font-black text-slate-900">Nový úkol</h2>
+            <h2 className="text-lg font-black text-[color:var(--wp-text)]">Nový úkol</h2>
           </div>
-          <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
-            <X size={16} className="text-slate-500" />
+          <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] flex items-center justify-center transition-colors">
+            <X size={16} className="text-[color:var(--wp-text-secondary)]" />
           </button>
         </div>
 
@@ -176,13 +176,13 @@ function NewTaskModal({
             {TASK_STEPS.map((s, i) => (
               <div key={s} className="flex items-center flex-1">
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${i <= step ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${i <= step ? "bg-emerald-600 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"}`}>
                     {i < step ? <Check size={14} /> : i + 1}
                   </div>
-                  <span className={`text-xs font-bold whitespace-nowrap transition-colors ${i <= step ? "text-slate-800" : "text-slate-400"}`}>{s}</span>
+                  <span className={`text-xs font-bold whitespace-nowrap transition-colors ${i <= step ? "text-[color:var(--wp-text)]" : "text-[color:var(--wp-text-tertiary)]"}`}>{s}</span>
                 </div>
                 {i < TASK_STEPS.length - 1 && (
-                  <div className={`h-0.5 flex-1 mx-3 rounded-full transition-colors ${i < step ? "bg-emerald-500" : "bg-slate-200"}`} />
+                  <div className={`h-0.5 flex-1 mx-3 rounded-full transition-colors ${i < step ? "bg-emerald-500" : "bg-[color:var(--wp-surface-card-border)]"}`} />
                 )}
               </div>
             ))}
@@ -197,7 +197,7 @@ function NewTaskModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Název úkolu…"
-                className="w-full text-2xl font-black text-slate-900 placeholder:text-slate-300 border-0 border-b-2 border-slate-200 focus:border-emerald-500 bg-transparent outline-none py-3 transition-colors"
+                className="w-full text-2xl font-black text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] border-0 border-b-2 border-[color:var(--wp-surface-card-border)] focus:border-emerald-500 bg-transparent outline-none py-3 transition-colors"
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-4">
@@ -218,7 +218,7 @@ function NewTaskModal({
               </div>
               <div>
                 <label className={tLabelClass}>Priorita</label>
-                <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+                <div className="flex bg-[color:var(--wp-surface-muted)] rounded-xl p-1 gap-1">
                   {([["low", "Nízká"], ["normal", "Běžná"], ["urgent", "Urgentní"]] as const).map(([val, label]) => (
                     <button
                       key={val}
@@ -229,9 +229,9 @@ function NewTaskModal({
                           ? val === "urgent"
                             ? "bg-rose-500 text-white shadow-md"
                             : val === "low"
-                              ? "bg-slate-600 text-white shadow-md"
-                              : "bg-white text-slate-800 shadow-md"
-                          : "text-slate-500 hover:text-slate-700"
+                              ? "bg-[color:var(--wp-text-secondary)] text-white shadow-md dark:bg-[color:var(--wp-text-tertiary)]"
+                              : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-md"
+                          : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"
                       }`}
                     >
                       {val === "urgent" && <Flag size={12} className="inline mr-1" />}
@@ -285,15 +285,15 @@ function NewTaskModal({
                   rows={5}
                 />
               </div>
-              <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+              <div className="bg-[color:var(--wp-surface-muted)] rounded-xl border border-[color:var(--wp-surface-card-border)] p-4">
                 <label className={tLabelClass}>Přiřazení</label>
                 <div className="flex items-center gap-3 mt-2">
                   <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
                     <User size={16} className="text-indigo-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-800">Já (aktuální uživatel)</p>
-                    <p className="text-xs text-slate-400">Výchozí přiřazení</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)]">Já (aktuální uživatel)</p>
+                    <p className="text-xs text-[color:var(--wp-text-tertiary)]">Výchozí přiřazení</p>
                   </div>
                 </div>
               </div>
@@ -302,11 +302,11 @@ function NewTaskModal({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="px-8 py-5 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center justify-between">
           <button
             type="button"
             onClick={step === 0 ? onClose : () => setStep((s) => s - 1)}
-            className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-colors"
           >
             {step === 0 ? "Zrušit" : "Zpět"}
           </button>
@@ -363,30 +363,33 @@ function EventDetailPopup({
   })();
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 bg-slate-50/50">
-          <h2 className="text-lg font-black text-slate-900 leading-tight truncate flex-1">{event.title}</h2>
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm dark:bg-black/50"
+      onClick={onClose}
+    >
+      <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl border border-[color:var(--wp-surface-card-border)] w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-start justify-between gap-3 bg-[color:var(--wp-surface-muted)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] leading-tight truncate flex-1">{event.title}</h2>
           <div className="flex items-center gap-1 shrink-0">
             <button type="button" onClick={onEdit} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" aria-label="Upravit" title="Upravit">
               <Edit2 size={18} className="text-blue-600" />
             </button>
-            <button type="button" onClick={onDelete} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-rose-600 transition-colors" aria-label="Smazat" title="Smazat">
+            <button type="button" onClick={onDelete} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-rose-600 transition-colors" aria-label="Smazat" title="Smazat">
               <Trash2 size={18} />
             </button>
-            <a href={mailtoHref} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" aria-label="Poslat e-mailem" title="Poslat e-mailem">
+            <a href={mailtoHref} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors" aria-label="Poslat e-mailem" title="Poslat e-mailem">
               <Mail size={18} />
             </a>
-            <button type="button" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" aria-label="Další" title="Další">
+            <button type="button" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors" aria-label="Další" title="Další">
               <MoreVertical size={18} />
             </button>
-            <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors" aria-label="Zavřít">
+            <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors" aria-label="Zavřít">
               <X size={18} />
             </button>
           </div>
         </div>
         <div className="p-5 space-y-4">
-          <p className="text-sm text-slate-600">{dateTimeStr}</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">{dateTimeStr}</p>
           {event.meetingLink && (
             <a href={event.meetingLink.startsWith("http") ? event.meetingLink : `https://${event.meetingLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 py-2 px-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-colors">
               Pozvat přes odkaz
@@ -394,13 +397,13 @@ function EventDetailPopup({
           )}
           {event.location && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Místo</p>
-              <p className="text-sm font-medium text-slate-800">{event.location}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Místo</p>
+              <p className="text-sm font-medium text-[color:var(--wp-text)]">{event.location}</p>
             </div>
           )}
           {event.contactName && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Účastník</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Účastník</p>
               <Link href={event.contactId ? `/portal/contacts/${event.contactId}` : "#"} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">
                 {event.contactName}
               </Link>
@@ -408,8 +411,8 @@ function EventDetailPopup({
           )}
           {event.notes && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Poznámka</p>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{event.notes}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Poznámka</p>
+              <p className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{event.notes}</p>
             </div>
           )}
         </div>
@@ -549,20 +552,20 @@ function EventFormModal({
     }
   }
 
-  const eLabelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
-  const eInputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400";
+  const eLabelClass = "block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5 ml-1";
+  const eInputClass = "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-indigo-300 rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)]";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 sm:p-6" onClick={onClose}>
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[640px] flex flex-col overflow-hidden border border-slate-100 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4 sm:p-6" onClick={onClose}>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] shadow-2xl w-full max-w-[640px] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Header */}
-          <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-            <h2 className="text-lg font-black text-slate-900">
+          <div className="px-8 py-5 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/80">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)]">
               {initial.id ? "Upravit aktivitu" : "Nová aktivita v kalendáři"}
             </h2>
-            <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
-              <X size={16} className="text-slate-500" />
+            <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] flex items-center justify-center transition-colors">
+              <X size={16} className="text-[color:var(--wp-text-secondary)]" />
             </button>
           </div>
 
@@ -575,7 +578,11 @@ function EventFormModal({
             <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
               {CALENDAR_EVENT_CATEGORIES.filter((t) => ["schuzka", "telefonat", "kafe", "mail", "ukol", "priorita"].includes(t.id)).map((t) => {
                 const isActive = form.eventType === t.id;
-                const ps = EVENT_PILL_STYLES[t.id] ?? { active: "bg-slate-700 text-white shadow-lg", inactive: "bg-slate-100 text-slate-600 hover:bg-slate-200" };
+                const ps = EVENT_PILL_STYLES[t.id] ?? {
+                  active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
+                  inactive:
+                    "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card-border)]",
+                };
                 return (
                   <button
                     key={t.id}
@@ -595,23 +602,23 @@ function EventFormModal({
               value={form.title}
               onChange={(e) => { setForm((f) => ({ ...f, title: e.target.value })); if (validationErrors.title) setValidationErrors((v) => ({ ...v, title: false })); }}
               placeholder="Název aktivity…"
-              className={`w-full text-2xl sm:text-3xl font-black text-slate-900 placeholder:text-slate-300 border-0 border-b-2 ${validationErrors.title ? "border-red-400" : "border-slate-200 focus:border-indigo-500"} bg-transparent outline-none py-3 transition-colors`}
+              className={`w-full text-2xl sm:text-3xl font-black text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] border-0 border-b-2 ${validationErrors.title ? "border-red-400" : "border-[color:var(--wp-surface-card-border)] focus:border-indigo-500"} bg-transparent outline-none py-3 transition-colors`}
               autoFocus
             />
 
             {/* Date section */}
-            <div className="bg-slate-50 p-5 rounded-[24px] border border-slate-100 space-y-4">
+            <div className="bg-[color:var(--wp-surface-muted)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] space-y-4">
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-slate-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Kdy se to koná?</span>
+                <Clock size={16} className="text-[color:var(--wp-text-tertiary)]" />
+                <span className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Kdy se to koná?</span>
               </div>
 
-              <label className="flex items-center gap-2.5 text-sm font-bold text-slate-600 cursor-pointer">
+              <label className="flex items-center gap-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.allDay}
                   onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                  className="rounded w-4 h-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded w-4 h-4 border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
                 />
                 Celý den
               </label>
@@ -714,9 +721,9 @@ function EventFormModal({
           </div>
 
           {/* Footer */}
-          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center gap-3 flex-wrap">
+          <div className="px-8 py-5 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Připomenutí</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Připomenutí</label>
               <CustomDropdown
                 value={String(form.reminderMinutes)}
                 onChange={(id) => setForm((f) => ({ ...f, reminderMinutes: Number(id) }))}
@@ -735,15 +742,15 @@ function EventFormModal({
             )}
             {initial.id && onFollowUp && (
               <>
-                <button type="button" onClick={() => onFollowUp(initial.id!, "event")} className="px-3 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors hidden sm:block">
+                <button type="button" onClick={() => onFollowUp(initial.id!, "event")} className="px-3 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-colors hidden sm:block">
                   + Follow-up
                 </button>
-                <button type="button" onClick={() => onFollowUp(initial.id!, "task")} className="px-3 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors hidden sm:block">
+                <button type="button" onClick={() => onFollowUp(initial.id!, "task")} className="px-3 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-colors hidden sm:block">
                   + Úkol
                 </button>
               </>
             )}
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-colors">
               Zrušit
             </button>
             <CreateActionButton
@@ -1136,28 +1143,28 @@ export function PortalCalendarView() {
             }}
           />
 
-          <main className="flex-1 bg-white rounded-xl sm:rounded-xl lg:rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden relative min-w-0">
-            <div className={`px-3 sm:px-4 lg:px-3 py-2 sm:py-2 border-b border-slate-100 flex items-center justify-between bg-white z-20 flex-wrap gap-2 lg:gap-2 ${isMobile ? "gap-y-2" : ""}`}>
+          <main className="flex-1 bg-[color:var(--wp-surface-card)] rounded-xl sm:rounded-xl lg:rounded-lg shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden relative min-w-0">
+            <div className={`px-3 sm:px-4 lg:px-3 py-2 sm:py-2 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-card)] z-20 flex-wrap gap-2 lg:gap-2 ${isMobile ? "gap-y-2" : ""}`}>
               <div className="flex items-center gap-2 sm:gap-3 lg:gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => { const today = new Date(); setCurrentDate(today); setSelectedDate(formatDate(today)); }}
-                  className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors min-h-[44px] sm:min-h-0"
+                  className="px-2.5 sm:px-3 py-1.5 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-xs font-bold rounded-lg transition-colors min-h-[44px] sm:min-h-0"
                 >
                   Dnes
                 </button>
                 <div className="flex items-center gap-0.5 sm:gap-1">
-                  <button type="button" onClick={() => navigate(-1)} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center" aria-label="Předchozí">
+                  <button type="button" onClick={() => navigate(-1)} className="p-1.5 rounded-md text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center" aria-label="Předchozí">
                     <ChevronLeft size={18} />
                   </button>
-                  <button type="button" onClick={() => navigate(1)} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center" aria-label="Další">
+                  <button type="button" onClick={() => navigate(1)} className="p-1.5 rounded-md text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center" aria-label="Další">
                     <ChevronRight size={18} />
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">{toolbarMonthYear}</h2>
+                  <h2 className="text-base sm:text-lg font-black text-[color:var(--wp-text)] truncate">{toolbarMonthYear}</h2>
                   {toolbarWeekNum != null && (
-                    <span className="bg-slate-100 text-slate-700 rounded-md px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm font-medium shrink-0">
+                    <span className="bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] rounded-md px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm font-medium shrink-0">
                       {toolbarWeekNum}. týden
                     </span>
                   )}
@@ -1170,36 +1177,36 @@ export function PortalCalendarView() {
                       setSelectedDate(e.target.value);
                       setCurrentDate(new Date(`${e.target.value}T12:00:00`));
                     }}
-                    className="min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 bg-white"
+                    className="min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm font-semibold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)]"
                     aria-label="Vybrat datum"
                   />
                 )}
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                <div className="bg-slate-100 p-0.5 rounded-lg flex items-center">
+                <div className="bg-[color:var(--wp-surface-muted)] p-0.5 rounded-lg flex items-center">
                   {isMobile
                     ? viewModesMobile.map((m) => (
-                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-2.5 sm:px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"}`}>
                           {m === "day" ? "Den" : m === "week" ? "Týden" : "Měsíc"}
                         </button>
                       ))
                     : (["workweek", "week", "month"] as const).map((m) => (
-                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                        <button key={m} type="button" onClick={() => setMode(m)} className={`px-3 py-1 rounded-md text-xs font-bold transition-all min-h-[40px] sm:min-h-0 ${mode === m ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"}`}>
                           {m === "workweek" ? "Pracovní" : m === "week" ? "Týden" : "Měsíc"}
                         </button>
                       ))}
                 </div>
-                <div className="w-px h-5 bg-slate-200 hidden sm:block" />
-                <button type="button" onClick={() => setContextPanelCollapsed((c) => !c)} className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-1.5 rounded-lg transition-colors ${!contextPanelCollapsed ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:bg-slate-100"}`} title="Přepnout postranní panel">
+                <div className="w-px h-5 bg-[color:var(--wp-surface-card-border)] hidden sm:block" />
+                <button type="button" onClick={() => setContextPanelCollapsed((c) => !c)} className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-1.5 rounded-lg transition-colors ${!contextPanelCollapsed ? "text-indigo-600 bg-indigo-50" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`} title="Přepnout postranní panel">
                   {!contextPanelCollapsed ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
                 </button>
-                <button type="button" onClick={handleCalendarSync} disabled={calendarSyncLoading} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 min-h-[44px] sm:min-h-0 disabled:opacity-60" title="Synchronizovat s Google Kalendářem">
+                <button type="button" onClick={handleCalendarSync} disabled={calendarSyncLoading} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 min-h-[44px] sm:min-h-0 disabled:opacity-60" title="Synchronizovat s Google Kalendářem">
                   <RefreshCw size={16} className={calendarSyncLoading ? "animate-spin" : ""} /> {calendarSyncLoading ? "Sync…" : "Sync s Google"}
                 </button>
                 <button type="button" onClick={() => openNew(todayStr)} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs sm:text-sm font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95 min-h-[44px] sm:min-h-0">
                   <Plus size={16} /> Vytvořit
                 </button>
-                <button type="button" onClick={() => setSettingsOpen(true)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 sm:block hidden" aria-label="Nastavení">
+                <button type="button" onClick={() => setSettingsOpen(true)} className="p-1.5 rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] sm:block hidden" aria-label="Nastavení">
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 2.31.49 2.31 1.066 0 1.552-2.308 2.6-4.342 2.6-2.034 0-4.341-1.048-4.341-2.6 0-.576.767-2.006 2.314-1.066 1.53.94 2.573 1.066 2.573-1.066 0-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 2.31.49 2.31 1.066 0 1.552-2.308 2.6-4.342 2.6-2.034 0-4.341-1.048-4.341-2.6 0-.576.767-2.006 2.314-1.066 1.53.94 2.573 1.066 2.573-1.066z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
               </div>
@@ -1220,7 +1227,7 @@ export function PortalCalendarView() {
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-slate-500 text-sm">Načítám kalendář…</p>
+                <p className="text-[color:var(--wp-text-secondary)] text-sm">Načítám kalendář…</p>
               </div>
             ) : calendarLoadError ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
@@ -1234,13 +1241,13 @@ export function PortalCalendarView() {
                 </button>
               </div>
             ) : mode === "month" ? (
-              <div className="flex-1 flex flex-col bg-white overflow-auto min-h-0">
-                <div className={`grid grid-cols-7 border-b border-slate-200 bg-white z-20 flex-shrink-0 ${isMobile ? "py-2" : "py-3"}`}>
+              <div className="flex-1 flex flex-col bg-[color:var(--wp-surface-card)] overflow-auto min-h-0">
+                <div className={`grid grid-cols-7 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] z-20 flex-shrink-0 ${isMobile ? "py-2" : "py-3"}`}>
                   {["PO", "ÚT", "ST", "ČT", "PÁ", "SO", "NE"].map((d, i) => (
-                    <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-r border-slate-100 last:border-r-0">{d}</div>
+                    <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] border-r border-[color:var(--wp-surface-card-border)] last:border-r-0">{d}</div>
                   ))}
                 </div>
-                <div className="flex-1 grid grid-cols-7 grid-rows-5 bg-slate-100 gap-[1px] min-h-0">
+                <div className="flex-1 grid grid-cols-7 grid-rows-5 bg-[color:var(--wp-surface-muted)] gap-[1px] min-h-0">
                   {monthDays.map((day, idx) => {
                     const ds = formatDate(day);
                     const isToday = ds === todayStr;
@@ -1251,7 +1258,7 @@ export function PortalCalendarView() {
                       <div
                         key={idx}
                         onClick={() => isCurrentMonth && openNew(ds)}
-                        className={`relative p-1.5 sm:p-2 bg-white transition-colors group cursor-pointer min-h-[64px] sm:min-h-[80px] ${!isCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 hover:bg-slate-50"} ${isPast && isCurrentMonth ? "wp-cal-striped-past opacity-80" : ""}`}
+                        className={`relative p-1.5 sm:p-2 bg-[color:var(--wp-surface-card)] transition-colors group cursor-pointer min-h-[64px] sm:min-h-[80px] ${!isCurrentMonth ? "text-[color:var(--wp-text-tertiary)] bg-[color:var(--wp-surface-muted)]/50" : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"} ${isPast && isCurrentMonth ? "wp-cal-striped-past opacity-80" : ""}`}
                       >
                         <span className={`absolute top-1 right-1 sm:top-2 sm:right-2 text-xs sm:text-sm font-bold w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full ${isToday ? "bg-indigo-600 text-white shadow-md" : ""}`}>{day.getDate()}</span>
                         <div className="mt-6 sm:mt-8 space-y-0.5 sm:space-y-1">
@@ -1270,7 +1277,7 @@ export function PortalCalendarView() {
                               </div>
                             );
                           })}
-                          {dayEvents.length > 4 && <span className="text-[9px] text-slate-500">+{dayEvents.length - 4}</span>}
+                          {dayEvents.length > 4 && <span className="text-[9px] text-[color:var(--wp-text-secondary)]">+{dayEvents.length - 4}</span>}
                         </div>
                       </div>
                     );

@@ -34,7 +34,7 @@ function MessageBubble({
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
           isOwn
             ? "bg-indigo-600 text-white"
-            : "bg-slate-100 text-slate-800 border border-slate-200"
+            : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] border border-[color:var(--wp-surface-card-border)]"
         }`}
       >
         <p className="whitespace-pre-wrap break-words">{m.body}</p>
@@ -55,7 +55,7 @@ function MessageBubble({
           </div>
         )}
         <p
-          className={`text-[10px] mt-1 ${isOwn ? "text-white/70" : "text-slate-500"}`}
+          className={`text-[10px] mt-1 ${isOwn ? "text-white/70" : "text-[color:var(--wp-text-secondary)]"}`}
         >
           {new Date(m.createdAt).toLocaleString("cs-CZ", {
             day: "numeric",
@@ -221,23 +221,23 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const showChat = !!selectedContactId;
 
   return (
-    <div className="flex flex-1 min-h-0 border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-sm">
+    <div className="flex flex-1 min-h-0 border border-[color:var(--wp-surface-card-border)] rounded-2xl bg-[color:var(--wp-surface-card)] overflow-hidden shadow-sm">
       {/* List: left on desktop, full on mobile when no selection */}
       <div
         className={`
-          flex flex-col border-r border-slate-200 bg-slate-50/50 min-w-0
+          flex flex-col border-r border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 min-w-0
           md:w-[320px] md:shrink-0
           ${showList ? "flex md:flex" : "hidden md:flex"}
         `}
       >
-        <div className="p-3 border-b border-slate-200 shrink-0 space-y-2">
+        <div className="p-3 border-b border-[color:var(--wp-surface-card-border)] shrink-0 space-y-2">
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="Hledat v konverzacích…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+              className="flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
               aria-label="Hledat v konverzacích"
             />
             <button
@@ -252,27 +252,27 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         </div>
 
         {newMsgOpen && (
-          <div className="border-b border-slate-200 bg-white p-3 space-y-2">
+          <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Nová zpráva – vyberte klienta</p>
-              <button type="button" onClick={() => setNewMsgOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
+              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-widest">Nová zpráva – vyberte klienta</p>
+              <button type="button" onClick={() => setNewMsgOpen(false)} className="p-1 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
                 <X size={16} />
               </button>
             </div>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Hledat klienta…"
                 value={contactSearch}
                 onChange={(e) => setContactSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
+                className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] pl-9 pr-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
                 autoFocus
               />
             </div>
             <div className="max-h-48 overflow-y-auto space-y-0.5">
               {filteredContacts.length === 0 && (
-                <p className="text-xs text-slate-500 py-2 text-center">Žádní klienti</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] py-2 text-center">Žádní klienti</p>
               )}
               {filteredContacts.slice(0, 20).map((c) => (
                 <button
@@ -282,7 +282,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                     selectConversation(c.id);
                     setNewMsgOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-indigo-50 text-sm font-medium text-slate-800 min-h-[44px] flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-indigo-50 text-sm font-medium text-[color:var(--wp-text)] min-h-[44px] flex items-center gap-2 transition-colors"
                 >
                   <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                     {[c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"}
@@ -295,7 +295,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         )}
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
-            <p className="p-4 text-sm text-slate-500 text-center">
+            <p className="p-4 text-sm text-[color:var(--wp-text-secondary)] text-center">
               Zatím žádné konverzace.
             </p>
           )}
@@ -305,16 +305,16 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
               type="button"
               onClick={() => selectConversation(c.contactId)}
               className={`
-                w-full text-left px-4 py-3 border-b border-slate-100 min-h-[44px] flex items-center gap-3
-                hover:bg-white transition-colors
-                ${selectedContactId === c.contactId ? "bg-white border-l-4 border-l-indigo-600" : ""}
+                w-full text-left px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] min-h-[44px] flex items-center gap-3
+                hover:bg-[color:var(--wp-surface-card)] transition-colors
+                ${selectedContactId === c.contactId ? "bg-[color:var(--wp-surface-card)] border-l-4 border-l-indigo-600" : ""}
               `}
             >
               <span className="flex-1 min-w-0">
-                <span className="font-semibold text-slate-800 truncate block">
+                <span className="font-semibold text-[color:var(--wp-text)] truncate block">
                   {c.contactName}
                 </span>
-                <span className="text-xs text-slate-500 truncate block">
+                <span className="text-xs text-[color:var(--wp-text-secondary)] truncate block">
                   {c.lastMessage?.slice(0, 60)}
                   {c.lastMessage && c.lastMessage.length > 60 ? "…" : ""}
                 </span>
@@ -338,19 +338,19 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
       >
         {selectedContactId ? (
           <>
-            <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
+            <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedContactId(null);
                   router.replace("/portal/messages", { scroll: false });
                 }}
-                className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600"
+                className="md:hidden p-2 -ml-2 rounded-lg hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] min-w-[44px] flex items-center justify-center text-[color:var(--wp-text-secondary)]"
                 aria-label="Zpět na seznam"
               >
                 <ArrowLeft size={20} />
               </button>
-              <span className="flex-1 font-semibold text-slate-800 truncate">
+              <span className="flex-1 font-semibold text-[color:var(--wp-text)] truncate">
                 {contactName || "Kontakt"}
               </span>
               <Link
@@ -364,7 +364,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {msgs.length === 0 && (
-                <p className="text-center text-slate-500 text-sm py-8">
+                <p className="text-center text-[color:var(--wp-text-secondary)] text-sm py-8">
                   Zatím žádné zprávy. Napište první zprávu.
                 </p>
               )}
@@ -379,7 +379,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
               <div ref={bottomRef} />
             </div>
 
-            <div className="shrink-0 border-t border-slate-200 p-3 bg-white">
+            <div className="shrink-0 border-t border-[color:var(--wp-surface-card-border)] p-3 bg-[color:var(--wp-surface-card)]">
               {sendError ? (
                 <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-rose-800 font-semibold">{sendError}</p>
@@ -401,13 +401,13 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                   {files.map((f, i) => (
                     <span
                       key={i}
-                      className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-lg flex items-center gap-1"
+                      className="text-xs bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] px-2 py-1 rounded-lg flex items-center gap-1"
                     >
                       {f.name}
                       <button
                         type="button"
                         onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                        className="text-slate-400 hover:text-slate-600"
+                        className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)]"
                         aria-label="Odstranit přílohu"
                       >
                         ×
@@ -432,7 +432,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="shrink-0 rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="shrink-0 rounded-xl p-2.5 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label="Přidat přílohu"
                 >
                   <Paperclip size={20} />
@@ -443,7 +443,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                   onKeyDown={handleKeyDown}
                   placeholder="Napište zprávu… (Enter odeslat, Shift+Enter nový řádek)"
                   rows={2}
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 resize-none min-h-[44px]"
+                  className="flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 resize-none min-h-[44px]"
                 />
                 <button
                   type="button"
@@ -457,7 +457,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500 text-sm p-8 md:border-l border-slate-200">
+          <div className="flex-1 flex items-center justify-center text-[color:var(--wp-text-secondary)] text-sm p-8 md:border-l border-[color:var(--wp-surface-card-border)]">
             Vyberte konverzaci v seznamu vlevo.
           </div>
         )}

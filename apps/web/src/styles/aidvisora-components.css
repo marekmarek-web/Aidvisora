@@ -364,6 +364,12 @@
   mix-blend-mode: screen;
 }
 
+/* Dark: bez screen blend – bloby nezesvětlují hlavní panel */
+.dark .wp-portal-blob {
+  mix-blend-mode: normal;
+  opacity: 0.55;
+}
+
 /* Jeden hlavní panel vpravo: border, stín, blur; na mobilu bez „rámečku“ */
 .wp-portal-main-panel {
   display: flex;
@@ -388,6 +394,12 @@
     background-color: var(--wp-main-panel-bg);
     backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 24px));
     -webkit-backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 24px));
+  }
+
+  /* Tmavý motiv: plná neprůhledná plocha (token --wp-main-panel-backdrop-blur: 0) */
+  .dark .wp-portal-main-panel {
+    backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 0px));
   }
 }
 
@@ -444,7 +456,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   color: var(--wp-text);
-  background-color: transparent;
+  background-color: var(--wp-main-scroll-bg);
 }
 
 /* Vyhledávání v hlavičce panelu (headerInput) */

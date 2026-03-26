@@ -122,24 +122,24 @@ export function CalendarContextPanel({
 
     return (
       <aside
-        className={`wp-cal-context-panel bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
+        className={`wp-cal-context-panel bg-[color:var(--wp-surface-card)] rounded-2xl shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
           isMobile ? "wp-cal-context-panel--mobile" : ""
         }`}
       >
         {wrapMobile(
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+          <div className="px-5 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-start justify-between bg-[color:var(--wp-surface-muted)]/50">
             <div>
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5">
                 <CalendarIcon size={12} /> {dateStrFormatted}
               </div>
-              <h2 className="text-lg font-black text-slate-900 leading-tight">{selectedEvent.title}</h2>
+              <h2 className="text-lg font-black text-[color:var(--wp-text)] leading-tight">{selectedEvent.title}</h2>
             </div>
             {onToggleCollapsed && (
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-slate-800 rounded-md transition-colors shadow-sm shrink-0"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] rounded-md transition-colors shadow-sm shrink-0"
                 aria-label="Zavřít panel"
               >
                 <X size={14} />
@@ -150,22 +150,22 @@ export function CalendarContextPanel({
           <div className="p-5 space-y-6 flex-1 overflow-y-auto wp-cal-hide-scrollbar">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
                   <Clock size={14} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Čas</p>
-                  <p className="text-sm font-bold text-slate-800">{timeStr}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Čas</p>
+                  <p className="text-sm font-bold text-[color:var(--wp-text)]">{timeStr}</p>
                 </div>
               </div>
               {selectedEvent.location && (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
                     {hasVideoLink ? <Video size={14} /> : <MapPin size={14} />}
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Místo</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedEvent.location}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Místo</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)]">{selectedEvent.location}</p>
                   </div>
                 </div>
               )}
@@ -185,8 +185,8 @@ export function CalendarContextPanel({
             )}
 
             {selectedEvent.contactName && (
-              <div className="pt-4 border-t border-slate-100">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Účastník</p>
+              <div className="pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-3">Účastník</p>
                 <Link
                   href={selectedEvent.contactId ? `/portal/contacts/${selectedEvent.contactId}` : "#"}
                   className="flex items-center justify-between group cursor-pointer"
@@ -201,8 +201,8 @@ export function CalendarContextPanel({
                         .toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600">{selectedEvent.contactName}</p>
-                      <p className="text-[11px] font-medium text-slate-500">Otevřít profil klienta</p>
+                      <p className="text-sm font-bold text-[color:var(--wp-text)] group-hover:text-indigo-600">{selectedEvent.contactName}</p>
+                      <p className="text-[11px] font-medium text-[color:var(--wp-text-secondary)]">Otevřít profil klienta</p>
                     </div>
                   </div>
                 </Link>
@@ -210,7 +210,7 @@ export function CalendarContextPanel({
             )}
 
             {selectedEvent.contactId && (
-              <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="pt-4 border-t border-[color:var(--wp-surface-card-border)] space-y-3">
                 <PreMeetingBriefPanel contactId={selectedEvent.contactId} eventId={selectedEvent.id} compact />
                 <CalendarEventAiActions
                   contactId={selectedEvent.contactId}
@@ -228,13 +228,13 @@ export function CalendarContextPanel({
 
             {selectedEvent.notes && (
               <div className="pt-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Poznámka</p>
-                <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedEvent.notes}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Poznámka</p>
+                <p className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{selectedEvent.notes}</p>
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-white grid grid-cols-2 gap-2">
+          <div className="p-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => onOpenFullEdit(selectedEvent)}
@@ -245,7 +245,7 @@ export function CalendarContextPanel({
             <button
               type="button"
               onClick={() => onDeleteEvent(selectedEvent)}
-              className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-rose-600 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg"
+              className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-rose-600 bg-[color:var(--wp-surface-card)] hover:bg-rose-50 border border-[color:var(--wp-surface-card-border)] rounded-lg"
             >
               <Trash2 size={14} /> Smazat
             </button>
@@ -258,28 +258,28 @@ export function CalendarContextPanel({
 
   return (
     <aside
-      className={`wp-cal-context-panel bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
+      className={`wp-cal-context-panel bg-[color:var(--wp-surface-card)] rounded-2xl shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden z-30 transition-all flex-shrink-0 ${
         isMobile ? "wp-cal-context-panel--mobile" : ""
       }`}
     >
       {wrapMobile(
       <>
-      <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between">
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+      <div className="p-6 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] flex items-center justify-between">
+        <h3 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text)]">
           Agenda • {formatMonthYear(selectedDate)}
         </h3>
         {onToggleCollapsed && (
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="text-slate-400 hover:text-indigo-600 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md hover:bg-slate-100"
+            className="text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md hover:bg-[color:var(--wp-surface-muted)]"
             aria-label="Zavřít panel"
           >
             <X size={16} />
           </button>
         )}
       </div>
-      <div className="flex-1 p-6 overflow-y-auto wp-cal-hide-scrollbar space-y-4 bg-slate-50/30">
+      <div className="flex-1 p-6 overflow-y-auto wp-cal-hide-scrollbar space-y-4 bg-[color:var(--wp-surface-muted)]/30">
         <div className="bg-gradient-to-b from-amber-50 to-orange-50/30 p-4 rounded-2xl border border-amber-100 shadow-sm mt-2">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-amber-500" />
@@ -291,12 +291,12 @@ export function CalendarContextPanel({
         </div>
 
         {/* Úkoly – hlavní sekce */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <section className="bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)] shadow-sm p-4">
           <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3">Úkoly</h4>
           {dayTasksLoading ? (
-            <p className="text-sm text-slate-500">Načítám…</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>
           ) : dayTasks.length === 0 ? (
-            <p className="text-sm text-slate-500 mb-2">Žádné úkoly na tento den</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mb-2">Žádné úkoly na tento den</p>
           ) : (
             <ul className="space-y-2 mb-3">
               {dayTasks.map((task) => (
@@ -304,13 +304,13 @@ export function CalendarContextPanel({
                   <button
                     type="button"
                     onClick={() => onToggleTask(task)}
-                    className="w-5 h-5 rounded border-2 border-slate-300 flex items-center justify-center shrink-0 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                    className="w-5 h-5 rounded border-2 border-[color:var(--wp-border-strong)] flex items-center justify-center shrink-0 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
                     style={task.completedAt ? { background: "var(--wp-success)", borderColor: "var(--wp-success)" } : {}}
                     aria-label={task.completedAt ? "Znovu otevřít" : "Splnit"}
                   >
                     {task.completedAt && <span className="text-white text-xs">✓</span>}
                   </button>
-                  <span className={`text-sm ${task.completedAt ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                  <span className={`text-sm ${task.completedAt ? "text-[color:var(--wp-text-tertiary)] line-through" : "text-[color:var(--wp-text)]"}`}>
                     {task.title}
                   </span>
                 </li>
@@ -331,14 +331,14 @@ export function CalendarContextPanel({
           </Link>
         </section>
 
-        <p className="text-sm font-medium text-slate-500 text-center pt-0">
+        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] text-center pt-0">
           Klikněte na jakoukoliv událost v mřížce pro zobrazení detailu.
         </p>
 
         <section>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Události dne</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Události dne</h4>
           {dayEvents.length === 0 ? (
-            <p className="text-sm text-slate-500">Žádné události</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné události</p>
           ) : (
             <ul className="space-y-1.5">
               {dayEvents
@@ -347,10 +347,10 @@ export function CalendarContextPanel({
                   const c = getEventCategory(ev.eventType);
                   return (
                     <li key={ev.id} className="flex items-center gap-2 text-sm">
-                      <span className="text-slate-400 shrink-0">{formatTime(new Date(ev.startAt))}</span>
-                      <span className="font-medium text-slate-800 truncate">{ev.title}</span>
+                      <span className="text-[color:var(--wp-text-tertiary)] shrink-0">{formatTime(new Date(ev.startAt))}</span>
+                      <span className="font-medium text-[color:var(--wp-text)] truncate">{ev.title}</span>
                       {ev.contactName && (
-                        <span className="text-slate-500 text-xs truncate hidden sm:inline">· {ev.contactName}</span>
+                        <span className="text-[color:var(--wp-text-secondary)] text-xs truncate hidden sm:inline">· {ev.contactName}</span>
                       )}
                     </li>
                   );
@@ -361,8 +361,8 @@ export function CalendarContextPanel({
 
         {freeSlots.length > 0 && (
           <section>
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Volná okna</h4>
-            <ul className="space-y-1 text-sm text-slate-600">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Volná okna</h4>
+            <ul className="space-y-1 text-sm text-[color:var(--wp-text-secondary)]">
               {freeSlots.slice(0, 5).map((slot, i) => (
                 <li key={i}>
                   {slot.start} – {slot.end}

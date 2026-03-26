@@ -72,12 +72,12 @@ function ProgressBar({ pct, status }: { pct: number; status: string }) {
   return (
     <div className="mt-2.5">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] text-slate-400 font-bold">
+        <span className="text-[10px] text-[color:var(--wp-text-tertiary)] font-bold">
           {pct < 100 ? `Krok ${Math.ceil((pct / 100) * TOTAL_STEPS)} z ${TOTAL_STEPS}` : "Dokončeno"}
         </span>
-        <span className="text-[10px] font-black text-slate-600">{pct}%</span>
+        <span className="text-[10px] font-black text-[color:var(--wp-text-secondary)]">{pct}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
         <div
           className={cx("h-full rounded-full transition-all", barColor)}
           style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
@@ -105,29 +105,29 @@ function AnalysisListCard({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 transition-colors"
+      className="w-full text-left bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl overflow-hidden hover:border-indigo-300 transition-colors"
     >
       <div className="p-3.5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <FileText size={18} className="text-slate-500" />
+          <div className="w-10 h-10 rounded-xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center flex-shrink-0">
+            <FileText size={18} className="text-[color:var(--wp-text-secondary)]" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-slate-900 truncate">
+              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                 {item.clientName || item.analysisTypeLabel || "Finanční analýza"}
               </p>
               <StatusBadge tone={cfg.tone}>{cfg.label}</StatusBadge>
             </div>
             {item.clientName && item.analysisTypeLabel ? (
-              <p className="text-xs text-slate-500 mt-0.5 truncate">{item.analysisTypeLabel}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 truncate">{item.analysisTypeLabel}</p>
             ) : null}
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-0.5">
               Upraveno: {formatUpdated(new Date(item.updatedAt))}
             </p>
             <ProgressBar pct={pct} status={item.status} />
           </div>
-          <ChevronRight size={14} className="text-slate-300 flex-shrink-0 mt-1" />
+          <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0 mt-1" />
         </div>
       </div>
     </button>
@@ -181,7 +181,7 @@ function AnalysisDetailPanel({
       {/* Hero */}
       <MobileCard className="p-4 bg-gradient-to-br from-[#0a0f29] to-indigo-900 border-0 rounded-xl">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center flex-shrink-0">
             <FileText size={22} className="text-indigo-300" />
           </div>
           <div className="flex-1 min-w-0">
@@ -228,17 +228,17 @@ function AnalysisDetailPanel({
         </MobileCard>
       ) : (
         <>
-          <MobileCard className="divide-y divide-slate-100 py-0">
+          <MobileCard className="divide-y divide-[color:var(--wp-surface-card-border)] py-0">
             <div className="flex items-center justify-between py-3 px-0.5">
-              <span className="text-xs text-slate-500 font-bold">Postup</span>
-              <span className="text-sm font-black text-slate-900">
+              <span className="text-xs text-[color:var(--wp-text-secondary)] font-bold">Postup</span>
+              <span className="text-sm font-black text-[color:var(--wp-text)]">
                 Krok {currentStep} z {TOTAL_STEPS}
               </span>
             </div>
             {clientData?.name ? (
               <div className="flex items-center gap-2 py-3 px-0.5">
-                <User size={13} className="text-slate-400" />
-                <span className="text-xs text-slate-600 font-bold">{String(clientData.name)}</span>
+                <User size={13} className="text-[color:var(--wp-text-tertiary)]" />
+                <span className="text-xs text-[color:var(--wp-text-secondary)] font-bold">{String(clientData.name)}</span>
               </div>
             ) : (
               <div className="py-3 px-0.5">
@@ -247,8 +247,8 @@ function AnalysisDetailPanel({
             )}
             {item?.lastExportedAt ? (
               <div className="flex items-center justify-between py-3 px-0.5">
-                <span className="text-xs text-slate-500">Export</span>
-                <span className="text-xs text-slate-700 font-bold">
+                <span className="text-xs text-[color:var(--wp-text-secondary)]">Export</span>
+                <span className="text-xs text-[color:var(--wp-text-secondary)] font-bold">
                   {formatUpdated(new Date(item.lastExportedAt))}
                 </span>
               </div>
@@ -257,7 +257,7 @@ function AnalysisDetailPanel({
 
           {/* Step checklist */}
           <MobileCard className="p-3.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2.5">
               Průběh kroků
             </p>
             <div className="grid grid-cols-4 gap-1.5">
@@ -270,7 +270,7 @@ function AnalysisDetailPanel({
                     key={step}
                     className={cx(
                       "h-8 rounded-lg flex items-center justify-center text-xs font-black",
-                      done ? "bg-emerald-100 text-emerald-700" : active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"
+                      done ? "bg-emerald-100 text-emerald-700" : active ? "bg-indigo-600 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"
                     )}
                   >
                     {step}
@@ -284,7 +284,7 @@ function AnalysisDetailPanel({
 
       {/* Status actions */}
       <MobileCard className="p-3.5">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2.5">
           Změnit status
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -296,7 +296,7 @@ function AnalysisDetailPanel({
               "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
               item?.status === "draft"
                 ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                : "border-slate-200 text-slate-600"
+                : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
             )}
           >
             Koncept
@@ -309,7 +309,7 @@ function AnalysisDetailPanel({
               "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
               item?.status === "completed"
                 ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 text-slate-600"
+                : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
             )}
           >
             Hotovo
@@ -322,7 +322,7 @@ function AnalysisDetailPanel({
               "min-h-[40px] rounded-lg border text-xs font-bold transition-colors",
               item?.status === "archived"
                 ? "border-amber-300 bg-amber-50 text-amber-700"
-                : "border-slate-200 text-slate-600"
+                : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
             )}
           >
             Archiv
@@ -421,20 +421,20 @@ export function AnalysesHubScreen({
       {error ? <ErrorState title={error} onRetry={reload} /> : null}
 
       {/* Header */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText size={18} className="text-indigo-600" />
-            <h2 className="text-base font-black text-slate-900">Finanční analýzy</h2>
+            <h2 className="text-base font-black text-[color:var(--wp-text)]">Finanční analýzy</h2>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={reload}
               disabled={pending}
-              className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center"
+              className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center"
             >
-              <RefreshCw size={14} className={cx("text-slate-500", pending && "animate-spin")} />
+              <RefreshCw size={14} className={cx("text-[color:var(--wp-text-secondary)]", pending && "animate-spin")} />
             </button>
             <PendingButton
               type="button"
@@ -475,7 +475,7 @@ export function AnalysesHubScreen({
       {isTablet ? (
         <div className="grid grid-cols-2 gap-0 h-[calc(100vh-10rem)]">
           {/* Master */}
-          <div className="border-r border-slate-100 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="border-r border-[color:var(--wp-surface-card-border)] overflow-y-auto px-4 py-3 space-y-2">
             {filtered.map((item) => (
               <AnalysisListCard
                 key={item.id}

@@ -58,7 +58,7 @@ const CALC_COLORS: Record<string, { from: string }> = {
 function CalculatorLoader() {
   return (
     <div className="flex min-h-[200px] items-center justify-center px-4">
-      <p className="text-sm font-semibold text-slate-500">Načítání kalkulačky…</p>
+      <p className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">Načítání kalkulačky…</p>
     </div>
   );
 }
@@ -144,20 +144,20 @@ export function CalculatorsHubScreen({
 
   return (
     <>
-      <div className="px-4 py-3 bg-white border-b border-slate-100">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
         <div className="flex items-center gap-2">
           <Target size={18} className="text-indigo-600" />
-          <h2 className="text-base font-black text-slate-900">Kalkulačky</h2>
+          <h2 className="text-base font-black text-[color:var(--wp-text)]">Kalkulačky</h2>
         </div>
-        <p className="text-xs text-slate-500 mt-0.5">Stejné propočty jako na webu</p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">Stejné propočty jako na webu</p>
       </div>
 
       {isTablet && selectedSlug ? (
         <div className="grid grid-cols-2 gap-0 h-[calc(100vh-10rem)]">
-          <div className="border-r border-slate-100 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="border-r border-[color:var(--wp-surface-card-border)] overflow-y-auto px-4 py-3 space-y-2">
             {calculators.map((calc) => {
               const Icon = CALC_ICONS[calc.slug] ?? Target;
-              const color = CALC_COLORS[calc.slug] ?? { from: "from-slate-600 to-slate-800" };
+              const color = CALC_COLORS[calc.slug] ?? { from: "from-[#475569] to-[#1e293b]" };
               const active = selectedSlug === calc.slug;
               return (
                 <button
@@ -166,7 +166,7 @@ export function CalculatorsHubScreen({
                   onClick={() => setSelectedSlug(calc.slug as CalculatorSlug)}
                   className={cx(
                     "w-full text-left rounded-xl border p-3.5 transition-colors",
-                    active ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-white hover:border-indigo-200"
+                    active ? "border-indigo-300 bg-indigo-50" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] hover:border-indigo-200"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -179,15 +179,15 @@ export function CalculatorsHubScreen({
                       <Icon size={18} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={cx("text-sm font-bold truncate", active ? "text-indigo-800" : "text-slate-900")}>
+                      <p className={cx("text-sm font-bold truncate", active ? "text-indigo-800" : "text-[color:var(--wp-text)]")}>
                         {calc.title}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{calc.description}</p>
+                      <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 line-clamp-1">{calc.description}</p>
                     </div>
                     {active ? (
                       <ArrowRight size={14} className="text-indigo-500 flex-shrink-0" />
                     ) : (
-                      <ChevronRight size={14} className="text-slate-300 flex-shrink-0" />
+                      <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
                     )}
                   </div>
                 </button>
@@ -200,7 +200,7 @@ export function CalculatorsHubScreen({
         <div className="px-4 py-3 space-y-2">
           {calculators.map((calc) => {
             const Icon = CALC_ICONS[calc.slug] ?? Target;
-            const color = CALC_COLORS[calc.slug] ?? { from: "from-slate-600 to-slate-800" };
+            const color = CALC_COLORS[calc.slug] ?? { from: "from-[#475569] to-[#1e293b]" };
             return (
               <button
                 key={calc.id}
@@ -209,7 +209,7 @@ export function CalculatorsHubScreen({
                   setSelectedSlug(calc.slug as CalculatorSlug);
                   setOpen(true);
                 }}
-                className="w-full text-left bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-200 transition-colors"
+                className="w-full text-left bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl overflow-hidden hover:border-indigo-200 transition-colors"
               >
                 <div className="flex items-center gap-3 p-3.5">
                   <div
@@ -221,10 +221,10 @@ export function CalculatorsHubScreen({
                     <Icon size={22} className="text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900">{calc.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{calc.description}</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)]">{calc.title}</p>
+                    <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 line-clamp-2">{calc.description}</p>
                   </div>
-                  <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+                  <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
                 </div>
               </button>
             );

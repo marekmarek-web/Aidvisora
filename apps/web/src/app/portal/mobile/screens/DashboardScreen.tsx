@@ -83,11 +83,11 @@ function WidgetCard({
     <MobileCard className={cx("overflow-hidden", borderColor)}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Icon size={16} className={iconColor ?? "text-slate-400"} />
-          <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">{title}</h3>
+          <Icon size={16} className={iconColor ?? "text-[color:var(--wp-text-tertiary)]"} />
+          <h3 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">{title}</h3>
         </div>
         {href ? (
-          <Link href={href} className="text-slate-400 min-h-[44px] min-w-[44px] inline-flex items-center justify-center -mr-2">
+          <Link href={href} className="text-[color:var(--wp-text-tertiary)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center -mr-2">
             <ChevronRight size={16} />
           </Link>
         ) : null}
@@ -117,9 +117,9 @@ function AiAssistantWidget() {
   }, []);
 
   return (
-    <MobileCard className="bg-gradient-to-br from-[#0a0f29] to-indigo-950 text-white border-slate-800 overflow-hidden">
+    <MobileCard className="overflow-hidden border-white/20 bg-gradient-to-br from-[#0a0f29] to-indigo-950 text-white">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-indigo-300">
+        <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center text-indigo-300">
           <Sparkles size={16} />
         </div>
         <h3 className="text-xs font-black uppercase tracking-widest text-indigo-200">AI Asistent</h3>
@@ -127,9 +127,9 @@ function AiAssistantWidget() {
 
       {loading ? (
         <div className="animate-pulse space-y-2 min-h-[72px]">
-          <div className="h-4 bg-white/10 rounded w-3/4" />
-          <div className="h-4 bg-white/10 rounded w-1/2" />
-          <div className="h-4 bg-white/10 rounded w-5/6" />
+          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-3/4" />
+          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-1/2" />
+          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-5/6" />
         </div>
       ) : summary?.assistantSummaryText ? (
         <>
@@ -148,7 +148,7 @@ function AiAssistantWidget() {
                       ? `/portal/contacts/${u.entityId}`
                       : "#"
               }
-              className="flex items-center justify-between w-full px-3 py-2 mb-1.5 bg-white/10 rounded-xl text-sm text-white/80 border border-white/10"
+              className="flex items-center justify-between w-full px-3 py-2 mb-1.5 bg-[color:var(--wp-surface-card)]/10 rounded-xl text-sm text-white/80 border border-white/10"
             >
               <span className="truncate flex-1">{u.title}</span>
               <ArrowRight size={12} className="shrink-0 ml-2 text-indigo-300" />
@@ -189,7 +189,7 @@ function TasksWidget({ kpis }: { kpis: DashboardKpis }) {
           <CheckCircle2 size={24} />
         </div>
         <p className="font-bold text-emerald-600 text-sm">Vše splněno!</p>
-        <p className="text-xs text-slate-500 mt-1">Máte čistý stůl.</p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Máte čistý stůl.</p>
       </div>
     );
   }
@@ -200,11 +200,11 @@ function TasksWidget({ kpis }: { kpis: DashboardKpis }) {
         <Link
           key={t.id}
           href={`/portal/tasks${isOverdue(t.dueDate) ? "?filter=overdue" : "?filter=today"}`}
-          className="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors group"
+          className="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-[color:var(--wp-surface-muted)] transition-colors group"
         >
           <span className="mt-0.5 w-4 h-4 rounded border-2 border-amber-300 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
+            <p className="text-sm font-bold text-[color:var(--wp-text)] truncate group-hover:text-indigo-600 transition-colors">
               {t.title}
             </p>
             <span
@@ -215,7 +215,7 @@ function TasksWidget({ kpis }: { kpis: DashboardKpis }) {
             >
               <Clock size={10} /> {timeLabel(t.dueDate)}
               {t.contactName && (
-                <span className="normal-case font-semibold text-slate-500"> · {t.contactName}</span>
+                <span className="normal-case font-semibold text-[color:var(--wp-text-secondary)]"> · {t.contactName}</span>
               )}
             </span>
           </div>
@@ -238,10 +238,10 @@ function ActiveDealsWidget({ kpis }: { kpis: DashboardKpis }) {
   if (atRisk.length === 0 && step34.length === 0) {
     return (
       <div className="flex flex-col items-center text-center py-4">
-        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 mb-2 border border-slate-100">
+        <div className="w-12 h-12 bg-[color:var(--wp-surface-muted)] rounded-xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-2 border border-[color:var(--wp-surface-card-border)]">
           <Clock size={24} />
         </div>
-        <p className="text-sm font-medium text-slate-500">Žádné aktivní obchody.</p>
+        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Žádné aktivní obchody.</p>
       </div>
     );
   }
@@ -252,13 +252,13 @@ function ActiveDealsWidget({ kpis }: { kpis: DashboardKpis }) {
         <Link
           key={o.id}
           href={`/portal/pipeline/${o.id}`}
-          className="block p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white transition-colors"
+          className="block p-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 hover:bg-[color:var(--wp-surface-card)] transition-colors"
         >
           <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
             Ohrožení
           </span>
-          <h4 className="font-bold text-sm text-slate-800 mt-1.5">{o.title}</h4>
-          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+          <h4 className="font-bold text-sm text-[color:var(--wp-text)] mt-1.5">{o.title}</h4>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 flex items-center gap-1">
             <Users size={11} /> {o.contactName ?? "—"}
           </p>
         </Link>
@@ -267,13 +267,13 @@ function ActiveDealsWidget({ kpis }: { kpis: DashboardKpis }) {
         <Link
           key={o.id}
           href={`/portal/pipeline/${o.id}`}
-          className="block p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white transition-colors"
+          className="block p-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 hover:bg-[color:var(--wp-surface-card)] transition-colors"
         >
           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
             {o.stageName}
           </span>
-          <h4 className="font-bold text-sm text-slate-800 mt-1.5">{o.title}</h4>
-          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+          <h4 className="font-bold text-sm text-[color:var(--wp-text)] mt-1.5">{o.title}</h4>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 flex items-center gap-1">
             <Users size={11} /> {o.contactName ?? "—"}
           </p>
         </Link>
@@ -308,31 +308,31 @@ function ProductionWidget({
   if (!productionSummary) {
     return (
       <div className="animate-pulse space-y-3 py-2 min-h-[80px] flex flex-col justify-center">
-        <div className="h-3 bg-slate-200 rounded w-2/3 mx-auto" />
-        <div className="h-8 bg-slate-200 rounded-lg w-3/4 mx-auto" />
-        <div className="h-3 bg-slate-100 rounded w-1/2 mx-auto" />
+        <div className="h-3 bg-[color:var(--wp-surface-card-border)] rounded w-2/3 mx-auto" />
+        <div className="h-8 bg-[color:var(--wp-surface-card-border)] rounded-lg w-3/4 mx-auto" />
+        <div className="h-3 bg-[color:var(--wp-surface-muted)] rounded w-1/2 mx-auto" />
       </div>
     );
   }
   if (productionSummary.totalCount === 0) {
     return (
       <div className="flex flex-col items-center text-center py-4">
-        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 mb-2 border border-slate-100">
+        <div className="w-12 h-12 bg-[color:var(--wp-surface-muted)] rounded-xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-2 border border-[color:var(--wp-surface-card-border)]">
           <PieChart size={24} />
         </div>
-        <p className="text-sm font-medium text-slate-500">Žádná produkce za tento měsíc.</p>
+        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Žádná produkce za tento měsíc.</p>
       </div>
     );
   }
   return (
     <div className="text-center py-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+      <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] block mb-1">
         Produkce {productionSummary.periodLabel}
       </span>
-      <div className="text-2xl font-black text-slate-900">
+      <div className="text-2xl font-black text-[color:var(--wp-text)]">
         {productionSummary.totalPremium.toLocaleString("cs-CZ")} Kč
       </div>
-      <div className="text-xs font-bold text-slate-500 mt-1">
+      <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-1">
         Roční: {productionSummary.totalAnnual.toLocaleString("cs-CZ")} Kč · {productionSummary.totalCount} smluv
       </div>
       <Link
@@ -361,7 +361,7 @@ function BusinessPlanWidget({ data }: { data: BusinessPlanWidgetData | null }) {
   if (!data) {
     return (
       <div className="py-4">
-        <p className="text-sm text-slate-500 mb-2">Zatím nemáte nastavený business plán.</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-2">Zatím nemáte nastavený business plán.</p>
         <Link
           href="/portal/business-plan"
           className="text-sm font-semibold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
@@ -375,18 +375,18 @@ function BusinessPlanWidget({ data }: { data: BusinessPlanWidgetData | null }) {
   return (
     <div className="py-1">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
           {data.periodLabel}
         </span>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
           {HEALTH_LABELS[data.overallHealth] ?? data.overallHealth}
         </span>
       </div>
       <div className="space-y-2">
         {data.metrics.map((m) => (
           <div key={m.metricType} className="flex justify-between items-center text-sm">
-            <span className="font-medium text-slate-700 truncate">{m.label}</span>
-            <span className="text-slate-600 shrink-0 ml-2 text-xs">
+            <span className="font-medium text-[color:var(--wp-text-secondary)] truncate">{m.label}</span>
+            <span className="text-[color:var(--wp-text-secondary)] shrink-0 ml-2 text-xs">
               {formatVal(m.actual, m.unit)} / {formatVal(m.target, m.unit)}
             </span>
           </div>
@@ -416,7 +416,7 @@ function ClientCareWidget({
   const hasLegacy = service.length > 0 || ann.length > 0;
 
   if (!hasRecs && !hasLegacy) {
-    return <p className="text-sm py-3 text-slate-500">Žádná péče k zobrazení.</p>;
+    return <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádná péče k zobrazení.</p>;
   }
 
   if (hasRecs) {
@@ -436,12 +436,12 @@ function ClientCareWidget({
               )}
             >
               <div className="min-w-0 flex-1">
-                <h4 className="font-bold text-sm text-slate-800">{name}</h4>
-                <p className="text-xs font-bold text-slate-600 truncate">{r.title}</p>
+                <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{name}</h4>
+                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">{r.title}</p>
               </div>
               <Link
                 href={cta.href}
-                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2.5 rounded-lg bg-white text-slate-700 border border-slate-200 text-xs font-semibold shrink-0"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2.5 rounded-lg bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)] text-xs font-semibold shrink-0"
               >
                 {cta.label}
               </Link>
@@ -460,7 +460,7 @@ function ClientCareWidget({
           className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/30 border border-amber-100/50 min-h-[44px]"
         >
           <div>
-            <h4 className="font-bold text-sm text-slate-800">
+            <h4 className="font-bold text-sm text-[color:var(--wp-text)]">
               {c.firstName} {c.lastName}
             </h4>
             <p className="text-xs font-bold text-amber-600 flex items-center gap-1">
@@ -470,7 +470,7 @@ function ClientCareWidget({
           </div>
           <Link
             href={`/portal/contacts/${c.id}`}
-            className="p-2 bg-white rounded-lg border border-slate-200 min-h-[44px] min-w-[44px] inline-flex items-center justify-center shrink-0"
+            className="p-2 bg-[color:var(--wp-surface-card)] rounded-lg border border-[color:var(--wp-surface-card-border)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center shrink-0"
           >
             <ChevronRight size={14} />
           </Link>
@@ -482,7 +482,7 @@ function ClientCareWidget({
           className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/30 border border-amber-100/50 min-h-[44px]"
         >
           <div>
-            <h4 className="font-bold text-sm text-slate-800">{c.partnerName ?? "—"}</h4>
+            <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{c.partnerName ?? "—"}</h4>
             <p className="text-xs font-bold text-amber-600 flex items-center gap-1">
               <AlertCircle size={11} /> Výročí ·{" "}
               {new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}
@@ -490,7 +490,7 @@ function ClientCareWidget({
           </div>
           <Link
             href={`/portal/contacts/${c.contactId}`}
-            className="p-2 bg-white rounded-lg border border-slate-200 min-h-[44px] min-w-[44px] inline-flex items-center justify-center shrink-0"
+            className="p-2 bg-[color:var(--wp-surface-card)] rounded-lg border border-[color:var(--wp-surface-card-border)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center shrink-0"
           >
             <ChevronRight size={14} />
           </Link>
@@ -510,7 +510,7 @@ function FinancialAnalysesWidget({ analyses }: { analyses: FinancialAnalysisList
   };
 
   if (analyses.length === 0) {
-    return <p className="text-sm py-3 text-slate-500">Žádné finanční analýzy.</p>;
+    return <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádné finanční analýzy.</p>;
   }
 
   return (
@@ -519,21 +519,21 @@ function FinancialAnalysesWidget({ analyses }: { analyses: FinancialAnalysisList
         <Link
           key={a.id}
           href={`/portal/analyses/financial?id=${encodeURIComponent(a.id)}`}
-          className="block p-3 rounded-xl border border-slate-200 hover:border-indigo-200 transition-all bg-white group"
+          className="block p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 transition-all bg-[color:var(--wp-surface-card)] group"
         >
           <div className="flex justify-between items-start mb-1.5">
             <span className="p-1 bg-blue-50 text-blue-600 rounded-lg">
               <FileText size={14} />
             </span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
               {formatAgo(a.updatedAt)}
             </span>
           </div>
-          <h4 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
+          <h4 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors">
             {a.analysisTypeLabel ?? "Analýza"}
           </h4>
-          <p className="text-xs text-slate-500 mt-0.5">{a.clientName ?? "—"}</p>
-          <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center">
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">{a.clientName ?? "—"}</p>
+          <div className="mt-2 pt-2 border-t border-[color:var(--wp-surface-card-border)] flex justify-between items-center">
             <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
               {a.status === "completed"
                 ? "Dokončeno"
@@ -543,7 +543,7 @@ function FinancialAnalysesWidget({ analyses }: { analyses: FinancialAnalysisList
             </span>
             <ChevronRight
               size={12}
-              className="text-slate-300 group-hover:text-indigo-600 transition-colors"
+              className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors"
             />
           </div>
         </Link>
@@ -573,10 +573,10 @@ function MessagesWidget() {
   if (loading) {
     return (
       <div className="flex items-center gap-3 min-h-[52px] py-1">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse shrink-0" />
+        <div className="w-10 h-10 rounded-xl bg-[color:var(--wp-surface-muted)] animate-pulse shrink-0" />
         <div className="flex-1 space-y-2 min-w-0">
-          <div className="h-6 bg-slate-100 rounded-lg w-16 animate-pulse" />
-          <div className="h-3 bg-slate-100 rounded w-32 animate-pulse" />
+          <div className="h-6 bg-[color:var(--wp-surface-muted)] rounded-lg w-16 animate-pulse" />
+          <div className="h-3 bg-[color:var(--wp-surface-muted)] rounded w-32 animate-pulse" />
         </div>
       </div>
     );
@@ -589,8 +589,8 @@ function MessagesWidget() {
           <MessageSquare size={20} />
         </div>
         <div>
-          <p className="text-2xl font-black text-slate-900 tabular-nums">{unreadCount}</p>
-          <p className="text-xs text-slate-500 font-bold">nepřečtených zpráv</p>
+          <p className="text-2xl font-black text-[color:var(--wp-text)] tabular-nums">{unreadCount}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] font-bold">nepřečtených zpráv</p>
         </div>
       </div>
     </div>
@@ -601,7 +601,7 @@ function NotesWidget({ notes }: { notes: MeetingNoteForBoard[] }) {
   if (notes.length === 0) {
     return (
       <div className="text-center py-4">
-        <p className="text-sm text-slate-500">Žádné zápisky z posledních schůzek.</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné zápisky z posledních schůzek.</p>
       </div>
     );
   }
@@ -615,10 +615,10 @@ function NotesWidget({ notes }: { notes: MeetingNoteForBoard[] }) {
         >
           <div className="flex justify-between items-start">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-800 truncate">
+              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                 {n.contactName || "Zápis"}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">
                 {n.domain} · {new Date(n.meetingAt).toLocaleDateString("cs-CZ")}
               </p>
             </div>
@@ -693,10 +693,10 @@ export function DashboardScreen({
 
       {/* Greeting */}
       <MobileSection>
-        <h1 className="text-xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight">
           Dobrý den, {advisorName.split(" ")[0]} 👋
         </h1>
-        <p className="text-xs text-slate-500 font-medium mt-0.5 first-letter:uppercase">
+        <p className="text-xs text-[color:var(--wp-text-secondary)] font-medium mt-0.5 first-letter:uppercase">
           {dateLabel}
         </p>
       </MobileSection>
@@ -709,10 +709,10 @@ export function DashboardScreen({
 
       <MobileSection title="Dnes v kalendáři">
         <MobileCard className="border-indigo-100/80 bg-gradient-to-br from-white to-indigo-50/40">
-          <p className="text-sm font-bold text-slate-900">
+          <p className="text-sm font-bold text-[color:var(--wp-text)]">
             {todayAgendaCount === 0 ? "Dnes nic naplánováno" : `${todayAgendaLabel} — schůzky a úkoly`}
           </p>
-          <p className="mt-1 text-xs text-slate-600">Otevřete kalendář nebo dnešní úkoly.</p>
+          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">Otevřete kalendář nebo dnešní úkoly.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/portal/calendar"
@@ -723,7 +723,7 @@ export function DashboardScreen({
             </Link>
             <Link
               href="/portal/tasks?filter=today"
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 active:scale-[0.99] sm:flex-none"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 text-xs font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.99] sm:flex-none"
             >
               <CheckSquare size={16} aria-hidden />
               Úkoly dnes
@@ -737,7 +737,7 @@ export function DashboardScreen({
         {QUICK_ACTIONS.map((qa, i) => {
           const QIcon = qa.icon;
           const cls =
-            "flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 whitespace-nowrap shrink-0 min-h-[40px] active:scale-95 transition-transform";
+            "flex items-center gap-1.5 px-3 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-bold text-[color:var(--wp-text-secondary)] whitespace-nowrap shrink-0 min-h-[40px] active:scale-95 transition-transform";
           if (qa.href) {
             return (
               <Link key={i} href={qa.href} className={cls}>
@@ -853,7 +853,7 @@ export function DashboardScreen({
             title="Finanční analýzy"
             href="/portal/analyses"
             iconColor="text-blue-600"
-            borderColor="border-t-4 border-t-slate-400"
+            borderColor="border-t-4 border-t-[color:var(--wp-text-tertiary)]"
           >
             <FinancialAnalysesWidget analyses={initialAnalyses} />
           </WidgetCard>
@@ -878,7 +878,7 @@ export function DashboardScreen({
             title="Zápisky"
             href="/portal/notes"
             iconColor="text-amber-500"
-            borderColor="border-t-4 border-t-slate-400"
+            borderColor="border-t-4 border-t-[color:var(--wp-text-tertiary)]"
           >
             <NotesWidget notes={initialNotes} />
           </WidgetCard>

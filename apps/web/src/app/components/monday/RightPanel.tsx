@@ -86,8 +86,8 @@ export function RightPanel({ itemId, itemName, onClose, getActivity, appendActiv
     <div
       className={
         mobileFullScreen
-          ? "fixed inset-0 z-[var(--z-drawer-panel,101)] w-full max-w-full bg-white flex flex-col shadow-[-4px_0_16px_rgba(0,0,0,0.04)] md:relative md:inset-auto md:z-auto md:w-[380px] md:flex-shrink-0 border-l border-[var(--board-border)] h-full"
-          : "w-[380px] flex-shrink-0 border-l border-[var(--board-border)] bg-white flex flex-col h-full shadow-[-4px_0_16px_rgba(0,0,0,0.04)]"
+          ? "fixed inset-0 z-[var(--z-drawer-panel,101)] w-full max-w-full bg-[color:var(--wp-surface-card)] flex flex-col shadow-[-4px_0_16px_rgba(0,0,0,0.04)] md:relative md:inset-auto md:z-auto md:w-[380px] md:flex-shrink-0 border-l border-[var(--board-border)] h-full"
+          : "w-[380px] flex-shrink-0 border-l border-[var(--board-border)] bg-[color:var(--wp-surface-card)] flex flex-col h-full shadow-[-4px_0_16px_rgba(0,0,0,0.04)]"
       }
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--board-border)] min-h-[44px]">

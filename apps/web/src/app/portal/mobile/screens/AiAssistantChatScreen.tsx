@@ -109,13 +109,13 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             "rounded-2xl px-3.5 py-2.5",
             isUser
               ? "bg-indigo-600 text-white rounded-tr-sm"
-              : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm"
+              : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text)] rounded-tl-sm shadow-sm"
           )}
         >
-          <p className={cx("text-sm leading-relaxed whitespace-pre-wrap", isUser ? "text-white" : "text-slate-800")}>
+          <p className={cx("text-sm leading-relaxed whitespace-pre-wrap", isUser ? "text-white" : "text-[color:var(--wp-text)]")}>
             {msg.text}
           </p>
-          <p className={cx("text-[10px] mt-1", isUser ? "text-indigo-200" : "text-slate-400")}>
+          <p className={cx("text-[10px] mt-1", isUser ? "text-indigo-200" : "text-[color:var(--wp-text-tertiary)]")}>
             {msg.timestamp.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
@@ -152,7 +152,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             {msg.suggestedActions!.slice(0, 4).map((action, i) => (
               <span
                 key={i}
-                className="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg"
+                className="text-[11px] font-bold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-2.5 py-1 rounded-lg"
               >
                 {action.label}
               </span>
@@ -162,8 +162,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       </div>
 
       {isUser ? (
-        <div className="w-7 h-7 rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <User size={13} className="text-slate-600" />
+        <div className="w-7 h-7 rounded-xl bg-[color:var(--wp-surface-card-border)] flex items-center justify-center flex-shrink-0 mt-0.5">
+          <User size={13} className="text-[color:var(--wp-text-secondary)]" />
         </div>
       ) : null}
     </div>
@@ -180,7 +180,7 @@ function TypingIndicator() {
       <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
         <Sparkles size={13} className="text-white" />
       </div>
-      <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+      <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
         <div className="flex gap-1 items-center h-4">
           {[0, 1, 2].map((i) => (
             <div
@@ -453,14 +453,14 @@ export function AiAssistantChatScreen() {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mx-auto shadow-lg">
                 <Sparkles size={26} className="text-white" />
               </div>
-              <h2 className="text-base font-black text-slate-900">AI Asistent</h2>
-              <p className="text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
+              <h2 className="text-base font-black text-[color:var(--wp-text)]">AI Asistent</h2>
+              <p className="text-sm text-[color:var(--wp-text-secondary)] max-w-xs mx-auto leading-relaxed">
                 Zeptejte se na cokoliv z vašeho CRM. Asistent zná vaše kontakty, úkoly, pipeline a smlouvy.
               </p>
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] text-center">
                 Rychlé otázky
               </p>
               {QUICK_STARTERS.map((starter) => (
@@ -468,11 +468,11 @@ export function AiAssistantChatScreen() {
                   key={starter.label}
                   type="button"
                   onClick={() => void sendMessage(starter.label)}
-                  className="w-full text-left min-h-[48px] flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-2xl active:border-indigo-200 active:bg-indigo-50/40 transition-colors"
+                  className="w-full text-left min-h-[48px] flex items-center gap-3 px-4 py-3 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl active:border-indigo-200 active:bg-indigo-50/40 transition-colors"
                 >
                   <span className="text-xl flex-shrink-0">{starter.emoji}</span>
-                  <span className="text-sm font-semibold text-slate-700 flex-1">{starter.label}</span>
-                  <ChevronRight size={15} className="text-slate-300 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)] flex-1">{starter.label}</span>
+                  <ChevronRight size={15} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
                 </button>
               ))}
             </div>
@@ -487,17 +487,17 @@ export function AiAssistantChatScreen() {
 
         {/* Draft email panel */}
         {draftEmail ? (
-          <div className="bg-white border border-indigo-200 rounded-2xl p-4 space-y-3 shadow-sm">
+          <div className="bg-[color:var(--wp-surface-card)] border border-indigo-200 rounded-2xl p-4 space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-bold text-indigo-700">
                 <Mail size={16} />
                 Draft e-mail
               </div>
-              <button type="button" onClick={() => setDraftEmail(null)} className="p-1 text-slate-400 min-h-[36px] min-w-[36px] flex items-center justify-center">
+              <button type="button" onClick={() => setDraftEmail(null)} className="p-1 text-[color:var(--wp-text-tertiary)] min-h-[36px] min-w-[36px] flex items-center justify-center">
                 <X size={16} />
               </button>
             </div>
-            <pre className="text-xs text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-xl p-3 max-h-[300px] overflow-y-auto">{draftEmail}</pre>
+            <pre className="text-xs text-[color:var(--wp-text-secondary)] whitespace-pre-wrap bg-[color:var(--wp-surface-muted)] rounded-xl p-3 max-h-[300px] overflow-y-auto">{draftEmail}</pre>
             <button
               type="button"
               onClick={copyDraft}
@@ -513,7 +513,7 @@ export function AiAssistantChatScreen() {
       </div>
 
       {/* Input bar */}
-      <div className="flex-shrink-0 border-t border-slate-200 bg-white px-3 pt-2 pb-[max(0.75rem,var(--safe-area-bottom))]">
+      <div className="flex-shrink-0 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 pt-2 pb-[max(0.75rem,var(--safe-area-bottom))]">
         {!isEmpty ? (
           <div className="flex items-center justify-between mb-2">
             <button
@@ -528,7 +528,7 @@ export function AiAssistantChatScreen() {
             <button
               type="button"
               onClick={clearChat}
-              className="flex items-center gap-1 text-[11px] font-bold text-slate-500 min-h-[28px] px-2"
+              className="flex items-center gap-1 text-[11px] font-bold text-[color:var(--wp-text-secondary)] min-h-[28px] px-2"
             >
               <RotateCcw size={11} /> Nový chat
             </button>
@@ -538,10 +538,10 @@ export function AiAssistantChatScreen() {
         {files.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {files.map((f, i) => (
-              <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-lg flex items-center gap-1 max-w-[200px]">
+              <span key={i} className="text-xs bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] px-2 py-1 rounded-lg flex items-center gap-1 max-w-[200px]">
                 <Paperclip size={12} className="shrink-0" />
                 <span className="truncate">{f.name}</span>
-                <button type="button" onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 ml-0.5" aria-label="Odstranit">×</button>
+                <button type="button" onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="text-[color:var(--wp-text-tertiary)] ml-0.5" aria-label="Odstranit">×</button>
               </span>
             ))}
             <button type="button" onClick={handleFileUpload} disabled={isTyping} className="text-xs font-bold text-indigo-600 px-2 py-1 rounded-lg bg-indigo-50 min-h-[28px] disabled:opacity-50">
@@ -565,7 +565,7 @@ export function AiAssistantChatScreen() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-11 h-11 rounded-2xl border border-slate-200 flex items-center justify-center flex-shrink-0 text-slate-500 active:bg-slate-100"
+            className="w-11 h-11 rounded-2xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center flex-shrink-0 text-[color:var(--wp-text-secondary)] active:bg-[color:var(--wp-surface-muted)]"
             aria-label="Nahrát soubor"
           >
             <Paperclip size={18} />
@@ -583,7 +583,7 @@ export function AiAssistantChatScreen() {
             onKeyDown={handleKeyDown}
             placeholder="Napište zprávu…"
             disabled={isTyping}
-            className="flex-1 resize-none min-h-[44px] max-h-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors disabled:opacity-50"
+            className="flex-1 resize-none min-h-[44px] max-h-[120px] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3.5 py-3 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:border-indigo-400 focus:bg-[color:var(--wp-surface-card)] transition-colors disabled:opacity-50"
           />
           <button
             type="button"

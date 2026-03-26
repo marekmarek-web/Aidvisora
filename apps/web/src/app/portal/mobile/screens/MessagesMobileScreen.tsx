@@ -38,7 +38,7 @@ function MessageBubble({
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
           isOwn
             ? "bg-indigo-600 text-white"
-            : "bg-slate-100 text-slate-800 border border-slate-200"
+            : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] border border-[color:var(--wp-surface-card-border)]"
         }`}
       >
         <p className="whitespace-pre-wrap break-words">{m.body}</p>
@@ -52,7 +52,7 @@ function MessageBubble({
                 rel="noopener noreferrer"
                 className={`flex items-center gap-1.5 text-xs truncate max-w-full rounded-lg px-2 py-1.5 min-h-[36px] ${
                   isOwn
-                    ? "text-white/90 bg-white/10 active:bg-white/20"
+                    ? "text-white/90 bg-[color:var(--wp-surface-card)]/10 active:bg-[color:var(--wp-surface-card)]/20"
                     : "text-indigo-600 bg-indigo-50 active:bg-indigo-100"
                 }`}
                 title={a.fileName}
@@ -63,7 +63,7 @@ function MessageBubble({
             ))}
           </div>
         )}
-        <p className={`text-[10px] mt-1 ${isOwn ? "text-white/70" : "text-slate-500"}`}>
+        <p className={`text-[10px] mt-1 ${isOwn ? "text-white/70" : "text-[color:var(--wp-text-secondary)]"}`}>
           {new Date(m.createdAt).toLocaleString("cs-CZ", {
             day: "numeric",
             month: "numeric",
@@ -99,7 +99,7 @@ function ConversationItem({
       onClick={onSelect}
       className={`
         w-full text-left px-4 py-3 min-h-[64px] flex items-center gap-3
-        border-b border-slate-100 active:bg-slate-50 transition-colors
+        border-b border-[color:var(--wp-surface-card-border)] active:bg-[color:var(--wp-surface-muted)] transition-colors
         ${isActive ? "bg-indigo-50/60 border-l-4 border-l-indigo-600" : ""}
       `}
     >
@@ -107,8 +107,8 @@ function ConversationItem({
         {initials || "?"}
       </span>
       <span className="flex-1 min-w-0">
-        <span className="font-semibold text-slate-800 truncate block text-sm">{conv.contactName}</span>
-        <span className="text-xs text-slate-500 truncate block mt-0.5">
+        <span className="font-semibold text-[color:var(--wp-text)] truncate block text-sm">{conv.contactName}</span>
+        <span className="text-xs text-[color:var(--wp-text-secondary)] truncate block mt-0.5">
           {conv.lastMessage?.slice(0, 60)}
           {conv.lastMessage && conv.lastMessage.length > 60 ? "…" : ""}
         </span>
@@ -312,16 +312,16 @@ export function MessagesMobileScreen() {
     return (
       <div className="-mx-4 -mt-4 flex flex-col min-h-[calc(100dvh-8rem)]">
         {/* Search + New message */}
-        <div className="px-4 pt-3 pb-2 border-b border-slate-200 bg-white space-y-2 shrink-0">
+        <div className="px-4 pt-3 pb-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] space-y-2 shrink-0">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Hledat v konverzacích…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+                className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] pl-9 pr-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
               />
             </div>
             <button
@@ -337,31 +337,31 @@ export function MessagesMobileScreen() {
 
         {/* New message contact picker */}
         {newMsgOpen && (
-          <div className="border-b border-slate-200 bg-white px-4 py-3 space-y-2 shrink-0">
+          <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 space-y-2 shrink-0">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Nová zpráva</p>
+              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-widest">Nová zpráva</p>
               <button
                 type="button"
                 onClick={() => setNewMsgOpen(false)}
-                className="p-1 text-slate-400 active:text-slate-700 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+                className="p-1 text-[color:var(--wp-text-tertiary)] active:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
               >
                 <X size={16} />
               </button>
             </div>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Hledat klienta…"
                 value={contactSearch}
                 onChange={(e) => setContactSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
+                className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] pl-9 pr-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
                 autoFocus
               />
             </div>
             <div className="max-h-48 overflow-y-auto space-y-0.5">
               {filteredContacts.length === 0 && (
-                <p className="text-xs text-slate-500 py-2 text-center">Žádní klienti</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] py-2 text-center">Žádní klienti</p>
               )}
               {filteredContacts.slice(0, 20).map((c) => {
                 const initials = [c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
@@ -373,7 +373,7 @@ export function MessagesMobileScreen() {
                       selectConversation(c.id);
                       setNewMsgOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2.5 rounded-lg active:bg-indigo-50 text-sm font-medium text-slate-800 min-h-[44px] flex items-center gap-2 transition-colors"
+                    className="w-full text-left px-3 py-2.5 rounded-lg active:bg-indigo-50 text-sm font-medium text-[color:var(--wp-text)] min-h-[44px] flex items-center gap-2 transition-colors"
                   >
                     <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                       {initials}
@@ -423,17 +423,17 @@ export function MessagesMobileScreen() {
   return (
     <div className="-mx-4 -mt-4 flex flex-col h-[calc(100dvh-4rem)]">
       {/* Thread header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-b border-slate-200 bg-white min-h-[56px]">
+      <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] min-h-[56px]">
         <button
           type="button"
           onClick={goBackToList}
-          className="p-2 -ml-2 rounded-lg active:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600"
+          className="p-2 -ml-2 rounded-lg active:bg-[color:var(--wp-surface-muted)] min-h-[44px] min-w-[44px] flex items-center justify-center text-[color:var(--wp-text-secondary)]"
           aria-label="Zpět na seznam"
         >
           <ArrowLeft size={20} />
         </button>
         <span className="flex-1 min-w-0">
-          <span className="font-semibold text-slate-800 truncate block text-sm">{contactName || "Kontakt"}</span>
+          <span className="font-semibold text-[color:var(--wp-text)] truncate block text-sm">{contactName || "Kontakt"}</span>
         </span>
         <button
           type="button"
@@ -451,9 +451,9 @@ export function MessagesMobileScreen() {
           <LoadingSkeleton variant="list" rows={5} />
         ) : msgs.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-16 text-center">
-            <MessageSquare size={40} className="text-slate-300 mb-3" />
-            <p className="text-sm font-semibold text-slate-600">Zatím žádné zprávy</p>
-            <p className="text-xs text-slate-500 mt-1">Napište první zprávu tomuto klientovi.</p>
+            <MessageSquare size={40} className="text-[color:var(--wp-text-tertiary)] mb-3" />
+            <p className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">Zatím žádné zprávy</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Napište první zprávu tomuto klientovi.</p>
           </div>
         ) : (
           <>
@@ -471,7 +471,7 @@ export function MessagesMobileScreen() {
       </div>
 
       {/* Compose */}
-      <div className="shrink-0 border-t border-slate-200 px-3 py-2 bg-white safe-area-bottom">
+      <div className="shrink-0 border-t border-[color:var(--wp-surface-card-border)] px-3 py-2 bg-[color:var(--wp-surface-card)] safe-area-bottom">
         {sendError && (
           <div className="mb-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 flex items-center justify-between gap-2">
             <p className="text-xs text-rose-800 font-semibold flex-1 min-w-0 truncate">{sendError}</p>
@@ -493,14 +493,14 @@ export function MessagesMobileScreen() {
             {files.map((f, i) => (
               <span
                 key={i}
-                className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-lg flex items-center gap-1 max-w-[200px]"
+                className="text-xs bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] px-2 py-1 rounded-lg flex items-center gap-1 max-w-[200px]"
               >
                 <Paperclip size={12} className="shrink-0" />
                 <span className="truncate">{f.name}</span>
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="text-slate-400 active:text-slate-600 ml-0.5"
+                  className="text-[color:var(--wp-text-tertiary)] active:text-[color:var(--wp-text-secondary)] ml-0.5"
                   aria-label="Odstranit"
                 >
                   ×
@@ -525,7 +525,7 @@ export function MessagesMobileScreen() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 rounded-xl p-2.5 text-slate-500 active:bg-slate-100 active:text-slate-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="shrink-0 rounded-xl p-2.5 text-[color:var(--wp-text-secondary)] active:bg-[color:var(--wp-surface-muted)] active:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Přidat přílohu"
           >
             <Paperclip size={20} />
@@ -537,7 +537,7 @@ export function MessagesMobileScreen() {
             onKeyDown={handleKeyDown}
             placeholder="Napište zprávu…"
             rows={1}
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 resize-none min-h-[44px] max-h-[120px]"
+            className="flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 resize-none min-h-[44px] max-h-[120px]"
           />
           <button
             type="button"

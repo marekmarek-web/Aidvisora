@@ -219,29 +219,29 @@ export function MobileSideDrawer({
     >
       <aside
         className={cx(
-          "flex h-full min-h-0 min-w-0 flex-col border-r border-slate-100 bg-white shadow-xl animate-in slide-in-from-left duration-300 ease-out shrink-0",
+          "flex h-full min-h-0 min-w-0 flex-col border-r border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-xl animate-in slide-in-from-left duration-300 ease-out shrink-0",
           widthClass
         )}
       >
-        <div className="pt-[calc(var(--safe-area-top)+0.75rem)] px-4 pb-3 border-b border-slate-100 flex items-start justify-between gap-2">
+        <div className="pt-[calc(var(--safe-area-top)+0.75rem)] px-4 pb-3 border-b border-[color:var(--wp-surface-card-border)] flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-500">Přihlášen</p>
-            <p className="text-sm font-black text-slate-900 truncate">{advisorName}</p>
+            <p className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Přihlášen</p>
+            <p className="text-sm font-black text-[color:var(--wp-text)] truncate">{advisorName}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 grid place-items-center shrink-0 active:scale-95 transition-transform"
+            className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center shrink-0 active:scale-95 transition-transform"
             aria-label="Zavřít"
           >
             <X size={18} />
           </button>
         </div>
 
-        {searchSlot ? <div className="px-3 py-2 border-b border-slate-100">{searchSlot}</div> : null}
+        {searchSlot ? <div className="px-3 py-2 border-b border-[color:var(--wp-surface-card-border)]">{searchSlot}</div> : null}
 
         {showDrawerScanShortcut ? (
-          <div className="px-3 pt-2 pb-2 border-b border-slate-100">
+          <div className="px-3 pt-2 pb-2 border-b border-[color:var(--wp-surface-card-border)]">
             <button
               type="button"
               onClick={() => onNavigate("/portal/scan")}
@@ -256,7 +256,7 @@ export function MobileSideDrawer({
         <nav className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-3 space-y-5">
           {sections.map((sec) => (
             <div key={sec.id}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 mb-2">{sec.title}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] px-2 mb-2">{sec.title}</p>
               <ul className="space-y-0.5">
                 {sec.items.map((item) => {
                   const Icon = item.Icon;
@@ -271,7 +271,7 @@ export function MobileSideDrawer({
                         onClick={() => onNavigate(item.href)}
                         className={cx(
                           "w-full flex items-center gap-3 min-h-[44px] px-3 rounded-xl text-left text-sm font-bold transition-colors active:scale-[0.99]",
-                          active ? "bg-indigo-50 text-indigo-800" : "text-slate-800 hover:bg-slate-50"
+                          active ? "bg-indigo-50 text-indigo-800" : "text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
                         )}
                       >
                         <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
@@ -292,7 +292,7 @@ export function MobileSideDrawer({
           ))}
         </nav>
 
-        <div className="p-3 border-t border-slate-100 pb-[max(0.75rem,var(--safe-area-bottom))]">
+        <div className="p-3 border-t border-[color:var(--wp-surface-card-border)] pb-[max(0.75rem,var(--safe-area-bottom))]">
           <button
             type="button"
             onClick={() => {

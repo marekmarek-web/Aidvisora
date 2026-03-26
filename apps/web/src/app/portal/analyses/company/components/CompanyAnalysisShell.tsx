@@ -110,7 +110,7 @@ export function CompanyAnalysisShell({
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-slate-900">
+        <h2 className="text-xl font-semibold text-[color:var(--wp-text)]">
           {payload.company?.name || "Firemní analýza"}
         </h2>
         <div className="flex items-center gap-3">
@@ -129,29 +129,29 @@ export function CompanyAnalysisShell({
       </div>
 
       {/* Company */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Firma</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Firma</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="sm:col-span-2">
-            <span className="block text-sm font-medium text-slate-600 mb-1">Název</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Název</span>
             <input
               type="text"
               value={payload.company?.name ?? ""}
               onChange={(e) => setCompany({ name: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">IČO</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">IČO</span>
             <input
               type="text"
               value={payload.company?.ico ?? ""}
               onChange={(e) => setCompany({ ico: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Obor</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Obor</span>
             <CustomDropdown
               value={payload.company?.industry ?? ""}
               onChange={(id) => setCompany({ industry: id })}
@@ -163,66 +163,66 @@ export function CompanyAnalysisShell({
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Zaměstnanci</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Zaměstnanci</span>
             <input
               type="number"
               min={0}
               value={payload.company?.employees ?? 0}
               onChange={(e) => setCompany({ employees: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Průměrná mzda (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Průměrná mzda (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.company?.avgWage ?? 0}
               onChange={(e) => setCompany({ avgWage: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">3. kategorie</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">3. kategorie</span>
             <input
               type="number"
               min={0}
               value={payload.company?.cat3 ?? 0}
               onChange={(e) => setCompany({ cat3: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">TOP klient (%)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">TOP klient (%)</span>
             <input
               type="number"
               min={0}
               max={100}
               value={payload.company?.topClient ?? 0}
               onChange={(e) => setCompany({ topClient: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
       </section>
 
       {/* Directors */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-slate-800">Jednatelé</h3>
+          <h3 className="text-lg font-medium text-[color:var(--wp-text)]">Jednatelé</h3>
           <button
             type="button"
             onClick={addDirector}
-            className="min-h-[44px] px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200"
+            className="min-h-[44px] px-4 py-2 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] font-medium rounded-lg hover:bg-[color:var(--wp-surface-card-border)]"
           >
             Přidat jednatele
           </button>
         </div>
         <div className="space-y-4">
           {payload.directors?.map((d, i) => (
-            <div key={i} className="p-4 border border-slate-200 rounded-lg space-y-3">
+            <div key={i} className="p-4 border border-[color:var(--wp-surface-card-border)] rounded-lg space-y-3">
               <div className="flex justify-between items-center">
-                <span className="font-medium text-slate-700">Jednatel {i + 1}</span>
+                <span className="font-medium text-[color:var(--wp-text-secondary)]">Jednatel {i + 1}</span>
                 <button
                   type="button"
                   onClick={() => removeDirector(i)}
@@ -233,43 +233,43 @@ export function CompanyAnalysisShell({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label>
-                  <span className="block text-sm text-slate-600 mb-1">Jméno</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Jméno</span>
                   <input
                     type="text"
                     value={d.name ?? ""}
                     onChange={(e) => setDirector(i, { name: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                   />
                 </label>
                 <label>
-                  <span className="block text-sm text-slate-600 mb-1">Věk</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Věk</span>
                   <input
                     type="number"
                     min={0}
                     value={d.age ?? ""}
                     onChange={(e) => setDirector(i, { age: e.target.value === "" ? null : num(e.target.value, 0) })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                   />
                 </label>
                 <label>
-                  <span className="block text-sm text-slate-600 mb-1">Podíl (%)</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Podíl (%)</span>
                   <input
                     type="number"
                     min={0}
                     max={100}
                     value={d.share ?? 100}
                     onChange={(e) => setDirector(i, { share: num(e.target.value, 100) })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                   />
                 </label>
                 <label>
-                  <span className="block text-sm text-slate-600 mb-1">Čistý měsíční příjem (Kč)</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Čistý měsíční příjem (Kč)</span>
                   <input
                     type="number"
                     min={0}
                     value={d.netIncome ?? 0}
                     onChange={(e) => setDirector(i, { netIncome: num(e.target.value, 0) })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                   />
                 </label>
                 <label className="sm:col-span-2 flex items-center gap-2">
@@ -277,22 +277,22 @@ export function CompanyAnalysisShell({
                     type="checkbox"
                     checked={d.hasSpouse ?? false}
                     onChange={(e) => setDirector(i, { hasSpouse: e.target.checked })}
-                    className="rounded border-slate-300"
+                    className="rounded border-[color:var(--wp-border-strong)]"
                   />
-                  <span className="text-sm text-slate-600">Manžel/ka</span>
+                  <span className="text-sm text-[color:var(--wp-text-secondary)]">Manžel/ka</span>
                 </label>
                 <label>
-                  <span className="block text-sm text-slate-600 mb-1">Počet dětí</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Počet dětí</span>
                   <input
                     type="number"
                     min={0}
                     value={d.childrenCount ?? 0}
                     onChange={(e) => setDirector(i, { childrenCount: num(e.target.value, 0) })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
                   />
                 </label>
                 <label className="block w-full">
-                  <span className="block text-sm text-slate-600 mb-1">Typ příjmu</span>
+                  <span className="block text-sm text-[color:var(--wp-text-secondary)] mb-1">Typ příjmu</span>
                   <CustomDropdown
                     value={d.incomeType ?? "employee"}
                     onChange={(id) => setDirector(i, { incomeType: id as "employee" | "osvc" })}
@@ -309,118 +309,118 @@ export function CompanyAnalysisShell({
       </section>
 
       {/* Finance */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Finance</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Finance</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Roční tržby (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Roční tržby (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.finance?.revenue ?? 0}
               onChange={(e) => setFinance({ revenue: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Roční zisk / EBITDA (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Roční zisk / EBITDA (Kč)</span>
             <input
               type="number"
               value={payload.finance?.profit ?? 0}
               onChange={(e) => setFinance({ profit: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Rezerva (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Rezerva (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.finance?.reserve ?? 0}
               onChange={(e) => setFinance({ reserve: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Měsíční splátka úvěrů (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Měsíční splátka úvěrů (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.finance?.loanPayment ?? 0}
               onChange={(e) => setFinance({ loanPayment: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
       </section>
 
       {/* Benefits */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Benefity</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Benefity</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={payload.benefits?.dps ?? false}
               onChange={(e) => setBenefits({ dps: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">DPS</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">DPS</span>
           </label>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={payload.benefits?.dip ?? false}
               onChange={(e) => setBenefits({ dip: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">DIP</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">DIP</span>
           </label>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={payload.benefits?.izp ?? false}
               onChange={(e) => setBenefits({ izp: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">IŽP</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">IŽP</span>
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Příspěvek na osobu/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Příspěvek na osobu/měs (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.benefits?.amount ?? 0}
               onChange={(e) => setBenefits({ amount: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Počet zaměstnanců (benefity)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Počet zaměstnanců (benefity)</span>
             <input
               type="number"
               min={0}
               value={payload.benefits?.count ?? 0}
               onChange={(e) => setBenefits({ count: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Jednatelé celkem/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Jednatelé celkem/měs (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.benefits?.directorsAmount ?? 0}
               onChange={(e) => setBenefits({ directorsAmount: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
       </section>
 
       {/* Risks */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Pojištění firmy</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Pojištění firmy</h3>
         <div className="space-y-3">
           {(["property", "interruption", "liability"] as const).map((key) => (
             <div key={key} className="flex flex-wrap items-center gap-3">
@@ -433,9 +433,9 @@ export function CompanyAnalysisShell({
                       [key]: { ...(payload.risks?.[key] ?? defaultRiskDetail()), has: e.target.checked },
                     })
                   }
-                  className="rounded border-slate-300"
+                  className="rounded border-[color:var(--wp-border-strong)]"
                 />
-                <span className="text-sm text-slate-600 capitalize">{key}</span>
+                <span className="text-sm text-[color:var(--wp-text-secondary)] capitalize">{key}</span>
               </label>
               <input
                 type="number"
@@ -450,7 +450,7 @@ export function CompanyAnalysisShell({
                     },
                   })
                 }
-                className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-slate-900 text-sm"
+                className="w-28 rounded-lg border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)] text-sm"
               />
               <input
                 type="number"
@@ -465,7 +465,7 @@ export function CompanyAnalysisShell({
                     },
                   })
                 }
-                className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-slate-900 text-sm"
+                className="w-28 rounded-lg border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)] text-sm"
               />
             </div>
           ))}
@@ -475,50 +475,50 @@ export function CompanyAnalysisShell({
                 type="checkbox"
                 checked={payload.risks?.[key] ?? false}
                 onChange={(e) => setRisks({ [key]: e.target.checked })}
-                className="rounded border-slate-300"
+                className="rounded border-[color:var(--wp-border-strong)]"
               />
-              <span className="text-sm text-slate-600 capitalize">{key}</span>
+              <span className="text-sm text-[color:var(--wp-text-secondary)] capitalize">{key}</span>
             </label>
           ))}
         </div>
       </section>
 
       {/* Director insurance */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Pojištění jednatele</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Pojištění jednatele</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Smrt (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Smrt (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.directorIns?.death ?? 0}
               onChange={(e) => setDirectorIns({ death: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Invalidita (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Invalidita (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.directorIns?.invalidity ?? 0}
               onChange={(e) => setDirectorIns({ invalidity: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">PN/den (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">PN/den (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.directorIns?.sick ?? 0}
               onChange={(e) => setDirectorIns({ sick: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label className="block w-full">
-            <span className="block text-sm font-medium text-slate-600 mb-1">Stupeň invalidity (1–3)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Stupeň invalidity (1–3)</span>
             <CustomDropdown
               value={String(payload.directorIns?.invalidityDegree ?? 1)}
               onChange={(id) => setDirectorIns({ invalidityDegree: Number(id) as 1 | 2 | 3 })}
@@ -530,24 +530,24 @@ export function CompanyAnalysisShell({
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Státní invalidní důchod/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Státní invalidní důchod/měs (Kč)</span>
             <input
               type="number"
               min={0}
               value={payload.directorIns?.statePensionMonthly ?? 0}
               onChange={(e) => setDirectorIns({ statePensionMonthly: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
       </section>
 
       {/* Strategy */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Investiční strategie</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Investiční strategie</h3>
         <div className="flex flex-wrap gap-4">
           <label className="block w-full min-w-[200px]">
-            <span className="block text-sm font-medium text-slate-600 mb-1">Profil</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Profil</span>
             <CustomDropdown
               value={payload.strategy?.profile ?? "balanced"}
               onChange={(id) => setStrategy({ profile: id as CompanyFaStrategy["profile"] })}
@@ -563,22 +563,22 @@ export function CompanyAnalysisShell({
               type="checkbox"
               checked={payload.strategy?.conservativeMode ?? false}
               onChange={(e) => setStrategy({ conservativeMode: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">Konzervativní režim</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">Konzervativní režim</span>
           </label>
         </div>
       </section>
 
       {/* Investments list */}
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Investice</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Investice</h3>
         <div className="space-y-3 overflow-x-auto">
           {payload.investments?.map((inv, i) => (
             <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end text-sm">
-              <span className="font-medium text-slate-700 truncate">{inv.productKey}</span>
+              <span className="font-medium text-[color:var(--wp-text-secondary)] truncate">{inv.productKey}</span>
               <label className="block min-w-0">
-                <span className="block text-xs text-slate-500">Typ</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Typ</span>
                 <CustomDropdown
                   value={inv.type}
                   onChange={(id) => setInvestment(i, { type: id as "lump" | "monthly" | "pension" })}
@@ -590,33 +590,33 @@ export function CompanyAnalysisShell({
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Částka (Kč)</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Částka (Kč)</span>
                 <input
                   type="number"
                   min={0}
                   value={inv.amount ?? 0}
                   onChange={(e) => setInvestment(i, { amount: num(e.target.value, 0) })}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Roky</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Roky</span>
                 <input
                   type="number"
                   min={0}
                   value={inv.years ?? 0}
                   onChange={(e) => setInvestment(i, { years: num(e.target.value, 0) })}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Výnos %</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Výnos %</span>
                 <input
                   type="number"
                   step={0.01}
                   value={inv.annualRate ?? 0}
                   onChange={(e) => setInvestment(i, { annualRate: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
             </div>

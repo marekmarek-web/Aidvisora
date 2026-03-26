@@ -161,7 +161,7 @@ export function ColumnHeader({
           />
         ) : (
           <span className={`truncate flex items-center gap-1 ${mondayStyle && !isFirst ? "flex-col" : ""}`}>
-            {mondayStyle && !isFirst && COLUMN_LUCIDE[column.id] && <span className="text-slate-500">{COLUMN_LUCIDE[column.id]}</span>}
+            {mondayStyle && !isFirst && COLUMN_LUCIDE[column.id] && <span className="text-[color:var(--wp-text-secondary)]">{COLUMN_LUCIDE[column.id]}</span>}
             {!mondayStyle && COLUMN_ICONS[column.id] && <span className="text-sm leading-none">{COLUMN_ICONS[column.id]}</span>}
             <span className={mondayStyle && !isFirst ? "text-[11px] mt-0.5 tracking-wider" : ""}>{column.title}</span>
             {!mondayStyle && (
@@ -243,7 +243,7 @@ export function ColumnHeader({
               ref={menuButtonRef}
               type="button"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-              className="p-0.5 rounded hover:bg-slate-100 text-slate-500 text-sm"
+              className="p-0.5 rounded hover:bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-sm"
               aria-label="Menu sloupce"
             >
               &#x22EF;
@@ -269,7 +269,7 @@ export function ColumnHeader({
                         <span className="text-[10px] opacity-70">&#x25B6;</span>
                       </button>
                       {typeMenuOpen && (
-                        <div className="pl-3 border-l border-slate-200 ml-2 my-0.5 space-y-0">
+                        <div className="pl-3 border-l border-[color:var(--wp-surface-card-border)] ml-2 my-0.5 space-y-0">
                           {CHANGEABLE_TYPES.map((t) => (
                             <button
                               key={t.type}

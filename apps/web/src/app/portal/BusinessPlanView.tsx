@@ -410,7 +410,7 @@ export function BusinessPlanView() {
   }
 
   return (
-    <div className="w-full h-full min-h-screen bg-transparent font-sans text-slate-800 flex flex-col relative pb-24 md:pb-28">
+    <div className="w-full h-full min-h-screen bg-transparent font-sans text-[color:var(--wp-text)] flex flex-col relative pb-24 md:pb-28">
       <style>{`
         .font-display { font-family: var(--font-primary, inherit), sans-serif; }
         @keyframes fillProgress { from { width: 0; } }
@@ -423,15 +423,15 @@ export function BusinessPlanView() {
       <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 md:p-8 flex flex-col relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-display font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight flex items-center gap-3">
               Můj business plán
             </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
+            <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-1">
               Vaše osobní vize, cíle a přesná cesta k jejich dosažení.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-slate-100/80 p-1 rounded-xl flex items-center border border-slate-200/60 shadow-inner w-fit">
+              <div className="bg-[color:var(--wp-surface-muted)]/80 p-1 rounded-xl flex items-center border border-[color:var(--wp-surface-card-border)]/60 shadow-inner w-fit">
                 {[
                   { id: "my" as const, label: "Můj plán", Icon: Target },
                   { id: "team" as const, label: "Tým", Icon: UsersRound },
@@ -442,15 +442,15 @@ export function BusinessPlanView() {
                     onClick={() => setViewMode(tab.id)}
                     className={`flex items-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all min-h-[44px] md:min-h-0 ${
                       viewMode === tab.id
-                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-slate-200/50"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
+                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-[color:var(--wp-surface-card-border)]/50"
+                        : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]/50"
                     }`}
                   >
                     <tab.Icon size={14} /> {tab.label}
                   </button>
                 ))}
               </div>
-              <div className="bg-slate-100/80 p-1 rounded-xl flex items-center border border-slate-200/60 shadow-inner w-fit">
+              <div className="bg-[color:var(--wp-surface-muted)]/80 p-1 rounded-xl flex items-center border border-[color:var(--wp-surface-card-border)]/60 shadow-inner w-fit">
                 {PERIOD_OPTIONS.map((t) => (
                   <button
                     key={t.id}
@@ -458,8 +458,8 @@ export function BusinessPlanView() {
                     onClick={() => setPeriodType(t.id)}
                     className={`px-4 md:px-5 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all min-h-[44px] md:min-h-0 ${
                       periodType === t.id
-                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-slate-200/50 scale-105"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
+                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-[color:var(--wp-surface-card-border)]/50 scale-105"
+                        : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]/50"
                     }`}
                   >
                     {t.label}
@@ -471,13 +471,13 @@ export function BusinessPlanView() {
 
         {showEmptyState && (
           <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm">
-            <div className="w-24 h-24 bg-slate-50 border-2 border-[color:var(--wp-surface-card-border)] rounded-full flex items-center justify-center text-slate-400 mb-6 relative">
-              <Target size={40} strokeWidth={1.5} className="text-slate-400" />
+            <div className="w-24 h-24 bg-[color:var(--wp-surface-muted)] border-2 border-[color:var(--wp-surface-card-border)] rounded-full flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-6 relative">
+              <Target size={40} strokeWidth={1.5} className="text-[color:var(--wp-text-tertiary)]" />
             </div>
-            <h2 className="text-xl md:text-2xl font-display font-bold text-slate-800 mb-3 text-center tracking-tight">
+            <h2 className="text-xl md:text-2xl font-display font-bold text-[color:var(--wp-text)] mb-3 text-center tracking-tight">
               Zatím nemáš nastavený business plán
             </h2>
-            <p className="text-slate-500 font-medium text-center max-w-md leading-relaxed mb-8">
+            <p className="text-[color:var(--wp-text-secondary)] font-medium text-center max-w-md leading-relaxed mb-8">
               Nastav svou osobní vizi, definuj cíle produkce a AI ti automaticky vypočítá potřebné aktivity a schůzky na každý den.
             </p>
             <button
@@ -492,10 +492,10 @@ export function BusinessPlanView() {
 
         {showNoTargetsState && plan && (
           <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm">
-            <h2 className="text-xl font-display font-bold text-slate-800 mb-3 text-center">
+            <h2 className="text-xl font-display font-bold text-[color:var(--wp-text)] mb-3 text-center">
               Plán pro {plan.periodLabel} existuje, ale nejsou vyplněné cíle
             </h2>
-            <p className="text-slate-500 font-medium text-center max-w-md mb-8">
+            <p className="text-[color:var(--wp-text-secondary)] font-medium text-center max-w-md mb-8">
               Doplněním cílů uvidíš plnění a doporučené akce.
             </p>
             <button
@@ -510,7 +510,7 @@ export function BusinessPlanView() {
 
         {isConfigured && viewMode === "team" && (
           <div className="space-y-6">
-            <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-xl font-display font-bold text-[color:var(--wp-text)] flex items-center gap-2">
               <UsersRound size={24} className="text-indigo-500" /> Týmový business plán – {periodLabel || periodType}
             </h2>
             {teamLoading ? (
@@ -526,20 +526,20 @@ export function BusinessPlanView() {
                     key={m.userId}
                     className="bg-[color:var(--wp-surface-card)] rounded-[24px] p-6 border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap"
                   >
-                    <div className="font-display font-bold text-slate-900 min-w-[140px]">
+                    <div className="font-display font-bold text-[color:var(--wp-text)] min-w-[140px]">
                       {m.displayName || m.userId.slice(0, 8)}
                     </div>
                     {m.periodLabel ? (
                       <>
                         <div className="flex items-center gap-4 flex-wrap text-sm">
-                          <span className="text-slate-600">
-                            Produkce: <strong className="text-slate-900">{(m.productionActual / 1000).toFixed(0)}k</strong> / {(m.productionTarget / 1000).toFixed(0)}k Kč
+                          <span className="text-[color:var(--wp-text-secondary)]">
+                            Produkce: <strong className="text-[color:var(--wp-text)]">{(m.productionActual / 1000).toFixed(0)}k</strong> / {(m.productionTarget / 1000).toFixed(0)}k Kč
                           </span>
-                          <span className="text-slate-600">
-                            Schůzky: <strong className="text-slate-900">{m.meetingsActual}</strong> / {m.meetingsTarget}
+                          <span className="text-[color:var(--wp-text-secondary)]">
+                            Schůzky: <strong className="text-[color:var(--wp-text)]">{m.meetingsActual}</strong> / {m.meetingsTarget}
                           </span>
-                          <span className="text-slate-600">
-                            Klienti: <strong className="text-slate-900">{m.newClientsActual}</strong> / {m.newClientsTarget}
+                          <span className="text-[color:var(--wp-text-secondary)]">
+                            Klienti: <strong className="text-[color:var(--wp-text)]">{m.newClientsActual}</strong> / {m.newClientsTarget}
                           </span>
                         </div>
                         <span className={`text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border shrink-0 ${
@@ -547,13 +547,13 @@ export function BusinessPlanView() {
                             ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                             : m.overallHealth === "significant_slip"
                               ? "bg-red-50 text-red-700 border-red-100"
-                              : "bg-slate-100 text-slate-600 border-slate-200"
+                              : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]"
                         }`}>
                           {m.overallHealth === "no_data" ? "Bez plánu" : (HEALTH_STATUS_LABELS as Record<string, string>)[m.overallHealth] ?? m.overallHealth}
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm text-slate-500">Nemá nastaven plán pro toto období.</span>
+                      <span className="text-sm text-[color:var(--wp-text-secondary)]">Nemá nastaven plán pro toto období.</span>
                     )}
                   </div>
                 ))}
@@ -577,7 +577,7 @@ export function BusinessPlanView() {
                         <span className="font-bold text-sm truncate pr-2">{goal.title}</span>
                         <span className={`text-xs font-medium shrink-0 ${goal.textClass}`}>{goal.progress}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-[color:var(--wp-surface-card)]/10 rounded-full overflow-hidden">
                         <div className={`h-full ${goal.colorClass} rounded-full animate-progress`} style={{ width: `${goal.progress}%` }} />
                       </div>
                     </div>
@@ -586,17 +586,17 @@ export function BusinessPlanView() {
                 <button
                   type="button"
                   onClick={openVisionModal}
-                  className="mt-8 text-xs font-bold text-indigo-300 hover:text-white transition-colors flex items-center gap-1 relative z-10 p-1 -ml-1 rounded hover:bg-white/5 min-h-[44px]"
+                  className="mt-8 text-xs font-bold text-indigo-300 hover:text-white transition-colors flex items-center gap-1 relative z-10 p-1 -ml-1 rounded hover:bg-[color:var(--wp-surface-card)]/5 min-h-[44px]"
                 >
                   <Edit2 size={12} /> Upravit vizi <ChevronRight size={14} />
                 </button>
               </div>
 
               <div className="lg:col-span-2 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm relative overflow-hidden">
-                <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-xl font-display font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                   <Target className="text-rose-500" size={24} /> Matematika úspěchu
                 </h2>
-                <p className="text-sm font-medium text-slate-500 mt-1">
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-1">
                   Co přesně musím udělat pro dosažení cíle za období: <strong>{periodLabel}</strong>
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 flex-wrap">
@@ -604,32 +604,32 @@ export function BusinessPlanView() {
                     <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-3 border border-blue-100 shadow-sm">
                       <Phone size={20} />
                     </div>
-                    <span className="text-2xl font-display font-black text-slate-900">{reverseMath.calls}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Dovolání</span>
+                    <span className="text-2xl font-display font-black text-[color:var(--wp-text)]">{reverseMath.calls}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Dovolání</span>
                   </div>
-                  <ArrowRight className="text-slate-300 hidden sm:block shrink-0" size={24} />
+                  <ArrowRight className="text-[color:var(--wp-text-tertiary)] hidden sm:block shrink-0" size={24} />
                   <div className="flex flex-col items-center text-center group flex-1 min-w-[80px]">
                     <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3 border border-indigo-100 shadow-sm">
                       <Calendar size={20} />
                     </div>
-                    <span className="text-2xl font-display font-black text-slate-900">{reverseMath.meetings}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Schůzek</span>
+                    <span className="text-2xl font-display font-black text-[color:var(--wp-text)]">{reverseMath.meetings}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Schůzek</span>
                   </div>
-                  <ArrowRight className="text-slate-300 hidden sm:block shrink-0" size={24} />
+                  <ArrowRight className="text-[color:var(--wp-text-tertiary)] hidden sm:block shrink-0" size={24} />
                   <div className="flex flex-col items-center text-center group flex-1 min-w-[80px]">
                     <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-3 border border-emerald-100 shadow-sm">
                       <FileSignature size={20} />
                     </div>
-                    <span className="text-2xl font-display font-black text-slate-900">{reverseMath.contracts}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Smluv</span>
+                    <span className="text-2xl font-display font-black text-[color:var(--wp-text)]">{reverseMath.contracts}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Smluv</span>
                   </div>
-                  <ArrowRight className="text-slate-300 hidden sm:block shrink-0" size={24} />
+                  <ArrowRight className="text-[color:var(--wp-text-tertiary)] hidden sm:block shrink-0" size={24} />
                   <div className="flex flex-col items-center text-center group flex-1 min-w-[80px]">
                     <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-400 text-white rounded-2xl flex items-center justify-center mb-3 shadow-lg shadow-amber-500/30">
                       <Trophy size={24} />
                     </div>
-                    <span className="text-2xl font-display font-black text-slate-900">{reverseMath.productionK}k</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Produkce (Kč)</span>
+                    <span className="text-2xl font-display font-black text-[color:var(--wp-text)]">{reverseMath.productionK}k</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Produkce (Kč)</span>
                   </div>
                 </div>
               </div>
@@ -647,16 +647,16 @@ export function BusinessPlanView() {
                   </span>
                 </div>
                 <div className="relative z-10">
-                  <span className="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Cílová produkce ({periodLabel})</span>
+                  <span className="block text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Cílová produkce ({periodLabel})</span>
                   <div className="flex items-baseline gap-2 mb-4 flex-wrap">
-                    <span className="text-3xl font-display font-black text-slate-900 tracking-tight">
+                    <span className="text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight">
                       {(production.actual / 1000).toFixed(0)}k
                     </span>
-                    <span className="text-sm font-semibold text-slate-400">
+                    <span className="text-sm font-semibold text-[color:var(--wp-text-tertiary)]">
                       / {(production.target / 1000).toFixed(0)}k Kč
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full animate-progress" style={{ width: `${calculateProgress(production.actual, production.target)}%` }} />
                   </div>
                 </div>
@@ -673,12 +673,12 @@ export function BusinessPlanView() {
                   </span>
                 </div>
                 <div className="relative z-10">
-                  <span className="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Počet schůzek ({periodLabel})</span>
+                  <span className="block text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Počet schůzek ({periodLabel})</span>
                   <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-display font-black text-slate-900 tracking-tight">{meetings.actual}</span>
-                    <span className="text-sm font-semibold text-slate-400">/ {meetings.target} schůzek</span>
+                    <span className="text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight">{meetings.actual}</span>
+                    <span className="text-sm font-semibold text-[color:var(--wp-text-tertiary)]">/ {meetings.target} schůzek</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                     <div className="h-full bg-indigo-500 rounded-full animate-progress" style={{ width: `${calculateProgress(meetings.actual, meetings.target)}%` }} />
                   </div>
                 </div>
@@ -695,12 +695,12 @@ export function BusinessPlanView() {
                   </span>
                 </div>
                 <div className="relative z-10">
-                  <span className="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Noví klienti ({periodLabel})</span>
+                  <span className="block text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Noví klienti ({periodLabel})</span>
                   <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-display font-black text-slate-900 tracking-tight">{newClients.actual}</span>
-                    <span className="text-sm font-semibold text-slate-400">/ {newClients.target} klientů</span>
+                    <span className="text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight">{newClients.actual}</span>
+                    <span className="text-sm font-semibold text-[color:var(--wp-text-tertiary)]">/ {newClients.target} klientů</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                     <div className="h-full bg-amber-500 rounded-full animate-progress" style={{ width: `${calculateProgress(newClients.actual, newClients.target)}%` }} />
                   </div>
                 </div>
@@ -709,22 +709,22 @@ export function BusinessPlanView() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm">
-                <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-xl font-display font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                   <BarChart3 className="text-indigo-500" size={24} /> Trychtýř aktivit
                 </h2>
-                <p className="text-sm font-medium text-slate-500 mt-1">Sledujte svou konverzi od prvního zavolání po uzavření obchodu.</p>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-1">Sledujte svou konverzi od prvního zavolání po uzavření obchodu.</p>
                 <div className="space-y-6 mt-6">
                   {activities.map((act) => {
                     const pct = calculateProgress(act.current, act.target);
                     return (
                       <div key={act.id}>
                         <div className="flex justify-between items-end mb-2">
-                          <span className="font-semibold text-slate-700 text-sm">{act.label}</span>
-                          <span className="text-sm font-black text-slate-900">{act.current} <span className="text-slate-400 font-medium">/ {act.target}</span></span>
+                          <span className="font-semibold text-[color:var(--wp-text-secondary)] text-sm">{act.label}</span>
+                          <span className="text-sm font-black text-[color:var(--wp-text)]">{act.current} <span className="text-[color:var(--wp-text-tertiary)] font-medium">/ {act.target}</span></span>
                         </div>
-                        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-3 w-full bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                           <div className={`h-full ${act.color} rounded-full animate-progress relative`} style={{ width: `${pct}%` }}>
-                            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20 rounded-full" />
+                            <div className="absolute top-0 left-0 w-full h-1/2 bg-[color:var(--wp-surface-card)]/20 rounded-full" />
                           </div>
                         </div>
                       </div>
@@ -745,26 +745,26 @@ export function BusinessPlanView() {
               </div>
 
               <div className="lg:col-span-1 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <h2 className="text-lg font-display font-bold text-slate-900 flex items-center gap-2 mb-2">
+                <h2 className="text-lg font-display font-bold text-[color:var(--wp-text)] flex items-center gap-2 mb-2">
                   <PieChart className="text-emerald-500" size={20} /> Produkční mix
                 </h2>
-                <p className="text-xs font-medium text-slate-500 mb-8">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mb-8">
                   Podle smluv v období (Kč); pokud v období není produkce, zobrazí se uložený cílový mix nebo výchozí poměr.
                 </p>
                 <div className="flex justify-center mb-8 relative">
                   {renderSVGDonut(mix)}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-black text-slate-900">100%</span>
+                    <span className="text-2xl font-black text-[color:var(--wp-text)]">100%</span>
                   </div>
                 </div>
                 <div className="space-y-3 mt-auto">
                   {mix.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg hover:bg-[color:var(--wp-surface-muted)] transition-colors">
                       <div className="flex items-center gap-2.5">
                         <span className="w-3 h-3 rounded-full shadow-sm shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                        <span className="text-sm font-bold text-[color:var(--wp-text-secondary)]">{item.label}</span>
                       </div>
-                      <span className="text-sm font-black text-slate-900">{item.pct} %</span>
+                      <span className="text-sm font-black text-[color:var(--wp-text)]">{item.pct} %</span>
                     </div>
                   ))}
                 </div>
@@ -778,7 +778,7 @@ export function BusinessPlanView() {
             <button
               type="button"
               onClick={() => setIsManualModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-800 hover:bg-slate-50 rounded-xl font-bold text-sm transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl font-bold text-sm transition-colors min-h-[44px]"
             >
               <FileSignature size={16} /> Ruční doplnění
             </button>
@@ -786,7 +786,7 @@ export function BusinessPlanView() {
           <button
             type="button"
             onClick={openParamsModal}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-bold text-sm transition-colors min-h-[44px]"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card-border)] rounded-xl font-bold text-sm transition-colors min-h-[44px]"
           >
             <Edit2 size={16} /> {isConfigured ? "Upravit parametry" : "Začít s plánováním"}
           </button>
@@ -802,55 +802,55 @@ export function BusinessPlanView() {
       </main>
 
       {isManualModalOpen && plan?.planId ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4">
           <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50 shrink-0">
-              <h2 className="text-lg font-bold text-slate-900">Ruční doplnění</h2>
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50 shrink-0">
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)]">Ruční doplnění</h2>
               <button
                 type="button"
                 onClick={() => setIsManualModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-2 rounded-md hover:bg-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] p-2 rounded-md hover:bg-[color:var(--wp-surface-card-border)] min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <X size={18} />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto custom-scroll text-sm">
-              <p className="text-slate-600">
+              <p className="text-[color:var(--wp-text-secondary)]">
                 <strong>Přičíst k automatickým číslům z CRM</strong> (schůzky, klienti, produkce v Kč). Záporná hodnota sníží výsledek.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label className="block">
-                  <span className="text-xs font-bold text-slate-500">Schůzky Δ</span>
+                  <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Schůzky Δ</span>
                   <input
                     type="number"
                     inputMode="numeric"
                     value={manualForm.meetingsDelta}
                     onChange={(e) => setManualForm((f) => ({ ...f, meetingsDelta: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-slate-200 rounded-xl"
+                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-[color:var(--wp-surface-card-border)] rounded-xl"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-slate-500">Noví klienti Δ</span>
+                  <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Noví klienti Δ</span>
                   <input
                     type="number"
                     inputMode="numeric"
                     value={manualForm.newClientsDelta}
                     onChange={(e) => setManualForm((f) => ({ ...f, newClientsDelta: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-slate-200 rounded-xl"
+                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-[color:var(--wp-surface-card-border)] rounded-xl"
                   />
                 </label>
                 <label className="block sm:col-span-1">
-                  <span className="text-xs font-bold text-slate-500">Produkce Δ (Kč)</span>
+                  <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Produkce Δ (Kč)</span>
                   <input
                     type="number"
                     inputMode="numeric"
                     value={manualForm.productionDelta}
                     onChange={(e) => setManualForm((f) => ({ ...f, productionDelta: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-slate-200 rounded-xl"
+                    className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-[color:var(--wp-surface-card-border)] rounded-xl"
                   />
                 </label>
               </div>
-              <p className="text-slate-600 pt-2">
+              <p className="text-[color:var(--wp-text-secondary)] pt-2">
                 <strong>Cílový mix</strong> (váhy) se použije v koláči, jen když v období není žádná produkce v CRM.
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -863,20 +863,20 @@ export function BusinessPlanView() {
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key} className="block">
-                    <span className="text-xs font-bold text-slate-500">{label}</span>
+                    <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">{label}</span>
                     <input
                       type="number"
                       min={0}
                       inputMode="numeric"
                       value={manualForm[key]}
                       onChange={(e) => setManualForm((f) => ({ ...f, [key]: e.target.value }))}
-                      className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-slate-200 rounded-xl"
+                      className="mt-1 w-full px-3 py-2.5 min-h-[44px] border border-[color:var(--wp-surface-card-border)] rounded-xl"
                     />
                   </label>
                 ))}
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex flex-wrap items-center justify-end gap-3 shrink-0">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex flex-wrap items-center justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={async () => {
@@ -894,14 +894,14 @@ export function BusinessPlanView() {
                   }
                 }}
                 disabled={manualSaving}
-                className="px-4 py-2.5 min-h-[44px] text-slate-600 font-bold text-sm"
+                className="px-4 py-2.5 min-h-[44px] text-[color:var(--wp-text-secondary)] font-bold text-sm"
               >
                 Vymazat
               </button>
               <button
                 type="button"
                 onClick={() => setIsManualModalOpen(false)}
-                className="px-4 py-2.5 min-h-[44px] bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm"
+                className="px-4 py-2.5 min-h-[44px] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold text-sm"
               >
                 Zrušit
               </button>
@@ -948,20 +948,20 @@ export function BusinessPlanView() {
       ) : null}
 
       {isVisionModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4">
           <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                 <Flag size={18} className="text-indigo-500" /> Osobní vize
               </h2>
-              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] p-1 rounded-md hover:bg-[color:var(--wp-surface-card-border)] min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <X size={18} />
               </button>
             </div>
             <div className="p-6 space-y-6">
               {tempVision.map((goal, idx) => (
-                <div key={goal.id} className="p-4 bg-slate-50 rounded-xl border border-[color:var(--wp-surface-card-border)]">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Cíl {idx + 1}</label>
+                <div key={goal.id} className="p-4 bg-[color:var(--wp-surface-muted)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Cíl {idx + 1}</label>
                   <input
                     type="text"
                     value={goal.title}
@@ -970,10 +970,10 @@ export function BusinessPlanView() {
                       newGoals[idx] = { ...newGoals[idx], title: e.target.value };
                       setTempVision(newGoals);
                     }}
-                    className="w-full px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-400 mb-4"
+                    className="w-full px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm font-bold outline-none focus:border-indigo-400 mb-4"
                   />
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs font-bold text-slate-500">Progres plnění</label>
+                    <label className="text-xs font-bold text-[color:var(--wp-text-secondary)]">Progres plnění</label>
                     <span className="text-sm font-black text-indigo-600">{goal.progress}%</span>
                   </div>
                   <input
@@ -990,8 +990,8 @@ export function BusinessPlanView() {
                 </div>
               ))}
             </div>
-            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex items-center justify-end gap-3">
-              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="px-4 py-2 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 min-h-[44px]">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="px-4 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold text-sm hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
                 Zrušit
               </button>
               <button type="button" onClick={saveVision} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md min-h-[44px]">
@@ -1003,20 +1003,20 @@ export function BusinessPlanView() {
       )}
 
       {isParamsModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4">
           <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                 <Target size={18} className="text-rose-500" /> Cíle pro {periodLabel}
               </h2>
-              <button type="button" onClick={() => setIsParamsModalOpen(false)} className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200 min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <button type="button" onClick={() => setIsParamsModalOpen(false)} className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] p-1 rounded-md hover:bg-[color:var(--wp-surface-card-border)] min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={saveParams} className="flex flex-col">
               <div className="p-6 space-y-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Cílová produkce (Kč)</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Cílová produkce (Kč)</label>
                   <input
                     type="number"
                     required
@@ -1024,30 +1024,30 @@ export function BusinessPlanView() {
                     step={10000}
                     value={tempParams.production}
                     onChange={(e) => setTempParams((p) => ({ ...p, production: Number(e.target.value) || 0 }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
+                    className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Počet schůzek</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Počet schůzek</label>
                     <input
                       type="number"
                       required
                       min={0}
                       value={tempParams.meetings}
                       onChange={(e) => setTempParams((p) => ({ ...p, meetings: Number(e.target.value) || 0 }))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
+                      className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Noví klienti</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Noví klienti</label>
                     <input
                       type="number"
                       required
                       min={0}
                       value={tempParams.newClients}
                       onChange={(e) => setTempParams((p) => ({ ...p, newClients: Number(e.target.value) || 0 }))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
+                      className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -1055,8 +1055,8 @@ export function BusinessPlanView() {
                   Změnou těchto hodnot dojde k automatickému přepočítání „Matematiky úspěchu“ a trychtýře aktivit.
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex items-center justify-end gap-3">
-                <button type="button" onClick={() => setIsParamsModalOpen(false)} className="px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 shadow-sm min-h-[44px]">
+              <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setIsParamsModalOpen(false)} className="px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold text-sm hover:bg-[color:var(--wp-surface-muted)] shadow-sm min-h-[44px]">
                   Zrušit
                 </button>
                 <button type="submit" disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md disabled:opacity-50 min-h-[44px]">

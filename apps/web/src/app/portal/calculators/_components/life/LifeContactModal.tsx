@@ -110,7 +110,7 @@ export function LifeContactModal({
 
       if (res.ok) {
         if (submitBtn) {
-          submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-slate-900");
+          submitBtn.classList.remove("bg-[#0a0f29]", "hover:bg-[#050814]");
           submitBtn.classList.add("bg-green-600", "hover:bg-green-700");
           submitBtn.textContent = "Odesláno úspěšně";
         }
@@ -121,7 +121,7 @@ export function LifeContactModal({
           if (submitBtn) {
             setTimeout(() => {
               submitBtn.disabled = false;
-              submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-slate-900");
+              submitBtn.classList.add("bg-[#0a0f29]", "hover:bg-[#050814]");
               submitBtn.classList.remove("bg-green-600", "hover:bg-green-700");
               submitBtn.textContent = originalText;
             }, 500);
@@ -169,7 +169,7 @@ export function LifeContactModal({
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div
           ref={contentRef}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 pointer-events-auto relative overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 pointer-events-auto relative overflow-hidden max-h-[90vh] overflow-y-auto"
           role="dialog"
           aria-modal
           aria-labelledby="life-modal-title"
@@ -177,7 +177,7 @@ export function LifeContactModal({
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-[#0a0f29] transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 z-10"
+            className="absolute top-4 right-4 text-[color:var(--wp-text-tertiary)] hover:text-[#0a0f29] transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--wp-surface-muted)] z-10"
             aria-label="Zavřít"
           >
             <svg
@@ -192,14 +192,14 @@ export function LifeContactModal({
               />
             </svg>
           </button>
-          <div className="bg-slate-50 p-6 border-b border-slate-100">
+          <div className="bg-[color:var(--wp-surface-muted)] p-6 border-b border-[color:var(--wp-surface-card-border)]">
             <h3
               id="life-modal-title"
               className="text-xl font-bold text-[#0a0f29]"
             >
               {TITLES[type]}
             </h3>
-            <p className="text-xs text-slate-500 mt-1">{SUBTITLES[type]}</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">{SUBTITLES[type]}</p>
           </div>
           <div className="p-6">
             <form
@@ -208,7 +208,7 @@ export function LifeContactModal({
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
+                <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1">
                   Jméno a příjmení <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -216,11 +216,11 @@ export function LifeContactModal({
                   name="name"
                   required
                   placeholder="Jan Novák"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
+                <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1">
                   Váš e-mail <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -228,13 +228,13 @@ export function LifeContactModal({
                   name="email"
                   required
                   placeholder="vas@email.cz"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
+                <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1">
                   Telefon{" "}
-                  <span className="text-slate-400 font-normal">
+                  <span className="text-[color:var(--wp-text-tertiary)] font-normal">
                     (nepovinné)
                   </span>
                 </label>
@@ -242,19 +242,19 @@ export function LifeContactModal({
                   type="tel"
                   name="phone"
                   placeholder="+420 777 ..."
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
+                  className="w-full pl-10 pr-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
               </div>
 
               {isCheck && (
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-1">
                     Nahrát soubor{" "}
-                    <span className="text-slate-400 font-normal">
+                    <span className="text-[color:var(--wp-text-tertiary)] font-normal">
                       (nepovinné)
                     </span>
                   </label>
-                  <label className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-indigo-300 transition-all group">
+                  <label className="border-2 border-dashed border-[color:var(--wp-border-strong)] rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-[color:var(--wp-surface-muted)] hover:border-indigo-300 transition-all group">
                     <input
                       type="file"
                       name="attachment"
@@ -263,7 +263,7 @@ export function LifeContactModal({
                       onChange={handleFileChange}
                     />
                     <svg
-                      className="w-8 h-8 text-slate-300 group-hover:text-indigo-500 mb-2 transition-colors"
+                      className="w-8 h-8 text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-500 mb-2 transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -276,7 +276,7 @@ export function LifeContactModal({
                       />
                     </svg>
                     <span
-                      className={`text-xs ${fileName ? "text-indigo-500 font-medium" : "text-slate-500"}`}
+                      className={`text-xs ${fileName ? "text-indigo-500 font-medium" : "text-[color:var(--wp-text-secondary)]"}`}
                     >
                       {fileName ?? "Klikněte pro nahrání smlouvy"}
                     </span>
@@ -287,7 +287,7 @@ export function LifeContactModal({
               <div className="pt-4">
                 <button
                   type="submit"
-                  className="w-full bg-[#0a0f29] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                  className="w-full bg-[#0a0f29] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-[#050814] transition-all flex items-center justify-center gap-2 min-h-[48px]"
                 >
                   {SUBMIT_LABELS[type]}
                   <svg
@@ -304,7 +304,7 @@ export function LifeContactModal({
                     />
                   </svg>
                 </button>
-                <p className="text-[10px] text-slate-400 text-center mt-3">
+                <p className="text-[10px] text-[color:var(--wp-text-tertiary)] text-center mt-3">
                   Odesláním souhlasíte se zpracováním osobních údajů.
                 </p>
               </div>

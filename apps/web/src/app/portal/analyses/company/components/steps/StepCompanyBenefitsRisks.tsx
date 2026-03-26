@@ -44,68 +44,68 @@ export function StepCompanyBenefitsRisks() {
 
   return (
     <div className="space-y-6">
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Benefity</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Benefity</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex items-center gap-2 min-h-[44px]">
             <input
               type="checkbox"
               checked={benefits.dps ?? false}
               onChange={(e) => setBenefits({ dps: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">DPS</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">DPS</span>
           </label>
           <label className="flex items-center gap-2 min-h-[44px]">
             <input
               type="checkbox"
               checked={benefits.dip ?? false}
               onChange={(e) => setBenefits({ dip: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">DIP</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">DIP</span>
           </label>
           <label className="flex items-center gap-2 min-h-[44px]">
             <input
               type="checkbox"
               checked={benefits.izp ?? false}
               onChange={(e) => setBenefits({ izp: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">IŽP</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">IŽP</span>
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Příspěvek na osobu/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Příspěvek na osobu/měs (Kč)</span>
             <input
               type="number"
               min={0}
               value={benefits.amount ?? 0}
               onChange={(e) => setBenefits({ amount: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Počet zaměstnanců (benefity)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Počet zaměstnanců (benefity)</span>
             <input
               type="number"
               min={0}
               value={benefits.count ?? 0}
               onChange={(e) => setBenefits({ count: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Jednatelé celkem/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Jednatelé celkem/měs (Kč)</span>
             <input
               type="number"
               min={0}
               value={benefits.directorsAmount ?? 0}
               onChange={(e) => setBenefits({ directorsAmount: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1 text-sm text-slate-600">
+        <div className="mt-4 p-3 bg-[color:var(--wp-surface-muted)] rounded-lg border border-[color:var(--wp-surface-card-border)] space-y-1 text-sm text-[color:var(--wp-text-secondary)]">
           <p><strong>Roční náklad (benefity zaměstnancům):</strong> {fmt(benefitSummary.yearlyCost)} Kč</p>
           <p><strong>Úspora oproti mzdě (hrubá ekv.):</strong> {fmt(benefitSummary.savings)} Kč/rok</p>
           <p><strong>Roční náklad jednatelé:</strong> {fmt(benefitSummary.directorsYearly)} Kč</p>
@@ -116,8 +116,8 @@ export function StepCompanyBenefitsRisks() {
         </div>
       </section>
 
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Pojištění firmy</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Pojištění firmy</h3>
         <div className="space-y-3">
           {(["property", "interruption", "liability"] as const).map((key) => (
             <div key={key} className="flex flex-wrap items-center gap-3">
@@ -133,9 +133,9 @@ export function StepCompanyBenefitsRisks() {
                       },
                     })
                   }
-                  className="rounded border-slate-300"
+                  className="rounded border-[color:var(--wp-border-strong)]"
                 />
-                <span className="text-sm text-slate-600 capitalize">{key}</span>
+                <span className="text-sm text-[color:var(--wp-text-secondary)] capitalize">{key}</span>
               </label>
               <input
                 type="number"
@@ -150,7 +150,7 @@ export function StepCompanyBenefitsRisks() {
                     },
                   })
                 }
-                className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-slate-900 text-sm"
+                className="w-28 rounded-lg border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)] text-sm"
               />
               <input
                 type="number"
@@ -165,7 +165,7 @@ export function StepCompanyBenefitsRisks() {
                     },
                   })
                 }
-                className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-slate-900 text-sm"
+                className="w-28 rounded-lg border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)] text-sm"
               />
             </div>
           ))}
@@ -175,14 +175,14 @@ export function StepCompanyBenefitsRisks() {
                 type="checkbox"
                 checked={risks[key] ?? false}
                 onChange={(e) => setRisks({ [key]: e.target.checked })}
-                className="rounded border-slate-300"
+                className="rounded border-[color:var(--wp-border-strong)]"
               />
-              <span className="text-sm text-slate-600 capitalize">{key}</span>
+              <span className="text-sm text-[color:var(--wp-text-secondary)] capitalize">{key}</span>
             </label>
           ))}
         </div>
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-slate-700">
+        <div className="mt-4 p-3 bg-[color:var(--wp-surface-muted)] rounded-lg border border-[color:var(--wp-surface-card-border)] flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
             Pokrytí rizik: {riskSummary.covered}/{riskSummary.total}
           </span>
           {riskSummary.gaps.length > 0 ? (
@@ -200,41 +200,41 @@ export function StepCompanyBenefitsRisks() {
         )}
       </section>
 
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Pojištění jednatele</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Pojištění jednatele</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Smrt (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Smrt (Kč)</span>
             <input
               type="number"
               min={0}
               value={directorIns.death ?? 0}
               onChange={(e) => setDirectorIns({ death: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Invalidita (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Invalidita (Kč)</span>
             <input
               type="number"
               min={0}
               value={directorIns.invalidity ?? 0}
               onChange={(e) => setDirectorIns({ invalidity: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">PN/den (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">PN/den (Kč)</span>
             <input
               type="number"
               min={0}
               value={directorIns.sick ?? 0}
               onChange={(e) => setDirectorIns({ sick: num(e.target.value, 0) })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
           <label className="block w-full">
-            <span className="block text-sm font-medium text-slate-600 mb-1">Stupeň invalidity (1–3)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Stupeň invalidity (1–3)</span>
             <CustomDropdown
               value={String(directorIns.invalidityDegree ?? 1)}
               onChange={(id) => setDirectorIns({ invalidityDegree: Number(id) as 1 | 2 | 3 })}
@@ -246,7 +246,7 @@ export function StepCompanyBenefitsRisks() {
             />
           </label>
           <label>
-            <span className="block text-sm font-medium text-slate-600 mb-1">Státní invalidní důchod/měs (Kč)</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Státní invalidní důchod/měs (Kč)</span>
             <input
               type="number"
               min={0}
@@ -254,29 +254,29 @@ export function StepCompanyBenefitsRisks() {
               onChange={(e) =>
                 setDirectorIns({ statePensionMonthly: num(e.target.value, 0) })
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
             />
           </label>
         </div>
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1 text-sm">
-          <p className="text-slate-600"><strong>Doporučené zajištění:</strong> smrt {fmt(Math.round(insRec.recDeath))} Kč, invalidita {fmt(Math.round(insRec.recInv))} Kč, PN {insRec.recSickPerDay} Kč/den</p>
+        <div className="mt-4 p-3 bg-[color:var(--wp-surface-muted)] rounded-lg border border-[color:var(--wp-surface-card-border)] space-y-1 text-sm">
+          <p className="text-[color:var(--wp-text-secondary)]"><strong>Doporučené zajištění:</strong> smrt {fmt(Math.round(insRec.recDeath))} Kč, invalidita {fmt(Math.round(insRec.recInv))} Kč, PN {insRec.recSickPerDay} Kč/den</p>
           {insRec.invGap.gap > 0 && (
             <p className="text-amber-700">Gap invalidita: {fmt(Math.round(insRec.invGap.gap))} Kč</p>
           )}
           {insRec.isOsvc && (
             <p className="text-amber-700">OSVČ: zvažte nemocenské pojištění.</p>
           )}
-          <p className="text-slate-500">
+          <p className="text-[color:var(--wp-text-secondary)]">
             {(insRec.belowDeath || insRec.belowInv || insRec.belowSick) && "Aktuální hodnoty pod doporučením."}
           </p>
         </div>
       </section>
 
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Investiční strategie</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Investiční strategie</h3>
         <div className="flex flex-wrap gap-4">
           <label className="block w-full min-w-[200px]">
-            <span className="block text-sm font-medium text-slate-600 mb-1">Profil</span>
+            <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Profil</span>
             <CustomDropdown
               value={strategy.profile ?? "balanced"}
               onChange={(id) => setStrategy({ profile: id as CompanyFaStrategy["profile"] })}
@@ -292,26 +292,26 @@ export function StepCompanyBenefitsRisks() {
               type="checkbox"
               checked={strategy.conservativeMode ?? false}
               onChange={(e) => setStrategy({ conservativeMode: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-[color:var(--wp-border-strong)]"
             />
-            <span className="text-sm text-slate-600">Konzervativní režim</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">Konzervativní režim</span>
           </label>
         </div>
       </section>
 
-      <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-        <h3 className="text-lg font-medium text-slate-800 mb-4">Investice</h3>
+      <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+        <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Investice</h3>
         <div className="space-y-3 overflow-x-auto">
           {investmentsWithFv.map((inv, i) => (
             <div
               key={i}
               className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end text-sm"
             >
-              <span className="font-medium text-slate-700 truncate">
+              <span className="font-medium text-[color:var(--wp-text-secondary)] truncate">
                 {inv.productKey}
               </span>
               <label className="block min-w-0">
-                <span className="block text-xs text-slate-500">Typ</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Typ</span>
                 <CustomDropdown
                   value={inv.type}
                   onChange={(id) =>
@@ -327,7 +327,7 @@ export function StepCompanyBenefitsRisks() {
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Částka (Kč)</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Částka (Kč)</span>
                 <input
                   type="number"
                   min={0}
@@ -335,11 +335,11 @@ export function StepCompanyBenefitsRisks() {
                   onChange={(e) =>
                     setInvestment(i, { amount: num(e.target.value, 0) })
                   }
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Roky</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Roky</span>
                 <input
                   type="number"
                   min={0}
@@ -347,11 +347,11 @@ export function StepCompanyBenefitsRisks() {
                   onChange={(e) =>
                     setInvestment(i, { years: num(e.target.value, 0) })
                   }
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
               <label>
-                <span className="block text-xs text-slate-500">Výnos %</span>
+                <span className="block text-xs text-[color:var(--wp-text-secondary)]">Výnos %</span>
                 <input
                   type="number"
                   step={0.01}
@@ -361,16 +361,16 @@ export function StepCompanyBenefitsRisks() {
                       annualRate: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-slate-900"
+                  className="w-full rounded border border-[color:var(--wp-border-strong)] px-2 py-1 text-[color:var(--wp-text)]"
                 />
               </label>
-              <span className="text-xs text-slate-600 self-center">
+              <span className="text-xs text-[color:var(--wp-text-secondary)] self-center">
                 FV: {fmt(inv.computed?.fv ?? 0)} Kč
               </span>
             </div>
           ))}
         </div>
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 flex flex-wrap gap-4 text-sm text-slate-600">
+        <div className="mt-4 p-3 bg-[color:var(--wp-surface-muted)] rounded-lg border border-[color:var(--wp-surface-card-border)] flex flex-wrap gap-4 text-sm text-[color:var(--wp-text-secondary)]">
           <span><strong>Jednorázově celkem:</strong> {fmt(totalLump)} Kč</span>
           <span><strong>Měsíčně celkem:</strong> {fmt(totalMonthly)} Kč</span>
           <span><strong>Očekávaná FV celkem:</strong> {fmt(Math.round(totalFV))} Kč</span>

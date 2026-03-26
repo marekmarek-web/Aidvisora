@@ -7,7 +7,7 @@ const PortalBoardView = dynamic(
   () => import("../PortalBoardView").then((m) => m.PortalBoardView),
   {
     loading: () => (
-      <div className="flex flex-1 items-center justify-center p-8 text-slate-500 text-sm">Načítání boardu…</div>
+      <div className="flex flex-1 items-center justify-center p-8 text-[color:var(--wp-text-secondary)] text-sm">Načítání boardu…</div>
     ),
   },
 );

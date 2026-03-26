@@ -23,14 +23,14 @@ const CATEGORY_BADGE: Record<
   deal: { label: "Obchod", className: "bg-emerald-100 text-emerald-800" },
   analysis: { label: "Analýza", className: "bg-violet-100 text-violet-800" },
   contract: { label: "Smlouva", className: "bg-sky-100 text-sky-800" },
-  document: { label: "Dokument", className: "bg-slate-100 text-slate-700" },
+  document: { label: "Dokument", className: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]" },
   service: { label: "Servis", className: "bg-rose-100 text-rose-800" },
 };
 
 export function ClientTimelineItem({ event }: { event: ClientTimelineEvent }) {
   const badge = CATEGORY_BADGE[event.category] ?? {
     label: event.category,
-    className: "bg-slate-100 text-slate-600",
+    className: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
   };
   const content = (
     <div className="min-w-0 flex-1">
@@ -41,16 +41,16 @@ export function ClientTimelineItem({ event }: { event: ClientTimelineEvent }) {
           {badge.label}
         </span>
         {event.isHouseholdEvent && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
             Domácnost
           </span>
         )}
       </div>
-      <p className="text-sm font-medium text-slate-800">{event.title}</p>
+      <p className="text-sm font-medium text-[color:var(--wp-text)]">{event.title}</p>
       {event.summary && (
-        <p className="text-xs text-slate-500 mt-0.5">{event.summary}</p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">{event.summary}</p>
       )}
-      <p className="text-xs text-slate-400 mt-1">
+      <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-1">
         {formatTimestamp(event.timestamp)}
       </p>
       {event.link && (
@@ -70,7 +70,7 @@ export function ClientTimelineItem({ event }: { event: ClientTimelineEvent }) {
       {event.link?.path ? (
         <Link
           href={event.link.path}
-          className="min-w-0 flex-1 block rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50/50 p-2 -m-2 transition-colors min-h-[44px] flex items-start"
+          className="min-w-0 flex-1 block rounded-lg border border-transparent hover:border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)]/50 p-2 -m-2 transition-colors min-h-[44px] flex items-start"
         >
           {content}
         </Link>

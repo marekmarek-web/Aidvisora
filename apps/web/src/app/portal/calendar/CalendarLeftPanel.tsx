@@ -46,7 +46,7 @@ function QuickNotes() {
   if (!loaded) return null;
   return (
     <>
-      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+      <h4 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-3">
         Rychlé poznámky
       </h4>
       <textarea
@@ -54,7 +54,7 @@ function QuickNotes() {
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder="Poznámky k dnešnímu dni…"
-        className="w-full min-h-[120px] p-3 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 resize-y"
+        className="w-full min-h-[120px] p-3 text-sm rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 resize-y"
         rows={5}
       />
     </>
@@ -87,10 +87,10 @@ export function CalendarLeftPanel({
   const monthYear = `${MONTH_NAMES[baseDate.getMonth()]} ${baseDate.getFullYear()}`;
 
   return (
-    <aside className="w-56 shrink-0 bg-white rounded-xl lg:rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden hidden lg:flex">
-      <div className="p-4 border-b border-slate-100">
+    <aside className="w-56 shrink-0 bg-[color:var(--wp-surface-card)] rounded-xl lg:rounded-lg shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden hidden lg:flex">
+      <div className="p-4 border-b border-[color:var(--wp-surface-card-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-slate-800 text-sm">{monthYear}</h3>
+          <h3 className="font-bold text-[color:var(--wp-text)] text-sm">{monthYear}</h3>
           <button
             type="button"
             onClick={onToday}
@@ -101,7 +101,7 @@ export function CalendarLeftPanel({
         </div>
         <div className="grid grid-cols-7 mb-2">
           {["PO", "ÚT", "ST", "ČT", "PÁ", "SO", "NE"].map((d, i) => (
-            <div key={i} className="text-[10px] font-black text-slate-400 text-center">
+            <div key={i} className="text-[10px] font-black text-[color:var(--wp-text-tertiary)] text-center">
               {d}
             </div>
           ))}
@@ -120,7 +120,7 @@ export function CalendarLeftPanel({
                 className={`h-7 flex items-center justify-center text-xs rounded-full cursor-pointer
                   ${isToday ? "bg-indigo-600 text-white font-bold shadow-md" : ""}
                   ${isSelected && !isToday ? "bg-indigo-100 text-indigo-700 font-bold" : ""}
-                  ${!isToday && !isSelected ? "text-slate-600 hover:bg-slate-100" : ""}
+                  ${!isToday && !isSelected ? "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]" : ""}
                 `}
               >
                 {day}

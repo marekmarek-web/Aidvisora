@@ -55,42 +55,42 @@ export function LifeResultsPanel({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-[20px] border border-slate-800 bg-[#0d1f4e] p-6 text-white shadow-[0_16px_48px_rgba(13,31,78,0.14),0_4px_12px_rgba(13,31,78,0.06)] md:p-7">
+    <div className="relative overflow-hidden rounded-[20px] border border-white/10 bg-[#0d1f4e] p-6 text-white shadow-[0_16px_48px_rgba(13,31,78,0.14),0_4px_12px_rgba(13,31,78,0.06)] md:p-7">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -ml-10 -mb-10" />
       </div>
 
-      <h3 className="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-300">
+      <h3 className="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--wp-text-tertiary)]">
         Doporučené min. pojistné částky
-        <span className="rounded bg-white/10 px-2 py-1 text-xs font-bold normal-case text-slate-100">
+        <span className="rounded bg-[color:var(--wp-surface-card)]/10 px-2 py-1 text-xs font-bold normal-case text-white/90">
           Klesající do 65 let
         </span>
       </h3>
 
-      <div className="relative z-10 space-y-0 rounded-xl border border-white/10 bg-white/5 p-1">
+      <div className="relative z-10 space-y-0 rounded-xl border border-white/10 bg-[color:var(--wp-surface-card)]/5 p-1">
         {rows.map((row) => {
           const Icon = row.icon;
           return (
             <div
               key={row.label}
-              className={`flex items-center justify-between rounded-lg border-b border-white/10 px-3 py-3 ${row.highlight ? "my-1 border-none bg-white/10" : ""}`}
+              className={`flex items-center justify-between rounded-lg border-b border-white/10 px-3 py-3 ${row.highlight ? "my-1 border-none bg-[color:var(--wp-surface-card)]/10" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-2 rounded-lg ${row.highlight ? "bg-emerald-500/20" : "bg-white/5"}`}
+                  className={`p-2 rounded-lg ${row.highlight ? "bg-emerald-500/20" : "bg-[color:var(--wp-surface-card)]/5"}`}
                 >
                   <Icon
-                    className={`w-5 h-5 ${row.highlight ? "text-emerald-300" : "text-slate-300"}`}
+                    className={`w-5 h-5 ${row.highlight ? "text-emerald-300" : "text-[color:var(--wp-text-tertiary)]"}`}
                   />
                 </div>
                 <div>
                   <div
-                  className={`text-[13px] sm:text-sm font-bold ${row.highlight ? "text-white" : "text-slate-200"}`}
+                  className={`text-[13px] sm:text-sm font-bold ${row.highlight ? "text-white" : "text-white/75"}`}
                   >
                     {row.label}
                   </div>
-                  <div className="text-xs text-slate-400">{row.subtext}</div>
+                  <div className="text-xs text-[color:var(--wp-text-tertiary)]">{row.subtext}</div>
                 </div>
               </div>
               <div className="text-right pl-2">
@@ -99,7 +99,7 @@ export function LifeResultsPanel({
                 >
                   {formatCurrency(row.value)}
                 </div>
-                <div className="text-xs text-slate-400 uppercase font-bold">
+                <div className="text-xs text-[color:var(--wp-text-tertiary)] uppercase font-bold">
                   {row.unit}
                 </div>
               </div>
@@ -110,10 +110,10 @@ export function LifeResultsPanel({
         <div className="mt-4 border-t border-white/10 pt-4">
           <div className="flex justify-between items-center mb-1">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/5 rounded-lg">
+              <div className="p-2 bg-[color:var(--wp-surface-card)]/5 rounded-lg">
                 <Zap className="w-4 h-4 text-sky-300" />
               </div>
-              <span className="text-slate-300 text-sm font-medium">
+              <span className="text-[color:var(--wp-text-tertiary)] text-sm font-medium">
                 Trvalé následky
               </span>
             </div>
@@ -122,34 +122,34 @@ export function LifeResultsPanel({
             </div>
           </div>
           <div className="flex justify-between items-center pl-11 flex-wrap gap-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+            <span className="text-[10px] text-[color:var(--wp-text-tertiary)] uppercase font-bold tracking-wider">
               Lineární plnění
             </span>
-            <span className="text-[10px] text-sky-200 font-bold bg-white/10 px-2 py-0.5 rounded">
+            <span className="text-[10px] text-sky-200 font-bold bg-[color:var(--wp-surface-card)]/10 px-2 py-0.5 rounded">
               Až 10násobná progrese ({formatCurrency(result.tnProgression)})
             </span>
           </div>
         </div>
 
-        <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-4 relative overflow-hidden transition-colors">
+        <div className="mt-4 bg-[color:var(--wp-surface-card)]/5 border border-white/10 rounded-xl p-4 relative overflow-hidden transition-colors">
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-xl -mr-5 -mt-5" />
           <div className="flex items-start gap-4 relative z-10">
-            <div className="bg-white p-2 rounded-lg shrink-0 w-12 h-12 flex items-center justify-center">
-              <Scale className="w-6 h-6 text-slate-900" />
+            <div className="bg-[color:var(--wp-surface-card)] p-2 rounded-lg shrink-0 w-12 h-12 flex items-center justify-center">
+              <Scale className="w-6 h-6 text-[color:var(--wp-text)]" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-white font-bold text-sm mb-1">
                 Právní ochrana EUCS
               </div>
-              <p className="text-xs text-slate-300 leading-snug mb-2 pr-1">
+              <p className="text-xs text-[color:var(--wp-text-tertiary)] leading-snug mb-2 pr-1">
                 Zajistí, že vám pojišťovna vyplatí{" "}
                 <strong>maximální plnění</strong>. Nutnost ke smlouvě.
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-sky-200">
-                <span className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
+                <span className="bg-[color:var(--wp-surface-card)]/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
                   {EUCS_LABELS.perPerson}
                 </span>
-                <span className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
+                <span className="bg-[color:var(--wp-surface-card)]/10 px-1.5 py-0.5 rounded border border-white/20 whitespace-nowrap">
                   {EUCS_LABELS.perFamily}
                 </span>
               </div>
@@ -176,10 +176,10 @@ export function LifeResultsPanel({
             <button
               type="button"
               onClick={onCtaCheck}
-              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1f4e]"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/20 bg-[color:var(--wp-surface-card)]/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[color:var(--wp-surface-card)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1f4e]"
             >
               <svg
-                className="w-4 h-4 text-slate-400"
+                className="w-4 h-4 text-[color:var(--wp-text-tertiary)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -194,7 +194,7 @@ export function LifeResultsPanel({
               Mám smlouvu ke kontrole
             </button>
           )}
-          <p className="text-xs text-slate-500 mt-2 text-center leading-relaxed opacity-60">
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-2 text-center leading-relaxed opacity-60">
             Kliknutím získáte nezávaznou konzultaci.
           </p>
         </div>

@@ -148,9 +148,9 @@ const MOCK_LICENSES = [
   { name: "Vázaný zástupce – Investice", status: "expiring" as const, expiry: "15. 04. 2026" },
 ];
 
-const labelClass = "block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1";
-const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 placeholder:text-slate-400 placeholder:font-medium min-h-[44px]";
-const iconInputClass = "w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-slate-800 min-h-[44px]";
+const labelClass = "block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1";
+const inputClass = "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] placeholder:font-medium min-h-[44px]";
+const iconInputClass = "w-full pl-11 pr-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] min-h-[44px]";
 
 export function SetupView({ initial }: { initial: SetupInitial }) {
   const searchParams = useSearchParams();
@@ -678,21 +678,21 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const initials = [firstName, lastName].map((s) => s?.[0]).filter(Boolean).join("").toUpperCase() || "?";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-12 md:pb-20">
+    <div className="min-h-screen bg-[#f8fafc] text-[color:var(--wp-text)] pb-12 md:pb-20">
       <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
       <main className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Nastavení účtu</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-[color:var(--wp-text)] tracking-tight">Nastavení účtu</h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative max-w-xl w-full sm:w-64 md:w-80">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Hledat v nastavení..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-slate-700 min-h-[44px]"
+                className="w-full pl-10 pr-4 py-2.5 bg-[color:var(--wp-surface-muted)]/80 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-[color:var(--wp-text-secondary)] min-h-[44px]"
               />
             </div>
             <CreateActionButton
@@ -706,7 +706,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 sm:gap-8 border-b border-slate-200 px-2 overflow-x-auto hide-scrollbar mb-8">
+        <div className="flex items-center gap-4 sm:gap-8 border-b border-[color:var(--wp-surface-card-border)] px-2 overflow-x-auto hide-scrollbar mb-8">
           {TABS.map((tab) => {
             const visible = isTabVisible(tab.id);
             if (!visible) return null;
@@ -716,7 +716,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`pb-4 pt-1 text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap min-h-[44px] flex items-end
-                  ${activeTab === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-800"}
+                  ${activeTab === tab.id ? "text-indigo-600" : "text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"}
                 `}
               >
                 {tab.label}
@@ -732,10 +732,10 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {activeTab === "osobni" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-300">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 sm:px-8 py-5 border-b border-slate-50">
-                  <h2 className="text-lg font-black text-slate-900">Základní informace a fakturace</h2>
-                  <p className="text-sm text-slate-500 font-medium mt-1">Tyto údaje slouží pro interní účely a vystavování faktur.</p>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+                <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h2 className="text-lg font-black text-[color:var(--wp-text)]">Základní informace a fakturace</h2>
+                  <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium mt-1">Tyto údaje slouží pro interní účely a vystavování faktur.</p>
                 </div>
                 <div className="p-6 sm:p-8 space-y-6">
                   {profileError && (
@@ -758,30 +758,30 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                     <div>
                       <label className={labelClass}>E-mail (pro přihlášení)</label>
                       <div className="relative">
-                        <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <input type="email" value={initial.email} readOnly className={`${iconInputClass} bg-slate-100 text-slate-500 cursor-not-allowed`} />
+                        <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
+                        <input type="email" value={initial.email} readOnly className={`${iconInputClass} bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] cursor-not-allowed`} />
                       </div>
                     </div>
                     <div>
                       <label className={labelClass}>Telefon</label>
                       <div className="relative">
-                        <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                         <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={iconInputClass} autoComplete="tel" />
                       </div>
                     </div>
                   </div>
-                  <div className="pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="pt-6 border-t border-[color:var(--wp-surface-card-border)] grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className={labelClass}>IČO</label>
                       <div className="relative">
-                        <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                         <input type="text" value={ico} onChange={(e) => setIco(e.target.value)} className={iconInputClass} placeholder="12345678" />
                       </div>
                     </div>
                     <div>
                       <label className={labelClass}>Sídlo / Korespondenční adresa</label>
                       <div className="relative">
-                        <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
                         <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className={iconInputClass} placeholder="Václavské nám. 1, Praha 1" />
                       </div>
                     </div>
@@ -821,22 +821,22 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                     transform: rotate(45deg);
                   }
                 `}</style>
-                <div className="bg-white rounded-[32px] shadow-2xl shadow-indigo-900/5 border border-slate-100 overflow-hidden relative">
+                <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] shadow-2xl shadow-indigo-900/5 border border-[color:var(--wp-surface-card-border)] overflow-hidden relative">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 opacity-50 rounded-full blur-3xl pointer-events-none" aria-hidden />
-                  <div className="px-10 py-8 border-b border-slate-50 relative z-10">
+                  <div className="px-10 py-8 border-b border-[color:var(--wp-surface-card-border)]/50 relative z-10">
                     <div className="flex items-center gap-4 mb-2">
                       <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
                         <Settings2 size={24} />
                       </div>
-                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">Rychlé tlačítko „+ Nový“</h2>
+                      <h2 className="text-2xl font-black text-[color:var(--wp-text)] tracking-tight">Rychlé tlačítko „+ Nový“</h2>
                     </div>
-                    <p className="text-sm font-medium text-slate-500 pl-16">
+                    <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] pl-16">
                       Vyberte položky a pořadí v menu „+ Nový“ v horní liště a v postranním panelu (ikona blesku). Skryté položky se nezobrazí.
                     </p>
                   </div>
                   <div className="p-6 md:p-10 space-y-1 relative z-10 max-h-[60vh] overflow-y-auto">
                     {quickLoading ? (
-                      <p className="text-sm text-slate-500 py-4">Načítám…</p>
+                      <p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám…</p>
                     ) : (
                       <>
                         {quickLoadError && (
@@ -853,7 +853,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                               key={id}
                               className={`flex items-center gap-6 p-4 rounded-2xl transition-colors group ${
                                 visible
-                                  ? "bg-slate-50 border border-slate-100 hover:border-indigo-100"
+                                  ? "bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-indigo-100"
                                   : "bg-transparent border border-transparent opacity-60"
                               }`}
                             >
@@ -868,7 +868,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                     }
                                   }}
                                   disabled={index === 0}
-                                  className="p-1 rounded-md text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors"
+                                  className="p-1 rounded-md text-[color:var(--wp-text-secondary)] hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[color:var(--wp-text-secondary)] transition-colors"
                                   aria-label="Posunout nahoru"
                                 >
                                   <ChevronUp size={18} strokeWidth={3} />
@@ -883,7 +883,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                     }
                                   }}
                                   disabled={index === quickOrder.length - 1}
-                                  className="p-1 rounded-md text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors"
+                                  className="p-1 rounded-md text-[color:var(--wp-text-secondary)] hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[color:var(--wp-text-secondary)] transition-colors"
                                   aria-label="Posunout dolů"
                                 >
                                   <ChevronDown size={18} strokeWidth={3} />
@@ -899,7 +899,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 />
                                 <span
                                   className={`text-base transition-colors ${
-                                    visible ? "font-bold text-slate-800" : "font-medium text-slate-500 line-through"
+                                    visible ? "font-bold text-[color:var(--wp-text)]" : "font-medium text-[color:var(--wp-text-secondary)] line-through"
                                   }`}
                                 >
                                   {item.label}
@@ -911,7 +911,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       </>
                     )}
                   </div>
-                  <div className="px-10 py-6 bg-slate-50/80 border-t border-slate-100 relative z-10">
+                  <div className="px-10 py-6 bg-[color:var(--wp-surface-muted)]/80 border-t border-[color:var(--wp-surface-card-border)] relative z-10">
                     <CreateActionButton
                       type="button"
                       onClick={handleSaveQuickActions}
@@ -927,9 +927,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
             </div>
 
             <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-50">
-                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
                     <Key size={18} className="text-indigo-500" /> Zabezpečení
                   </h2>
                 </div>
@@ -944,7 +944,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   </div>
                   {passwordError && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg border border-rose-200" role="alert">{passwordError}</p>}
                   {passwordSuccess && <p className="text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200" role="status">Heslo bylo změněno.</p>}
-                  <button type="submit" disabled={passwordSaving} className="w-full px-5 py-3 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px] disabled:opacity-60">
+                  <button type="submit" disabled={passwordSaving} className="w-full px-5 py-3 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px] disabled:opacity-60">
                     {passwordSaving ? "Ukládám…" : "Aktualizovat heslo"}
                   </button>
                 </form>
@@ -954,8 +954,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <Shield size={20} className="text-white" />
                 </div>
                 <h3 className="font-bold text-lg mb-2">Dvoufázové ověření</h3>
-                <p className="text-sm font-medium text-slate-300 leading-relaxed mb-5">Zvyšte bezpečnost svého účtu pomocí aplikace Authenticator.</p>
-                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full bg-white text-slate-900 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
+                <p className="text-sm font-medium text-[color:var(--wp-text-tertiary)] leading-relaxed mb-5">Zvyšte bezpečnost svého účtu pomocí aplikace Authenticator.</p>
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
                   Aktivovat 2FA
                 </button>
               </div>
@@ -967,7 +967,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {activeTab === "profil" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-300">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 sm:p-8">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-6 sm:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
                   <div className="relative group flex-shrink-0 mx-auto md:mx-0">
                     <label className="block cursor-pointer">
@@ -978,7 +978,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                           initials
                         )}
                       </div>
-                      <div className="absolute inset-0 bg-slate-900/40 rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <div className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <Camera size={28} className="text-white mb-1" />
                         <span className="text-[10px] font-black uppercase text-white">Nahrát fotku</span>
                       </div>
@@ -991,7 +991,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       />
                     </label>
                     {advisorAvatarUploading && (
-                      <p className="text-xs text-slate-500 mt-2 text-center">Nahrávám…</p>
+                      <p className="text-xs text-[color:var(--wp-text-secondary)] mt-2 text-center">Nahrávám…</p>
                     )}
                     {advisorAvatarError && (
                       <p className="text-xs text-red-600 mt-2 text-center max-w-[140px]">{advisorAvatarError}</p>
@@ -1025,52 +1025,52 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <LinkIcon className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10" aria-hidden />
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-4 flex items-center gap-2">Váš rezervační odkaz</h3>
                 <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">Pošlete tento odkaz klientům pro naplánování schůzky.</p>
-                <div className="bg-white/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4 cursor-pointer hover:bg-white/20 transition-colors min-h-[44px]" onClick={handleCopyLink} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && handleCopyLink()}>
+                <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4 cursor-pointer hover:bg-[color:var(--wp-surface-card)]/20 transition-colors min-h-[44px]" onClick={handleCopyLink} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && handleCopyLink()}>
                   <span className="text-xs font-medium truncate opacity-90">
                     {bookingLink || "Načítám odkaz…"}
                   </span>
-                  <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">{copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}</div>
+                  <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center flex-shrink-0">{copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}</div>
                 </div>
                 <Link href="/portal/calendar" className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px] inline-flex items-center">
                   Nastavit dostupnost <ChevronRight size={14} />
                 </Link>
               </div>
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-50">
-                  <h3 className="font-black text-slate-900">Licence a Oprávnění ČNB</h3>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h3 className="font-black text-[color:var(--wp-text)]">Licence a Oprávnění ČNB</h3>
                 </div>
                 <div className="p-4 space-y-3">
                   {MOCK_LICENSES.map((lic, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+                    <div key={idx} className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3">
                       <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
                         {lic.status === "valid" ? <CheckCircle size={12} strokeWidth={3} /> : <AlertCircle size={12} strokeWidth={3} />}
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{lic.name}</h4>
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-slate-400" : "text-amber-600"}`}>Platnost do: {lic.expiry}</p>
+                        <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}>Platnost do: {lic.expiry}</p>
                       </div>
                     </div>
                   ))}
-                  <a href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
+                  <a href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
                     Vyhledat v registru ČNB
                   </a>
                 </div>
               </div>
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden mt-6">
-                <div className="px-6 py-5 border-b border-slate-50">
-                  <h3 className="font-black text-slate-900">PDF report z finanční analýzy</h3>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Pro záhlaví a zápatí</p>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden mt-6">
+                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h3 className="font-black text-[color:var(--wp-text)]">PDF report z finanční analýzy</h3>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Pro záhlaví a zápatí</p>
                 </div>
                 <div className="p-4 space-y-3">
-                  <p className="text-xs text-slate-600 mb-3">Do záhlaví a zápatí PDF se použijí: jméno a příjmení z vašeho profilu, e-mail z přihlášení a níže vyplněné pole.</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3">Do záhlaví a zápatí PDF se použijí: jméno a příjmení z vašeho profilu, e-mail z přihlášení a níže vyplněné pole.</p>
                   <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-400">Jméno, příjmení</span>
-                      <span className="font-medium text-slate-700">{[firstName, lastName].filter(Boolean).join(" ") || "—"}</span>
+                    <div className="flex justify-between py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                      <span className="text-[color:var(--wp-text-tertiary)]">Jméno, příjmení</span>
+                      <span className="font-medium text-[color:var(--wp-text-secondary)]">{[firstName, lastName].filter(Boolean).join(" ") || "—"}</span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-400">E-mail</span>
-                      <span className="font-medium text-slate-700">{initial.email || "—"}</span>
+                    <div className="flex justify-between py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                      <span className="text-[color:var(--wp-text-tertiary)]">E-mail</span>
+                      <span className="font-medium text-[color:var(--wp-text-secondary)]">{initial.email || "—"}</span>
                     </div>
                   </div>
                   <div>
@@ -1107,18 +1107,18 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
 
         {/* Tab: Tým */}
         {activeTab === "tym" && (
-          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-300">
-            <div className="px-6 sm:px-8 py-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden animate-in fade-in duration-300">
+            <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-slate-900 mb-1">Správa Týmu</h2>
-                <p className="text-sm font-medium text-slate-500">Spolupracujte na klientech se svými asistenty nebo kolegy.</p>
+                <h2 className="text-xl font-black text-[color:var(--wp-text)] mb-1">Správa Týmu</h2>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Spolupracujte na klientech se svými asistenty nebo kolegy.</p>
               </div>
               <Link href="/portal/team-overview" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
                 <Users size={16} /> Otevřít správu týmu
               </Link>
             </div>
-            <div className="px-6 sm:px-8 py-4 bg-slate-50 border-b border-slate-100">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Pozvat nového člena</p>
+            <div className="px-6 sm:px-8 py-4 bg-[color:var(--wp-surface-muted)] border-b border-[color:var(--wp-surface-card-border)]">
+              <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3">Pozvat nového člena</p>
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -1140,7 +1140,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="email@kolegy.cz"
-                  className="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+                  className="flex-1 min-w-[200px] px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
                   required
                 />
                 <CustomDropdown
@@ -1165,19 +1165,19 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
             </div>
             <div className="overflow-x-auto">
               {teamMembers.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="p-8 text-center text-[color:var(--wp-text-secondary)]">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-[color:var(--wp-text-tertiary)]" />
                   <p className="font-medium">Zatím žádní další členové.</p>
                   <p className="text-sm mt-1">Pozvěte prvního člena tlačítkem výše.</p>
                 </div>
               ) : (
                 <table className="w-full text-left min-w-[500px]">
                   <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Uživatel</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden md:table-cell">Připojení</th>
-                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Akce</th>
+                    <tr className="bg-[color:var(--wp-surface-muted)]/50 border-b border-[color:var(--wp-surface-card-border)]">
+                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Uživatel</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Role</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hidden md:table-cell">Připojení</th>
+                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] text-right">Akce</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1187,27 +1187,27 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       const displayEmail = isCurrentUser ? initial.email : "—";
                       const initials = isCurrentUser && initial.fullName ? [initial.fullName.trim().split(/\s+/)[0]?.[0], initial.fullName.trim().split(/\s+/).pop()?.[0]].filter(Boolean).join("").toUpperCase() : (displayEmail.slice(0, 2).toUpperCase() || "?");
                       return (
-                        <tr key={m.membershipId} className="border-b border-slate-50">
+                        <tr key={m.membershipId} className="border-b border-[color:var(--wp-surface-card-border)]/50">
                           <td className="px-6 sm:px-8 py-5">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0">
                                 {initials}
                               </div>
                               <div>
-                                <div className="font-bold text-slate-900">{displayName}</div>
-                                <div className="text-xs font-medium text-slate-500">{displayEmail}</div>
+                                <div className="font-bold text-[color:var(--wp-text)]">{displayName}</div>
+                                <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{displayEmail}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg ${m.roleName === "Admin" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>
+                            <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg ${m.roleName === "Admin" ? "bg-slate-800 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"}`}>
                               {m.roleName === "Admin" ? "Vlastník" : m.roleName}
                             </span>
                           </td>
-                          <td className="px-6 py-5 text-sm font-bold text-slate-500 hidden md:table-cell">
+                          <td className="px-6 py-5 text-sm font-bold text-[color:var(--wp-text-secondary)] hidden md:table-cell">
                             {new Date(m.joinedAt).toLocaleDateString("cs-CZ")}
                           </td>
-                          <td className="px-6 sm:px-8 py-5 text-right text-slate-300">{isCurrentUser ? "—" : <button type="button" className="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline">Odebrat</button>}</td>
+                          <td className="px-6 sm:px-8 py-5 text-right text-[color:var(--wp-text-tertiary)]">{isCurrentUser ? "—" : <button type="button" className="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline">Odebrat</button>}</td>
                         </tr>
                       );
                     })}
@@ -1223,18 +1223,18 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-300">
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-gradient-to-br from-aidv-create to-slate-800 rounded-[24px] p-8 text-white shadow-xl">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Aktuální tarif</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-tertiary)] mb-2">Aktuální tarif</h3>
                 <div className="flex flex-col gap-1 mb-6">
                   <span className="text-3xl sm:text-4xl font-black tracking-tight leading-tight break-words">
                     {initial.billing?.plan ?? "Zatím bez aktivního plánu"}
                   </span>
                   {initial.billing?.subscriptionStatus ? (
-                    <span className="text-sm font-bold text-slate-400">
+                    <span className="text-sm font-bold text-[color:var(--wp-text-tertiary)]">
                       Stav: {initial.billing.subscriptionStatus}
                     </span>
                   ) : null}
                   {initial.billing?.currentPeriodEnd ? (
-                    <span className="text-sm font-medium text-slate-400">
+                    <span className="text-sm font-medium text-[color:var(--wp-text-tertiary)]">
                       Období do{" "}
                       {new Date(initial.billing.currentPeriodEnd).toLocaleDateString("cs-CZ", {
                         day: "numeric",
@@ -1245,12 +1245,12 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   ) : null}
                 </div>
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Neomezení klienti</div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> AI Asistent</div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Týmová spolupráce</div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-300"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Finanční analýzy</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--wp-text-tertiary)]"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Neomezení klienti</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--wp-text-tertiary)]"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> AI Asistent</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--wp-text-tertiary)]"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Týmová spolupráce</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--wp-text-tertiary)]"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Finanční analýzy</div>
                 </div>
-                <div className="text-xs text-slate-500 mb-4 space-y-1">
+                <div className="text-xs text-[color:var(--wp-text-secondary)] mb-4 space-y-1">
                   <p>Přehled cen a tarifů na webu: Starter / Pro / Team.</p>
                   <p>
                     Více na{" "}
@@ -1263,36 +1263,36 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   href="https://www.aidvisora.cz"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors min-h-[44px] inline-flex items-center justify-center"
+                  className="w-full py-3 bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[44px] inline-flex items-center justify-center"
                 >
                   Porovnat tarify na webu
                 </a>
               </div>
             </div>
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-6 sm:p-8">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-6 sm:p-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <CreditCard size={22} className="text-slate-400 shrink-0" />
-                  <h2 className="text-lg font-black text-slate-900">Předplatné a platby</h2>
+                  <CreditCard size={22} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                  <h2 className="text-lg font-black text-[color:var(--wp-text)]">Předplatné a platby</h2>
                 </div>
-                <p className="text-sm text-slate-500 mb-6 max-w-xl">
+                <p className="text-sm text-[color:var(--wp-text-secondary)] mb-6 max-w-xl">
                   Zde zahájíte předplatné přes Stripe Checkout nebo otevřete Customer Portal (karty, faktury, zrušení).
                 </p>
                 {initial.billing ? (
                   <WorkspaceStripeBilling billing={initial.billing} billingContext="setup" showTitle={false} />
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[color:var(--wp-text-secondary)]">
                     Správa předplatného vyžaduje Stripe na serveru (STRIPE_SECRET_KEY + STRIPE_PRICE_*_* nebo STRIPE_PRICE_ID) a migraci{" "}
-                    <code className="text-xs bg-slate-100 px-1 rounded">add_stripe_workspace_billing.sql</code>.
+                    <code className="text-xs bg-[color:var(--wp-surface-muted)] px-1 rounded">add_stripe_workspace_billing.sql</code>.
                   </p>
                 )}
               </div>
-              <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden h-full">
-                <div className="px-6 sm:px-8 py-6 border-b border-slate-50">
-                  <h2 className="text-lg font-black text-slate-900">Historie plateb</h2>
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden h-full">
+                <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50">
+                  <h2 className="text-lg font-black text-[color:var(--wp-text)]">Historie plateb</h2>
                 </div>
                 <div className="p-4 sm:p-6">
-                  <p className="text-sm text-slate-500 text-center py-4">
+                  <p className="text-sm text-[color:var(--wp-text-secondary)] text-center py-4">
                     Detail faktur a historii najdete ve Stripe Customer Portalu (tlačítko „Spravovat platby a faktury“ výše).
                   </p>
                 </div>
@@ -1304,10 +1304,10 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {/* Tab: Notifikace */}
         {activeTab === "notifikace" && (
           <div className="max-w-3xl space-y-6 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 sm:px-8 py-6 border-b border-slate-50 flex items-center gap-3">
+            <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-3">
                 <Mail size={20} className="text-indigo-500" />
-                <h2 className="text-lg font-black text-slate-900">E-mailová upozornění</h2>
+                <h2 className="text-lg font-black text-[color:var(--wp-text)]">E-mailová upozornění</h2>
               </div>
               <div className="p-6 space-y-4">
                 {[
@@ -1316,30 +1316,30 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   { title: "Zpožděné úkoly", desc: "Upozornění na úkoly, které jsou více než 24 hodin po termínu.", id: "tasks" },
                   { title: "Expirace smluv", desc: "Týdenní souhrn smluv, kterým se blíží konec fixace nebo výročí.", id: "contracts" },
                 ].map((notif) => (
-                  <div key={notif.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors min-h-[44px] gap-3">
+                  <div key={notif.id} className="flex items-center justify-between p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[44px] gap-3">
                     <div>
-                      <h4 className="font-bold text-slate-800 text-sm mb-1">{notif.title}</h4>
-                      <p className="text-xs font-medium text-slate-500">{notif.desc}</p>
+                      <h4 className="font-bold text-[color:var(--wp-text)] text-sm mb-1">{notif.title}</h4>
+                      <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{notif.desc}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer ml-2 shrink-0">
                       <input type="checkbox" className="sr-only peer" checked={notifPrefs[notif.id] ?? true} onChange={() => handleNotifToggle(notif.id)} />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
+                      <div className="w-11 h-6 bg-[color:var(--wp-surface-card-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[color:var(--wp-surface-card)] after:border-[color:var(--wp-border-strong)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
                     </label>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="px-6 sm:px-8 py-6 border-b border-slate-50 flex items-center gap-3">
+            <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-3">
                 <Bell size={20} className="text-amber-500" />
-                <h2 className="text-lg font-black text-slate-900">Prohlížeč (Push notifikace)</h2>
+                <h2 className="text-lg font-black text-[color:var(--wp-text)]">Prohlížeč (Push notifikace)</h2>
               </div>
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-1">Povolit upozornění v prohlížeči</h4>
-                  <p className="text-xs font-medium text-slate-500">Pro okamžitá upozornění na obrazovce, i když nemáte Aidvisoru otevřenou.</p>
+                  <h4 className="font-bold text-[color:var(--wp-text)] text-sm mb-1">Povolit upozornění v prohlížeči</h4>
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Pro okamžitá upozornění na obrazovce, i když nemáte Aidvisoru otevřenou.</p>
                 </div>
-                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors shadow-sm min-h-[44px]">
+                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] font-bold text-xs rounded-xl hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm min-h-[44px]">
                   Požádat o oprávnění
                 </button>
               </div>
@@ -1350,13 +1350,13 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {/* Tab: Integrace */}
         {activeTab === "integrace" && (
           <div className="animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-8 border-b border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-8 border-b border-[color:var(--wp-surface-card-border)]">
               <div>
-                <h2 className="text-xl font-black text-slate-900 mb-1">Integrace a propojené aplikace</h2>
-                <p className="text-sm font-medium text-slate-500">Zrychlete svou práci a propojte Aidvisoru s nástroji, které používáte každý den.</p>
+                <h2 className="text-xl font-black text-[color:var(--wp-text)] mb-1">Integrace a propojené aplikace</h2>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Zrychlete svou práci a propojte Aidvisoru s nástroji, které používáte každý den.</p>
               </div>
               <div className="flex items-center gap-3">
-                <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:bg-slate-50 transition-all min-h-[44px]">
+                <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:bg-[color:var(--wp-surface-muted)] transition-all min-h-[44px]">
                   <Server size={16} /> Filtry
                 </button>
                 <CreateActionButton
@@ -1381,7 +1381,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                     key={cat.id}
                     type="button"
                     onClick={() => setIntegrationsCategory(cat.id)}
-                    className={`flex items-center px-5 py-3 rounded-xl text-sm font-bold transition-all text-left min-h-[44px] ${integrationsCategory === cat.id ? "bg-indigo-50 text-indigo-700" : "bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
+                    className={`flex items-center px-5 py-3 rounded-xl text-sm font-bold transition-all text-left min-h-[44px] ${integrationsCategory === cat.id ? "bg-indigo-50 text-indigo-700" : "bg-transparent text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"}`}
                   >
                     {cat.label}
                   </button>
@@ -1430,14 +1430,14 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                     <div
                       key={integration.id}
                       id={`integration-card-${integration.id}`}
-                      className={`bg-white rounded-[24px] border transition-all duration-300 flex flex-col group ${isConnected ? "border-indigo-200 shadow-md" : "border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200"}`}
+                      className={`bg-[color:var(--wp-surface-card)] rounded-[24px] border transition-all duration-300 flex flex-col group ${isConnected ? "border-indigo-200 shadow-md" : "border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-[color:var(--wp-surface-card-border)]"}`}
                     >
                       <div className="p-6 flex items-start justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-colors ${isConnected ? "bg-white border-indigo-100" : "bg-slate-50 border-slate-100 grayscale-[0.5]"}`}>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-colors ${isConnected ? "bg-[color:var(--wp-surface-card)] border-indigo-100" : "bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)] grayscale-[0.5]"}`}>
                             <Icon />
                           </div>
-                          <h3 className="font-bold text-lg text-slate-900">{integration.name}</h3>
+                          <h3 className="font-bold text-lg text-[color:var(--wp-text)]">{integration.name}</h3>
                         </div>
                         <label className={`relative inline-flex items-center mt-2 ${toggleDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
                           <input
@@ -1447,27 +1447,27 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                             onChange={handleToggleClick}
                             disabled={toggleDisabled}
                           />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
+                          <div className="w-11 h-6 bg-[color:var(--wp-surface-card-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[color:var(--wp-surface-card)] after:border-[color:var(--wp-border-strong)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
                         </label>
                       </div>
                       <div className="px-6 pb-6 flex-1">
-                        <p className={`text-sm font-medium leading-relaxed transition-colors ${isConnected ? "text-slate-600" : "text-slate-500"}`}>{integration.description}</p>
+                        <p className={`text-sm font-medium leading-relaxed transition-colors ${isConnected ? "text-[color:var(--wp-text-secondary)]" : "text-[color:var(--wp-text-secondary)]"}`}>{integration.description}</p>
                       </div>
-                      <div className={`px-6 py-4 bg-slate-50/80 border-t flex items-center justify-between rounded-b-[24px] transition-all ${isConnected ? "border-indigo-50" : "border-slate-50"}`}>
+                      <div className={`px-6 py-4 bg-[color:var(--wp-surface-muted)]/80 border-t flex items-center justify-between rounded-b-[24px] transition-all ${isConnected ? "border-indigo-50" : "border-[color:var(--wp-surface-card-border)]/50"}`}>
                         <button
                           type="button"
                           onClick={() => setExpandedId(expanded ? null : integration.id)}
-                          className={`text-sm font-bold flex items-center gap-1 transition-colors ${isConnected ? "text-indigo-600 hover:text-indigo-800" : "text-slate-500 hover:text-slate-800"}`}
+                          className={`text-sm font-bold flex items-center gap-1 transition-colors ${isConnected ? "text-indigo-600 hover:text-indigo-800" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"}`}
                         >
                           {isConnected ? "Spravovat nastavení" : "Zobrazit detaily"} <ChevronRight size={14} className={expanded ? "rotate-90" : ""} />
                         </button>
                       </div>
                       {expanded && (
-                        <div className="px-6 pb-6 space-y-3 border-t border-slate-100 pt-4">
+                        <div className="px-6 pb-6 space-y-3 border-t border-[color:var(--wp-surface-card-border)] pt-4">
                         {expanded && isGoogleCalendar && (
                           <div className="space-y-3">
                             {calendarStatusLoading && calendarStatus === null && !calendarStatusError ? (
-                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status">
+                              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2" role="status">
                                 <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…
                               </p>
                             ) : calendarStatusError ? (
@@ -1475,22 +1475,22 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2">
                                   <AlertCircle size={16} className="shrink-0" aria-hidden /> {calendarStatusError}
                                 </p>
-                                <button type="button" onClick={() => fetchCalendarStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">
+                                <button type="button" onClick={() => fetchCalendarStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] flex items-center gap-2">
                                   Zkusit znovu
                                 </button>
                               </div>
                             ) : calendarStatus?.connected ? (
                               <>
                                 {calendarStatus.email && (
-                                  <p className="text-sm text-slate-700 font-medium flex items-center gap-2">
-                                    <Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {calendarStatus.email}
+                                  <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2">
+                                    <Mail size={14} className="shrink-0 text-[color:var(--wp-text-secondary)]" aria-hidden /> {calendarStatus.email}
                                   </p>
                                 )}
                                 <button type="button" onClick={handleCalendarSync} disabled={calendarSyncing} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold hover:bg-indigo-100 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarSyncing}>
                                   {calendarSyncing ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {calendarSyncing ? "Synchronizuji…" : "Synchronizovat teď"}
                                 </button>
-                                <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
+                                <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
                                   {calendarDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {calendarDisconnecting ? "Odpojuji…" : "Odpojit Google Kalendář"}
                                 </button>
@@ -1507,16 +1507,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                         {expanded && isGoogleDrive && (
                           <div className="space-y-3">
                             {driveStatusLoading && driveStatus === null && !driveStatusError ? (
-                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
+                              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
                             ) : driveStatusError ? (
                               <div className="space-y-2">
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" aria-hidden /> {driveStatusError}</p>
-                                <button type="button" onClick={() => fetchDriveStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
+                                <button type="button" onClick={() => fetchDriveStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] flex items-center gap-2">Zkusit znovu</button>
                               </div>
                             ) : driveStatus?.connected ? (
                               <>
                                 {driveStatus.email && (
-                                  <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {driveStatus.email}</p>
+                                  <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-[color:var(--wp-text-secondary)]" aria-hidden /> {driveStatus.email}</p>
                                 )}
                                 <Link
                                   href="/portal/tools/drive"
@@ -1524,7 +1524,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 >
                                   Otevřít Google Drive workspace
                                 </Link>
-                                <button type="button" onClick={handleDriveDisconnect} disabled={driveDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={driveDisconnecting}>
+                                <button type="button" onClick={handleDriveDisconnect} disabled={driveDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60 flex items-center gap-2" aria-busy={driveDisconnecting}>
                                   {driveDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {driveDisconnecting ? "Odpojuji…" : "Odpojit Google Drive"}
                                 </button>
@@ -1539,16 +1539,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                         {expanded && isGmail && (
                           <div className="space-y-3">
                             {gmailStatusLoading && gmailStatus === null && !gmailStatusError ? (
-                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
+                              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2" role="status"><Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> Načítám stav…</p>
                             ) : gmailStatusError ? (
                               <div className="space-y-2">
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" aria-hidden /> {gmailStatusError}</p>
-                                <button type="button" onClick={() => fetchGmailStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 flex items-center gap-2">Zkusit znovu</button>
+                                <button type="button" onClick={() => fetchGmailStatus()} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] flex items-center gap-2">Zkusit znovu</button>
                               </div>
                             ) : gmailStatus?.connected ? (
                               <>
                                 {gmailStatus.email && (
-                                  <p className="text-sm text-slate-700 font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-slate-500" aria-hidden /> {gmailStatus.email}</p>
+                                  <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2"><Mail size={14} className="shrink-0 text-[color:var(--wp-text-secondary)]" aria-hidden /> {gmailStatus.email}</p>
                                 )}
                                 <Link
                                   href="/portal/tools/gmail"
@@ -1556,7 +1556,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 >
                                   Otevřít Gmail workspace
                                 </Link>
-                                <button type="button" onClick={handleGmailDisconnect} disabled={gmailDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2" aria-busy={gmailDisconnecting}>
+                                <button type="button" onClick={handleGmailDisconnect} disabled={gmailDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60 flex items-center gap-2" aria-busy={gmailDisconnecting}>
                                   {gmailDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
                                   {gmailDisconnecting ? "Odpojuji…" : "Odpojit Gmail"}
                                 </button>
@@ -1571,12 +1571,12 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                         {expanded && isOpenAI && (
                           <div className="space-y-3">
                             {aiHealthLoading && !aiHealth ? (
-                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
+                              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
                             ) : (
                               <>
                                 <div className="text-sm">
-                                  <p className="font-bold text-slate-700">Model: {aiHealth?.model ?? "—"}</p>
-                                  {aiHealth?.latencyMs != null && <p className="text-slate-500 mt-0.5">Latence: {aiHealth.latencyMs} ms</p>}
+                                  <p className="font-bold text-[color:var(--wp-text-secondary)]">Model: {aiHealth?.model ?? "—"}</p>
+                                  {aiHealth?.latencyMs != null && <p className="text-[color:var(--wp-text-secondary)] mt-0.5">Latence: {aiHealth.latencyMs} ms</p>}
                                 </div>
                                 {aiHealth?.fallbackModel && (
                                   <p className="text-sm text-amber-600 font-medium flex items-center gap-1"><AlertCircle size={14} /> Použit fallback model ({aiHealth.fallbackModel}). Primární model nemusí být na účtu dostupný.</p>
@@ -1584,7 +1584,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 {aiHealth?.error && !aiHealth.ok && (
                                   <p className="text-sm text-red-600 font-medium">{aiHealth.error === "missing_api_key" ? "API klíč není nastaven (OPENAI_API_KEY v .env)." : aiHealth.error}</p>
                                 )}
-                                <button type="button" onClick={handleTestAIConnection} disabled={aiHealthTesting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200 disabled:opacity-60 flex items-center gap-2">
+                                <button type="button" onClick={handleTestAIConnection} disabled={aiHealthTesting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60 flex items-center gap-2">
                                   {aiHealthTesting ? <Loader2 size={16} className="animate-spin" /> : null} Otestovat připojení
                                 </button>
                               </>
@@ -1594,11 +1594,11 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                         {expanded && isResend && (
                           <div className="space-y-3">
                             {resendStatusLoading && resendStatus === null && !resendStatusError ? (
-                              <p className="text-sm text-slate-500 font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
+                              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Načítám stav…</p>
                             ) : resendStatusError ? (
                               <>
                                 <p className="text-sm text-amber-700 font-medium flex items-center gap-2"><AlertCircle size={16} className="shrink-0" /> {resendStatusError}</p>
-                                <button type="button" onClick={fetchResendStatus} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200">
+                                <button type="button" onClick={fetchResendStatus} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)]">
                                   Zkusit znovu
                                 </button>
                               </>
@@ -1607,20 +1607,20 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 <p className={`text-sm font-medium ${resendStatus?.connected ? "text-emerald-700" : "text-amber-700"}`}>
                                   {resendStatus?.connected ? "Resend je nakonfigurovaný." : "Resend zatím není nakonfigurovaný (chybí RESEND_API_KEY)."}
                                 </p>
-                                <p className="text-xs text-slate-500">
-                                  Odesílatel (From): <span className="font-bold text-slate-700">{resendStatus?.fromEmail ?? "—"}</span>
+                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
+                                  Odesílatel (From): <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.fromEmail ?? "—"}</span>
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
                                   Doména pro generovaný From:{" "}
-                                  <span className="font-bold text-slate-700">{resendStatus?.fromDomain ?? "—"}</span>
-                                  <span className="block text-slate-400 mt-0.5">
+                                  <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.fromDomain ?? "—"}</span>
+                                  <span className="block text-[color:var(--wp-text-tertiary)] mt-0.5">
                                     Env <code className="text-[11px]">RESEND_FROM_DOMAIN</code> nebo z <code className="text-[11px]">RESEND_FROM_EMAIL</code>.
                                   </span>
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
                                   Odpovědi (Reply-To):{" "}
-                                  <span className="font-bold text-slate-700">{resendStatus?.replyToEmail ?? "—"}</span>
-                                  <span className="block text-slate-400 mt-0.5">
+                                  <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.replyToEmail ?? "—"}</span>
+                                  <span className="block text-[color:var(--wp-text-tertiary)] mt-0.5">
                                     Firemní e-mail bez ověření domény v Resend nastav jako <code className="text-[11px]">RESEND_REPLY_TO</code>; u přihlášeného poradce
                                     jde o e-mail z profilu / účtu.
                                   </span>
@@ -1631,7 +1631,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                     await fetchResendStatus();
                                     toast.showToast("Konfigurace Resendu ověřena.");
                                   }}
-                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-sm font-bold hover:bg-slate-200"
+                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)]"
                                 >
                                   Ověřit konfiguraci
                                 </button>

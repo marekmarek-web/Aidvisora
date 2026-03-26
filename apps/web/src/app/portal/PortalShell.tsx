@@ -302,7 +302,7 @@ function PortalShellInner({
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(false)}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"
                 aria-label="Zavřít vyhledávání"
               >
                 ×
@@ -329,9 +329,9 @@ function PortalShellInner({
         <AiAssistantDrawer />
 
         {shouldShowSoftPrompt ? (
-          <div className="fixed inset-x-3 bottom-[calc(var(--safe-area-bottom)+0.75rem)] z-modal sm:inset-x-auto sm:right-4 sm:w-[360px] rounded-2xl border border-slate-200 bg-white shadow-xl p-4">
-            <p className="text-sm font-semibold text-slate-900">Povolit push notifikace?</p>
-            <p className="mt-1 text-sm text-slate-600">
+          <div className="fixed inset-x-3 bottom-[calc(var(--safe-area-bottom)+0.75rem)] z-modal sm:inset-x-auto sm:right-4 sm:w-[360px] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-xl p-4">
+            <p className="text-sm font-semibold text-[color:var(--wp-text)]">Povolit push notifikace?</p>
+            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
               Dostanete upozornění na nové zprávy, dokumenty a důležité změny.
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -347,7 +347,7 @@ function PortalShellInner({
               <button
                 type="button"
                 onClick={markSoftPromptSeen}
-                className="min-h-[44px] rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
               >
                 Teď ne
               </button>

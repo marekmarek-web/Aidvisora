@@ -43,7 +43,7 @@ export function ContactLastNotePreview({ contactId }: { contactId: string }) {
       </div>
       <Link
         href={`/portal/notes?contactId=${contactId}&note=${last.id}`}
-        className="w-10 h-10 rounded-full bg-white text-amber-600 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0 border border-amber-200 min-h-[44px] min-w-[44px]"
+        className="w-10 h-10 rounded-full bg-[color:var(--wp-surface-card)] text-amber-600 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0 border border-amber-200 min-h-[44px] min-w-[44px]"
         aria-label="Otevřít zápisek"
       >
         <Plus size={16} />

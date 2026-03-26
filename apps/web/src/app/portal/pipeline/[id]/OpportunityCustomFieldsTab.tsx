@@ -114,9 +114,9 @@ export function OpportunityCustomFieldsTab({
       {SECTIONS.map((section) => (
         <div
           key={section.key}
-          className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5 sm:p-6"
+          className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm p-5 sm:p-6"
         >
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 pb-3 border-b border-slate-50">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-4 pb-3 border-b border-[color:var(--wp-surface-card-border)]/50">
             {section.label}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -128,13 +128,13 @@ export function OpportunityCustomFieldsTab({
                       type="checkbox"
                       checked={!!values[field.key]}
                       onChange={(e) => setOne(field.key, e.target.checked)}
-                      className="rounded border-slate-300 size-5 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-[color:var(--wp-border-strong)] size-5 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span className="text-sm font-semibold text-slate-700">{field.label}</span>
+                    <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">{field.label}</span>
                   </label>
                 ) : (
                   <>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5">
                       {field.label}
                     </label>
                     <input
@@ -146,7 +146,7 @@ export function OpportunityCustomFieldsTab({
                           field.type === "number" ? e.target.valueAsNumber : e.target.value,
                         )
                       }
-                      className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                      className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm font-semibold text-[color:var(--wp-text)] focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                     />
                   </>
                 )}

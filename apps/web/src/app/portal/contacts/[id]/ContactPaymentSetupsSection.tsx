@@ -54,7 +54,7 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
 
   if (items === null) {
     return (
-      <section className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+      <section className="flex items-center gap-2 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 text-sm text-[color:var(--wp-text-secondary)]">
         <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden />
         Načítám platební údaje…
       </section>
@@ -66,16 +66,16 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4">
+    <section className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
       <div className="mb-3 flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-slate-600" aria-hidden />
-        <h2 className="text-base font-semibold text-slate-900">Platební údaje (z dokumentů)</h2>
+        <CreditCard className="h-5 w-5 text-[color:var(--wp-text-secondary)]" aria-hidden />
+        <h2 className="text-base font-semibold text-[color:var(--wp-text)]">Platební údaje (z dokumentů)</h2>
       </div>
       <ul className="space-y-3">
         {items.map((row) => (
           <li
             key={row.id}
-            className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm text-slate-800"
+            className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-3 text-sm text-[color:var(--wp-text)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium">
@@ -87,7 +87,7 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
                 {row.needsHumanReview ? " · ke kontrole" : ""}
               </span>
             </div>
-            <div className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+            <div className="mt-2 grid gap-1 text-xs text-[color:var(--wp-text-secondary)] sm:grid-cols-2">
               {row.contractNumber ? <div>Ref. smlouvy: {row.contractNumber}</div> : null}
               {row.iban ? <div>IBAN: {row.iban}</div> : null}
               {!row.iban && row.accountNumber ? <div>Účet: {row.accountNumber}</div> : null}

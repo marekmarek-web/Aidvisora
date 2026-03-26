@@ -45,7 +45,7 @@ function mergeColumnsWithDefaults(saved: Column[]): Column[] {
 }
 
 function StatusPill({ value, labels }: { value: string; labels: StatusLabel[] }) {
-  if (!value || value === "") return <span className="text-xs text-slate-400">—</span>;
+  if (!value || value === "") return <span className="text-xs text-[color:var(--wp-text-tertiary)]">—</span>;
   const sl = getStatusById(labels, value);
   return (
     <span
@@ -78,7 +78,7 @@ function ItemCard({
     <button
       type="button"
       onClick={onTap}
-      className="w-full text-left bg-white rounded-2xl border border-slate-200/90 border-l-[4px] border-l-indigo-500 pl-3.5 pr-4 py-3.5 min-h-[64px] active:bg-slate-50/90 active:scale-[0.99] transition-all shadow-[0_2px_14px_-3px_rgba(15,23,42,0.1)] touch-manipulation"
+      className="w-full text-left bg-[color:var(--wp-surface-card)] rounded-2xl border border-[color:var(--wp-surface-card-border)]/90 border-l-[4px] border-l-indigo-500 pl-3.5 pr-4 py-3.5 min-h-[64px] active:bg-[color:var(--wp-surface-muted)]/90 active:scale-[0.99] transition-all shadow-[0_2px_14px_-3px_rgba(15,23,42,0.1)] touch-manipulation"
     >
       <div className="flex items-center gap-2">
         {item.contactName && (
@@ -93,9 +93,9 @@ function ItemCard({
           </span>
         )}
         <span className="flex-1 min-w-0">
-          <span className="font-bold text-[15px] text-slate-900 leading-snug truncate block">{item.name}</span>
+          <span className="font-bold text-[15px] text-[color:var(--wp-text)] leading-snug truncate block">{item.name}</span>
           {item.contactName && item.contactName !== item.name && (
-            <span className="text-xs text-slate-500 truncate block mt-0.5 font-medium">{item.contactName}</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)] truncate block mt-0.5 font-medium">{item.contactName}</span>
           )}
         </span>
       </div>
@@ -103,12 +103,12 @@ function ItemCard({
         <div className="flex flex-wrap gap-1 mt-2">
           {filledStatuses.slice(0, 5).map((col) => (
             <div key={col.id} className="flex items-center gap-1">
-              <span className="text-[10px] text-slate-500">{col.title}:</span>
+              <span className="text-[10px] text-[color:var(--wp-text-secondary)]">{col.title}:</span>
               <StatusPill value={String(item.cells[col.id] ?? "")} labels={labels} />
             </div>
           ))}
           {filledStatuses.length > 5 && (
-            <span className="text-[10px] text-slate-400">+{filledStatuses.length - 5}</span>
+            <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">+{filledStatuses.length - 5}</span>
           )}
         </div>
       )}
@@ -133,7 +133,7 @@ function GroupSection({
 
   return (
     <div className="mb-5">
-      <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-gradient-to-r from-[color:var(--wp-surface-muted)] to-[color:var(--wp-surface-card)] overflow-hidden shadow-sm">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -144,22 +144,22 @@ function GroupSection({
             style={{ backgroundColor: group.color }}
           />
           <div className="flex-1 min-w-0 text-left">
-            <span className="font-black text-sm text-slate-900 block truncate">{group.name}</span>
+            <span className="font-black text-sm text-[color:var(--wp-text)] block truncate">{group.name}</span>
             {group.subtitle ? (
-              <span className="text-[11px] text-slate-500 font-semibold truncate block">{group.subtitle}</span>
+              <span className="text-[11px] text-[color:var(--wp-text-secondary)] font-semibold truncate block">{group.subtitle}</span>
             ) : null}
           </div>
-          <span className="text-xs font-black text-slate-600 bg-white/90 border border-slate-200 px-2 py-0.5 rounded-lg tabular-nums">
+          <span className="text-xs font-black text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)]/90 border border-[color:var(--wp-surface-card-border)] px-2 py-0.5 rounded-lg tabular-nums">
             {items.length}
           </span>
-          {collapsed ? <ChevronRight size={18} className="text-slate-400 shrink-0" /> : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+          {collapsed ? <ChevronRight size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" /> : <ChevronDown size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" />}
         </button>
       </div>
 
       {!collapsed && (
         <div className="space-y-2.5 mt-2.5 pl-0.5">
           {items.length === 0 && (
-            <p className="text-xs text-slate-400 text-center py-3">Žádné položky</p>
+            <p className="text-xs text-[color:var(--wp-text-tertiary)] text-center py-3">Žádné položky</p>
           )}
           {items.map((item) => (
             <ItemCard
@@ -363,21 +363,21 @@ export function BoardMobileScreen() {
   return (
     <div className="-mx-4 -mt-4 flex flex-col min-h-[calc(100dvh-8rem)]">
       {/* Search bar */}
-      <div className="px-4 pt-3 pb-2 border-b border-slate-200 bg-white shrink-0">
+      <div className="px-4 pt-3 pb-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shrink-0">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
           <input
             type="text"
             placeholder={`Hledat v boardu (${totalItems} položek)…`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+            className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] pl-9 pr-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[color:var(--wp-text-tertiary)]"
             >
               <X size={16} />
             </button>
@@ -389,7 +389,7 @@ export function BoardMobileScreen() {
       <div className={`flex-1 overflow-y-auto px-4 py-3 ${isTablet ? "columns-2 gap-4" : ""}`}>
         {filteredItems ? (
           filteredItems.length === 0 ? (
-            <p className="text-center text-sm text-slate-500 py-8">Nic nenalezeno pro &quot;{searchQuery}&quot;</p>
+            <p className="text-center text-sm text-[color:var(--wp-text-secondary)] py-8">Nic nenalezeno pro &quot;{searchQuery}&quot;</p>
           ) : (
             <div className="space-y-2">
               {filteredItems.map((item) => (
@@ -475,16 +475,16 @@ export function BoardMobileScreen() {
 
             {/* Status cells */}
             <div className="space-y-3">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Produkty</p>
+              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Produkty</p>
               {statusCols.map((col) => {
                 const val = String(selectedItem.cells[col.id] ?? "");
                 return (
                   <div key={col.id} className="flex items-center justify-between min-h-[44px]">
-                    <span className="text-sm text-slate-700 font-medium">{col.title}</span>
+                    <span className="text-sm text-[color:var(--wp-text-secondary)] font-medium">{col.title}</span>
                     <select
                       value={val}
                       onChange={(e) => handleStatusChange(col.id, e.target.value)}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-800 bg-white min-h-[36px] min-w-[110px]"
+                      className="rounded-lg border border-[color:var(--wp-surface-card-border)] px-2 py-1.5 text-sm text-[color:var(--wp-text)] bg-[color:var(--wp-surface-card)] min-h-[36px] min-w-[110px]"
                     >
                       <option value="">—</option>
                       {statusLabels.map((sl) => (
@@ -497,11 +497,11 @@ export function BoardMobileScreen() {
             </div>
 
             {/* Actions */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="space-y-2 pt-2 border-t border-[color:var(--wp-surface-card-border)]">
               <button
                 type="button"
                 onClick={() => setMoveOpen(true)}
-                className="w-full min-h-[44px] rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 active:bg-slate-50"
+                className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-semibold text-[color:var(--wp-text-secondary)] active:bg-[color:var(--wp-surface-muted)]"
               >
                 Přesunout do skupiny…
               </button>
@@ -538,14 +538,14 @@ export function BoardMobileScreen() {
                 disabled={isCurrent || savePending}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl min-h-[48px] text-left transition-colors ${
                   isCurrent
-                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    : "bg-white border border-slate-200 active:bg-slate-50"
+                    ? "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)] cursor-not-allowed"
+                    : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] active:bg-[color:var(--wp-surface-muted)]"
                 }`}
               >
                 <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: group.color }} />
-                <span className="text-sm font-medium text-slate-800 flex-1">{group.name}</span>
-                {isCurrent && <span className="text-[10px] text-slate-400">aktuální</span>}
-                <span className="text-xs text-slate-500">{group.itemIds.length}</span>
+                <span className="text-sm font-medium text-[color:var(--wp-text)] flex-1">{group.name}</span>
+                {isCurrent && <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">aktuální</span>}
+                <span className="text-xs text-[color:var(--wp-text-secondary)]">{group.itemIds.length}</span>
               </button>
             );
           })}
@@ -560,22 +560,22 @@ export function BoardMobileScreen() {
       >
         <div className="space-y-4 pb-4">
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1">Název</label>
+            <label className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider block mb-1">Název</label>
             <input
               type="text"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="Jméno klienta / název…"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-100"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1">Skupina</label>
+            <label className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider block mb-1">Skupina</label>
             <select
               value={newItemGroup}
               onChange={(e) => setNewItemGroup(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm min-h-[44px]"
+              className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5 text-sm min-h-[44px]"
             >
               {board.groups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>

@@ -143,7 +143,7 @@ export function PersonalFALinkBanner() {
               type="button"
               onClick={handleUnlink}
               disabled={unlinkLoading}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] px-4 py-2 font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-50"
             >
               {unlinkLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
               Odpojit analýzu
@@ -223,22 +223,22 @@ function DiffApplyModal({
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl bg-[color:var(--wp-surface-card)] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-slate-800">
+        <h3 className="text-lg font-bold text-[color:var(--wp-text)]">
           {companyName ? `Načíst data z firmy ${companyName}` : "Načíst firemní data"}
         </h3>
         {loading ? (
-          <p className="mt-4 text-slate-500">Načítání změn…</p>
+          <p className="mt-4 text-[color:var(--wp-text-secondary)]">Načítání změn…</p>
         ) : diffItems.length === 0 ? (
-          <p className="mt-4 text-slate-600">Žádné nové změny oproti aktuálním údajům.</p>
+          <p className="mt-4 text-[color:var(--wp-text-secondary)]">Žádné nové změny oproti aktuálním údajům.</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {diffItems.map((item) => (
               <li key={item.path} className="flex flex-wrap gap-2 text-sm">
-                <span className="font-medium text-slate-700">{item.label}:</span>
-                <span className="text-slate-500">
+                <span className="font-medium text-[color:var(--wp-text-secondary)]">{item.label}:</span>
+                <span className="text-[color:var(--wp-text-secondary)]">
                   {String(item.current ?? "—")} → {String(item.proposed ?? "—")}
                 </span>
               </li>
@@ -259,7 +259,7 @@ function DiffApplyModal({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-[44px] rounded-xl border border-slate-200 px-4 font-semibold text-slate-700 hover:bg-slate-50"
+            className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
           >
             Zrušit
           </button>

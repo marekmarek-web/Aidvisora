@@ -34,7 +34,7 @@ const DOMAIN_STYLES: Record<string, string> = {
 };
 
 function getDomainStyle(domain: string): string {
-  return DOMAIN_STYLES[domain] ?? "text-slate-600 bg-slate-100 border-slate-200";
+  return DOMAIN_STYLES[domain] ?? "text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)]";
 }
 
 function loadPositions(): Record<string, Position> {
@@ -83,12 +83,12 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   const notes = initialNotes.slice(0, 8);
   if (notes.length === 0) {
     return (
-      <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm p-6">
-        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-1">
+      <div className="mt-8 rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm p-6">
+        <h3 className="text-sm font-black text-[color:var(--wp-text)] flex items-center gap-2 mb-1">
           <FileText size={18} className="text-indigo-600" /> Zápisky
         </h3>
-        <p className="text-xs font-bold text-slate-500 mb-4">Rychlé poznámky a nápady</p>
-        <p className="text-sm text-slate-500 mb-4">Zatím žádné zápisky.</p>
+        <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-4">Rychlé poznámky a nápady</p>
+        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">Zatím žádné zápisky.</p>
         <Link href="/portal/notes" className="inline-flex items-center gap-2 min-h-[44px] py-2.5 px-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold text-sm hover:bg-indigo-100 hover:border-indigo-300 transition-colors w-fit">
           <Plus size={16} /> Přidat
         </Link>
@@ -165,13 +165,13 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   });
 
   return (
-    <div className="mt-8 rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-5 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
+    <div className="mt-8 rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-5 py-4 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+          <h3 className="text-sm font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <FileText size={18} className="text-indigo-600" /> Zápisky
           </h3>
-          <p className="text-xs font-bold text-slate-500 mt-0.5">Rychlé poznámky a nápady. Chytněte kartu a přetáhněte.</p>
+          <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-0.5">Rychlé poznámky a nápady. Chytněte kartu a přetáhněte.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/portal/notes" className="min-h-[44px] py-2.5 px-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold text-xs uppercase tracking-widest hover:bg-indigo-100 hover:border-indigo-300 transition-colors inline-flex items-center gap-2">
@@ -184,7 +184,7 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
       </div>
       <div
         ref={boardRef}
-        className="relative min-h-[280px] overflow-hidden cursor-crosshair bg-slate-50/50"
+        className="relative min-h-[280px] overflow-hidden cursor-crosshair bg-[color:var(--wp-surface-muted)]/50"
         style={{
           backgroundImage: "radial-gradient(circle, #cbd5e1 1.5px, transparent 0)",
           backgroundSize: "20px 20px",
@@ -210,19 +210,19 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
                 touchAction: "none",
               }}
               className={`
-                w-[160px] rounded-xl border border-slate-100 bg-white/95 shadow-md backdrop-blur-sm transition-shadow cursor-grab active:cursor-grabbing
+                w-[160px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 shadow-md backdrop-blur-sm transition-shadow cursor-grab active:cursor-grabbing
                 ${isDragging ? "shadow-lg ring-2 ring-indigo-400/30 scale-105" : "hover:shadow-lg"}
                 ${isPinned ? "ring-1 ring-amber-300/50" : ""}
               `}
             >
-              <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100">
-                <span className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-grab active:cursor-grabbing touch-none shrink-0" aria-label="Chytit a přesunout">
+              <div className="flex items-center justify-between px-2 py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                <span className="p-1.5 rounded-lg text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] cursor-grab active:cursor-grabbing touch-none shrink-0" aria-label="Chytit a přesunout">
                   <GripVertical size={16} />
                 </span>
                 <button
                   type="button"
                   onClick={(e) => togglePin(note.id, e)}
-                  className={`p-1 rounded-lg ${isPinned ? "bg-amber-100 text-amber-600" : "text-slate-400 hover:bg-slate-100"}`}
+                  className={`p-1 rounded-lg ${isPinned ? "bg-amber-100 text-amber-600" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
                   aria-label={isPinned ? "Odepnout" : "Připnout"}
                 >
                   <Pin size={10} className={isPinned ? "fill-current" : ""} />
@@ -232,9 +232,9 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
                 <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
                   {note.domain ?? "jiné"}
                 </span>
-                <h4 className="font-semibold text-slate-800 text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
-                {preview && <p className="text-[10px] text-slate-500 line-clamp-2">{preview}</p>}
-                {note.contactName && <p className="text-[10px] text-slate-400 mt-1 truncate">{note.contactName}</p>}
+                <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
+                {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
+                {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
               </Link>
             </div>
           );

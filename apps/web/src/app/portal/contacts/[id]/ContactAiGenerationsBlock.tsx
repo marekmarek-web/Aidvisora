@@ -87,9 +87,9 @@ function AiSection({
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+    <section className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-4">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-bold text-[color:var(--wp-text)]">{title}</h3>
         <button
           type="button"
           onClick={handleGenerate}
@@ -110,7 +110,7 @@ function AiSection({
         </p>
       )}
       {output?.outputText ? (
-        <div className="text-sm text-slate-700 whitespace-pre-wrap border-t border-slate-200 pt-2 mt-2">
+        <div className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap border-t border-[color:var(--wp-surface-card-border)] pt-2 mt-2">
           {output.outputText}
           {(promptKey === "clientOpportunities" || promptKey === "nextBestAction") && output.id && (
             <AiActionMenu
@@ -122,7 +122,7 @@ function AiSection({
           )}
         </div>
       ) : !loading && (
-        <p className="text-xs text-slate-500 italic">
+        <p className="text-xs text-[color:var(--wp-text-secondary)] italic">
           Klikněte na Vygenerovat pro vytvoření výstupu.
         </p>
       )}
@@ -156,16 +156,16 @@ export function ContactAiGenerationsBlock({ contactId, initialGenerations }: Pro
 
   return (
     <div
-      className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden p-6"
+      className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden p-6"
       style={{ borderRadius: "var(--wp-radius-lg, 24px)" }}
     >
       <div className="flex items-center gap-2 mb-4">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100">
           <Zap size={16} className="text-indigo-600" aria-hidden />
         </div>
-        <h2 className="text-lg font-bold text-slate-900">AI analýza</h2>
+        <h2 className="text-lg font-bold text-[color:var(--wp-text)]">AI analýza</h2>
       </div>
-      <p className="text-sm text-slate-600 mb-4">
+      <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
         Shrnutí klienta, příležitosti a doporučený další krok na základě dat v CRM.
       </p>
       <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
@@ -183,11 +183,11 @@ export function ContactAiGenerationsBlock({ contactId, initialGenerations }: Pro
         {automationError ? <p className="mt-2 text-xs text-rose-700">{automationError}</p> : null}
         {automation ? (
           <div className="mt-2 space-y-2">
-            <p className="text-sm text-slate-700">{automation.summary}</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">{automation.summary}</p>
             {automation.recommendations.length > 0 ? (
               <ul className="space-y-1">
                 {automation.recommendations.map((item, idx) => (
-                  <li key={`${item}-${idx}`} className="text-xs text-slate-600">
+                  <li key={`${item}-${idx}`} className="text-xs text-[color:var(--wp-text-secondary)]">
                     - {item}
                   </li>
                 ))}
@@ -219,10 +219,10 @@ export function ContactAiGenerationsBlock({ contactId, initialGenerations }: Pro
           onUpdate={handleUpdate}
         />
       </div>
-      <div className="mt-4 pt-4 border-t border-slate-100">
+      <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
         <Link
           href="#obchody"
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
         >
           Založit příležitost <ArrowUpRight size={14} aria-hidden />
         </Link>

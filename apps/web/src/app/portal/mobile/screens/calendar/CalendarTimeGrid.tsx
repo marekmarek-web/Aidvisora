@@ -108,15 +108,15 @@ export function CalendarTimeGrid({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[color:var(--wp-surface-card)]">
       {hasAnyAllDay ? (
-        <div className="flex shrink-0 border-b border-slate-200 bg-slate-50/40">
-          <div className="shrink-0 border-r border-slate-100" style={{ width: timeColWidth }} />
+        <div className="flex shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40">
+          <div className="shrink-0 border-r border-[color:var(--wp-surface-card-border)]" style={{ width: timeColWidth }} />
           {visibleDays.map((day) => {
             const ds = formatDateLocal(day);
             const list = eventsByDate.get(ds) ?? [];
             return (
-              <div key={ds} className="min-h-[32px] min-w-0 flex-1 border-r border-slate-100 last:border-r-0">
+              <div key={ds} className="min-h-[32px] min-w-0 flex-1 border-r border-[color:var(--wp-surface-card-border)] last:border-r-0">
                 <CalendarAllDayChips
                   events={list}
                   columnDateStr={ds}
@@ -145,14 +145,14 @@ export function CalendarTimeGrid({
       >
         <div className="flex" style={{ minHeight: totalHeight }}>
           <div
-            className="relative z-10 shrink-0 border-r border-slate-100 bg-white"
+            className="relative z-10 shrink-0 border-r border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]"
             style={{ width: timeColWidth, height: totalHeight }}
           >
             {hours.map((h) => (
               <div key={h} className="relative" style={{ height: pixelsPerHour }}>
                 <span
                   className={cx(
-                    "absolute -top-2.5 font-bold text-slate-400",
+                    "absolute -top-2.5 font-bold text-[color:var(--wp-text-tertiary)]",
                     compact ? "right-1 text-[9px]" : "right-2 text-[10px]",
                   )}
                 >
@@ -177,8 +177,8 @@ export function CalendarTimeGrid({
                   <div
                     key={ds}
                     className={cx(
-                      "relative min-w-0 flex-1 border-r border-slate-100 last:border-r-0",
-                      isWeekend ? "bg-slate-50/40" : "bg-white",
+                      "relative min-w-0 flex-1 border-r border-[color:var(--wp-surface-card-border)] last:border-r-0",
+                      isWeekend ? "bg-[color:var(--wp-surface-muted)]/40" : "bg-[color:var(--wp-surface-card)]",
                     )}
                     style={{ height: totalHeight }}
                   >
@@ -194,8 +194,8 @@ export function CalendarTimeGrid({
                             type="button"
                             onClick={() => handleSlotClick(ds, h)}
                             className={cx(
-                              "w-full shrink-0 border-b border-slate-100/80 transition-colors active:bg-indigo-50/60",
-                              isPastHour ? "bg-slate-50/30" : "",
+                              "w-full shrink-0 border-b border-[color:var(--wp-surface-card-border)]/80 transition-colors active:bg-indigo-50/60",
+                              isPastHour ? "bg-[color:var(--wp-surface-muted)]/30" : "",
                             )}
                             style={{ height: pixelsPerHour }}
                             aria-label={`Nová událost ${ds} v ${h}:00`}

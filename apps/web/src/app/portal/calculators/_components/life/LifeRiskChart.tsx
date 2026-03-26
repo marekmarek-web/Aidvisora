@@ -38,23 +38,23 @@ export function LifeRiskChart({ chartData }: LifeRiskChartProps) {
                 )}
               </div>
               <div
-                className="w-full min-h-[4px] rounded-b-lg bg-slate-300 transition-all duration-500 ease-out"
+                className="w-full min-h-[4px] rounded-b-lg bg-[color:var(--wp-surface-card-border)] transition-all duration-500 ease-out"
                 style={{ height: `${statHeight}%` }}
               />
             </div>
-            <div className="text-xs font-bold text-slate-600 mt-2 text-center">
+            <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-2 text-center">
               {item.label}
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-[color:var(--wp-text-tertiary)]">
               {formatCurrency(item.prijem)} Kč
             </div>
           </div>
         );
       })}
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-4 border-t border-slate-100 pt-4 text-xs">
-        <span className="inline-flex items-center gap-2 text-slate-500">
-          <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-4 border-t border-[color:var(--wp-surface-card-border)] pt-4 text-xs">
+        <span className="inline-flex items-center gap-2 text-[color:var(--wp-text-secondary)]">
+          <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--wp-surface-card-border)]" />
           Krytí od státu
         </span>
         <span className="inline-flex items-center gap-2 font-semibold text-indigo-600">

@@ -56,7 +56,7 @@ export function PensionInputPanel({
   };
 
   return (
-    <div className="bg-white rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border-[1.5px] border-[#e2e8f0] shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] p-5 sm:p-6 md:p-7">
 
       {/* Věk */}
       <div className="mb-0">
@@ -176,7 +176,7 @@ export function PensionInputPanel({
                 value={formatCurrency(state.rent)}
                 onChange={(e) => handleTextChange("rent", e.target.value)}
                 onFocus={(e) => e.target.select()}
-                className="text-right font-bold text-[1.3rem] text-[#0d1f4e] bg-transparent border-none outline-none w-[170px] p-0.5 rounded hover:bg-white focus:bg-white focus:text-[#2563eb] transition-colors"
+                className="text-right font-bold text-[1.3rem] text-[#0d1f4e] bg-transparent border-none outline-none w-[170px] p-0.5 rounded hover:bg-[color:var(--wp-surface-card)] focus:bg-[color:var(--wp-surface-card)] focus:text-[#2563eb] transition-colors"
               />
               <span className="text-xs font-semibold text-[#94a3b8]">Kč</span>
             </div>
@@ -227,7 +227,7 @@ export function PensionInputPanel({
 
       {/* Info box */}
       <div className="mt-6 pt-6 border-t border-[#e2e8f0]">
-        <div className="flex items-start gap-3 rounded-[10px] border border-slate-200 bg-[#f4f6fb] p-3.5">
+        <div className="flex items-start gap-3 rounded-[10px] border border-[color:var(--wp-surface-card-border)] bg-[#f4f6fb] p-3.5">
           <Info className="w-4 h-4 text-[#2563eb] mt-0.5 shrink-0" />
           <div>
             <div className="text-sm font-bold text-[#0d1f4e] mb-0.5">Proč mi vychází tak málo?</div>

@@ -4,7 +4,7 @@ const PortalCalendarView = dynamic(
   () => import("../PortalCalendarView").then((m) => ({ default: m.PortalCalendarView })),
   {
     loading: () => (
-      <div className="flex flex-1 min-h-[40vh] items-center justify-center text-slate-500 text-sm p-6">
+      <div className="flex flex-1 min-h-[40vh] items-center justify-center text-[color:var(--wp-text-secondary)] text-sm p-6">
         Načítám kalendář…
       </div>
     ),

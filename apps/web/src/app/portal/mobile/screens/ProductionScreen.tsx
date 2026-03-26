@@ -51,11 +51,11 @@ const SEGMENT_COLORS: Record<string, string> = {
   health: "bg-rose-500",
   pension: "bg-violet-500",
   investment: "bg-blue-500",
-  other: "bg-slate-400",
+  other: "bg-[color:var(--wp-text-tertiary)]",
 };
 
 function getSegmentColor(segment: string): string {
-  return SEGMENT_COLORS[segment] ?? "bg-slate-400";
+  return SEGMENT_COLORS[segment] ?? "bg-[color:var(--wp-text-tertiary)]";
 }
 
 /* ------------------------------------------------------------------ */
@@ -119,18 +119,18 @@ function SegmentBreakdown({
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={cx("w-3 h-3 rounded-full flex-shrink-0", color)} />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{row.segmentLabel}</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{row.segmentLabel}</p>
                     {row.partnerName ? (
-                      <p className="text-xs text-slate-500 truncate">{row.partnerName}</p>
+                      <p className="text-xs text-[color:var(--wp-text-secondary)] truncate">{row.partnerName}</p>
                     ) : null}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-black text-slate-900">{fmtCzk(row.totalAnnual)}</p>
-                  <p className="text-[11px] text-slate-500">{row.count} smluv</p>
+                  <p className="text-sm font-black text-[color:var(--wp-text)]">{fmtCzk(row.totalAnnual)}</p>
+                  <p className="text-[11px] text-[color:var(--wp-text-secondary)]">{row.count} smluv</p>
                 </div>
               </div>
-              <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="mt-2 h-1.5 bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                 <div
                   className={cx("h-full rounded-full transition-all", color)}
                   style={{ width: `${pct}%` }}
@@ -173,22 +173,22 @@ function ContractList({
           <MobileCard key={contract.id} className="p-3.5">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2.5 min-w-0">
-                <FileText size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
+                <FileText size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 truncate">
+                  <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
                     {contract.contractNumber ?? "Bez čísla"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 truncate">
                     {contract.segmentLabel}
                     {contract.partnerName ? ` · ${contract.partnerName}` : ""}
                   </p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-black text-slate-900">
+                <p className="text-sm font-black text-[color:var(--wp-text)]">
                   {fmtCzk(contract.premiumAnnual)}
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-[color:var(--wp-text-tertiary)]">
                   {contract.startDate
                     ? new Date(contract.startDate).toLocaleDateString("cs-CZ", {
                         day: "numeric",
@@ -289,7 +289,7 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
       ) : null}
 
       {/* Period selector */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100">
+      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
         <div className="flex items-center justify-between gap-2">
           <FilterChips
             value={period}
@@ -304,7 +304,7 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
             type="button"
             onClick={loadData}
             disabled={pending}
-            className="flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-500 disabled:opacity-50"
+            className="flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[color:var(--wp-surface-card-border)] text-xs font-bold text-[color:var(--wp-text-secondary)] disabled:opacity-50"
           >
             <RefreshCw size={12} className={cx(pending && "animate-spin")} /> Obnovit
           </button>
@@ -315,12 +315,12 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
         <div className="min-h-[50vh] px-4 pt-3 space-y-3">
           <div className="grid grid-cols-3 gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-2xl bg-slate-200/70 animate-pulse" />
+              <div key={i} className="h-20 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
             ))}
           </div>
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 rounded-2xl bg-slate-200/70 animate-pulse" />
+              <div key={i} className="h-16 rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
             ))}
           </div>
         </div>
@@ -347,15 +347,15 @@ export function ProductionScreen({ deviceClass = "phone" }: { deviceClass?: Devi
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <div className={cx("w-2.5 h-2.5 rounded-full flex-shrink-0", color)} />
-                            <span className="text-xs font-bold text-slate-700">{seg.label}</span>
+                            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">{seg.label}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500">{seg.count}×</span>
-                            <span className="text-xs font-black text-slate-900">{fmtCzk(seg.annual)}</span>
-                            <span className="text-[11px] text-slate-400 w-8 text-right">{pct}%</span>
+                            <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">{seg.count}×</span>
+                            <span className="text-xs font-black text-[color:var(--wp-text)]">{fmtCzk(seg.annual)}</span>
+                            <span className="text-[11px] text-[color:var(--wp-text-tertiary)] w-8 text-right">{pct}%</span>
                           </div>
                         </div>
-                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden">
                           <div
                             className={cx("h-full rounded-full transition-all", color)}
                             style={{ width: `${pct}%` }}

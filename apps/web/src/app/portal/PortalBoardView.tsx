@@ -662,13 +662,13 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                 placeholder="Hledat…"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); triggerTableLoading(); }}
-                className="flex-1 min-w-0 min-h-[44px] px-3 py-2 text-sm border border-slate-200 rounded-[var(--wp-radius-sm)]"
+                className="flex-1 min-w-0 min-h-[44px] px-3 py-2 text-sm border border-[color:var(--wp-surface-card-border)] rounded-[var(--wp-radius-sm)]"
               />
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen((o) => !o)}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                   aria-label="Filtry a řazení"
                 >
                   ⋮
@@ -676,9 +676,9 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                 {mobileMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setMobileMenuOpen(false)} aria-hidden />
-                    <div className="absolute right-0 top-full mt-1 py-2 min-w-[200px] bg-white border border-slate-200 rounded-[var(--wp-radius-sm)] shadow-lg z-40">
-                      <div className="px-3 py-2 border-b border-slate-100">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase mb-1.5">STAV</p>
+                    <div className="absolute right-0 top-full mt-1 py-2 min-w-[200px] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-[var(--wp-radius-sm)] shadow-lg z-40">
+                      <div className="px-3 py-2 border-b border-[color:var(--wp-surface-card-border)]">
+                        <p className="text-[11px] font-semibold text-[color:var(--wp-text-secondary)] uppercase mb-1.5">STAV</p>
                         <CustomDropdown
                           value={filterStatus ?? ""}
                           onChange={(id) => { setFilterStatus(id || null); triggerTableLoading(); }}
@@ -691,7 +691,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                         />
                       </div>
                       <div className="px-3 py-2">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase mb-1.5">Seřadit</p>
+                        <p className="text-[11px] font-semibold text-[color:var(--wp-text-secondary)] uppercase mb-1.5">Seřadit</p>
                         <CustomDropdown
                           value={sortColumnId ?? "item"}
                           onChange={(id) => { setSortColumnId(id || null); triggerTableLoading(); }}
@@ -706,14 +706,14 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                           <button
                             type="button"
                             onClick={() => { setSortDir("asc"); triggerTableLoading(); }}
-                            className={`flex-1 min-h-[44px] text-sm rounded-[var(--wp-radius-sm)] border ${sortDir === "asc" ? "border-slate-400 bg-slate-100" : "border-slate-200"}`}
+                            className={`flex-1 min-h-[44px] text-sm rounded-[var(--wp-radius-sm)] border ${sortDir === "asc" ? "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)]" : "border-[color:var(--wp-surface-card-border)]"}`}
                           >
                             A→Z
                           </button>
                           <button
                             type="button"
                             onClick={() => { setSortDir("desc"); triggerTableLoading(); }}
-                            className={`flex-1 min-h-[44px] text-sm rounded-[var(--wp-radius-sm)] border ${sortDir === "desc" ? "border-slate-400 bg-slate-100" : "border-slate-200"}`}
+                            className={`flex-1 min-h-[44px] text-sm rounded-[var(--wp-radius-sm)] border ${sortDir === "desc" ? "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)]" : "border-[color:var(--wp-surface-card-border)]"}`}
                           >
                             Z→A
                           </button>
@@ -738,32 +738,32 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
               {filteredAndSortedGroups.map((group) => {
                 const groupItems = group.itemIds.map((id) => board.items[id]).filter(Boolean) as Item[];
                 return (
-                  <div key={group.id} className="rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <div key={group.id} className="rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
                     <div
-                      className="px-4 py-3 flex items-center justify-between border-b border-slate-100"
+                      className="px-4 py-3 flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)]"
                       style={{ backgroundColor: group.color ? `${group.color}20` : "var(--wp-bg)" }}
                     >
-                      <span className="font-semibold text-sm text-slate-800">{group.name}</span>
-                      <span className="text-xs text-slate-500">{groupItems.length} položek</span>
+                      <span className="font-semibold text-sm text-[color:var(--wp-text)]">{group.name}</span>
+                      <span className="text-xs text-[color:var(--wp-text-secondary)]">{groupItems.length} položek</span>
                     </div>
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-[color:var(--wp-surface-card-border)]">
                       {groupItems.map((item) => (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedItemId(item.id)}
-                          className="w-full text-left px-4 py-3 min-h-[44px] flex flex-col gap-1 hover:bg-slate-50 transition-colors"
+                          className="w-full text-left px-4 py-3 min-h-[44px] flex flex-col gap-1 hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                         >
-                          <span className="font-medium text-slate-900">{item.name}</span>
+                          <span className="font-medium text-[color:var(--wp-text)]">{item.name}</span>
                           {item.contactName && (
-                            <span className="text-xs text-slate-500">{item.contactName}</span>
+                            <span className="text-xs text-[color:var(--wp-text-secondary)]">{item.contactName}</span>
                           )}
                           <div className="flex flex-wrap gap-1 mt-1">
                             {visibleColumns.slice(0, 4).map((col) => {
                               const val = item.cells[col.id];
                               if (val == null || val === "") return null;
                               return (
-                                <span key={col.id} className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                                <span key={col.id} className="px-2 py-0.5 rounded text-[10px] font-medium bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
                                   {col.title}: {String(val)}
                                 </span>
                               );
@@ -774,7 +774,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                       <button
                         type="button"
                         onClick={() => onAddItem(group.id)}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 min-h-[44px]"
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px]"
                       >
                         + Přidat položku
                       </button>
@@ -785,7 +785,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
               <button
                 type="button"
                 onClick={onOpenAddGroupModal}
-                className="w-full py-3 px-4 rounded-[var(--wp-radius-sm)] border-2 border-dashed border-slate-200 text-slate-500 font-medium text-sm hover:border-slate-300 hover:text-slate-700 min-h-[44px]"
+                className="w-full py-3 px-4 rounded-[var(--wp-radius-sm)] border-2 border-dashed border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] font-medium text-sm hover:border-[color:var(--wp-border-strong)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px]"
               >
                 + Přidat skupinu
               </button>
@@ -835,7 +835,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
           <BaseModal open={true} onClose={() => setNewBoardModalOpen(false)} title="Nový board" maxWidth="sm">
             <div className="px-4 py-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Název</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Název</label>
                 <input
                   value={newBoardName}
                   onChange={(e) => setNewBoardName(e.target.value)}
@@ -846,12 +846,12 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                     }
                   }}
                   placeholder="např. Obchody Q1"
-                  className="w-full border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-monday-blue/20 focus:border-monday-blue rounded-[var(--wp-radius-sm)] min-h-[44px]"
+                  className="w-full border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-monday-blue/20 focus:border-monday-blue rounded-[var(--wp-radius-sm)] min-h-[44px]"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Z šablony</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Z šablony</label>
                 <CustomDropdown
                   value={newBoardTemplateId}
                   onChange={setNewBoardTemplateId}
@@ -860,7 +860,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setNewBoardModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-[var(--wp-radius-sm)]">
+                <button type="button" onClick={() => setNewBoardModalOpen(false)} className="px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-[var(--wp-radius-sm)]">
                   Zrušit
                 </button>
                 <button
@@ -892,17 +892,17 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
           <BaseModal open={true} onClose={() => setAddGroupModalOpen(false)} title="Přidat skupinu" maxWidth="sm">
             <div className="px-4 py-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Název skupiny *</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Název skupiny *</label>
                 <input
                   value={addGroupName}
                   onChange={(e) => setAddGroupName(e.target.value)}
                   placeholder="např. V jednání"
-                  className="w-full border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-monday-blue/20 focus:border-monday-blue rounded-[var(--wp-radius-sm)]"
+                  className="w-full border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-monday-blue/20 focus:border-monday-blue rounded-[var(--wp-radius-sm)]"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Barva (volitelně)</label>
+                <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Barva (volitelně)</label>
                 <div className="flex flex-wrap gap-2">
                   {GROUP_COLORS.map((c) => (
                     <button
@@ -924,7 +924,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
                 <button
                   type="button"
                   onClick={() => setAddGroupModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-[var(--wp-radius-sm)]"
+                  className="px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-[var(--wp-radius-sm)]"
                 >
                   Zrušit
                 </button>

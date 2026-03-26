@@ -61,15 +61,15 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Handshake className="text-slate-400" size={20} />
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+            <Handshake className="text-[color:var(--wp-text-tertiary)]" size={20} />
             Doporučení
           </h2>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-500">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>
         </div>
       </div>
     );
@@ -77,15 +77,15 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
 
   if (error || (summary === null && signalsResult === null)) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Handshake className="text-slate-400" size={20} />
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+            <Handshake className="text-[color:var(--wp-text-tertiary)]" size={20} />
             Doporučení
           </h2>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-600">{error ?? "Chyba načtení."}</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">{error ?? "Chyba načtení."}</p>
         </div>
       </div>
     );
@@ -103,24 +103,24 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
   const suppressReason = signalsResult?.suppressReason ?? null;
 
   return (
-    <div id="doporučení" className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-50">
-        <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-          <Handshake className="text-slate-400" size={20} />
+    <div id="doporučení" className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
+          <Handshake className="text-[color:var(--wp-text-tertiary)]" size={20} />
           Doporučení
         </h2>
       </div>
       <div className="p-6 space-y-6">
         {/* Kdo klienta doporučil */}
         {!hasReferredBy && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 flex flex-col gap-3">
-            <p className="text-sm text-slate-600 flex items-start gap-2">
-              <Info size={18} className="text-slate-400 shrink-0 mt-0.5" />
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-5 flex flex-col gap-3">
+            <p className="text-sm text-[color:var(--wp-text-secondary)] flex items-start gap-2">
+              <Info size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0 mt-0.5" />
               Zdroj doporučení není vyplněn.
             </p>
             <Link
               href={`/portal/contacts/${contactId}/edit`}
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 transition-colors w-fit"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors w-fit"
             >
               <Edit2 size={16} />
               Upravit kontakt
@@ -129,7 +129,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
         )}
         {hasReferredBy && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-500">Doporučil(a):</span>
+            <span className="text-sm text-[color:var(--wp-text-secondary)]">Doporučil(a):</span>
             {hasReferredByLink && summary?.referredByContactId ? (
               <Link
                 href={`/portal/contacts/${summary.referredByContactId}`}
@@ -138,14 +138,14 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
                 {summary.referredByContactName ?? "Kontakt"}
               </Link>
             ) : (
-              <span className="text-sm font-medium text-slate-800">
+              <span className="text-sm font-medium text-[color:var(--wp-text)]">
                 {summary?.referredBySourceText ?? summary?.referredByContactName ?? "—"}
               </span>
             )}
             {hasReferredByLink && (
               <Link
                 href={`/portal/contacts/${contactId}/edit`}
-                className="text-xs text-slate-500 hover:text-slate-700 ml-1"
+                className="text-xs text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)] ml-1"
               >
                 (propojit s kontaktem)
               </Link>
@@ -155,13 +155,13 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
 
         {/* Koho klient doporučil – počet a hodnota */}
         {givenCount === 0 && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 flex flex-col gap-3">
-            <p className="text-sm text-slate-600">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-5 flex flex-col gap-3">
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">
               Tento klient zatím nikoho nedoporučil.
             </p>
             {primarySignal && !suppressReason && (
               <>
-                <p className="text-sm font-medium text-slate-800">{primarySignal.description}</p>
+                <p className="text-sm font-medium text-[color:var(--wp-text)]">{primarySignal.description}</p>
                 <div className="flex flex-wrap gap-2">
                   <CreateActionButton
                     type="button"
@@ -174,7 +174,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
                   </CreateActionButton>
                   <Link
                     href={`/portal/calendar?contactId=${contactId}&newEvent=1`}
-                    className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 transition-colors"
+                    className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                   >
                     <Calendar size={16} />
                     Naplánovat schůzku
@@ -188,22 +188,22 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
         {givenCount > 0 && (
           <>
             <div className="flex flex-wrap items-center gap-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-800">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text)]">
                 <Users size={14} />
                 {givenCount} doporučení
               </span>
               {convertedCount > 0 && (
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-[color:var(--wp-text-secondary)]">
                   {convertedCount} konvertováno
                 </span>
               )}
               {valueCzk != null && valueCzk > 0 && (
-                <span className="text-sm font-semibold text-slate-800">
+                <span className="text-sm font-semibold text-[color:var(--wp-text)]">
                   Hodnota: {Number(valueCzk).toLocaleString("cs-CZ")} Kč
                 </span>
               )}
               {lastReferralAt && (
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-[color:var(--wp-text-secondary)]">
                   Poslední: {new Date(lastReferralAt).toLocaleDateString("cs-CZ")}
                 </span>
               )}
@@ -211,13 +211,13 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
 
             {/* Referral historie – seznam */}
             <div>
-              <h3 className="text-sm font-bold text-slate-700 mb-2">Historie doporučení</h3>
+              <h3 className="text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Historie doporučení</h3>
               <ul className="space-y-2">
                 {referredContacts.map((ref) => (
-                  <li key={ref.id} className="flex items-center justify-between gap-2 py-2 border-b border-slate-100 last:border-0">
+                  <li key={ref.id} className="flex items-center justify-between gap-2 py-2 border-b border-[color:var(--wp-surface-card-border)] last:border-0">
                     <Link
                       href={`/portal/contacts/${ref.id}`}
-                      className="text-sm font-medium text-slate-800 hover:text-[var(--brand-main)] truncate"
+                      className="text-sm font-medium text-[color:var(--wp-text)] hover:text-[var(--brand-main)] truncate"
                     >
                       {ref.name}
                     </Link>
@@ -227,12 +227,12 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
                           Klient
                         </span>
                       ) : (
-                        <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
                           Lead
                         </span>
                       )}
                       {ref.valueCzk != null && ref.valueCzk > 0 && (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-[color:var(--wp-text-secondary)]">
                           {Number(ref.valueCzk).toLocaleString("cs-CZ")} Kč
                         </span>
                       )}
@@ -245,7 +245,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
             {/* CTA: Přidat doporučeného */}
             <Link
               href={`/portal/contacts/new?referralContactId=${contactId}`}
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 transition-colors w-fit"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors w-fit"
             >
               <UserPlus size={16} />
               Přidat doporučeného
@@ -254,7 +254,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
             {/* Vhodný moment požádat o další referral */}
             {primarySignal && !suppressReason && (
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-5 flex flex-col gap-3">
-                <p className="text-sm font-medium text-slate-800">{primarySignal.description}</p>
+                <p className="text-sm font-medium text-[color:var(--wp-text)]">{primarySignal.description}</p>
                 <div className="flex flex-wrap gap-2">
                   <CreateActionButton
                     type="button"
@@ -267,7 +267,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
                   </CreateActionButton>
                   <Link
                     href={`/portal/calendar?contactId=${contactId}&newEvent=1`}
-                    className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200 bg-white text-indigo-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 transition-colors"
+                    className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200 bg-[color:var(--wp-surface-card)] text-indigo-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 transition-colors"
                   >
                     <Calendar size={16} />
                     Naplánovat schůzku

@@ -63,9 +63,9 @@ export function StepCompanyOutput() {
   };
 
   return (
-    <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-      <h3 className="text-lg font-medium text-slate-800 mb-4">Výstup</h3>
-      <p className="text-slate-600 mb-4">
+    <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+      <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Výstup</h3>
+      <p className="text-[color:var(--wp-text-secondary)] mb-4">
         Shrnutí a doporučení pro <strong>{companyName}</strong>. Můžete vygenerovat report a uložit ho do dokumentů ke klientovi.
       </p>
 
@@ -73,7 +73,7 @@ export function StepCompanyOutput() {
         <button
           type="button"
           onClick={handleGenerateAndPrint}
-          className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-800 font-medium rounded-xl hover:bg-slate-200"
+          className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] font-medium rounded-xl hover:bg-[color:var(--wp-surface-card-border)]"
         >
           <FileText className="w-5 h-5" />
           Náhled / tisk reportu
@@ -108,7 +108,7 @@ export function StepCompanyOutput() {
           </div>
           <div
             id="company-report-print-root"
-            className="mt-4 p-4 bg-white border border-slate-200 rounded-xl overflow-auto max-h-[70vh] print:max-h-none print:border-0 print:p-0 print:m-0 print:overflow-visible"
+            className="mt-4 p-4 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl overflow-auto max-h-[70vh] print:max-h-none print:border-0 print:p-0 print:m-0 print:overflow-visible"
             dangerouslySetInnerHTML={{ __html: reportHtml }}
           />
         </div>

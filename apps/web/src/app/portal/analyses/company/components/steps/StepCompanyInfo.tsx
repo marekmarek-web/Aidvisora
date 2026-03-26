@@ -32,29 +32,29 @@ export function StepCompanyInfo() {
   const kpi = step1Kpi(payload);
 
   return (
-    <section className="p-4 md:p-6 bg-white rounded-xl border border-slate-200">
-      <h3 className="text-lg font-medium text-slate-800 mb-4">Firma</h3>
+    <section className="p-4 md:p-6 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
+      <h3 className="text-lg font-medium text-[color:var(--wp-text)] mb-4">Firma</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="sm:col-span-2">
-          <span className="block text-sm font-medium text-slate-600 mb-1">Název</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Název</span>
           <input
             type="text"
             value={company.name ?? ""}
             onChange={(e) => setCompany({ name: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
         <label>
-          <span className="block text-sm font-medium text-slate-600 mb-1">IČO</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">IČO</span>
           <input
             type="text"
             value={company.ico ?? ""}
             onChange={(e) => setCompany({ ico: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
         <label className="block w-full">
-          <span className="block text-sm font-medium text-slate-600 mb-1">Obor</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Obor</span>
           <CustomDropdown
             value={company.industry ?? ""}
             onChange={(id) => setCompany({ industry: id })}
@@ -66,49 +66,49 @@ export function StepCompanyInfo() {
           />
         </label>
         <label>
-          <span className="block text-sm font-medium text-slate-600 mb-1">Zaměstnanci</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Zaměstnanci</span>
           <input
             type="number"
             min={0}
             value={company.employees ?? 0}
             onChange={(e) => setCompany({ employees: num(e.target.value, 0) })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
         <label>
-          <span className="block text-sm font-medium text-slate-600 mb-1">Průměrná mzda (Kč)</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Průměrná mzda (Kč)</span>
           <input
             type="number"
             min={0}
             value={company.avgWage ?? 0}
             onChange={(e) => setCompany({ avgWage: num(e.target.value, 0) })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
         <label>
-          <span className="block text-sm font-medium text-slate-600 mb-1">3. kategorie</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">3. kategorie</span>
           <input
             type="number"
             min={0}
             value={company.cat3 ?? 0}
             onChange={(e) => setCompany({ cat3: num(e.target.value, 0) })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
         <label>
-          <span className="block text-sm font-medium text-slate-600 mb-1">TOP klient (%)</span>
+          <span className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">TOP klient (%)</span>
           <input
             type="number"
             min={0}
             max={100}
             value={company.topClient ?? 0}
             onChange={(e) => setCompany({ topClient: num(e.target.value, 0) })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            className="w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-[color:var(--wp-text)]"
           />
         </label>
       </div>
-      <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-        <p className="text-sm text-slate-600">
+      <div className="mt-4 p-3 bg-[color:var(--wp-surface-muted)] rounded-lg border border-[color:var(--wp-surface-card-border)]">
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">
           <strong>Mzdový fond (měs.):</strong> {kpi.wageFund.toLocaleString("cs-CZ")} Kč
           {" · "}
           <strong>Rizikovost oboru:</strong> {RISK_LABELS[kpi.riskLevel] ?? kpi.riskLevel}

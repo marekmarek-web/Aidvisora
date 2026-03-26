@@ -31,16 +31,16 @@ export function CustomDropdown({
   const isInput = variant === "input";
 
   const buttonClasses = isInput
-    ? `w-full px-4 py-3 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-sm font-bold transition-all focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 flex items-center justify-between min-h-[44px] ${isPlaceholder ? "text-slate-400" : "text-slate-800"}`
-    : "flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-700 transition-all shadow-sm active:scale-95 min-h-[44px]";
+    ? `w-full px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between min-h-[44px] border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] hover:border-[color:var(--wp-header-input-focus-border)] focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-[color:var(--wp-header-input-focus-ring)] focus:border-[color:var(--wp-header-input-focus-border)] ${isPlaceholder ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-input-text)]"}`
+    : "flex min-h-[44px] items-center gap-2 rounded-xl border border-indigo-200/80 bg-indigo-500/10 px-4 py-2.5 text-xs font-bold text-indigo-700 shadow-sm transition-all hover:bg-indigo-500/15 active:scale-95 dark:border-indigo-500/35 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25";
 
   return (
     <div className="relative">
       <style>{`
         .custom-dropdown-scroll::-webkit-scrollbar { width: 6px; }
         .custom-dropdown-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-dropdown-scroll::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 10px; }
-        .custom-dropdown-scroll::-webkit-scrollbar-thumb:hover { background-color: #cbd5e1; }
+        .custom-dropdown-scroll::-webkit-scrollbar-thumb { background-color: var(--wp-surface-card-border); border-radius: 10px; }
+        .custom-dropdown-scroll::-webkit-scrollbar-thumb:hover { background-color: var(--wp-border-strong); }
       `}</style>
       <button
         type="button"
@@ -52,7 +52,7 @@ export function CustomDropdown({
             {Icon && (
               <Icon
                 size={18}
-                className={isPlaceholder ? "text-slate-300 shrink-0" : "text-slate-500 shrink-0"}
+                className={isPlaceholder ? "shrink-0 text-[color:var(--wp-text-tertiary)]" : "shrink-0 text-[color:var(--wp-icon-default)]"}
               />
             )}
             <span className="truncate">{selected ? selected.label : placeholder}</span>
@@ -70,7 +70,7 @@ export function CustomDropdown({
         )}
         <ChevronDown
           size={isInput ? 16 : 14}
-          className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isInput ? "text-slate-400" : ""}`}
+          className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isInput ? "text-[color:var(--wp-text-tertiary)]" : ""}`}
         />
       </button>
 
@@ -82,7 +82,7 @@ export function CustomDropdown({
             aria-hidden
           />
           <div
-            className={`absolute ${isInput ? "left-0 w-full" : "left-0 w-56"} bg-white border border-slate-100 rounded-2xl shadow-xl shadow-indigo-900/10 py-2 z-[120] max-h-60 overflow-y-auto custom-dropdown-scroll
+            className={`absolute ${isInput ? "left-0 w-full" : "left-0 w-56"} z-[120] max-h-60 overflow-y-auto rounded-2xl border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] py-2 shadow-xl shadow-indigo-900/10 dark:shadow-black/40 custom-dropdown-scroll
               ${direction === "up" ? "bottom-full mb-2" : "top-full mt-2"}
               animate-in fade-in duration-200
               ${direction === "up" ? "slide-in-from-bottom-2" : "slide-in-from-top-2"}
@@ -96,8 +96,8 @@ export function CustomDropdown({
                   onChange(opt.id);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold transition-colors hover:bg-slate-50 text-left
-                  ${value === opt.id ? "text-indigo-600 bg-indigo-50/50" : "text-slate-600"}
+                className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-bold transition-colors hover:bg-[color:var(--wp-surface-muted)]
+                  ${value === opt.id ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "text-[color:var(--wp-text-secondary)]"}
                 `}
               >
                 <span className="truncate pr-4">{opt.label}</span>

@@ -63,8 +63,8 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{name}</h1>
-        <p className="text-slate-500 mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold text-[color:var(--wp-text)]">{name}</h1>
+        <p className="text-[color:var(--wp-text-secondary)] mt-1">
           {detail.roleName}
           {detail.email ? ` · ${detail.email}` : ""}
           {" · v týmu od "}
@@ -74,8 +74,8 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
 
       {coachingBullets.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Shrnutí pro coaching</h2>
-          <ul className="rounded-2xl border border-slate-100 bg-indigo-50/30 p-5 space-y-2 list-disc list-inside text-sm text-slate-700">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Shrnutí pro coaching</h2>
+          <ul className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-indigo-50/30 p-5 space-y-2 list-disc list-inside text-sm text-[color:var(--wp-text-secondary)]">
             {coachingBullets.map((b, i) => (
               <li key={i}>{b}</li>
             ))}
@@ -85,7 +85,7 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
 
       {detail.alerts.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             Upozornění
           </h2>
@@ -97,8 +97,8 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
                   a.severity === "critical" ? "border-rose-200 bg-rose-50/50" : "border-amber-200 bg-amber-50/50"
                 }`}
               >
-                <p className="font-medium text-slate-900">{a.title}</p>
-                <p className="text-sm text-slate-600">{a.description}</p>
+                <p className="font-medium text-[color:var(--wp-text)]">{a.title}</p>
+                <p className="text-sm text-[color:var(--wp-text-secondary)]">{a.description}</p>
               </li>
             ))}
           </ul>
@@ -107,69 +107,69 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
 
       {m && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Metriky (tento měsíc)</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Metriky (tento měsíc)</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{m.unitsThisPeriod}</p>
-              <p className="text-xs text-slate-500">Jednotky</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{m.unitsThisPeriod}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Jednotky</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{formatNumber(m.productionThisPeriod)}</p>
-              <p className="text-xs text-slate-500">Produkce</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{formatNumber(m.productionThisPeriod)}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Produkce</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{m.meetingsThisPeriod}</p>
-              <p className="text-xs text-slate-500">Schůzky</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{m.meetingsThisPeriod}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Schůzky</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{m.activityCount}</p>
-              <p className="text-xs text-slate-500">Aktivity</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{m.activityCount}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Aktivity</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{m.callsThisPeriod}</p>
-              <p className="text-xs text-slate-500">Hovory</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{m.callsThisPeriod}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Hovory</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{m.followUpsThisPeriod}</p>
-              <p className="text-xs text-slate-500">Follow-upy</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{m.followUpsThisPeriod}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Follow-upy</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{Math.round(m.conversionRate * 100)}%</p>
-              <p className="text-xs text-slate-500">Conversion</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{Math.round(m.conversionRate * 100)}%</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Conversion</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900">{formatNumber(m.pipelineValue)}</p>
-              <p className="text-xs text-slate-500">Pipeline</p>
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <p className="text-2xl font-bold text-[color:var(--wp-text)]">{formatNumber(m.pipelineValue)}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">Pipeline</p>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-            <p className="text-slate-600">Otevřené úkoly: <strong>{m.tasksOpen}</strong></p>
-            <p className="text-slate-600">Splněné úkoly: <strong>{m.tasksCompleted}</strong></p>
-            <p className="text-slate-600">Otevřené případy: <strong>{m.opportunitiesOpen}</strong></p>
-            <p className="text-slate-600">Poslední aktivita: {m.lastActivityAt ? new Date(m.lastActivityAt).toLocaleDateString("cs-CZ") : "—"}</p>
-            <p className="text-slate-600">Dnů bez aktivity: <strong>{m.daysWithoutActivity}</strong></p>
+            <p className="text-[color:var(--wp-text-secondary)]">Otevřené úkoly: <strong>{m.tasksOpen}</strong></p>
+            <p className="text-[color:var(--wp-text-secondary)]">Splněné úkoly: <strong>{m.tasksCompleted}</strong></p>
+            <p className="text-[color:var(--wp-text-secondary)]">Otevřené případy: <strong>{m.opportunitiesOpen}</strong></p>
+            <p className="text-[color:var(--wp-text-secondary)]">Poslední aktivita: {m.lastActivityAt ? new Date(m.lastActivityAt).toLocaleDateString("cs-CZ") : "—"}</p>
+            <p className="text-[color:var(--wp-text-secondary)]">Dnů bez aktivity: <strong>{m.daysWithoutActivity}</strong></p>
           </div>
         </section>
       )}
 
       {detail.performanceOverTime.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Výkon v čase</h2>
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Výkon v čase</h2>
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
             <div className="flex gap-2 items-end justify-between h-28">
               {detail.performanceOverTime.map((p, i) => {
                 const maxUnits = Math.max(...detail.performanceOverTime.map((x) => x.units), 1);
                 const heightPct = maxUnits > 0 ? (p.units / maxUnits) * 100 : 0;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                    <div className="w-full flex flex-col justify-end h-16 rounded-t bg-slate-100 overflow-hidden">
+                    <div className="w-full flex flex-col justify-end h-16 rounded-t bg-[color:var(--wp-surface-muted)] overflow-hidden">
                       <div
                         className="w-full bg-indigo-500 rounded-t"
                         style={{ height: `${heightPct}%`, minHeight: p.units > 0 ? "4px" : 0 }}
                       />
                     </div>
-                    <span className="text-[10px] font-medium text-slate-500 truncate w-full text-center" title={p.label}>{p.label}</span>
-                    <span className="text-xs font-semibold text-slate-700">{p.units}</span>
+                    <span className="text-[10px] font-medium text-[color:var(--wp-text-secondary)] truncate w-full text-center" title={p.label}>{p.label}</span>
+                    <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">{p.units}</span>
                   </div>
                 );
               })}
@@ -180,18 +180,18 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
 
       {detail.adaptation && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Adaptace nováčka</h2>
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Adaptace nováčka</h2>
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="text-slate-600">{detail.adaptation.daysInTeam} dní v týmu</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-700">{detail.adaptation.adaptationScore} %</span>
+              <span className="text-[color:var(--wp-text-secondary)]">{detail.adaptation.daysInTeam} dní v týmu</span>
+              <span className="rounded-full bg-[color:var(--wp-surface-muted)] px-3 py-1 text-sm font-bold text-[color:var(--wp-text-secondary)]">{detail.adaptation.adaptationScore} %</span>
             </div>
-            <p className="text-sm text-slate-600 mb-3">Stav: <strong>{detail.adaptation.adaptationStatus}</strong></p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mb-3">Stav: <strong>{detail.adaptation.adaptationStatus}</strong></p>
             <ul className="space-y-2">
               {detail.adaptation.checklist.map((s) => (
                 <li key={s.key} className="flex items-center gap-2 text-sm">
-                  {s.completed ? <Check className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-slate-300" />}
-                  <span className={s.completed ? "text-slate-700" : "text-slate-500"}>{s.label}</span>
+                  {s.completed ? <Check className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-[color:var(--wp-text-tertiary)]" />}
+                  <span className={s.completed ? "text-[color:var(--wp-text-secondary)]" : "text-[color:var(--wp-text-secondary)]"}>{s.label}</span>
                 </li>
               ))}
             </ul>

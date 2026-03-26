@@ -105,8 +105,8 @@ export function StepBenefitsRisks() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Benefity & Rizika</h2>
-        <p className="text-slate-500 mt-1">Co máte a co chybí (1 minuta).</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Benefity & Rizika</h2>
+        <p className="text-[color:var(--wp-text-secondary)] mt-1">Co máte a co chybí (1 minuta).</p>
       </div>
 
       <div className="flex gap-3 mb-8 flex-wrap">
@@ -114,7 +114,7 @@ export function StepBenefitsRisks() {
           type="button"
           onClick={() => setActiveTab("benefits")}
           className={`min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors ${
-            activeTab === "benefits" ? "bg-indigo-500 text-white shadow" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            activeTab === "benefits" ? "bg-indigo-500 text-white shadow" : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
           }`}
         >
           <Gift className="w-4 h-4" />
@@ -124,7 +124,7 @@ export function StepBenefitsRisks() {
           type="button"
           onClick={() => setActiveTab("risks")}
           className={`min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors ${
-            activeTab === "risks" ? "bg-indigo-500 text-white shadow" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            activeTab === "risks" ? "bg-indigo-500 text-white shadow" : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
           }`}
         >
           <Shield className="w-4 h-4" />
@@ -134,14 +134,14 @@ export function StepBenefitsRisks() {
 
       {activeTab === "benefits" && (
         <div className="space-y-6">
-          <section className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Přispíváte zaměstnancům?</h3>
+          <section className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+            <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-4">Přispíváte zaměstnancům?</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {BENEFIT_OPTIONS.map(({ key, label, subtitle, Icon, iconBg }) => (
                 <label
                   key={key}
-                  className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 bg-white p-4 min-h-[44px] transition-all ${
-                    benefits[key] ? "border-indigo-500 ring-2 ring-indigo-200" : "border-slate-200 hover:border-slate-300"
+                  className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 bg-[color:var(--wp-surface-card)] p-4 min-h-[44px] transition-all ${
+                    benefits[key] ? "border-indigo-500 ring-2 ring-indigo-200" : "border-[color:var(--wp-surface-card-border)] hover:border-[color:var(--wp-border-strong)]"
                   }`}
                 >
                   <input
@@ -154,8 +154,8 @@ export function StepBenefitsRisks() {
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-900">{label}</div>
-                    <div className="text-xs text-slate-500">{subtitle}</div>
+                    <div className="font-bold text-[color:var(--wp-text)]">{label}</div>
+                    <div className="text-xs text-[color:var(--wp-text-secondary)]">{subtitle}</div>
                   </div>
                   {benefits[key] && <Check className="w-5 h-5 text-indigo-500 flex-shrink-0" />}
                 </label>
@@ -175,9 +175,9 @@ export function StepBenefitsRisks() {
                         statePensionTaxRefundAnnual: e.target.checked ? STATE_PENSION_TAX_REFUND_ANNUAL : undefined,
                       })
                     }
-                    className="mt-1 h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="mt-1 h-5 w-5 rounded border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="text-sm text-slate-800">
+                  <span className="text-sm text-[color:var(--wp-text)]">
                     <strong>Danové zvýhodnění od státu:</strong> až {formatCzk(STATE_PENSION_TAX_LIMIT_ANNUAL)}/rok do DIP a DPS,{" "}
                     <strong>{formatCzk(STATE_PENSION_TAX_REFUND_ANNUAL)}</strong> daň zpět ročně.
                   </span>
@@ -185,56 +185,56 @@ export function StepBenefitsRisks() {
               </div>
             )}
 
-            <div className="mt-6 bg-white p-4 rounded-xl border border-slate-200">
-              <h4 className="font-bold text-slate-800 mb-3">Detail příspěvků – Zaměstnanci</h4>
+            <div className="mt-6 bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)]">
+              <h4 className="font-bold text-[color:var(--wp-text)] mb-3">Detail příspěvků – Zaměstnanci</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Příspěvek na osobu/měs (zaměstnanci)</label>
+                  <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Příspěvek na osobu/měs (zaměstnanci)</label>
                   <div className="relative">
                     <input
                       type="number"
                       min={0}
                       value={benefits.amountPerPerson ?? ""}
                       onChange={(e) => setBenefits({ amountPerPerson: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-4 pr-12 py-2 border border-slate-200 rounded-xl text-sm min-h-[44px]"
+                      className="w-full pl-4 pr-12 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm min-h-[44px]"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">Kč</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] text-sm">Kč</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Kolika zaměstnancům</label>
+                  <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Kolika zaměstnancům</label>
                   <input
                     type="number"
                     min={0}
                     value={benefits.employeeCount ?? ""}
                     onChange={(e) => setBenefits({ employeeCount: parseInt(e.target.value, 10) || 0 })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm min-h-[44px]"
+                    className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm min-h-[44px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Roční náklad firmy (zaměstnanci)</label>
-                  <div className="w-full px-4 py-2 bg-slate-50 rounded-xl text-sm font-bold text-slate-900 text-center min-h-[44px] flex items-center justify-center">
+                  <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Roční náklad firmy (zaměstnanci)</label>
+                  <div className="w-full px-4 py-2 bg-[color:var(--wp-surface-muted)] rounded-xl text-sm font-bold text-[color:var(--wp-text)] text-center min-h-[44px] flex items-center justify-center">
                     {yearlyEmployees > 0 ? formatCzk(yearlyEmployees) : "—"}
                   </div>
                 </div>
               </div>
-              <h4 className="font-bold text-slate-800 mb-3">Příspěvky jednatelům (majitelé)</h4>
+              <h4 className="font-bold text-[color:var(--wp-text)] mb-3">Příspěvky jednatelům (majitelé)</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Kolik přispíváte jednatelům měsíčně? (celkem)</label>
+                  <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Kolik přispíváte jednatelům měsíčně? (celkem)</label>
                   <div className="relative">
                     <input
                       type="number"
                       min={0}
                       value={benefits.directorsAmount ?? ""}
                       onChange={(e) => setBenefits({ directorsAmount: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-4 pr-12 py-2 border border-slate-200 rounded-xl text-sm min-h-[44px]"
+                      className="w-full pl-4 pr-12 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm min-h-[44px]"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">Kč</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] text-sm">Kč</span>
                   </div>
                 </div>
                 <div className="flex items-end">
-                  <div className="text-sm text-slate-600">Roční náklad: {yearlyDirectors > 0 ? formatCzk(yearlyDirectors) : "—"}</div>
+                  <div className="text-sm text-[color:var(--wp-text-secondary)]">Roční náklad: {yearlyDirectors > 0 ? formatCzk(yearlyDirectors) : "—"}</div>
                 </div>
               </div>
             </div>
@@ -246,46 +246,46 @@ export function StepBenefitsRisks() {
               Kalkulačka benefitů
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-4 rounded-xl border border-slate-200">
-                <h4 className="font-bold text-slate-800 mb-3">Varianta A: Navýšení mzdy</h4>
+              <div className="bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)]">
+                <h4 className="font-bold text-[color:var(--wp-text)] mb-3">Varianta A: Navýšení mzdy</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Hrubá mzda navíc:</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Hrubá mzda navíc:</span>
                     <span className="font-bold">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(grossEquiv * employeeCount) : "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Odvody (33,8 %):</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Odvody (33,8 %):</span>
                     <span className="font-bold text-red-500">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk((employerCost - grossEquiv) * employeeCount) : "—"}</span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-100 pt-2">
+                  <div className="flex justify-between border-t border-[color:var(--wp-surface-card-border)] pt-2">
                     <span className="font-bold">Náklad firmy:</span>
                     <span className="font-bold text-red-600">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(employerCost * employeeCount) : "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Zaměstnanec čistého:</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Zaměstnanec čistého:</span>
                     <span className="font-bold">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(netForEmployee * employeeCount) : "—"}</span>
                   </div>
                 </div>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-emerald-300 ring-2 ring-emerald-200">
+              <div className="bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-emerald-300 ring-2 ring-emerald-200">
                 <h4 className="font-bold text-emerald-700 mb-3 flex items-center gap-1">
                   <span className="text-amber-500">★</span> Varianta B: Benefit
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Příspěvek:</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Příspěvek:</span>
                     <span className="font-bold">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(amountPerPerson * employeeCount) : "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Odvody:</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Odvody:</span>
                     <span className="font-bold text-emerald-600">0 Kč</span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-100 pt-2">
+                  <div className="flex justify-between border-t border-[color:var(--wp-surface-card-border)] pt-2">
                     <span className="font-bold">Náklad firmy:</span>
                     <span className="font-bold text-emerald-600">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(amountPerPerson * employeeCount) : "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Zaměstnanec dostane:</span>
+                    <span className="text-[color:var(--wp-text-secondary)]">Zaměstnanec dostane:</span>
                     <span className="font-bold text-emerald-600">{amountPerPerson > 0 && employeeCount > 0 ? formatCzk(amountPerPerson * employeeCount) : "—"}</span>
                   </div>
                 </div>
@@ -317,8 +317,8 @@ export function StepBenefitsRisks() {
       )}
 
       {activeTab === "risks" && (
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Jaká pojištění má firma?</h3>
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-4">Jaká pojištění má firma?</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {RISK_OPTIONS.map(({ key, label, subtitle, Icon, iconBg, hasDetail, tooltip }) => {
               const rk = key as keyof CompanyRiskDetails;
@@ -330,8 +330,8 @@ export function StepBenefitsRisks() {
               return (
               <div
                 key={key}
-                className={`bg-white border-2 rounded-xl p-4 transition-all ${
-                  risks[key] ? "border-indigo-500" : "border-slate-200"
+                className={`bg-[color:var(--wp-surface-card)] border-2 rounded-xl p-4 transition-all ${
+                  risks[key] ? "border-indigo-500" : "border-[color:var(--wp-surface-card-border)]"
                 } ${hasDetail ? "" : ""}`}
               >
                 <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
@@ -345,20 +345,20 @@ export function StepBenefitsRisks() {
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-900">{label}</div>
-                    {subtitle && <div className="text-xs text-slate-500">{subtitle}</div>}
+                    <div className="font-bold text-[color:var(--wp-text)]">{label}</div>
+                    {subtitle && <div className="text-xs text-[color:var(--wp-text-secondary)]">{subtitle}</div>}
                   </div>
                   {tooltip && (
-                    <span title={tooltip} className="flex-shrink-0 text-slate-400 hover:text-slate-600">
+                    <span title={tooltip} className="flex-shrink-0 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)]">
                       <Info className="w-4 h-4" />
                     </span>
                   )}
                   {risks[key] && <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />}
                 </label>
                 {hasDetail && risks[key] && (key === "property" || key === "interruption" || key === "liability") && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                  <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] space-y-2">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-0.5">Pojistný limit</label>
+                      <label className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-0.5">Pojistný limit</label>
                       <CurrencyCzkInput
                         value={riskDetails[key]?.limit}
                         onChange={(v: number | undefined) => setRiskDetail(key, { limit: v })}
@@ -367,23 +367,23 @@ export function StepBenefitsRisks() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-0.5">Stáří smlouvy (roky)</label>
+                      <label className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-0.5">Stáří smlouvy (roky)</label>
                       <input
                         type="number"
                         min={0}
                         value={riskDetails[key]?.contractYears ?? ""}
                         onChange={(e) => setRiskDetail(key, { contractYears: parseInt(e.target.value, 10) || undefined })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm min-h-[40px]"
+                        className="w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm min-h-[40px]"
                       />
                     </div>
                   </div>
                 )}
                 {risks[key] && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Pojistné – srovnání</p>
+                  <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] space-y-2">
+                    <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wide">Pojistné – srovnání</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <span className="block text-xs font-semibold text-slate-600 mb-1">Aktuálně platí</span>
+                        <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Aktuálně platí</span>
                         <CurrencyCzkInput
                           value={d?.currentPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { currentPremiumMonthly: v })}
@@ -392,7 +392,7 @@ export function StepBenefitsRisks() {
                         />
                       </div>
                       <div>
-                        <span className="block text-xs font-semibold text-slate-600 mb-1">Návrh (nově)</span>
+                        <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Návrh (nově)</span>
                         <CurrencyCzkInput
                           value={d?.proposedPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { proposedPremiumMonthly: v })}
@@ -400,13 +400,13 @@ export function StepBenefitsRisks() {
                           unitLabel="Kč/měs."
                         />
                       </div>
-                      <div className="flex flex-col justify-end min-h-[40px] rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-                        <span className="text-xs font-semibold text-slate-500">Úspora měsíčně</span>
+                      <div className="flex flex-col justify-end min-h-[40px] rounded-lg bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-3 py-2">
+                        <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Úspora měsíčně</span>
                         <span className="text-sm font-bold text-emerald-700">
                           {monthlySaving != null && monthlySaving > 0 ? formatCzk(monthlySaving) : "—"}
                         </span>
                         {monthlySaving != null && monthlySaving > 0 && (
-                          <span className="text-xs text-slate-500">Rok: {formatCzk(monthlySaving * 12)}</span>
+                          <span className="text-xs text-[color:var(--wp-text-secondary)]">Rok: {formatCzk(monthlySaving * 12)}</span>
                         )}
                       </div>
                     </div>
@@ -416,12 +416,12 @@ export function StepBenefitsRisks() {
             );
             })}
           </div>
-          <div className="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+          <div className="mt-6 p-4 bg-[color:var(--wp-surface-card)] rounded-xl border border-[color:var(--wp-surface-card-border)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-slate-800">Skóre rizik</span>
+              <span className="font-bold text-[color:var(--wp-text)]">Skóre rizik</span>
               <span className="text-2xl font-bold text-indigo-600">{riskCount}/6</span>
             </div>
-            <div className="w-full bg-slate-200 rounded-full h-3 mb-3 overflow-hidden">
+            <div className="w-full bg-[color:var(--wp-surface-card-border)] rounded-full h-3 mb-3 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500 rounded-full transition-all duration-300"
                 style={{ width: `${(riskCount / 6) * 100}%` }}

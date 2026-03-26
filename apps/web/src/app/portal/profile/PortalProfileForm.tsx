@@ -34,42 +34,42 @@ export function PortalProfileForm({ initial }: { initial: PortalProfileInitial }
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+        <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">E-mail</label>
         <input
           type="email"
           value={initial.email}
           readOnly
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 text-sm"
+          className="w-full rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-[color:var(--wp-text-secondary)] text-sm"
           aria-readonly
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Jméno</label>
+        <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Jméno</label>
         <input
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           placeholder="Vaše jméno"
-          className="w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full rounded-lg border border-[color:var(--wp-surface-card-border)] px-4 py-3 text-[color:var(--wp-text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+        <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Role</label>
         <input
           type="text"
           value={initial.roleName}
           readOnly
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 text-sm"
+          className="w-full rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-[color:var(--wp-text-secondary)] text-sm"
           aria-readonly
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Organizace</label>
+        <label className="block text-sm font-medium text-[color:var(--wp-text-secondary)] mb-1">Organizace</label>
         <input
           type="text"
           value={initial.tenantName}
           readOnly
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 text-sm"
+          className="w-full rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-[color:var(--wp-text-secondary)] text-sm"
           aria-readonly
         />
       </div>

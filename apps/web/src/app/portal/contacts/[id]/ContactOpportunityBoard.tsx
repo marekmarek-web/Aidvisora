@@ -13,10 +13,10 @@ import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 type ContactOption = { id: string; firstName: string; lastName: string };
 
 const retryButtonClass =
-  "inline-flex min-h-[44px] items-center justify-center rounded-[14px] border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]";
+  "inline-flex min-h-[44px] items-center justify-center rounded-[14px] border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] px-6 py-2.5 text-sm font-bold text-[color:var(--wp-text)] shadow-sm transition-all hover:bg-[color:var(--wp-surface-muted)] active:scale-[0.98]";
 
 const secondaryLinkClass =
-  "inline-flex min-h-[44px] items-center justify-center rounded-[14px] border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-50 no-underline active:scale-[0.98]";
+  "inline-flex min-h-[44px] items-center justify-center rounded-[14px] border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] px-6 py-2.5 text-sm font-bold text-[color:var(--wp-text)] shadow-sm transition-all hover:bg-[color:var(--wp-surface-muted)] no-underline active:scale-[0.98]";
 
 export function ContactOpportunityBoard({
   contactId,
@@ -101,8 +101,8 @@ export function ContactOpportunityBoard({
         {loading && <PipelineBoardSkeleton />}
 
         {!loading && loadError && (
-          <div className="rounded-[var(--wp-radius-sm)] border-2 border-slate-200 bg-slate-50/50 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]">
-            <p className="text-slate-700 text-sm mb-4">{loadError}</p>
+          <div className="rounded-[var(--wp-radius-sm)] border-2 border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]">
+            <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">{loadError}</p>
             <button type="button" onClick={() => setRetry((r) => r + 1)} className={retryButtonClass}>
               Zkusit znovu
             </button>
@@ -110,10 +110,10 @@ export function ContactOpportunityBoard({
         )}
 
         {!loading && !loadError && noStages && (
-          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 min-h-[200px]">
-            <LayoutList size={40} className="text-slate-300 mb-3" />
-            <h2 className="text-lg font-bold text-slate-800 mb-1">Pipeline není nastavená</h2>
-            <p className="text-sm text-slate-500 text-center mb-4">
+          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-8 min-h-[200px]">
+            <LayoutList size={40} className="text-[color:var(--wp-text-tertiary)] mb-3" />
+            <h2 className="text-lg font-bold text-[color:var(--wp-text)] mb-1">Pipeline není nastavená</h2>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] text-center mb-4">
               Nastavte stupně pipeline v modulu Obchody.
             </p>
             <Link href="/portal/pipeline" className={secondaryLinkClass}>
@@ -123,10 +123,10 @@ export function ContactOpportunityBoard({
         )}
 
         {!loading && !loadError && !noStages && isEmpty && !openCreateStageId && (
-          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-slate-200 bg-white/50 p-8 min-h-[200px]">
-            <CheckCircle2 size={40} className="text-slate-300 mb-3" />
-            <h2 className="text-lg font-bold text-slate-800 mb-1">Tento klient zatím nemá žádný obchod</h2>
-            <p className="text-sm text-slate-500 text-center mb-4">
+          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/50 p-8 min-h-[200px]">
+            <CheckCircle2 size={40} className="text-[color:var(--wp-text-tertiary)] mb-3" />
+            <h2 className="text-lg font-bold text-[color:var(--wp-text)] mb-1">Tento klient zatím nemá žádný obchod</h2>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] text-center mb-4">
               Vytvořte první obchod a přiřaďte ho do příslušného stupně.
             </p>
             <CreateActionButton
@@ -137,7 +137,7 @@ export function ContactOpportunityBoard({
             >
               Vytvořit první obchod
             </CreateActionButton>
-            <p className="text-xs text-slate-400 mt-4 text-center">
+            <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-4 text-center">
               Později zde budete moci založit obchod z AI příležitosti.
             </p>
           </div>

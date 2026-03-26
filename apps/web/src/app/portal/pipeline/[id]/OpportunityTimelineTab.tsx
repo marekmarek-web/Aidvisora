@@ -107,14 +107,14 @@ export function OpportunityTimelineTab(props: {
   }, [opportunityId]);
 
   if (loading) {
-    return <p className="text-sm font-medium text-slate-500">Načítání…</p>;
+    return <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání…</p>;
   }
   if (items.length === 0) {
-    return <p className="text-sm font-medium text-slate-500">Zatím žádná aktivita.</p>;
+    return <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Zatím žádná aktivita.</p>;
   }
 
   return (
-    <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-100">
+    <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px before:h-full before:w-0.5 before:bg-[color:var(--wp-surface-muted)]">
       {items.map((item, index) => {
         const metaObj = normalizeActivityMeta(item.meta);
         const metaLabel = formatMetaLabel(item.action, metaObj, stages);
@@ -124,25 +124,25 @@ export function OpportunityTimelineTab(props: {
           <div key={item.id} className="relative flex items-start gap-5 group">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center border-4 border-white z-10 shrink-0 transition-transform group-hover:scale-110 ${
-                isLatest ? "bg-slate-100" : "bg-slate-100"
+                isLatest ? "bg-[color:var(--wp-surface-muted)]" : "bg-[color:var(--wp-surface-muted)]"
               }`}
             >
               <div
-                className={`w-2.5 h-2.5 rounded-full ${isLatest ? "bg-indigo-500" : "bg-slate-400"}`}
+                className={`h-2.5 w-2.5 rounded-full ${isLatest ? "bg-indigo-500" : "bg-[color:var(--wp-text-tertiary)]"}`}
               />
             </div>
             <div
               className={`rounded-2xl p-4 flex-1 transition-colors border ${
                 isLatest
-                  ? "bg-slate-50 border-slate-100 group-hover:border-indigo-200"
-                  : "bg-white border-slate-100 group-hover:border-indigo-200"
+                  ? "bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)] group-hover:border-indigo-200"
+                  : "bg-[color:var(--wp-surface-card)] border-[color:var(--wp-surface-card-border)] group-hover:border-indigo-200"
               }`}
             >
-              <p className="text-sm font-bold text-slate-900 mb-1">
+              <p className="text-sm font-bold text-[color:var(--wp-text)] mb-1">
                 {label}
-                {metaLabel ? <span className="text-slate-600 font-semibold">{metaLabel}</span> : null}
+                {metaLabel ? <span className="text-[color:var(--wp-text-secondary)] font-semibold">{metaLabel}</span> : null}
               </p>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] flex items-center gap-1.5">
                 <Clock size={12} className="shrink-0" aria-hidden />
                 {formatDate(item.createdAt)}
               </p>

@@ -291,7 +291,7 @@ export function DashboardEditable({
         };
         return all.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-amber-100 mb-4 text-emerald-500">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-amber-200/60 bg-[color:var(--wp-surface-card)] text-emerald-500 shadow-sm dark:border-amber-500/25">
               <CheckCircle2 size={32} />
             </div>
             <p className="font-bold text-emerald-600 mb-1">Vše splněno!</p>
@@ -304,14 +304,14 @@ export function DashboardEditable({
                 <Link
                   key={t.id}
                   href={`/portal/tasks${isOverdue(t.dueDate) ? "?filter=overdue" : "?filter=today"}`}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-amber-200 group no-underline text-inherit"
+                  className="group flex items-start gap-3 rounded-xl border border-transparent p-3 text-inherit no-underline transition-colors hover:border-amber-300/50 hover:bg-[color:var(--wp-surface-muted)] dark:hover:border-amber-500/30"
                 >
                   <span className="mt-0.5 w-5 h-5 rounded-md border-2 border-amber-300 shrink-0" aria-hidden />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 leading-tight mb-1 group-hover:text-indigo-600 transition-colors truncate">{t.title}</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1 group-hover:text-indigo-600 transition-colors truncate">{t.title}</p>
                     <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${isOverdue(t.dueDate) ? "text-rose-500" : "text-amber-500"}`}>
                       <Clock size={10} /> {timeLabel(t.dueDate)}
-                      {t.contactName && <span className="normal-case font-semibold text-slate-500 truncate"> · {t.contactName}</span>}
+                      {t.contactName && <span className="normal-case font-semibold text-[color:var(--wp-text-secondary)] truncate"> · {t.contactName}</span>}
                     </span>
                   </div>
                 </Link>
@@ -328,30 +328,30 @@ export function DashboardEditable({
         const show = atRisk.length > 0 || step34.length > 0;
         return !show ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 mb-3 border border-slate-100">
+            <div className="w-12 h-12 bg-[color:var(--wp-surface-muted)] rounded-xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-3 border border-[color:var(--wp-surface-card-border)]">
               <Clock size={24} />
             </div>
-            <p className="text-sm font-medium text-slate-500 mb-4">Žádné aktivní obchody.</p>
+            <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-4">Žádné aktivní obchody.</p>
           </div>
         ) : (
           <div className="flex flex-col h-full">
             <div className="space-y-3 flex-1">
               {atRisk.map((o) => (
-                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/70 hover:bg-[color:var(--wp-surface-card)] hover:shadow-sm transition-all group">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">Ohrožení</span>
                   </div>
-                  <h4 className="font-bold text-sm text-slate-800">{o.title}</h4>
-                  <p className="text-xs font-medium text-slate-500 mt-0.5 flex items-center gap-1"><Users size={12} /> {o.contactName ?? "—"}</p>
+                  <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{o.title}</h4>
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-0.5 flex items-center gap-1"><Users size={12} /> {o.contactName ?? "—"}</p>
                 </Link>
               ))}
               {step34.map((o) => (
-                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                <Link key={o.id} href={`/portal/pipeline/${o.id}`} className="block p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/70 hover:bg-[color:var(--wp-surface-card)] hover:shadow-sm transition-all group">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{o.stageName}</span>
+                    <span className="rounded bg-indigo-500/12 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{o.stageName}</span>
                   </div>
-                  <h4 className="font-bold text-sm text-slate-800">{o.title}</h4>
-                  <p className="text-xs font-medium text-slate-500 mt-0.5 flex items-center gap-1"><Users size={12} /> {o.contactName ?? "—"}</p>
+                  <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{o.title}</h4>
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-0.5 flex items-center gap-1"><Users size={12} /> {o.contactName ?? "—"}</p>
                 </Link>
               ))}
             </div>
@@ -382,9 +382,9 @@ export function DashboardEditable({
           return (
             <div className="flex flex-col h-full justify-center">
               <div className="animate-pulse space-y-4">
-                <div className="h-8 bg-slate-200 rounded w-3/4 mx-auto" />
-                <div className="h-10 bg-slate-100 rounded w-1/2 mx-auto" />
-                <div className="h-3 bg-slate-100 rounded-full" />
+                <div className="h-8 bg-[color:var(--wp-surface-card-border)] rounded w-3/4 mx-auto" />
+                <div className="h-10 bg-[color:var(--wp-surface-muted)] rounded w-1/2 mx-auto" />
+                <div className="h-3 bg-[color:var(--wp-surface-muted)] rounded-full" />
               </div>
             </div>
           );
@@ -392,25 +392,25 @@ export function DashboardEditable({
         if (totalCount === 0) {
           return (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 mb-3 border border-slate-100">
+              <div className="w-12 h-12 bg-[color:var(--wp-surface-muted)] rounded-xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-3 border border-[color:var(--wp-surface-card-border)]">
                 <PieChart size={24} />
               </div>
-              <p className="text-sm font-medium text-slate-500 mb-4">Žádná produkce za tento měsíc.</p>
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-4">Žádná produkce za tento měsíc.</p>
             </div>
           );
         }
         return (
           <div className="flex flex-col h-full justify-center">
             <div className="text-center mb-6">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
                 Produkce {periodLabel}
               </span>
-              <div className="text-3xl font-black text-slate-900">{totalPremium.toLocaleString("cs-CZ")} Kč</div>
-              <div className="text-xs font-bold text-slate-500 mt-1">
+              <div className="text-3xl font-black text-[color:var(--wp-text)]">{totalPremium.toLocaleString("cs-CZ")} Kč</div>
+              <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-1">
                 Roční ekvivalent: {totalAnnual.toLocaleString("cs-CZ")} Kč · {totalCount} smluv
               </div>
               {target != null && target > 0 && (
-                <div className="text-xs font-bold text-slate-500 mt-0.5">Cíl: {Number(target).toLocaleString("cs-CZ")} Kč</div>
+                <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-0.5">Cíl: {Number(target).toLocaleString("cs-CZ")} Kč</div>
               )}
             </div>
             {target != null && target > 0 && (
@@ -418,7 +418,7 @@ export function DashboardEditable({
                 <div className="mb-2 flex justify-between text-xs font-bold">
                   <span className="text-indigo-600">{pct}% splněno</span>
                 </div>
-                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                <div className="h-3 w-full bg-[color:var(--wp-surface-muted)] rounded-full overflow-hidden flex shadow-inner">
                   <div className="h-full bg-indigo-500 border-r border-white/20 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
               </>
@@ -442,7 +442,7 @@ export function DashboardEditable({
         if (!data) {
           return (
             <div className="flex flex-col h-full justify-center">
-              <p className="text-sm py-3 text-slate-500 mb-2">Zatím nemáš nastavený business plán.</p>
+              <p className="text-sm py-3 text-[color:var(--wp-text-secondary)] mb-2">Zatím nemáš nastavený business plán.</p>
               <Link
                 href="/portal/business-plan"
                 className="text-sm font-semibold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
@@ -455,18 +455,18 @@ export function DashboardEditable({
         return (
           <div className="flex flex-col h-full justify-center">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                 {data.periodLabel}
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
                 {HEALTH_LABELS[data.overallHealth] ?? data.overallHealth}
               </span>
             </div>
             <div className="space-y-2 mb-4">
               {data.metrics.map((m) => (
                 <div key={m.metricType} className="flex justify-between items-center text-sm">
-                  <span className="font-medium text-slate-700 truncate">{m.label}</span>
-                  <span className="text-slate-600 shrink-0 ml-2">
+                  <span className="font-medium text-[color:var(--wp-text-secondary)] truncate">{m.label}</span>
+                  <span className="text-[color:var(--wp-text-secondary)] shrink-0 ml-2">
                     {formatVal(m.actual, m.unit)} / {formatVal(m.target, m.unit)}
                   </span>
                 </div>
@@ -489,7 +489,7 @@ export function DashboardEditable({
         const hasLegacy = service.length > 0 || ann.length > 0;
         const hasAny = hasRecs || hasLegacy;
         if (!hasAny) {
-          return <p className="text-sm py-3 text-slate-500">Žádná péče k zobrazení.</p>;
+          return <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádná péče k zobrazení.</p>;
         }
         if (hasRecs) {
           return (
@@ -507,10 +507,10 @@ export function DashboardEditable({
                       }`}
                     >
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-slate-800">{name}</h4>
-                        <p className="text-xs font-bold text-slate-600 mt-0.5 truncate">{r.title}</p>
+                        <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{name}</h4>
+                        <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-0.5 truncate">{r.title}</p>
                         {r.dueDate && (
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">
                             {new Date(r.dueDate).toLocaleDateString("cs-CZ")}
                           </p>
                         )}
@@ -518,13 +518,13 @@ export function DashboardEditable({
                       <div className="flex items-center gap-2 shrink-0">
                         <Link
                           href={cta.href}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-white text-slate-700 border border-slate-200 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
+                          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm font-semibold text-[color:var(--wp-text-secondary)] transition-colors hover:border-indigo-300/50 hover:bg-indigo-500/10"
                         >
                           {cta.label}
                         </Link>
                         <Link
                           href={`/portal/contacts/${r.contactId}`}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg shadow-sm transition-colors"
+                          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-[color:var(--wp-text-secondary)] shadow-sm transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
                           aria-label="Otevřít klienta"
                         >
                           <ChevronRight size={16} />
@@ -549,19 +549,19 @@ export function DashboardEditable({
               {service.map((c) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50/30 border border-amber-100/50 min-h-[44px]">
                   <div>
-                    <h4 className="font-bold text-sm text-slate-800">{c.firstName} {c.lastName}</h4>
+                    <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{c.firstName} {c.lastName}</h4>
                     <p className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle size={12} /> Servis · {new Date(c.nextServiceDue).toLocaleDateString("cs-CZ")}</p>
                   </div>
-                  <Link href={`/portal/contacts/${c.id}`} className="p-2 bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg shadow-sm transition-colors shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
+                  <Link href={`/portal/contacts/${c.id}`} className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-[color:var(--wp-text-secondary)] shadow-sm transition-colors hover:text-indigo-600 dark:hover:text-indigo-400" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
                 </div>
               ))}
               {ann.map((c) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50/30 border border-amber-100/50 min-h-[44px]">
                   <div>
-                    <h4 className="font-bold text-sm text-slate-800">{c.partnerName ?? "—"}</h4>
+                    <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{c.partnerName ?? "—"}</h4>
                     <p className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle size={12} /> Výročí · {c.contactName} · {new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}</p>
                   </div>
-                  <Link href={`/portal/contacts/${c.contactId}`} className="p-2 bg-white text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg shadow-sm transition-colors shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
+                  <Link href={`/portal/contacts/${c.contactId}`} className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-[color:var(--wp-text-secondary)] shadow-sm transition-colors hover:text-indigo-600 dark:hover:text-indigo-400" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
                 </div>
               ))}
             </div>
@@ -577,24 +577,24 @@ export function DashboardEditable({
           return new Date(d).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" });
         };
         return initialAnalyses.length === 0 ? (
-          <p className="text-sm py-3 text-slate-500">Žádné finanční analýzy.</p>
+          <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádné finanční analýzy.</p>
         ) : (
           <div className="space-y-3 flex-1">
             {initialAnalyses.slice(0, 3).map((a) => (
               <Link
                 key={a.id}
                 href={`/portal/analyses/financial?id=${encodeURIComponent(a.id)}`}
-                className="block p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all bg-gradient-to-br from-white to-slate-50 group"
+                className="group block rounded-xl border border-[color:var(--wp-surface-card-border)] bg-gradient-to-br from-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-muted)] p-4 transition-all hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-500/40"
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><FileText size={16} /></span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{formatAgo(new Date(a.updatedAt))}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">{formatAgo(new Date(a.updatedAt))}</span>
                 </div>
-                <h4 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">Analýza</h4>
-                <p className="text-xs font-medium text-slate-500 mt-1">{a.clientName ?? "—"}</p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                <h4 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors">Analýza</h4>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-1">{a.clientName ?? "—"}</p>
+                <div className="mt-4 pt-3 border-t border-[color:var(--wp-surface-card-border)] flex justify-between items-center">
                   <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{a.status === "completed" ? "Dokončeno" : a.status === "draft" ? "Rozpracováno" : a.status}</span>
-                  <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
+                  <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -687,7 +687,7 @@ export function DashboardEditable({
               <button
                 type="button"
                 onClick={openCustomize}
-                className="text-sm font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:text-indigo-200 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 min-h-[44px]"
+                className="flex min-h-[44px] items-center gap-2 rounded-xl bg-indigo-500/12 px-4 py-2 text-sm font-bold text-indigo-600 transition-colors hover:bg-indigo-500/18 hover:text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:text-indigo-200"
               >
                 <Settings2 size={16} /> Upravit nástěnku
               </button>
@@ -861,7 +861,7 @@ export function DashboardEditable({
                       draggable
                       onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
                       onDragEnd={handleDragEnd}
-                      className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded p-2 text-slate-300 transition-colors hover:text-slate-500 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
+                      className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded p-2 text-[color:var(--wp-text-tertiary)] transition-colors hover:text-[color:var(--wp-text-secondary)] active:cursor-grabbing dark:text-[color:var(--wp-text-secondary)] dark:hover:text-[color:var(--wp-text-tertiary)]"
                       aria-label="Chytit a přesunout widget"
                     >
                       <GripVertical size={16} />
@@ -932,14 +932,14 @@ export function DashboardEditable({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-[80px] pointer-events-none -translate-x-1/2 -translate-y-1/2" aria-hidden />
-            <div className="px-10 py-8 border-b border-slate-50 relative z-10">
+            <div className="px-10 py-8 border-b border-[color:var(--wp-surface-card-border)] relative z-10">
               <div className="flex items-center gap-4 mb-2">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
                   <LayoutDashboard size={24} />
                 </div>
-                <h2 id="dashboard-customize-title" className="text-2xl font-black text-slate-900 tracking-tight">Upravit nástěnku</h2>
+                <h2 id="dashboard-customize-title" className="text-2xl font-black text-[color:var(--wp-text)] tracking-tight">Upravit nástěnku</h2>
               </div>
-              <p className="text-sm font-medium text-slate-500 pl-16">
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] pl-16">
                 Zaškrtněte viditelné widgety, zvolte barvu a použijte šipky pro pořadí.
               </p>
             </div>
@@ -954,8 +954,8 @@ export function DashboardEditable({
                     key={id}
                     className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl transition-all duration-300 group ${
                       isVisible
-                        ? "bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200"
-                        : "bg-slate-50/50 border border-slate-100 opacity-60 grayscale-[0.5]"
+                        ? "border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-500/35"
+                        : "bg-[color:var(--wp-surface-muted)]/70 border border-[color:var(--wp-surface-card-border)] opacity-60 grayscale-[0.5]"
                     }`}
                   >
                     <label className="flex items-center gap-4 cursor-pointer flex-1 sm:w-1/3 min-w-0">
@@ -966,7 +966,7 @@ export function DashboardEditable({
                         className="dashboard-edit-custom-check shrink-0"
                         aria-label={WIDGET_LABELS[id]}
                       />
-                      <span className={`text-base transition-colors ${isVisible ? "font-bold text-slate-800" : "font-medium text-slate-400 line-through"}`}>
+                      <span className={`text-base transition-colors ${isVisible ? "font-bold text-[color:var(--wp-text)]" : "font-medium text-[color:var(--wp-text-tertiary)] line-through"}`}>
                         {WIDGET_LABELS[id]}
                       </span>
                     </label>
@@ -994,7 +994,7 @@ export function DashboardEditable({
                         type="button"
                         onClick={() => moveUp(id)}
                         disabled={index === 0}
-                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-[color:var(--wp-text-secondary)] dark:hover:text-indigo-400"
                         aria-label="Posunout nahoru"
                       >
                         <ArrowUp size={20} strokeWidth={2.5} />
@@ -1003,7 +1003,7 @@ export function DashboardEditable({
                         type="button"
                         onClick={() => moveDown(id)}
                         disabled={index === editOrder.length - 1}
-                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-[color:var(--wp-text-secondary)] dark:hover:text-indigo-400"
                         aria-label="Posunout dolů"
                       >
                         <ArrowDown size={20} strokeWidth={2.5} />
@@ -1013,11 +1013,11 @@ export function DashboardEditable({
                 );
               })}
             </div>
-            <div className="px-10 py-6 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-4 relative z-10">
+            <div className="px-10 py-6 bg-[color:var(--wp-surface-muted)]/80 border-t border-[color:var(--wp-surface-card-border)] flex items-center justify-end gap-4 relative z-10">
               <button
                 type="button"
                 onClick={() => setCustomizeOpen(false)}
-                className="px-6 py-3 bg-transparent text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors min-h-[44px]"
+                className="px-6 py-3 bg-transparent text-[color:var(--wp-text-secondary)] font-bold text-sm rounded-xl hover:bg-[color:var(--wp-surface-card-border)] transition-colors min-h-[44px]"
               >
                 Zrušit
               </button>

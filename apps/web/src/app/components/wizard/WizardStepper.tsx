@@ -12,7 +12,7 @@ export function WizardStepper({
   currentStep: number;
 }) {
   return (
-    <div className="px-6 sm:px-10 py-6 sm:py-8 bg-slate-50/50 border-b border-slate-50 flex items-center justify-center relative z-10 shrink-0">
+    <div className="relative z-10 flex shrink-0 items-center justify-center border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-6 py-6 sm:px-10 sm:py-8">
       <div className="flex items-center w-full max-w-[560px]">
         {steps.map((step, i) => {
           const index = i + 1;
@@ -24,8 +24,8 @@ export function WizardStepper({
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black transition-colors duration-300 shrink-0 ${
                     isActive
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                      : "bg-slate-100 text-slate-400 border border-slate-200"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-950/50"
+                      : "border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-raised)] text-[color:var(--wp-text-tertiary)]"
                   }`}
                 >
                   {isCompleted ? (
@@ -36,7 +36,7 @@ export function WizardStepper({
                 </div>
                 <span
                   className={`text-sm transition-colors duration-300 hidden sm:block ${
-                    isActive ? "font-bold text-slate-900" : "font-medium text-slate-400"
+                    isActive ? "font-bold text-[color:var(--wp-text)]" : "font-medium text-[color:var(--wp-text-tertiary)]"
                   }`}
                 >
                   {step.label}
@@ -45,7 +45,7 @@ export function WizardStepper({
               {i < steps.length - 1 && (
                 <div
                   className={`flex-1 h-0.5 mx-4 sm:mx-8 rounded-full transition-colors duration-300 min-w-[16px] ${
-                    currentStep > index ? "bg-indigo-600" : "bg-slate-200"
+                    currentStep > index ? "bg-indigo-600" : "bg-[color:var(--wp-surface-card-border)]"
                   }`}
                 />
               )}

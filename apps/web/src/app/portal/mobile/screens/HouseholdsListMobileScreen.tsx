@@ -80,16 +80,16 @@ export function HouseholdsListMobileScreen() {
       {/* Search */}
       {rows.length > 0 && (
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
           <input
             type="text"
             placeholder="Hledat domácnosti…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
+            className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] pl-9 pr-9 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
           />
           {searchQuery && (
-            <button type="button" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400">
+            <button type="button" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[color:var(--wp-text-tertiary)]">
               <X size={16} />
             </button>
           )}
@@ -115,7 +115,7 @@ export function HouseholdsListMobileScreen() {
             }
           />
         ) : filteredRows.length === 0 ? (
-          <p className="text-center text-sm text-slate-500 py-6">
+          <p className="text-center text-sm text-[color:var(--wp-text-secondary)] py-6">
             Nic nenalezeno pro &quot;{searchQuery}&quot;
           </p>
         ) : (
@@ -124,16 +124,16 @@ export function HouseholdsListMobileScreen() {
               <button
                 type="button"
                 onClick={() => router.push(`/portal/households/${h.id}`)}
-                className="w-full flex items-center gap-3 min-h-[56px] px-4 py-3 text-left active:bg-slate-50 transition-colors"
+                className="w-full flex items-center gap-3 min-h-[56px] px-4 py-3 text-left active:bg-[color:var(--wp-surface-muted)] transition-colors"
               >
                 <span className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
                   <Home size={18} className="text-indigo-600" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-slate-900 truncate">{h.name}</p>
-                  <p className="text-xs text-slate-500 font-semibold">{h.memberCount} členů</p>
+                  <p className="text-sm font-black text-[color:var(--wp-text)] truncate">{h.name}</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] font-semibold">{h.memberCount} členů</p>
                 </div>
-                <ChevronRight size={18} className="text-slate-300 shrink-0" />
+                <ChevronRight size={18} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
               </button>
             </MobileCard>
           ))
@@ -152,14 +152,14 @@ export function HouseholdsListMobileScreen() {
       <BottomSheet open={createOpen} onClose={() => !createBusy && setCreateOpen(false)} title="Nová domácnost">
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
               Název domácnosti
             </label>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
               placeholder="Např. Novákovi"
               disabled={createBusy}
             />

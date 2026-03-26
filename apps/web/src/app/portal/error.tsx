@@ -32,7 +32,7 @@ export default function PortalError({
           >
             Zkusit znovu
           </button>
-          <a href="/" className="rounded-[6px] px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">
+          <a href="/" className="rounded-[6px] px-4 py-2 text-sm font-semibold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)]">
             Úvodní stránka
           </a>
         </div>

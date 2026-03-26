@@ -23,14 +23,14 @@ export function CalculatorFaqSection({ title, items }: CalculatorFaqSectionProps
           return (
             <div
               key={index}
-              className="rounded-xl shadow-sm mb-4 border border-slate-100 bg-white transition-shadow hover:shadow-md"
+              className="rounded-xl shadow-sm mb-4 border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] transition-shadow hover:shadow-md"
             >
               <button
                 type="button"
                 onClick={() => setOpenIndex(isOpen ? null : index)}
                 className="w-full text-left py-4 px-6 flex justify-between items-center transition-colors hover:text-[#fbbf24] focus:outline-none min-h-[44px] touch-manipulation"
               >
-                <h4 className="text-lg font-bold text-slate-900 pr-4">{item.question}</h4>
+                <h4 className="text-lg font-bold text-[color:var(--wp-text)] pr-4">{item.question}</h4>
                 <ChevronDown
                   className={`w-5 h-5 shrink-0 transition-transform text-[#0B3A7A] ${isOpen ? "rotate-180 text-[#fbbf24]" : ""}`}
                 />
@@ -43,7 +43,7 @@ export function CalculatorFaqSection({ title, items }: CalculatorFaqSectionProps
                 }}
               >
                 <div className="pb-4 px-6">
-                  <p className="text-slate-600 text-sm">{item.answer}</p>
+                  <p className="text-[color:var(--wp-text-secondary)] text-sm">{item.answer}</p>
                 </div>
               </div>
             </div>

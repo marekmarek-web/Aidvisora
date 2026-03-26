@@ -183,7 +183,7 @@ export function FinancialAnalysisLayout() {
   return (
     <div className="flex-grow flex flex-col items-center pt-4 sm:pt-6 pb-[max(6rem,env(safe-area-inset-bottom))] sm:pb-20 px-3 sm:px-4 min-h-0">
       <section className="w-full max-w-4xl mb-4 sm:mb-6 text-center px-1">
-        <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-[color:var(--wp-text)] tracking-tight">
           Finanční analýza
         </h1>
       </section>
@@ -194,7 +194,7 @@ export function FinancialAnalysisLayout() {
         <PersonalFALinkBanner />
       </div>
 
-      <div className="w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-3 sm:p-6 md:p-10 mb-8 sm:mb-20 shadow-lg flex flex-col min-h-0">
+      <div className="w-full max-w-6xl rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 sm:p-6 md:p-10 mb-8 sm:mb-20 shadow-lg flex flex-col min-h-0">
         <FinancialAnalysisToolbar />
 
         <div className="min-h-[min(50vh,320px)] sm:min-h-[320px] flex-1 min-h-0 overflow-x-hidden">
@@ -205,17 +205,17 @@ export function FinancialAnalysisLayout() {
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-[5] -mx-3 sm:mx-0 mt-4 sm:mt-8 pt-4 pb-2 sm:pb-0 sm:pt-8 border-t border-slate-200 bg-white/95 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 px-1 sm:px-0">
+        <div className="sticky bottom-0 z-[5] -mx-3 sm:mx-0 mt-4 sm:mt-8 pt-4 pb-2 sm:pb-0 sm:pt-8 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 px-1 sm:px-0">
           <button
             type="button"
             onClick={() => prevStep()}
-            className={currentStep === 1 ? "hidden" : "min-h-[44px] px-6 py-3 border border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50"}
+            className={currentStep === 1 ? "hidden" : "min-h-[44px] px-6 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}
           >
             Zpět
           </button>
           <div className="flex-1 sm:text-right">
             {currentStep === totalSteps ? (
-              <span className="text-slate-500 text-sm">Použijte tlačítko v kroku Shrnutí pro export reportu.</span>
+              <span className="text-[color:var(--wp-text-secondary)] text-sm">Použijte tlačítko v kroku Shrnutí pro export reportu.</span>
             ) : (
               <button
                 type="button"
@@ -228,8 +228,8 @@ export function FinancialAnalysisLayout() {
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-slate-200">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+        <div className="mt-8 pt-8 border-t border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-sm font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-2 flex items-center gap-2">
             <StickyNote className="w-4 h-4 text-indigo-600" />
             Poznámky k analýze
           </h3>
@@ -237,7 +237,7 @@ export function FinancialAnalysisLayout() {
             value={notes}
             onChange={(e) => setData({ notes: e.target.value })}
             placeholder="Poznámky k analýze – uloží se s analýzou. Můžete je později převést na úkol nebo do zápisků."
-            className="w-full min-h-[100px] px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-y"
+            className="w-full min-h-[100px] px-4 py-3 border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-y"
           />
           <div className="flex flex-wrap gap-3 mt-2 items-center">
             <button

@@ -17,10 +17,10 @@ function CheckSquare({ size, className }: { size: number; className?: string }) 
 /** Kalendar.txt: Schůzka, Úkol, Telefonát, E-mail, Kafe → eventType */
 const ACTIVITY_TYPES = [
   { id: "schuzka", label: "Schůzka", icon: CalendarIcon, color: "bg-indigo-500 text-white border-indigo-500" },
-  { id: "ukol", label: "Úkol", icon: CheckSquare, color: "text-emerald-700 hover:bg-emerald-50 border-slate-200" },
-  { id: "telefonat", label: "Telefonát", icon: Phone, color: "text-rose-600 hover:bg-rose-50 border-slate-200" },
-  { id: "mail", label: "E-mail", icon: Mail, color: "text-slate-600 hover:bg-slate-100 border-slate-200" },
-  { id: "kafe", label: "Kafe", icon: Coffee, color: "text-amber-700 hover:bg-amber-50 border-slate-200" },
+  { id: "ukol", label: "Úkol", icon: CheckSquare, color: "text-emerald-700 hover:bg-emerald-50 border-[color:var(--wp-surface-card-border)]" },
+  { id: "telefonat", label: "Telefonát", icon: Phone, color: "text-rose-600 hover:bg-rose-50 border-[color:var(--wp-surface-card-border)]" },
+  { id: "mail", label: "E-mail", icon: Mail, color: "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)]" },
+  { id: "kafe", label: "Kafe", icon: Coffee, color: "text-amber-700 hover:bg-amber-50 border-[color:var(--wp-surface-card-border)]" },
 ] as const;
 
 export interface QuickEventFormValues {
@@ -114,13 +114,13 @@ export function QuickEventForm({
   return (
     <div
       ref={ref}
-      className="bg-white rounded-2xl shadow-2xl w-full max-w-[600px] flex flex-col overflow-hidden border border-slate-100"
+      className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-[600px] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)]"
       role="dialog"
       aria-label={initialValues?.id ? "Rychlá úprava události" : "Nová aktivita"}
     >
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <h2 className="text-lg font-bold text-slate-900">{initialValues?.id ? "Upravit aktivitu" : "Nová aktivita"}</h2>
-        <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200" aria-label="Zavřít">
+      <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
+        <h2 className="text-lg font-bold text-[color:var(--wp-text)]">{initialValues?.id ? "Upravit aktivitu" : "Nová aktivita"}</h2>
+        <button type="button" onClick={onClose} className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] p-1 rounded-md hover:bg-[color:var(--wp-surface-card-border)]" aria-label="Zavřít">
           <X size={18} />
         </button>
       </div>
@@ -138,11 +138,11 @@ export function QuickEventForm({
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, eventType: type.id }))}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                    useInlineColor ? "text-gray-800 border-gray-300" : isActive ? type.color : "text-slate-600 hover:bg-slate-50 border-slate-200 shadow-sm"
+                    useInlineColor ? "text-gray-800 border-gray-300" : isActive ? type.color : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)] shadow-sm"
                   }`}
                   style={useInlineColor ? { backgroundColor: customColor, borderColor: customColor } : undefined}
                 >
-                  <Icon size={16} className={useInlineColor ? "text-gray-800" : isActive && type.id !== "schuzka" ? "" : isActive ? "text-white/80" : "text-slate-400"} />
+                  <Icon size={16} className={useInlineColor ? "text-gray-800" : isActive && type.id !== "schuzka" ? "" : isActive ? "text-white/80" : "text-[color:var(--wp-text-tertiary)]"} />
                   {type.label}
                 </button>
               );
@@ -153,34 +153,34 @@ export function QuickEventForm({
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             placeholder="Název aktivity…"
-            className="w-full text-xl font-bold text-slate-800 placeholder:text-slate-400 border-b-2 border-slate-200 hover:border-slate-300 focus:border-indigo-500 py-2 outline-none transition-colors bg-transparent"
+            className="w-full text-xl font-bold text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] border-b-2 border-[color:var(--wp-surface-card-border)] hover:border-[color:var(--wp-border-strong)] focus:border-indigo-500 py-2 outline-none transition-colors bg-transparent"
             autoFocus
           />
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Začátek</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Začátek</label>
               <input
                 type="datetime-local"
                 step={300}
                 value={form.startAt}
                 onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Konec</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Konec</label>
               <input
                 type="datetime-local"
                 step={300}
                 value={form.endAt}
                 onChange={(e) => setForm((f) => ({ ...f, endAt: e.target.value }))}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Kontakt</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Kontakt</label>
               <ContactSearchInput
                 value={form.contactId}
                 contacts={contacts}
@@ -189,28 +189,28 @@ export function QuickEventForm({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Místo</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Místo</label>
               <input
                 type="text"
                 value={form.location}
                 onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                 placeholder="Adresa / odkaz"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Poznámka</label>
+            <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Poznámka</label>
             <input
               type="text"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Volitelné"
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none"
+              className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none"
             />
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between flex-wrap gap-2">
+        <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex justify-between flex-wrap gap-2">
           <button
             type="submit"
             disabled={saving || !form.startAt}
@@ -218,7 +218,7 @@ export function QuickEventForm({
           >
             {saving ? "Ukládám…" : initialValues?.id ? "Uložit" : "Vytvořit"}
           </button>
-          <button type="button" onClick={onClose} className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors px-4 py-2">
+          <button type="button" onClick={onClose} className="text-sm font-bold text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] transition-colors px-4 py-2">
             Zavřít
           </button>
         </div>

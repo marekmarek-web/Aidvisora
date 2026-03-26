@@ -426,20 +426,20 @@ export function AiAssistantDrawer() {
         aria-hidden
       />
       <div
-        className="fixed inset-0 md:inset-y-0 md:left-auto md:right-0 md:w-full md:max-w-[420px] z-[101] flex flex-col bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.12)]"
+        className="fixed inset-0 md:inset-y-0 md:left-auto md:right-0 md:w-full md:max-w-[420px] z-[101] flex flex-col bg-[color:var(--wp-surface-card)] shadow-[-4px_0_24px_rgba(0,0,0,0.12)]"
         role="dialog"
         aria-label="AI asistent"
       >
         {/* Header - reference style */}
-        <div className="shrink-0 px-4 py-4 border-b border-slate-100 bg-white/80">
+        <div className="shrink-0 px-4 py-4 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/80">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">
               <div className="w-12 h-12 rounded-[20px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 flex-shrink-0">
                 <Sparkles size={24} />
               </div>
               <div className="min-w-0">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">AI asistent</h2>
-                <p className="text-sm font-medium text-slate-500 mt-0.5">
+                <h2 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight">AI asistent</h2>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-0.5">
                   Nahrajte smlouvu nebo se zeptejte. Pomůžu s revizí a CRM.
                 </p>
               </div>
@@ -447,7 +447,7 @@ export function AiAssistantDrawer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors flex-shrink-0"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] transition-colors flex-shrink-0"
               aria-label="Zavřít"
             >
               <X size={22} />
@@ -461,7 +461,7 @@ export function AiAssistantDrawer() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadPhase !== "idle"}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-slate-100 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors whitespace-nowrap disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors whitespace-nowrap disabled:opacity-50"
           >
             <UploadCloud size={18} className="text-indigo-500" />
             Nahrát smlouvu
@@ -469,7 +469,7 @@ export function AiAssistantDrawer() {
           <button
             type="button"
             onClick={() => inputRef.current?.focus()}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-slate-100 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors whitespace-nowrap"
           >
             <MessageCircle size={18} className="text-indigo-500" />
             Zeptat se AI
@@ -478,7 +478,7 @@ export function AiAssistantDrawer() {
             type="button"
             onClick={handleUrgent}
             disabled={chatLoading}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-slate-100 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors whitespace-nowrap disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors whitespace-nowrap disabled:opacity-50"
           >
             <Zap size={18} className="text-indigo-500" />
             Co je dnes urgentní
@@ -487,7 +487,7 @@ export function AiAssistantDrawer() {
             type="button"
             onClick={handleImportContactsClick}
             disabled={importContactsLoading}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-slate-100 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors whitespace-nowrap disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors whitespace-nowrap disabled:opacity-50"
           >
             <UserPlus size={18} className="text-indigo-500" />
             Import klientů
@@ -515,10 +515,10 @@ export function AiAssistantDrawer() {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={() => uploadPhase === "idle" && fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-[24px] p-6 bg-white text-center cursor-pointer transition-all ${
+            className={`border-2 border-dashed rounded-[24px] p-6 bg-[color:var(--wp-surface-card)] text-center cursor-pointer transition-all ${
               uploadPhase === "idle"
                 ? "border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/30"
-                : "border-slate-200 bg-slate-50/50 cursor-wait pointer-events-none"
+                : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 cursor-wait pointer-events-none"
             }`}
           >
             {uploadPhase === "idle" && !uploadError && (
@@ -526,14 +526,14 @@ export function AiAssistantDrawer() {
                 <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mx-auto mb-3">
                   <UploadCloud size={28} strokeWidth={1.5} />
                 </div>
-                <p className="text-sm font-black text-slate-800 mb-1">{isNative ? "Nahrajte smlouvu" : "Přetáhněte smlouvu sem"}</p>
-                <p className="text-xs text-slate-500 font-medium">{isNative ? "klepněte pro výběr souboru (PDF)" : "nebo klikněte pro výběr (PDF)"}</p>
+                <p className="text-sm font-black text-[color:var(--wp-text)] mb-1">{isNative ? "Nahrajte smlouvu" : "Přetáhněte smlouvu sem"}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] font-medium">{isNative ? "klepněte pro výběr souboru (PDF)" : "nebo klikněte pro výběr (PDF)"}</p>
               </>
             )}
             {uploadPhase === "uploading" && (
               <div className="flex flex-col items-center gap-2 py-2">
                 <Loader2 size={28} className="animate-spin text-indigo-500" />
-                <p className="text-sm font-bold text-slate-600">Nahrávám…</p>
+                <p className="text-sm font-bold text-[color:var(--wp-text-secondary)]">Nahrávám…</p>
               </div>
             )}
             {uploadPhase === "processing" && (
@@ -543,7 +543,7 @@ export function AiAssistantDrawer() {
                   <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <p className="text-sm font-medium text-slate-600">AI čte dokument a extrahuje data…</p>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">AI čte dokument a extrahuje data…</p>
               </div>
             )}
           </div>
@@ -567,22 +567,22 @@ export function AiAssistantDrawer() {
         {/* Import klientů block */}
         {importContactsStep !== "idle" && (
           <div className="shrink-0 px-4 pb-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Import klientů</h3>
+            <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-[color:var(--wp-text)] mb-3">Import klientů</h3>
               {importContactsLoading && importContactsStep === "mapping" && (
-                <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
+                <div className="flex items-center gap-2 text-[color:var(--wp-text-secondary)] text-sm py-2">
                   <Loader2 size={16} className="animate-spin" />
                   Načítám náhled…
                 </div>
               )}
               {importContactsStep === "mapping" && importContactsPreview && !importContactsLoading && (
                 <>
-                  <p className="text-xs text-slate-500 mb-2">Soubor: {importContactsFile?.name}</p>
-                  <p className="text-xs text-slate-500 mb-2">Namapujte sloupce:</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-2">Soubor: {importContactsFile?.name}</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-2">Namapujte sloupce:</p>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     {(["firstName", "lastName", "email", "phone"] as const).map((field) => (
                       <div key={field} className="flex flex-col gap-0.5">
-                        <label className="text-xs font-medium text-slate-600">
+                        <label className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
                           {field === "firstName" ? "Jméno" : field === "lastName" ? "Příjmení" : field === "email" ? "E-mail" : "Telefon"}
                         </label>
                         <CustomDropdown
@@ -598,7 +598,7 @@ export function AiAssistantDrawer() {
                     <button
                       type="button"
                       onClick={handleImportContactsReset}
-                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                      className="px-3 py-1.5 text-xs font-bold border border-[color:var(--wp-surface-card-border)] rounded-xl text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                     >
                       Zrušit
                     </button>
@@ -614,14 +614,14 @@ export function AiAssistantDrawer() {
               )}
               {importContactsStep === "preview" && importContactsPreview && (
                 <>
-                  <p className="text-xs text-slate-500 mb-2">Náhled (max 10 řádků):</p>
-                  <div className="overflow-x-auto max-h-32 overflow-y-auto border border-slate-100 rounded-lg mb-3 text-xs">
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-2">Náhled (max 10 řádků):</p>
+                  <div className="overflow-x-auto max-h-32 overflow-y-auto border border-[color:var(--wp-surface-card-border)] rounded-lg mb-3 text-xs">
                     <table className="border-collapse w-full">
                       <tbody>
                         {importContactsPreview.rows.slice(0, 10).map((row, ri) => (
                           <tr key={ri}>
                             {row.map((cell, ci) => (
-                              <td key={ci} className="border border-slate-100 px-2 py-0.5">{cell}</td>
+                              <td key={ci} className="border border-[color:var(--wp-surface-card-border)] px-2 py-0.5">{cell}</td>
                             ))}
                           </tr>
                         ))}
@@ -632,7 +632,7 @@ export function AiAssistantDrawer() {
                     <button
                       type="button"
                       onClick={() => setImportContactsStep("mapping")}
-                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                      className="px-3 py-1.5 text-xs font-bold border border-[color:var(--wp-surface-card-border)] rounded-xl text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                     >
                       Zpět
                     </button>
@@ -660,7 +660,7 @@ export function AiAssistantDrawer() {
                     <button
                       type="button"
                       onClick={handleImportContactsReset}
-                      className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50"
+                      className="px-3 py-1.5 text-xs font-bold border border-[color:var(--wp-surface-card-border)] rounded-xl text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
                     >
                       Importovat znovu
                     </button>
@@ -682,7 +682,7 @@ export function AiAssistantDrawer() {
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-4 space-y-3">
             {messages.length === 0 && uploadPhase === "idle" && (
-              <p className="text-sm text-slate-500 font-medium py-2">
+              <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium py-2">
                 Napište zprávu nebo nahrajte PDF. Po zpracování vám nabídneme další kroky.
               </p>
             )}
@@ -695,10 +695,10 @@ export function AiAssistantDrawer() {
                   className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm ${
                     m.role === "user"
                       ? "bg-indigo-600 text-white shadow-sm"
-                      : "bg-white border border-slate-100 shadow-sm"
+                      : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-sm"
                   }`}
                 >
-                  <p className={`whitespace-pre-wrap ${m.role === "user" ? "text-white" : "text-slate-600"}`}>{m.content}</p>
+                  <p className={`whitespace-pre-wrap ${m.role === "user" ? "text-white" : "text-[color:var(--wp-text-secondary)]"}`}>{m.content}</p>
                   {m.role === "assistant" && m.warnings && m.warnings.length > 0 && (
                     <div className="flex items-center gap-2 mt-2 text-amber-700 text-xs font-medium">
                       <AlertCircle size={14} />
@@ -734,7 +734,7 @@ export function AiAssistantDrawer() {
                           <button
                             type="button"
                             onClick={() => handleDraftEmail(clientId)}
-                            className="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+                            className="text-xs px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                           >
                             Připravit email
                           </button>
@@ -745,7 +745,7 @@ export function AiAssistantDrawer() {
                           key={j}
                           type="button"
                           onClick={() => handleOpenReview(m.reviewId!)}
-                          className="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+                          className="text-xs px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                         >
                           {d.label.length > 24 ? d.label.slice(0, 22) + "…" : d.label}
                         </button>
@@ -757,9 +757,9 @@ export function AiAssistantDrawer() {
             ))}
             {chatLoading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl px-4 py-2.5 bg-white border border-slate-100 shadow-sm flex items-center gap-2">
+                <div className="rounded-2xl px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-sm flex items-center gap-2">
                   <Loader2 size={16} className="animate-spin text-indigo-500" />
-                  <span className="text-sm text-slate-500 font-medium">Přemýšlím…</span>
+                  <span className="text-sm text-[color:var(--wp-text-secondary)] font-medium">Přemýšlím…</span>
                 </div>
               </div>
             )}
@@ -767,7 +767,7 @@ export function AiAssistantDrawer() {
           </div>
 
           {/* Input area - reference */}
-          <div className="shrink-0 p-4 pt-2 border-t border-slate-100 bg-white/80">
+          <div className="shrink-0 p-4 pt-2 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/80">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -776,7 +776,7 @@ export function AiAssistantDrawer() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
                 placeholder="Zeptejte se asistenta…"
-                className="flex-1 min-w-0 rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
+                className="flex-1 min-w-0 rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
               />
               <button
                 type="button"
@@ -792,7 +792,7 @@ export function AiAssistantDrawer() {
                 )}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1.5">
               Např. přiřaď smlouvu ke klientovi, vytvoř úkol, připrav email…
             </p>
           </div>

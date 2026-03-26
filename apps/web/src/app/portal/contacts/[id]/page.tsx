@@ -110,8 +110,8 @@ export default async function ContactDetailPage({
         <div className="p-6">
           <ContractsSection contactId={id} />
           <ClientFinancialSummary contactId={id} />
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <h2 className="text-lg font-black text-slate-900 mb-2">Platební instrukce</h2>
+          <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>
             <SendPaymentPdfButton contactId={id} />
           </div>
         </div>
@@ -127,8 +127,8 @@ export default async function ContactDetailPage({
         </div>
       </div>
       <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900">Zprávy</h2>
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Zprávy</h2>
         </div>
         <div className="p-6">
           <ChatThread contactId={id} currentUserType="advisor" />
@@ -157,10 +157,10 @@ export default async function ContactDetailPage({
     { id: "prehled" as const, label: "Přehled", content: overviewContent },
     { id: "timeline" as const, label: "Timeline", content: timelineContent },
     { id: "smlouvy" as const, label: "Produkty", content: smlouvyContent },
-    { id: "dokumenty" as const, label: "Dokumenty", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Dokumenty</h2></div><div className="p-6"><DocumentsSection contactId={id} /></div></div> },
+    { id: "dokumenty" as const, label: "Dokumenty", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50"><h2 className="text-lg font-black text-[color:var(--wp-text)]">Dokumenty</h2></div><div className="p-6"><DocumentsSection contactId={id} /></div></div> },
     { id: "zapisky" as const, label: "Zápisky", content: zapiskyContent },
     { id: "aktivita" as const, label: "Aktivita", content: aktivitaContent },
-    { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
+    { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50"><h2 className="text-lg font-black text-[color:var(--wp-text)]">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
     { id: "obchody" as const, label: "Obchody", content: (
       <div className="flex flex-col flex-1 min-h-0 w-full">
         <ContactOpportunityBoardLazy contactId={id} contactFirstName={contact.firstName ?? undefined} contactLastName={contact.lastName ?? undefined} />
@@ -179,7 +179,7 @@ export default async function ContactDetailPage({
   const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Kontakt";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-20">
+    <div className="min-h-screen bg-[#f8fafc] text-[color:var(--wp-text)] pb-20">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
@@ -188,15 +188,15 @@ export default async function ContactDetailPage({
         <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           <Link
             href="/portal/contacts"
-            className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors shrink-0 min-h-[44px]"
+            className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shrink-0 min-h-[44px]"
           >
             <ArrowLeft size={16} /> Zpět na kontakty
           </Link>
-          <div className="w-px h-6 bg-slate-200 shrink-0 hidden sm:block" aria-hidden />
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 min-w-0">
+          <div className="w-px h-6 bg-[color:var(--wp-surface-card-border)] shrink-0 hidden sm:block" aria-hidden />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-tertiary)] min-w-0">
             <span>Databáze</span>
             <span className="opacity-30">/</span>
-            <span className="text-slate-800 truncate">{fullName}</span>
+            <span className="text-[color:var(--wp-text)] truncate">{fullName}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -216,7 +216,7 @@ export default async function ContactDetailPage({
           <div className="flex flex-col xl:flex-row justify-between gap-6 xl:gap-8 z-10">
             <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6 min-w-0">
               <div className="relative shrink-0">
-                <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-slate-800 to-aidv-create flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-slate-900/20 border-4 border-white overflow-hidden">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] border-4 border-[color:var(--wp-surface-card)] bg-gradient-to-br from-[#1e293b] to-aidv-create font-black text-3xl text-white shadow-xl shadow-black/25">
                   {contact.avatarUrl ? (
                     <img src={contact.avatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -226,33 +226,33 @@ export default async function ContactDetailPage({
               </div>
               <div className="pt-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
-                  <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                  <h1 className="text-2xl md:text-3xl font-black text-[color:var(--wp-text)] tracking-tight">
                     {contact.firstName} {contact.lastName}
                   </h1>
                   <ContactTagsEditor contactId={id} initialTags={contact.tags ?? []} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-slate-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-[color:var(--wp-text-secondary)]">
                   {contact.email && (
                     <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors min-h-[44px] md:min-h-0">
-                      <Mail size={16} className="text-slate-400 shrink-0" />
+                      <Mail size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
                       <span className="truncate">{contact.email}</span>
                     </a>
                   )}
                   {contact.phone && (
                     <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors min-h-[44px] md:min-h-0">
-                      <Phone size={16} className="text-slate-400 shrink-0" />
+                      <Phone size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
                       {contact.phone}
                     </a>
                   )}
                   {addressLine && (
                     <span className="flex items-center gap-2 min-h-[44px] md:min-h-0">
-                      <MapPin size={16} className="text-slate-400 shrink-0" />
+                      <MapPin size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
                       <span className="truncate">{addressLine}</span>
                     </span>
                   )}
                   {contact.birthDate && (
                     <span className="flex items-center gap-2 min-h-[44px] md:min-h-0">
-                      <Calendar size={16} className="text-slate-400 shrink-0" />
+                      <Calendar size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
                       {contact.birthDate}
                     </span>
                   )}

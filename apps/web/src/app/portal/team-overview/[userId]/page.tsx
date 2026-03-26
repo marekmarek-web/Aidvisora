@@ -26,7 +26,7 @@ export default async function TeamMemberDetailPage({
       <div className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         <Link
           href="/portal/team-overview"
-          className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-indigo-600 mb-6"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:text-indigo-600 mb-6"
         >
           ← Zpět na Týmový přehled
         </Link>

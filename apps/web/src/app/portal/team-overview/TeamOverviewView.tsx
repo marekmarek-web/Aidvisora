@@ -66,8 +66,8 @@ function TeamSummaryFeedback({
   const [actionTaken, setActionTaken] = useState<AiFeedbackActionTaken>("none");
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100">
-      <p className="text-sm font-medium text-slate-700 mb-2">Zpětná vazba k shrnutí</p>
+    <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+      <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Zpětná vazba k shrnutí</p>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {FEEDBACK_VERDICTS.map((v) => (
           <button
@@ -78,7 +78,7 @@ function TeamSummaryFeedback({
             className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm font-medium disabled:opacity-60 ${
               verdict === v.value
                 ? "border-violet-500 bg-violet-50 text-violet-700"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
             }`}
           >
             {v.label}
@@ -86,7 +86,7 @@ function TeamSummaryFeedback({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-sm text-slate-600">Co jste udělali:</label>
+        <label className="text-sm text-[color:var(--wp-text-secondary)]">Co jste udělali:</label>
         <CustomDropdown
           value={actionTaken}
           onChange={(id) => setActionTaken(id as AiFeedbackActionTaken)}
@@ -136,8 +136,8 @@ function TeamSummaryFollowUp({
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100">
-      <p className="text-sm font-medium text-slate-700 mb-2">Vytvořit follow-up z shrnutí</p>
+    <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+      <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-2">Vytvořit follow-up z shrnutí</p>
       {error && <p className="mb-2 text-sm text-rose-600" role="alert">{error}</p>}
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
         <CustomDropdown
@@ -153,7 +153,7 @@ function TeamSummaryFollowUp({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Název úkolu nebo schůzky"
           disabled={saving}
-          className="min-h-[44px] flex-1 min-w-[160px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 disabled:opacity-60"
+          className="min-h-[44px] flex-1 min-w-[160px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)] disabled:opacity-60"
         />
         <CustomDropdown
           value={memberId}
@@ -167,7 +167,7 @@ function TeamSummaryFollowUp({
           value={dueAt}
           onChange={(e) => setDueAt(e.target.value)}
           disabled={saving}
-          className="min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 disabled:opacity-60"
+          className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] disabled:opacity-60"
           title="Termín"
         />
         <button
@@ -214,7 +214,7 @@ function formatNumber(n: number): string {
 function TrendIndicator({ trend }: { trend: number }) {
   if (trend > 0) return <span className="inline-flex items-center text-emerald-600 text-xs font-medium"><ArrowUp className="w-3.5 h-3.5 mr-0.5" />+{trend}</span>;
   if (trend < 0) return <span className="inline-flex items-center text-rose-600 text-xs font-medium"><ArrowDown className="w-3.5 h-3.5 mr-0.5" />{trend}</span>;
-  return <span className="inline-flex items-center text-slate-500 text-xs"><Minus className="w-3.5 h-3.5" /></span>;
+  return <span className="inline-flex items-center text-[color:var(--wp-text-secondary)] text-xs"><Minus className="w-3.5 h-3.5" /></span>;
 }
 
 export function TeamOverviewView({
@@ -424,10 +424,10 @@ export function TeamOverviewView({
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 md:mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Týmový přehled</h1>
-            <p className="mt-1 text-sm text-slate-500">Výkon týmu, aktivita a adaptace nováčků na jednom místě.</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[color:var(--wp-text)]">Týmový přehled</h1>
+            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">Výkon týmu, aktivita a adaptace nováčků na jednom místě.</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--wp-surface-muted)] px-3 py-1 text-xs font-semibold text-[color:var(--wp-text-secondary)]">
                 <UsersRound className="w-3.5 h-3.5" />
                 {memberCount} {memberCount === 1 ? "člen" : memberCount < 5 ? "členové" : "členů"} týmu
               </span>
@@ -457,7 +457,7 @@ export function TeamOverviewView({
               type="button"
               onClick={refresh}
               disabled={loading}
-              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] shadow-sm hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
               aria-label="Obnovit data"
             >
               <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
@@ -491,20 +491,20 @@ export function TeamOverviewView({
           <button
             type="button"
             onClick={() => setRiskOnly((v) => !v)}
-            className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${riskOnly ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-200 bg-white text-slate-700"}`}
+            className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${riskOnly ? "border-amber-300 bg-amber-50 text-amber-700" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"}`}
           >
             Jen rizikoví
           </button>
           <button
             type="button"
             onClick={() => setOnboardingOnly((v) => !v)}
-            className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${onboardingOnly ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700"}`}
+            className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${onboardingOnly ? "border-blue-300 bg-blue-50 text-blue-700" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"}`}
           >
             Jen nováčci
           </button>
         </div>
         {hierarchy.length > 0 && (
-          <div className="mb-6 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-600">
+          <div className="mb-6 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 text-sm text-[color:var(--wp-text-secondary)]">
             Hierarchie:
             {" "}
             {hierarchy.slice(0, 5).map((node) => node.displayName || node.email || node.userId).join(" > ")}
@@ -532,86 +532,86 @@ export function TeamOverviewView({
             </div>
           ) : kpis ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link href="#clenove" className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-slate-200">
+              <Link href="#clenove" className="group rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm transition hover:shadow-md hover:border-[color:var(--wp-surface-card-border)]">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.blue.bg}`}>
                   <Users className={`w-5 h-5 ${KPI_THEMES.blue.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{kpis.memberCount}</p>
-                <p className="text-xs font-medium text-slate-500">Členové týmu</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.memberCount}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Členové týmu</p>
               </Link>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
                   <TrendingUp className={`w-5 h-5 ${KPI_THEMES.green.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{kpis.unitsThisPeriod}</p>
-                <p className="text-xs font-medium text-slate-500">Jednotky ({kpis.periodLabel})</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.unitsThisPeriod}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Jednotky ({kpis.periodLabel})</p>
                 <div className="mt-1"><TrendIndicator trend={kpis.unitsTrend} /></div>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.purple.bg}`}>
                   <TrendingUp className={`w-5 h-5 ${KPI_THEMES.purple.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{formatNumber(kpis.productionThisPeriod)}</p>
-                <p className="text-xs font-medium text-slate-500">Produkce ({kpis.periodLabel})</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{formatNumber(kpis.productionThisPeriod)}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Produkce ({kpis.periodLabel})</p>
                 <div className="mt-1"><TrendIndicator trend={Math.round(kpis.productionTrend)} /></div>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
                   <Calendar className={`w-5 h-5 ${KPI_THEMES.green.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{kpis.meetingsThisWeek}</p>
-                <p className="text-xs font-medium text-slate-500">Schůzky tento týden</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.meetingsThisWeek}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Schůzky tento týden</p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.amber.bg}`}>
                   <UserPlus className={`w-5 h-5 ${KPI_THEMES.amber.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{kpis.newcomersInAdaptation}</p>
-                <p className="text-xs font-medium text-slate-500">Nováčci v adaptaci</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.newcomersInAdaptation}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Nováčci v adaptaci</p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.rose.bg}`}>
                   <AlertTriangle className={`w-5 h-5 ${KPI_THEMES.rose.subtitle}`} />
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{kpis.riskyMemberCount}</p>
-                <p className="text-xs font-medium text-slate-500">Rizikoví členové</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.riskyMemberCount}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Rizikoví členové</p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <p className="text-xs font-medium text-slate-500">Pipeline value</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{formatNumber(Math.round(kpis.pipelineValue))}</p>
-                <p className="text-xs font-medium text-slate-500">Konverze: {Math.round(kpis.conversionRate * 100)} %</p>
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Pipeline value</p>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{formatNumber(Math.round(kpis.pipelineValue))}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Konverze: {Math.round(kpis.conversionRate * 100)} %</p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <p className="text-xs font-medium text-slate-500">Top performer</p>
-                <p className="mt-2 text-base font-bold text-slate-900">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Top performer</p>
+                <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">
                   {topMetric ? (members.find((m) => m.userId === topMetric.userId)?.displayName || "Člen týmu") : "—"}
                 </p>
-                <p className="text-xs font-medium text-slate-500">{topMetric ? formatNumber(topMetric.productionThisPeriod) : "—"}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{topMetric ? formatNumber(topMetric.productionThisPeriod) : "—"}</p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <p className="text-xs font-medium text-slate-500">Potřebuje pozornost</p>
-                <p className="mt-2 text-base font-bold text-slate-900">
+              <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Potřebuje pozornost</p>
+                <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">
                   {bottomMetric ? (members.find((m) => m.userId === bottomMetric.userId)?.displayName || "Člen týmu") : "—"}
                 </p>
-                <p className="text-xs font-medium text-slate-500">{bottomMetric ? formatNumber(bottomMetric.productionThisPeriod) : "—"}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{bottomMetric ? formatNumber(bottomMetric.productionThisPeriod) : "—"}</p>
               </div>
               {kpis.teamGoalTarget != null && kpis.teamGoalType && (
-                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                   <div className="inline-flex rounded-xl p-2 bg-indigo-500/20">
                     <Target className="w-5 h-5 text-indigo-600" />
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                  <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">
                     {kpis.teamGoalProgressPercent != null ? `${kpis.teamGoalProgressPercent} %` : "—"}
                   </p>
-                  <p className="text-xs font-medium text-slate-500">Splnění týmového cíle</p>
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Splnění týmového cíle</p>
+                  <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                     {kpis.teamGoalActual != null ? formatNumber(kpis.teamGoalActual) : "0"} / {formatNumber(kpis.teamGoalTarget)}
                     {kpis.teamGoalType === "units" && " jednotek"}
                     {kpis.teamGoalType === "production" && " produkce"}
                     {kpis.teamGoalType === "meetings" && " schůzek"}
                   </p>
                   {kpis.teamGoalProgressPercent != null && (
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
                       <div
                         className="h-full rounded-full bg-indigo-500 transition-all"
                         style={{ width: `${Math.min(kpis.teamGoalProgressPercent, 100)}%` }}
@@ -627,22 +627,22 @@ export function TeamOverviewView({
         {/* Výkon v čase */}
         {performanceOverTime.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-slate-900 mb-3">Výkon v čase</h2>
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Výkon v čase</h2>
+            <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
               <div className="flex gap-2 items-end justify-between h-32" aria-label="Graf jednotek po obdobích">
                 {performanceOverTime.map((p, i) => {
                   const maxUnits = Math.max(...performanceOverTime.map((x) => x.units), 1);
                   const heightPct = maxUnits > 0 ? (p.units / maxUnits) * 100 : 0;
                   return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                      <div className="w-full flex flex-col justify-end h-20 rounded-t bg-slate-100 overflow-hidden">
+                      <div className="w-full flex flex-col justify-end h-20 rounded-t bg-[color:var(--wp-surface-muted)] overflow-hidden">
                         <div
                           className="w-full bg-indigo-500 rounded-t transition-all"
                           style={{ height: `${heightPct}%`, minHeight: p.units > 0 ? "4px" : 0 }}
                         />
                       </div>
-                      <span className="text-[10px] font-medium text-slate-500 truncate w-full text-center" title={p.label}>{p.label}</span>
-                      <span className="text-xs font-semibold text-slate-700">{p.units}</span>
+                      <span className="text-[10px] font-medium text-[color:var(--wp-text-secondary)] truncate w-full text-center" title={p.label}>{p.label}</span>
+                      <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">{p.units}</span>
                     </div>
                   );
                 })}
@@ -653,9 +653,9 @@ export function TeamOverviewView({
 
         {/* AI summary */}
         <section className="mb-8">
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-[color:var(--wp-text)] flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-violet-500" />
                 AI shrnutí týmu
               </h2>
@@ -664,7 +664,7 @@ export function TeamOverviewView({
                   type="button"
                   onClick={loadLatestTeamSummary}
                   disabled={aiLoading}
-                  className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
                 >
                   {aiLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                   Načíst uložené
@@ -685,7 +685,7 @@ export function TeamOverviewView({
             )}
             {aiSummary ? (
               <>
-                <p className="text-slate-700 whitespace-pre-wrap">{aiSummary}</p>
+                <p className="text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{aiSummary}</p>
                 {aiGenerationId && !aiFeedbackSubmitted && (
                   <TeamSummaryFeedback
                     onSubmit={submitTeamSummaryFeedback}
@@ -706,16 +706,16 @@ export function TeamOverviewView({
                 )}
               </>
             ) : !aiLoading ? (
-              <p className="text-slate-500 text-sm">Načtěte uložené shrnutí nebo klikněte na „Generovat shrnutí“, aby AI na základě metrik a upozornění vytvořilo manažerské shrnutí.</p>
+              <p className="text-[color:var(--wp-text-secondary)] text-sm">Načtěte uložené shrnutí nebo klikněte na „Generovat shrnutí“, aby AI na základě metrik a upozornění vytvořilo manažerské shrnutí.</p>
             ) : null}
           </div>
         </section>
 
         {/* Rizika */}
         <section className="mb-8">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Rizika a upozornění</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Rizika a upozornění</h2>
           {alerts.length === 0 ? (
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center text-slate-500">
+            <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 text-center text-[color:var(--wp-text-secondary)]">
               Žádná aktivní upozornění.
             </div>
           ) : (
@@ -724,14 +724,14 @@ export function TeamOverviewView({
                 <li key={i}>
                   <Link
                     href={`/portal/team-overview/${a.memberId}`}
-                    className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-white p-4 shadow-sm hover:border-amber-200 hover:bg-amber-50/50 transition"
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm hover:border-amber-200 hover:bg-amber-50/50 transition"
                   >
                     <span className={`rounded-full p-1 ${a.severity === "critical" ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"}`}>
                       <AlertTriangle className="w-4 h-4" />
                     </span>
-                    <span className="font-medium text-slate-900">{a.title}</span>
-                    <span className="text-slate-500 text-sm">{a.description}</span>
-                    <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
+                    <span className="font-medium text-[color:var(--wp-text)]">{a.title}</span>
+                    <span className="text-[color:var(--wp-text-secondary)] text-sm">{a.description}</span>
+                    <ChevronRight className="w-4 h-4 text-[color:var(--wp-text-tertiary)] ml-auto" />
                   </Link>
                 </li>
               ))}
@@ -741,9 +741,9 @@ export function TeamOverviewView({
 
         {/* Adaptace nováčků */}
         <section className="mb-8">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Adaptace nováčků</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Adaptace nováčků</h2>
           {newcomers.length === 0 ? (
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center text-slate-500">
+            <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 text-center text-[color:var(--wp-text-secondary)]">
               Momentálně žádní nováčci v adaptačním období.
             </div>
           ) : (
@@ -755,18 +755,18 @@ export function TeamOverviewView({
                   <Link
                     key={n.userId}
                     href={`/portal/team-overview/${n.userId}`}
-                    className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition"
+                    className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm hover:shadow-md transition"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-slate-900">{name}</p>
-                        <p className="text-xs text-slate-500">{n.daysInTeam} dní v týmu · {n.adaptationStatus}</p>
+                        <p className="font-semibold text-[color:var(--wp-text)]">{name}</p>
+                        <p className="text-xs text-[color:var(--wp-text-secondary)]">{n.daysInTeam} dní v týmu · {n.adaptationStatus}</p>
                       </div>
-                      <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{n.adaptationScore} %</div>
+                      <div className="rounded-full bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-xs font-bold text-[color:var(--wp-text-secondary)]">{n.adaptationScore} %</div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1">
                       {n.checklist.map((s) => (
-                        <span key={s.key} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${s.completed ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`} title={s.label}>
+                        <span key={s.key} className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${s.completed ? "bg-emerald-100 text-emerald-600" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"}`} title={s.label}>
                           {s.completed ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                         </span>
                       ))}
@@ -783,58 +783,58 @@ export function TeamOverviewView({
 
         {/* Seznam členů */}
         <section id="clenove">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">Členové týmu</h2>
-          <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Členové týmu</h2>
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-100">
+              <table className="min-w-full divide-y divide-[color:var(--wp-surface-card-border)]">
                 <thead>
-                  <tr className="bg-slate-50/80">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Člen</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Jednotky</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Produkce</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Schůzky</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Konverze</th>
+                  <tr className="bg-[color:var(--wp-surface-muted)]/80">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Člen</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Jednotky</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Produkce</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Schůzky</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Konverze</th>
                     {scope === "full" && (
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Nadřízený</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Nadřízený</th>
                     )}
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Aktivita</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Stav</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Aktivita</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Stav</th>
                     <th className="w-10" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[color:var(--wp-surface-card-border)]">
                   {visibleMembers.map((m) => {
                     const met = metricsByUser.get(m.userId);
                     return (
-                      <tr key={m.userId} className="hover:bg-slate-50/50">
+                      <tr key={m.userId} className="hover:bg-[color:var(--wp-surface-muted)]/50">
                         <td className="px-4 py-3">
-                          <Link href={`/portal/team-overview/${m.userId}`} className="font-medium text-slate-900 hover:underline">
+                          <Link href={`/portal/team-overview/${m.userId}`} className="font-medium text-[color:var(--wp-text)] hover:underline">
                             {displayName(m)}
                           </Link>
-                          <p className="text-xs text-slate-500">{m.roleName}{m.email ? ` · ${m.email}` : ""}</p>
+                          <p className="text-xs text-[color:var(--wp-text-secondary)]">{m.roleName}{m.email ? ` · ${m.email}` : ""}</p>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{met?.unitsThisPeriod ?? "—"}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{met ? formatNumber(met.productionThisPeriod) : "—"}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{met?.meetingsThisPeriod ?? "—"}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{met ? `${Math.round(met.conversionRate * 100)}%` : "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met?.unitsThisPeriod ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met ? formatNumber(met.productionThisPeriod) : "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met?.meetingsThisPeriod ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met ? `${Math.round(met.conversionRate * 100)}%` : "—"}</td>
                         {scope === "full" && (
-                          <td className="px-4 py-3 text-right text-sm text-slate-700">{m.managerName ?? "—"}</td>
+                          <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{m.managerName ?? "—"}</td>
                         )}
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{met?.activityCount ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met?.activityCount ?? "—"}</td>
                         <td className="px-4 py-3 text-right">
                           {met && (
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                               met.riskLevel === "critical" ? "bg-rose-100 text-rose-700" :
                               met.riskLevel === "warning" ? "bg-amber-100 text-amber-700" :
-                              "bg-slate-100 text-slate-600"
+                              "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                             }`}>
                               {met.riskLevel === "critical" ? "Riziko" : met.riskLevel === "warning" ? "Pozor" : "OK"}
                             </span>
                           )}
                         </td>
                         <td>
-                          <Link href={`/portal/team-overview/${m.userId}`} className="inline-flex p-2 text-slate-400 hover:text-indigo-600" aria-label="Detail">
+                          <Link href={`/portal/team-overview/${m.userId}`} className="inline-flex p-2 text-[color:var(--wp-text-tertiary)] hover:text-indigo-600" aria-label="Detail">
                             <ChevronRight className="w-4 h-4" />
                           </Link>
                         </td>
@@ -845,34 +845,34 @@ export function TeamOverviewView({
               </table>
             </div>
             {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden divide-y divide-[color:var(--wp-surface-card-border)]">
               {visibleMembers.map((m) => {
                 const met = metricsByUser.get(m.userId);
                 return (
-                  <Link key={m.userId} href={`/portal/team-overview/${m.userId}`} className="relative block p-4 hover:bg-slate-50/50 active:bg-slate-100">
+                  <Link key={m.userId} href={`/portal/team-overview/${m.userId}`} className="relative block p-4 hover:bg-[color:var(--wp-surface-muted)]/50 active:bg-[color:var(--wp-surface-muted)]">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="font-medium text-slate-900">{displayName(m)}</p>
-                        <p className="text-xs text-slate-500">{m.roleName}{m.email ? ` · ${m.email}` : ""}</p>
+                        <p className="font-medium text-[color:var(--wp-text)]">{displayName(m)}</p>
+                        <p className="text-xs text-[color:var(--wp-text-secondary)]">{m.roleName}{m.email ? ` · ${m.email}` : ""}</p>
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         met?.riskLevel === "critical" ? "bg-rose-100 text-rose-700" :
                         met?.riskLevel === "warning" ? "bg-amber-100 text-amber-700" :
-                        "bg-slate-100 text-slate-600"
+                        "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                       }`}>
                         {met?.riskLevel === "critical" ? "Riziko" : met?.riskLevel === "warning" ? "Pozor" : "OK"}
                       </span>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-sm text-slate-600">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-sm text-[color:var(--wp-text-secondary)]">
                       <span>Jednotky: {met?.unitsThisPeriod ?? "—"}</span>
                       <span>Produkce: {met ? formatNumber(met.productionThisPeriod) : "—"}</span>
                       <span>Schůzky: {met?.meetingsThisPeriod ?? "—"}</span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                       Konverze: {met ? `${Math.round(met.conversionRate * 100)} %` : "—"}
                       {m.managerName ? ` · Nadřízený: ${m.managerName}` : ""}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2" />
+                    <ChevronRight className="w-4 h-4 text-[color:var(--wp-text-tertiary)] absolute right-2 top-1/2 -translate-y-1/2" />
                   </Link>
                 );
               })}

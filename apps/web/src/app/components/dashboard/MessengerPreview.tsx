@@ -45,12 +45,12 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
   const dark = !!forDarkPanel;
 
   return (
-    <div className={embedded ? "pt-0" : dark ? "pt-0" : "pt-6 border-t border-slate-100"}>
+    <div className={embedded ? "pt-0" : dark ? "pt-0" : "pt-6 border-t border-[color:var(--wp-surface-card-border)]"}>
       {!embedded && (
         <div className="flex items-center justify-between mb-4">
           <h3
             className={`text-xs font-black uppercase tracking-widest ${
-              dark ? "text-aidv-text-muted-on-dark" : "text-slate-400"
+              dark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-tertiary)]"
             }`}
           >
             Zprávy z portálu
@@ -71,9 +71,9 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
       )}
 
       {loading ? (
-        <p className={`text-sm ${dark ? "text-aidv-text-muted-on-dark" : "text-slate-500"}`}>Načítám…</p>
+        <p className={`text-sm ${dark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-secondary)]"}`}>Načítám…</p>
       ) : conversations.length === 0 ? (
-        <p className={`text-sm ${dark ? "text-aidv-text-muted-on-dark" : "text-slate-500"}`}>Žádné nedávné zprávy.</p>
+        <p className={`text-sm ${dark ? "text-aidv-text-muted-on-dark" : "text-[color:var(--wp-text-secondary)]"}`}>Žádné nedávné zprávy.</p>
       ) : (
         <div className="space-y-3">
           {conversations.map((c) => (
@@ -83,7 +83,7 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
               className={
                 dark
                   ? "flex cursor-pointer gap-4 rounded-2xl border border-[color:var(--wp-sc-card-border)] bg-[color:var(--wp-sc-card-bg)] p-4 text-inherit no-underline shadow-sm backdrop-blur-md transition-all hover:border-indigo-300/40 hover:bg-[color:var(--wp-message-box-hover)]"
-                  : "flex cursor-pointer gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-inherit no-underline transition-all hover:bg-white hover:shadow-sm"
+                  : "flex cursor-pointer gap-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 text-inherit no-underline transition-all hover:bg-[color:var(--wp-surface-card)] hover:shadow-sm"
               }
             >
               <span
@@ -101,14 +101,14 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
                           ? "font-black text-[color:var(--wp-text)]"
                           : "font-bold text-[color:var(--wp-text-muted)]"
                         : c.unread
-                          ? "font-black text-slate-900"
-                          : "font-bold text-slate-700"
+                          ? "font-black text-[color:var(--wp-text)]"
+                          : "font-bold text-[color:var(--wp-text-secondary)]"
                     }`}
                   >
                     {c.contactName}
                   </h4>
                   <span
-                    className={`shrink-0 text-[10px] font-bold ${dark ? "text-[color:var(--wp-text-muted)]" : "text-slate-400"}`}
+                    className={`shrink-0 text-[10px] font-bold ${dark ? "text-[color:var(--wp-text-muted)]" : "text-[color:var(--wp-text-tertiary)]"}`}
                   >
                     {timeAgo(c.lastMessageAt)}
                   </span>
@@ -120,8 +120,8 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
                         ? "font-semibold text-[color:var(--wp-text)]"
                         : "text-[color:var(--wp-text-muted)]"
                       : c.unread
-                        ? "font-bold text-slate-800"
-                        : "text-slate-500"
+                        ? "font-bold text-[color:var(--wp-text)]"
+                        : "text-[color:var(--wp-text-secondary)]"
                   }`}
                 >
                   {c.senderType === "advisor" ? "Vy: " : ""}

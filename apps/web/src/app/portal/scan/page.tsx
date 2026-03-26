@@ -51,10 +51,10 @@ function ScanThumbnail({ file, alt }: { file: File; alt: string }) {
   }, [file]);
 
   if (!url) {
-    return <div className="h-24 w-24 animate-pulse rounded-lg bg-slate-100" aria-hidden />;
+    return <div className="h-24 w-24 animate-pulse rounded-lg bg-[color:var(--wp-surface-muted)]" aria-hidden />;
   }
 
-  return <img src={url} alt={alt} className="h-24 w-24 rounded-lg border border-slate-200 object-cover" />;
+  return <img src={url} alt={alt} className="h-24 w-24 rounded-lg border border-[color:var(--wp-surface-card-border)] object-cover" />;
 }
 
 function QualityBadge({ quality }: { quality?: ScanPage["quality"] }) {
@@ -96,9 +96,9 @@ function SortablePageCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={`shrink-0 rounded-xl border p-2 ${hasError ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
+    <div ref={setNodeRef} style={style} className={`shrink-0 rounded-xl border p-2 ${hasError ? "border-amber-300 bg-amber-50" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]"}`}>
       <div {...attributes} {...listeners} className="cursor-grab touch-none active:cursor-grabbing">
-        <div className="mb-1 text-center text-xs font-medium text-slate-500">{index + 1}</div>
+        <div className="mb-1 text-center text-xs font-medium text-[color:var(--wp-text-secondary)]">{index + 1}</div>
         <div className="relative">
           <ScanThumbnail file={scanPage.file} alt={`Strana ${index + 1}`} />
           <QualityBadge quality={scanPage.quality} />
@@ -114,7 +114,7 @@ function SortablePageCard({
           type="button"
           onClick={() => onRetake(index)}
           disabled={isCapturing}
-          className={`min-h-[40px] flex-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${hasError ? "border-amber-400 bg-amber-100 text-amber-800" : "border-slate-300 text-slate-700"}`}
+          className={`min-h-[40px] flex-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${hasError ? "border-amber-400 bg-amber-100 text-amber-800" : "border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)]"}`}
         >
           {hasError ? "Přefotit" : "Znovu"}
         </button>
@@ -130,7 +130,7 @@ function SortablePageCard({
         type="button"
         onClick={() => onRotateCw(index)}
         disabled={isCapturing}
-        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-semibold text-slate-800 disabled:opacity-50"
+        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)] px-2 text-xs font-semibold text-[color:var(--wp-text)] disabled:opacity-50"
       >
         Otočit o 90°
       </button>
@@ -301,9 +301,9 @@ export default function ScanPage() {
   if (!supportsMultiPageScan) {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pb-8 pt-8 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h1 className="text-lg font-semibold text-slate-900">Sken na tomto zařízení</h1>
-          <p className="mt-2 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5">
+          <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Sken na tomto zařízení</h1>
+          <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)]">
             Vícestránkové skenování je v širokém webovém zobrazení vypnuté. Nahrajte PDF nebo obrázek v sekci dokumentů,
             nebo použijte telefon (prohlížeč nebo aplikaci Aidvisora).
           </p>
@@ -316,7 +316,7 @@ export default function ScanPage() {
             </Link>
             <Link
               href="/portal/today"
-              className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)]"
             >
               Zpět na přehled
             </Link>
@@ -329,15 +329,15 @@ export default function ScanPage() {
   if (step === "capture") {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <h1 className="text-lg font-semibold text-slate-900">Skenovat dokument</h1>
-          <p className="mt-1 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
+          <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Skenovat dokument</h1>
+          <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
             Vyfoťte jednotlivé strany dokumentu. Přetažením změníte pořadí.
           </p>
         </div>
 
         {tier === "web_mobile" ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3 text-xs text-[color:var(--wp-text-secondary)]">
             V prohlížeči je sken omezený na fotky bez automatického ořezu dokumentu. Pro nejlepší výsledek použijte{" "}
             <strong>mobilní aplikaci Aidvisora</strong> (sken dokumentu) nebo nahrajte už hotové PDF z galerie přes
             dokumenty. Po klepnutí na <strong>Přidat stranu</strong> se otevře fotoaparát nebo výběr souboru; více stran
@@ -370,8 +370,8 @@ export default function ScanPage() {
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <h2 className="mb-3 text-sm font-medium text-slate-700">
+        <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+          <h2 className="mb-3 text-sm font-medium text-[color:var(--wp-text-secondary)]">
             Naskenované strany ({scanPages.length})
           </h2>
 
@@ -384,7 +384,7 @@ export default function ScanPage() {
           ) : null}
 
           {scanPages.length === 0 ? (
-            <p className="text-sm text-slate-500">Zatím není přidaná žádná strana.</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">Zatím není přidaná žádná strana.</p>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={pageIds} strategy={rectSortingStrategy}>
@@ -406,7 +406,7 @@ export default function ScanPage() {
           )}
         </div>
 
-        <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+        <div className="sticky bottom-0 z-10 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 backdrop-blur">
           {hasQualityIssues ? (
             <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
               Některé strany mají nízkou kvalitu. Doporučujeme je přefotit pro lepší rozpoznání textu.
@@ -421,7 +421,7 @@ export default function ScanPage() {
                   void capturePage();
                 }}
                 disabled={isCapturing || !canAddMore}
-                className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-[color:var(--wp-surface-card-border)]"
               >
                 {isCapturing ? "Otevírám výběr…" : canAddMore ? "Přidat stranu" : "Limit 20 stran"}
               </button>
@@ -429,7 +429,7 @@ export default function ScanPage() {
                 type="button"
                 onClick={() => setStep("metadata")}
                 disabled={pages.length === 0}
-                className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-[44px] flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Pokračovat ({pages.length} {pages.length === 1 ? "strana" : pages.length < 5 ? "strany" : "stran"})
               </button>
@@ -454,7 +454,7 @@ export default function ScanPage() {
                 void addPagesFromGalleryBatch();
               }}
               disabled={isCapturing || !canAddMore}
-              className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[44px] w-full rounded-lg border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-card)] px-4 text-sm font-semibold text-[color:var(--wp-text)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Více z galerie (najednou)
             </button>
@@ -467,23 +467,23 @@ export default function ScanPage() {
   if (step === "preview") {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <h1 className="text-lg font-semibold text-slate-900">Náhled PDF</h1>
-          <p className="mt-1 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
+          <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Náhled PDF</h1>
+          <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
             Zkontrolujte složený dokument. Teprve poté ho odešlete do knihovny dokumentů.
           </p>
         </div>
 
         {pdfPreviewUrl ? (
           <div className="space-y-2">
-            <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="w-full overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
               <iframe
                 title="Náhled PDF před nahráním"
                 src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&view=FitH`}
-                className="block min-h-[55vh] w-full border-0 bg-white sm:min-h-[65vh]"
+                className="block min-h-[55vh] w-full border-0 bg-[color:var(--wp-surface-card)] sm:min-h-[65vh]"
               />
             </div>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[color:var(--wp-text-secondary)]">
               Pokud se PDF v rámečku nezobrazí (Safari), otevřete ho v novém okně nebo systémovým prohlížečem PDF.
             </p>
             <a
@@ -496,13 +496,13 @@ export default function ScanPage() {
             </a>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">Náhled není k dispozici.</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Náhled není k dispozici.</p>
         )}
 
         {uploadState === "uploading" ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-3">
-            <div className="mb-1 text-sm font-medium text-slate-700">Nahrávání</div>
-            <div className="h-2 w-full overflow-hidden rounded bg-slate-100">
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+            <div className="mb-1 text-sm font-medium text-[color:var(--wp-text-secondary)]">Nahrávání</div>
+            <div className="h-2 w-full overflow-hidden rounded bg-[color:var(--wp-surface-muted)]">
               <div className="h-full bg-blue-500 transition-all duration-150" style={{ width: `${progress}%` }} />
             </div>
           </div>
@@ -512,13 +512,13 @@ export default function ScanPage() {
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
         ) : null}
 
-        <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+        <div className="sticky bottom-0 z-10 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 backdrop-blur">
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               disabled={isUploading || uploadState === "done"}
               onClick={() => void uploadPreparedPdf()}
-              className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-[color:var(--wp-surface-card-border)]"
             >
               {uploadState === "uploading"
                 ? `Nahrávám... ${progress}%`
@@ -532,7 +532,7 @@ export default function ScanPage() {
               type="button"
               disabled={isUploading}
               onClick={leavePreview}
-              className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50"
+              className="min-h-[44px] flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)] disabled:opacity-50"
             >
               Zpět k údajům
             </button>
@@ -574,9 +574,9 @@ export default function ScanPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h1 className="text-lg font-semibold text-slate-900">Nahrání skenu</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
+        <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Nahrání skenu</h1>
+        <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
           Vyplňte údaje, zobrazte náhled PDF a teprve poté nahrajte dokument.
         </p>
       </div>
@@ -592,8 +592,8 @@ export default function ScanPage() {
 
       <ContactPicker value={selectedContact} onChange={setSelectedContact} />
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="scan-doc-type">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+        <label className="mb-2 block text-sm font-medium text-[color:var(--wp-text-secondary)]" htmlFor="scan-doc-type">
           Typ dokumentu
         </label>
         <input
@@ -601,10 +601,10 @@ export default function ScanPage() {
           value={documentType}
           onChange={(event) => setDocumentType(event.target.value)}
           placeholder="Např. smlouva, faktura"
-          className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          className="h-11 w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         />
 
-        <label className="mb-2 mt-3 block text-sm font-medium text-slate-700" htmlFor="scan-note">
+        <label className="mb-2 mt-3 block text-sm font-medium text-[color:var(--wp-text-secondary)]" htmlFor="scan-note">
           Poznámka
         </label>
         <textarea
@@ -612,19 +612,19 @@ export default function ScanPage() {
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder="Volitelná poznámka ke skenu"
-          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          className="min-h-24 w-full rounded-lg border border-[color:var(--wp-border-strong)] px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <h2 className="mb-2 text-sm font-medium text-slate-700">
+      <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3">
+        <h2 className="mb-2 text-sm font-medium text-[color:var(--wp-text-secondary)]">
           Strany v dokumentu ({pages.length})
         </h2>
         <div className="flex flex-wrap gap-3">
           {scanPages.map((sp, index) => (
             <div key={sp.id} className="shrink-0 text-center">
               <ScanThumbnail file={sp.file} alt={`Strana ${index + 1}`} />
-              <div className="mt-1 text-xs text-slate-500">
+              <div className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
                 {index + 1} · {formatSize(sp.file.size)}
               </div>
             </div>
@@ -636,13 +636,13 @@ export default function ScanPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
       ) : null}
 
-      <div className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+      <div className="sticky bottom-0 z-10 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 backdrop-blur">
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             disabled={isUploading || isBuildingPdf || pages.length === 0}
             onClick={() => void preparePreviewPdf()}
-            className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="min-h-[44px] flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-[color:var(--wp-surface-card-border)]"
           >
             {previewButtonLabel}
           </button>
@@ -662,7 +662,7 @@ export default function ScanPage() {
               setPreparedPdf(null);
               setStep("capture");
             }}
-            className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50"
+            className="min-h-[44px] flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)] disabled:opacity-50"
           >
             Zpět na focení
           </button>

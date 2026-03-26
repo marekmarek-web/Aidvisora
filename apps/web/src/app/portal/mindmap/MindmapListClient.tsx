@@ -58,8 +58,8 @@ function getEntityKindStyle(kind: ClientMapItem["entityKind"]): { bg: string; te
       };
     default:
       return {
-        bg: "bg-slate-100 text-slate-600 border-slate-200",
-        text: "text-slate-600",
+        bg: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]",
+        text: "text-[color:var(--wp-text-secondary)]",
         icon: <User size={16} />,
       };
   }
@@ -181,14 +181,14 @@ export function MindmapListClient({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[color:var(--wp-text)] tracking-tight">
                 Mindmap
               </h1>
-              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-black rounded-lg border border-slate-200">
+              <span className="px-3 py-1 bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-xs font-black rounded-lg border border-[color:var(--wp-surface-card-border)]">
                 {totalCount} celkem
               </span>
             </div>
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
               Klientské a libovolné mapy. Přehled, vyhledávání a rychlý přístup k editoru.
             </p>
           </div>
@@ -203,17 +203,17 @@ export function MindmapListClient({
 
         {/* Hlavní vyhledávání */}
         <div className="mb-8 md:mb-10">
-          <div className="relative bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="relative bg-[color:var(--wp-surface-card)] rounded-3xl border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
             <Search
               size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none"
             />
             <input
               type="search"
               placeholder="Hledat podle názvu mapy, klienta, domácnosti…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-5 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 border-0 min-h-[52px]"
+              className="w-full pl-12 pr-5 py-3.5 text-sm font-medium text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 border-0 min-h-[52px]"
               aria-label="Hledat mapy"
             />
           </div>
@@ -230,26 +230,26 @@ export function MindmapListClient({
 
         {/* Sekce 1 – Nedávno upravené klientské mapy */}
         <section className="mb-10 sm:mb-12">
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <h2 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-4 flex items-center gap-2">
             <Map size={14} />
             Nedávno upravené klientské mapy
           </h2>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
             {filteredClientMaps.length === 0 ? (
-              <div className="px-6 py-10 text-center text-slate-500 text-sm">
+              <div className="px-6 py-10 text-center text-[color:var(--wp-text-secondary)] text-sm">
                 {clientMaps.length === 0
                   ? "Zatím žádné klientské mapy. Otevřete mapu u klienta nebo domácnosti a uložte ji."
                   : "Žádné výsledky pro hledaný výraz."}
               </div>
             ) : (
-              <ul className="divide-y divide-slate-100" role="list">
+              <ul className="divide-y divide-[color:var(--wp-surface-card-border)]" role="list">
                 {filteredClientMaps.map((m) => {
                   const style = getEntityKindStyle(m.entityKind);
                   return (
                     <li key={`${m.entityType}-${m.entityId}`}>
                       <Link
                         href={m.openRoute}
-                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 hover:bg-slate-50/80 transition-all duration-200 group"
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 hover:bg-[color:var(--wp-surface-muted)]/80 transition-all duration-200 group"
                       >
                         <div
                           className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 border ${style.bg}`}
@@ -257,21 +257,21 @@ export function MindmapListClient({
                           {style.icon}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                          <h3 className="font-bold text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors truncate">
                             {m.entityName}
                           </h3>
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                          <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mt-0.5">
                             {m.entityKind}
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          <span className="text-xs font-bold text-[color:var(--wp-text-tertiary)] uppercase tracking-wider">
                             {m.nodeCount} uzlů
                           </span>
-                          <span className="text-xs font-medium text-slate-500">
+                          <span className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
                             {formatUpdated(m.updatedAt)}
                           </span>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider group-hover:bg-indigo-100 group-hover:text-indigo-700 transition-colors">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-xs font-bold uppercase tracking-wider group-hover:bg-indigo-100 group-hover:text-indigo-700 transition-colors">
                             <ArrowRight size={14} />
                             Otevřít
                           </span>
@@ -287,7 +287,7 @@ export function MindmapListClient({
 
         {/* Sekce 2 – Libovolné mapy */}
         <section>
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <h2 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-4 flex items-center gap-2">
             <Map size={14} />
             Libovolné mapy
           </h2>
@@ -300,49 +300,49 @@ export function MindmapListClient({
               value={newMapName}
               onChange={(e) => setNewMapName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateStandaloneMap(newMapName)}
-              className="flex-1 min-w-[200px] max-w-md rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 bg-white shadow-sm min-h-[44px]"
+              className="flex-1 min-w-[200px] max-w-md rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 bg-[color:var(--wp-surface-card)] shadow-sm min-h-[44px]"
             />
             <button
               type="button"
               onClick={() => handleCreateStandaloneMap(newMapName)}
               disabled={creating}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 hover:border-indigo-200 transition-all min-h-[44px] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] hover:border-indigo-200 transition-all min-h-[44px] disabled:opacity-50"
             >
               <Plus size={16} />
               {creating ? "Vytvářím…" : "Nová mapa"}
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
             {filteredStandaloneMaps.length === 0 ? (
-              <div className="p-8 sm:p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 mx-4 my-6 sm:mx-6 sm:my-8">
-                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 mx-auto mb-4 shadow-sm">
+              <div className="p-8 sm:p-12 text-center border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-2xl bg-[color:var(--wp-surface-muted)]/50 mx-4 my-6 sm:mx-6 sm:my-8">
+                <div className="w-16 h-16 bg-[color:var(--wp-surface-card)] rounded-2xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mx-auto mb-4 shadow-sm">
                   <Map size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-700 mb-2">Zatím žádné libovolné mapy</h3>
-                <p className="text-sm text-slate-500 mb-6">
+                <h3 className="text-lg font-bold text-[color:var(--wp-text-secondary)] mb-2">Zatím žádné libovolné mapy</h3>
+                <p className="text-sm text-[color:var(--wp-text-secondary)] mb-6">
                   Vytvořte mapu výše (brainstorming, projekty, schůzky) nebo otevřete mapu u klienta.
                 </p>
                 <button
                   type="button"
                   onClick={() => handleCreateStandaloneMap()}
                   disabled={creating}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-all"
                 >
                   <Plus size={16} />
                   Nová mapa
                 </button>
               </div>
             ) : (
-              <ul className="divide-y divide-slate-100" role="list">
+              <ul className="divide-y divide-[color:var(--wp-surface-card-border)]" role="list">
                 {filteredStandaloneMaps.map((m) => (
                   <li key={m.id} className="group">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 hover:bg-slate-50/80 transition-all duration-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 hover:bg-[color:var(--wp-surface-muted)]/80 transition-all duration-200">
                       <Link href={`/portal/mindmap/${m.id}`} className="min-w-0 flex-1">
-                        <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                        <h3 className="font-bold text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors truncate">
                           {m.name}
                         </h3>
-                        <p className="text-xs font-medium text-slate-500 mt-0.5">
+                        <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-0.5">
                           {formatUpdated(m.updatedAt)}
                           {m.nodeCount > 0 && ` · ${m.nodeCount} uzlů`}
                         </p>
@@ -350,7 +350,7 @@ export function MindmapListClient({
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Link
                           href={`/portal/mindmap/${m.id}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-indigo-100 hover:text-indigo-700 transition-colors min-h-[44px]"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] text-xs font-bold uppercase tracking-wider hover:bg-indigo-100 hover:text-indigo-700 transition-colors min-h-[44px]"
                         >
                           <ArrowRight size={14} />
                           Otevřít
@@ -359,7 +359,7 @@ export function MindmapListClient({
                           <button
                             type="button"
                             onClick={() => setOpenMenuId(openMenuId === m.id ? null : m.id)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px]"
+                            className="p-2.5 rounded-xl text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[44px] min-w-[44px]"
                             aria-label="Další akce"
                             aria-expanded={openMenuId === m.id}
                           >
@@ -372,10 +372,10 @@ export function MindmapListClient({
                                 aria-hidden
                                 onClick={() => setOpenMenuId(null)}
                               />
-                              <div className="absolute right-0 top-full mt-1 z-20 py-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg">
+                              <div className="absolute right-0 top-full mt-1 z-20 py-1 w-48 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-lg">
                                 <Link
                                   href={`/portal/mindmap/${m.id}`}
-                                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg"
+                                  className="flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg"
                                   onClick={() => setOpenMenuId(null)}
                                 >
                                   <ArrowRight size={14} />
@@ -385,7 +385,7 @@ export function MindmapListClient({
                                   type="button"
                                   onClick={() => handleRename(m.id, m.name)}
                                   disabled={renamingId === m.id}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg disabled:opacity-50"
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg disabled:opacity-50"
                                 >
                                   <Pencil size={14} />
                                   Přejmenovat
@@ -394,7 +394,7 @@ export function MindmapListClient({
                                   type="button"
                                   onClick={() => handleDuplicate(m.id)}
                                   disabled={duplicatingId === m.id}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg disabled:opacity-50"
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg disabled:opacity-50"
                                 >
                                   <Copy size={14} />
                                   Duplikovat

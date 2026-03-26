@@ -128,30 +128,30 @@ export function StepGoals() {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Finanční cíle</h2>
-          <p className="text-slate-500 mt-1">Cílový kapitál nebo důchod – FV a měsíční spoření.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Finanční cíle</h2>
+          <p className="text-[color:var(--wp-text-secondary)] mt-1">Cílový kapitál nebo důchod – FV a měsíční spoření.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm">
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Celkem cílový kapitál</span>
-            <span className="text-lg font-bold text-slate-800">{formatCzk(totalTarget)}</span>
+          <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-lg px-4 py-2 shadow-sm">
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Celkem cílový kapitál</span>
+            <span className="text-lg font-bold text-[color:var(--wp-text)]">{formatCzk(totalTarget)}</span>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm">
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Měsíčně spoření</span>
+          <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-lg px-4 py-2 shadow-sm">
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Měsíčně spoření</span>
             <span className="text-lg font-bold text-indigo-700">{formatCzk(totalMonthly)}</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-          <h3 className="text-slate-800 font-bold mb-6 flex items-center gap-2">
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-[color:var(--wp-text)] font-bold mb-6 flex items-center gap-2">
             <Target className="w-5 h-5 text-indigo-600" />
             {editingId != null ? "Upravit cíl" : "Přidat cíl"}
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Typ cíle</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Typ cíle</label>
               <CustomDropdown
                 value={type}
                 onChange={(id) => setType(id)}
@@ -159,21 +159,21 @@ export function StepGoals() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Název cíle</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Důchod, bydlení, auto…" className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Název cíle</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Důchod, bydlení, auto…" className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">
                 {type === "renta" ? "Cílový měsíční příjem (Kč)" : "Cílový kapitál (Kč)"}
               </label>
-              <input type="number" value={amount || ""} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+              <input type="number" value={amount || ""} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Horizont (roky)</label>
-              <input type="number" min={1} max={50} value={horizon} onChange={(e) => setHorizon(parseInt(e.target.value, 10) || 1)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Horizont (roky)</label>
+              <input type="number" min={1} max={50} value={horizon} onChange={(e) => setHorizon(parseInt(e.target.value, 10) || 1)} className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Strategie zhodnocení</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Strategie zhodnocení</label>
               <CustomDropdown
                 value={String(strategy)}
                 onChange={(id) => setStrategy(parseFloat(id))}
@@ -182,42 +182,42 @@ export function StepGoals() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Počáteční vklad (Kč)</label>
-                <input type="number" value={initial || ""} onChange={(e) => setInitial(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Počáteční vklad (Kč)</label>
+                <input type="number" value={initial || ""} onChange={(e) => setInitial(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Jednorázově nyní (Kč)</label>
-                <input type="number" value={lumpsum || ""} onChange={(e) => setLumpsum(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+                <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Jednorázově nyní (Kč)</label>
+                <input type="number" value={lumpsum || ""} onChange={(e) => setLumpsum(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
               </div>
             </div>
             {type === "renta" && (
-              <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-100">
+              <div className="space-y-3 bg-[color:var(--wp-surface-card)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)]">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={useInflationFV}
                     onChange={(e) => setUseInflationFV(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-500"
+                    className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-500"
                   />
-                  <span className="text-sm font-semibold text-slate-700">Započítat inflaci do FV (3 % p.a.)</span>
+                  <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">Započítat inflaci do FV (3 % p.a.)</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={pensionDeduction}
                     onChange={(e) => setPensionDeduction(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-500"
+                    className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-500"
                   />
-                  <span className="text-sm font-semibold text-slate-700">Započítat důchod (snižuje potřebný kapitál)</span>
+                  <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">Započítat důchod (snižuje potřebný kapitál)</span>
                 </label>
                 {pensionDeduction && (
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Očekávaný měsíční důchod (Kč)</label>
+                    <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Očekávaný měsíční důchod (Kč)</label>
                     <input
                       type="number"
                       value={pensionAmount || ""}
                       onChange={(e) => setPensionAmount(parseFloat(e.target.value) || 0)}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl"
+                      className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl"
                     />
                   </div>
                 )}
@@ -228,27 +228,27 @@ export function StepGoals() {
                 <Plus className="w-5 h-5" /> {editingId != null ? "Uložit" : "Přidat cíl"}
               </button>
               {editingId != null && (
-                <button type="button" onClick={() => { setEditingId(null); setName(""); setAmount(0); setHorizon(10); setInitial(0); setLumpsum(0); setUseInflationFV(true); setPensionDeduction(false); setPensionAmount(0); }} className="min-h-[44px] px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold">Zrušit</button>
+                <button type="button" onClick={() => { setEditingId(null); setName(""); setAmount(0); setHorizon(10); setInitial(0); setLumpsum(0); setUseInflationFV(true); setPensionDeduction(false); setPensionAmount(0); }} className="min-h-[44px] px-4 rounded-xl border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-secondary)] font-semibold">Zrušit</button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-          <h3 className="text-slate-800 font-bold mb-4">Seznam cílů</h3>
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-[color:var(--wp-text)] font-bold mb-4">Seznam cílů</h3>
           {goals.length === 0 ? (
-            <p className="text-slate-500 text-sm">Zatím žádné cíle. Přidejte je v levém formuláři.</p>
+            <p className="text-[color:var(--wp-text-secondary)] text-sm">Zatím žádné cíle. Přidejte je v levém formuláři.</p>
           ) : (
             <ul className="space-y-3 mb-6">
               {goals.map((g) => (
-                <li key={g.id} className="bg-white rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
+                <li key={g.id} className="bg-[color:var(--wp-surface-card)] rounded-xl p-4 border border-[color:var(--wp-surface-card-border)] flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-800">{g.name}</div>
-                    <div className="text-sm text-slate-500">{g.type === "renta" ? "Renta" : "Kapitál"} · {formatCzk(g.computed?.fvTarget ?? 0)} · {g.horizon ?? g.years} let</div>
+                    <div className="font-semibold text-[color:var(--wp-text)]">{g.name}</div>
+                    <div className="text-sm text-[color:var(--wp-text-secondary)]">{g.type === "renta" ? "Renta" : "Kapitál"} · {formatCzk(g.computed?.fvTarget ?? 0)} · {g.horizon ?? g.years} let</div>
                     <div className="text-sm font-bold text-indigo-700 mt-1">Měsíčně {formatCzk(g.computed?.pmt ?? 0)}</div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button type="button" onClick={() => { handleEdit(g); setChartGoalId(g.id); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg" aria-label="Upravit"><Pencil className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => { handleEdit(g); setChartGoalId(g.id); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg" aria-label="Upravit"><Pencil className="w-4 h-4" /></button>
                     <button type="button" onClick={() => removeGoal(g.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg" aria-label="Odebrat"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </li>
@@ -258,14 +258,14 @@ export function StepGoals() {
 
           {goals.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-sm font-bold text-slate-700 mb-2">Vývoj hodnoty v čase</h4>
+              <h4 className="text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Vývoj hodnoty v čase</h4>
               <div className="flex flex-wrap gap-2 mb-3">
                 {goals.map((g) => (
                   <button
                     key={g.id}
                     type="button"
                     onClick={() => setChartGoalId(g.id)}
-                    className={`min-h-[44px] px-3 py-2 rounded-lg text-sm font-semibold ${chartGoalId === g.id ? "bg-indigo-500 text-white" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}
+                    className={`min-h-[44px] px-3 py-2 rounded-lg text-sm font-semibold ${chartGoalId === g.id ? "bg-indigo-500 text-white" : "bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
                   >
                     {g.name}
                   </button>

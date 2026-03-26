@@ -16,7 +16,7 @@ export function CalculatorPageShell({
       className={`${maxWidth} mx-auto space-y-4 rounded-[20px] bg-[#f4f6fb] p-4 sm:p-6 ${className}`.trim()}
     >
       {children}
-      <p className="text-center text-sm text-slate-500 pt-2">
+      <p className="text-center text-sm text-[color:var(--wp-text-secondary)] pt-2">
         Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
       </p>
     </div>

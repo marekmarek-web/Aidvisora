@@ -77,14 +77,14 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-600" />
             Synchronizovat klienty z FA
           </h3>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center">
-            <X className="w-5 h-5 text-slate-500" />
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <X className="w-5 h-5 text-[color:var(--wp-text-secondary)]" />
           </button>
         </div>
 
@@ -92,7 +92,7 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
           {loading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-              <span className="ml-2 text-sm text-slate-600">Načítám preview...</span>
+              <span className="ml-2 text-sm text-[color:var(--wp-text-secondary)]">Načítám preview...</span>
             </div>
           )}
 
@@ -103,20 +103,20 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
               <div className="space-y-2">
                 {preview.persons.map((p, idx) => (
                   <label key={idx} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors min-h-[44px] ${
-                    selectedIndices.has(idx) ? "border-indigo-300 bg-indigo-50/50" : "border-slate-200 bg-slate-50/50"
+                    selectedIndices.has(idx) ? "border-indigo-300 bg-indigo-50/50" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50"
                   }`}>
                     <input
                       type="checkbox"
                       checked={selectedIndices.has(idx)}
                       onChange={() => togglePerson(idx)}
-                      className="mt-0.5 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="mt-0.5 w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-900 text-sm">{p.firstName} {p.lastName}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">{ROLE_LABELS[p.faRole] ?? p.faRole}</span>
+                        <span className="font-bold text-[color:var(--wp-text)] text-sm">{p.firstName} {p.lastName}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]">{ROLE_LABELS[p.faRole] ?? p.faRole}</span>
                       </div>
-                      {p.email && <p className="text-xs text-slate-500">{p.email}</p>}
+                      {p.email && <p className="text-xs text-[color:var(--wp-text-secondary)]">{p.email}</p>}
                       {p.matchedContactId && (
                         <p className="text-xs text-amber-700 flex items-center gap-1 mt-1">
                           <AlertTriangle className="w-3 h-3" />
@@ -135,23 +135,23 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
               </div>
 
               {preview.persons.length > 1 && (
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                <div className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 space-y-2">
                   <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
                     <input
                       type="checkbox"
                       checked={createHousehold}
                       onChange={(e) => setCreateHousehold(e.target.checked)}
-                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
                     />
-                    <Home className="w-4 h-4 text-slate-600" />
-                    <span className="text-sm font-semibold text-slate-800">Vytvořit domácnost</span>
+                    <Home className="w-4 h-4 text-[color:var(--wp-text-secondary)]" />
+                    <span className="text-sm font-semibold text-[color:var(--wp-text)]">Vytvořit domácnost</span>
                   </label>
                   {createHousehold && (
                     <input
                       value={householdName}
                       onChange={(e) => setHouseholdName(e.target.value)}
                       placeholder="Název domácnosti"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[44px]"
+                      className="w-full px-3 py-2 rounded-lg border border-[color:var(--wp-surface-card-border)] text-sm min-h-[44px]"
                     />
                   )}
                 </div>
@@ -161,11 +161,11 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
         </div>
 
         {preview && !loading && (
-          <div className="flex justify-end gap-3 p-5 border-t border-slate-100">
+          <div className="flex justify-end gap-3 p-5 border-t border-[color:var(--wp-surface-card-border)]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2.5 text-sm font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 min-h-[44px]"
+              className="rounded-xl px-4 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
             >
               Zrušit
             </button>

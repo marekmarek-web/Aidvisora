@@ -86,7 +86,7 @@ function TaskDetailSheet({
             {isDone ? "Dokončeno" : label}
           </span>
           {task.contactName && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
               <User size={11} /> {task.contactName}
             </span>
           )}
@@ -99,7 +99,7 @@ function TaskDetailSheet({
 
         {/* Description */}
         {task.description ? (
-          <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-xl px-4 py-3">
+          <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed bg-[color:var(--wp-surface-muted)] rounded-xl px-4 py-3">
             {task.description}
           </p>
         ) : null}
@@ -129,7 +129,7 @@ function TaskDetailSheet({
             className={cx(
               "min-h-[48px] rounded-xl text-sm font-bold flex items-center justify-center gap-2",
               isDone
-                ? "border border-slate-200 text-slate-700"
+                ? "border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)]"
                 : "bg-emerald-600 text-white"
             )}
           >
@@ -151,7 +151,7 @@ function TaskDetailSheet({
         {task.contactId ? (
           <a
             href={`/portal/contacts/${task.contactId}`}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-bold flex items-center justify-center gap-2"
           >
             <User size={14} /> Otevřít klienta <ArrowRight size={14} />
           </a>
@@ -188,7 +188,7 @@ function TaskRowCard({
               ? "bg-emerald-50 text-emerald-500"
               : isOverdue
                 ? "bg-rose-50 text-rose-300"
-                : "bg-slate-50 text-slate-300"
+                : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"
           )}
           aria-label={isDone ? "Znovu otevřít" : "Označit jako hotovo"}
         >
@@ -207,7 +207,7 @@ function TaskRowCard({
           <p
             className={cx(
               "text-sm font-bold leading-snug",
-              isDone ? "line-through text-slate-400" : "text-slate-900"
+              isDone ? "line-through text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text)]"
             )}
           >
             {task.title}
@@ -221,7 +221,7 @@ function TaskRowCard({
                     ? "text-rose-500"
                     : isToday && !isDone
                       ? "text-amber-500"
-                      : "text-slate-400"
+                      : "text-[color:var(--wp-text-tertiary)]"
                 )}
               >
                 <CalendarDays size={10} />
@@ -234,7 +234,7 @@ function TaskRowCard({
           </div>
         </button>
 
-        <div className="flex items-center pr-3 text-slate-300">
+        <div className="flex items-center pr-3 text-[color:var(--wp-text-tertiary)]">
           <ChevronRight size={16} />
         </div>
       </div>
@@ -318,7 +318,7 @@ export function TasksScreen({
             <button
               type="button"
               onClick={() => onFilterChange("overdue")}
-              className="text-xs font-bold text-rose-700 min-h-[44px] px-3 rounded-lg border border-rose-200 bg-white shrink-0"
+              className="text-xs font-bold text-rose-700 min-h-[44px] px-3 rounded-lg border border-rose-200 bg-[color:var(--wp-surface-card)] shrink-0"
             >
               Zobrazit
             </button>

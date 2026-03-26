@@ -15,10 +15,10 @@ export function useContactTab(): ContactTabId {
 function TabSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-6 w-48 bg-slate-200 rounded" />
-      <div className="h-4 w-full bg-slate-100 rounded" />
-      <div className="h-4 w-3/4 bg-slate-100 rounded" />
-      <div className="h-32 w-full bg-slate-100 rounded-xl" />
+      <div className="h-6 w-48 bg-[color:var(--wp-surface-card-border)] rounded" />
+      <div className="h-4 w-full bg-[color:var(--wp-surface-muted)] rounded" />
+      <div className="h-4 w-3/4 bg-[color:var(--wp-surface-muted)] rounded" />
+      <div className="h-32 w-full bg-[color:var(--wp-surface-muted)] rounded-xl" />
     </div>
   );
 }
@@ -54,7 +54,7 @@ export function ContactTabLayout({
     <ContactTabContext.Provider value={activeId}>
       <div className="wp-contact-v2-tabs">
         <nav
-        className="flex items-center gap-6 md:gap-8 border-b border-slate-200 px-2 overflow-x-auto hide-scrollbar min-h-[48px]"
+        className="flex items-center gap-6 md:gap-8 border-b border-[color:var(--wp-surface-card-border)] px-2 overflow-x-auto hide-scrollbar min-h-[48px]"
         aria-label="Záložky"
       >
         {tabs.map((tab) => (
@@ -63,7 +63,7 @@ export function ContactTabLayout({
             type="button"
             onClick={() => setTab(tab.id)}
             className={`relative pb-4 pt-2 text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap min-h-[44px] flex items-center ${
-              activeId === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-800"
+              activeId === tab.id ? "text-indigo-600" : "text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"
             }`}
           >
             {tab.label}

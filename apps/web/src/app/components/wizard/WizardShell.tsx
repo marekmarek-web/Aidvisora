@@ -108,12 +108,12 @@ export function WizardShell({
   if (!open) return null;
 
   const backdropClass =
-    "fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/40";
+    "fixed inset-0 z-modal flex items-center justify-center p-4 bg-[color:var(--wp-overlay-scrim)]";
   const mobileBackdropClass =
-    "fixed inset-0 z-modal flex flex-col p-0 bg-white";
+    "fixed inset-0 z-modal flex flex-col p-0 bg-[color:var(--wp-surface-card)]";
 
   const panelBase =
-    "w-full max-w-[640px] bg-white rounded-[24px] shadow-2xl shadow-indigo-900/5 border border-slate-100 flex flex-col overflow-hidden relative max-h-[90vh]";
+    "w-full max-w-[640px] bg-[color:var(--wp-surface-card)] rounded-[24px] shadow-2xl shadow-indigo-900/10 dark:shadow-black/40 border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden relative max-h-[90vh]";
   const panelMobile = "rounded-none min-h-full max-h-full border-0 shadow-none";
 
   return (
@@ -136,7 +136,7 @@ export function WizardShell({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Glow blob */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 opacity-50 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-indigo-500/[0.08] opacity-90 blur-3xl pointer-events-none dark:bg-indigo-400/10" />
             {children}
           </div>
         </div>
@@ -147,7 +147,7 @@ export function WizardShell({
           className={`${panelBase}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 opacity-50 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-indigo-500/[0.08] opacity-90 blur-3xl pointer-events-none dark:bg-indigo-400/10" />
           {children}
         </div>
       )}

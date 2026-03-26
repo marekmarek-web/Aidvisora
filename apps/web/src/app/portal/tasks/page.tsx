@@ -139,7 +139,7 @@ function CustomDropdown({
   const isInput = variant === "input";
 
   const buttonClasses = isInput
-    ? `w-full px-4 py-3.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-sm font-bold transition-all focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 flex items-center justify-between ${isPlaceholder ? "text-slate-400" : "text-slate-800"}`
+    ? `w-full px-4 py-3.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-emerald-300 rounded-xl text-sm font-bold transition-all focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 flex items-center justify-between ${isPlaceholder ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text)]"}`
     : `flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-700 transition-all shadow-sm active:scale-95`;
 
   const toggleOpen = (e: React.MouseEvent) => {
@@ -164,7 +164,7 @@ function CustomDropdown({
       <button ref={buttonRef} type="button" onClick={toggleOpen} className={buttonClasses}>
         {isInput ? (
           <div className="flex items-center gap-3 truncate">
-            {Icon && <Icon size={18} className={isPlaceholder ? "text-slate-300" : "text-slate-500"} />}
+            {Icon && <Icon size={18} className={isPlaceholder ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text-secondary)]"} />}
             <span className="truncate">{selected ? selected.label : placeholder}</span>
           </div>
         ) : (
@@ -173,14 +173,14 @@ function CustomDropdown({
             {selected ? selected.label : placeholder}
           </>
         )}
-        <ChevronDown size={isInput ? 16 : 14} className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isInput ? "text-slate-400" : ""}`} />
+        <ChevronDown size={isInput ? 16 : 14} className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isInput ? "text-[color:var(--wp-text-tertiary)]" : ""}`} />
       </button>
 
       {isOpen && mounted && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} onWheel={() => setIsOpen(false)} onTouchMove={() => setIsOpen(false)} />
           <div
-            className="fixed bg-white border border-slate-100 rounded-2xl shadow-xl shadow-indigo-900/10 py-2 z-[9999] animate-in fade-in duration-200 max-h-60 overflow-y-auto custom-scrollbar"
+            className="fixed bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl shadow-xl shadow-indigo-900/10 py-2 z-[9999] animate-in fade-in duration-200 max-h-60 overflow-y-auto custom-scrollbar"
             style={dropdownStyles}
           >
             {options.map((opt) => (
@@ -188,8 +188,8 @@ function CustomDropdown({
                 key={opt.id}
                 type="button"
                 onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold transition-colors hover:bg-slate-50
-                  ${value === opt.id ? "text-emerald-600 bg-emerald-50/50" : "text-slate-600"}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[color:var(--wp-surface-muted)]
+                  ${value === opt.id ? "text-emerald-600 bg-emerald-50/50" : "text-[color:var(--wp-text-secondary)]"}
                 `}
               >
                 <span className="truncate pr-4">{opt.label}</span>
@@ -278,29 +278,29 @@ function CustomDatePicker({ value, onChange, placeholder }: { value: string; onC
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-sm font-bold transition-all focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 flex items-center justify-between text-left text-slate-800"
+        className="w-full pl-11 pr-4 py-3.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-emerald-300 rounded-xl text-sm font-bold transition-all focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 flex items-center justify-between text-left text-[color:var(--wp-text)]"
       >
-        <span className={!value ? "text-slate-400 font-medium" : ""}>{formatDisplayDate(value)}</span>
+        <span className={!value ? "text-[color:var(--wp-text-tertiary)] font-medium" : ""}>{formatDisplayDate(value)}</span>
       </button>
 
       {isOpen && mounted && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} onWheel={() => setIsOpen(false)} onTouchMove={() => setIsOpen(false)} />
           <div
-            className="fixed w-72 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-indigo-900/10 p-5 z-[9999] animate-in fade-in zoom-in-95 duration-200"
+            className="fixed w-72 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl shadow-xl shadow-indigo-900/10 p-5 z-[9999] animate-in fade-in zoom-in-95 duration-200"
             style={dropdownStyles}
           >
             <div className="flex justify-between items-center mb-5">
-              <span className="font-black text-slate-800 text-sm capitalize">{monthsCZ[month]} {year}</span>
+              <span className="font-black text-[color:var(--wp-text)] text-sm capitalize">{monthsCZ[month]} {year}</span>
               <div className="flex gap-1">
-                <button type="button" onClick={handlePrevMonth} className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"><ChevronLeft size={16} /></button>
-                <button type="button" onClick={handleNextMonth} className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"><ChevronRight size={16} /></button>
+                <button type="button" onClick={handlePrevMonth} className="p-1.5 rounded-md text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"><ChevronLeft size={16} /></button>
+                <button type="button" onClick={handleNextMonth} className="p-1.5 rounded-md text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"><ChevronRight size={16} /></button>
               </div>
             </div>
 
             <div className="grid grid-cols-7 mb-3">
               {weekDaysCZ.map((day) => (
-                <div key={day} className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">{day}</div>
+                <div key={day} className="text-center text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">{day}</div>
               ))}
             </div>
 
@@ -317,7 +317,7 @@ function CustomDatePicker({ value, onChange, placeholder }: { value: string; onC
                     type="button"
                     onClick={() => handleSelectDate(d)}
                     className={`h-8 w-8 mx-auto flex items-center justify-center rounded-full text-xs font-bold transition-all
-                      ${isSelected ? "bg-emerald-500 text-white shadow-md" : "text-slate-700 hover:bg-slate-100"}
+                      ${isSelected ? "bg-emerald-500 text-white shadow-md" : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"}
                       ${isDayToday && !isSelected ? "ring-2 ring-inset ring-emerald-500 text-emerald-600 bg-emerald-50" : ""}
                     `}
                   >
@@ -327,8 +327,8 @@ function CustomDatePicker({ value, onChange, placeholder }: { value: string; onC
               })}
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-              <button type="button" onClick={clearDate} className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors px-2 py-1">Vymazat</button>
+            <div className="flex justify-between items-center pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+              <button type="button" onClick={clearDate} className="text-xs font-bold text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] transition-colors px-2 py-1">Vymazat</button>
               <button type="button" onClick={setToday} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg">Dnes</button>
             </div>
           </div>
@@ -353,14 +353,14 @@ function TaskSettingsModal({ settings, onSave, onClose }: { settings: TaskSettin
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 sm:p-6 modal-overlay">
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden border border-slate-100 modal-content">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4 sm:p-6 modal-overlay">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)] modal-content">
 
-        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 rounded-t-[32px]">
-          <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <Settings2 className="text-slate-500" /> Nastavení úkolů
+        <div className="px-8 py-6 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-muted)]/80 rounded-t-[32px]">
+          <h2 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight flex items-center gap-3">
+            <Settings2 className="text-[color:var(--wp-text-secondary)]" /> Nastavení úkolů
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shadow-sm">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm">
             <X size={16} strokeWidth={2.5} />
           </button>
         </div>
@@ -368,21 +368,21 @@ function TaskSettingsModal({ settings, onSave, onClose }: { settings: TaskSettin
         <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
 
           <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Zobrazení a třídění</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)] pb-2">Zobrazení a třídění</h3>
 
-            <label className="flex items-center justify-between cursor-pointer group p-4 border border-slate-200 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors">
+            <label className="flex items-center justify-between cursor-pointer group p-4 border border-[color:var(--wp-surface-card-border)] rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors">
               <div>
-                <div className="text-sm font-bold text-slate-800 mb-0.5">Skrýt dokončené úkoly</div>
-                <div className="text-xs font-medium text-slate-500">Automaticky přesune splněné úkoly do historie.</div>
+                <div className="text-sm font-bold text-[color:var(--wp-text)] mb-0.5">Skrýt dokončené úkoly</div>
+                <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Automaticky přesune splněné úkoly do historie.</div>
               </div>
               <div className="relative inline-flex items-center ml-4 shrink-0">
                 <input type="checkbox" className="sr-only peer" checked={hideCompleted} onChange={() => setHideCompleted(!hideCompleted)} />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
+                <div className="w-11 h-6 bg-[color:var(--wp-surface-card-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[color:var(--wp-surface-card)] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[color:var(--wp-surface-card)] after:border-[color:var(--wp-border-strong)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aidv-create" />
               </div>
             </label>
 
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Výchozí pohled</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">Výchozí pohled</label>
               <CustomDropdownUI
                 value={defaultTab}
                 onChange={setDefaultTab}
@@ -398,13 +398,13 @@ function TaskSettingsModal({ settings, onSave, onClose }: { settings: TaskSettin
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Nové úkoly</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)] pb-2">Nové úkoly</h3>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Výchozí priorita</label>
-              <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                <button onClick={() => setDefaultPriority("low")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${defaultPriority === "low" ? "bg-white text-slate-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Nízká</button>
-                <button onClick={() => setDefaultPriority("normal")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${defaultPriority === "normal" ? "bg-white text-indigo-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Běžná</button>
-                <button onClick={() => setDefaultPriority("high")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${defaultPriority === "high" ? "bg-white text-rose-600 shadow-sm border border-rose-200" : "text-slate-500 hover:text-slate-700"}`}>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">Výchozí priorita</label>
+              <div className="flex bg-[color:var(--wp-surface-muted)] p-1.5 rounded-xl border border-[color:var(--wp-surface-card-border)]">
+                <button onClick={() => setDefaultPriority("low")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${defaultPriority === "low" ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm border border-[color:var(--wp-surface-card-border)]" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>Nízká</button>
+                <button onClick={() => setDefaultPriority("normal")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${defaultPriority === "normal" ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-[color:var(--wp-surface-card-border)]" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>Běžná</button>
+                <button onClick={() => setDefaultPriority("high")} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${defaultPriority === "high" ? "bg-[color:var(--wp-surface-card)] text-rose-600 shadow-sm border border-rose-200" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>
                   <Flag size={14} className={defaultPriority === "high" ? "fill-rose-100" : ""} /> Urgentní
                 </button>
               </div>
@@ -413,8 +413,8 @@ function TaskSettingsModal({ settings, onSave, onClose }: { settings: TaskSettin
 
         </div>
 
-        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end gap-4 rounded-b-[32px]">
-          <button onClick={onClose} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shadow-sm">
+        <div className="px-8 py-5 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 flex items-center justify-end gap-4 rounded-b-[32px]">
+          <button onClick={onClose} className="px-6 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm">
             Zrušit
           </button>
           <CreateActionButton type="button" onClick={handleSave} icon={Check}>
@@ -492,24 +492,24 @@ function NewTaskWizard({
     }
   };
 
-  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 ml-1";
+  const labelClass = "block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5 ml-1";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 sm:p-6 modal-overlay">
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[500px] flex flex-col border border-slate-100 min-h-[500px] modal-content">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm p-4 sm:p-6 modal-overlay">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] shadow-2xl w-full max-w-[500px] flex flex-col border border-[color:var(--wp-surface-card-border)] min-h-[500px] modal-content">
 
-        <div className="px-8 pt-6 pb-0 border-b border-slate-100 bg-white relative z-10 rounded-t-[32px]">
+        <div className="px-8 pt-6 pb-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] relative z-10 rounded-t-[32px]">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight flex items-center gap-2">
               <CheckSquare className="text-emerald-500" /> Nový úkol
             </h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shadow-sm">
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm">
               <X size={16} strokeWidth={2.5} />
             </button>
           </div>
 
           <div className="flex items-center justify-between pb-4 relative">
-            <div className="absolute left-0 top-3 w-full h-1 bg-slate-100 rounded-full -z-10" />
+            <div className="absolute left-0 top-3 w-full h-1 bg-[color:var(--wp-surface-muted)] rounded-full -z-10" />
             <div className="absolute left-0 top-3 h-1 bg-emerald-500 rounded-full -z-10 transition-all duration-500" style={{ width: step === 1 ? "0%" : step === 2 ? "50%" : "100%" }} />
 
             {[
@@ -517,15 +517,15 @@ function NewTaskWizard({
               { id: 2, label: "Kontext" },
               { id: 3, label: "Detaily" },
             ].map((s) => (
-              <div key={s.id} className="flex flex-col items-center gap-2 bg-white px-2">
+              <div key={s.id} className="flex flex-col items-center gap-2 bg-[color:var(--wp-surface-card)] px-2">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 transition-colors duration-300
                   ${step === s.id ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" :
                     step > s.id ? "border-emerald-500 bg-emerald-500 text-white" :
-                    "border-slate-200 bg-slate-50 text-slate-400"}
+                    "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"}
                 `}>
                   {step > s.id ? <Check size={12} strokeWidth={4} /> : s.id}
                 </div>
-                <span className={`text-[9px] font-black uppercase tracking-widest ${step >= s.id ? "text-slate-800" : "text-slate-400"}`}>{s.label}</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${step >= s.id ? "text-[color:var(--wp-text)]" : "text-[color:var(--wp-text-tertiary)]"}`}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -544,7 +544,7 @@ function NewTaskWizard({
                   placeholder="Např. Urgovat výpisy z účtu"
                   value={taskData.title}
                   onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
-                  className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-lg font-black outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all text-slate-800 placeholder:text-slate-300"
+                  className="w-full px-4 py-4 bg-[color:var(--wp-surface-card)] border-2 border-[color:var(--wp-surface-card-border)] rounded-2xl text-lg font-black outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)]"
                 />
               </div>
 
@@ -552,7 +552,7 @@ function NewTaskWizard({
                 <div>
                   <label className={labelClass}>Termín splnění *</label>
                   <div className="relative">
-                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none z-10" />
                     <CustomDatePicker
                       value={taskData.date}
                       onChange={(val) => setTaskData({ ...taskData, date: val })}
@@ -573,10 +573,10 @@ function NewTaskWizard({
 
               <div>
                 <label className={labelClass}>Priorita</label>
-                <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                  <button onClick={() => setTaskData({ ...taskData, priority: "low" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === "low" ? "bg-white text-slate-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Nízká</button>
-                  <button onClick={() => setTaskData({ ...taskData, priority: "normal" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === "normal" ? "bg-white text-indigo-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Běžná</button>
-                  <button onClick={() => setTaskData({ ...taskData, priority: "high" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${taskData.priority === "high" ? "bg-white text-rose-600 shadow-sm border border-rose-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <div className="flex bg-[color:var(--wp-surface-muted)] p-1.5 rounded-xl border border-[color:var(--wp-surface-card-border)]">
+                  <button onClick={() => setTaskData({ ...taskData, priority: "low" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === "low" ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm border border-[color:var(--wp-surface-card-border)]" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>Nízká</button>
+                  <button onClick={() => setTaskData({ ...taskData, priority: "normal" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${taskData.priority === "normal" ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-[color:var(--wp-surface-card-border)]" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>Běžná</button>
+                  <button onClick={() => setTaskData({ ...taskData, priority: "high" })} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${taskData.priority === "high" ? "bg-[color:var(--wp-surface-card)] text-rose-600 shadow-sm border border-rose-200" : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)]"}`}>
                     <Flag size={14} className={taskData.priority === "high" ? "fill-rose-100" : ""} /> Urgentní
                   </button>
                 </div>
@@ -627,29 +627,29 @@ function NewTaskWizard({
                   value={taskData.desc}
                   onChange={(e) => setTaskData({ ...taskData, desc: e.target.value })}
                   placeholder="Přidejte kontext, co je potřeba udělat..."
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all text-slate-800 resize-none leading-relaxed custom-scrollbar"
+                  className="w-full p-4 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all text-[color:var(--wp-text)] resize-none leading-relaxed custom-scrollbar"
                 />
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:border-indigo-200 transition-colors">
+              <div className="bg-[color:var(--wp-surface-muted)] p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-between cursor-pointer hover:border-indigo-200 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">MD</div>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">Přiřazeno vám</p>
-                    <p className="text-[10px] font-medium text-slate-500">Klikněte pro delegování</p>
+                    <p className="text-xs font-bold text-[color:var(--wp-text)]">Přiřazeno vám</p>
+                    <p className="text-[10px] font-medium text-[color:var(--wp-text-secondary)]">Klikněte pro delegování</p>
                   </div>
                 </div>
-                <ChevronRight size={16} className="text-slate-400" />
+                <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
               </div>
             </div>
           )}
 
         </div>
 
-        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-4 rounded-b-[32px]">
+        <div className="px-8 py-5 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 flex items-center justify-between gap-4 rounded-b-[32px]">
           <button
             onClick={() => step > 1 ? setStep(step - 1) : onClose()}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shadow-sm flex items-center gap-2"
+            className="px-6 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm flex items-center gap-2"
           >
             {step > 1 ? <><ChevronLeft size={16} /> Zpět</> : "Zrušit"}
           </button>
@@ -700,14 +700,14 @@ function MoreActionsMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: (
 
   return (
     <>
-      <button ref={btnRef} type="button" onClick={toggle} className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all" aria-label="Více možností">
+      <button ref={btnRef} type="button" onClick={toggle} className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-all" aria-label="Více možností">
         <MoreVertical size={16} />
       </button>
       {isOpen && mounted && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
-          <div className="fixed w-40 bg-white border border-slate-100 rounded-xl shadow-xl py-1 z-[9999]" style={menuStyles}>
-            <button type="button" onClick={() => { onEdit(); setIsOpen(false); }} className="w-full px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 text-left transition-colors">Upravit</button>
+          <div className="fixed w-40 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-xl py-1 z-[9999]" style={menuStyles}>
+            <button type="button" onClick={() => { onEdit(); setIsOpen(false); }} className="w-full px-4 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] text-left transition-colors">Upravit</button>
             <button type="button" onClick={() => { onDelete(); setIsOpen(false); }} className="w-full px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 text-left transition-colors">Smazat</button>
           </div>
         </>,
@@ -870,7 +870,7 @@ function TasksPageContent() {
   }, [filteredBySearch, settings.hideCompleted, filter]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 pb-20">
+    <div className="min-h-screen bg-[color:var(--wp-bg)] pb-20 font-sans text-[color:var(--wp-text)]">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-sans { font-family: 'Inter', sans-serif; }
@@ -894,11 +894,11 @@ function TasksPageContent() {
         {/* --- LEFT PANEL --- */}
         <div className="xl:col-span-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-            <h1 className="text-3xl font-display font-black text-slate-900 tracking-tight">Moje úkoly</h1>
+            <h1 className="text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight">Moje úkoly</h1>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-all active:scale-95"
               >
                 <Settings2 size={16} /> Nastavení
               </button>
@@ -909,10 +909,10 @@ function TasksPageContent() {
           </div>
 
           {/* Quick add */}
-          <div className={`bg-white rounded-[24px] border transition-all duration-300 overflow-hidden shadow-sm ${isInputFocused ? "border-indigo-400 ring-4 ring-indigo-50 shadow-md" : "border-slate-200 hover:border-indigo-300"}`}>
+          <div className={`bg-[color:var(--wp-surface-card)] rounded-[24px] border transition-all duration-300 overflow-hidden shadow-sm ${isInputFocused ? "border-indigo-400 ring-4 ring-indigo-50 shadow-md" : "border-[color:var(--wp-surface-card-border)] hover:border-indigo-300"}`}>
             <div className="p-1 flex flex-col md:flex-row items-center gap-2">
               <div className="flex-1 flex items-start w-full relative">
-                <div className="p-4 text-slate-300 shrink-0"><Plus size={20} className={isInputFocused ? "text-indigo-500" : ""} /></div>
+                <div className="p-4 text-[color:var(--wp-text-tertiary)] shrink-0"><Plus size={20} className={isInputFocused ? "text-indigo-500" : ""} /></div>
                 <textarea
                   rows={isInputFocused ? 2 : 1}
                   value={newTaskTitle}
@@ -920,7 +920,7 @@ function TasksPageContent() {
                   onFocus={() => setIsInputFocused(true)}
                   onBlur={() => { if (!newTaskTitle) setIsInputFocused(false); }}
                   placeholder="Rychlý úkol: Co potřebujete udělat?..."
-                  className="w-full py-4 pr-4 bg-transparent text-slate-800 font-semibold placeholder:font-medium placeholder:text-slate-400 outline-none text-sm resize-none transition-all"
+                  className="w-full py-4 pr-4 bg-transparent text-[color:var(--wp-text)] font-semibold placeholder:font-medium placeholder:text-[color:var(--wp-text-tertiary)] outline-none text-sm resize-none transition-all"
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleQuickAdd(); } }}
                 />
               </div>
@@ -938,19 +938,19 @@ function TasksPageContent() {
           {/* Search (inline, matching spec header search style) */}
           {tasks.length > 0 && (
             <div className="relative group hidden lg:block">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat úkol..." className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-sm font-medium outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all w-full" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] group-focus-within:text-indigo-500 transition-colors" />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat úkol..." className="pl-9 pr-4 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] hover:border-[color:var(--wp-border-strong)] rounded-xl text-sm font-medium outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all w-full" />
             </div>
           )}
 
           {/* Tabs */}
-          <div className="flex items-center gap-2 border-b border-slate-200 pt-2 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] pt-2 overflow-x-auto hide-scrollbar">
             {FILTERS.map((tab) => {
               const count = counts[tab.key as keyof TaskCounts] ?? 0;
               return (
-                <button key={tab.key} onClick={() => handleFilterChange(tab.key)} className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-[3px] transition-all whitespace-nowrap ${filter === tab.key ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:text-slate-800"} ${tab.alert && filter !== tab.key ? "text-rose-500" : ""}`}>
+                <button key={tab.key} onClick={() => handleFilterChange(tab.key)} className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-[3px] transition-all whitespace-nowrap ${filter === tab.key ? "border-indigo-600 text-indigo-700" : "border-transparent text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"} ${tab.alert && filter !== tab.key ? "text-rose-500" : ""}`}>
                   {tab.label}
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${filter === tab.key ? "bg-indigo-100 text-indigo-700" : tab.alert ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-500"}`}>{count}</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${filter === tab.key ? "bg-indigo-100 text-indigo-700" : tab.alert ? "bg-rose-100 text-rose-600" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"}`}>{count}</span>
                 </button>
               );
             })}
@@ -969,19 +969,19 @@ function TasksPageContent() {
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="bg-white p-4 sm:p-5 rounded-[20px] border border-slate-100 flex items-center gap-4">
+                  <div key={i} className="bg-[color:var(--wp-surface-card)] p-4 sm:p-5 rounded-[20px] border border-[color:var(--wp-surface-card-border)] flex items-center gap-4">
                     <SkeletonLine className="h-6 w-6 rounded-full" />
                     <div className="flex-1"><SkeletonLine className="h-4 w-3/4 mb-2" /><SkeletonLine className="h-3 w-1/2" /></div>
                   </div>
                 ))}
               </div>
             ) : visibleTasks.length === 0 ? (
-              <div className="bg-white rounded-[24px] border border-slate-200 border-dashed p-16 flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] border-dashed p-16 flex flex-col items-center justify-center text-center shadow-sm">
                 <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-400 mb-6 shadow-inner">
                   <CheckCircle2 size={40} strokeWidth={1.5} />
                 </div>
-                <h3 className="font-display text-xl font-bold text-slate-900 mb-2">Žádné aktivní úkoly</h3>
-                <p className="text-sm font-medium text-slate-500 max-w-sm mb-8">V tomto výběru máte čistý stůl. Vytvořte si nový úkol pomocí průvodce, nebo si užijte volnou chvíli.</p>
+                <h3 className="font-display text-xl font-bold text-[color:var(--wp-text)] mb-2">Žádné aktivní úkoly</h3>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] max-w-sm mb-8">V tomto výběru máte čistý stůl. Vytvořte si nový úkol pomocí průvodce, nebo si užijte volnou chvíli.</p>
                 <button onClick={() => setIsWizardOpen(true)} className="px-6 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2">
                   <Plus size={16} strokeWidth={2.5} /> Přidat první úkol
                 </button>
@@ -997,7 +997,7 @@ function TasksPageContent() {
                       onEdit={() => openMobileEdit(t)}
                       leftSlot={
                         <button type="button" onClick={() => handleToggle(t)} className="flex-shrink-0 p-1" aria-label={t.completedAt ? "Označit jako nedokončené" : "Označit jako hotovo"}>
-                          {t.completedAt ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} className="text-slate-300" />}
+                          {t.completedAt ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} className="text-[color:var(--wp-text-tertiary)]" />}
                         </button>
                       }
                     />
@@ -1012,56 +1012,56 @@ function TasksPageContent() {
 
                     if (editId === task.id) {
                       return (
-                        <div key={task.id} className="bg-white p-5 rounded-[20px] border border-slate-200 shadow-sm space-y-3">
+                        <div key={task.id} className="bg-[color:var(--wp-surface-card)] p-5 rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm space-y-3">
                           <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" placeholder="Název úkolu" />
+                            className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" placeholder="Název úkolu" />
                           <div className="flex flex-wrap gap-3">
                             <div className="flex-1 min-w-[180px]">
                               <ContactSearchInput value={editForm.contactId} contacts={contacts} onChange={(cid) => setEditForm({ ...editForm, contactId: cid })} placeholder="Vyhledat klienta…" className="min-h-[40px]" />
                             </div>
                             <input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                              className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium min-w-[160px] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+                              className="px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium min-w-[160px] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
                           </div>
                           <div className="flex gap-2">
                             <button type="button" onClick={handleSaveEdit} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold">Uložit</button>
-                            <button type="button" onClick={() => setEditId(null)} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50">Zrušit</button>
+                            <button type="button" onClick={() => setEditId(null)} className="px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)]">Zrušit</button>
                           </div>
                         </div>
                       );
                     }
 
                     return (
-                      <div key={task.id} className={`group bg-white p-4 sm:p-5 rounded-[20px] border transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isCompleted ? "border-slate-100 bg-slate-50/50 opacity-60 hover:opacity-100" : "border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200"}`}>
-                        <button onClick={() => handleToggle(task)} className={`mt-1 sm:mt-0 flex-shrink-0 transition-colors transform active:scale-90 ${isCompleted ? "text-emerald-500" : overdue ? "text-rose-400 hover:text-emerald-500" : "text-slate-300 hover:text-emerald-500"}`}>
+                      <div key={task.id} className={`group bg-[color:var(--wp-surface-card)] p-4 sm:p-5 rounded-[20px] border transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isCompleted ? "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 opacity-60 hover:opacity-100" : "border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-indigo-200"}`}>
+                        <button onClick={() => handleToggle(task)} className={`mt-1 sm:mt-0 flex-shrink-0 transition-colors transform active:scale-90 ${isCompleted ? "text-emerald-500" : overdue ? "text-rose-400 hover:text-emerald-500" : "text-[color:var(--wp-text-tertiary)] hover:text-emerald-500"}`}>
                           {isCompleted ? <CheckCircle2 size={26} className="fill-emerald-50" /> : <Circle size={26} />}
                         </button>
                         <div className="flex-1 min-w-0 w-full">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             {overdue && <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 shadow-sm"><AlertCircle size={10} /> Po termínu</span>}
-                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border border-slate-200 bg-slate-50 text-slate-500">Úkol</span>
+                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">Úkol</span>
                           </div>
-                          <h3 className={`font-bold text-[15px] mb-1.5 transition-all leading-tight ${isCompleted ? "text-slate-400 line-through" : "text-slate-900 group-hover:text-indigo-600"}`}>{task.title}</h3>
-                          <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500">
+                          <h3 className={`font-bold text-[15px] mb-1.5 transition-all leading-tight ${isCompleted ? "text-[color:var(--wp-text-tertiary)] line-through" : "text-[color:var(--wp-text)] group-hover:text-indigo-600"}`}>{task.title}</h3>
+                          <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-[color:var(--wp-text-secondary)]">
                             {task.contactId && task.contactName ? (
-                              <Link href={`/portal/contacts/${task.contactId}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:text-indigo-600 cursor-pointer transition-colors px-2 py-1 bg-slate-100 rounded-md">
-                                <User size={12} className="text-slate-400" /> {task.contactName}
+                              <Link href={`/portal/contacts/${task.contactId}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:text-indigo-600 cursor-pointer transition-colors px-2 py-1 bg-[color:var(--wp-surface-muted)] rounded-md">
+                                <User size={12} className="text-[color:var(--wp-text-tertiary)]" /> {task.contactName}
                               </Link>
                             ) : null}
-                            <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${overdue ? "text-rose-600 bg-rose-50" : "text-slate-500"}`}><CalendarDays size={12} className={overdue ? "text-rose-500" : "text-slate-400"} /> {formatDate(task.dueDate)}</span>
+                            <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${overdue ? "text-rose-600 bg-rose-50" : "text-[color:var(--wp-text-secondary)]"}`}><CalendarDays size={12} className={overdue ? "text-rose-500" : "text-[color:var(--wp-text-tertiary)]"} /> {formatDate(task.dueDate)}</span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto border-t sm:border-none border-slate-100 pt-3 sm:pt-0 mt-2 sm:mt-0">
+                        <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto border-t sm:border-none border-[color:var(--wp-surface-card-border)] pt-3 sm:pt-0 mt-2 sm:mt-0">
                           {!isCompleted && (
                             <>
                               {task.contactPhone ? (
-                                <a href={`tel:${task.contactPhone}`} onClick={(e) => e.stopPropagation()} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"><Phone size={16} /></a>
+                                <a href={`tel:${task.contactPhone}`} onClick={(e) => e.stopPropagation()} className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"><Phone size={16} /></a>
                               ) : (
-                                <button className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"><Phone size={16} /></button>
+                                <button className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"><Phone size={16} /></button>
                               )}
                               {task.contactEmail ? (
-                                <a href={`mailto:${task.contactEmail}`} onClick={(e) => e.stopPropagation()} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Mail size={16} /></a>
+                                <a href={`mailto:${task.contactEmail}`} onClick={(e) => e.stopPropagation()} className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Mail size={16} /></a>
                               ) : (
-                                <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Mail size={16} /></button>
+                                <button className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Mail size={16} /></button>
                               )}
                             </>
                           )}
@@ -1078,7 +1078,7 @@ function TasksPageContent() {
 
         {/* --- RIGHT PANEL --- */}
         <div className="xl:col-span-4 space-y-6">
-          <div className="bg-gradient-to-br from-aidv-create to-[#0f172a] rounded-[32px] p-8 text-white shadow-xl shadow-indigo-900/10 relative overflow-hidden border border-slate-800">
+          <div className="bg-gradient-to-br from-aidv-create to-[#0f172a] rounded-[32px] p-8 text-white shadow-xl shadow-indigo-900/10 relative overflow-hidden border border-white/20">
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-8">
@@ -1089,33 +1089,33 @@ function TasksPageContent() {
                 <div className="flex items-end gap-3 mb-1">
                   <span className="text-6xl font-display font-black tracking-tighter">{activeTasksCount}</span>
                 </div>
-                <span className="text-sm font-bold text-slate-400">Aktivních úkolů</span>
+                <span className="text-sm font-bold text-[color:var(--wp-text-tertiary)]">Aktivních úkolů</span>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs font-bold text-slate-400">
+                <div className="flex justify-between items-center text-xs font-bold text-[color:var(--wp-text-tertiary)]">
                   <span>Progres dnešní agendy</span>
                   <span className="text-emerald-400">{progressPercent}%</span>
                 </div>
-                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden shadow-inner">
                   <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${progressPercent}%` }}>
-                     <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
+                     <div className="absolute top-0 left-0 w-full h-1/2 bg-[color:var(--wp-surface-card)]/20" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm relative group overflow-hidden">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] p-6 shadow-sm relative group overflow-hidden">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100"><Sparkles size={20} /></div>
-              <h3 className="font-black text-sm uppercase tracking-widest text-slate-900">AI Priority</h3>
+              <h3 className="font-black text-sm uppercase tracking-widest text-[color:var(--wp-text)]">AI Priority</h3>
             </div>
             <div className="space-y-4">
               {overdueTask ? (
                 <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50 text-sm">
                   <p className="font-bold text-rose-900 mb-1 flex items-center gap-2"><AlertCircle size={14} className="text-rose-500" /> Zpožděné úkoly</p>
                   <p className="text-rose-700/80 mb-3 text-xs leading-relaxed font-medium">&ldquo;{overdueTask.title}&rdquo;{overdueTask.contactName ? ` pro klienta ${overdueTask.contactName}` : ""} mělo proběhnout {formatDate(overdueTask.dueDate)}.</p>
-                  <button onClick={() => handleMoveToToday(overdueTask.id)} className="text-[10px] font-black uppercase tracking-widest text-rose-600 bg-white px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-all w-full">Přesunout na dnešek</button>
+                  <button onClick={() => handleMoveToToday(overdueTask.id)} className="text-[10px] font-black uppercase tracking-widest text-rose-600 bg-[color:var(--wp-surface-card)] px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-all w-full">Přesunout na dnešek</button>
                 </div>
               ) : (
                 <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50 text-sm">
@@ -1141,29 +1141,29 @@ function TasksPageContent() {
 
       {/* Mobile edit overlay */}
       {mobileEditId && (
-        <div className="fixed inset-0 z-[100] md:hidden flex flex-col bg-white" role="dialog" aria-modal="true" aria-labelledby="mobile-edit-title">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0">
-            <h2 id="mobile-edit-title" className="text-lg font-bold text-slate-900">Upravit úkol</h2>
-            <button type="button" onClick={() => { setMobileEditId(null); setEditId(null); }} className="p-2 text-slate-500 hover:text-slate-700 rounded-lg" aria-label="Zavřít">
+        <div className="fixed inset-0 z-[100] md:hidden flex flex-col bg-[color:var(--wp-surface-card)]" role="dialog" aria-modal="true" aria-labelledby="mobile-edit-title">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] shrink-0">
+            <h2 id="mobile-edit-title" className="text-lg font-bold text-[color:var(--wp-text)]">Upravit úkol</h2>
+            <button type="button" onClick={() => { setMobileEditId(null); setEditId(null); }} className="p-2 text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text-secondary)] rounded-lg" aria-label="Zavřít">
               <X size={20} />
             </button>
           </div>
           <div className="flex-1 overflow-auto p-4 space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Název</label>
-              <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 min-h-[44px]" placeholder="Název úkolu" />
+              <label className="block text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-1">Název</label>
+              <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 min-h-[44px]" placeholder="Název úkolu" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Klient</label>
+              <label className="block text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-1">Klient</label>
               <ContactSearchInput value={editForm.contactId} contacts={contacts} onChange={(cid) => setEditForm({ ...editForm, contactId: cid })} placeholder="Vyhledat klienta…" className="min-h-[44px]" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Termín</label>
-              <input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
+              <label className="block text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider mb-1">Termín</label>
+              <input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })} className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
             </div>
           </div>
-          <div className="flex gap-3 p-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-200 shrink-0">
-            <button type="button" onClick={() => { setMobileEditId(null); setEditId(null); }} className="flex-1 px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 min-h-[44px]">Zrušit</button>
+          <div className="flex gap-3 p-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[color:var(--wp-surface-card-border)] shrink-0">
+            <button type="button" onClick={() => { setMobileEditId(null); setEditId(null); }} className="flex-1 px-5 py-3 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">Zrušit</button>
             <button type="button" onClick={handleSaveEdit} className="flex-1 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold min-h-[44px]">Uložit</button>
           </div>
         </div>
@@ -1185,19 +1185,19 @@ export default function TasksPage() {
 
 function TasksLoading() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-6 md:p-8">
+    <div className="min-h-screen bg-[color:var(--wp-bg)] p-6 md:p-8">
       <div className="max-w-[1400px] mx-auto space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-slate-200 rounded" />
+        <div className="h-8 w-48 bg-[color:var(--wp-surface-card-border)] rounded" />
         <div className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-10 w-24 bg-slate-200 rounded-xl" />)}
+          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-10 w-24 bg-[color:var(--wp-surface-card-border)] rounded-xl" />)}
         </div>
-        <div className="rounded-[24px] border-2 border-slate-100 bg-white p-4 space-y-3">
-          <div className="h-4 w-32 bg-slate-100 rounded" />
-          <div className="h-12 bg-slate-50 rounded-xl" />
-          <div className="h-12 bg-slate-50 rounded-xl" />
+        <div className="rounded-[24px] border-2 border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 space-y-3">
+          <div className="h-4 w-32 bg-[color:var(--wp-surface-muted)] rounded" />
+          <div className="h-12 bg-[color:var(--wp-surface-muted)] rounded-xl" />
+          <div className="h-12 bg-[color:var(--wp-surface-muted)] rounded-xl" />
           <div className="h-10 w-24 bg-indigo-100 rounded-xl" />
         </div>
-        <div className="h-64 bg-white rounded-[24px] border border-slate-200" />
+        <div className="h-64 bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)]" />
       </div>
     </div>
   );

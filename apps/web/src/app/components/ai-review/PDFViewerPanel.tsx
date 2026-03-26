@@ -97,57 +97,57 @@ export function PDFViewerPanel({
       }`}
     >
       {/* Toolbar */}
-      <div className="h-14 md:h-16 px-4 md:px-6 border-b border-slate-300 bg-slate-100 flex items-center justify-between flex-shrink-0 shadow-sm z-10">
+      <div className="h-14 md:h-16 px-4 md:px-6 border-b border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-muted)] flex items-center justify-between flex-shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText size={16} className="text-slate-500 shrink-0" />
-          <span className="text-xs font-bold text-slate-700 truncate">
+          <FileText size={16} className="text-[color:var(--wp-text-secondary)] shrink-0" />
+          <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">
             {doc.fileName}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Page navigation */}
-          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-1 bg-[color:var(--wp-surface-card)] px-2 py-1 rounded-xl border border-[color:var(--wp-surface-card-border)] shadow-sm">
             <button
               onClick={() => onPageChange(Math.max(1, activePage - 1))}
               disabled={activePage <= 1}
-              className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors disabled:opacity-30"
+              className="p-1 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg hover:text-[color:var(--wp-text)] transition-colors disabled:opacity-30"
             >
               <ChevronLeft size={14} />
             </button>
-            <span className="text-[10px] font-black w-14 text-center text-slate-600">
+            <span className="text-[10px] font-black w-14 text-center text-[color:var(--wp-text-secondary)]">
               {activePage} / {doc.pageCount}
             </span>
             <button
               onClick={() => onPageChange(Math.min(doc.pageCount, activePage + 1))}
               disabled={activePage >= doc.pageCount}
-              className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors disabled:opacity-30"
+              className="p-1 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg hover:text-[color:var(--wp-text)] transition-colors disabled:opacity-30"
             >
               <ChevronRight size={14} />
             </button>
           </div>
 
           {/* Zoom controls */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-1 bg-[color:var(--wp-surface-card)] p-1 rounded-xl border border-[color:var(--wp-surface-card-border)] shadow-sm">
             <button
               onClick={zoomOut}
-              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors"
+              className="p-1.5 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg hover:text-[color:var(--wp-text)] transition-colors"
             >
               <ZoomOut size={16} />
             </button>
-            <span className="text-[10px] font-black w-10 text-center text-slate-600">
+            <span className="text-[10px] font-black w-10 text-center text-[color:var(--wp-text-secondary)]">
               {zoomLevel}%
             </span>
             <button
               onClick={zoomIn}
-              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors"
+              className="p-1.5 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg hover:text-[color:var(--wp-text)] transition-colors"
             >
               <ZoomIn size={16} />
             </button>
-            <div className="w-px h-4 bg-slate-200 mx-0.5" />
+            <div className="w-px h-4 bg-[color:var(--wp-surface-card-border)] mx-0.5" />
             <button
               onClick={onFullscreenToggle}
-              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors"
+              className="p-1.5 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg hover:text-[color:var(--wp-text)] transition-colors"
             >
               {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
             </button>
@@ -158,14 +158,14 @@ export function PDFViewerPanel({
       {/* Viewer area */}
       <div className="flex-1 overflow-auto custom-scroll p-4 md:p-8 flex justify-center">
         {loadState === "loading" && (
-          <div className="flex flex-col items-center justify-center gap-3 text-slate-500 py-20">
+          <div className="flex flex-col items-center justify-center gap-3 text-[color:var(--wp-text-secondary)] py-20">
             <Loader2 size={32} className="animate-spin text-indigo-400" />
             <p className="text-sm font-medium">Načítám dokument…</p>
           </div>
         )}
 
         {loadState === "error" && (
-          <div className="flex flex-col items-center justify-center gap-3 text-slate-500 py-20">
+          <div className="flex flex-col items-center justify-center gap-3 text-[color:var(--wp-text-secondary)] py-20">
             <AlertCircle size={32} className="text-rose-400" />
             <p className="text-sm font-medium">Nepodařilo se načíst dokument</p>
             <button
@@ -179,7 +179,7 @@ export function PDFViewerPanel({
 
         {loadState === "ready" && (
           <div
-            className="w-full max-w-[700px] bg-white shadow-2xl rounded-sm relative"
+            className="w-full max-w-[700px] bg-[color:var(--wp-surface-card)] shadow-2xl rounded-sm relative"
             style={{
               transform: `scale(${zoomLevel / 100})`,
               transformOrigin: "top center",
@@ -219,7 +219,7 @@ function SimulatedPDFPage({
 }) {
   if (highlights.length === 0) {
     return (
-      <div className="min-h-[900px] p-8 md:p-12 flex flex-col items-center justify-center text-slate-400">
+      <div className="min-h-[900px] p-8 md:p-12 flex flex-col items-center justify-center text-[color:var(--wp-text-tertiary)]">
         <FileText size={48} className="mb-4 opacity-30" />
         <p className="text-sm font-medium">PDF náhled nedostupný</p>
         <p className="text-xs mt-1">Extrahovaná data se zobrazují v levém panelu</p>
@@ -228,10 +228,10 @@ function SimulatedPDFPage({
   }
 
   return (
-    <div className="min-h-[900px] p-8 md:p-12 relative font-sans text-slate-700">
-      <div className="border-b-2 border-slate-800 pb-6 mb-8">
-        <h2 className="text-xl font-bold text-slate-900">Extrahovaná data z dokumentu</h2>
-        <p className="text-xs text-slate-500 mt-1">
+    <div className="min-h-[900px] p-8 md:p-12 relative font-sans text-[color:var(--wp-text-secondary)]">
+      <div className="border-b-2 border-[color:var(--wp-surface-card-border)] pb-6 mb-8">
+        <h2 className="text-xl font-bold text-[color:var(--wp-text)]">Extrahovaná data z dokumentu</h2>
+        <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">
           Klikněte na zvýrazněnou hodnotu pro zobrazení odpovídajícího pole
         </p>
       </div>
@@ -246,7 +246,7 @@ function SimulatedPDFPage({
               activeFieldId === h.fieldId
             )}`}
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] block mb-1">
               {h.label}
             </span>
             <HighlightValue

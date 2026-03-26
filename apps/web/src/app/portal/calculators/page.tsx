@@ -67,7 +67,7 @@ export default function CalculatorsPage() {
           title="Žádné kalkulačky"
           description="V registru nejsou momentálně žádné kalkulačky."
         />
-        <p className="text-center text-sm text-slate-500 mt-8">
+        <p className="mt-8 text-center text-sm text-[color:var(--wp-text-secondary)]">
           Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
         </p>
       </ListPageShell>
@@ -80,14 +80,14 @@ export default function CalculatorsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-12">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-3xl font-black tracking-tight text-[color:var(--wp-text)] md:text-4xl">
               Kalkulačky
             </h1>
-            <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-black rounded-lg border border-slate-200">
+            <span className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-1 text-xs font-black text-[color:var(--wp-text-secondary)]">
               {calculators.length} celkem
             </span>
           </div>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
             Hypoteční, investiční a další expertní kalkulačky pro přípravu řešení.
           </p>
         </div>
@@ -120,10 +120,10 @@ export default function CalculatorsPage() {
                 >
                   <Icon size={28} strokeWidth={2} />
                 </div>
-                <h2 className="text-lg font-black text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors duration-300">
+                <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-3 group-hover:text-indigo-600 transition-colors duration-300">
                   {def.title}
                 </h2>
-                <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-[280px]">
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] leading-relaxed max-w-[280px]">
                   {def.description}
                 </p>
               </div>
@@ -156,7 +156,7 @@ export default function CalculatorsPage() {
       {/* Nedávné propočty – vizuál 1:1, připraveno na live data */}
       <div className="rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)] flex items-center gap-2">
             <FileText size={18} className="text-indigo-500" />
             Nedávné propočty
           </h2>
@@ -178,11 +178,11 @@ export default function CalculatorsPage() {
                 <FileText size={20} />
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors mb-0.5 truncate">
+                <h3 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors mb-0.5 truncate">
                   {item.client}
                 </h3>
-                <p className="text-xs font-bold text-slate-500 mb-2">{item.type}</p>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">{item.type}</p>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
                   {item.date}
                 </span>
               </div>
@@ -191,7 +191,7 @@ export default function CalculatorsPage() {
         </div>
       </div>
 
-      <p className="text-center text-sm text-slate-500 mt-8">
+      <p className="text-center text-sm text-[color:var(--wp-text-secondary)] mt-8">
         Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
       </p>
     </ListPageShell>

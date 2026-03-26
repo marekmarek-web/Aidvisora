@@ -20,13 +20,13 @@ export async function MobilePortalApp({ showTeamOverview = true }: { showTeamOve
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] flex flex-col bg-slate-50">
-          <div className="px-4 pt-[var(--safe-area-top)] pb-2 border-b border-slate-200 bg-white">
-            <div className="h-10 w-40 rounded-lg bg-slate-100 animate-pulse" />
+        <div className="min-h-[100dvh] flex flex-col bg-[color:var(--wp-surface-muted)]">
+          <div className="px-4 pt-[var(--safe-area-top)] pb-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
+            <div className="h-10 w-40 rounded-lg bg-[color:var(--wp-surface-muted)] animate-pulse" />
           </div>
           <div className="flex-1 p-4 space-y-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-14 rounded-xl bg-slate-200/70 animate-pulse" />
+              <div key={i} className="h-14 rounded-xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse" />
             ))}
           </div>
         </div>

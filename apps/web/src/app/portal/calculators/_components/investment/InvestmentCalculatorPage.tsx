@@ -77,7 +77,7 @@ export function InvestmentCalculatorPage() {
         </div>
 
         {/* Strategy switcher */}
-        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
           <InvestmentStrategySwitcher
             profiles={INVESTMENT_PROFILES}
             activeIndex={profileIndex}
@@ -113,12 +113,12 @@ export function InvestmentCalculatorPage() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
             <h3 className="text-base font-bold text-[#0d1f4e] mb-1">Projekce vývoje</h3>
             <p className="text-xs text-[#475569] mb-4">Odhadovaný vývoj hodnoty investice v čase.</p>
             <InvestmentGrowthChart data={growthChartData} />
           </div>
-          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
+          <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
             <h3 className="text-base font-bold text-[#0d1f4e] mb-1">Složení portfolia</h3>
             <p className="text-xs text-[#475569] mb-4">Rozdělení strategie podle tříd aktiv.</p>
             <InvestmentAllocationChart data={allocationChartData} />
@@ -126,7 +126,7 @@ export function InvestmentCalculatorPage() {
         </div>
 
         {/* Backtest */}
-        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6 md:p-7">
+        <div className="rounded-[20px] border-[1.5px] border-[#e2e8f0] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6 md:p-7">
           <InvestmentBacktestChart
             series={backtestSeries}
             monthlyFormatted={formatCurrency(monthly)}

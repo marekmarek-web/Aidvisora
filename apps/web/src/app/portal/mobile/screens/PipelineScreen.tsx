@@ -70,8 +70,8 @@ function QuickMoveSheet({
 }) {
   return (
     <BottomSheet open title="Přesunout případ" onClose={onClose}>
-      <p className="text-sm font-bold text-slate-800 mb-3 truncate">{opp.title}</p>
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Vyberte fázi</p>
+      <p className="text-sm font-bold text-[color:var(--wp-text)] mb-3 truncate">{opp.title}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Vyberte fázi</p>
       <div className="space-y-1.5 max-h-[min(60vh,420px)] overflow-y-auto">
         {stages.map((stage) => {
           const theme = getPipelineColumnTheme(stage.sortOrder);
@@ -84,7 +84,7 @@ function QuickMoveSheet({
                 "w-full min-h-[48px] rounded-xl border text-left px-4 text-sm font-semibold flex items-center justify-between transition-colors active:scale-[0.99]",
                 stage.id === opp.stageId
                   ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                  : "border-slate-200 text-slate-700 hover:bg-slate-50",
+                  : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]",
                 "border-l-4",
                 theme.mobileBorderL
               )}
@@ -93,7 +93,7 @@ function QuickMoveSheet({
               {stage.id === opp.stageId ? (
                 <span className="text-[10px] font-black text-indigo-500 uppercase">Aktuální</span>
               ) : (
-                <ArrowRight size={14} className="text-slate-300" />
+                <ArrowRight size={14} className="text-[color:var(--wp-text-tertiary)]" />
               )}
             </button>
           );
@@ -167,17 +167,17 @@ function OpportunityDetailSheet({
           </div>
 
           {opp.contactName ? (
-            <div className="flex items-center gap-2 text-sm text-slate-700">
-              <Users size={16} className="text-slate-400" />
+            <div className="flex items-center gap-2 text-sm text-[color:var(--wp-text-secondary)]">
+              <Users size={16} className="text-[color:var(--wp-text-tertiary)]" />
               {opp.contactName}
             </div>
           ) : null}
 
           {opp.expectedCloseDate ? (
-            <div className="flex items-center gap-2 text-sm text-slate-700">
-              <Calendar size={16} className="text-slate-400" />
+            <div className="flex items-center gap-2 text-sm text-[color:var(--wp-text-secondary)]">
+              <Calendar size={16} className="text-[color:var(--wp-text-tertiary)]" />
               Uzavření: {new Date(opp.expectedCloseDate).toLocaleDateString("cs-CZ")}
-              <span className="text-xs font-bold text-slate-500">
+              <span className="text-xs font-bold text-[color:var(--wp-text-secondary)]">
                 ({formatCloseDate(opp.expectedCloseDate)})
               </span>
             </div>
@@ -188,7 +188,7 @@ function OpportunityDetailSheet({
               type="button"
               onClick={() => setEditing((e) => !e)}
               disabled={pending}
-              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 active:scale-[0.98] transition-transform disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.98] transition-transform disabled:opacity-50"
             >
               <Pencil size={14} /> {editing ? "Zrušit úpravy" : "Upravit"}
             </button>
@@ -206,47 +206,47 @@ function OpportunityDetailSheet({
           </div>
 
           {editing ? (
-            <div className="space-y-3 rounded-xl border border-slate-200 p-3 bg-slate-50">
+            <div className="space-y-3 rounded-xl border border-[color:var(--wp-surface-card-border)] p-3 bg-[color:var(--wp-surface-muted)]">
               <label className="block">
-                <span className="text-[10px] font-black uppercase text-slate-500">Název</span>
+                <span className="text-[10px] font-black uppercase text-[color:var(--wp-text-secondary)]">Název</span>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-black uppercase text-slate-500">Typ / produkt</span>
+                <span className="text-[10px] font-black uppercase text-[color:var(--wp-text-secondary)]">Typ / produkt</span>
                 <input
                   value={caseType}
                   onChange={(e) => setCaseType(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-black uppercase text-slate-500">Očekávaná hodnota (Kč)</span>
+                <span className="text-[10px] font-black uppercase text-[color:var(--wp-text-secondary)]">Očekávaná hodnota (Kč)</span>
                 <input
                   value={expectedValue}
                   onChange={(e) => setExpectedValue(e.target.value)}
                   inputMode="decimal"
-                  className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-black uppercase text-slate-500">Datum uzavření</span>
+                <span className="text-[10px] font-black uppercase text-[color:var(--wp-text-secondary)]">Datum uzavření</span>
                 <input
                   type="date"
                   value={expectedCloseDate}
                   onChange={(e) => setExpectedCloseDate(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-black uppercase text-slate-500">Klient</span>
+                <span className="text-[10px] font-black uppercase text-[color:var(--wp-text-secondary)]">Klient</span>
                 <select
                   value={contactId}
                   onChange={(e) => setContactId(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-200 px-3 text-sm bg-white"
+                  className="mt-1 w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 text-sm bg-[color:var(--wp-surface-card)]"
                 >
                   <option value="">— bez klienta —</option>
                   {contactOptions.map((c) => (
@@ -280,7 +280,7 @@ function OpportunityDetailSheet({
           ) : null}
 
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Uzavřít případ</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Uzavřít případ</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -308,7 +308,7 @@ function OpportunityDetailSheet({
           </div>
 
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Posunout do fáze</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-2">Posunout do fáze</p>
             <div className="space-y-1.5">
               {stages.map((stage) => {
                 const theme = getPipelineColumnTheme(stage.sortOrder);
@@ -322,7 +322,7 @@ function OpportunityDetailSheet({
                       "w-full min-h-[44px] rounded-xl border text-left px-4 text-sm font-semibold flex items-center justify-between transition-colors active:scale-[0.99]",
                       stage.name === opp.stageName
                         ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                        : "border-slate-200 text-slate-700 hover:bg-slate-50",
+                        : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]",
                       "border-l-4",
                       theme.mobileBorderL
                     )}
@@ -331,7 +331,7 @@ function OpportunityDetailSheet({
                     {stage.name === opp.stageName ? (
                       <span className="text-[10px] font-black text-indigo-500 uppercase">Aktuální</span>
                     ) : (
-                      <ArrowRight size={14} className="text-slate-300" />
+                      <ArrowRight size={14} className="text-[color:var(--wp-text-tertiary)]" />
                     )}
                   </button>
                 );
@@ -343,7 +343,7 @@ function OpportunityDetailSheet({
             <button
               type="button"
               onClick={() => onOpenContact(opp.contactId!)}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             >
               <Users size={14} /> Otevřít klienta <ChevronRight size={14} />
             </button>
@@ -421,14 +421,14 @@ export function PipelineScreen({
         <>
       <div className="flex gap-3">
         <MobileCard className="flex-1 p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Celkem</p>
-          <p className="text-xl font-black text-slate-900 mt-0.5">{totalDeals}</p>
-          <p className="text-xs text-slate-500">případů</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Celkem</p>
+          <p className="text-xl font-black text-[color:var(--wp-text)] mt-0.5">{totalDeals}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">případů</p>
         </MobileCard>
         <MobileCard className="flex-1 p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hodnota</p>
-          <p className="text-lg font-black text-slate-900 mt-0.5">{formatValue(String(totalValue))}</p>
-          <p className="text-xs text-slate-500">celkem</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Hodnota</p>
+          <p className="text-lg font-black text-[color:var(--wp-text)] mt-0.5">{formatValue(String(totalValue))}</p>
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">celkem</p>
         </MobileCard>
       </div>
 
@@ -445,7 +445,7 @@ export function PipelineScreen({
 
           return (
             <MobileSection key={stage.id} title={stage.name}>
-              <MobileCard className="p-0 overflow-hidden border border-slate-200/80 shadow-sm">
+              <MobileCard className="p-0 overflow-hidden border border-[color:var(--wp-surface-card-border)]/80 shadow-sm">
                 <div className={cx("h-1.5 w-full shrink-0", theme.mobileHeaderBar)} aria-hidden />
                 <div
                   className={cx(
@@ -463,13 +463,13 @@ export function PipelineScreen({
                     {stageIdx + 1}
                   </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-lg font-black text-slate-900">{stage.opportunities.length}</p>
-                  <p className="text-xs text-slate-500 font-bold">
+                  <p className="text-lg font-black text-[color:var(--wp-text)]">{stage.opportunities.length}</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] font-bold">
                     {stageValue > 0 ? formatValue(String(stageValue)) : "bez hodnoty"}
                   </p>
                 </div>
                 {urgentCount > 0 ? (
-                  <span className="text-[10px] font-black text-rose-600 bg-white/80 px-2 py-1 rounded-lg border border-rose-100">
+                  <span className="text-[10px] font-black text-rose-600 bg-[color:var(--wp-surface-card)]/80 px-2 py-1 rounded-lg border border-rose-100">
                     {urgentCount} prošlé
                   </span>
                 ) : null}
@@ -477,7 +477,7 @@ export function PipelineScreen({
               </MobileCard>
 
               {stage.opportunities.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-2">Prázdná fáze</p>
+                <p className="text-xs text-[color:var(--wp-text-tertiary)] text-center py-2">Prázdná fáze</p>
               ) : (
                 stage.opportunities.map((opp) => {
                   const isPastDue =
@@ -488,9 +488,9 @@ export function PipelineScreen({
                     <div
                       key={opp.id}
                       className={cx(
-                        "flex rounded-2xl border bg-white shadow-sm overflow-hidden transition-all border-l-4",
+                        "flex rounded-2xl border bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden transition-all border-l-4",
                         theme.mobileBorderL,
-                        isPastDue ? "border-t-rose-200 border-r-rose-200 border-b-rose-200 bg-rose-50/30" : "border-t-slate-200 border-r-slate-200 border-b-slate-200"
+                        isPastDue ? "border-t-rose-200 border-r-rose-200 border-b-rose-200 bg-rose-50/30" : "border-b-[color:var(--wp-surface-card-border)] border-r-[color:var(--wp-surface-card-border)] border-t-[color:var(--wp-surface-card-border)]"
                       )}
                     >
                       <button
@@ -506,16 +506,16 @@ export function PipelineScreen({
                           }
                           setSelectedOpp(rowSelected);
                         }}
-                        className="flex-1 min-w-0 text-left p-3.5 active:bg-slate-50/80 transition-colors touch-manipulation"
+                        className="flex-1 min-w-0 text-left p-3.5 active:bg-[color:var(--wp-surface-muted)]/80 transition-colors touch-manipulation"
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <p className="text-sm font-bold text-slate-900 leading-snug flex-1">{opp.title}</p>
-                          <ChevronRight size={14} className="text-slate-300 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm font-bold text-[color:var(--wp-text)] leading-snug flex-1">{opp.title}</p>
+                          <ChevronRight size={14} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0 mt-0.5" />
                         </div>
 
                         <div className="flex flex-wrap gap-2 items-center">
                           {opp.contactName ? (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-500 font-bold">
+                            <span className="flex items-center gap-1 text-[11px] text-[color:var(--wp-text-secondary)] font-bold">
                               <Users size={11} /> {opp.contactName}
                             </span>
                           ) : null}
@@ -528,7 +528,7 @@ export function PipelineScreen({
                             <span
                               className={cx(
                                 "flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded",
-                                isPastDue ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-600"
+                                isPastDue ? "bg-rose-50 text-rose-600" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                               )}
                             >
                               <Calendar size={11} /> {formatCloseDate(opp.expectedCloseDate)}
@@ -539,7 +539,7 @@ export function PipelineScreen({
                       <button
                         type="button"
                         onClick={() => setQuickMoveOpp(rowSelected)}
-                        className="shrink-0 w-[52px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 border-l border-slate-100 bg-slate-50/90 text-slate-600 active:bg-indigo-50 active:text-indigo-700"
+                        className="shrink-0 w-[52px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/90 text-[color:var(--wp-text-secondary)] active:bg-indigo-50 active:text-indigo-700"
                         aria-label="Přesunout do jiné fáze"
                       >
                         <ArrowRightLeft size={18} />

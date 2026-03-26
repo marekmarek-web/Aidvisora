@@ -29,10 +29,10 @@ const SEGMENT_LABELS: Record<string, string> = {
 };
 
 const SEGMENT_COLORS: Record<string, string> = {
-  lead: "bg-slate-100 text-slate-600",
+  lead: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
   prospect: "bg-blue-50 text-blue-700",
   client: "bg-emerald-50 text-emerald-700",
-  former_client: "bg-slate-100 text-slate-500",
+  former_client: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
   vip: "bg-amber-50 text-amber-700",
 };
 
@@ -89,35 +89,35 @@ function ContactCard({
         <div className="flex items-center gap-3 p-3.5">
           <Initials firstName={contact.firstName} lastName={contact.lastName} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-slate-900 truncate">
+            <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
               {contact.firstName} {contact.lastName}
             </p>
             {contact.email ? (
-              <p className="text-xs text-slate-500 truncate mt-0.5">{contact.email}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)] truncate mt-0.5">{contact.email}</p>
             ) : contact.phone ? (
-              <p className="text-xs text-slate-500 truncate mt-0.5">{contact.phone}</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)] truncate mt-0.5">{contact.phone}</p>
             ) : null}
             {segment ? (
               <span
                 className={cx(
                   "inline-block mt-1 text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
-                  SEGMENT_COLORS[segment] ?? "bg-slate-100 text-slate-600"
+                  SEGMENT_COLORS[segment] ?? "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                 )}
               >
                 {SEGMENT_LABELS[segment] ?? segment}
               </span>
             ) : null}
           </div>
-          <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+          <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] flex-shrink-0" />
         </div>
       </button>
 
       {/* Quick action row */}
-      <div className="flex gap-0 border-t border-slate-100">
+      <div className="flex gap-0 border-t border-[color:var(--wp-surface-card-border)]">
         {contact.phone ? (
           <a
             href={`tel:${contact.phone}`}
-            className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-100"
+            className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 text-xs font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors border-r border-[color:var(--wp-surface-card-border)]"
             onClick={(e) => e.stopPropagation()}
           >
             <Phone size={13} /> Zavolat
@@ -126,7 +126,7 @@ function ContactCard({
         {contact.email ? (
           <a
             href={`mailto:${contact.email}`}
-            className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-100"
+            className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 text-xs font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors border-r border-[color:var(--wp-surface-card-border)]"
             onClick={(e) => e.stopPropagation()}
           >
             <Mail size={13} /> E-mail

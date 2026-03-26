@@ -50,7 +50,7 @@ export function QuickNewItemIcon({ item }: { item: QuickActionItem }) {
   const hoverAnim = ICON_HOVER_ANIM[item.id];
   return (
     <span className={`flex items-center justify-center shrink-0 transition-all duration-300 ${hoverAnim ?? ""}`}>
-      <Icon className={`size-5 ${item.iconColor ?? "text-slate-500"}`} aria-hidden />
+      <Icon className={`size-5 ${item.iconColor ?? "text-[color:var(--wp-text-secondary)]"}`} aria-hidden />
     </span>
   );
 }
@@ -76,8 +76,8 @@ export function QuickActionsMenuContent({
 
   const itemClass =
     variant === "sheet"
-      ? "group w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10 rounded-xl text-left active:scale-[0.99] transition-transform"
-      : "group flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10 rounded-xl";
+      ? "group w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-[color:var(--wp-surface-card)]/10 rounded-xl text-left active:scale-[0.99] transition-transform"
+      : "group flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-[color:var(--wp-surface-card)]/10 rounded-xl";
 
   return (
     <>
@@ -110,9 +110,9 @@ export function QuickActionsMenuContent({
         )
       ) : (
         <div className="px-3 py-4 space-y-2" aria-hidden>
-          <div className="h-5 w-full bg-slate-100 rounded animate-pulse" />
-          <div className="h-5 w-4/5 bg-slate-100 rounded animate-pulse" />
-          <div className="h-5 w-3/4 bg-slate-100 rounded animate-pulse" />
+          <div className="h-5 w-full bg-[color:var(--wp-surface-muted)] rounded animate-pulse" />
+          <div className="h-5 w-4/5 bg-[color:var(--wp-surface-muted)] rounded animate-pulse" />
+          <div className="h-5 w-3/4 bg-[color:var(--wp-surface-muted)] rounded animate-pulse" />
         </div>
       )}
       {showScanInQuickMenu ? (
@@ -124,14 +124,14 @@ export function QuickActionsMenuContent({
             className={itemClass}
           >
             <span className="flex items-center justify-center shrink-0 transition-all duration-300">
-              <ScanLine className="size-5 text-slate-500" aria-hidden />
+              <ScanLine className="size-5 text-[color:var(--wp-text-secondary)]" aria-hidden />
             </span>
             Skenovat dokument
           </Link>
         ) : (
           <button type="button" onClick={() => go("/portal/scan")} className={`${itemClass} mt-1`}>
             <span className="flex items-center justify-center shrink-0 transition-all duration-300">
-              <ScanLine className="size-5 text-slate-500" aria-hidden />
+              <ScanLine className="size-5 text-[color:var(--wp-text-secondary)]" aria-hidden />
             </span>
             Skenovat dokument
           </button>

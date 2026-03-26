@@ -19,16 +19,16 @@ function InputAmount({
 }: { label: string; value: number; onChange: (v: number) => void; id: string }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor={id}>{label}</label>
+      <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1" htmlFor={id}>{label}</label>
       <div className="relative">
         <input
           id={id}
           type="number"
           value={value || ""}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="w-full pl-4 pr-12 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+          className="w-full pl-4 pr-12 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl focus:ring-2 focus:ring-indigo-400"
         />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">Kč</span>
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] text-sm font-bold">Kč</span>
       </div>
     </div>
   );
@@ -62,26 +62,26 @@ export function StepAssetsLiabilities() {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Bilance</h2>
-          <p className="text-slate-500 mt-1">Aktiva a pasiva domácnosti.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)]">Bilance</h2>
+          <p className="text-[color:var(--wp-text-secondary)] mt-1">Aktiva a pasiva domácnosti.</p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <div className="bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm">
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Aktiva</span>
+          <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-lg px-4 py-2 shadow-sm">
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Aktiva</span>
             <span className="text-lg font-bold text-green-600">{formatCzk(totalAssets)}</span>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm">
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider block">Pasiva</span>
+          <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-lg px-4 py-2 shadow-sm">
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Pasiva</span>
             <span className="text-lg font-bold text-red-600">{formatCzk(totalLiabilities)}</span>
           </div>
-          <div className={`px-4 py-2 rounded-lg text-sm font-bold ${netWorthVal >= 0 ? "bg-slate-100 text-slate-700" : "bg-red-50 text-red-700"}`}>
+          <div className={`px-4 py-2 rounded-lg text-sm font-bold ${netWorthVal >= 0 ? "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]" : "bg-red-50 text-red-700"}`}>
             Čisté jmění: {formatCzk(netWorthVal)}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
           <h3 className="text-green-800 font-bold mb-6 flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center"><Landmark className="w-4 h-4 text-green-600" /></div>
             Aktiva
@@ -89,10 +89,10 @@ export function StepAssetsLiabilities() {
           <div className="space-y-4">
             <InputAmount label="Účty a hotovost" value={assets.cash} onChange={(v) => setAssetsField("cash", v)} id="asset-cash" />
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Nemovitosti</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Nemovitosti</label>
               <div className="space-y-2 mb-2">
                 {(assets.realEstateItems ?? []).map((item) => (
-                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
+                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
                     <div className="min-w-[140px] flex-1 sm:flex-none">
                       <CustomDropdown
                         value={item.label}
@@ -105,9 +105,9 @@ export function StepAssetsLiabilities() {
                       value={item.value || ""}
                       onChange={(e) => updateRealEstateItem(item.id, { value: parseFloat(e.target.value) || 0 })}
                       placeholder="Hodnota"
-                      className="w-32 px-2 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="w-32 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm"
                     />
-                    <span className="text-slate-500 text-sm">Kč</span>
+                    <span className="text-[color:var(--wp-text-secondary)] text-sm">Kč</span>
                     <button type="button" onClick={() => removeRealEstateItem(item.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg" aria-label="Odebrat"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
@@ -116,14 +116,14 @@ export function StepAssetsLiabilities() {
                 <Plus className="w-4 h-4" /> Přidat nemovitost
               </button>
               {assets.realEstate > 0 && (
-                <p className="text-xs text-slate-500 mt-1">Celkem nemovitosti: {formatCzk(assets.realEstate)}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1">Celkem nemovitosti: {formatCzk(assets.realEstate)}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Investice (Akcie, Fondy, Dluhopisy, Krypto, ETF)</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Investice (Akcie, Fondy, Dluhopisy, Krypto, ETF)</label>
               <div className="space-y-2 mb-2">
                 {(assets.investmentsList || []).map((item) => (
-                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
+                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
                     <div className="min-w-[140px] flex-1 sm:flex-none">
                       <CustomDropdown
                         value={item.type || "Akcie"}
@@ -131,9 +131,9 @@ export function StepAssetsLiabilities() {
                         options={INVESTMENT_ASSET_TYPES.map((t) => ({ id: t, label: t }))}
                       />
                     </div>
-                    <input type="number" value={item.value || ""} onChange={(e) => updateAssetInvestment(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
-                    <span className="text-slate-500 text-sm">Kč</span>
-                    <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetInvestment(item.id, { note: e.target.value })} placeholder="Poznámka" className="flex-1 min-w-0 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                    <input type="number" value={item.value || ""} onChange={(e) => updateAssetInvestment(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
+                    <span className="text-[color:var(--wp-text-secondary)] text-sm">Kč</span>
+                    <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetInvestment(item.id, { note: e.target.value })} placeholder="Poznámka" className="flex-1 min-w-0 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
                     <button type="button" onClick={() => removeAssetInvestment(item.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg" aria-label="Odebrat"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
@@ -143,10 +143,10 @@ export function StepAssetsLiabilities() {
               </button>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Penzijní / DIP / DPS</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Penzijní / DIP / DPS</label>
               <div className="space-y-2 mb-2">
                 {(assets.pensionList || []).map((item) => (
-                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-white rounded-lg p-3 border border-slate-100">
+                  <div key={item.id} className="flex flex-wrap gap-2 items-center bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
                     <div className="min-w-[100px] flex-1 sm:flex-none">
                       <CustomDropdown
                         value={item.type || "DPS"}
@@ -154,9 +154,9 @@ export function StepAssetsLiabilities() {
                         options={PENSION_ASSET_TYPES.map((t) => ({ id: t, label: t }))}
                       />
                     </div>
-                    <input type="number" value={item.value || ""} onChange={(e) => updateAssetPension(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
-                    <span className="text-slate-500 text-sm">Kč</span>
-                    <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetPension(item.id, { note: e.target.value })} placeholder="Poznámka / detail" className="flex-1 min-w-0 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                    <input type="number" value={item.value || ""} onChange={(e) => updateAssetPension(item.id, { value: parseFloat(e.target.value) || 0 })} placeholder="0" className="w-28 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
+                    <span className="text-[color:var(--wp-text-secondary)] text-sm">Kč</span>
+                    <input type="text" value={item.note ?? ""} onChange={(e) => updateAssetPension(item.id, { note: e.target.value })} placeholder="Poznámka / detail" className="flex-1 min-w-0 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
                     <button type="button" onClick={() => removeAssetPension(item.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg" aria-label="Odebrat"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
@@ -169,7 +169,7 @@ export function StepAssetsLiabilities() {
           </div>
         </div>
 
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
           <h3 className="text-red-800 font-bold mb-6 flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center"><Building2 className="w-4 h-4 text-red-600" /></div>
             Pasiva
@@ -182,7 +182,7 @@ export function StepAssetsLiabilities() {
               <InputAmount label="Měsíční splátka (Kč)" value={liab.mortgageDetails?.pay ?? 0} onChange={(v) => setLiabilitiesField("mortgageDetails.pay", v)} id="liab-mortgage-pay" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="liab-mortgage-provider">Poskytovatel hypotéky</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1" htmlFor="liab-mortgage-provider">Poskytovatel hypotéky</label>
               <CustomDropdown
                 value={liab.mortgageProvider ?? ""}
                 onChange={(id) => setLiabilitiesField("mortgageProvider", id)}
@@ -194,12 +194,12 @@ export function StepAssetsLiabilities() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Úvěry (kromě hypotéky)</label>
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">Úvěry (kromě hypotéky)</label>
               <div className="space-y-2 mb-2">
                 {(liab.loansList || []).map((loan) => {
                   const loanProviders = getLoanProvidersByType(loan.type ?? LOAN_TYPES[0]);
                   return (
-                  <div key={loan.id} className="flex flex-wrap gap-2 items-stretch bg-white rounded-lg p-3 border border-slate-100">
+                  <div key={loan.id} className="flex flex-wrap gap-2 items-stretch bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
                     <div className="min-w-[160px] flex-1 sm:flex-none">
                       <CustomDropdown
                         value={loan.type ?? LOAN_TYPES[0]}
@@ -218,10 +218,10 @@ export function StepAssetsLiabilities() {
                         ]}
                       />
                     </div>
-                    <input type="number" value={Number(loan.balance) || ""} onChange={(e) => updateLoan(loan.id, { balance: parseFloat(e.target.value) || 0 })} placeholder="Zůstatek" className="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
-                    <span className="text-slate-500 text-sm flex items-center">Kč</span>
-                    <input type="number" value={Number(loan.rate) || ""} onChange={(e) => updateLoan(loan.id, { rate: parseFloat(e.target.value) || 0 })} placeholder="Sazba %" className="w-20 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
-                    <input type="number" value={Number(loan.pay) || ""} onChange={(e) => updateLoan(loan.id, { pay: parseFloat(e.target.value) || 0 })} placeholder="Splátka" className="w-24 px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                    <input type="number" value={Number(loan.balance) || ""} onChange={(e) => updateLoan(loan.id, { balance: parseFloat(e.target.value) || 0 })} placeholder="Zůstatek" className="w-28 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
+                    <span className="text-[color:var(--wp-text-secondary)] text-sm flex items-center">Kč</span>
+                    <input type="number" value={Number(loan.rate) || ""} onChange={(e) => updateLoan(loan.id, { rate: parseFloat(e.target.value) || 0 })} placeholder="Sazba %" className="w-20 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
+                    <input type="number" value={Number(loan.pay) || ""} onChange={(e) => updateLoan(loan.id, { pay: parseFloat(e.target.value) || 0 })} placeholder="Splátka" className="w-24 px-2 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm" />
                     <button type="button" onClick={() => removeLoan(loan.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg" aria-label="Odebrat"><Trash2 className="w-4 h-4" /></button>
                   </div>
                   );
@@ -238,27 +238,27 @@ export function StepAssetsLiabilities() {
               <ProvenanceBadge path="liabilities.other" data={data as unknown as Record<string, unknown>} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="liab-other-desc">Popis ostatních pasiv</label>
-              <input id="liab-other-desc" type="text" value={liab.otherDesc ?? ""} onChange={(e) => setLiabilitiesField("otherDesc", e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl" />
+              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1" htmlFor="liab-other-desc">Popis ostatních pasiv</label>
+              <input id="liab-other-desc" type="text" value={liab.otherDesc ?? ""} onChange={(e) => setLiabilitiesField("otherDesc", e.target.value)} className="w-full px-4 py-2 border border-[color:var(--wp-surface-card-border)] rounded-xl" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-6">
+      <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex gap-8 text-center sm:text-left">
           <div>
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Celková aktiva</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider">Celková aktiva</span>
             <div className="text-lg font-bold text-green-600">{formatCzk(totalAssets)}</div>
           </div>
           <div>
-            <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Celková pasiva</span>
+            <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider">Celková pasiva</span>
             <div className="text-lg font-bold text-red-600">{formatCzk(totalLiabilities)}</div>
           </div>
         </div>
-        <div className="text-center sm:text-right border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Čisté jmění</span>
-          <div className={`text-2xl font-bold ${netWorthVal >= 0 ? "text-slate-900" : "text-red-700"}`}>{formatCzk(netWorthVal)}</div>
+        <div className="text-center sm:text-right border-t sm:border-t-0 border-[color:var(--wp-surface-card-border)] pt-4 sm:pt-0">
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider">Čisté jmění</span>
+          <div className={`text-2xl font-bold ${netWorthVal >= 0 ? "text-[color:var(--wp-text)]" : "text-red-700"}`}>{formatCzk(netWorthVal)}</div>
         </div>
       </div>
     </>

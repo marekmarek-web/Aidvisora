@@ -114,22 +114,22 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
 
   if (closedAt) {
     return (
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 relative overflow-hidden">
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-8 relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner shrink-0">
+            <div className="w-16 h-16 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] shadow-inner shrink-0">
               <Briefcase size={28} aria-hidden />
             </div>
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
                 Obchodní případ {opportunity.opportunityNumber}
               </p>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-black text-[color:var(--wp-text)] tracking-tight">
                 {opportunity.title}
               </h1>
             </div>
           </div>
-          <p className="text-sm font-semibold text-slate-600">
+          <p className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">
             Obchod uzavřen {new Date(closedAt).toLocaleDateString("cs-CZ")}
             {opportunity.closedAs === "won"
               ? " (prodáno)"
@@ -153,18 +153,18 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
   }
 
   return (
-    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 sm:p-8 relative overflow-hidden">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-6 sm:p-8 relative overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-8">
         <div className="flex items-center gap-5 min-w-0">
-          <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner shrink-0">
+          <div className="w-16 h-16 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] shadow-inner shrink-0">
             <Briefcase size={28} aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <p className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Obchodní případ {opportunity.opportunityNumber}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[color:var(--wp-text)] tracking-tight">
                 {opportunity.title}
               </h1>
               {opportunity.faSourceId ? (
@@ -179,9 +179,9 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
           </div>
         </div>
 
-        <div className="flex items-center gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-wrap">
+        <div className="flex items-center gap-6 bg-[color:var(--wp-surface-muted)] p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] flex-wrap">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Konečná cena
             </p>
             <div className="flex items-baseline gap-1">
@@ -195,19 +195,19 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
                   schedulePriceSave();
                 }}
                 onBlur={flushPrice}
-                className="w-24 sm:w-28 bg-transparent border-b border-slate-300 focus:border-indigo-500 outline-none text-xl sm:text-2xl font-black text-slate-900 transition-colors min-h-[44px]"
+                className="w-24 sm:w-28 bg-transparent border-b border-[color:var(--wp-border-strong)] focus:border-indigo-500 outline-none text-xl sm:text-2xl font-black text-[color:var(--wp-text)] transition-colors min-h-[44px]"
                 aria-label="Konečná cena v Kč"
               />
-              <span className="text-sm font-bold text-slate-500">Kč</span>
+              <span className="text-sm font-bold text-[color:var(--wp-text-secondary)]">Kč</span>
             </div>
           </div>
-          <div className="w-px h-10 bg-slate-200 hidden sm:block" aria-hidden />
+          <div className="w-px h-10 bg-[color:var(--wp-surface-card-border)] hidden sm:block" aria-hidden />
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Šance na úspěch
             </p>
             <div className="flex items-center gap-2">
-              <div className="flex items-baseline gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all min-h-[44px]">
+              <div className="flex items-baseline gap-1 bg-[color:var(--wp-surface-card)] px-2 py-1 rounded-lg border border-[color:var(--wp-surface-card-border)] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all min-h-[44px]">
                 <input
                   type="number"
                   min={0}
@@ -232,7 +232,7 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pt-6 border-t border-slate-100">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
         <div className="flex flex-wrap gap-2 flex-1">
           {opportunity.stages.map((stage) => {
             const isActive = stage.id === opportunity.stageId;
@@ -245,7 +245,7 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
                 className={`min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors border touch-manipulation ${
                   isActive
                     ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100"
+                    : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)] hover:border-[color:var(--wp-border-strong)] active:bg-[color:var(--wp-surface-muted)]"
                 }`}
               >
                 {stage.name}
@@ -274,7 +274,7 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-500">
+      <div className="mt-4 flex flex-wrap gap-4 text-sm text-[color:var(--wp-text-secondary)]">
         <span>
           Otevřeno od{" "}
           {opportunity.createdAt

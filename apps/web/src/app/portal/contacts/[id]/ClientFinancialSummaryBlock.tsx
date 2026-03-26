@@ -81,12 +81,12 @@ export function ClientFinancialSummaryBlock({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900">Finanční souhrn</h2>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Finanční souhrn</h2>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-500">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>
         </div>
       </div>
     );
@@ -94,9 +94,9 @@ export function ClientFinancialSummaryBlock({
 
   if (error || !view) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900">Finanční souhrn</h2>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Finanční souhrn</h2>
         </div>
         <div className="p-6">
           <p className="text-sm text-red-600">{error ?? "Žádná data."}</p>
@@ -110,16 +110,16 @@ export function ClientFinancialSummaryBlock({
 
   if (view.status === "missing") {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-50">
-          <h2 className="text-lg font-black text-slate-900">Finanční souhrn</h2>
+      <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Finanční souhrn</h2>
         </div>
         <div className="p-8 flex flex-col items-center justify-center text-center">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-            <FileText className="w-7 h-7 text-slate-400" aria-hidden />
+          <div className="w-14 h-14 rounded-2xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center mb-4">
+            <FileText className="w-7 h-7 text-[color:var(--wp-text-tertiary)]" aria-hidden />
           </div>
-          <p className="text-slate-600 font-semibold mb-1">Žádná finanční analýza</p>
-          <p className="text-sm text-slate-500 mb-6 max-w-sm">
+          <p className="text-[color:var(--wp-text-secondary)] font-semibold mb-1">Žádná finanční analýza</p>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mb-6 max-w-sm">
             Založte finanční analýzu a mějte přehled o cílech, příjmech, výdajích a majetku klienta.
           </p>
           <Link
@@ -135,23 +135,23 @@ export function ClientFinancialSummaryBlock({
   }
 
   return (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-50 flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-slate-900">Finanční souhrn</h2>
+          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Finanční souhrn</h2>
           {view.scope === "household" && view.householdName && (
-            <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-1">
+            <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mt-1 flex items-center gap-1">
               <Users className="w-3.5 h-3.5" />
               Údaje z analýzy domácnosti: {view.householdName}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-500 px-2.5 py-1 rounded-lg bg-slate-100">
+          <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] px-2.5 py-1 rounded-lg bg-[color:var(--wp-surface-muted)]">
             {getAnalysisStatusLabel(view.status)}
           </span>
           {view.updatedAt && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-[color:var(--wp-text-tertiary)]">
               {new Date(view.updatedAt).toLocaleDateString("cs-CZ")}
               {stale && (
                 <span className="ml-1 text-amber-600 font-semibold">
@@ -166,19 +166,19 @@ export function ClientFinancialSummaryBlock({
       <div className="p-6 space-y-6">
         {/* Cíle */}
         <section>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 flex items-center gap-1.5">
             <Target className="w-3.5 h-3.5" />
             Cíle
           </h3>
           {view.goalsCount === 0 ? (
-            <p className="text-sm text-slate-500">—</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">—</p>
           ) : (
-            <ul className="text-sm font-semibold text-slate-800 space-y-1">
+            <ul className="text-sm font-semibold text-[color:var(--wp-text)] space-y-1">
               {view.goals.map((g, i) => (
                 <li key={i}>{g.name}</li>
               ))}
               {view.goalsCount > view.goals.length && (
-                <li className="text-slate-500 font-normal">
+                <li className="text-[color:var(--wp-text-secondary)] font-normal">
                   +{view.goalsCount - view.goals.length} dalších
                 </li>
               )}
@@ -189,23 +189,23 @@ export function ClientFinancialSummaryBlock({
         {/* Příjmy a výdaje */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Příjmy
             </h3>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[color:var(--wp-text)]">
               {fmtCZK(view.income)}
             </p>
           </div>
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Výdaje
             </h3>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[color:var(--wp-text)]">
               {fmtCZK(view.expenses)}
             </p>
           </div>
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Bilance
             </h3>
             <p
@@ -231,27 +231,27 @@ export function ClientFinancialSummaryBlock({
         {/* Majetek a závazky */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 flex items-center gap-1">
               <Wallet className="w-3.5 h-3.5" />
               Majetek
             </h3>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[color:var(--wp-text)]">
               {fmtCZK(view.assets)}
             </p>
           </div>
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Závazky
             </h3>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[color:var(--wp-text)]">
               {fmtCZK(view.liabilities)}
             </p>
           </div>
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
               Čisté jmění
             </h3>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[color:var(--wp-text)]">
               {fmtCZK(view.netWorth)}
             </p>
           </div>
@@ -259,7 +259,7 @@ export function ClientFinancialSummaryBlock({
 
         {/* Rezerva */}
         <section>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
             Rezerva
           </h3>
           {view.reserveOk ? (
@@ -273,17 +273,17 @@ export function ClientFinancialSummaryBlock({
               Chybí {fmtCZK(view.reserveGap)}
             </p>
           ) : (
-            <p className="text-sm text-slate-500">—</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">—</p>
           )}
         </section>
 
         {/* Priority */}
         {view.priorities.length > 0 && (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
               Priority
             </h3>
-            <ul className="text-sm font-semibold text-slate-800 space-y-1">
+            <ul className="text-sm font-semibold text-[color:var(--wp-text)] space-y-1">
               {view.priorities.map((p, i) => (
                 <li key={i}>{p}</li>
               ))}
@@ -294,7 +294,7 @@ export function ClientFinancialSummaryBlock({
         {/* Mezery */}
         {view.gaps.length > 0 && (
           <section>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
               Mezery
             </h3>
             <ul className="text-sm text-amber-700 space-y-1">
@@ -309,7 +309,7 @@ export function ClientFinancialSummaryBlock({
         )}
 
         {/* CTA */}
-        <div className="pt-4 border-t border-slate-100">
+        <div className="pt-4 border-t border-[color:var(--wp-surface-card-border)]">
           <Link
             href={cta.href}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white px-5 py-3 text-sm font-semibold hover:bg-amber-600 transition-colors min-h-[44px]"

@@ -41,7 +41,7 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Načítám…</p>;
+    return <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítám…</p>;
   }
   if (loadError) {
     return (
@@ -65,9 +65,9 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <h3 className="text-sm font-semibold text-slate-700">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
+          <h3 className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">
             Úkoly ({openTasks.length})
           </h3>
           <Link
@@ -77,23 +77,23 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
             Přidat úkol
           </Link>
         </div>
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-[color:var(--wp-surface-card-border)]">
           {openTasks.length === 0 && completedTasks.length === 0 && (
-            <li className="px-4 py-6 text-sm text-slate-500">Žádné úkoly.</li>
+            <li className="px-4 py-6 text-sm text-[color:var(--wp-text-secondary)]">Žádné úkoly.</li>
           )}
           {openTasks.map((task) => (
-            <li key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 min-h-[44px]">
+            <li key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
               <button
                 type="button"
                 onClick={() => handleToggleTask(task)}
-                className="shrink-0 w-6 h-6 rounded border border-slate-300 hover:border-[var(--wp-accent)] hover:bg-blue-50 flex items-center justify-center"
+                className="shrink-0 w-6 h-6 rounded border border-[color:var(--wp-border-strong)] hover:border-[var(--wp-accent)] hover:bg-blue-50 flex items-center justify-center"
                 aria-label={task.completedAt ? "Znovu otevřít" : "Splnit"}
               >
                 {task.completedAt ? "✓" : null}
               </button>
-              <span className="flex-1 text-sm text-slate-700">{task.title}</span>
+              <span className="flex-1 text-sm text-[color:var(--wp-text-secondary)]">{task.title}</span>
               {task.dueDate && (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[color:var(--wp-text-tertiary)]">
                   {new Date(task.dueDate + "T00:00:00").toLocaleDateString("cs-CZ")}
                 </span>
               )}
@@ -109,16 +109,16 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
               >
                 ✓
               </button>
-              <span className="flex-1 text-sm text-slate-500 line-through">{task.title}</span>
+              <span className="flex-1 text-sm text-[color:var(--wp-text-secondary)] line-through">{task.title}</span>
               {task.dueDate && (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[color:var(--wp-text-tertiary)]">
                   {new Date(task.dueDate + "T00:00:00").toLocaleDateString("cs-CZ")}
                 </span>
               )}
             </li>
           ))}
         </ul>
-        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+        <div className="px-4 py-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
           <Link
             href={`/portal/tasks?contactId=${contactId}`}
             className="text-sm font-medium text-[var(--wp-accent)] hover:underline min-h-[44px] inline-flex items-center"
@@ -128,21 +128,21 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
         </div>
       </div>
 
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <h3 className="text-sm font-semibold text-slate-700 px-4 py-3 border-b border-slate-100 bg-slate-50">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+        <h3 className="text-sm font-semibold text-[color:var(--wp-text-secondary)] px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
           Schůzky a události ({events.length})
         </h3>
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-[color:var(--wp-surface-card-border)]">
           {events.length === 0 && (
-            <li className="px-4 py-6 text-sm text-slate-500">Žádné události.</li>
+            <li className="px-4 py-6 text-sm text-[color:var(--wp-text-secondary)]">Žádné události.</li>
           )}
           {upcomingEvents.map((ev) => (
-            <li key={ev.id} className="px-4 py-3 flex flex-wrap items-center gap-2 hover:bg-slate-50 min-h-[44px]">
-              <span className="text-xs font-mono text-slate-400 w-12 shrink-0">
+            <li key={ev.id} className="px-4 py-3 flex flex-wrap items-center gap-2 hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
+              <span className="text-xs font-mono text-[color:var(--wp-text-tertiary)] w-12 shrink-0">
                 {new Date(ev.startAt).toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit" })}{" "}
                 {new Date(ev.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
               </span>
-              <span className="flex-1 text-sm text-slate-700 min-w-0">{ev.title}</span>
+              <span className="flex-1 text-sm text-[color:var(--wp-text-secondary)] min-w-0">{ev.title}</span>
               <Link
                 href={`/portal/contacts/${contactId}?eventId=${ev.id}#briefing`}
                 className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border border-indigo-200"
@@ -156,14 +156,14 @@ export function ContactTasksAndEvents({ contactId }: { contactId: string }) {
           ))}
           {pastEvents.slice(0, 5).map((ev) => (
             <li key={ev.id} className="px-4 py-3 flex items-center gap-3 opacity-75 min-h-[44px]">
-              <span className="text-xs font-mono text-slate-400 w-12 shrink-0">
+              <span className="text-xs font-mono text-[color:var(--wp-text-tertiary)] w-12 shrink-0">
                 {new Date(ev.startAt).toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit" })}
               </span>
-              <span className="flex-1 text-sm text-slate-500">{ev.title}</span>
+              <span className="flex-1 text-sm text-[color:var(--wp-text-secondary)]">{ev.title}</span>
             </li>
           ))}
         </ul>
-        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+        <div className="px-4 py-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
           <Link
             href="/portal/calendar"
             className="text-sm font-medium text-[var(--wp-accent)] hover:underline min-h-[44px] inline-flex items-center"

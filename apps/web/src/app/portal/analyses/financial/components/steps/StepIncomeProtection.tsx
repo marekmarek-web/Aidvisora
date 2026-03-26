@@ -155,11 +155,11 @@ export function StepIncomeProtection() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[color:var(--wp-text)] flex items-center gap-2">
           <Shield className="w-8 h-8 text-indigo-600" />
           Zajištění
         </h2>
-        <p className="text-slate-500 mt-1">
+        <p className="text-[color:var(--wp-text-secondary)] mt-1">
           Doporučené krytí a navržené řešení pojištění pro každého člena analýzy.
         </p>
       </div>
@@ -171,9 +171,9 @@ export function StepIncomeProtection() {
             type="checkbox"
             checked={invalidity50Plus}
             onChange={(e) => setInsurance({ invalidity50Plus: e.target.checked })}
-            className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400"
+            className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-500 focus:ring-indigo-400"
           />
-          <span className="text-sm font-semibold text-slate-700">
+          <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">
             Použít poloviční doporučení na invaliditu (volba poradce)
           </span>
         </label>
@@ -183,12 +183,12 @@ export function StepIncomeProtection() {
         {persons.map((person) => (
           <section
             key={person.personKey}
-            className="bg-white border border-slate-200 rounded-2xl shadow-sm"
+            className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl shadow-sm"
           >
-            <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-800">
+            <div className="p-4 sm:p-6 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50">
+              <h3 className="text-lg font-bold text-[color:var(--wp-text)]">
                 {person.displayName}
-                <span className="text-slate-500 font-normal ml-2">({person.role})</span>
+                <span className="text-[color:var(--wp-text-secondary)] font-normal ml-2">({person.role})</span>
               </h3>
               {(person.roleType === "client" || person.roleType === "partner") && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -225,10 +225,10 @@ export function StepIncomeProtection() {
 
             <div className="p-4 sm:p-6 space-y-6">
               {/* Doporučené zajištění (read-only) – ordered: Smrt, Invalidita, TN, PN */}
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                <h4 className="text-sm font-bold text-slate-700 mb-3">Doporučené krytí</h4>
+              <div className="bg-[color:var(--wp-surface-muted)] rounded-xl p-4 border border-[color:var(--wp-surface-card-border)]">
+                <h4 className="text-sm font-bold text-[color:var(--wp-text-secondary)] mb-3">Doporučené krytí</h4>
                 {person.personKey === "client" && ins.netIncome > 0 && (
-                  <ul className="text-sm text-slate-600 space-y-1">
+                  <ul className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                     <li>Smrt: {ins.death.individual ? "individuálně" : formatCzk(ins.death.coverage)}</li>
                     <li>Invalidita: {formatCzk(ins.invalidity.capital)}</li>
                     <li>TN: {formatCzk(ins.tn.base)} (progrese {ins.tn.progress}×)</li>
@@ -236,7 +236,7 @@ export function StepIncomeProtection() {
                   </ul>
                 )}
                 {person.personKey === "partner" && ins.partnerInsurance && (
-                  <ul className="text-sm text-slate-600 space-y-1">
+                  <ul className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                     <li>Smrt: {formatCzk(ins.partnerInsurance.death.coverage)}</li>
                     <li>Invalidita: {formatCzk(ins.partnerInsurance.invalidity.capital)}</li>
                     <li>PN: {Math.round(ins.partnerInsurance.sickness.dailyBenefit).toLocaleString("cs-CZ")} Kč/den</li>
@@ -247,7 +247,7 @@ export function StepIncomeProtection() {
                   const c = ins.childInsurance[idx];
                   if (!c) return null;
                   return (
-                    <ul className="text-sm text-slate-600 space-y-1">
+                    <ul className="text-sm text-[color:var(--wp-text-secondary)] space-y-1">
                       <li>Invalidita: {formatCzk(c.invalidity)}</li>
                       <li>TN: {formatCzk(c.tn)}</li>
                       <li>Denní odškodné: {formatCzk(c.dailyComp)}/den</li>
@@ -257,7 +257,7 @@ export function StepIncomeProtection() {
                 {((person.personKey === "client" && ins.netIncome === 0) ||
                   (person.personKey === "partner" && !ins.partnerInsurance) ||
                   (person.personKey.startsWith("child_") && ins.childInsurance.length === 0)) && (
-                  <p className="text-sm text-slate-500">Zadejte příjmy v kroku Cashflow pro doporučení.</p>
+                  <p className="text-sm text-[color:var(--wp-text-secondary)]">Zadejte příjmy v kroku Cashflow pro doporučení.</p>
                 )}
               </div>
 
@@ -274,13 +274,13 @@ export function StepIncomeProtection() {
                   return (
                   <>
                   {fromPlans > 0 && (
-                    <p className="text-sm text-slate-600 mb-3">
+                    <p className="text-sm text-[color:var(--wp-text-secondary)] mb-3">
                       Z pojistných bloků (zdroj firma): <strong>{formatCzk(fromPlans)}</strong> Kč/měs.
                     </p>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700 flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-[color:var(--wp-text-secondary)] flex flex-wrap items-center gap-2">
                         Měsíční příspěvek firmy (Kč)
                         <ProvenanceBadge path="incomeProtection.persons" data={data as unknown as Record<string, unknown>} />
                       </span>
@@ -297,39 +297,39 @@ export function StepIncomeProtection() {
                           });
                         }}
                         onBlur={() => recalcBenefitVsSalary(person.personKey)}
-                        className="mt-1 block w-full min-h-[44px] rounded-xl border border-slate-200 px-3 py-2 text-slate-800"
+                        className="mt-1 block w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-[color:var(--wp-text)]"
                       />
                     </label>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <span className="text-xs font-bold text-slate-500 uppercase">Firma platí</span>
-                      <p className="text-lg font-semibold text-slate-800">{formatCzk(person.funding?.companyContributionMonthly ?? fromPlans)} / měs.</p>
+                    <div className="bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
+                      <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase">Firma platí</span>
+                      <p className="text-lg font-semibold text-[color:var(--wp-text)]">{formatCzk(person.funding?.companyContributionMonthly ?? fromPlans)} / měs.</p>
                     </div>
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <span className="text-xs font-bold text-slate-500 uppercase">Osobně / OSVČ doplácí</span>
-                      <p className="text-lg font-semibold text-slate-800">{formatCzk(personalPart)} / měs.</p>
+                    <div className="bg-[color:var(--wp-surface-card)] rounded-lg p-3 border border-[color:var(--wp-surface-card-border)]">
+                      <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase">Osobně / OSVČ doplácí</span>
+                      <p className="text-lg font-semibold text-[color:var(--wp-text)]">{formatCzk(personalPart)} / měs.</p>
                     </div>
                   </div>
                   </>
                   ); })()}
                   {person.funding?.benefitVsSalaryComparison && person.funding.companyContributionMonthly != null && person.funding.companyContributionMonthly > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="bg-white rounded-lg p-4 border border-slate-200">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-2">Varianta A – Navýšení mzdy</div>
-                        <p className="text-sm text-slate-700">
+                      <div className="bg-[color:var(--wp-surface-card)] rounded-lg p-4 border border-[color:var(--wp-surface-card-border)]">
+                        <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase mb-2">Varianta A – Navýšení mzdy</div>
+                        <p className="text-sm text-[color:var(--wp-text-secondary)]">
                           Hrubá mzda ekvivalent: {formatCzk(person.funding.benefitVsSalaryComparison.salaryIncreaseGrossEquivalent ?? 0)}
                         </p>
-                        <p className="text-sm text-slate-700">
+                        <p className="text-sm text-[color:var(--wp-text-secondary)]">
                           Náklad firmy: {formatCzk(person.funding.benefitVsSalaryComparison.salaryVariantCompanyCost ?? 0)}/měs.
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-slate-200">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-2">Varianta B – Firemní příspěvek</div>
-                        <p className="text-sm text-slate-700">
+                      <div className="bg-[color:var(--wp-surface-card)] rounded-lg p-4 border border-[color:var(--wp-surface-card-border)]">
+                        <div className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase mb-2">Varianta B – Firemní příspěvek</div>
+                        <p className="text-sm text-[color:var(--wp-text-secondary)]">
                           Náklad firmy: {formatCzk(person.funding.benefitVsSalaryComparison.benefitVariantCompanyCost ?? 0)}/měs.
                         </p>
-                        <p className="text-sm text-slate-700">
+                        <p className="text-sm text-[color:var(--wp-text-secondary)]">
                           Do pojištění: {formatCzk(person.funding.benefitVsSalaryComparison.benefitVariantNetToInsurance ?? 0)}/měs.
                         </p>
                       </div>
@@ -349,7 +349,7 @@ export function StepIncomeProtection() {
                     </div>
                   )}
                   {person.funding?.benefitVsSalaryComparison?.explanation && (
-                    <p className="text-sm text-slate-600 mt-3">{person.funding.benefitVsSalaryComparison.explanation}</p>
+                    <p className="text-sm text-[color:var(--wp-text-secondary)] mt-3">{person.funding.benefitVsSalaryComparison.explanation}</p>
                   )}
                 </div>
               )}
@@ -361,15 +361,15 @@ export function StepIncomeProtection() {
                     onChange={(e) =>
                       setIncomeProtectionPersonFunding(person.personKey, { benefitOptimizationEnabled: e.target.checked })
                     }
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-500"
+                    className="w-5 h-5 rounded border-[color:var(--wp-border-strong)] text-indigo-500"
                   />
-                  <span className="text-sm font-medium text-slate-700">Optimalizace příspěvku (jednatel / majitel)</span>
+                  <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Optimalizace příspěvku (jednatel / majitel)</span>
                 </label>
               )}
 
               {/* Navržené řešení – plány */}
               <div>
-                <h4 className="text-sm font-bold text-slate-700 mb-3">Navržené řešení</h4>
+                <h4 className="text-sm font-bold text-[color:var(--wp-text-secondary)] mb-3">Navržené řešení</h4>
                 <div className="space-y-4">
                   {(person.insurancePlans ?? []).map((plan) => (
                     <PlanCard
@@ -386,7 +386,7 @@ export function StepIncomeProtection() {
                 </div>
                 <div className="mt-3 flex flex-col sm:flex-row gap-2">
                   <div
-                    className="max-w-md w-full border-2 border-dashed border-slate-300 rounded-xl p-0.5 bg-white"
+                    className="max-w-md w-full border-2 border-dashed border-[color:var(--wp-border-strong)] rounded-xl p-0.5 bg-[color:var(--wp-surface-card)]"
                     aria-label="Přidat pojistný blok"
                   >
                     <CustomDropdown
@@ -411,7 +411,7 @@ export function StepIncomeProtection() {
                 </div>
               </div>
 
-              <div className="text-sm font-semibold text-slate-700 pt-2 border-t border-slate-100">
+              <div className="text-sm font-semibold text-[color:var(--wp-text-secondary)] pt-2 border-t border-[color:var(--wp-surface-card-border)]">
                 Celkem za {person.displayName}: {formatCzk(totalMonthlyPerPerson(person.insurancePlans ?? []))} / měsíc
               </div>
             </div>
@@ -420,18 +420,18 @@ export function StepIncomeProtection() {
       </div>
 
       {/* Side summary */}
-      <div className="mt-8 p-4 sm:p-6 bg-slate-50 rounded-2xl border border-slate-200 sticky bottom-4 sm:bottom-0">
-        <h4 className="font-bold text-slate-800 mb-2">Souhrn</h4>
-        <p className="text-slate-700">
+      <div className="mt-8 p-4 sm:p-6 bg-[color:var(--wp-surface-muted)] rounded-2xl border border-[color:var(--wp-surface-card-border)] sticky bottom-4 sm:bottom-0">
+        <h4 className="font-bold text-[color:var(--wp-text)] mb-2">Souhrn</h4>
+        <p className="text-[color:var(--wp-text-secondary)]">
           Celková měsíční cena: <strong>{formatCzk(grandTotalMonthly)}</strong>
         </p>
         {companyTotalMonthly > 0 && (
-          <p className="text-slate-600 text-sm mt-1">
+          <p className="text-[color:var(--wp-text-secondary)] text-sm mt-1">
             Z toho firma: {formatCzk(companyTotalMonthly)} / měsíc
           </p>
         )}
         {personalOsvcTotalMonthly > 0 && (
-          <p className="text-slate-600 text-sm mt-1">
+          <p className="text-[color:var(--wp-text-secondary)] text-sm mt-1">
             Osobně / OSVČ doplácí: {formatCzk(personalOsvcTotalMonthly)} / měsíc
           </p>
         )}
@@ -484,7 +484,7 @@ function PlanCard({
   const planTotal = computePlanTotalMonthly(plan);
 
   return (
-    <div className="border border-slate-200 rounded-xl p-4 bg-white">
+    <div className="border border-[color:var(--wp-surface-card-border)] rounded-xl p-4 bg-[color:var(--wp-surface-card)]">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex-1 min-w-[180px]">
           <CustomDropdown
@@ -514,7 +514,7 @@ function PlanCard({
         <button
           type="button"
           onClick={onRemove}
-          className="min-h-[44px] min-w-[44px] p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"
+          className="min-h-[44px] min-w-[44px] p-2 rounded-lg border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-red-50 hover:text-red-600 flex items-center justify-center"
           aria-label="Odebrat blok"
         >
           <Trash2 className="w-4 h-4" />
@@ -522,7 +522,7 @@ function PlanCard({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <label className="block">
-          <span className="text-xs text-slate-500">Měsíční příspěvek</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Měsíční příspěvek</span>
           <div className="mt-1">
             <CurrencyCzkInput
               value={plan.monthlyPremium}
@@ -538,7 +538,7 @@ function PlanCard({
           </div>
         </label>
         <label className="block">
-          <span className="text-xs text-slate-500">Roční příspěvek</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">Roční příspěvek</span>
           <div className="mt-1">
             <CurrencyCzkInput
               value={plan.annualContribution}
@@ -557,7 +557,7 @@ function PlanCard({
 
       {/* Risk pills – spread, aligned grid */}
       <div>
-        <span className="text-xs font-bold text-slate-600 mb-2 block">Rizika</span>
+        <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2 block">Rizika</span>
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {riskTypes.map((rt) => {
             const entry = risks.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false };
@@ -567,7 +567,7 @@ function PlanCard({
                 className={`rounded-xl border p-3 transition-colors ${
                   entry.enabled
                     ? "border-indigo-300 bg-indigo-50/50"
-                    : "border-slate-200 bg-white"
+                    : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]"
                 }`}
               >
                 <label className="flex items-center gap-2 min-h-[36px] cursor-pointer mb-2">
@@ -575,9 +575,9 @@ function PlanCard({
                     type="checkbox"
                     checked={entry.enabled}
                     onChange={(e) => toggleRisk(rt, e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-500"
+                    className="w-4 h-4 rounded border-[color:var(--wp-border-strong)] text-indigo-500"
                   />
-                  <span className="text-sm font-semibold text-slate-700">{getRiskLabel(rt as InsuredRiskType)}</span>
+                  <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">{getRiskLabel(rt as InsuredRiskType)}</span>
                 </label>
                 {entry.enabled && (
                   <div className="flex flex-col gap-2">
@@ -600,11 +600,11 @@ function PlanCard({
           })}
         </div>
         <div className="mt-3 space-y-1">
-          <div className="text-sm font-bold text-slate-800">
+          <div className="text-sm font-bold text-[color:var(--wp-text)]">
             Celkem za tento plán: {formatCurrencyMonthly(planTotal)}
           </div>
           {riskPriceSum > 0 && (
-            <div className="text-xs font-medium text-slate-600">
+            <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
               Z toho příplatky za rizika: {formatCurrencyMonthly(riskPriceSum)}
             </div>
           )}
