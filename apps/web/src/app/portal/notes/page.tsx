@@ -1,9 +1,13 @@
-import { Suspense } from "react";
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
 import { getContactsList } from "@/app/actions/contacts";
 import { NotesVisionBoard } from "./NotesVisionBoard";
 
-export default async function NotesPage() {
+export default async function NotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; noteId?: string }>;
+}) {
+  const sp = await searchParams;
   let notes: Awaited<ReturnType<typeof getMeetingNotesForBoard>> = [];
   let contactsList: Awaited<ReturnType<typeof getContactsList>> = [];
   try {
@@ -17,10 +21,13 @@ export default async function NotesPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full">
-      <Suspense fallback={<div className="flex flex-1 items-center justify-center text-[color:var(--wp-text-secondary)]">Načítám…</div>}>
-        <NotesVisionBoard initialNotes={notes} contacts={contactsList} />
-      </Suspense>
+    <div className="flex min-h-0 w-full flex-1 flex-col bg-[color:var(--wp-main-scroll-bg)]">
+      <NotesVisionBoard
+        initialNotes={notes}
+        contacts={contactsList}
+        initialSearchQuery={sp.q ?? ""}
+        initialNoteId={sp.noteId ?? null}
+      />
     </div>
   );
 }

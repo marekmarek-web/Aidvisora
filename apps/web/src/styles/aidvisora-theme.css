@@ -113,6 +113,9 @@
 
   /* Obsahová plocha uvnitř hlavního panelu (scroll) – light: průhledná = stejný glass jako panel */
   --wp-main-scroll-bg: transparent;
+  --wp-skeleton-bg: #e2e8f0;
+  --wp-scrollbar-thumb: #cbd5e1;
+  --wp-scrollbar-thumb-hover: #94a3b8;
   /* Modal / dialog – shodně s dropdown surface hierarchy */
   --wp-modal-surface: var(--wp-dropdown-surface);
   --wp-modal-border: var(--wp-dropdown-border);
@@ -315,19 +318,22 @@
   --wp-shell-main-border: rgba(255, 255, 255, 0.08);
   --wp-shell-main-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 
-  --wp-app-canvas-bg: #040814;
+  --wp-app-canvas-bg: #020510;
   --wp-portal-blob-1: rgba(79, 70, 229, 0.1);
   --wp-portal-blob-2: rgba(147, 51, 234, 0.1);
   --wp-sidebar-card-bg: rgba(15, 21, 40, 0.8);
   --wp-sidebar-card-border: rgba(255, 255, 255, 0.1);
   --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
   /* Neprůhledný hlavní panel – žádný „filtr“ přes canvas */
-  --wp-main-panel-bg: #0c1222;
+  --wp-main-panel-bg: #060a14;
   --wp-main-panel-border: rgba(255, 255, 255, 0.12);
   --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
   --wp-main-panel-backdrop-blur: 0px;
-  --wp-main-scroll-bg: #0c1222;
-  --wp-canvas-dot-color: rgba(255, 255, 255, 0.03);
+  --wp-main-scroll-bg: #060a14;
+  --wp-canvas-dot-color: rgba(255, 255, 255, 0.04);
+  --wp-skeleton-bg: rgba(255, 255, 255, 0.1);
+  --wp-scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --wp-scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
 
   --wp-sidebar-search-bg: rgba(17, 24, 54, 0.6);
   --wp-sidebar-search-border: rgba(255, 255, 255, 0.05);

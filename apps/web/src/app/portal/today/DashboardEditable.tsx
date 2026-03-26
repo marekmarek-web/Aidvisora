@@ -14,8 +14,6 @@ import {
   Clock,
   Plus,
   GripVertical,
-  Mail,
-  Calculator,
   FileText,
   LayoutDashboard,
   ArrowUp,
@@ -700,10 +698,6 @@ export function DashboardEditable({
               { icon: UserPlus, label: "Nový klient", href: "/portal/contacts?newClient=1", variant: "create" as const },
               { icon: Calendar, label: "Nová schůzka", href: "/portal/calendar?new=1", variant: "create" as const },
               { icon: CheckSquare, label: "Nový úkol", href: "/portal/tasks", variant: "create" as const },
-              { icon: Mail, label: "Napsat zprávu", href: "/portal/messages", variant: "secondary" as const },
-              { icon: Calculator, label: "Kalkulačky", href: "/portal/calculators", variant: "secondary" as const },
-              { icon: PieChart, label: "Finanční analýza", href: "/portal/analyses/financial", variant: "secondary" as const },
-              { icon: Calendar, label: "Kalendář", href: "/portal/calendar", variant: "secondary" as const },
             ] as { icon: LucideIcon; label: string; href: string; variant: "create" | "secondary" }[]).map((btn, i) =>
               btn.variant === "create" ? (
                 <CreateActionButton key={i} href={btn.href} icon={btn.icon} className="shadow-lg">

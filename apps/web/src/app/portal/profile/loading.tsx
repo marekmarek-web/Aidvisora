@@ -1,6 +1,6 @@
 export default function ProfileLoading() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] animate-pulse">
+    <div className="min-h-screen animate-pulse bg-[color:var(--wp-main-scroll-bg)]">
       <header className="bg-[color:var(--wp-surface-card)]/80 border-b border-[color:var(--wp-surface-card-border)] px-4 sm:px-6 md:px-8 py-4 sticky top-0 z-40">
         <div className="flex items-center justify-between gap-4">
           <div className="h-5 w-32 bg-[color:var(--wp-surface-card-border)] rounded" />

@@ -38,7 +38,12 @@ export function NotesMobileScreen() {
 
   return (
     <div className="-mx-4 -mt-4 flex flex-col flex-1 min-h-[60vh] w-full">
-      <NotesVisionBoard initialNotes={notes} contacts={contacts} />
+      <NotesVisionBoard
+        initialNotes={notes}
+        contacts={contacts}
+        initialSearchQuery=""
+        initialNoteId={null}
+      />
     </div>
   );
 }

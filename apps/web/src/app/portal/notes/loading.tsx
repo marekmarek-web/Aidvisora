@@ -1,14 +1,15 @@
 function Skeleton({ className }: { className?: string }) {
-  return <div className={`animate-pulse bg-monday-border rounded ${className ?? ""}`} />;
+  return (
+    <div className={`animate-pulse rounded bg-[color:var(--wp-skeleton-bg)] ${className ?? ""}`} />
+  );
 }
 
 export default function NotesLoading() {
   return (
-    <div className="p-4 space-y-4">
+    <div className="min-h-[50vh] w-full space-y-4 bg-[color:var(--wp-main-scroll-bg)] p-4">
       <Skeleton className="h-6 w-36" />
 
-      {/* Form skeleton */}
-      <div className="rounded-lg border border-monday-border bg-monday-surface p-4 space-y-3">
+      <div className="space-y-3 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
         <div className="grid gap-3 md:grid-cols-2">
           <Skeleton className="h-9 w-full rounded-[6px]" />
           <Skeleton className="h-9 w-full rounded-[6px]" />
@@ -20,10 +21,12 @@ export default function NotesLoading() {
         </div>
       </div>
 
-      {/* Notes list skeleton */}
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-lg border border-monday-border bg-monday-surface p-4 space-y-2">
+          <div
+            key={i}
+            className="space-y-2 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4"
+          >
             <div className="flex items-center justify-between">
               <Skeleton className="h-4 w-40" />
               <Skeleton className="h-4 w-24" />

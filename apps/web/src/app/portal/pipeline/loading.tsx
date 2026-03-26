@@ -2,7 +2,7 @@ import { PipelineBoardSkeleton } from "@/app/dashboard/pipeline/PipelineBoardSke
 
 export default function PipelineLoading() {
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full bg-[#f8fafc]">
+    <div className="flex min-h-0 w-full flex-1 flex-col bg-[color:var(--wp-main-scroll-bg)]">
       <div className="flex-1 min-h-0 flex flex-col pb-4 w-full min-w-0">
         <div className="py-4 flex justify-between items-center gap-3 sm:gap-4 border-b border-[color:var(--wp-surface-card-border)] shrink-0 bg-[color:var(--wp-surface-card)] rounded-t-xl">
           <div>

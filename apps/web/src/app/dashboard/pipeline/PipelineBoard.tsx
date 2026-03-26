@@ -61,22 +61,22 @@ const STAGE_SUBTITLES: Record<number, string> = {
 
 function getProductDesign(type: string) {
   const t = type?.toLowerCase() || "";
-  if (t.includes("hypo")) return { icon: <Home size={12} />, color: "text-blue-700 bg-blue-50 border-blue-200", label: "Hypotéka" };
-  if (t.includes("invest")) return { icon: <TrendingUp size={12} />, color: "text-emerald-700 bg-emerald-50 border-emerald-200", label: "Investice" };
-  if (t.includes("pojis")) return { icon: <Shield size={12} />, color: "text-rose-700 bg-rose-50 border-rose-200", label: "Pojištění" };
-  if (t.includes("úvěr")) return { icon: <PiggyBank size={12} />, color: "text-purple-700 bg-purple-50 border-purple-200", label: "Úvěr" };
-  return { icon: <CheckCircle2 size={12} />, color: "text-slate-600 bg-slate-50 border-slate-200", label: type || "Jiné" };
+  if (t.includes("hypo")) return { icon: <Home size={12} />, color: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-200 dark:bg-blue-950/60 dark:border-blue-700/60", label: "Hypotéka" };
+  if (t.includes("invest")) return { icon: <TrendingUp size={12} />, color: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-200 dark:bg-emerald-950/60 dark:border-emerald-700/60", label: "Investice" };
+  if (t.includes("pojis")) return { icon: <Shield size={12} />, color: "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-200 dark:bg-rose-950/60 dark:border-rose-700/60", label: "Pojištění" };
+  if (t.includes("úvěr")) return { icon: <PiggyBank size={12} />, color: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-200 dark:bg-purple-950/60 dark:border-purple-700/60", label: "Úvěr" };
+  return { icon: <CheckCircle2 size={12} />, color: "text-slate-600 bg-slate-50 border-slate-200 dark:text-slate-200 dark:bg-slate-800/80 dark:border-slate-600/60", label: type || "Jiné" };
 }
 
 function getUrgencyProps(dateString?: string | null) {
-  if (!dateString) return { class: "bg-slate-50 text-slate-500 border-slate-200", alert: null };
+  if (!dateString) return { class: "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-600/60", alert: null };
   const date = new Date(dateString);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   if (date.getTime() < today.getTime()) return { class: "bg-red-50 text-red-700 border-red-200", alert: "Po termínu!" };
   if (date.getTime() === today.getTime()) return { class: "bg-orange-50 text-orange-700 border-orange-200", alert: null };
-  return { class: "bg-slate-50 text-slate-600 border-slate-200", alert: null };
+  return { class: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-600/60", alert: null };
 }
 
 function formatDate(dateString?: string | null) {
@@ -137,14 +137,14 @@ function Modal({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[var(--wp-radius-sm)] w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
-          <h2 className="font-bold text-lg text-slate-800">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 px-6 py-4">
+          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--wp-surface-raised)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
           >
             ✕
           </button>
@@ -208,21 +208,23 @@ function CreateForm({
   }
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all";
+    "w-full rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-4 py-2.5 text-sm text-[color:var(--wp-input-text)] outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25";
 
   const contactDisplayName = hideContactSelector
     ? (contacts.length > 0 ? `${contacts[0].firstName} ${contacts[0].lastName}`.trim() || "Tento klient" : "Tento klient")
     : null;
 
+  const labelClass = "mb-1.5 ml-1 block text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Název případu *</label>
+        <label className={labelClass}>Název případu *</label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} required placeholder="Např. Refinancování bytu..." />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Typ případu</label>
+          <label className={labelClass}>Typ případu</label>
           <CustomDropdown
             value={caseType}
             onChange={setCaseType}
@@ -232,7 +234,7 @@ function CreateForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Stupeň</label>
+          <label className={labelClass}>Stupeň</label>
           <CustomDropdown
             value={selectedStage}
             onChange={setSelectedStage}
@@ -244,7 +246,7 @@ function CreateForm({
       </div>
       {!hideContactSelector && (
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Klient / Kontakt</label>
+        <label className={labelClass}>Klient / Kontakt</label>
         <CustomDropdown
           value={contactId}
           onChange={setContactId}
@@ -256,29 +258,29 @@ function CreateForm({
       )}
       {hideContactSelector && contactDisplayName && (
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Klient</label>
-        <p className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-[var(--wp-radius-sm)] text-sm text-slate-700 font-medium">
+        <label className={labelClass}>Klient</label>
+        <p className="rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text)]">
           {contactDisplayName}
         </p>
       </div>
       )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Hodnota (Kč)</label>
+          <label className={labelClass}>Hodnota (Kč)</label>
           <input type="number" step="0.01" value={expectedValue} onChange={(e) => setExpectedValue(e.target.value)} className={inputClass} placeholder="0.00" />
         </div>
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Oček. uzavření</label>
+          <label className={labelClass}>Oček. uzavření</label>
           <input type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} className={inputClass} />
         </div>
       </div>
       {formError && (
-        <p className="rounded-[var(--wp-radius-sm)] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-[var(--wp-radius-sm)] border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-300">
           {formError}
         </p>
       )}
-      <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
-        <button type="button" onClick={onDone} className="px-5 py-2.5 rounded-[var(--wp-radius-sm)] font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+      <div className="mt-2 flex justify-end gap-3 border-t border-[color:var(--wp-surface-card-border)] pt-4">
+        <button type="button" onClick={onDone} className="rounded-[var(--wp-radius-sm)] px-5 py-2.5 font-semibold text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)]">
           Zrušit
         </button>
         <CreateActionButton type="submit" isLoading={pending} icon={Briefcase} className="rounded-[14px] px-6 py-2.5">

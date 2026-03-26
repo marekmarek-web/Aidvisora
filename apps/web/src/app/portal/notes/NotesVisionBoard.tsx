@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { Suspense, useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Pin,
@@ -120,16 +120,20 @@ function noteMatchesSearch(note: MeetingNoteForBoard, q: string): boolean {
   );
 }
 
-export function NotesVisionBoard({
+function NotesVisionBoardInner({
   initialNotes,
   contacts,
+  initialSearchQuery,
+  initialNoteId,
 }: {
   initialNotes: MeetingNoteForBoard[];
   contacts: ContactRow[];
+  initialSearchQuery: string;
+  initialNoteId: string | null;
 }) {
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get("q") ?? "";
-  const noteIdFromQuery = searchParams.get("noteId");
+  const searchQuery = searchParams.get("q") ?? initialSearchQuery;
+  const noteIdFromQuery = searchParams.get("noteId") ?? initialNoteId ?? "";
   const [notes, setNotes] = useState(initialNotes);
   const [positions, setPositions] = useState<Record<string, BoardPosition>>(() => {
     if (typeof window === "undefined") return {};
@@ -145,6 +149,7 @@ export function NotesVisionBoard({
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState<"feed" | "board">("feed");
   const boardRef = useRef<HTMLDivElement>(null);
+  const deepLinkHandled = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -237,7 +242,6 @@ export function NotesVisionBoard({
     setNotes(fresh);
   }
 
-  const deepLinkHandled = useRef(false);
   useEffect(() => {
     if (noteIdFromQuery && notes.length > 0 && !deepLinkHandled.current) {
       const target = notes.find((n) => n.id === noteIdFromQuery);
@@ -364,10 +368,10 @@ export function NotesVisionBoard({
   ];
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] overflow-hidden font-sans">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[color:var(--wp-main-scroll-bg)] font-sans">
       <style>{`
         .notes-dot-grid {
-          background-image: radial-gradient(#cbd5e1 1.5px, transparent 0);
+          background-image: radial-gradient(var(--wp-canvas-dot-color) 1.5px, transparent 0);
           background-size: 28px 28px;
         }
         .notes-glass-card {
@@ -775,3 +779,30 @@ export function NotesVisionBoard({
   );
 }
 
+function NotesBoardSuspenseFallback() {
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[color:var(--wp-main-scroll-bg)] font-sans">
+      <div className="flex h-14 shrink-0 animate-pulse items-center justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4" />
+      <div className="notes-dot-grid m-4 min-h-[200px] flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-inset)]/40 animate-pulse" />
+      <style>{`
+        .notes-dot-grid {
+          background-image: radial-gradient(var(--wp-canvas-dot-color) 1.5px, transparent 0);
+          background-size: 28px 28px;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export function NotesVisionBoard(props: {
+  initialNotes: MeetingNoteForBoard[];
+  contacts: ContactRow[];
+  initialSearchQuery: string;
+  initialNoteId: string | null;
+}) {
+  return (
+    <Suspense fallback={<NotesBoardSuspenseFallback />}>
+      <NotesVisionBoardInner {...props} />
+    </Suspense>
+  );
+}

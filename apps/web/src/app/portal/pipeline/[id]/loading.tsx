@@ -1,6 +1,6 @@
 export default function OpportunityDetailLoading() {
   return (
-    <div className="min-h-screen bg-[#f4f7f9] animate-pulse">
+    <div className="min-h-screen animate-pulse bg-[color:var(--wp-main-scroll-bg)]">
       <div className="h-16 bg-[color:var(--wp-surface-card)]/80 border-b border-[color:var(--wp-surface-card-border)]" />
       <div className="max-w-[1400px] mx-auto p-4 sm:p-8 space-y-6">
         <div className="h-56 rounded-[32px] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-sm" />

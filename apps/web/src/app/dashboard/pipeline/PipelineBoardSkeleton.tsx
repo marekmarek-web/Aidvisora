@@ -3,7 +3,7 @@
 function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded bg-slate-200 ${className ?? ""}`}
+      className={`animate-pulse rounded bg-[color:var(--wp-skeleton-bg)] ${className ?? ""}`}
       aria-hidden
     />
   );
@@ -11,30 +11,30 @@ function Skeleton({ className }: { className?: string }) {
 
 function ColumnSkeleton() {
   return (
-    <div className="flex flex-col h-[480px] rounded-[24px] border border-slate-200/70 bg-slate-50/60 overflow-hidden">
-      <div className="flex items-center justify-between w-full px-5 py-4 border-b border-slate-200 bg-slate-100/80">
+    <div className="flex h-[480px] flex-col overflow-hidden rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-inset)]/60">
+      <div className="flex w-full items-center justify-between border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-5 py-4">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-[10px] shrink-0" />
+          <Skeleton className="h-8 w-8 shrink-0 rounded-[10px]" />
           <div className="flex flex-col gap-1">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-20" />
           </div>
         </div>
-        <Skeleton className="h-7 w-8 rounded-lg shrink-0" />
+        <Skeleton className="h-7 w-8 shrink-0 rounded-lg" />
       </div>
-      <div className="flex flex-col gap-4 p-4 flex-1 min-h-0 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-white p-4 rounded-[20px] border border-slate-100 flex flex-col gap-3 shrink-0"
+            className="flex shrink-0 flex-col gap-3 rounded-[20px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4"
           >
-            <div className="flex justify-between items-start gap-2">
+            <div className="flex items-start justify-between gap-2">
               <Skeleton className="h-5 w-20 rounded-md" />
               <Skeleton className="h-5 w-14 rounded" />
             </div>
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-3 w-28" />
-            <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
+            <div className="flex items-center justify-between border-t border-[color:var(--wp-surface-card-border)] pt-2">
               <Skeleton className="h-6 w-20 rounded-md" />
               <div className="flex gap-1">
                 <Skeleton className="h-6 w-6 rounded-md" />
@@ -43,7 +43,7 @@ function ColumnSkeleton() {
             </div>
           </div>
         ))}
-        <Skeleton className="h-12 w-full rounded-[16px] shrink-0 min-h-[44px]" />
+        <Skeleton className="h-12 min-h-[44px] w-full shrink-0 rounded-[16px]" />
       </div>
     </div>
   );
@@ -51,9 +51,9 @@ function ColumnSkeleton() {
 
 export function PipelineBoardSkeleton() {
   return (
-    <div className="flex-1 overflow-y-auto min-h-0 pt-4">
+    <div className="min-h-0 flex-1 overflow-y-auto pt-4">
       <div className="w-full pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8 xl:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <ColumnSkeleton key={i} />
           ))}
