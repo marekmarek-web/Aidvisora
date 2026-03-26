@@ -80,23 +80,52 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
             <Link
               key={c.contactId}
               href={`/portal/contacts/${c.contactId}#aktivita`}
-              className="p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition-all cursor-pointer flex gap-4 text-inherit no-underline"
+              className={
+                dark
+                  ? "flex cursor-pointer gap-4 rounded-2xl border border-[color:var(--wp-sc-card-border)] bg-[color:var(--wp-sc-card-bg)] p-4 text-inherit no-underline shadow-sm backdrop-blur-md transition-all hover:border-indigo-300/40 hover:bg-[color:var(--wp-message-box-hover)]"
+                  : "flex cursor-pointer gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-inherit no-underline transition-all hover:bg-white hover:shadow-sm"
+              }
             >
               <span
-                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
                 style={{ background: avatarColor(c.contactName) }}
               >
                 {getInitials(c.contactName)}
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <h4 className={`text-sm truncate pr-2 ${c.unread ? "font-black text-slate-900" : "font-bold text-slate-700"}`}>
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 flex items-baseline justify-between">
+                  <h4
+                    className={`truncate pr-2 text-sm ${
+                      dark
+                        ? c.unread
+                          ? "font-black text-[color:var(--wp-text)]"
+                          : "font-bold text-[color:var(--wp-text-muted)]"
+                        : c.unread
+                          ? "font-black text-slate-900"
+                          : "font-bold text-slate-700"
+                    }`}
+                  >
                     {c.contactName}
                   </h4>
-                  <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">{timeAgo(c.lastMessageAt)}</span>
+                  <span
+                    className={`shrink-0 text-[10px] font-bold ${dark ? "text-[color:var(--wp-text-muted)]" : "text-slate-400"}`}
+                  >
+                    {timeAgo(c.lastMessageAt)}
+                  </span>
                 </div>
-                <p className={`text-xs truncate ${c.unread ? "font-bold text-slate-800" : "text-slate-500"}`}>
-                  {c.senderType === "advisor" ? "Vy: " : ""}{c.lastMessage}
+                <p
+                  className={`truncate text-xs ${
+                    dark
+                      ? c.unread
+                        ? "font-semibold text-[color:var(--wp-text)]"
+                        : "text-[color:var(--wp-text-muted)]"
+                      : c.unread
+                        ? "font-bold text-slate-800"
+                        : "text-slate-500"
+                  }`}
+                >
+                  {c.senderType === "advisor" ? "Vy: " : ""}
+                  {c.lastMessage}
                 </p>
               </div>
             </Link>

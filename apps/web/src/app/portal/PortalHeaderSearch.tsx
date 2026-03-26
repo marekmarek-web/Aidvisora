@@ -17,8 +17,16 @@ const EMPTY_RESULTS: SearchResult = {
 
 export type PortalHeaderSearchHandle = { focus: () => void };
 
+export type PortalHeaderSearchProps = {
+  /** `header` = vstup v top headeru podle UX txt (rounded-2xl, tokeny headerInput). */
+  variant?: "toolbar" | "header";
+};
+
 /** Na stránce Zápisky řídí vyhledávání v zápiscích. Jinde funguje inline dropdown bez otevírání okna. Cmd/Ctrl+K fokusuje input. */
-export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, object>(function PortalHeaderSearch(_, ref) {
+export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, PortalHeaderSearchProps>(function PortalHeaderSearch(
+  { variant = "toolbar" },
+  ref
+) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,11 +147,20 @@ export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, ob
     [isNotesPage, firstResultHref, closeAndNavigate]
   );
 
+  const isHeader = variant === "header";
+
   return (
-    <div ref={wrapperRef} className="wp-search-wrapper flex relative min-w-0 flex-1 min-h-[44px]">
+    <div
+      ref={wrapperRef}
+      className={
+        isHeader
+          ? "wp-portal-header-search-wrap group flex relative min-w-0 flex-1"
+          : "wp-search-wrapper flex relative min-w-0 flex-1 min-h-[44px]"
+      }
+    >
       <input
         ref={inputRef}
-        className="wp-search-input"
+        className={isHeader ? "wp-portal-header-search-input" : "wp-search-input"}
         type="text"
         placeholder={placeholder}
         value={value}
@@ -157,15 +174,20 @@ export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, ob
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
+        width={isHeader ? 18 : 20}
+        height={isHeader ? 18 : 20}
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
         viewBox="0 0 24 24"
-        style={{ opacity: 0.5 }}
+        className={
+          isHeader
+            ? "wp-portal-header-search-icon transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400"
+            : undefined
+        }
+        style={isHeader ? { opacity: 0.55 } : { opacity: 0.5 }}
       >
         <circle cx="11" cy="11" r="8" />
         <path d="M21 21l-4.35-4.35" />
@@ -255,3 +277,5 @@ export const PortalHeaderSearch = forwardRef<PortalHeaderSearchHandle | null, ob
     </div>
   );
 });
+
+PortalHeaderSearch.displayName = "PortalHeaderSearch";

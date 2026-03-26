@@ -21,10 +21,13 @@ import { useCaptureCapabilities } from "@/lib/device/useCaptureCapabilities";
 const MOBILE_BREAKPOINT = 768;
 
 const SIDEBAR_STORAGE_KEY = "portal-sidebar";
-const SIDEBAR_CONTENT_GAP_PX = 14;
+/** Odsazení plovoucího sidebaru od levého okraje (Tailwind left-5). */
+const PORTAL_SIDEBAR_FLOAT_INSET_PX = 20;
+/** Mezera mezi sidebar kartou a hlavním panelem. */
+const PORTAL_SIDEBAR_MAIN_GAP_PX = 16;
 const SIDEBAR_WIDTH_MIN = 240;
 const SIDEBAR_WIDTH_MAX = 320;
-const SIDEBAR_WIDTH_DEFAULT = 280;
+const SIDEBAR_WIDTH_DEFAULT = 300;
 
 function getStoredSidebarState() {
   if (typeof window === "undefined") return { width: SIDEBAR_WIDTH_DEFAULT, collapsed: false };
@@ -67,7 +70,7 @@ export function PortalShell({ children, showTeamOverview }: { children: React.Re
   const mainMarginPx = useMemo(() => {
     if (!isDesktop) return 0;
     const sidebarPx = sidebarCollapsed ? PORTAL_SIDEBAR_COLLAPSED_PX : sidebarWidth;
-    return sidebarPx + SIDEBAR_CONTENT_GAP_PX;
+    return PORTAL_SIDEBAR_FLOAT_INSET_PX + sidebarPx + PORTAL_SIDEBAR_MAIN_GAP_PX;
   }, [isDesktop, sidebarCollapsed, sidebarWidth]);
 
   const handleSidebarResize = useCallback((w: number) => {
@@ -181,7 +184,16 @@ function PortalShellInner({
   }, [hasSharedFiles, pathname, router]);
 
   return (
-    <div className="wp-app-container monday-board-wrap flex min-h-screen">
+    <div className="wp-portal-canvas monday-board-wrap relative flex h-[100dvh] min-h-0 flex-row overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+        <div
+          className="wp-portal-blob absolute left-[5%] top-[10%] h-[min(800px,90vw)] w-[min(800px,90vw)] bg-[var(--wp-portal-blob-1)] transition-colors duration-700 ease-out"
+        />
+        <div
+          className="wp-portal-blob absolute bottom-[-10%] right-[10%] h-[min(600px,70vw)] w-[min(600px,70vw)] bg-[var(--wp-portal-blob-2)] transition-colors duration-700 ease-out"
+        />
+        <div className="wp-portal-canvas-dots" />
+      </div>
       <PortalSidebar
           showTeamOverview={showTeamOverview}
           width={sidebarWidth}
@@ -192,12 +204,16 @@ function PortalShellInner({
           mobileDrawerOpen={sidebarDrawerOpen}
           onMobileDrawerClose={() => setSidebarDrawerOpen(false)}
         />
-        <div className="flex flex-col flex-1 min-w-0" style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}>
-          <header className="wp-app-header shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 sticky top-0 z-sticky-header px-3 sm:px-6 md:px-8 pb-1.5 md:pb-4 pt-[calc(var(--safe-area-top)+0.25rem)] sm:pt-[calc(var(--safe-area-top)+0.5rem)] md:pt-[calc(var(--safe-area-top)+1rem)]">
+        <div
+          className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col pb-[var(--safe-area-bottom)] max-md:min-h-0 md:my-5 md:mr-5"
+          style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}
+        >
+          <div className="wp-portal-main-panel flex min-h-0 flex-1 flex-col">
+            <header className="wp-portal-top-header">
             <button
               type="button"
               onClick={() => setSidebarDrawerOpen(true)}
-              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+              className="md:hidden p-2 rounded-lg text-[color:var(--wp-text-muted)] hover:bg-[color:var(--wp-link-hover-bg)] min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
               aria-label="Otevřít menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" viewBox="0 0 24 24">
@@ -205,44 +221,43 @@ function PortalShellInner({
               </svg>
             </button>
             {/* Desktop: inline search. Mobile: icon → opens overlay with search */}
-            <div className="flex-1 min-w-0 min-h-[40px] flex items-center max-w-md md:max-w-2xl">
+            <div className="flex min-h-[48px] min-w-0 flex-1 items-center md:max-w-md">
               {isDesktop && (
-                <Suspense fallback={<div className="h-9 w-48 bg-slate-100 rounded animate-pulse" aria-hidden />}>
-                  <PortalHeaderSearch ref={headerSearchRef} />
+                <Suspense fallback={<div className="h-12 w-48 rounded-2xl bg-[color:var(--wp-header-input-bg)] animate-pulse" aria-hidden />}>
+                  <PortalHeaderSearch ref={headerSearchRef} variant="header" />
                 </Suspense>
               )}
               {isMobile && (
                 <button
                   type="button"
                   onClick={() => setMobileSearchOpen(true)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10 shrink-0"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[color:var(--wp-text-muted)] hover:bg-[color:var(--wp-link-hover-bg)] shrink-0"
                   aria-label="Hledat"
                 >
                   <Search size={22} />
                 </button>
               )}
             </div>
-            {/* sm+: bell + user beside Nový. Below sm: Nový + optional Sken + ⋮ so nothing is only under overflow */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="wp-portal-top-header-actions flex items-center gap-2 sm:gap-3 shrink-0 md:gap-5">
               <QuickNewMenu />
               {showScanInQuickMenu ? (
                 <Link
                   href="/portal/scan"
-                  className="sm:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 active:scale-[0.98] transition-transform"
+                  className="sm:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] text-[color:var(--wp-text-muted)] hover:bg-[color:var(--wp-link-hover-bg)] active:scale-[0.98] transition-transform"
                   aria-label="Skenovat dokument"
                 >
                   <ScanLine size={22} aria-hidden />
                 </Link>
               ) : null}
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 md:gap-5">
                 <NotificationBell />
-                <UserMenu />
+                <UserMenu variant="portalHeader" />
               </div>
               <div className="relative sm:hidden">
                 <button
                   type="button"
                   onClick={() => setOverflowOpen((o) => !o)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[color:var(--wp-text-muted)] hover:bg-[color:var(--wp-link-hover-bg)]"
                   aria-label="Další akce"
                   aria-expanded={overflowOpen}
                 >
@@ -253,14 +268,14 @@ function PortalShellInner({
                     <div className="fixed inset-0 z-overlay" aria-hidden onClick={() => setOverflowOpen(false)} />
                     <div className="absolute right-0 top-full mt-1 z-dropdown w-56 py-1 bg-wp-surface border border-wp-border rounded-xl shadow-xl dark:shadow-black/40">
                       <div className="px-3 py-2 border-b border-wp-border">
-                        <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Další</span>
+                        <span className="text-xs font-semibold text-[color:var(--wp-text-muted)] uppercase tracking-wider">Další</span>
                       </div>
                       <div className="py-1" onClick={() => setOverflowOpen(false)}>
                         <div className="flex items-center gap-2 px-3 py-2">
                           <NotificationBell />
                         </div>
                         <div className="px-2">
-                          <UserMenu />
+                          <UserMenu variant="portalHeader" />
                         </div>
                       </div>
                     </div>
@@ -269,14 +284,8 @@ function PortalShellInner({
               </div>
             </div>
           </header>
-          <div className="flex-1 flex min-h-0 wp-app-content pb-[var(--safe-area-bottom)]">
-            <div className="wp-app-content-inner !flex !flex-col !min-h-0 !p-0 !pt-0">
-              <div className="wp-app-main-surface flex flex-1 flex-col min-h-0">
-                {/* Odpovídá dřívějšímu wp-app-content-inner padding (16/20/12 px pod breakpointem). */}
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-5 pt-4 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-3">
-                  {children}
-                </div>
-              </div>
+            <div className="wp-portal-main-scroll px-4 pb-5 pt-4 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-3">
+              {children}
             </div>
           </div>
         </div>
@@ -286,8 +295,8 @@ function PortalShellInner({
           <div className="fixed inset-0 z-modal bg-wp-bg flex flex-col">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-wp-border shrink-0 min-h-[44px]">
               <div className="flex-1 min-w-0">
-                <Suspense fallback={<div className="h-9 flex-1 bg-slate-100 rounded animate-pulse" />}>
-                  <PortalHeaderSearch ref={headerSearchRef} />
+                <Suspense fallback={<div className="h-12 flex-1 rounded-2xl bg-[color:var(--wp-header-input-bg)] animate-pulse" />}>
+                  <PortalHeaderSearch ref={headerSearchRef} variant="header" />
                 </Suspense>
               </div>
               <button

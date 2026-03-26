@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
+import Script from "next/script";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getContactsCount } from "@/app/actions/contacts";
 import { PortalShell } from "./PortalShell";
 import { MobilePortalApp } from "./mobile/MobilePortalApp";
 import { PortalThemeProvider } from "./PortalThemeProvider";
+import { PORTAL_THEME_STORAGE_PREFLIGHT } from "./theme-storage-preflight";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import "@/styles/aidvisora-monday.css";
 import "@/styles/board.css";
@@ -63,14 +65,24 @@ export default async function PortalLayout({
   });
   if (mobileUiEnabled) {
     return (
-      <PortalThemeProvider>
-        <MobilePortalApp showTeamOverview={showTeamOverview} />
-      </PortalThemeProvider>
+      <>
+        <Script id="portal-theme-storage-preflight" strategy="beforeInteractive">
+          {PORTAL_THEME_STORAGE_PREFLIGHT}
+        </Script>
+        <PortalThemeProvider>
+          <MobilePortalApp showTeamOverview={showTeamOverview} />
+        </PortalThemeProvider>
+      </>
     );
   }
   return (
-    <PortalThemeProvider>
-      <PortalShell showTeamOverview={showTeamOverview}>{children}</PortalShell>
-    </PortalThemeProvider>
+    <>
+      <Script id="portal-theme-storage-preflight" strategy="beforeInteractive">
+        {PORTAL_THEME_STORAGE_PREFLIGHT}
+      </Script>
+      <PortalThemeProvider>
+        <PortalShell showTeamOverview={showTeamOverview}>{children}</PortalShell>
+      </PortalThemeProvider>
+    </>
   );
 }

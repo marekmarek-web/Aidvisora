@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -25,11 +25,10 @@ import {
   CheckCircle2,
   PieChart,
   Settings2,
-  X,
   ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
-import type { DashboardKpis, TodayEvent } from "@/app/actions/dashboard";
+import type { DashboardKpis } from "@/app/actions/dashboard";
 import type { ServiceRecommendationWithContact } from "@/app/actions/service-engine";
 import { getServiceCtaHref } from "@/lib/service-engine/cta";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
@@ -614,25 +613,63 @@ export function DashboardEditable({
   const greetingName = advisorName?.trim() || "poradce";
   const dateLabel = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const formatEventTime = (e: TodayEvent) =>
-    new Date(e.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
-
   const agendaEmpty = kpis.todayEvents.length === 0 && kpis.tasksDueToday.length === 0;
 
+  const sidePanelTodayLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString("cs-CZ", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    []
+  );
+
+  const agendaTimelineRows = useMemo(() => {
+    const rows: { id: string; kind: "event" | "task"; time: string; title: string; sub?: string }[] = [];
+    for (const ev of kpis.todayEvents) {
+      rows.push({
+        id: `ev-${ev.id}`,
+        kind: "event",
+        time: new Date(ev.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }),
+        title: ev.title,
+        sub: ev.contactName ?? undefined,
+      });
+    }
+    for (const t of kpis.tasksDueToday) {
+      rows.push({
+        id: `task-${t.id}`,
+        kind: "task",
+        time: "Úkol",
+        title: t.title,
+        sub: t.contactName ?? undefined,
+      });
+    }
+    return rows;
+  }, [kpis.todayEvents, kpis.tasksDueToday]);
+
   return (
-    <div className="flex-1 min-h-0 bg-wp-bg text-wp-primary relative overflow-y-auto animate-[wp-fade-in_0.3s_ease] dark:text-slate-100">
+    <div
+      className={clsx(
+        "relative flex-1 min-h-0 overflow-y-auto bg-transparent text-[color:var(--wp-text)] animate-[wp-fade-in_0.3s_ease]",
+        "transition-[margin-right] duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        drawerOpen && "lg:mr-[420px]",
+      )}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .bg-dot-grid {
-          background-image: radial-gradient(#cbd5e1 1px, transparent 0);
-          background-size: 32px 32px;
-        }
-        .dark .bg-dot-grid {
-          background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 0);
-        }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .dashboard-sc-panel-scroll::-webkit-scrollbar { width: 6px; }
+        .dashboard-sc-panel-scroll::-webkit-scrollbar-track { background: transparent; }
+        .dashboard-sc-panel-scroll::-webkit-scrollbar-thumb {
+          background: color-mix(in srgb, var(--wp-text-muted) 35%, transparent);
+          border-radius: 10px;
+        }
+        .dashboard-sc-panel-scroll::-webkit-scrollbar-thumb:hover {
+          background: color-mix(in srgb, var(--wp-text-muted) 55%, transparent);
+        }
         @keyframes slideInRight {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
@@ -640,34 +677,34 @@ export function DashboardEditable({
         .animate-slide-in-right { animation: slideInRight 0.25s ease-out; }
       `}</style>
 
-      <main className="max-w-[1400px] mx-auto p-4 sm:p-6 md:p-8 bg-dot-grid min-h-[calc(100vh-73px)] text-slate-800 dark:text-slate-100">
+      <main className="max-w-[1400px] mx-auto min-h-0 p-4 sm:p-6 md:p-8 text-[color:var(--wp-text)]">
 
         {/* 1. GREETING + TOP CONTROLS */}
         <div className="mb-10">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight font-display">
+            <h1 className="text-3xl md:text-4xl font-black text-[color:var(--wp-text)] tracking-tight font-display">
               Dobrý den, {greetingName} 👋
             </h1>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={toggleCalendarDrawer}
-                className="text-sm font-bold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 shadow-sm min-h-[44px]"
+                className="text-sm font-bold text-[color:var(--wp-text-muted)] hover:text-[color:var(--wp-text)] bg-[color:var(--wp-surface)] border border-[color:var(--wp-border)] px-4 py-2 rounded-xl transition-colors flex items-center gap-2 shadow-sm min-h-[44px]"
               >
                 <Calendar size={16} /> {drawerOpen ? "Skrýt kalendář" : "Kalendář"}
               </button>
               <button
                 type="button"
                 onClick={openCustomize}
-                className="text-sm font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 min-h-[44px]"
+                className="text-sm font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:text-indigo-200 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 min-h-[44px]"
               >
                 <Settings2 size={16} /> Upravit nástěnku
               </button>
             </div>
           </div>
-          <p className="text-sm font-medium text-slate-500 mb-8">Dnes je {dateLabel}. Zde je váš přehled.</p>
+          <p className="text-sm font-medium text-[color:var(--wp-text-muted)] mb-8">Dnes je {dateLabel}. Zde je váš přehled.</p>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-3">
             {([
               { icon: UserPlus, label: "Nový klient", href: "/portal/contacts?newClient=1", variant: "create" as const },
               { icon: Calendar, label: "Nová schůzka", href: "/portal/calendar?new=1", variant: "create" as const },
@@ -685,7 +722,7 @@ export function DashboardEditable({
                 <Link
                   key={i}
                   href={btn.href}
-                  className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:border-indigo-200 hover:bg-slate-50 hover:text-indigo-600"
+                  className="flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-2.5 text-xs font-bold text-[color:var(--wp-text-muted)] shadow-sm transition-all hover:border-indigo-200 hover:bg-[color:var(--wp-link-hover-bg)] hover:text-indigo-600 dark:hover:text-indigo-300"
                 >
                   <btn.icon size={16} className="opacity-70" />
                   {btn.label}
@@ -720,7 +757,7 @@ export function DashboardEditable({
                     <Icon size={16} />
                     <span className="text-[10px] font-black uppercase tracking-widest">{card.label}</span>
                   </div>
-                  <div className={`text-4xl font-display font-black text-slate-900 leading-none ${c.hoverText} transition-colors tabular-nums`}>
+                  <div className={`text-4xl font-display font-black text-[color:var(--wp-text)] leading-none ${c.hoverText} transition-colors tabular-nums`}>
                     {kpis[card.key]}
                   </div>
                 </div>
@@ -833,7 +870,7 @@ export function DashboardEditable({
                       draggable
                       onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
                       onDragEnd={handleDragEnd}
-                      className="p-2 min-h-[44px] min-w-[44px] text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 inline-flex items-center justify-center"
+                      className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded p-2 text-slate-300 transition-colors hover:text-slate-500 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
                       aria-label="Chytit a přesunout widget"
                     >
                       <GripVertical size={16} />
@@ -862,86 +899,109 @@ export function DashboardEditable({
         type="button"
         onClick={() => setCalendarDrawerOpen(true)}
         className={clsx(
-          "fixed right-0 top-1/2 z-[202] flex min-h-[100px] min-w-[48px] -translate-y-1/2 flex-col items-center justify-center gap-1 rounded-l-2xl border border-r-0 border-slate-200/90 bg-white/95 py-3 pl-2 pr-1 shadow-lg backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] dark:border-white/12 dark:bg-aidv-surface-elevated/95",
+          "fixed right-0 top-1/2 z-[202] flex h-32 w-10 -translate-y-1/2 flex-col items-center justify-center gap-2 rounded-l-2xl border border-r-0 border-[color:var(--wp-sc-panel-border)] bg-[color:var(--wp-sc-panel-bg)] py-3 pl-1 pr-0.5 shadow-[var(--wp-sc-panel-shadow)] backdrop-blur-md transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
           drawerOpen && "pointer-events-none translate-x-full opacity-0",
         )}
         aria-label="Otevřít kalendář, agendu a zprávy"
       >
+        <ChevronLeft size={18} className="text-[color:var(--wp-text-muted)]" aria-hidden />
+        <div className="h-px w-5 bg-[color:var(--wp-sc-timeline-line-via)]" aria-hidden />
         <Calendar size={20} className="text-indigo-600 dark:text-indigo-300" aria-hidden />
-        <ChevronLeft size={18} className="text-slate-500 dark:text-slate-300" aria-hidden />
       </button>
 
       <aside
         className={clsx(
-          "fixed inset-y-0 right-0 z-drawer-panel flex w-full max-w-[min(100vw,420px)] flex-col border-l border-[color:var(--aidv-border-on-dark)] bg-aidv-surface-dark shadow-[ -4px_0_24px_-12px_rgba(0,0,0,0.25) ] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:max-w-[420px]",
+          "fixed inset-y-0 right-0 z-drawer-panel flex w-full max-w-[min(100vw,420px)] flex-col border-l border-[color:var(--wp-sc-panel-border)] bg-[color:var(--wp-sc-panel-bg)] shadow-[var(--wp-sc-panel-shadow)] backdrop-blur-xl transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[420px]",
           drawerOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
         )}
         aria-hidden={!drawerOpen}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--aidv-border-on-dark)] px-3 py-2 lg:px-4">
-          <span className="text-sm font-bold text-aidv-text-on-dark">Kalendář a zprávy</span>
+        <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--wp-sc-panel-border)] px-6 py-6 md:px-8">
+          <Link
+            href="/portal/calendar"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-[color:var(--wp-text-muted)] transition-colors hover:bg-[color:var(--wp-link-hover-bg)] hover:text-[color:var(--wp-text)]"
+            aria-label="Otevřít kalendář"
+          >
+            <Calendar size={22} aria-hidden />
+          </Link>
           <button
             type="button"
             onClick={() => setCalendarDrawerOpen(false)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-aidv-text-muted-on-dark transition-colors hover:bg-white/10 hover:text-aidv-text-on-dark"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-[color:var(--wp-text-muted)] transition-colors hover:bg-[color:var(--wp-link-hover-bg)] hover:text-[color:var(--wp-text)]"
             aria-label="Zavřít panel"
           >
-            <X size={22} aria-hidden />
+            <ChevronRight size={24} aria-hidden />
           </button>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="hide-scrollbar flex-1 space-y-5 overflow-y-auto p-4 sm:p-5">
-            <section className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-aidv-text-muted-on-dark">Kalendář</h3>
-              <CalendarWidget hideTitle onNewActivity={() => router.push("/portal/calendar?new=1")} variant="darkPanel" />
+          <div className="dashboard-sc-panel-scroll flex-1 space-y-6 overflow-y-auto p-4 sm:p-5 md:px-8 md:pb-6 md:pt-2">
+            <section>
+              <div className="group relative overflow-hidden rounded-3xl border border-[color:var(--wp-sc-card-border)] bg-[color:var(--wp-sc-card-bg)] p-6 shadow-lg backdrop-blur-xl">
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  aria-hidden
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(168,85,247,0.05) 100%)",
+                  }}
+                />
+                <div className="relative mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-lg font-black tracking-tight text-[color:var(--wp-text)]">Dnes</h2>
+                    <p className="text-sm font-semibold text-[color:var(--wp-text-muted)]">{sidePanelTodayLabel}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/portal/calendar?new=1")}
+                    className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md shadow-indigo-500/25 transition-transform hover:scale-105 active:scale-95 dark:bg-indigo-500"
+                    aria-label="Nová aktivita v kalendáři"
+                  >
+                    <Plus size={22} aria-hidden />
+                  </button>
+                </div>
+                <div className="relative">
+                  <CalendarWidget hideTitle onNewActivity={() => router.push("/portal/calendar?new=1")} variant="darkPanel" />
+                </div>
+              </div>
             </section>
 
-            <section className="space-y-3 border-t border-[color:var(--aidv-border-on-dark)] pt-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-aidv-text-muted-on-dark">Agenda</h3>
+            <section className="space-y-4 border-t border-[color:var(--wp-sc-panel-border)] pt-6">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-muted)]">Agenda</h3>
               {agendaEmpty ? (
-                <p className="text-sm text-aidv-text-muted-on-dark">Dnes nic naplánováno.</p>
+                <p className="text-sm text-[color:var(--wp-text-muted)]">Dnes nic naplánováno.</p>
               ) : (
-                <ul className="space-y-2">
-                  {kpis.todayEvents.map((ev) => (
-                    <li key={ev.id}>
-                      <Link
-                        href="/portal/calendar"
-                        className="block rounded-xl border border-[color:var(--aidv-border-on-dark)] bg-aidv-surface-elevated/50 px-3 py-2.5 transition-colors hover:bg-white/10"
-                      >
-                        <p className="text-xs font-bold text-aidv-text-muted-on-dark">{formatEventTime(ev)}</p>
-                        <p className="text-sm font-semibold text-aidv-text-on-dark">{ev.title}</p>
-                        {ev.contactName ? (
-                          <p className="mt-0.5 text-xs text-aidv-text-muted-on-dark">{ev.contactName}</p>
-                        ) : null}
-                      </Link>
-                    </li>
-                  ))}
-                  {kpis.tasksDueToday.map((t) => (
-                    <li key={t.id}>
-                      <Link
-                        href="/portal/tasks"
-                        className="block rounded-xl border border-[color:var(--aidv-border-on-dark)] bg-aidv-surface-elevated/50 px-3 py-2.5 transition-colors hover:bg-white/10"
-                      >
-                        <p className="text-xs font-bold uppercase tracking-wider text-amber-300/90">Úkol</p>
-                        <p className="text-sm font-semibold text-aidv-text-on-dark">{t.title}</p>
-                        {t.contactName ? (
-                          <p className="mt-0.5 text-xs text-aidv-text-muted-on-dark">{t.contactName}</p>
-                        ) : null}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <div className="relative pl-2">
+                  <div
+                    className="absolute left-[15px] top-2 bottom-2 w-px bg-gradient-to-b from-[color:var(--wp-sc-timeline-line-from)] via-[color:var(--wp-sc-timeline-line-via)] to-transparent"
+                    aria-hidden
+                  />
+                  <ul className="space-y-4">
+                    {agendaTimelineRows.map((row) => (
+                      <li key={row.id} className="relative flex gap-4 pl-1">
+                        <div className="relative z-[1] mt-1.5 flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 border-[color:var(--wp-sc-timeline-dot-border)] bg-[color:var(--wp-sc-timeline-dot-bg)] shadow-sm" />
+                        <Link
+                          href={row.kind === "event" ? "/portal/calendar" : "/portal/tasks"}
+                          className="min-w-0 flex-1 rounded-2xl border border-[color:var(--wp-sc-card-border)] bg-[color:var(--wp-sc-card-bg)] p-4 shadow-sm backdrop-blur-md transition-colors hover:border-indigo-300/40 hover:bg-[color:var(--wp-message-box-hover)]"
+                        >
+                          <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-muted)]">{row.time}</p>
+                          <p className="mt-1 text-sm font-bold text-[color:var(--wp-text)]">{row.title}</p>
+                          {row.sub ? <p className="mt-0.5 text-xs text-[color:var(--wp-text-muted)]">{row.sub}</p> : null}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </section>
 
-            <section className="border-t border-[color:var(--aidv-border-on-dark)] pt-4">
-              <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-aidv-text-muted-on-dark">Zprávy</h3>
+            <section className="space-y-3 border-t border-[color:var(--wp-sc-panel-border)] pt-6">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--wp-text-muted)]">Zprávy</h3>
               <MessengerPreview forDarkPanel />
             </section>
           </div>
 
-          <div className="flex-shrink-0 border-t border-[color:var(--aidv-border-on-dark)] bg-aidv-surface-elevated p-4">
+          <div className="flex-shrink-0 border-t border-[color:var(--wp-sc-panel-border)] bg-[color:var(--wp-sc-card-bg)] p-4 backdrop-blur-md md:px-8">
             <CreateActionButton
               type="button"
               onClick={() => router.push("/portal/calendar?new=1")}

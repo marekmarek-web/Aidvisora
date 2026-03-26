@@ -337,6 +337,205 @@
   color: var(--wp-text);
 }
 
+/* Portal: plátno za plovoucími panely (bgApp z UX txt) */
+.wp-portal-canvas {
+  min-height: 100vh;
+  font-size: var(--wp-fs-sm);
+  color: var(--wp-text);
+  background-color: var(--wp-app-canvas-bg);
+  transition: background-color 700ms ease-out, color 700ms ease-out;
+}
+
+/* Tečky na plátně (jako txt ř. 184) – jedna vrstva pod panely */
+.wp-portal-canvas-dots {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--wp-canvas-dot-color) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+.wp-portal-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Jeden hlavní panel vpravo: border, stín, blur; na mobilu bez „rámečku“ */
+.wp-portal-main-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .wp-portal-main-panel {
+    border-radius: var(--wp-radius-2xl);
+    border: 1px solid var(--wp-main-panel-border);
+    box-shadow: var(--wp-main-panel-shadow);
+    background-color: var(--wp-main-panel-bg);
+    backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 24px));
+    -webkit-backdrop-filter: blur(var(--wp-main-panel-backdrop-blur, 24px));
+  }
+}
+
+/* Header uvnitř main panelu (h-24) */
+.wp-portal-top-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wp-space-2);
+  flex-shrink: 0;
+  height: 6rem;
+  min-height: 6rem;
+  padding-left: var(--wp-space-4);
+  padding-right: var(--wp-space-4);
+  padding-top: calc(var(--safe-area-top, 0px) + var(--wp-space-2));
+  padding-bottom: var(--wp-space-2);
+  border-bottom: 1px solid var(--wp-portal-header-border);
+  background: var(--wp-portal-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 40;
+}
+
+@media (min-width: 640px) {
+  .wp-portal-top-header {
+    padding-left: var(--wp-space-6);
+    padding-right: var(--wp-space-6);
+    padding-top: calc(var(--safe-area-top, 0px) + var(--wp-space-3));
+    gap: var(--wp-space-3);
+  }
+}
+
+@media (min-width: 768px) {
+  .wp-portal-top-header {
+    padding-left: var(--wp-space-8);
+    padding-right: var(--wp-space-8);
+    padding-top: calc(var(--safe-area-top, 0px) + var(--wp-space-4));
+    gap: var(--wp-space-5);
+    flex-wrap: nowrap;
+  }
+
+  /* txt ř. 465: gap-5 mezi search a akcemi */
+  .wp-portal-top-header-actions {
+    gap: var(--wp-space-5);
+  }
+}
+
+/* Scrollovatelný obsah – tečky na plátně (.wp-portal-canvas-dots), zde bez duplicity */
+.wp-portal-main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--wp-text);
+  background-color: transparent;
+}
+
+/* Vyhledávání v hlavičce panelu (headerInput) */
+.wp-portal-header-search-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  min-height: 48px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-portal-header-search-wrap svg.wp-portal-header-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--wp-text-muted);
+}
+
+.wp-portal-header-search-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border-radius: 1rem;
+  font-size: var(--wp-fs-sm);
+  font-weight: var(--wp-fw-semibold);
+  font-family: var(--wp-font);
+  outline: none;
+  border: 1px solid var(--wp-header-input-border);
+  background-color: var(--wp-header-input-bg);
+  color: var(--wp-header-input-text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.wp-portal-header-search-input::placeholder {
+  color: var(--wp-header-input-placeholder);
+  font-weight: var(--wp-fw-medium);
+  opacity: 1;
+}
+
+.wp-portal-header-search-input:focus {
+  border-color: var(--wp-header-input-focus-border);
+  box-shadow: 0 0 0 4px var(--wp-header-input-focus-ring);
+}
+
+/* + Nový v top headeru (btnNew z txt) */
+.wp-quick-new-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 1rem;
+  font-size: var(--wp-fs-xs);
+  font-weight: var(--wp-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--wp-header-new-text);
+  background-color: var(--wp-header-new-bg);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.wp-quick-new-trigger:hover {
+  background-color: var(--wp-header-new-hover);
+}
+
+.wp-quick-new-trigger:active {
+  transform: scale(0.96);
+}
+
+.wp-quick-new-menu {
+  border-radius: 1.5rem;
+  border: 1px solid var(--wp-dropdown-border);
+  background-color: var(--wp-dropdown-surface);
+  box-shadow: var(--wp-dropdown-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 /* DASHBOARD.txt: app-header with 16px 24px padding; sklo přes tokeny (light/dark) */
 .wp-app-header {
   display: flex;

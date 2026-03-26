@@ -35,6 +35,7 @@ import {
   FileText,
   Target,
   User,
+  Command,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getOpenTasksCount } from "@/app/actions/tasks";
@@ -42,8 +43,9 @@ import { getUnreadConversationsCount } from "@/app/actions/messages";
 import { useQuickActionsItems } from "@/lib/quick-actions/useQuickActionsItems";
 import { QuickNewItemIcon } from "@/app/portal/quick-new-ui";
 
-export const PORTAL_SIDEBAR_WIDTH_PX = 280;
-export const PORTAL_SIDEBAR_COLLAPSED_PX = 80;
+/** Zarovnáno s main banner txt (expanded 300px, collapsed 88px). */
+export const PORTAL_SIDEBAR_WIDTH_PX = 300;
+export const PORTAL_SIDEBAR_COLLAPSED_PX = 88;
 
 const SIDEBAR_ORDER_KEY = "portal-sidebar-order";
 
@@ -401,22 +403,26 @@ export function PortalSidebar({
 
       <aside
         className={[
-          "fixed left-0 top-0 bottom-0 flex flex-col shrink-0 transition-[width,transform] duration-300 ease-in-out",
+          "fixed z-drawer-panel flex flex-col shrink-0 transition-[width,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "bg-[color:var(--wp-sidebar-card-bg)] backdrop-blur-3xl",
+          "max-md:left-0 max-md:top-0 max-md:bottom-0 max-md:border-r max-md:border-[color:var(--wp-sidebar-card-border)] max-md:shadow-[4px_0_24px_-12px_rgba(0,0,0,0.12)]",
+          "md:left-5 md:top-5 md:bottom-5 md:h-auto md:rounded-[32px] md:border md:border-[color:var(--wp-sidebar-card-border)] md:shadow-[var(--wp-sidebar-card-shadow)]",
           "md:z-20 md:translate-x-0",
-          mobileOpen ? "translate-x-0 z-drawer-panel pointer-events-auto" : "-translate-x-full z-drawer-panel pointer-events-none md:pointer-events-auto",
-          isDark
-            ? "bg-gradient-to-br from-aidv-surface-dark via-aidv-surface-elevated to-[#101630] border-r border-[color:var(--aidv-border-on-dark)] shadow-[4px_0_24px_-12px_rgba(0,0,0,0.35)]"
-            : "bg-white border-r border-slate-100 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)]",
+          mobileOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none md:pointer-events-auto",
         ].join(" ")}
         style={{
-          width: isMobileState ? "min(85vw, 280px)" : `${effectiveWidth}px`,
+          width: isMobileState ? "min(85vw, 300px)" : `${effectiveWidth}px`,
         }}
       >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent opacity-80"
+          aria-hidden
+        />
         {/* Header – collapsed: symbol A; expanded: logos/Aidvisora logo.png → public/logos */}
         <div
           className={[
-            "h-20 flex items-center justify-between px-5 flex-shrink-0",
-            isDark ? "border-b border-white/10" : "border-b border-slate-50",
+            "h-24 flex items-center justify-between flex-shrink-0 border-b px-5 md:px-6",
+            isDark ? "border-white/5" : "border-slate-200/50",
           ].join(" ")}
         >
           <Link
@@ -447,15 +453,17 @@ export function PortalSidebar({
               <button
                 type="button"
                 onClick={() => onCollapsedChange(!collapsed)}
-                className={`hidden md:flex w-7 h-7 items-center justify-center rounded-lg transition-colors
-                  ${isDark ? "text-white hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}
-                  ${
-                    collapsed
-                      ? isDark
-                        ? "absolute -right-3.5 top-6 bg-aidv-surface-elevated border border-white/15 shadow-lg z-50"
-                        : "absolute -right-3.5 top-6 bg-white border border-slate-200 shadow-sm z-50"
-                      : ""
-                  }`}
+                className={[
+                  "hidden md:flex h-8 w-8 shrink-0 items-center justify-center transition-all",
+                  collapsed
+                    ? "absolute -right-4 top-8 z-50 rounded-full bg-indigo-600 text-white shadow-lg hover:scale-110"
+                    : [
+                        "rounded-full border border-transparent",
+                        isDark
+                          ? "text-slate-400 hover:bg-white/10 hover:text-white"
+                          : "text-slate-400 hover:bg-white/10 hover:text-slate-900",
+                      ].join(" "),
+                ].join(" ")}
                 aria-label={collapsed ? "Rozbalit panel" : "Sbalit panel"}
               >
                 {collapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={16} />}
@@ -473,56 +481,63 @@ export function PortalSidebar({
           </div>
         </div>
 
-        {/* Search – v2 */}
+        {/* Search – main banner txt: py-5, rounded-[16px], Command + K */}
         {!collapsed && (
-          <div className="px-5 py-4 flex-shrink-0">
-            <div className="relative group">
-              <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? "text-white" : "text-slate-400"}`} />
+          <div className="relative z-10 flex-shrink-0 px-5 py-5 transition-all duration-300 md:px-6">
+            <div className="relative">
+              <Search
+                size={18}
+                className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--wp-sidebar-search-text)] opacity-60"
+                aria-hidden
+              />
               <input
                 type="text"
                 placeholder="Hledat v menu..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs font-bold outline-none transition-all min-h-[44px] ${
-                  isDark
-                    ? "bg-white/10 border border-white/20 text-white placeholder:text-white/90 focus:bg-white/20 focus:ring-2 focus:ring-white/30 focus:border-white/40"
-                    : "bg-slate-50 border border-slate-100 text-slate-700 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
-                }`}
+                className="min-h-[48px] w-full rounded-2xl border border-[color:var(--wp-sidebar-search-border)] bg-[color:var(--wp-sidebar-search-bg)] py-3 pl-11 pr-16 text-sm font-semibold text-[color:var(--wp-sidebar-search-text)] outline-none transition-all placeholder:font-medium placeholder:text-[color:var(--wp-sidebar-search-placeholder)] focus:border-[color:var(--wp-sidebar-search-focus-border)] focus:bg-[color:var(--wp-sidebar-search-focus-bg)] focus:ring-4 focus:ring-[color:var(--wp-sidebar-search-focus-ring)]"
                 aria-label="Hledat v menu"
               />
+              <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-50">
+                <Command size={12} className="text-[color:var(--wp-sidebar-search-text)]" aria-hidden />
+                <span className="text-[10px] font-bold text-[color:var(--wp-sidebar-search-text)]">K</span>
+              </div>
             </div>
           </div>
         )}
 
         {/* Nav – sekce, specialBg, AI položka, D&D */}
-        <nav className="flex-1 overflow-y-auto pb-6 pt-2 hide-scrollbar">
+        <nav className="flex-1 space-y-6 overflow-y-auto pb-6 pt-2 hide-scrollbar">
           {filteredSections.map((group, groupIdx) => (
             <div
               key={group.id}
-              className={`
-                ${groupIdx !== 0 ? "mt-2" : collapsed ? "mt-4" : ""}
-                ${group.specialBg && !collapsed
+              className={[
+                "relative transition-all duration-300",
+                groupIdx === 0 && collapsed ? "mt-4" : "",
+                group.specialBg && !collapsed
                   ? isDark
-                    ? "bg-white/10 mx-3 py-3 rounded-2xl border border-white/10"
-                    : "bg-gradient-to-b from-fuchsia-50/40 to-indigo-50/40 mx-3 py-3 rounded-2xl border border-indigo-100/50 shadow-sm"
-                  : "px-3"}
-                ${group.specialBg && collapsed ? (isDark ? "bg-white/10 mx-2 py-2 rounded-2xl" : "bg-fuchsia-50/40 mx-2 py-2 rounded-2xl") : ""}
-              `}
+                    ? "mx-3 rounded-2xl border border-fuchsia-500/20 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/5 p-3 shadow-inner"
+                    : "mx-3 rounded-2xl border border-purple-100/50 bg-gradient-to-b from-purple-50/50 to-indigo-50/30 p-3 shadow-inner"
+                  : "px-3",
+                group.specialBg && collapsed ? (isDark ? "mx-2 rounded-2xl bg-white/10 py-2" : "mx-2 rounded-2xl bg-fuchsia-50/40 py-2") : "",
+              ].join(" ")}
             >
               {!collapsed && (
-                <div className="flex items-center px-3 mb-2 pt-1">
-                  <h4 className={`text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-1.5 ${
-                    group.specialBg ? (isDark ? "text-white" : "text-indigo-500") : isDark ? "text-white" : "text-slate-400"
-                  }`}>
-                    {group.specialBg && <Zap size={10} className={isDark ? "text-white shrink-0" : "text-amber-500 shrink-0"} />}
+                <div className="relative z-10 mb-3 ml-3 flex items-center pt-1">
+                  <h4
+                    className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] ${
+                      group.specialBg ? (isDark ? "text-fuchsia-400" : "text-purple-600") : isDark ? "text-slate-400" : "text-slate-400"
+                    }`}
+                  >
+                    {group.specialBg && <Zap size={12} className="shrink-0 fill-amber-500/20 text-amber-500" />}
                     {group.section}
                   </h4>
                 </div>
               )}
               {collapsed && groupIdx !== 0 && !group.specialBg && (
-                <div className={`w-8 h-px mx-auto mb-4 mt-2 ${isDark ? "bg-white/20" : "bg-slate-100"}`} aria-hidden />
+                <div className={`mx-auto mb-4 mt-2 h-px w-8 ${isDark ? "bg-white/10" : "bg-slate-200"}`} aria-hidden />
               )}
-              <ul className="space-y-1">
+              <ul className="relative z-10 space-y-1.5">
                 {group.items.map((item, itemIdx) => {
                   const isActive = isItemActive(pathname, item.href);
                   const Icon = item.Icon;
@@ -546,15 +561,15 @@ export function PortalSidebar({
                       >
                         <Link
                           href={item.href}
-                          className={`w-full flex items-center relative transition-all duration-300
-                            ${collapsed ? "justify-center p-3 rounded-2xl min-h-[44px]" : "px-3 py-2.5 rounded-xl min-h-[44px]"}
+                          className={`w-full flex items-center relative overflow-hidden transition-all duration-300
+                            ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] justify-between rounded-[14px] px-4 py-3"}
                             ${isDark
                               ? isActive
-                                ? "bg-white/20 text-white shadow-lg"
-                                : "text-white hover:bg-white/10 border border-transparent hover:border-white/20"
+                                ? "border border-transparent bg-white/15 text-white shadow-lg ring-1 ring-white/10"
+                                : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
                               : isActive
-                                ? "bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white shadow-lg shadow-fuchsia-900/20"
-                                : "text-slate-700 hover:bg-white hover:shadow-md border border-transparent hover:border-fuchsia-100"}
+                                ? "border border-transparent bg-gradient-to-r from-fuchsia-600 to-indigo-600 font-bold text-white shadow-lg shadow-fuchsia-900/20"
+                                : "border border-transparent text-slate-500 hover:bg-slate-100/60 hover:text-slate-900"}
                           `}
                           title={collapsed ? item.label : undefined}
                         >
@@ -590,17 +605,17 @@ export function PortalSidebar({
                     >
                       <Link
                         href={item.href}
-                        className={`w-full flex items-center relative transition-all duration-200
-                          ${collapsed ? "justify-center p-3 rounded-2xl min-h-[44px]" : "px-3 py-2.5 rounded-xl min-h-[44px]"}
+                        className={`w-full flex items-center relative overflow-hidden transition-all duration-300
+                          ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] rounded-[14px] px-4 py-3"}
                           ${isDark
                             ? isActive
-                              ? "bg-white/20 text-white shadow-md"
-                              : "text-white hover:bg-white/10"
+                              ? "border border-transparent bg-white/15 text-white shadow-lg ring-1 ring-white/10"
+                              : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
                             : isActive
-                              ? "bg-[#0f172a] text-white shadow-md"
+                              ? "border border-slate-200 bg-white font-bold text-indigo-700 shadow-lg shadow-indigo-100"
                               : item.isHighlighted
-                                ? "text-slate-700 hover:bg-slate-100/80 font-bold"
-                                : "text-slate-600 hover:bg-slate-50"}
+                                ? "border border-transparent font-bold text-slate-700 hover:bg-slate-100/60 hover:text-slate-900"
+                                : "border border-transparent font-medium text-slate-500 hover:bg-slate-100/60 hover:text-slate-900"}
                         `}
                         title={collapsed ? item.label : undefined}
                       >
@@ -655,14 +670,12 @@ export function PortalSidebar({
             </div>
           )}
           {filteredSections.length === 0 && (
-            <p className="px-3 py-4 text-sm text-slate-500">Žádné položky nevyhovují hledání.</p>
+            <p className="px-3 py-4 text-sm text-[color:var(--wp-text-muted)]">Žádné položky nevyhovují hledání.</p>
           )}
         </nav>
 
         {/* Spodní blok – profil + přepínač palety; konzistentní šířka a zarovnání (90°) */}
-        <div
-          className={`flex-shrink-0 border-t ${isDark ? "border-white/10 bg-white/5" : "border-slate-100 bg-slate-50/50"}`}
-        >
+        <div className="flex-shrink-0 border-t border-[color:var(--wp-sidebar-card-border)]">
           {/* Footer – profil */}
           <div className="w-full px-5 py-4">
             <Link
@@ -687,23 +700,23 @@ export function PortalSidebar({
             </Link>
           </div>
 
-          {(paletteOpen || zapOpen) && (
+          <div className="relative z-[60] w-full px-5 pb-4 flex justify-center">
+            {(paletteOpen || zapOpen) && (
+              <div
+                className="fixed inset-0 z-[30] bg-black/25 backdrop-blur-[2px] md:bg-black/20 pointer-events-auto"
+                aria-hidden
+                onClick={() => {
+                  setPaletteOpen(false);
+                  setZapOpen(false);
+                }}
+              />
+            )}
             <div
-              className="fixed inset-0 z-[45]"
-              aria-hidden
-              onClick={() => {
-                setPaletteOpen(false);
-                setZapOpen(false);
-              }}
-            />
-          )}
-          <div className="w-full px-5 pb-4 flex justify-center">
-            <div
-              className={`relative inline-flex gap-0.5 rounded-full p-1.5 shadow-lg ${
+              className={`relative z-[50] inline-flex gap-0.5 rounded-full p-1.5 shadow-lg ${
                 isDark ? "bg-black/20 backdrop-blur-md border border-white/10" : "bg-slate-100 border border-slate-200"
               }`}
             >
-              <div className="relative z-[50]">
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => {
@@ -728,71 +741,83 @@ export function PortalSidebar({
                 {paletteOpen && (
                   <div
                     role="menu"
-                    className={`absolute bottom-full left-1/2 z-[60] mb-2 w-52 -translate-x-1/2 rounded-2xl border py-1.5 shadow-xl ${
-                      isDark ? "border-white/10 bg-aidv-surface-elevated" : "border-slate-200 bg-white"
-                    }`}
+                    className="absolute bottom-full left-1/2 z-[100] mb-2 min-w-[min(100vw-2rem,280px)] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] p-2 shadow-2xl backdrop-blur-2xl pointer-events-auto"
                   >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setTheme("light");
-                        setPaletteOpen(false);
-                      }}
-                      className={`mx-1 flex min-h-[44px] w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold ${
-                        theme === "light"
-                          ? isDark
-                            ? "bg-white/15 text-white"
-                            : "bg-slate-100 text-slate-900"
-                          : isDark
-                            ? "text-white/90 hover:bg-white/10"
-                            : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Sun size={18} aria-hidden /> Světlý
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setTheme("dark");
-                        setPaletteOpen(false);
-                      }}
-                      className={`mx-1 flex min-h-[44px] w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold ${
-                        theme === "dark"
-                          ? isDark
-                            ? "bg-white/15 text-white"
-                            : "bg-slate-100 text-slate-900"
-                          : isDark
-                            ? "text-white/90 hover:bg-white/10"
-                            : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Moon size={18} aria-hidden /> Tmavý
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setTheme("system");
-                        setPaletteOpen(false);
-                      }}
-                      className={`mx-1 flex min-h-[44px] w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold ${
-                        theme === "system"
-                          ? isDark
-                            ? "bg-white/15 text-white"
-                            : "bg-slate-100 text-slate-900"
-                          : isDark
-                            ? "text-white/90 hover:bg-white/10"
-                            : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Monitor size={18} aria-hidden /> Systém
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTheme("light");
+                          setPaletteOpen(false);
+                        }}
+                        className={[
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                          theme === "light"
+                            ? isDark
+                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
+                              : "bg-slate-900 text-white shadow-md"
+                            : isDark
+                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
+                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        <Sun size={18} className={theme === "light" && !isDark ? "text-white" : undefined} aria-hidden />
+                        Světlý
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTheme("dark");
+                          setPaletteOpen(false);
+                        }}
+                        className={[
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                          theme === "dark"
+                            ? isDark
+                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
+                              : "bg-slate-900 text-white shadow-md"
+                            : isDark
+                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
+                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        <Moon size={18} aria-hidden />
+                        Tmavý
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTheme("system");
+                          setPaletteOpen(false);
+                        }}
+                        className={[
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                          theme === "system"
+                            ? isDark
+                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
+                              : "bg-slate-900 text-white shadow-md"
+                            : isDark
+                              ? "text-slate-300 hover:bg-white/10 hover:text-white"
+                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        <Monitor size={18} aria-hidden />
+                        Systém
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="relative z-[50]">
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => {
@@ -817,9 +842,7 @@ export function PortalSidebar({
                 {zapOpen && (
                   <div
                     role="menu"
-                    className={`absolute bottom-full left-1/2 z-[60] mb-2 max-h-[min(70vh,380px)] w-60 -translate-x-1/2 overflow-y-auto rounded-2xl border py-2 shadow-xl ${
-                      isDark ? "border-white/10 bg-aidv-surface-elevated" : "border-slate-200 bg-white"
-                    }`}
+                    className={`absolute bottom-full left-1/2 z-[100] mb-2 max-h-[min(70vh,380px)] w-60 -translate-x-1/2 overflow-y-auto rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] py-2 shadow-2xl backdrop-blur-2xl pointer-events-auto`}
                   >
                     <p
                       className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${isDark ? "text-white/50" : "text-slate-400"}`}

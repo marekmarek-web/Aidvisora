@@ -14,7 +14,12 @@ function getInitials(email: string | undefined): string {
   return part.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu() {
+type UserMenuProps = {
+  /** Kulatý trigger 48px jako main banner txt (ř. 516–526). */
+  variant?: "default" | "portalHeader";
+};
+
+export function UserMenu({ variant = "default" }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [initials, setInitials] = useState("?");
   const ref = useRef<HTMLDivElement>(null);
@@ -62,12 +67,20 @@ export function UserMenu() {
     router.refresh();
   }
 
+  const triggerClass =
+    variant === "portalHeader"
+      ? `flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+          dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:scale-105 dark:ring-offset-[color:var(--wp-portal-header-bg)]
+          border-white bg-slate-200 text-slate-600 shadow-sm hover:scale-105 hover:bg-slate-100 ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)]
+          ${open ? "ring-2 ring-indigo-500 ring-offset-2" : ""}`
+      : "flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-full bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2";
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-full bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+        className={triggerClass}
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Profil a nastavení"

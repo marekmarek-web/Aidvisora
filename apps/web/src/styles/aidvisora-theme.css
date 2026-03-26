@@ -35,6 +35,58 @@
   --wp-shell-main-border: rgba(148, 163, 184, 0.22);
   --wp-shell-main-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 
+  /* Portal canvas + plovoucí panely (UX main banner txt) */
+  --wp-app-canvas-bg: #fafafc;
+  /* txt: indigo-400/20, purple-400/20 */
+  --wp-portal-blob-1: rgba(129, 140, 248, 0.2);
+  --wp-portal-blob-2: rgba(192, 132, 252, 0.2);
+  --wp-sidebar-card-bg: rgba(255, 255, 255, 0.8);
+  --wp-sidebar-card-border: rgba(226, 232, 240, 0.6);
+  --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.05);
+  /* Main panel – shodně s main banner txt ř. 446–447 */
+  --wp-main-panel-bg: rgba(255, 255, 255, 0.6);
+  --wp-main-panel-border: rgba(255, 255, 255, 1);
+  /* shadow-2xl z main banner txt (lehký, ne příliš tvrdý) */
+  --wp-main-panel-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08);
+  --wp-main-panel-backdrop-blur: 24px;
+  --wp-canvas-dot-color: rgba(0, 0, 0, 0.03);
+
+  /* Sidebar menu search (t.inputBg z txt) */
+  --wp-sidebar-search-bg: rgba(248, 250, 252, 0.5);
+  --wp-sidebar-search-border: rgba(226, 232, 240, 0.6);
+  --wp-sidebar-search-text: #334155;
+  --wp-sidebar-search-placeholder: rgba(100, 116, 139, 0.85);
+  --wp-sidebar-search-focus-bg: #ffffff;
+  --wp-sidebar-search-focus-border: rgba(129, 140, 248, 0.55);
+  --wp-sidebar-search-focus-ring: rgba(129, 140, 248, 0.1);
+
+  /* Sidecalendar panel (light) */
+  --wp-sc-panel-bg: rgba(255, 255, 255, 0.92);
+  --wp-sc-panel-border: rgba(226, 232, 240, 0.8);
+  --wp-sc-panel-shadow: -30px 0 60px rgba(0, 0, 0, 0.06);
+  --wp-sc-card-bg: rgba(255, 255, 255, 0.6);
+  --wp-sc-card-border: rgba(255, 255, 255, 1);
+  --wp-sc-timeline-line-from: rgba(165, 180, 252, 0.5);
+  --wp-sc-timeline-line-via: rgba(226, 232, 240, 1);
+  --wp-sc-timeline-dot-border: rgba(199, 210, 254, 1);
+  --wp-sc-timeline-dot-bg: #ffffff;
+  --wp-portal-header-bg: rgba(255, 255, 255, 0.6);
+  --wp-portal-header-border: rgba(226, 232, 240, 0.5);
+  --wp-header-input-bg: #ffffff;
+  --wp-header-input-border: rgba(226, 232, 240, 0.6);
+  --wp-header-input-text: #334155;
+  --wp-header-input-placeholder: rgba(100, 116, 139, 0.85);
+  --wp-header-input-focus-border: rgba(99, 102, 241, 0.55);
+  --wp-header-input-focus-ring: rgba(99, 102, 241, 0.1);
+  --wp-header-new-bg: #1e293b;
+  --wp-header-new-hover: #0f172a;
+  --wp-header-new-text: #ffffff;
+  --wp-dropdown-surface: rgba(255, 255, 255, 0.95);
+  --wp-dropdown-border: #e2e8f0;
+  --wp-dropdown-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+  --wp-theme-popover-bg: rgba(255, 255, 255, 0.92);
+  --wp-theme-popover-border: rgba(226, 232, 240, 0.85);
+
   /* Aidvisora – hero navy / dark surfaces (sidebar, calendar panel, „Dnes“ karta) */
   --aidv-hero-navy: #0a0f29;
   --aidv-surface-dark: #0a0f29;
@@ -199,6 +251,52 @@
   --wp-shell-main-bg: rgba(30, 41, 59, 0.45);
   --wp-shell-main-border: rgba(255, 255, 255, 0.08);
   --wp-shell-main-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+
+  --wp-app-canvas-bg: #040814;
+  --wp-portal-blob-1: rgba(79, 70, 229, 0.1);
+  --wp-portal-blob-2: rgba(147, 51, 234, 0.1);
+  --wp-sidebar-card-bg: rgba(15, 21, 40, 0.8);
+  --wp-sidebar-card-border: rgba(255, 255, 255, 0.1);
+  --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
+  --wp-main-panel-bg: rgba(6, 9, 24, 0.6);
+  --wp-main-panel-border: rgba(255, 255, 255, 0.1);
+  --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  --wp-main-panel-backdrop-blur: 16px;
+  --wp-canvas-dot-color: rgba(255, 255, 255, 0.03);
+
+  --wp-sidebar-search-bg: rgba(17, 24, 54, 0.6);
+  --wp-sidebar-search-border: rgba(255, 255, 255, 0.05);
+  --wp-sidebar-search-text: #e2e8f0;
+  --wp-sidebar-search-placeholder: rgba(148, 163, 184, 0.85);
+  --wp-sidebar-search-focus-bg: rgba(17, 24, 54, 1);
+  --wp-sidebar-search-focus-border: rgba(99, 102, 241, 0.5);
+  --wp-sidebar-search-focus-ring: rgba(99, 102, 241, 0.2);
+
+  --wp-sc-panel-bg: rgba(15, 21, 40, 0.92);
+  --wp-sc-panel-border: rgba(255, 255, 255, 0.08);
+  --wp-sc-panel-shadow: -30px 0 60px rgba(0, 0, 0, 0.45);
+  --wp-sc-card-bg: rgba(255, 255, 255, 0.05);
+  --wp-sc-card-border: rgba(255, 255, 255, 0.08);
+  --wp-sc-timeline-line-from: rgba(99, 102, 241, 0.45);
+  --wp-sc-timeline-line-via: rgba(51, 65, 85, 0.9);
+  --wp-sc-timeline-dot-border: rgba(99, 102, 241, 0.35);
+  --wp-sc-timeline-dot-bg: rgba(15, 21, 40, 0.95);
+  --wp-portal-header-bg: rgba(15, 21, 40, 0.8);
+  --wp-portal-header-border: rgba(255, 255, 255, 0.1);
+  --wp-header-input-bg: rgba(17, 24, 54, 0.6);
+  --wp-header-input-border: rgba(255, 255, 255, 0.05);
+  --wp-header-input-text: #e2e8f0;
+  --wp-header-input-placeholder: rgba(148, 163, 184, 0.9);
+  --wp-header-input-focus-border: rgba(99, 102, 241, 0.5);
+  --wp-header-input-focus-ring: rgba(99, 102, 241, 0.2);
+  --wp-header-new-bg: #4f46e5;
+  --wp-header-new-hover: #6366f1;
+  --wp-header-new-text: #ffffff;
+  --wp-dropdown-surface: rgba(15, 23, 40, 0.95);
+  --wp-dropdown-border: rgba(255, 255, 255, 0.1);
+  --wp-dropdown-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --wp-theme-popover-bg: rgba(10, 15, 32, 0.92);
+  --wp-theme-popover-border: rgba(255, 255, 255, 0.1);
 
   --aidv-create-bg: #1e293b;
   --aidv-create-bg-hover: #334155;
