@@ -60,6 +60,35 @@ function tierSupports(catalog: CheckoutCatalogSnapshot, tier: PlanTier, interval
   return interval === "month" ? row.month : row.year;
 }
 
+type StripeRoutePayload = { url?: string; error?: string; detail?: string };
+
+async function parseStripeRouteResponse(res: Response): Promise<StripeRoutePayload & { httpOk: boolean }> {
+  const text = await res.text();
+  if (!text.trim()) {
+    return {
+      httpOk: res.ok,
+      error: res.ok ? undefined : `Prázdná odpověď serveru (HTTP ${res.status}).`,
+    };
+  }
+  try {
+    const data = JSON.parse(text) as StripeRoutePayload;
+    return { httpOk: res.ok, url: data.url, error: data.error, detail: data.detail };
+  } catch {
+    return {
+      httpOk: false,
+      error:
+        res.status >= 500
+          ? "Server vrátil neočekávanou odpověď. Zkontrolujte log vývoje nebo nasazení."
+          : `Neplatná odpověď serveru (HTTP ${res.status}).`,
+    };
+  }
+}
+
+function formatStripeClientError(data: StripeRoutePayload): string {
+  const parts = [data.error, data.detail].filter((s): s is string => Boolean(s?.trim()));
+  return parts.join(" — ") || "Požadavek se nepodařilo dokončit.";
+}
+
 export function WorkspaceStripeBilling({
   billing,
   billingContext,
@@ -115,12 +144,12 @@ export function WorkspaceStripeBilling({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok) {
-        setBillingError(data.error ?? "Checkout se nepodařilo spustit.");
+      const data = await parseStripeRouteResponse(res);
+      if (!data.httpOk || !data.url) {
+        setBillingError(formatStripeClientError(data));
         return;
       }
-      if (data.url) window.location.href = data.url;
+      window.location.href = data.url;
     } catch {
       setBillingError("Síťová chyba.");
     } finally {
@@ -138,12 +167,12 @@ export function WorkspaceStripeBilling({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billingContext }),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok) {
-        setBillingError(data.error ?? "Portál se nepodařilo otevřít.");
+      const data = await parseStripeRouteResponse(res);
+      if (!data.httpOk || !data.url) {
+        setBillingError(formatStripeClientError(data));
         return;
       }
-      if (data.url) window.location.href = data.url;
+      window.location.href = data.url;
     } catch {
       setBillingError("Síťová chyba.");
     } finally {

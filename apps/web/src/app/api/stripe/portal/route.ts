@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { getBillingReturnUrls, parseBillingContext } from "@/lib/stripe/billing-return-paths";
@@ -54,15 +55,36 @@ export async function POST(request: Request) {
   );
   const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { portalReturnUrl } = getBillingReturnUrls(appBase, billingContext);
-  const stripe = getStripe();
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: portalReturnUrl,
-  });
 
-  if (!session.url) {
-    return NextResponse.json({ error: "Chybí URL billing portálu." }, { status: 500 });
+  try {
+    const stripe = getStripe();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: portalReturnUrl,
+    });
+
+    if (!session.url) {
+      return NextResponse.json({ error: "Chybí URL billing portálu." }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    console.error("[api/stripe/portal]", err);
+    if (err instanceof Stripe.errors.StripeError) {
+      return NextResponse.json(
+        {
+          error: "Stripe portál není dostupný. Ověřte konfiguraci Customer Portalu a klíče ve Stripe.",
+          detail: err.message,
+        },
+        { status: 502 }
+      );
+    }
+    if (err instanceof Error) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: "Nepodařilo se otevřít billing portál. Zkuste to znovu." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ url: session.url });
 }

@@ -13,7 +13,7 @@ import {
 } from "@/lib/stripe/price-catalog";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe/server";
 import { db, tenants, eq } from "db";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -92,47 +92,68 @@ export async function POST(request: Request) {
     );
   }
 
-  const [tenantRow] = await db
-    .select({ stripeCustomerId: tenants.stripeCustomerId })
-    .from(tenants)
-    .where(eq(tenants.id, m.tenantId))
-    .limit(1);
-  const stripeCustomerId = tenantRow?.stripeCustomerId ?? null;
+  try {
+    const [tenantRow] = await db
+      .select({ stripeCustomerId: tenants.stripeCustomerId })
+      .from(tenants)
+      .where(eq(tenants.id, m.tenantId))
+      .limit(1);
+    const stripeCustomerId = tenantRow?.stripeCustomerId ?? null;
 
-  const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const { successUrl, cancelUrl } = getBillingReturnUrls(appBase, billingContext);
-  const stripe = getStripe();
+    const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const { successUrl, cancelUrl } = getBillingReturnUrls(appBase, billingContext);
+    const stripe = getStripe();
 
-  const trialDays = getTrialPeriodDays();
+    const trialDays = getTrialPeriodDays();
 
-  const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
-    metadata: subscriptionMetadata,
-  };
-  if (trialDays > 0) {
-    subscriptionData.trial_period_days = trialDays;
+    const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
+      metadata: subscriptionMetadata,
+    };
+    if (trialDays > 0) {
+      subscriptionData.trial_period_days = trialDays;
+    }
+
+    const params: Stripe.Checkout.SessionCreateParams = {
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: m.tenantId,
+      metadata: { tenant_id: m.tenantId },
+      subscription_data: subscriptionData,
+    };
+
+    if (stripeCustomerId) {
+      params.customer = stripeCustomerId;
+    } else {
+      if (user.email) params.customer_email = user.email;
+      params.customer_creation = "always";
+    }
+
+    const session = await stripe.checkout.sessions.create(params);
+    if (!session.url) {
+      return NextResponse.json({ error: "Chybí URL checkout relace." }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    console.error("[api/stripe/checkout]", err);
+    if (err instanceof Stripe.errors.StripeError) {
+      return NextResponse.json(
+        {
+          error:
+            "Platební brána odmítla požadavek. Zkontrolujte STRIPE_SECRET_KEY a ID cen (test/live), případně stav cen ve Stripe.",
+          detail: err.message,
+        },
+        { status: 502 }
+      );
+    }
+    if (err instanceof Error) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: "Nepodařilo se vytvořit platební relaci. Zkuste to znovu." },
+      { status: 500 }
+    );
   }
-
-  const params: Stripe.Checkout.SessionCreateParams = {
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    client_reference_id: m.tenantId,
-    metadata: { tenant_id: m.tenantId },
-    subscription_data: subscriptionData,
-  };
-
-  if (stripeCustomerId) {
-    params.customer = stripeCustomerId;
-  } else {
-    if (user.email) params.customer_email = user.email;
-    params.customer_creation = "always";
-  }
-
-  const session = await stripe.checkout.sessions.create(params);
-  if (!session.url) {
-    return NextResponse.json({ error: "Chybí URL checkout relace." }, { status: 500 });
-  }
-
-  return NextResponse.json({ url: session.url });
 }
