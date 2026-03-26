@@ -1,5 +1,15 @@
 import { PDFDocument } from "pdf-lib";
 
+/**
+ * E2E scan pipeline (historický problém):
+ * capture → useScanCapture (File[]) → buildPdfFromImages → preview → upload.
+ * Dříve: pevná A4 + centrování + scale≤1 ⇒ „fotka na bílém“.
+ * Nyní: vstupní stránky jsou už normalizované (orientace) v useScanCapture;
+ * PDF má page box podle obrázku + malý okraj (žádný velký bílý mat).
+ */
+
+const MARGIN_PT = 4.5;
+
 async function embedRasterPage(
   pdfDoc: PDFDocument,
   pageFile: File
@@ -30,7 +40,7 @@ async function embedRasterPage(
       throw new Error("Canvas není k dispozici.");
     }
     ctx.drawImage(bitmap, 0, 0);
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.88));
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.9));
     if (!blob) {
       throw new Error("Konverze obrázku do PDF selhala.");
     }
@@ -42,17 +52,15 @@ async function embedRasterPage(
 }
 
 /**
- * Build a single PDF from an array of image File objects.
- * Pages are embedded in order and scaled to fit a standard A4-ish page
- * while preserving aspect ratio.
- * Non-JPEG/PNG images are rasterized via canvas in the browser (HEIC/WebP/GIF…).
+ * Build multipage PDF: each page tightly wraps the image (minimal margin).
+ * Expects each `File` to already be normalized (JPEG) from `normalizeScanImageForPdf`.
  */
 export async function buildPdfFromImages(
   pages: File[],
   options?: { documentName?: string }
 ): Promise<File> {
   if (pages.length === 0) {
-    throw new Error("No pages to build PDF from.");
+    throw new Error("No pages to build from.");
   }
 
   const pdfDoc = await PDFDocument.create();
@@ -67,22 +75,15 @@ export async function buildPdfFromImages(
     const image = await embedRasterPage(pdfDoc, pageFile);
     const { width: imgW, height: imgH } = image.scale(1);
 
-    const PAGE_W = 595.28; // A4 width in points
-    const PAGE_H = 841.89; // A4 height in points
-    const MARGIN = 0;
+    const pageW = imgW + 2 * MARGIN_PT;
+    const pageH = imgH + 2 * MARGIN_PT;
 
-    const availW = PAGE_W - 2 * MARGIN;
-    const availH = PAGE_H - 2 * MARGIN;
-    const scale = Math.min(availW / imgW, availH / imgH, 1);
-    const drawW = imgW * scale;
-    const drawH = imgH * scale;
-
-    const page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    const page = pdfDoc.addPage([pageW, pageH]);
     page.drawImage(image, {
-      x: (PAGE_W - drawW) / 2,
-      y: (PAGE_H - drawH) / 2,
-      width: drawW,
-      height: drawH,
+      x: MARGIN_PT,
+      y: MARGIN_PT,
+      width: imgW,
+      height: imgH,
     });
   }
 

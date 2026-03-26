@@ -32,6 +32,9 @@ importers:
       '@capacitor/push-notifications':
         specifier: ^8.0.2
         version: 8.0.2(@capacitor/core@8.2.0)
+      '@capgo/capacitor-document-scanner':
+        specifier: ^8.0.0
+        version: 8.3.18(@capacitor/core@8.2.0)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -98,6 +101,9 @@ importers:
       drizzle-orm:
         specifier: 0.36.4
         version: 0.36.4(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(@types/react@19.2.14)(postgres@3.4.8)(react@19.2.4)
+      exifr:
+        specifier: ^7.1.3
+        version: 7.1.3
       google-auth-library:
         specifier: ^10.6.2
         version: 10.6.2
@@ -368,6 +374,11 @@ packages:
 
   '@capacitor/push-notifications@8.0.2':
     resolution: {integrity: sha512-mej8Eh4EU4JXbaeyMX2l+4NNK6IdY5iRsEXpBOTHLD29fuCACBP7kOJTiJv6piw134zdlbFH0rR+sDKHIiFOFg==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@capgo/capacitor-document-scanner@8.3.18':
+    resolution: {integrity: sha512-erJ3bJop4d5b8x7tWROAIW8tN9UPYd3Sy/UgUwpRX/RPFOMDwBP+o6+XPSaxX3rw2bckqbL8Cuw3KABIvoEtkA==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -3777,6 +3788,9 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
+  exifr@7.1.3:
+    resolution: {integrity: sha512-g/aje2noHivrRSLbAUtBPWFbxKdKhgj/xr1vATDdUXPOFYJlQ62Ft0oy+72V6XLIpDJfHs6gXLbBLAolqOXYRw==}
+
   expand-template@2.0.3:
     resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
     engines: {node: '>=6'}
@@ -6403,6 +6417,10 @@ snapshots:
       '@capacitor/core': 8.2.0
 
   '@capacitor/push-notifications@8.0.2(@capacitor/core@8.2.0)':
+    dependencies:
+      '@capacitor/core': 8.2.0
+
+  '@capgo/capacitor-document-scanner@8.3.18(@capacitor/core@8.2.0)':
     dependencies:
       '@capacitor/core': 8.2.0
 
@@ -9828,6 +9846,8 @@ snapshots:
       - bare-abort-controller
 
   events@3.3.0: {}
+
+  exifr@7.1.3: {}
 
   expand-template@2.0.3: {}
 

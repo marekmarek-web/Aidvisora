@@ -73,12 +73,14 @@ function SortablePageCard({
   index,
   onRetake,
   onRemove,
+  onRotateCw,
   isCapturing,
 }: {
   scanPage: ScanPage;
   index: number;
   onRetake: (index: number) => void;
   onRemove: (index: number) => void;
+  onRotateCw: (index: number) => void;
   isCapturing: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -124,6 +126,14 @@ function SortablePageCard({
           Smazat
         </button>
       </div>
+      <button
+        type="button"
+        onClick={() => onRotateCw(index)}
+        disabled={isCapturing}
+        className="mt-1.5 min-h-[40px] w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-semibold text-slate-800 disabled:opacity-50"
+      >
+        Otočit o 90°
+      </button>
     </div>
   );
 }
@@ -138,9 +148,11 @@ export default function ScanPage() {
     pages,
     capturePage,
     addPagesFromGalleryBatch,
+    addPagesFromDocumentScanner,
     retakePage,
     removePage,
     reorderPages,
+    rotatePage,
     clearPages,
     buildPdf,
     isCapturing,
@@ -150,6 +162,7 @@ export default function ScanPage() {
     canAddMore,
     qualityWarnings,
     hasQualityIssues,
+    didManualRotate,
   } = useScanCapture();
   const { uploadFile, progress } = useFileUpload();
   const [step, setStep] = useState<ScanStep>("capture");
@@ -263,7 +276,7 @@ export default function ScanPage() {
         captureMode: "multi_page_scan",
         captureQualityWarnings: captureQualityWarnings.length ? captureQualityWarnings : undefined,
         manualCropApplied: false,
-        rotationAdjusted: false,
+        rotationAdjusted: didManualRotate,
       });
 
       setUploadState("done");
@@ -325,8 +338,10 @@ export default function ScanPage() {
 
         {tier === "web_mobile" ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-            V prohlížeči se po klepnutí na <strong>Přidat stranu</strong> otevře systémové okno fotoaparátu nebo výběr
-            souboru. Každou stranu přidejte zvlášť, nebo najednou přes <strong>Více z galerie</strong>.
+            V prohlížeči je sken omezený na fotky bez automatického ořezu dokumentu. Pro nejlepší výsledek použijte{" "}
+            <strong>mobilní aplikaci Aidvisora</strong> (sken dokumentu) nebo nahrajte už hotové PDF z galerie přes
+            dokumenty. Po klepnutí na <strong>Přidat stranu</strong> se otevře fotoaparát nebo výběr souboru; více stran
+            najednou přes <strong>Více z galerie</strong>.
           </div>
         ) : null}
 
@@ -360,6 +375,14 @@ export default function ScanPage() {
             Naskenované strany ({scanPages.length})
           </h2>
 
+          {scanPages.length > 0 ? (
+            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              Připraveno k uložení do PDF · <strong>{scanPages.length}</strong>{" "}
+              {scanPages.length === 1 ? "strana" : scanPages.length < 5 ? "strany" : "stran"} · pokračujte k údajům a
+              náhledu
+            </div>
+          ) : null}
+
           {scanPages.length === 0 ? (
             <p className="text-sm text-slate-500">Zatím není přidaná žádná strana.</p>
           ) : (
@@ -373,6 +396,7 @@ export default function ScanPage() {
                       index={index}
                       onRetake={(i) => void retakePage(i)}
                       onRemove={removePage}
+                      onRotateCw={(i) => void rotatePage(i, 1)}
                       isCapturing={isCapturing}
                     />
                   ))}
@@ -410,6 +434,19 @@ export default function ScanPage() {
                 Pokračovat ({pages.length} {pages.length === 1 ? "strana" : pages.length < 5 ? "strany" : "stran"})
               </button>
             </div>
+            {tier === "native_capacitor" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  void addPagesFromDocumentScanner();
+                }}
+                disabled={isCapturing || !canAddMore}
+                className="min-h-[44px] w-full rounded-lg border-2 border-blue-500 bg-blue-50 px-4 text-sm font-semibold text-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Skenovat dokument (systémový skener)
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -439,20 +476,23 @@ export default function ScanPage() {
 
         {pdfPreviewUrl ? (
           <div className="space-y-2">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
               <iframe
                 title="Náhled PDF před nahráním"
-                src={pdfPreviewUrl}
-                className="min-h-[50vh] w-full bg-white"
+                src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&view=FitH`}
+                className="block min-h-[55vh] w-full border-0 bg-white sm:min-h-[65vh]"
               />
             </div>
+            <p className="text-xs text-slate-600">
+              Pokud se PDF v rámečku nezobrazí (Safari), otevřete ho v novém okně nebo systémovým prohlížečem PDF.
+            </p>
             <a
               href={pdfPreviewUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex min-h-[44px] items-center text-sm font-semibold text-blue-700 underline-offset-2 hover:underline"
             >
-              Otevřít náhled v novém okně (Safari / mobil)
+              Otevřít PDF v novém okně / systému
             </a>
           </div>
         ) : (
@@ -542,6 +582,13 @@ export default function ScanPage() {
       </div>
 
       {globalError ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{globalError}</div> : null}
+
+      {pages.length > 0 ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Připraveno k uložení do PDF · <strong>{pages.length}</strong>{" "}
+          {pages.length === 1 ? "strana" : pages.length < 5 ? "strany" : "stran"}
+        </div>
+      ) : null}
 
       <ContactPicker value={selectedContact} onChange={setSelectedContact} />
 

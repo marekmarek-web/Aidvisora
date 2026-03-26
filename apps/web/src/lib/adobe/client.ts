@@ -4,7 +4,8 @@ import { getProcessingConfig } from "@/lib/documents/processing/config";
 /** Adobe PDF Services host per region (see Getting Started). */
 export function getAdobeServiceOrigin(region: string): string {
   const r = region.trim().toLowerCase();
-  if (r === "ew1" || r === "eu") return "https://pdf-services-ew1.adobe.io";
+  // eu1: některé Adobe konzole uvádějí EU jako eu1 — stejný host jako ew1
+  if (r === "ew1" || r === "eu" || r === "eu1") return "https://pdf-services-ew1.adobe.io";
   if (r === "ue1") return "https://pdf-services-ue1.adobe.io";
   return "https://pdf-services.adobe.io";
 }
