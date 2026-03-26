@@ -145,7 +145,8 @@ export function MobileBottomNav({
     <nav
       className={cx(
         "fixed bottom-0 inset-x-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur",
-        "pb-[max(0.5rem,var(--safe-area-bottom))]"
+        "pb-[max(0.5rem,var(--safe-area-bottom))]",
+        "pl-[max(0.25rem,env(safe-area-inset-left,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))]"
       )}
     >
       {useFab && deviceClass === "phone" ? (
@@ -385,7 +386,7 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="fixed z-40 right-4 bottom-[calc(90px+var(--safe-area-bottom))] min-h-[52px] min-w-[52px] rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(90px+var(--safe-area-bottom))] right-[max(1rem,env(safe-area-inset-right,0px))]"
       aria-label={label}
       title={label}
     >

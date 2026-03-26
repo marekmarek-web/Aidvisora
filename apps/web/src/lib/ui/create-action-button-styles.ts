@@ -3,9 +3,9 @@ import clsx from "clsx";
 /** Vnější plášť primárního create tlačítka (UX UI/button.txt, barvy --aidv-create-*). */
 export const createActionButtonSurfaceClassName = clsx(
   "relative inline-flex items-center justify-center gap-2",
-  "px-6 py-3.5 min-h-[44px] box-border",
+  "px-5 py-3 min-h-[48px] box-border",
   "bg-aidv-create text-white",
-  "rounded-[14px]",
+  "rounded-2xl",
   "text-xs font-black uppercase tracking-[0.15em]",
   "shadow-lg shadow-slate-900/20",
   "transition-all duration-300 ease-out",

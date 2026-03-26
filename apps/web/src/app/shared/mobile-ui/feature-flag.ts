@@ -1,5 +1,11 @@
 import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 
+/**
+ * Rozdělení portálu (produktová volba):
+ * – Mobile UI v1: vlastní shell ([MobilePortalClient]) + [DashboardScreen] na /portal/today — bez pravého
+ *   slide-over kalendáře z desktopové nástěnky; kalendář je /portal/calendar a souhrn „Dnes“ na nástěnce.
+ * – Vypnuto: [PortalShell] + [DashboardEditable] včetně [DashboardCalendarSidePanel].
+ */
 export const MOBILE_UI_BETA_COOKIE = "mobile_ui_v1_beta";
 
 export type MobileUiMode = "off" | "beta" | "on";

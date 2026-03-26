@@ -134,7 +134,7 @@ export default function CalculatorsPage() {
             return (
               <div
                 key={def.id}
-                className="block bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm opacity-75 cursor-not-allowed"
+                className="block rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-8 shadow-sm opacity-75 cursor-not-allowed"
               >
                 {cardContent}
               </div>
@@ -145,7 +145,7 @@ export default function CalculatorsPage() {
             <Link
               key={def.id}
               href={def.route}
-              className="group block bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden transform hover:-translate-y-1"
+              className="group block rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-8 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden transform hover:-translate-y-1"
             >
               {cardContent}
             </Link>
@@ -154,7 +154,7 @@ export default function CalculatorsPage() {
       </div>
 
       {/* Nedávné propočty – vizuál 1:1, připraveno na live data */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-8">
+      <div className="rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <FileText size={18} className="text-indigo-500" />
@@ -172,9 +172,9 @@ export default function CalculatorsPage() {
             <Link
               key={item.id}
               href={item.href}
-              className="p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-md hover:border-indigo-200 transition-all group flex items-start gap-4"
+              className="group flex items-start gap-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 transition-all hover:border-indigo-200 hover:bg-[color:var(--wp-surface-card)] hover:shadow-md"
             >
-              <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-indigo-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+              <div className="shrink-0 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-indigo-500 shadow-sm transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:group-hover:bg-indigo-950/40">
                 <FileText size={20} />
               </div>
               <div className="min-w-0">

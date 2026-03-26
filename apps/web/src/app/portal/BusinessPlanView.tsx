@@ -442,7 +442,7 @@ export function BusinessPlanView() {
                     onClick={() => setViewMode(tab.id)}
                     className={`flex items-center gap-1.5 px-3 md:px-4 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all min-h-[44px] md:min-h-0 ${
                       viewMode === tab.id
-                        ? "bg-white text-indigo-700 shadow-sm border border-slate-200/50"
+                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-slate-200/50"
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
                     }`}
                   >
@@ -458,7 +458,7 @@ export function BusinessPlanView() {
                     onClick={() => setPeriodType(t.id)}
                     className={`px-4 md:px-5 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all min-h-[44px] md:min-h-0 ${
                       periodType === t.id
-                        ? "bg-white text-indigo-700 shadow-sm border border-slate-200/50 scale-105"
+                        ? "bg-[color:var(--wp-surface-card)] text-indigo-700 shadow-sm border border-slate-200/50 scale-105"
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
                     }`}
                   >
@@ -470,8 +470,8 @@ export function BusinessPlanView() {
         </div>
 
         {showEmptyState && (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-white rounded-[32px] border border-slate-100 shadow-sm">
-            <div className="w-24 h-24 bg-slate-50 border-2 border-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-6 relative">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm">
+            <div className="w-24 h-24 bg-slate-50 border-2 border-[color:var(--wp-surface-card-border)] rounded-full flex items-center justify-center text-slate-400 mb-6 relative">
               <Target size={40} strokeWidth={1.5} className="text-slate-400" />
             </div>
             <h2 className="text-xl md:text-2xl font-display font-bold text-slate-800 mb-3 text-center tracking-tight">
@@ -491,7 +491,7 @@ export function BusinessPlanView() {
         )}
 
         {showNoTargetsState && plan && (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-white rounded-[32px] border border-slate-100 shadow-sm">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm">
             <h2 className="text-xl font-display font-bold text-slate-800 mb-3 text-center">
               Plán pro {plan.periodLabel} existuje, ale nejsou vyplněné cíle
             </h2>
@@ -524,7 +524,7 @@ export function BusinessPlanView() {
                 {teamSummary.map((m) => (
                   <div
                     key={m.userId}
-                    className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap"
+                    className="bg-[color:var(--wp-surface-card)] rounded-[24px] p-6 border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap"
                   >
                     <div className="font-display font-bold text-slate-900 min-w-[140px]">
                       {m.displayName || m.userId.slice(0, 8)}
@@ -592,7 +592,7 @@ export function BusinessPlanView() {
                 </button>
               </div>
 
-              <div className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+              <div className="lg:col-span-2 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm relative overflow-hidden">
                 <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2">
                   <Target className="text-rose-500" size={24} /> Matematika úspěchu
                 </h2>
@@ -636,7 +636,7 @@ export function BusinessPlanView() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] p-6 border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-6 relative z-10">
                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100">
@@ -662,7 +662,7 @@ export function BusinessPlanView() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] p-6 border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-indigo-50 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-6 relative z-10">
                   <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center border border-indigo-100">
@@ -684,7 +684,7 @@ export function BusinessPlanView() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] p-6 border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-6 relative z-10">
                   <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100">
@@ -708,7 +708,7 @@ export function BusinessPlanView() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              <div className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm">
+              <div className="lg:col-span-2 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm">
                 <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2">
                   <BarChart3 className="text-indigo-500" size={24} /> Trychtýř aktivit
                 </h2>
@@ -732,7 +732,7 @@ export function BusinessPlanView() {
                   })}
                 </div>
                 <div className="mt-10 p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl flex items-start gap-4">
-                  <div className="p-2 bg-white rounded-xl shadow-sm text-amber-500 shrink-0">
+                  <div className="p-2 bg-[color:var(--wp-surface-card)] rounded-xl shadow-sm text-amber-500 shrink-0">
                     <Sparkles size={20} />
                   </div>
                   <div className="min-w-0">
@@ -744,7 +744,7 @@ export function BusinessPlanView() {
                 </div>
               </div>
 
-              <div className="lg:col-span-1 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+              <div className="lg:col-span-1 bg-[color:var(--wp-surface-card)] rounded-[32px] p-6 md:p-8 border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col hover:shadow-md transition-shadow">
                 <h2 className="text-lg font-display font-bold text-slate-900 flex items-center gap-2 mb-2">
                   <PieChart className="text-emerald-500" size={20} /> Produkční mix
                 </h2>
@@ -778,7 +778,7 @@ export function BusinessPlanView() {
             <button
               type="button"
               onClick={() => setIsManualModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 rounded-xl font-bold text-sm transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-800 hover:bg-slate-50 rounded-xl font-bold text-sm transition-colors min-h-[44px]"
             >
               <FileSignature size={16} /> Ruční doplnění
             </button>
@@ -803,8 +803,8 @@ export function BusinessPlanView() {
 
       {isManualModalOpen && plan?.planId ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50 shrink-0">
               <h2 className="text-lg font-bold text-slate-900">Ruční doplnění</h2>
               <button
                 type="button"
@@ -876,7 +876,7 @@ export function BusinessPlanView() {
                 ))}
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-end gap-3 shrink-0">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex flex-wrap items-center justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={async () => {
@@ -901,7 +901,7 @@ export function BusinessPlanView() {
               <button
                 type="button"
                 onClick={() => setIsManualModalOpen(false)}
-                className="px-4 py-2.5 min-h-[44px] bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm"
+                className="px-4 py-2.5 min-h-[44px] bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm"
               >
                 Zrušit
               </button>
@@ -949,8 +949,8 @@ export function BusinessPlanView() {
 
       {isVisionModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Flag size={18} className="text-indigo-500" /> Osobní vize
               </h2>
@@ -960,7 +960,7 @@ export function BusinessPlanView() {
             </div>
             <div className="p-6 space-y-6">
               {tempVision.map((goal, idx) => (
-                <div key={goal.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div key={goal.id} className="p-4 bg-slate-50 rounded-xl border border-[color:var(--wp-surface-card-border)]">
                   <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Cíl {idx + 1}</label>
                   <input
                     type="text"
@@ -970,7 +970,7 @@ export function BusinessPlanView() {
                       newGoals[idx] = { ...newGoals[idx], title: e.target.value };
                       setTempVision(newGoals);
                     }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-400 mb-4"
+                    className="w-full px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-400 mb-4"
                   />
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-xs font-bold text-slate-500">Progres plnění</label>
@@ -990,8 +990,8 @@ export function BusinessPlanView() {
                 </div>
               ))}
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 min-h-[44px]">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setIsVisionModalOpen(false)} className="px-4 py-2 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 min-h-[44px]">
                 Zrušit
               </button>
               <button type="button" onClick={saveVision} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md min-h-[44px]">
@@ -1004,8 +1004,8 @@ export function BusinessPlanView() {
 
       {isParamsModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Target size={18} className="text-rose-500" /> Cíle pro {periodLabel}
               </h2>
@@ -1024,7 +1024,7 @@ export function BusinessPlanView() {
                     step={10000}
                     value={tempParams.production}
                     onChange={(e) => setTempParams((p) => ({ ...p, production: Number(e.target.value) || 0 }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-white focus:border-indigo-400 min-h-[44px]"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1036,7 +1036,7 @@ export function BusinessPlanView() {
                       min={0}
                       value={tempParams.meetings}
                       onChange={(e) => setTempParams((p) => ({ ...p, meetings: Number(e.target.value) || 0 }))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-white focus:border-indigo-400 min-h-[44px]"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                     />
                   </div>
                   <div>
@@ -1047,7 +1047,7 @@ export function BusinessPlanView() {
                       min={0}
                       value={tempParams.newClients}
                       onChange={(e) => setTempParams((p) => ({ ...p, newClients: Number(e.target.value) || 0 }))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-white focus:border-indigo-400 min-h-[44px]"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black outline-none focus:bg-[color:var(--wp-surface-card)] focus:border-indigo-400 min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -1055,8 +1055,8 @@ export function BusinessPlanView() {
                   Změnou těchto hodnot dojde k automatickému přepočítání „Matematiky úspěchu“ a trychtýře aktivit.
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-                <button type="button" onClick={() => setIsParamsModalOpen(false)} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 shadow-sm min-h-[44px]">
+              <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-slate-50 flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setIsParamsModalOpen(false)} className="px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 shadow-sm min-h-[44px]">
                   Zrušit
                 </button>
                 <button type="submit" disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md disabled:opacity-50 min-h-[44px]">

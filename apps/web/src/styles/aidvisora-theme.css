@@ -87,6 +87,30 @@
   --wp-theme-popover-bg: rgba(255, 255, 255, 0.92);
   --wp-theme-popover-border: rgba(226, 232, 240, 0.85);
 
+  /* Sémantické vrstvy (light) – skutečný theme systém */
+  --wp-surface-card: #ffffff;
+  --wp-surface-card-border: #e2e8f0;
+  --wp-surface-raised: #f8fafc;
+  --wp-surface-inset: #f1f5f9;
+  --wp-surface-muted: #eef2f7;
+  --wp-text-secondary: #475569;
+  --wp-text-tertiary: #64748b;
+  --wp-text-inverse: #ffffff;
+  --wp-icon-default: #64748b;
+  --wp-icon-active: #4f46e5;
+  --wp-border-strong: #cbd5e1;
+  --wp-overlay-scrim: rgba(15, 23, 42, 0.45);
+  --wp-shadow-card: 0 10px 40px rgba(15, 23, 42, 0.06);
+  --wp-shadow-dropdown-strong: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+  --wp-nav-active-bg: #eef2ff;
+  --wp-nav-active-border: #c7d2fe;
+  --wp-nav-active-text: #312e81;
+  --wp-nav-active-shadow: 0 4px 16px rgba(79, 70, 229, 0.12);
+  --wp-input-bg: #f8fafc;
+  --wp-input-border: #e2e8f0;
+  --wp-input-text: var(--wp-text);
+  --wp-profile-menu-width: 14rem;
+
   /* Aidvisora – hero navy / dark surfaces (sidebar, calendar panel, „Dnes“ karta) */
   --aidv-hero-navy: #0a0f29;
   --aidv-surface-dark: #0a0f29;
@@ -298,27 +322,49 @@
   --wp-theme-popover-bg: rgba(10, 15, 32, 0.92);
   --wp-theme-popover-border: rgba(255, 255, 255, 0.1);
 
+  --wp-surface-card: rgba(22, 30, 52, 0.96);
+  --wp-surface-card-border: rgba(255, 255, 255, 0.1);
+  --wp-surface-raised: rgba(30, 41, 69, 0.55);
+  --wp-surface-inset: rgba(8, 11, 24, 0.88);
+  --wp-surface-muted: rgba(255, 255, 255, 0.04);
+  --wp-text-secondary: #cbd5e1;
+  --wp-text-tertiary: #94a3b8;
+  --wp-text-inverse: #0f172a;
+  --wp-icon-default: #94a3b8;
+  --wp-icon-active: #a5b4fc;
+  --wp-border-strong: rgba(255, 255, 255, 0.14);
+  --wp-overlay-scrim: rgba(0, 0, 0, 0.65);
+  --wp-shadow-card: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --wp-shadow-dropdown-strong: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+  --wp-nav-active-bg: rgba(99, 102, 241, 0.22);
+  --wp-nav-active-border: rgba(129, 140, 248, 0.45);
+  --wp-nav-active-text: #eef2ff;
+  --wp-nav-active-shadow: 0 4px 20px rgba(79, 70, 229, 0.25);
+  --wp-input-bg: rgba(17, 24, 54, 0.65);
+  --wp-input-border: rgba(255, 255, 255, 0.1);
+  --wp-input-text: #f1f5f9;
+
   --aidv-create-bg: #1e293b;
   --aidv-create-bg-hover: #334155;
   --aidv-dashboard-cta-bg: #4f46e5;
   --aidv-dashboard-cta-bg-hover: #6366f1;
   --aidv-dashboard-cta-ring: rgba(129, 140, 248, 0.45);
 
-  --background: 222 47% 11%;
+  --background: 222 47% 9%;
   --foreground: 210 40% 98%;
-  --card: 222 47% 14%;
+  --card: 222 44% 13%;
   --card-foreground: 210 40% 98%;
   --primary: 217 91% 60%;
   --primary-foreground: 222 47% 11%;
-  --secondary: 217 33% 17%;
+  --secondary: 222 35% 16%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 217 33% 17%;
+  --muted: 222 35% 16%;
+  --muted-foreground: 215 20% 68%;
+  --accent: 222 35% 18%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62% 45%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217 33% 20%;
-  --input: 217 33% 20%;
+  --border: 222 30% 18%;
+  --input: 222 30% 18%;
   --ring: 224 76% 55%;
 }

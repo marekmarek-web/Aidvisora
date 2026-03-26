@@ -42,6 +42,7 @@ import { getOpenTasksCount } from "@/app/actions/tasks";
 import { getUnreadConversationsCount } from "@/app/actions/messages";
 import { useQuickActionsItems } from "@/lib/quick-actions/useQuickActionsItems";
 import { QuickNewItemIcon } from "@/app/portal/quick-new-ui";
+import clsx from "clsx";
 
 /** Zarovnáno s main banner txt (expanded 300px, collapsed 88px). */
 export const PORTAL_SIDEBAR_WIDTH_PX = 300;
@@ -250,6 +251,7 @@ export function PortalSidebar({
   const [mounted, setMounted] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [zapOpen, setZapOpen] = useState(false);
+  const [sunSpinKey, setSunSpinKey] = useState(0);
   const { items: quickActionItems, ready: quickActionsReady } = useQuickActionsItems();
 
   useEffect(() => {
@@ -565,7 +567,7 @@ export function PortalSidebar({
                             ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] justify-between rounded-[14px] px-4 py-3"}
                             ${isDark
                               ? isActive
-                                ? "border border-transparent bg-white/15 text-white shadow-lg ring-1 ring-white/10"
+                                ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
                                 : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
                               : isActive
                                 ? "border border-transparent bg-gradient-to-r from-fuchsia-600 to-indigo-600 font-bold text-white shadow-lg shadow-fuchsia-900/20"
@@ -609,10 +611,10 @@ export function PortalSidebar({
                           ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] rounded-[14px] px-4 py-3"}
                           ${isDark
                             ? isActive
-                              ? "border border-transparent bg-white/15 text-white shadow-lg ring-1 ring-white/10"
+                              ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
                               : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-white"
                             : isActive
-                              ? "border border-slate-200 bg-white font-bold text-indigo-700 shadow-lg shadow-indigo-100"
+                              ? "border border-[color:var(--wp-nav-active-border)] bg-[color:var(--wp-nav-active-bg)] font-bold text-[color:var(--wp-nav-active-text)] shadow-[var(--wp-nav-active-shadow)]"
                               : item.isHighlighted
                                 ? "border border-transparent font-bold text-slate-700 hover:bg-slate-100/60 hover:text-slate-900"
                                 : "border border-transparent font-medium text-slate-500 hover:bg-slate-100/60 hover:text-slate-900"}
@@ -625,7 +627,13 @@ export function PortalSidebar({
                         <div className={`relative flex items-center justify-center shrink-0 transition-all duration-300 ${!isActive && item.hoverAnim ? item.hoverAnim : ""}`}>
                           <Icon
                             size={18}
-                            className={`transition-colors ${isActive ? "text-white" : isDark ? "text-white" : "text-slate-500 group-hover:text-indigo-600"}`}
+                            className={`transition-colors ${
+                              isActive
+                                ? "text-[color:var(--wp-nav-active-text)]"
+                                : isDark
+                                  ? "text-white"
+                                  : "text-slate-500 group-hover:text-indigo-600"
+                            }`}
                             strokeWidth={isActive || item.isHighlighted ? 2.5 : 2}
                           />
                         </div>
@@ -743,7 +751,20 @@ export function PortalSidebar({
                     role="menu"
                     className="absolute bottom-full left-1/2 z-[100] mb-2 min-w-[min(100vw-2rem,280px)] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] p-2 shadow-2xl backdrop-blur-2xl pointer-events-auto"
                   >
-                    <div className="flex gap-1">
+                    <p
+                      className={clsx(
+                        "px-2 pb-1.5 text-[9px] font-black uppercase tracking-widest",
+                        isDark ? "text-white/50" : "text-slate-400",
+                      )}
+                    >
+                      Motiv
+                    </p>
+                    <div
+                      className={clsx(
+                        "flex w-full gap-0.5 rounded-full p-1",
+                        isDark ? "bg-black/25" : "bg-slate-200/80",
+                      )}
+                    >
                       <button
                         type="button"
                         role="menuitem"
@@ -751,20 +772,26 @@ export function PortalSidebar({
                           e.preventDefault();
                           e.stopPropagation();
                           setTheme("light");
+                          setSunSpinKey((k) => k + 1);
                           setPaletteOpen(false);
                         }}
-                        className={[
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                        className={clsx(
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
                           theme === "light"
                             ? isDark
-                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
-                              : "bg-slate-900 text-white shadow-md"
+                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
+                              : "bg-white text-slate-900 shadow-md"
                             : isDark
                               ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-                        ].join(" ")}
+                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                        )}
                       >
-                        <Sun size={18} className={theme === "light" && !isDark ? "text-white" : undefined} aria-hidden />
+                        <Sun
+                          key={sunSpinKey}
+                          size={18}
+                          className={sunSpinKey > 0 ? "animate-theme-sun-spin" : undefined}
+                          aria-hidden
+                        />
                         Světlý
                       </button>
                       <button
@@ -776,16 +803,16 @@ export function PortalSidebar({
                           setTheme("dark");
                           setPaletteOpen(false);
                         }}
-                        className={[
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                        className={clsx(
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
                           theme === "dark"
                             ? isDark
-                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
+                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
                               : "bg-slate-900 text-white shadow-md"
                             : isDark
                               ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-                        ].join(" ")}
+                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                        )}
                       >
                         <Moon size={18} aria-hidden />
                         Tmavý
@@ -799,16 +826,16 @@ export function PortalSidebar({
                           setTheme("system");
                           setPaletteOpen(false);
                         }}
-                        className={[
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl p-3 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                        className={clsx(
+                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
                           theme === "system"
                             ? isDark
-                              ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
+                              ? "bg-white/20 text-white shadow-sm ring-1 ring-white/15"
                               : "bg-slate-900 text-white shadow-md"
                             : isDark
                               ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-                        ].join(" ")}
+                              : "text-slate-500 hover:bg-white/60 hover:text-slate-900",
+                        )}
                       >
                         <Monitor size={18} aria-hidden />
                         Systém

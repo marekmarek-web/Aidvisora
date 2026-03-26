@@ -106,7 +106,7 @@ export default async function ContactDetailPage({
 
   const smlouvyContent = (
     <div className="space-y-6 md:space-y-8">
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
         <div className="p-6">
           <ContractsSection contactId={id} />
           <ClientFinancialSummary contactId={id} />
@@ -121,12 +121,12 @@ export default async function ContactDetailPage({
 
   const aktivitaContent = (
     <div className="space-y-6 md:space-y-8">
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
         <div className="p-6">
           <ContactActivityTimeline contactId={id} />
         </div>
       </div>
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-50">
           <h2 className="text-lg font-black text-slate-900">Zprávy</h2>
         </div>
@@ -138,7 +138,7 @@ export default async function ContactDetailPage({
   );
 
   const zapiskyContent = (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
       <div className="p-6">
         <ContactNotesSection contactId={id} />
       </div>
@@ -146,7 +146,7 @@ export default async function ContactDetailPage({
   );
 
   const timelineContent = (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
       <div className="p-6">
         <ClientTimeline contactId={id} />
       </div>
@@ -157,17 +157,17 @@ export default async function ContactDetailPage({
     { id: "prehled" as const, label: "Přehled", content: overviewContent },
     { id: "timeline" as const, label: "Timeline", content: timelineContent },
     { id: "smlouvy" as const, label: "Produkty", content: smlouvyContent },
-    { id: "dokumenty" as const, label: "Dokumenty", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Dokumenty</h2></div><div className="p-6"><DocumentsSection contactId={id} /></div></div> },
+    { id: "dokumenty" as const, label: "Dokumenty", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Dokumenty</h2></div><div className="p-6"><DocumentsSection contactId={id} /></div></div> },
     { id: "zapisky" as const, label: "Zápisky", content: zapiskyContent },
     { id: "aktivita" as const, label: "Aktivita", content: aktivitaContent },
-    { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
+    { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-slate-50"><h2 className="text-lg font-black text-slate-900">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
     { id: "obchody" as const, label: "Obchody", content: (
       <div className="flex flex-col flex-1 min-h-0 w-full">
         <ContactOpportunityBoardLazy contactId={id} contactFirstName={contact.firstName ?? undefined} contactLastName={contact.lastName ?? undefined} />
       </div>
     ) },
     { id: "briefing" as const, label: "Briefing", content: (
-      <Suspense fallback={<div className="bg-white rounded-[24px] border border-slate-100 p-6">Načítání…</div>}>
+      <Suspense fallback={<div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6">Načítání…</div>}>
         <BriefingTabContent contactId={id} />
       </Suspense>
     ) },
@@ -184,7 +184,7 @@ export default async function ContactDetailPage({
         .hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 md:px-8 py-4 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 px-4 py-4 backdrop-blur-md sm:px-6 md:px-8">
         <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           <Link
             href="/portal/contacts"
@@ -211,7 +211,7 @@ export default async function ContactDetailPage({
       </header>
 
       <main className="max-w-[1400px] mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-        <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm md:p-8">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50 to-blue-50/30 rounded-bl-full -z-10 opacity-50" aria-hidden />
           <div className="flex flex-col xl:flex-row justify-between gap-6 xl:gap-8 z-10">
             <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6 min-w-0">

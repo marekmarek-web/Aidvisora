@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { revokeAllStoredPushTokens, revokeStoredPushToken } from "@/lib/push/usePushNotifications";
+import clsx from "clsx";
 
 function getInitials(email: string | undefined): string {
   if (!email) return "?";
@@ -15,9 +16,12 @@ function getInitials(email: string | undefined): string {
 }
 
 type UserMenuProps = {
-  /** Kulatý trigger 48px jako main banner txt (ř. 516–526). */
+  /** Kulatý trigger 48px jako main banner txt. */
   variant?: "default" | "portalHeader";
 };
+
+const itemClass =
+  "flex w-full min-h-[44px] items-center px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10";
 
 export function UserMenu({ variant = "default" }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -69,11 +73,15 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
 
   const triggerClass =
     variant === "portalHeader"
-      ? `flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
-          dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:scale-105 dark:ring-offset-[color:var(--wp-portal-header-bg)]
-          border-white bg-slate-200 text-slate-600 shadow-sm hover:scale-105 hover:bg-slate-100 ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)]
-          ${open ? "ring-2 ring-indigo-500 ring-offset-2" : ""}`
-      : "flex items-center justify-center min-h-[44px] min-w-[44px] h-9 w-9 rounded-full bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2";
+      ? clsx(
+          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2",
+          "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-raised)] text-[color:var(--wp-text-secondary)] shadow-sm",
+          "hover:scale-105 hover:bg-[color:var(--wp-surface-muted)] dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/15",
+          "ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)]",
+          open && "ring-2 ring-indigo-500 ring-offset-2",
+        )
+      : "flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
 
   return (
     <div className="relative" ref={ref}>
@@ -88,28 +96,29 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
         {initials}
       </button>
       {open && (
-        <div className="wp-dropdown absolute right-0 top-full mt-1 w-48 z-[9999] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1">
-          <Link
-            href="/portal/profile"
-            className="block px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
-            onClick={() => setOpen(false)}
-          >
+        <div
+          className="absolute right-0 z-dropdown w-56 rounded-[24px] border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] py-2 shadow-2xl backdrop-blur-xl"
+          style={{
+            top: "calc(100% + 12px)",
+            boxShadow: "var(--wp-shadow-dropdown-strong, var(--wp-dropdown-shadow))",
+          }}
+          role="menu"
+        >
+          <Link href="/portal/profile" className={itemClass} onClick={() => setOpen(false)} role="menuitem">
             Profil
           </Link>
-          <Link
-            href="/portal/setup"
-            className="block px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
-            onClick={() => setOpen(false)}
-          >
+          <Link href="/portal/setup" className={itemClass} onClick={() => setOpen(false)} role="menuitem">
             Nastavení
           </Link>
+          <div className="my-1 border-t border-[color:var(--wp-border)]" aria-hidden />
           <button
             type="button"
             onClick={() => {
               setOpen(false);
-              signOut();
+              void signOut();
             }}
-            className="block w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+            className={clsx(itemClass, "text-left")}
+            role="menuitem"
           >
             Odhlásit se
           </button>
@@ -117,9 +126,10 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
             type="button"
             onClick={() => {
               setOpen(false);
-              signOutAllDevices();
+              void signOutAllDevices();
             }}
-            className="block w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+            className={clsx(itemClass, "text-left text-[color:var(--wp-text-secondary)]")}
+            role="menuitem"
           >
             Odhlásit všechna zařízení
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import clsx from "clsx";
 import { QuickActionsMenuContent } from "@/app/portal/quick-new-ui";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 
@@ -31,12 +32,10 @@ export function QuickNewMenu() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         iconClassName={open ? "rotate-45 duration-200" : "duration-200"}
-        className={[
-          "wp-quick-new-trigger !min-h-[48px] !rounded-2xl !px-5 !py-3 !bg-[var(--wp-header-new-bg)] !text-[var(--wp-header-new-text)] hover:!bg-[var(--wp-header-new-hover)] hover:!translate-y-0 !uppercase !tracking-widest !text-xs !font-black !shadow-lg",
-          open ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)] scale-[0.98]" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className={clsx(
+          "shadow-lg",
+          open && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)] scale-[0.98]",
+        )}
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Nový – rychlé akce"
@@ -46,7 +45,7 @@ export function QuickNewMenu() {
       {open && (
         <div
           role="menu"
-          className="wp-quick-new-menu absolute right-0 top-full z-50 mt-2 w-56 p-2"
+          className="wp-quick-new-menu absolute right-0 top-full z-dropdown mt-3 w-56 origin-top-right animate-in fade-in zoom-in-95 p-2 duration-200"
         >
           <QuickActionsMenuContent variant="dropdown" onClose={() => setOpen(false)} />
         </div>

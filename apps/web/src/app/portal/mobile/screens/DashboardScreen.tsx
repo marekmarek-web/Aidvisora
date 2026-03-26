@@ -669,6 +669,15 @@ export function DashboardScreen({
     month: "long",
   });
   const isTablet = deviceClass === "tablet";
+  const todayAgendaCount = kpis.todayEvents.length + kpis.tasksDueToday.length;
+  const todayAgendaLabel =
+    todayAgendaCount === 0
+      ? ""
+      : todayAgendaCount === 1
+        ? "1 položka"
+        : todayAgendaCount >= 2 && todayAgendaCount <= 4
+          ? `${todayAgendaCount} položky`
+          : `${todayAgendaCount} položek`;
   const actionCallbacks: Record<string, () => void> = {
     newTask: onNewTask,
     newClient: onNewClient,
@@ -697,6 +706,31 @@ export function DashboardScreen({
         czNameDaysToday={kpis.czNameDaysToday}
         birthdaysToday={kpis.birthdaysToday}
       />
+
+      <MobileSection title="Dnes v kalendáři">
+        <MobileCard className="border-indigo-100/80 bg-gradient-to-br from-white to-indigo-50/40">
+          <p className="text-sm font-bold text-slate-900">
+            {todayAgendaCount === 0 ? "Dnes nic naplánováno" : `${todayAgendaLabel} — schůzky a úkoly`}
+          </p>
+          <p className="mt-1 text-xs text-slate-600">Otevřete kalendář nebo dnešní úkoly.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/portal/calendar"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-wide text-white active:scale-[0.99] sm:flex-none"
+            >
+              <Calendar size={16} aria-hidden />
+              Kalendář
+            </Link>
+            <Link
+              href="/portal/tasks?filter=today"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 active:scale-[0.99] sm:flex-none"
+            >
+              <CheckSquare size={16} aria-hidden />
+              Úkoly dnes
+            </Link>
+          </div>
+        </MobileCard>
+      </MobileSection>
 
       {/* Quick Actions -- horizontal scroll, 8 pills */}
       <div className="dash-scroll-strip flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">

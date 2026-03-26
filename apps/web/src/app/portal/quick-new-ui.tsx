@@ -76,12 +76,12 @@ export function QuickActionsMenuContent({
 
   const itemClass =
     variant === "sheet"
-      ? "group w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-sm text-slate-700 hover:bg-slate-50 rounded-xl text-left active:scale-[0.99] transition-transform"
-      : "group flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-slate-700 hover:bg-slate-50 rounded-xl";
+      ? "group w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10 rounded-xl text-left active:scale-[0.99] transition-transform"
+      : "group flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] dark:hover:bg-white/10 rounded-xl";
 
   return (
     <>
-      <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3 py-2">
+      <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
         Rychlé akce
       </div>
       {ready && items.length > 0 ? (
@@ -137,12 +137,12 @@ export function QuickActionsMenuContent({
           </button>
         )
       ) : null}
-      <div className="h-px bg-slate-100 my-2" />
+      <div className="my-2 h-px bg-[color:var(--wp-border)]" />
       {variant === "dropdown" ? (
         <Link
           href="/portal/setup#quick-actions"
           onClick={() => onClose()}
-          className="group flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-xs font-bold text-slate-400 hover:text-slate-600 rounded-xl transition-colors"
+          className="group flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-[color:var(--wp-text-tertiary)] transition-colors hover:text-[color:var(--wp-text-secondary)]"
         >
           <Settings2 className="size-4 shrink-0 group-hover:rotate-90 transition-transform" aria-hidden />
           Upravit nabídku
@@ -151,7 +151,7 @@ export function QuickActionsMenuContent({
         <button
           type="button"
           onClick={() => go("/portal/setup#quick-actions")}
-          className="group w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-xs font-bold text-slate-400 hover:text-slate-600 rounded-xl text-left active:scale-[0.99] transition-transform"
+          className="group flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-xs font-bold text-[color:var(--wp-text-tertiary)] transition-transform hover:text-[color:var(--wp-text-secondary)] active:scale-[0.99]"
         >
           <Settings2 className="size-4 shrink-0 group-hover:rotate-90 transition-transform" aria-hidden />
           Upravit nabídku

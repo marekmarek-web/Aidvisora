@@ -319,7 +319,7 @@ function PortalShellInner({
             type="button"
             onClick={() => setAiDrawerOpen(true)}
             title="AI asistent"
-            className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-floating-ai min-w-[48px] min-h-[48px] rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 pb-[env(safe-area-inset-bottom,0)]"
+            className="fixed z-floating-ai flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 transition-all duration-200 hover:scale-105 hover:shadow-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:scale-95 bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-[max(1rem,env(safe-area-inset-right,0px))] md:bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] md:right-[max(1.5rem,env(safe-area-inset-right,0px))]"
             aria-label="Otevřít AI asistenta"
           >
             <Sparkles size={24} />

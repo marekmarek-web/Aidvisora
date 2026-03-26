@@ -140,7 +140,7 @@ export function MessengerPreview({ embedded, forDarkPanel }: { embedded?: boolea
             dark ? "text-indigo-300 hover:text-white" : "text-indigo-600"
           }`}
         >
-          Otevřít chat →
+          Otevřít chat
         </Link>
       )}
       {embedded && (

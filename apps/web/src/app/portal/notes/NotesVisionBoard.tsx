@@ -371,7 +371,7 @@ export function NotesVisionBoard({
           background-size: 28px 28px;
         }
         .notes-glass-card {
-          background: rgba(255, 255, 255, 0.92);
+          background: color-mix(in srgb, var(--wp-surface-card) 94%, transparent);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
         }
@@ -379,9 +379,9 @@ export function NotesVisionBoard({
         .notes-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white/80 shrink-0 gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 text-indigo-600">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[color:var(--wp-surface-muted)] text-indigo-600 dark:text-indigo-300">
             <FileText size={20} />
           </div>
           <div className="min-w-0">
@@ -415,18 +415,18 @@ export function NotesVisionBoard({
       </div>
 
       {isMobile && (
-        <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-100/80 mx-4 mt-3 shrink-0">
+        <div className="mx-4 mt-3 flex shrink-0 rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-1">
           <button
             type="button"
             onClick={() => setMobileTab("feed")}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-md transition-all min-h-[44px] ${mobileTab === "feed" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}
+            className={`min-h-[44px] flex-1 rounded-md py-2.5 text-sm font-bold transition-all ${mobileTab === "feed" ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm" : "text-[color:var(--wp-text-secondary)]"}`}
           >
             Zápisky
           </button>
           <button
             type="button"
             onClick={() => setMobileTab("board")}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-md transition-all min-h-[44px] ${mobileTab === "board" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}
+            className={`min-h-[44px] flex-1 rounded-md py-2.5 text-sm font-bold transition-all ${mobileTab === "board" ? "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-sm" : "text-[color:var(--wp-text-secondary)]"}`}
           >
             Board
           </button>
@@ -455,7 +455,7 @@ export function NotesVisionBoard({
                     <button
                       type="button"
                       onClick={(e) => handleOpenEdit(note, e)}
-                      className="w-full text-left notes-glass-card rounded-2xl border border-slate-100 shadow-lg p-4 transition-shadow active:scale-[0.99] min-h-[44px]"
+                      className="notes-glass-card min-h-[44px] w-full rounded-2xl border border-[color:var(--wp-surface-card-border)] p-4 text-left shadow-lg transition-shadow active:scale-[0.99]"
                     >
                       <div className="flex justify-between items-start gap-2 mb-2">
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase border ${design.color}`}>
@@ -496,7 +496,7 @@ export function NotesVisionBoard({
       >
         {notes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[32px] border border-slate-200 shadow-2xl flex flex-col items-center max-w-md text-center pointer-events-auto">
+            <div className="pointer-events-auto flex max-w-md flex-col items-center rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-10 text-center shadow-2xl backdrop-blur-xl">
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-slate-100">
                 <FileText size={40} className="text-aidv-create" />
               </div>
@@ -539,10 +539,10 @@ export function NotesVisionBoard({
               className={`
                 notes-glass-card w-[350px] rounded-2xl border transition-shadow duration-300
                 ${isDragging ? "shadow-2xl scale-[1.02] cursor-grabbing opacity-95" : "shadow-lg cursor-grab hover:shadow-xl"}
-                ${pos.pinned ? `border-slate-300 shadow-[0_0_20px_-5px_rgba(0,0,0,0.1)] ${design.glow}` : "border-slate-100"}
+                ${pos.pinned ? `border-[color:var(--wp-border-strong)] shadow-[0_0_20px_-5px_rgba(0,0,0,0.1)] ${design.glow}` : "border-[color:var(--wp-surface-card-border)]"}
               `}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/80 border-b border-slate-100/80 rounded-t-2xl">
+              <div className="flex items-center justify-between rounded-t-2xl border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/90 px-4 py-2.5">
                 <GripHorizontal size={18} className="text-slate-300" />
                 <div className="flex items-center gap-1">
                   <button

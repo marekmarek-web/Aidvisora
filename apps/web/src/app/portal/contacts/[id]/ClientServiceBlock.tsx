@@ -70,7 +70,7 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-50">
           <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <Wrench className="text-slate-400" size={20} />
@@ -86,7 +86,7 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
 
   if (error || !data) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-50">
           <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <Wrench className="text-slate-400" size={20} />
@@ -106,7 +106,7 @@ export function ClientServiceBlock({ contactId }: { contactId: string }) {
   const hasNoSignals = activeRecs.length === 0 && !hasNoData;
 
   return (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-slate-50">
         <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
           <Wrench className="text-slate-400" size={20} />
