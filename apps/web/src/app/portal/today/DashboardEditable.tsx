@@ -27,9 +27,6 @@ import {
   Settings2,
   X,
   ChevronLeft,
-  Cake,
-  Landmark,
-  Gift,
   type LucideIcon,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
@@ -61,6 +58,7 @@ import {
 } from "./dashboard-config";
 import { useDashboardCalendarDrawer } from "./use-dashboard-calendar-drawer";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
 
 const STORAGE_KEY = "aidvisora_dashboard_widgets";
 
@@ -691,50 +689,12 @@ export function DashboardEditable({
         </div>
 
         {/* Svátky + narozeniny (Europe/Prague, kontakty v CRM) */}
-        <div className="mb-8 rounded-[24px] border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Landmark size={16} className="text-indigo-500 shrink-0" />
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Dnes v kalendáři</h2>
-          </div>
-          <div className="space-y-3 text-sm">
-            <p className="text-slate-700">
-              <span className="font-bold text-slate-900">Státní svátek: </span>
-              {kpis.czPublicHolidayToday ?? "žádný (běžný den)"}
-            </p>
-            <p className="text-slate-700">
-              <span className="inline-flex items-center gap-1.5 font-bold text-slate-900">
-                <Gift size={15} className="text-violet-500 shrink-0" aria-hidden />
-                Svátek podle kalendáře jmen:{" "}
-              </span>
-              {kpis.czNameDaysToday.length === 0 ? (
-                <span className="text-slate-500">dnes žádné jméno v kalendáři</span>
-              ) : (
-                <span>{kpis.czNameDaysToday.join(", ")}</span>
-              )}
-            </p>
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Cake size={16} className="text-rose-500 shrink-0" />
-                <span className="font-bold text-slate-900">Narozeniny u kontaktů</span>
-              </div>
-              {kpis.birthdaysToday.length === 0 ? (
-                <p className="text-slate-500 pl-6">Dnes nikdo z kontaktů nemá narozeniny.</p>
-              ) : (
-                <ul className="pl-6 space-y-1.5">
-                  {kpis.birthdaysToday.map((c) => (
-                    <li key={c.id}>
-                      <Link
-                        href={`/portal/contacts/${c.id}`}
-                        className="font-semibold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
-                      >
-                        {c.firstName} {c.lastName}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+        <div className="mb-8">
+          <TodayInCalendarWidget
+            czPublicHolidayToday={kpis.czPublicHolidayToday}
+            czNameDaysToday={kpis.czNameDaysToday}
+            birthdaysToday={kpis.birthdaysToday}
+          />
         </div>
 
         {/* 2. KPI CARDS */}

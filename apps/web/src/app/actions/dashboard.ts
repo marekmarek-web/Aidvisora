@@ -35,7 +35,7 @@ export type DashboardKpis = {
   /** Jména podle českého občanského kalendáře jmen (Europe/Prague, stejný den jako svátky). */
   czNameDaysToday: string[];
   /** Kontakty s narozeninami dnes (MM-DD v Europe/Prague). */
-  birthdaysToday: Array<{ id: string; firstName: string; lastName: string }>;
+  birthdaysToday: Array<{ id: string; firstName: string; lastName: string; age: number }>;
 };
 
 export async function getDashboardKpis(): Promise<DashboardKpis> {
@@ -241,6 +241,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         id: contacts.id,
         firstName: contacts.firstName,
         lastName: contacts.lastName,
+        birthDate: contacts.birthDate,
       })
       .from(contacts)
       .where(
@@ -325,11 +326,16 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     createdAt: a.createdAt,
   }));
 
-  const birthdaysToday = birthdaysTodayList.map((c) => ({
-    id: c.id,
-    firstName: c.firstName,
-    lastName: c.lastName,
-  }));
+  const birthdaysToday = birthdaysTodayList.map((c) => {
+    const y = c.birthDate ? parseInt(c.birthDate.slice(0, 4), 10) : NaN;
+    const age = Number.isFinite(y) ? pragueToday.year - y : 0;
+    return {
+      id: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      age,
+    };
+  });
 
   return {
     meetingsToday: meetingsList.length,

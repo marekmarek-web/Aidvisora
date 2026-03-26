@@ -22,9 +22,6 @@ import {
   StickyNote,
   CheckCircle2,
   LayoutDashboard,
-  Cake,
-  Landmark,
-  Gift,
   type LucideIcon,
 } from "lucide-react";
 import type { DashboardKpis } from "@/app/actions/dashboard";
@@ -33,6 +30,7 @@ import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import type { ProductionSummary } from "@/app/actions/production";
 import type { BusinessPlanWidgetData } from "@/app/portal/today/DashboardEditable";
+import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
 import { getServiceCtaHref } from "@/lib/service-engine/cta";
 import { MobileCard, MobileSection, MetricCard } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
@@ -694,45 +692,11 @@ export function DashboardScreen({
         </p>
       </MobileSection>
 
-      <WidgetCard icon={Landmark} title="Svátky a narozeniny" iconColor="text-indigo-500">
-        <p className="text-sm text-slate-700">
-          <span className="font-bold text-slate-900">Státní svátek: </span>
-          {kpis.czPublicHolidayToday ?? "žádný"}
-        </p>
-        <p className="text-sm text-slate-700 mt-2 flex gap-2">
-          <Gift size={16} className="text-violet-500 shrink-0 mt-0.5" aria-hidden />
-          <span>
-            <span className="font-bold text-slate-900">Kalendář jmen: </span>
-            {kpis.czNameDaysToday.length === 0 ? (
-              <span className="text-slate-500">dnes žádné jméno</span>
-            ) : (
-              kpis.czNameDaysToday.join(", ")
-            )}
-          </span>
-        </p>
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-2 mb-2">
-            <Cake size={14} className="text-rose-500 shrink-0" />
-            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Narozeniny</span>
-          </div>
-          {kpis.birthdaysToday.length === 0 ? (
-            <p className="text-sm text-slate-500">Dnes žádný kontakt.</p>
-          ) : (
-            <ul className="space-y-1">
-              {kpis.birthdaysToday.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/portal/contacts/${c.id}`}
-                    className="text-sm font-semibold text-indigo-600 min-h-[44px] inline-flex items-center"
-                  >
-                    {c.firstName} {c.lastName}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </WidgetCard>
+      <TodayInCalendarWidget
+        czPublicHolidayToday={kpis.czPublicHolidayToday}
+        czNameDaysToday={kpis.czNameDaysToday}
+        birthdaysToday={kpis.birthdaysToday}
+      />
 
       {/* Quick Actions -- horizontal scroll, 8 pills */}
       <div className="dash-scroll-strip flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
