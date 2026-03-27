@@ -13,11 +13,11 @@ import {
   CheckCircle2,
   FileCheck,
   AlertCircle,
-  Sparkles,
   ArrowRight,
   Trash2,
 } from "lucide-react";
 import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
@@ -251,8 +251,8 @@ export default function ContractReviewListPage() {
         {/* Header - reference style */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 flex-shrink-0">
-              <Sparkles size={28} />
+            <div className="w-14 h-14 rounded-[20px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 flex-shrink-0 p-2.5">
+              <AiAssistantBrandIcon size={36} className="max-w-full max-h-full" />
             </div>
             <div>
               <h1 className="text-3xl font-black text-[color:var(--wp-text)] tracking-tight mb-1">Review smluv</h1>
@@ -461,7 +461,7 @@ export default function ContractReviewListPage() {
                           <div className="space-y-3">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1">
-                                <Sparkles size={12} /> Extrahovaná data
+                                <AiAssistantBrandIcon size={12} /> Extrahovaná data
                               </span>
                               {row.confidence != null && (
                                 <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">

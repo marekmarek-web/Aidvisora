@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { useToast } from "@/app/components/Toast";
 import { useAiAssistantDrawer } from "@/app/portal/AiAssistantDrawerContext";
 import type { UrgentItem, SuggestedAction, DashboardSummary } from "@/lib/ai/dashboard-types";
@@ -87,7 +88,7 @@ export function DashboardAiAssistant() {
     return (
       <div className="flex min-h-[280px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-aidv-surface-dark to-indigo-950 p-8 text-white">
         <div className="animate-pulse flex flex-col items-center gap-2">
-          <Sparkles size={28} className="text-indigo-300" />
+          <AiAssistantBrandIcon size={28} className="opacity-80" />
           <span className="text-sm text-indigo-200">Načítám…</span>
         </div>
       </div>
@@ -114,13 +115,21 @@ export function DashboardAiAssistant() {
 
   return (
     <div className="group relative flex min-h-[280px] cursor-pointer flex-col justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-aidv-surface-dark to-indigo-950 p-8 text-white shadow-xl shadow-indigo-900/10 transition-colors hover:border-indigo-500/50">
-      <Sparkles className="absolute -top-6 -right-6 w-40 h-40 text-indigo-500/20 group-hover:rotate-12 transition-transform duration-700 pointer-events-none" aria-hidden />
+      <span
+        className="absolute -top-6 -right-6 flex h-40 w-40 items-center justify-center overflow-visible pointer-events-none transition-transform duration-700 will-change-transform group-hover:rotate-12"
+        aria-hidden
+      >
+        <AiAssistantBrandIcon
+          size={160}
+          className="h-full max-h-[160px] w-full max-w-[160px] object-contain opacity-[0.18]"
+        />
+      </span>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col flex-1 min-h-0">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-indigo-300 backdrop-blur-sm border border-white/10">
-            <Sparkles size={20} />
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/10 p-1.5">
+            <AiAssistantBrandIcon size={28} className="max-w-full max-h-full" />
           </div>
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">AI Asistent</h2>
         </div>
@@ -187,7 +196,7 @@ export function DashboardAiAssistant() {
             onClick={() => setAiDrawerOpen(true)}
             className="flex items-center justify-between w-full sm:w-auto sm:inline-flex px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide border border-indigo-500 shadow-lg shadow-indigo-500/30 gap-3 min-h-[44px]"
           >
-            <Sparkles size={16} /> Otevřít asistenta <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+            <AiAssistantBrandIcon size={18} /> Otevřít asistenta <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>

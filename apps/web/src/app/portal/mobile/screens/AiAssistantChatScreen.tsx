@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import {
-  Sparkles,
   Send,
   ChevronRight,
   RotateCcw,
@@ -16,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -97,8 +97,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div className={cx("flex gap-2.5", isUser ? "justify-end" : "justify-start")}>
       {!isUser ? (
-        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-          <Sparkles size={13} className="text-white" />
+        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm p-1">
+          <AiAssistantBrandIcon size={18} className="max-w-full max-h-full" />
         </div>
       ) : null}
 
@@ -177,8 +177,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 function TypingIndicator() {
   return (
     <div className="flex gap-2.5 justify-start">
-      <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-        <Sparkles size={13} className="text-white" />
+      <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm p-1">
+        <AiAssistantBrandIcon size={18} className="max-w-full max-h-full" />
       </div>
       <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
         <div className="flex gap-1 items-center h-4">
@@ -450,8 +450,8 @@ export function AiAssistantChatScreen() {
         {isEmpty ? (
           <div className="space-y-6 pt-4">
             <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mx-auto shadow-lg">
-                <Sparkles size={26} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mx-auto shadow-lg p-2">
+                <AiAssistantBrandIcon size={36} className="max-w-full max-h-full" />
               </div>
               <h2 className="text-base font-black text-[color:var(--wp-text)]">AI Asistent</h2>
               <p className="text-sm text-[color:var(--wp-text-secondary)] max-w-xs mx-auto leading-relaxed">

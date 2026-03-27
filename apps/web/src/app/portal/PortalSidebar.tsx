@@ -28,7 +28,6 @@ import {
   ChevronRight,
   Search,
   MessageCircle,
-  Sparkles,
   Zap,
   GripVertical,
   MoreVertical,
@@ -41,6 +40,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getOpenTasksCount } from "@/app/actions/tasks";
 import { getUnreadConversationsCount } from "@/app/actions/messages";
 import clsx from "clsx";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
 /** Zarovnáno s main banner txt (expanded 300px, collapsed 88px). */
 export const PORTAL_SIDEBAR_WIDTH_PX = 300;
@@ -125,7 +125,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     section: "Nástroje poradce",
     specialBg: true,
     items: [
-      { href: "/portal/contracts/review", label: "AI Review smluv", Icon: Sparkles, isAi: true },
+      { href: "/portal/contracts/review", label: "AI Review smluv", Icon: AiAssistantBrandIcon, isAi: true },
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network, hoverAnim: "group-hover:-translate-y-1" },
@@ -575,11 +575,7 @@ export function PortalSidebar({
                           title={collapsed ? item.label : undefined}
                         >
                           <div className="relative flex items-center justify-center shrink-0">
-                            <Icon
-                              size={18}
-                              className={`transition-colors ${isActive ? "text-white animate-spin-slow" : isDark ? "text-white animate-pulse-glow" : "text-fuchsia-500 animate-pulse-glow group-hover:text-fuchsia-600"}`}
-                              strokeWidth={isActive ? 2.5 : 2}
-                            />
+                            <AiAssistantBrandIcon size={18} />
                           </div>
                           {!collapsed && (
                             <span className={`ml-3 flex-1 text-left text-sm font-black tracking-wide ${isActive ? "text-white" : isDark ? "text-white" : "text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-indigo-600"}`}>

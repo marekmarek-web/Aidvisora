@@ -56,6 +56,7 @@ import type { DashboardAgendaTimelineRow } from "./dashboard-agenda-types";
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
 const STORAGE_KEY = "aidvisora_dashboard_widgets";
 
@@ -769,17 +770,20 @@ export function DashboardEditable({
                   key={id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, id)}
-                  className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
+                  className={`group/dash-ai ${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
                 >
                   <div className="relative">
                     <span
                       draggable
                       onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
                       onDragEnd={handleDragEnd}
-                      className="absolute top-4 right-4 z-10 p-2 min-h-[44px] min-w-[44px] rounded-lg bg-white/10 hover:bg-white/20 cursor-grab active:cursor-grabbing transition-colors shrink-0 inline-flex items-center justify-center"
+                      className="absolute top-4 right-4 z-10 inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded-lg bg-white/10 p-2 transition-colors hover:bg-white/20 active:cursor-grabbing"
                       aria-label="Chytit a přesunout widget"
                     >
-                      <GripVertical size={16} className="text-indigo-200" />
+                      <AiAssistantBrandIcon
+                        size={22}
+                        className="opacity-90 transition-transform duration-700 group-hover/dash-ai:rotate-12"
+                      />
                     </span>
                     <DashboardAiAssistant />
                   </div>

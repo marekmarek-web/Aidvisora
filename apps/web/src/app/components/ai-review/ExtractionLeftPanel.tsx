@@ -6,7 +6,6 @@ import {
   User,
   Shield,
   Heart,
-  Sparkles,
   AlertCircle,
   AlertTriangle,
   Lightbulb,
@@ -25,6 +24,7 @@ import {
   Clock,
   Eye,
 } from "lucide-react";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type {
   ExtractionDocument,
   ExtractedGroup,
@@ -311,7 +311,7 @@ function AIRecommendationsCard({
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
       <div className="relative z-10">
         <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-800 mb-4 flex items-center gap-2">
-          <Sparkles size={16} className="text-indigo-500" />
+          <AiAssistantBrandIcon size={16} className="shrink-0" />
           AI Analýza a navrhované akce
           <span className="ml-auto text-indigo-500 font-bold text-[10px] normal-case tracking-normal">
             {visible.length} aktivních

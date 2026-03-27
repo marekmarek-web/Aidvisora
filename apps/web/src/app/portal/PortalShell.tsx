@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Sparkles, Search, MoreVertical, ScanLine } from "lucide-react";
+import { Search, MoreVertical, ScanLine } from "lucide-react";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import Link from "next/link";
 import { PortalSidebar, PORTAL_SIDEBAR_COLLAPSED_PX } from "./PortalSidebar";
 import { PortalHeaderSearch, type PortalHeaderSearchHandle } from "./PortalHeaderSearch";
@@ -322,7 +323,7 @@ function PortalShellInner({
             className="fixed z-floating-ai flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 transition-all duration-200 hover:scale-105 hover:shadow-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:scale-95 bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-[max(1rem,env(safe-area-inset-right,0px))] md:bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] md:right-[max(1.5rem,env(safe-area-inset-right,0px))]"
             aria-label="Otevřít AI asistenta"
           >
-            <Sparkles size={24} />
+            <AiAssistantBrandIcon size={26} className="drop-shadow-sm" />
           </button>
         )}
 

@@ -12,7 +12,6 @@ import {
   Bell,
   ArrowLeft,
   Menu,
-  Sparkles,
   Search,
   FileText,
 } from "lucide-react";
@@ -84,6 +83,7 @@ import { MobileGlobalSearchOverlay } from "./MobileGlobalSearchOverlay";
 import { MobileShellErrorBoundary } from "@/app/shared/mobile-ui/MobileShellErrorBoundary";
 import { ToastProvider } from "@/app/components/Toast";
 import { PortalFeedbackLauncher } from "@/app/portal/PortalFeedbackLauncher";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { QuickNewMobileSheet } from "./QuickNewMobileSheet";
 import { HouseholdsListMobileScreen } from "./screens/HouseholdsListMobileScreen";
@@ -817,7 +817,7 @@ export function MobilePortalClient({
               className="min-h-[44px] min-w-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] grid place-items-center active:scale-95 transition-transform text-indigo-600"
               aria-label="Zeptat se AI"
             >
-              <Sparkles size={18} />
+              <AiAssistantBrandIcon size={20} />
             </button>
             <button
               type="button"

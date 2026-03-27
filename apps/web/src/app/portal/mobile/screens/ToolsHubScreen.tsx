@@ -8,7 +8,6 @@ import {
   Home,
   TrendingUp,
   Target,
-  FileSearch,
   BarChart2,
   Calculator,
   HardDrive,
@@ -16,8 +15,8 @@ import {
   Bell,
   Settings,
   Users,
-  Sparkles,
 } from "lucide-react";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { MobileCard, MobileSection } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
@@ -49,7 +48,7 @@ const TOOL_SECTIONS: ToolSection[] = [
   {
     title: "AI Asistent",
     items: [
-      { label: "AI Chat", href: "/portal/ai", icon: Sparkles },
+      { label: "AI Chat", href: "/portal/ai", icon: AiAssistantBrandIcon },
     ],
   },
   {
@@ -71,7 +70,7 @@ const TOOL_SECTIONS: ToolSection[] = [
   {
     title: "Nástroje poradce",
     items: [
-      { label: "AI smlouvy", href: "/portal/contracts/review", icon: FileSearch },
+      { label: "AI smlouvy", href: "/portal/contracts/review", icon: AiAssistantBrandIcon },
       { label: "Dokumenty", href: "/portal/documents", icon: FileText },
       { label: "Finanční analýzy", href: "/portal/analyses", icon: BarChart2 },
       { label: "Kalkulačky", href: "/portal/calculators", icon: Calculator },

@@ -16,7 +16,6 @@ import {
   Settings,
   Network,
   MessageCircle,
-  Sparkles,
   X,
   FileText,
   Target,
@@ -27,6 +26,7 @@ import {
 } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -92,7 +92,7 @@ function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSec
 
   const nastroje: DrawerNavItem[] = [
     ...(hasPermission(roleName, "documents:read")
-      ? [{ href: "/portal/contracts/review", label: "AI Review smluv", Icon: Sparkles } as DrawerNavItem]
+      ? [{ href: "/portal/contracts/review", label: "AI Review smluv", Icon: AiAssistantBrandIcon } as DrawerNavItem]
       : []),
     ...(hasPermission(roleName, "documents:read")
       ? [{ href: "/portal/documents", label: "Dokumenty", Icon: FileText } as DrawerNavItem]
@@ -301,7 +301,7 @@ export function MobileSideDrawer({
             }}
             className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-black flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
           >
-            <Sparkles size={18} />
+            <AiAssistantBrandIcon size={20} />
             Zeptejte se AI
           </button>
         </div>

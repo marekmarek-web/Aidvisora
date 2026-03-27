@@ -13,7 +13,6 @@ import {
   Calculator,
   FileText,
   PieChart,
-  Sparkles,
   ArrowRight,
   Users,
   MessageSquare,
@@ -24,6 +23,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { DashboardKpis } from "@/app/actions/dashboard";
 import type { ServiceRecommendationWithContact } from "@/app/actions/service-engine";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
@@ -43,12 +43,11 @@ function cx(...classes: Array<string | false | null | undefined>) {
 /*  Quick-action pill definitions                                      */
 /* ------------------------------------------------------------------ */
 
-const QUICK_ACTIONS: {
-  icon: LucideIcon;
-  label: string;
-  href?: string;
-  action?: "newTask" | "newClient" | "newOpportunity";
-}[] = [
+type QuickActionItem =
+  | { icon: LucideIcon; label: string; href?: string; action?: "newTask" | "newClient" | "newOpportunity" }
+  | { brandAi: true; label: string; href: string };
+
+const QUICK_ACTIONS: QuickActionItem[] = [
   { icon: CheckSquare, label: "Nový úkol", action: "newTask" },
   { icon: UserPlus, label: "Nový klient", action: "newClient" },
   { icon: Calendar, label: "Nová schůzka", href: "/portal/calendar?new=1" },
@@ -57,7 +56,7 @@ const QUICK_ACTIONS: {
   { icon: LayoutDashboard, label: "Board", href: "/portal/board" },
   { icon: Calculator, label: "Kalkulačky", href: "/portal/calculators" },
   { icon: PieChart, label: "Analýza", href: "/portal/analyses/financial" },
-  { icon: Sparkles, label: "AI Smlouvy", href: "/portal/contracts/review" },
+  { brandAi: true, label: "AI Smlouvy", href: "/portal/contracts/review" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -119,8 +118,8 @@ function AiAssistantWidget() {
   return (
     <MobileCard className="overflow-hidden border-white/20 bg-gradient-to-br from-[#0a0f29] to-indigo-950 text-white">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center text-indigo-300">
-          <Sparkles size={16} />
+        <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center p-1">
+          <AiAssistantBrandIcon size={22} className="max-w-full max-h-full" />
         </div>
         <h3 className="text-xs font-black uppercase tracking-widest text-indigo-200">AI Asistent</h3>
       </div>
@@ -163,7 +162,7 @@ function AiAssistantWidget() {
         href="/portal/contracts/review"
         className="mt-3 flex items-center justify-center gap-2 w-full min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold"
       >
-        <Sparkles size={14} /> AI Smlouvy <ArrowRight size={14} />
+        <AiAssistantBrandIcon size={16} /> AI Smlouvy <ArrowRight size={14} />
       </Link>
     </MobileCard>
   );
@@ -735,13 +734,21 @@ export function DashboardScreen({
       {/* Quick Actions -- horizontal scroll, 8 pills */}
       <div className="dash-scroll-strip flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
         {QUICK_ACTIONS.map((qa, i) => {
-          const QIcon = qa.icon;
           const cls =
             "flex items-center gap-1.5 px-3 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-bold text-[color:var(--wp-text-secondary)] whitespace-nowrap shrink-0 min-h-[40px] active:scale-95 transition-transform";
+          const iconEl =
+            "brandAi" in qa && qa.brandAi ? (
+              <AiAssistantBrandIcon size={14} className="opacity-70 shrink-0" />
+            ) : (
+              (() => {
+                const QIcon = (qa as Extract<QuickActionItem, { icon: LucideIcon }>).icon;
+                return <QIcon size={14} className="opacity-70" />;
+              })()
+            );
           if (qa.href) {
             return (
               <Link key={i} href={qa.href} className={cls}>
-                <QIcon size={14} className="opacity-70" />
+                {iconEl}
                 {qa.label}
               </Link>
             );
@@ -750,10 +757,10 @@ export function DashboardScreen({
             <button
               key={i}
               type="button"
-              onClick={() => qa.action && actionCallbacks[qa.action]?.()}
+              onClick={() => "action" in qa && qa.action && actionCallbacks[qa.action]?.()}
               className={cls}
             >
-              <QIcon size={14} className="opacity-70" />
+              {iconEl}
               {qa.label}
             </button>
           );
