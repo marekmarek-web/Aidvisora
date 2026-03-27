@@ -763,16 +763,16 @@ export function PipelineBoard({
                               {isMenuOpen && (
                                 <>
                                   <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); }} aria-hidden />
-                                  <div className="absolute right-2 bottom-14 z-20 py-1 rounded-lg bg-white border border-slate-200 shadow-lg min-w-[140px]">
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setEditOpp(opp); }} className="w-full px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                  <div className="absolute bottom-14 right-2 z-20 min-w-[140px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-1 shadow-lg">
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setEditOpp(opp); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]">
                                       <Edit2 size={14} /> Upravit
                                     </button>
                                     {opp.contactId && (
-                                      <Link href={`/portal/contacts/${opp.contactId}`} onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); }} className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                      <Link href={`/portal/contacts/${opp.contactId}`} onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]">
                                         <Phone size={14} /> Otevřít kontakt
                                       </Link>
                                     )}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setDeleteConfirmId(opp.id); }} className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setDeleteConfirmId(opp.id); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400">
                                       <Trash2 size={14} /> Smazat
                                     </button>
                                   </div>
@@ -786,7 +786,7 @@ export function PipelineBoard({
                       <button
                         type="button"
                         onClick={() => setCreateStageId(stage.id)}
-                        className="flex items-center justify-center gap-2 w-full py-3 mt-1 rounded-[16px] text-slate-500 text-[11px] font-black uppercase tracking-widest bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 hover:text-indigo-600 transition-all active:scale-[0.98] min-h-[44px]"
+                        className="mt-1 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[16px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-3 text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] shadow-sm transition-all hover:border-indigo-400/50 hover:text-indigo-600 hover:shadow-md active:scale-[0.98] dark:hover:text-indigo-400"
                       >
                         <Plus size={16} strokeWidth={2.5} /> Přidat
                       </button>
