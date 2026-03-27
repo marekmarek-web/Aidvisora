@@ -109,7 +109,7 @@ function StatusIcon({ status }: { status: CoverageStatus }) {
     );
   if (status === "not_relevant")
     return (
-      <span className="shrink-0 text-slate-400" aria-hidden>
+      <span className="shrink-0 text-[color:var(--wp-text-muted)]" aria-hidden>
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
@@ -133,28 +133,28 @@ export function CoverageSummaryBar({ summary }: { summary: CoverageSummary }) {
   const opportunityPct = total ? (opportunity / total) * 100 : 0;
 
   return (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 flex flex-col justify-center">
-      <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-4">Celkové pokrytí portfolia</h3>
-      <div className="flex gap-2 text-sm font-bold mb-3">
-        <span className="text-emerald-600">{done} hotovo</span>
-        <span className="text-slate-300">,</span>
-        <span className="text-amber-500">{inProgress} řeší se</span>
-        <span className="text-slate-300">,</span>
-        <span className="text-slate-500">{none} nic</span>
+    <div className="bg-[color:var(--wp-surface)] rounded-[24px] border border-[color:var(--wp-border)] shadow-sm p-6 flex flex-col justify-center">
+      <h3 className="font-black text-[color:var(--wp-text)] uppercase tracking-widest text-[11px] mb-4">Celkové pokrytí portfolia</h3>
+      <div className="flex gap-2 text-sm font-bold mb-3 flex-wrap">
+        <span className="text-emerald-600 dark:text-emerald-400">{done} hotovo</span>
+        <span className="text-[color:var(--wp-text-muted)]">,</span>
+        <span className="text-amber-500 dark:text-amber-400">{inProgress} řeší se</span>
+        <span className="text-[color:var(--wp-text-muted)]">,</span>
+        <span className="text-[color:var(--wp-text-muted)]">{none} nic</span>
         {opportunity > 0 && (
           <>
-            <span className="text-slate-300">,</span>
-            <span className="text-indigo-500">{opportunity} příležitost</span>
+            <span className="text-[color:var(--wp-text-muted)]">,</span>
+            <span className="text-indigo-500 dark:text-indigo-400">{opportunity} příležitost</span>
           </>
         )}
         {notRelevant > 0 && (
           <>
-            <span className="text-slate-300">,</span>
-            <span className="text-slate-400">{notRelevant} nerelevantní</span>
+            <span className="text-[color:var(--wp-text-muted)]">,</span>
+            <span className="text-[color:var(--wp-text-muted)]">{notRelevant} nerelevantní</span>
           </>
         )}
       </div>
-      <div className="h-2 w-full max-w-md mx-auto bg-slate-100 rounded-full overflow-hidden flex">
+      <div className="h-2 w-full max-w-md mx-auto bg-[color:var(--wp-surface-inset)] rounded-full overflow-hidden flex">
         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${donePct}%` }} />
         <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${inProgressPct}%` }} />
         <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${opportunityPct}%` }} />
@@ -178,12 +178,12 @@ function CoverageStatusSelector({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3 py-2 rounded-[var(--wp-radius-sm)] hover:bg-slate-100 transition-colors touch-manipulation"
+      className="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3 py-2 rounded-[var(--wp-radius-sm)] hover:bg-[color:var(--wp-surface-muted)] transition-colors touch-manipulation"
       title="Klikni pro změnu stavu"
       aria-label={`Stav: ${STATUS_LABELS[status]}. Klikni pro změnu.`}
     >
       <StatusIcon status={status} />
-      <span className="text-sm font-medium text-slate-700">{STATUS_LABELS[status]}</span>
+      <span className="text-sm font-medium text-[color:var(--wp-text)]">{STATUS_LABELS[status]}</span>
     </button>
   );
 }
@@ -269,7 +269,7 @@ function CoverageActionsMenu({
       <>
         <div className="fixed inset-0 z-[100]" aria-hidden onClick={() => setOpen(false)} />
         <div
-          className="fixed z-[101] min-w-[180px] rounded-[var(--wp-radius-sm)] border border-slate-200 bg-white shadow-lg py-1"
+          className="fixed z-[101] min-w-[180px] rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] shadow-lg py-1"
           style={
             menuPosition
               ? { bottom: menuPosition.bottom, right: menuPosition.right }
@@ -279,7 +279,7 @@ function CoverageActionsMenu({
           {item.linkedContractId && (
             <Link
               href={`/portal/contacts/${contactId}#produkty`}
-              className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+              className="block px-4 py-2 text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center"
               onClick={() => setOpen(false)}
             >
               Smlouva →
@@ -288,7 +288,7 @@ function CoverageActionsMenu({
           {item.linkedOpportunityId && (
             <Link
               href={`/portal/pipeline/${item.linkedOpportunityId}`}
-              className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+              className="block px-4 py-2 text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center"
               onClick={() => setOpen(false)}
             >
               Obchod →
@@ -298,7 +298,7 @@ function CoverageActionsMenu({
             type="button"
             onClick={handleCreateOpportunity}
             disabled={loading}
-            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
+            className="w-full text-left px-4 py-2 text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center disabled:opacity-50"
           >
             Založit obchod
           </button>
@@ -306,13 +306,13 @@ function CoverageActionsMenu({
             type="button"
             onClick={handleCreateTask}
             disabled={loading}
-            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center disabled:opacity-50"
+            className="w-full text-left px-4 py-2 text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center disabled:opacity-50"
           >
             Vytvořit úkol
           </button>
           <Link
             href={`/portal/contacts/${contactId}#ukoly`}
-            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px] flex items-center"
+            className="block px-4 py-2 text-sm text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] flex items-center"
             onClick={() => setOpen(false)}
           >
             Úkoly →
@@ -327,7 +327,7 @@ function CoverageActionsMenu({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="min-h-[44px] min-w-[44px] p-2 rounded-[var(--wp-radius-sm)] hover:bg-slate-100 text-slate-500 touch-manipulation"
+        className="min-h-[44px] min-w-[44px] p-2 rounded-[var(--wp-radius-sm)] hover:bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-muted)] touch-manipulation"
         aria-label="Další akce"
         aria-expanded={open}
       >
@@ -425,10 +425,10 @@ function CoverageItemRow({
 
   const btnClass =
     isDone
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm dark:bg-emerald-950/35 dark:text-emerald-300 dark:border-emerald-800/50"
       : isPending
-        ? "bg-amber-50 text-amber-700 border-amber-200 shadow-sm"
-        : "bg-slate-50/50 text-slate-500 border-slate-200 hover:bg-white hover:shadow-md";
+        ? "bg-amber-50 text-amber-700 border-amber-200 shadow-sm dark:bg-amber-950/35 dark:text-amber-300 dark:border-amber-800/50"
+        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-muted)] border-[color:var(--wp-border)] hover:bg-[color:var(--wp-surface)] hover:shadow-md dark:hover:bg-[color:var(--wp-surface-card)]";
 
   const label =
     single && isDone ? "Hotovo" : single && isPending ? "Řeší se" : single && isNone ? "Nastavit" : item.label;
@@ -446,7 +446,7 @@ function CoverageItemRow({
       >
         {isDone && <CheckCircle2 size={16} className="text-emerald-500 shrink-0" aria-hidden />}
         {isPending && <Clock size={16} className="text-amber-500 shrink-0" aria-hidden />}
-        {isNone && <Circle size={16} className="text-slate-300 shrink-0 group-hover/btn:text-indigo-400 transition-colors" aria-hidden />}
+        {isNone && <Circle size={16} className="text-[color:var(--wp-text-muted)] shrink-0 group-hover/btn:text-indigo-400 transition-colors" aria-hidden />}
         <span className="min-w-0 line-clamp-2 text-left break-words">{label}</span>
       </button>
       {!single && showFaButton && (
@@ -473,11 +473,19 @@ const CATEGORY_SPEC: Record<string, { icon: typeof Car; from: string; to: string
   "Životní pojištění": { icon: Heart, from: "from-rose-500/5", to: "to-pink-500/5", iconColor: "text-rose-500", shadowColor: "shadow-rose-500" },
   Úvěry: { icon: CreditCard, from: "from-cyan-500/5", to: "to-blue-500/5", iconColor: "text-cyan-500", shadowColor: "shadow-cyan-500" },
   Investice: { icon: TrendingUp, from: "from-purple-500/5", to: "to-fuchsia-500/5", iconColor: "text-purple-500", shadowColor: "shadow-purple-500" },
-  DPS: { icon: PiggyBank, from: "from-slate-500/5", to: "to-gray-500/5", iconColor: "text-slate-500", shadowColor: "shadow-slate-500" },
+  DPS: { icon: PiggyBank, from: "from-slate-500/5", to: "to-gray-500/5", iconColor: "text-[color:var(--wp-text-muted)]", shadowColor: "shadow-slate-500" },
 };
 
 function getCategorySpec(category: string) {
-  return CATEGORY_SPEC[category] ?? { icon: BarChart2, from: "from-slate-500/5", to: "to-slate-500/5", iconColor: "text-slate-500", shadowColor: "shadow-slate-500" };
+  return (
+    CATEGORY_SPEC[category] ?? {
+      icon: BarChart2,
+      from: "from-slate-500/5",
+      to: "to-slate-500/5",
+      iconColor: "text-[color:var(--wp-text-muted)]",
+      shadowColor: "shadow-slate-500",
+    }
+  );
 }
 
 /** Karta jedné kategorie (glass-card, ikona, spec „pokryti produktu.txt“). */
@@ -500,13 +508,13 @@ function CoverageAreaCard({
   const Icon = spec.icon;
   const single = items.length === 1;
   return (
-    <div className={`relative rounded-[28px] p-5 flex flex-col h-full group hover:bg-white/80 transition-all duration-500 overflow-hidden border border-white/60 bg-white/40 backdrop-blur-[12px] shadow-[0_8px_30px_rgba(0,0,0,0.04)]`}>
+    <div className="relative rounded-[28px] p-5 flex flex-col h-full group hover:bg-white/80 dark:hover:bg-[color:var(--wp-surface-card)]/80 transition-all duration-500 overflow-hidden border border-white/60 dark:border-[color:var(--wp-border)] bg-white/40 dark:bg-[color:var(--wp-surface-muted)]/40 backdrop-blur-[12px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
       <div className={`absolute inset-0 bg-gradient-to-br ${spec.from} ${spec.to} opacity-50 group-hover:opacity-100 transition-opacity duration-500 z-0`} aria-hidden />
       <div className="relative z-10 flex flex-col items-center justify-center mb-6 text-center pt-2">
-        <div className={`w-14 h-14 bg-white rounded-2xl shadow-md ${spec.shadowColor}/20 mb-4 flex items-center justify-center ${spec.iconColor} group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500`}>
+        <div className={`w-14 h-14 bg-white dark:bg-[color:var(--wp-surface-card)] rounded-2xl shadow-md ${spec.shadowColor}/20 mb-4 flex items-center justify-center ${spec.iconColor} group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500`}>
           <Icon size={24} strokeWidth={2.5} aria-hidden />
         </div>
-        <h4 className="font-black text-slate-800 text-[15px] tracking-tight leading-tight">{displayName}</h4>
+        <h4 className="font-black text-[color:var(--wp-text)] text-[15px] tracking-tight leading-tight">{displayName}</h4>
       </div>
       <div className={`relative z-10 flex flex-col gap-2 mt-auto min-w-0 ${single ? "items-center justify-center" : ""}`}>
         {items.map((item) => (
@@ -587,7 +595,7 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
       console.error("[ClientCoverageWidget] getCoverageForContact error:", error.message);
     }
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm text-sm text-red-600">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm text-sm text-red-600">
         Chyba při načítání pokrytí: {displayMessage}
       </div>
     );
@@ -595,7 +603,7 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm text-sm text-slate-500">
+      <div className="bg-[color:var(--wp-surface)] rounded-[24px] border border-[color:var(--wp-border)] p-6 shadow-sm text-sm text-[color:var(--wp-text-muted)]">
         Načítám pokrytí…
       </div>
     );
@@ -610,20 +618,20 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
   return (
     <div className="space-y-6">
       {/* Glass panel podle spec „pokryti produktu.txt“ */}
-      <div className="w-full rounded-[32px] p-6 sm:p-8 border border-white/50 bg-white/85 backdrop-blur-[20px] shadow-[0_8px_32px_rgba(31,38,135,0.05)]">
+      <div className="w-full rounded-[32px] p-6 sm:p-8 border border-white/50 dark:border-[color:var(--wp-border)] bg-white/85 dark:bg-[color:var(--wp-surface-card)]/90 backdrop-blur-[20px] shadow-[0_8px_32px_rgba(31,38,135,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
         <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+            <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-inner">
               <BarChart2 size={28} strokeWidth={2.5} aria-hidden />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pokrytí produktů</h2>
-              <p className="text-sm font-bold text-slate-400 mt-1">Interaktivní mapa klientova portfolia</p>
+              <h2 className="text-2xl font-black text-[color:var(--wp-text)] tracking-tight">Pokrytí produktů</h2>
+              <p className="text-sm font-bold text-[color:var(--wp-text-muted)] mt-1">Interaktivní mapa klientova portfolia</p>
             </div>
           </div>
-          <div className="flex-1 max-w-sm w-full bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+          <div className="flex-1 max-w-sm w-full bg-slate-50/50 dark:bg-[color:var(--wp-surface-muted)] p-4 rounded-2xl border border-slate-100 dark:border-[color:var(--wp-border)]">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stav pokrytí</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-muted)]">Stav pokrytí</span>
               <div className="flex gap-3 text-xs font-bold">
                 <span className="text-emerald-600 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden />{activeCount}
@@ -633,18 +641,18 @@ export function ClientCoverageWidget({ contactId }: { contactId: string }) {
                 </span>
               </div>
             </div>
-            <div className="h-2.5 w-full bg-white rounded-full overflow-hidden flex shadow-inner border border-slate-200/60">
+            <div className="h-2.5 w-full bg-[color:var(--wp-surface-inset)] rounded-full overflow-hidden flex shadow-inner border border-[color:var(--wp-border)]">
               <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-700 ease-out" style={{ width: `${activePct}%` }} />
               <div className="h-full bg-gradient-to-r from-amber-300 to-amber-400 transition-all duration-700 ease-out" style={{ width: `${pendingPct}%` }} />
             </div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-3 text-center">Klikni na položku pro změnu stavu.</p>
+            <p className="text-[9px] text-[color:var(--wp-text-muted)] font-bold uppercase tracking-widest mt-3 text-center">Klikni na položku pro změnu stavu.</p>
           </div>
         </div>
         <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-bold text-slate-500" />
+          <span className="text-sm font-bold text-[color:var(--wp-text-muted)]" />
           <Link
             href={`/portal/contacts/${contactId}#obchody`}
-            className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 min-h-[44px]"
+            className="text-sm font-black text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors flex items-center gap-1 min-h-[44px]"
           >
             Obchody <span aria-hidden>→</span>
           </Link>

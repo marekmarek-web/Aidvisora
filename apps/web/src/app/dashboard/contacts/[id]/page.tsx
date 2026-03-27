@@ -30,7 +30,7 @@ export default async function ContactDetailPage({
           {contact.firstName} {contact.lastName}
         </h1>
         <div className="flex gap-2">
-          <Link href={`/dashboard/contacts/${id}/summary`} className="rounded-xl px-4 py-2 text-sm font-semibold border border-[var(--brand-border)] text-slate-700 hover:bg-slate-50">
+          <Link href={`/dashboard/contacts/${id}/summary`} className="rounded-xl px-4 py-2 text-sm font-semibold border border-[var(--brand-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]">
             Klientská zpráva (PDF)
           </Link>
           <Link href={`/dashboard/contacts/${id}/edit`} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: "var(--brand-main)" }}>
@@ -38,24 +38,24 @@ export default async function ContactDetailPage({
           </Link>
         </div>
       </div>
-      <div className="rounded-xl border border-[var(--brand-border)] bg-white p-6 shadow-sm space-y-3">
-        <p><span className="text-slate-500">E-mail:</span> {contact.email ?? "—"}</p>
-        <p><span className="text-slate-500">Telefon:</span> {contact.phone ?? "—"}</p>
-        {contact.title ? <p><span className="text-slate-500">Titul:</span> {contact.title}</p> : null}
+      <div className="rounded-xl border border-[var(--brand-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm space-y-3">
+        <p><span className="text-[color:var(--wp-text-muted)]">E-mail:</span> {contact.email ?? "—"}</p>
+        <p><span className="text-[color:var(--wp-text-muted)]">Telefon:</span> {contact.phone ?? "—"}</p>
+        {contact.title ? <p><span className="text-[color:var(--wp-text-muted)]">Titul:</span> {contact.title}</p> : null}
         {(contact.nextServiceDue || contact.serviceCycleMonths) && (
           <p>
-            <span className="text-slate-500">Servisní cyklus:</span> {contact.serviceCycleMonths ?? "—"} měsíců
+            <span className="text-[color:var(--wp-text-muted)]">Servisní cyklus:</span> {contact.serviceCycleMonths ?? "—"} měsíců
             {contact.nextServiceDue && (
-              <> · <span className="text-slate-500">Příští servis:</span> {contact.nextServiceDue}</>
+              <> · <span className="text-[color:var(--wp-text-muted)]">Příští servis:</span> {contact.nextServiceDue}</>
             )}
           </p>
         )}
         {contact.gdprConsentAt && (
-          <p><span className="text-slate-500">Souhlas GDPR:</span> {new Date(contact.gdprConsentAt).toLocaleString("cs-CZ")}</p>
+          <p><span className="text-[color:var(--wp-text-muted)]">Souhlas GDPR:</span> {new Date(contact.gdprConsentAt).toLocaleString("cs-CZ")}</p>
         )}
         {(contact.referralSource || contact.referralContactName) && (
           <p>
-            <span className="text-slate-500">Doporučení:</span>{" "}
+            <span className="text-[color:var(--wp-text-muted)]">Doporučení:</span>{" "}
             {[contact.referralSource, contact.referralContactName].filter(Boolean).join(" – ")}
             {contact.referralContactId && (
               <Link href={`/dashboard/contacts/${contact.referralContactId}`} className="ml-2 text-sm" style={{ color: "var(--brand-main)" }}>
@@ -66,7 +66,7 @@ export default async function ContactDetailPage({
         )}
         {referralSummary && (referralSummary.givenCount > 0 || !(contact.referralSource || contact.referralContactName)) && (
           <p>
-            <span className="text-slate-500">Doporučení od tohoto klienta:</span>{" "}
+            <span className="text-[color:var(--wp-text-muted)]">Doporučení od tohoto klienta:</span>{" "}
             {referralSummary.givenCount === 0
               ? "zatím nikoho nedoporučil"
               : `${referralSummary.givenCount} ${referralSummary.givenCount === 1 ? "kontakt" : referralSummary.givenCount < 5 ? "kontakty" : "kontaktů"}`}
@@ -84,8 +84,8 @@ export default async function ContactDetailPage({
         )}
       </div>
       <ContractsSection contactId={id} />
-      <div className="rounded-xl border border-[var(--brand-border)] bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800 mb-2">Platební instrukce</h2>
+      <div className="rounded-xl border border-[var(--brand-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <h2 className="font-semibold text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>
         <SendPaymentPdfButton contactId={id} />
       </div>
       <DocumentsSection contactId={id} />

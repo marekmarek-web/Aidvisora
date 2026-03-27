@@ -58,7 +58,7 @@ export function MasterDetailLayout({
     <div className="flex h-full min-h-0">
       <div
         className={cx(
-          "overflow-y-auto border-r border-slate-200 flex-shrink-0",
+          "overflow-y-auto border-r border-[color:var(--wp-border)] flex-shrink-0",
           showDetail ? "w-[320px]" : "flex-1"
         )}
       >

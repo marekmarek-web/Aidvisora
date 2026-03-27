@@ -70,13 +70,13 @@ export function CsvImportForm() {
   const colOptions = preview?.headers.map((h, i) => ({ value: i, label: `${i}: ${h || "(prázdný)"}` })) ?? [];
 
   return (
-    <div className="rounded-xl border border-monday-border bg-white p-4 shadow-sm">
-      <h3 className="font-semibold text-slate-800 mb-2">Import z CSV nebo Excel</h3>
+    <div className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 shadow-sm">
+      <h3 className="font-semibold text-[color:var(--wp-text)] mb-2">Import z CSV nebo Excel</h3>
       <div className="flex gap-2 mb-4 text-sm">
         {WIZARD_STEPS.slice(0, -1).map((s, i) => (
           <span
             key={s}
-            className={stepIndex >= i ? "font-medium text-slate-700" : "text-slate-400"}
+            className={stepIndex >= i ? "font-medium text-[color:var(--wp-text)]" : "text-[color:var(--wp-text-muted)]"}
           >
             {i + 1}. {s === "upload" ? "Upload" : s === "mapping" ? "Mapování" : "Preview"}
           </span>
@@ -84,8 +84,8 @@ export function CsvImportForm() {
       </div>
       {step === "upload" && (
         <div>
-          <p className="text-sm text-slate-500 mb-3">Nahrajte soubor CSV nebo Excel (.xlsx). První řádek se bere jako hlavička. Následně namapujete sloupce na pole.</p>
-          <label className={`inline-flex items-center min-h-[44px] px-3 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"}`}>
+          <p className="text-sm text-[color:var(--wp-text-muted)] mb-3">Nahrajte soubor CSV nebo Excel (.xlsx). První řádek se bere jako hlavička. Následně namapujete sloupce na pole.</p>
+          <label className={`inline-flex items-center min-h-[44px] px-3 rounded-lg border border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface)] text-sm font-medium text-[color:var(--wp-text)] ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[color:var(--wp-surface-muted)]"}`}>
             Vybrat CSV/XLSX
             <input type="file" accept=".csv,.txt,.xlsx" className="hidden" onChange={onFileChange} disabled={loading} />
           </label>
@@ -93,7 +93,7 @@ export function CsvImportForm() {
       )}
       {step === "mapping" && preview && (
         <div>
-          <p className="text-sm text-slate-500 mb-3">Namapujte sloupce na pole (číslo sloupce odpovídá pořadí v souboru):</p>
+          <p className="text-sm text-[color:var(--wp-text-muted)] mb-3">Namapujte sloupce na pole (číslo sloupce odpovídá pořadí v souboru):</p>
           <div className="grid grid-cols-2 gap-2 mb-4 max-w-md">
             <label className="text-sm font-medium">Jméno</label>
             <CustomDropdown
@@ -129,7 +129,7 @@ export function CsvImportForm() {
             />
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setStep("upload")} className="rounded-lg px-4 py-2 text-sm font-semibold border border-slate-300 text-slate-600">
+            <button type="button" onClick={() => setStep("upload")} className="rounded-lg px-4 py-2 text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-muted)]">
               Zpět
             </button>
             <button type="button" onClick={() => setStep("preview")} className="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-monday-blue">
@@ -140,26 +140,26 @@ export function CsvImportForm() {
       )}
       {step === "preview" && preview && (
         <div>
-          <p className="text-sm text-slate-500 mb-2">Náhled dat (max 10 řádků):</p>
-          <div className="overflow-x-auto mb-4 text-xs border border-slate-200 rounded p-2 max-h-40 overflow-y-auto">
+          <p className="text-sm text-[color:var(--wp-text-muted)] mb-2">Náhled dat (max 10 řádků):</p>
+          <div className="overflow-x-auto mb-4 text-xs border border-[color:var(--wp-border)] rounded p-2 max-h-40 overflow-y-auto">
             <table className="border-collapse">
               <tbody>
                 {preview.rows.slice(0, 10).map((row, ri) => (
                   <tr key={ri}>
                     {row.map((cell, ci) => (
-                      <td key={ci} className="border border-slate-200 px-2 py-0.5">{cell}</td>
+                      <td key={ci} className="border border-[color:var(--wp-border)] px-2 py-0.5">{cell}</td>
                     ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="mb-4 p-3 border border-amber-200 rounded-lg bg-amber-50">
-            <p className="text-xs font-medium text-amber-800 mb-1">Potenciální duplicity</p>
-            <p className="text-xs text-amber-700">Kontrola duplicit (e-mail, telefon) proběhne při importu. Řádky s duplicitou budou přeskočeny.</p>
+          <div className="mb-4 p-3 border border-amber-200 dark:border-amber-800/60 rounded-lg bg-amber-50 dark:bg-amber-950/35">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">Potenciální duplicity</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300/90">Kontrola duplicit (e-mail, telefon) proběhne při importu. Řádky s duplicitou budou přeskočeny.</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setStep("mapping")} className="rounded-lg px-4 py-2 text-sm font-semibold border border-slate-300 text-slate-600">
+            <button type="button" onClick={() => setStep("mapping")} className="rounded-lg px-4 py-2 text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-muted)]">
               Zpět
             </button>
             <button type="button" onClick={onConfirmImport} disabled={loading} className="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-monday-blue disabled:opacity-50">
@@ -170,12 +170,12 @@ export function CsvImportForm() {
       )}
       {step === "done" && result && (
         <div className="text-sm">
-          <p className="text-green-700">Importováno: {result.imported}</p>
-          {result.skipped > 0 && <p className="text-amber-700">Přeskočeno (duplicity): {result.skipped}</p>}
+          <p className="text-green-700 dark:text-green-400">Importováno: {result.imported}</p>
+          {result.skipped > 0 && <p className="text-amber-700 dark:text-amber-300">Přeskočeno (duplicity): {result.skipped}</p>}
           {result.errors.length > 0 && (
-            <p className="text-amber-700 mt-1">Chyby: {result.errors.length} (řádky {result.errors.slice(0, 5).map((e) => e.row).join(", ")}{result.errors.length > 5 ? "…" : ""})</p>
+            <p className="text-amber-700 dark:text-amber-300 mt-1">Chyby: {result.errors.length} (řádky {result.errors.slice(0, 5).map((e) => e.row).join(", ")}{result.errors.length > 5 ? "…" : ""})</p>
           )}
-          <button type="button" onClick={() => { setStep("upload"); setPreview(null); setFile(null); setResult(null); }} className="mt-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-300 text-slate-600">
+          <button type="button" onClick={() => { setStep("upload"); setPreview(null); setFile(null); setResult(null); }} className="mt-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-muted)]">
             Importovat znovu
           </button>
         </div>

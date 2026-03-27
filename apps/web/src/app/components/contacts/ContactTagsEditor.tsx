@@ -7,7 +7,7 @@ import { setContactTags } from "@/app/actions/contacts";
 import { useToast } from "@/app/components/Toast";
 
 const BADGE_CLS =
-  "inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-slate-200";
+  "inline-flex items-center gap-1 px-2.5 py-1 bg-[color:var(--wp-surface-inset)] text-[color:var(--wp-text-muted)] text-[10px] font-black uppercase tracking-widest rounded-md border border-[color:var(--wp-border)]";
 
 type ContactTagsEditorProps = {
   contactId: string;
@@ -81,7 +81,7 @@ export function ContactTagsEditor({ contactId, initialTags }: ContactTagsEditorP
             type="button"
             onClick={() => handleRemove(tag)}
             disabled={saving}
-            className="min-h-[44px] min-w-[44px] -m-1 flex items-center justify-center rounded hover:bg-slate-200/80 text-slate-500 disabled:opacity-50 touch-manipulation"
+            className="min-h-[44px] min-w-[44px] -m-1 flex items-center justify-center rounded hover:bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-muted)] disabled:opacity-50 touch-manipulation"
             aria-label={`Odebrat štítek ${tag}`}
           >
             <X size={12} strokeWidth={2.5} />
@@ -96,14 +96,14 @@ export function ContactTagsEditor({ contactId, initialTags }: ContactTagsEditorP
           onKeyDown={handleKeyDown}
           placeholder="Přidat štítek"
           disabled={saving}
-          className="min-h-[44px] px-3 py-1.5 rounded-md border border-slate-200 text-[13px] font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+          className="min-h-[44px] px-3 py-1.5 rounded-md border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] text-[color:var(--wp-text)] text-[13px] font-medium w-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
           aria-label="Nový štítek"
         />
         <button
           type="button"
           onClick={handleAdd}
           disabled={saving || !newTag.trim()}
-          className="min-h-[44px] px-3 py-1.5 rounded-md border border-indigo-200 text-indigo-700 text-xs font-bold bg-white hover:bg-indigo-50 transition-colors disabled:opacity-50 touch-manipulation"
+          className="min-h-[44px] px-3 py-1.5 rounded-md border border-indigo-200 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold bg-[color:var(--wp-surface)] hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors disabled:opacity-50 touch-manipulation"
         >
           Přidat
         </button>

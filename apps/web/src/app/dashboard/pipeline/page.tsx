@@ -11,7 +11,7 @@ export default async function PipelinePage() {
       <h1 className="text-2xl font-bold" style={{ color: "var(--brand-dark)" }}>
         Pipeline
       </h1>
-      <p className="text-slate-600">
+      <p className="text-[color:var(--wp-text-muted)]">
         Případy (hypo / invest / pojist) – přesuňte do jiného stupně pomocí tlačítka.
       </p>
       <PipelineBoard stages={stages} contacts={contacts} />

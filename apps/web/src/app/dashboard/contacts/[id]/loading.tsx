@@ -1,5 +1,5 @@
 function Skeleton({ className }: { className?: string }) {
-  return <div className={`animate-pulse bg-monday-border rounded ${className ?? ""}`} />;
+  return <div className={`animate-pulse bg-[color:var(--wp-skeleton-bg)] rounded ${className ?? ""}`} />;
 }
 
 export default function ContactDetailLoading() {
@@ -20,7 +20,7 @@ export default function ContactDetailLoading() {
         <Skeleton className="h-8 w-20 rounded-[6px]" />
         <Skeleton className="h-8 w-24 rounded-[6px]" />
       </div>
-      <div className="rounded-xl border border-monday-border bg-white p-6 space-y-4">
+      <div className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 space-y-4">
         <Skeleton className="h-5 w-32" />
         <div className="grid grid-cols-2 gap-4">
           <Skeleton className="h-10 w-full" />

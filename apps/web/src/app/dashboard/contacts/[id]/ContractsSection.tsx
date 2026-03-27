@@ -160,7 +160,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
     });
   }
 
-  if (loading) return <p className="text-slate-500 text-sm">Načítám smlouvy…</p>;
+  if (loading) return <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám smlouvy…</p>;
   if (loadError) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
@@ -173,7 +173,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   }
 
   return (
-    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
       <ConfirmDeleteModal
         open={deleteConfirmId !== null}
         title="Opravdu smazat smlouvu?"
@@ -181,18 +181,18 @@ export function ContractsSection({ contactId }: { contactId: string }) {
         onCancel={() => setDeleteConfirmId(null)}
         loading={deletePending}
       />
-      <h2 className="font-semibold text-slate-800 mb-2">Produkty / Smlouvy</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-semibold text-[color:var(--wp-text)] mb-2">Produkty / Smlouvy</h2>
+      <p className="text-xs text-[color:var(--wp-text-muted)] mb-4">
         {EUCS_ZP_DISCLAIMER}
       </p>
       <ul className="space-y-3 mb-4">
         {list.map((c) => (
-          <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm min-h-[44px]">
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm min-h-[44px]">
             <span className="min-w-0">
               {c.contractNumber ? (
                 <>
-                  <span className="font-medium text-slate-800">č. {c.contractNumber}</span>
-                  <span className="text-slate-500"> · </span>
+                  <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
+                  <span className="text-[color:var(--wp-text-muted)]"> · </span>
                 </>
               ) : null}
               {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
@@ -200,7 +200,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
             </span>
             <div className="flex gap-2 shrink-0">
-              <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-slate-100 min-h-[44px]">
+              <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
                 Upravit
               </button>
               <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]">
@@ -219,7 +219,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       {editingId ? (
         <form onSubmit={handleSubmitEdit} className="space-y-2 max-w-md">
           <div>
-            <label className="block text-xs font-medium text-slate-500">Segment</label>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Segment</label>
             <CustomDropdown
               value={form.segment}
               onChange={(seg) => {
@@ -248,7 +248,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500">Partner / Produkt (text)</label>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Partner / Produkt (text)</label>
             <input
               value={form.partnerName}
               onChange={(e) => setForm((f) => ({ ...f, partnerName: e.target.value }))}
@@ -264,7 +264,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-slate-500">Pojistné (měsíční)</label>
+              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Pojistné (měsíční)</label>
               <input
                 type="number"
                 step="0.01"
@@ -275,7 +275,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-medium text-slate-500">Roční pojistné</label>
+              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Roční pojistné</label>
               <input
                 type="number"
                 step="0.01"
@@ -287,7 +287,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500">Číslo smlouvy</label>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Číslo smlouvy</label>
             <input
               value={form.contractNumber}
               onChange={(e) => setForm((f) => ({ ...f, contractNumber: e.target.value }))}
@@ -296,7 +296,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Nahrát smlouvu (PDF)</label>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Nahrát smlouvu (PDF)</label>
             <DocumentUploadZone
               contactId={contactId}
               initialContractId={editingId}
@@ -308,7 +308,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
           </div>
           <div className="flex gap-2">
             <div>
-              <label className="block text-xs font-medium text-slate-500">Od</label>
+              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Od</label>
               <input
                 type="date"
                 value={form.startDate}
@@ -317,7 +317,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500">Výročí</label>
+              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Výročí</label>
               <input
                 type="date"
                 value={form.anniversaryDate}
@@ -327,7 +327,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500">Poznámka</label>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Poznámka</label>
             <input
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
@@ -345,7 +345,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
             <button
               type="button"
               onClick={() => { setEditingId(null); setSubmitError(null); }}
-              className="rounded px-3 py-1.5 text-sm font-semibold border border-slate-300 text-slate-600"
+              className="rounded px-3 py-1.5 text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-muted)]"
             >
               Zrušit
             </button>

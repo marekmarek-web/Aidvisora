@@ -48,6 +48,11 @@
     background-color: var(--wp-bg);
     font-family: var(--wp-font);
   }
+  /* Dark: stejný podklad jako portálové plátno (gutter, overscroll, mezery u fixed sidebaru) */
+  html.dark,
+  html.dark body {
+    background-color: var(--wp-app-canvas-bg);
+  }
 }
 
 @layer utilities {

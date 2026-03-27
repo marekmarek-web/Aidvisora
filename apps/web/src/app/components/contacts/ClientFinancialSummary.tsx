@@ -28,15 +28,15 @@ export function ClientFinancialSummary({ contactId }: { contactId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Načítám finanční přehled…</p>
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <p className="text-sm text-[color:var(--wp-text-muted)]">Načítám finanční přehled…</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
         <p className="text-sm text-red-600">{error ?? "Žádná data."}</p>
       </div>
     );
@@ -45,8 +45,8 @@ export function ClientFinancialSummary({ contactId }: { contactId: string }) {
   const maxMonthly = Math.max(...data.bySegment.map((s) => s.monthlySum), 1);
 
   return (
-    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-      <h2 className="font-semibold text-slate-800 text-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm space-y-6">
+      <h2 className="font-semibold text-[color:var(--wp-text)] text-sm">
         Finanční přehled
       </h2>
 

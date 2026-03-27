@@ -85,7 +85,7 @@ export const WIDGET_SECTION_BG: Record<DashboardSection, string> = {
   A: "bg-emerald-500/10",
   B: "bg-blue-500/10",
   C: "bg-violet-500/10",
-  D: "bg-slate-500/10",
+  D: "bg-[color:var(--wp-text-muted)]/10",
 };
 
 /** Volba barvy widgetu v modalu „Upravit nástěnku“ – gradientové barvy 2026 */
@@ -94,18 +94,21 @@ export type WidgetColorId = "white" | "emerald" | "blue" | "violet" | "rose" | "
 export const WIDGET_COLOR_IDS: WidgetColorId[] = ["white", "emerald", "blue", "violet", "rose", "amber", "slate"];
 
 export const WIDGET_COLOR_CLASS: Record<WidgetColorId, string> = {
-  white: "bg-white",
+  white: "bg-[color:var(--wp-surface)]",
   emerald: "bg-emerald-500/10",
   blue: "bg-blue-500/10",
   violet: "bg-violet-500/10",
   rose: "bg-rose-500/10",
   amber: "bg-amber-500/10",
-  slate: "bg-slate-500/10",
+  slate: "bg-[color:var(--wp-text-muted)]/12",
 };
 
 /** Pro modální výběr – gradient + ring při aktivním výběru */
 export const WIDGET_COLOR_GRADIENT: Record<WidgetColorId, { bgClass: string; ringClass: string }> = {
-  white: { bgClass: "bg-white border border-slate-200", ringClass: "ring-slate-300" },
+  white: {
+    bgClass: "bg-[color:var(--wp-surface)] border border-[color:var(--wp-border)]",
+    ringClass: "ring-[color:var(--wp-border-strong)]",
+  },
   emerald: { bgClass: "bg-gradient-to-br from-emerald-400 to-teal-500", ringClass: "ring-emerald-500" },
   blue: { bgClass: "bg-gradient-to-br from-blue-400 to-cyan-500", ringClass: "ring-blue-500" },
   violet: { bgClass: "bg-gradient-to-br from-indigo-500 to-purple-600", ringClass: "ring-indigo-500" },

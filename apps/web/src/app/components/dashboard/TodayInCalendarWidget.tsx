@@ -90,7 +90,7 @@ export function TodayInCalendarWidget({
             className={`rounded-[24px] p-6 border transition-all duration-500 flex flex-col justify-center ${
               holidayActive
                 ? "bg-rose-50 dark:bg-rose-950/45 border-rose-100/80 dark:border-rose-500/25 shadow-[0_4px_20px_-4px_rgba(244,63,94,0.15)] dark:shadow-[0_4px_20px_-4px_rgba(244,63,94,0.2)] scale-[1.02]"
-                : "bg-slate-50/50 border-slate-100 hover:bg-slate-50 dark:bg-[color:var(--wp-surface-muted)] dark:border-[color:var(--wp-surface-card-border)] dark:hover:bg-[color:var(--wp-surface-raised)]"
+                : "bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-border)] hover:bg-[color:var(--wp-surface-raised)]"
             }`}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -106,7 +106,7 @@ export function TodayInCalendarWidget({
               <div className="min-w-0">
                 <p
                   className={`text-[10px] font-extrabold uppercase tracking-widest mb-0.5 ${
-                    holidayActive ? "text-rose-500 dark:text-rose-400" : "text-slate-400 dark:text-[color:var(--wp-text-tertiary)]"
+                    holidayActive ? "text-rose-500 dark:text-rose-400" : "text-[color:var(--wp-text-tertiary)]"
                   }`}
                 >
                   Státní svátek
@@ -138,7 +138,7 @@ export function TodayInCalendarWidget({
                 <Gift size={22} aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-extrabold text-slate-400 dark:text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-0.5">
+                <p className="text-[10px] font-extrabold text-[color:var(--wp-text-tertiary)] uppercase tracking-widest mb-0.5">
                   Svátek slaví
                 </p>
                 {nameLine ? (
@@ -146,7 +146,7 @@ export function TodayInCalendarWidget({
                     {nameLine}
                   </p>
                 ) : (
-                  <p className="text-sm font-medium text-slate-500 dark:text-[color:var(--wp-text-secondary)] mt-0.5">
+                  <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-0.5">
                     Dnes žádné jméno v kalendáři
                   </p>
                 )}
@@ -159,7 +159,7 @@ export function TodayInCalendarWidget({
             className={`rounded-[24px] p-6 border transition-all duration-500 flex flex-col justify-center relative overflow-hidden ${
               hasBirthdays
                 ? "bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/35 border-orange-200/50 dark:border-orange-500/25 shadow-[0_8px_24px_-8px_rgba(249,115,22,0.2)] dark:shadow-[0_8px_24px_-8px_rgba(249,115,22,0.15)]"
-                : "bg-slate-50/50 border-slate-100 border-dashed dark:bg-[color:var(--wp-surface-muted)] dark:border-[color:var(--wp-surface-card-border)]"
+                : "bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-border)] border-dashed"
             }`}
           >
             {hasBirthdays ? (
@@ -175,7 +175,7 @@ export function TodayInCalendarWidget({
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
                   hasBirthdays
                     ? "bg-orange-500 text-white shadow-md shadow-orange-200 dark:shadow-orange-950/50"
-                    : "bg-slate-100/50 dark:bg-white/5 text-slate-400 dark:text-[color:var(--wp-text-tertiary)]"
+                    : "bg-[color:var(--wp-surface-inset)] text-[color:var(--wp-text-tertiary)]"
                 }`}
               >
                 <Cake size={22} strokeWidth={hasBirthdays ? 2.5 : 2} aria-hidden />
@@ -185,7 +185,7 @@ export function TodayInCalendarWidget({
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <p
                     className={`text-[10px] font-extrabold uppercase tracking-widest ${
-                      hasBirthdays ? "text-orange-600 dark:text-orange-400" : "text-slate-400 dark:text-[color:var(--wp-text-tertiary)]"
+                      hasBirthdays ? "text-orange-600 dark:text-orange-400" : "text-[color:var(--wp-text-tertiary)]"
                     }`}
                   >
                     Narozeniny klientů
@@ -198,7 +198,7 @@ export function TodayInCalendarWidget({
                 </div>
 
                 {!hasBirthdays ? (
-                  <p className="text-sm font-medium text-slate-500 dark:text-[color:var(--wp-text-secondary)] mt-1">
+                  <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mt-1">
                     Dnes nikdo z kontaktů nemá narozeniny.
                   </p>
                 ) : (
@@ -229,7 +229,7 @@ export function TodayInCalendarWidget({
                         <Link
                           href={`/portal/messages?contact=${bday.id}`}
                           aria-label={`Napsat zprávu: ${bday.firstName} ${bday.lastName}`}
-                          className="min-h-[44px] min-w-[44px] shrink-0 rounded-full bg-white dark:bg-[color:var(--wp-surface-raised)] border border-orange-200 dark:border-orange-500/40 text-orange-500 dark:text-orange-400 flex items-center justify-center hover:bg-orange-500 hover:text-white hover:border-orange-500 dark:hover:bg-orange-500 dark:hover:text-white transition-all shadow-sm"
+                          className="min-h-[44px] min-w-[44px] shrink-0 rounded-full bg-[color:var(--wp-surface)] border border-orange-200 dark:border-orange-500/40 text-orange-500 dark:text-orange-400 flex items-center justify-center hover:bg-orange-500 hover:text-white hover:border-orange-500 dark:hover:bg-orange-500 dark:hover:text-white transition-all shadow-sm"
                         >
                           <Send size={14} className="ml-0.5" aria-hidden />
                         </Link>

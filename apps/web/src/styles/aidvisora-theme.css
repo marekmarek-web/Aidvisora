@@ -297,7 +297,8 @@
  * Zaměřeno na shell tokeny; postupně doplňovat komponenty mimo portál.
  */
 .dark {
-  --wp-bg: #0b1020;
+  /* Jednotný „void“ s UX bgApp (#040814) – gutter kolem plovoucích panelů */
+  --wp-bg: #040814;
   --wp-surface: #12182b;
   --wp-border: rgba(255, 255, 255, 0.1);
   --wp-text: #f1f5f9;
@@ -320,18 +321,18 @@
   --wp-shell-main-border: rgba(255, 255, 255, 0.08);
   --wp-shell-main-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 
-  --wp-app-canvas-bg: #020510;
+  --wp-app-canvas-bg: #040814;
   --wp-portal-blob-1: rgba(79, 70, 229, 0.1);
   --wp-portal-blob-2: rgba(147, 51, 234, 0.1);
   --wp-sidebar-card-bg: rgba(15, 21, 40, 0.8);
   --wp-sidebar-card-border: rgba(255, 255, 255, 0.1);
   --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
   /* Neprůhledný hlavní panel – žádný „filtr“ přes canvas */
-  --wp-main-panel-bg: #060a14;
+  --wp-main-panel-bg: #050b16;
   --wp-main-panel-border: rgba(255, 255, 255, 0.12);
   --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
   --wp-main-panel-backdrop-blur: 0px;
-  --wp-main-scroll-bg: #060a14;
+  --wp-main-scroll-bg: #050b16;
   --wp-canvas-dot-color: rgba(255, 255, 255, 0.04);
   --wp-skeleton-bg: rgba(255, 255, 255, 0.1);
   --wp-scrollbar-thumb: rgba(255, 255, 255, 0.18);

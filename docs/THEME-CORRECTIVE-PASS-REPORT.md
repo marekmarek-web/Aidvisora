@@ -47,12 +47,13 @@ Nové barvy: `wp-text`, `wp-text-muted`, `wp-border-token`, `wp-app-canvas`, `wp
 | **Vlna 6** | `MessengerPreview.tsx`, `CalendarWidget.tsx`, `NotificationBell.tsx`, doplněk kalkulaček (`calculators/_components/**`), `PortalSidebar.tsx`, `quick-new-ui`, `PortalShell` (push toast), `setup/*`, `tools/*`, `admin/ai-quality`, `notes`, `notifications`, `share/import`, `DashboardMiniNotes`, `PortalFeedbackLauncher`, `error.tsx`, `board/page` |
 | Nástěnka | `DashboardEditable.tsx`, `DashboardAiAssistant.tsx`, `DashboardCard.tsx`, `TodayInCalendarWidget.tsx` |
 | Sidecalendar | `DashboardCalendarSidePanel.tsx` (tokeny panelu + scrim) |
+| **Záverečná vlna (portal + sdílené importy)** | `dashboard/pipeline/PipelineBoard.tsx`, `dashboard/pipeline/page.tsx`; `dashboard/contacts/CsvImportForm.tsx`, `dashboard/contacts/[id]/` (`ContractsSection`, `DocumentsSection`, `ContactActivityTimeline`, `ContactFinancialAnalysesSection`, `ContactEventsSection`, `loading`, `page`); `components/contacts/` (`ClientCoverageWidget`, `ComplianceSection`, `ClientFinancialSummary`, `ContactTagsEditor`, `ProductCoverageGrid`); `components/meeting-briefing/` (`PreMeetingBriefPanel`, `PostMeetingSummaryPanel`); `portal/today/dashboard-config.ts`; `shared/mobile-ui/MobileLayouts.tsx`; `components/dashboard/TodayInCalendarWidget.tsx`; `portal/mindmap/page.tsx` (obal loading/error/chyba) |
 
 ## 6. Kde odpadly hardcoded light surfaces (vzorek)
 
 - Nahrazeno `bg-white`, `bg-slate-*`, `text-slate-*`, `border-slate-*` za `var(--wp-*)` / Tailwind arbitrary `bg-[color:var(--wp-*)]` v prošitých souborech výše.
 - **Úmyslně ponecháno:** některé tmavé gradienty / CTA (`#0a0f29`, `#111827`, …) kde jde o brandovaný „inverse“ panel; skleněné `bg-white/10` na tmavých gradientech.
-- **Doporučená kontrola:** občasný `rg` na `portal/` pro `slate-` / `bg-white` (admin, nové soubory, marketing mimo portál).
+- **Doporučená kontrola:** občasný `rg` na `portal/` a na sdílené importy z portálu; po závěrečné vlně zůstávají záměrně např. `bg-white/10` na gradientech AI nástěnky, hover `dark:bg-white/10` u zvonku, admin badge `bg-slate-800`, a pevné barvy v `ProductCoverageGrid` / kategoriích pokrytí (vizuální mapa).
 
 ## 7. A–G (stručně)
 
@@ -86,4 +87,5 @@ Nové barvy: `wp-text`, `wp-text-muted`, `wp-border-token`, `wp-app-canvas`, `wp
 - [x] Light / dark / system – `next-themes` + CSS `.dark` + nový light shadcn blok v `aidvisora-theme.css`.
 
 - [x] **Vlny 2–6 (plán theme parity):** úkoly, kalendář, kontakty/domácnosti/board, analýzy/mindmap/tým/zprávy/AI, mobilní portál, sidecalendar widgety, kalkulačky (komponenty), sidebar/theme segmenty, doplněk zbývajících portálových cest.
+- [x] **Záverečná vlna:** sdílené sekce importované z portálu (pipeline, detail klienta / CSV, kontaktní widgety, briefing před/po schůzce), `dashboard-config` barvy widgetů, mobile master–detail okraj, `TodayInCalendarWidget`, shell mindmap loading/error.
 - [ ] Marketing / landing a zóny mimo portál – záměrně mimo tento pass (dle produktu).

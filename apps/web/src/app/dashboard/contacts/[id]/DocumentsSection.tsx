@@ -61,7 +61,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
     load();
   }
 
-  if (loading) return <p className="text-slate-500 text-sm">Načítám dokumenty…</p>;
+  if (loading) return <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám dokumenty…</p>;
   if (loadError) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
@@ -74,20 +74,20 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
   }
 
   return (
-    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800 mb-4">Dokumenty</h2>
+    <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+      <h2 className="font-semibold text-[color:var(--wp-text)] mb-4">Dokumenty</h2>
 
       <input
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Hledat podle názvu…"
-        className="w-full max-w-md rounded-[var(--wp-radius)] border border-slate-200 px-3 py-2.5 text-sm mb-4 min-h-[44px]"
+        className="w-full max-w-md rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2.5 text-sm mb-4 min-h-[44px]"
       />
 
       <ul className="space-y-3 mb-6">
         {filtered.map((d) => (
-          <li key={d.id} className="rounded-[var(--wp-radius)] border border-slate-200 bg-slate-50/50 px-4 py-3">
+          <li key={d.id} className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3">
             <div className="flex flex-wrap items-center gap-3 text-sm min-h-[44px]">
               <a href={`/api/documents/${d.id}/download`} className="font-medium text-[var(--wp-accent)] hover:underline">
                 {d.name}
@@ -97,14 +97,14 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                   {d.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-block rounded-[var(--wp-radius-sm)] bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                      className="inline-block rounded-[var(--wp-radius-sm)] bg-[color:var(--wp-surface-inset)] px-2 py-0.5 text-xs text-[color:var(--wp-text-muted)]"
                     >
                       {tag}
                     </span>
                   ))}
                 </span>
               )}
-              <span className="text-slate-400">{new Date(d.createdAt).toLocaleDateString("cs-CZ")}</span>
+              <span className="text-[color:var(--wp-text-muted)]">{new Date(d.createdAt).toLocaleDateString("cs-CZ")}</span>
               <ProcessingStatusBadge
                 documentId={d.id}
                 processingStatus={d.processingStatus}
@@ -113,12 +113,12 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                 isScanLike={d.isScanLike}
                 compact
               />
-              <label className="flex items-center gap-1.5 text-slate-600 min-h-[44px]">
+              <label className="flex items-center gap-1.5 text-[color:var(--wp-text-muted)] min-h-[44px]">
                 <input
                   type="checkbox"
                   checked={visibleToClient[d.id] ?? false}
                   onChange={(e) => onToggleVisible(d.id, e.target.checked)}
-                  className="rounded border-slate-300"
+                  className="rounded border-[color:var(--wp-border-strong)]"
                 />
                 Viditelné klientovi
               </label>
@@ -126,7 +126,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                 <button
                   type="button"
                   onClick={() => setPreviewId(previewId === d.id ? null : d.id)}
-                  className="text-xs font-medium px-3 py-2 rounded-[var(--wp-radius)] border border-slate-200 text-[var(--wp-accent)] hover:bg-slate-100 min-h-[44px]"
+                  className="text-xs font-medium px-3 py-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] text-[var(--wp-accent)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                 >
                   {previewId === d.id ? "Zavřít náhled" : "Náhled"}
                 </button>
@@ -142,7 +142,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
             {previewId === d.id && (
               <iframe
                 src={`/api/documents/${d.id}/download`}
-                className="mt-2 w-full rounded-[var(--wp-radius)] border border-slate-200"
+                className="mt-2 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)]"
                 style={{ height: 400 }}
                 title={`Náhled – ${d.name}`}
               />

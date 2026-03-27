@@ -18,9 +18,9 @@ import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { Shield, FileCheck } from "lucide-react";
 
 const RISK_BADGE: Record<string, string> = {
-  low: "bg-green-100 text-green-800",
-  medium: "bg-yellow-100 text-yellow-800",
-  high: "bg-red-100 text-red-800",
+  low: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
+  medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/45 dark:text-yellow-200",
+  high: "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
 };
 
 export function ComplianceSection({ contactId }: { contactId: string }) {
@@ -106,24 +106,24 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
 
   if (loading)
     return (
-      <p className="text-slate-500 text-sm">Načítám KYC & AML data…</p>
+      <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám KYC & AML data…</p>
     );
 
   return (
-    <div className="rounded-[var(--wp-radius-lg)] border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800 mb-4 text-sm">
+    <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+      <h2 className="font-semibold text-[color:var(--wp-text)] mb-4 text-sm">
         KYC & AML
       </h2>
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-4 border-b border-slate-200">
+      <div className="flex gap-1 mb-4 border-b border-[color:var(--wp-border)]">
         <button
           type="button"
           onClick={() => setTab("aml")}
           className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors min-h-[44px] ${
             tab === "aml"
               ? "border-[var(--wp-accent)] text-[var(--wp-accent)]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              : "border-transparent text-[color:var(--wp-text-muted)] hover:text-[color:var(--wp-text)]"
           }`}
         >
           AML
@@ -134,7 +134,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
           className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors min-h-[44px] ${
             tab === "consents"
               ? "border-[var(--wp-accent)] text-[var(--wp-accent)]"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              : "border-transparent text-[color:var(--wp-text-muted)] hover:text-[color:var(--wp-text)]"
           }`}
         >
           Souhlasy
@@ -145,29 +145,30 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
       {tab === "aml" && (
         <div>
           {amlList.length === 0 && !showAmlForm && (
-            <p className="text-sm text-slate-500 mb-3">Zatím žádné AML kontroly.</p>
+            <p className="text-sm text-[color:var(--wp-text-muted)] mb-3">Zatím žádné AML kontroly.</p>
           )}
 
           <ul className="space-y-2 mb-4">
             {amlList.map((row) => (
               <li
                 key={row.id}
-                className="flex items-center gap-3 text-sm border-b border-slate-100 pb-2 min-h-[44px]"
+                className="flex items-center gap-3 text-sm border-b border-[color:var(--wp-border)] pb-2 min-h-[44px]"
               >
-                <span className="text-slate-800">
+                <span className="text-[color:var(--wp-text)]">
                   {new Date(row.checkDate).toLocaleDateString("cs-CZ")}
                 </span>
                 {row.riskLevel && (
                   <span
                     className={`inline-block rounded-lg px-2.5 py-0.5 text-xs font-medium ${
-                      RISK_BADGE[row.riskLevel] ?? "bg-slate-100 text-slate-700"
+                      RISK_BADGE[row.riskLevel] ??
+                      "bg-[color:var(--wp-surface-inset)] text-[color:var(--wp-text)]"
                     }`}
                   >
                     {row.riskLevel}
                   </span>
                 )}
                 {row.notes && (
-                  <span className="text-slate-500 truncate max-w-xs">{row.notes}</span>
+                  <span className="text-[color:var(--wp-text-muted)] truncate max-w-xs">{row.notes}</span>
                 )}
               </li>
             ))}
@@ -176,17 +177,17 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
           {showAmlForm ? (
             <form onSubmit={handleAmlSubmit} className="space-y-3 max-w-md">
               <div>
-                <label className="block text-xs font-medium text-slate-500">Datum kontroly</label>
+                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Datum kontroly</label>
                 <input
                   type="date"
                   value={amlForm.checkDate}
                   onChange={(e) => setAmlForm((f) => ({ ...f, checkDate: e.target.value }))}
                   required
-                  className="w-full rounded-[var(--wp-radius)] border border-slate-200 px-2 py-2 text-sm min-h-[44px]"
+                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-2 py-2 text-sm min-h-[44px]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500">Úroveň rizika</label>
+                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Úroveň rizika</label>
                 <CustomDropdown
                   value={amlForm.riskLevel}
                   onChange={(id) => setAmlForm((f) => ({ ...f, riskLevel: id }))}
@@ -200,12 +201,12 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500">Poznámky</label>
+                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Poznámky</label>
                 <textarea
                   value={amlForm.notes}
                   onChange={(e) => setAmlForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-[var(--wp-radius)] border border-slate-200 px-2 py-1.5 text-sm resize-none"
+                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-2 py-1.5 text-sm resize-none"
                 />
               </div>
               <div className="flex gap-2">
@@ -219,7 +220,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 <button
                   type="button"
                   onClick={() => setShowAmlForm(false)}
-                  className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 min-h-[44px]"
+                  className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-[color:var(--wp-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                 >
                   Zrušit
                 </button>
@@ -229,7 +230,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
             <button
               type="button"
               onClick={() => setShowAmlForm(true)}
-              className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 min-h-[44px]"
+              className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold border border-[color:var(--wp-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
             >
               + Nová kontrola
             </button>
@@ -241,7 +242,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
       {tab === "consents" && (
         <div>
           {consentList.length === 0 && !showConsentForm && (
-            <p className="text-sm text-slate-500 mb-3">
+            <p className="text-sm text-[color:var(--wp-text-muted)] mb-3">
               Zatím žádné souhlasy.
             </p>
           )}
@@ -252,26 +253,26 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
               return (
                 <li
                   key={row.id}
-                  className="flex items-center justify-between text-sm border-b border-slate-100 pb-2"
+                  className="flex items-center justify-between text-sm border-b border-[color:var(--wp-border)] pb-2"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-slate-800 font-medium truncate">
+                    <span className="text-[color:var(--wp-text)] font-medium truncate">
                       {row.purposeName}
                     </span>
                     <span
                       className={`shrink-0 inline-block rounded-lg px-2.5 py-0.5 text-xs font-medium ${
                         isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"
                       }`}
                     >
                       {isActive ? "Aktivní" : "Odvolán"}
                     </span>
-                    <span className="text-slate-500 shrink-0">
+                    <span className="text-[color:var(--wp-text-muted)] shrink-0">
                       {new Date(row.grantedAt).toLocaleDateString("cs-CZ")}
                     </span>
                     {row.revokedAt && (
-                      <span className="text-slate-500 shrink-0">
+                      <span className="text-[color:var(--wp-text-muted)] shrink-0">
                         →{" "}
                         {new Date(row.revokedAt).toLocaleDateString("cs-CZ")}
                       </span>
@@ -297,7 +298,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
               className="space-y-2 max-w-md"
             >
               <div>
-                <label className="block text-xs font-medium text-slate-500">
+                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">
                   Účel zpracování
                 </label>
                 <CustomDropdown
@@ -314,7 +315,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500">
+                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">
                   Zdroj
                 </label>
                 <input
@@ -324,7 +325,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                     setConsentForm((f) => ({ ...f, source: e.target.value }))
                   }
                   placeholder="např. e-mail, formulář"
-                  className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-2 py-1.5 text-sm"
                 />
               </div>
               <div className="flex gap-2">
@@ -338,7 +339,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
                 <button
                   type="button"
                   onClick={() => setShowConsentForm(false)}
-                  className="rounded px-3 py-1.5 text-sm font-semibold border border-slate-200 text-slate-800 hover:bg-slate-50"
+                  className="rounded px-3 py-1.5 text-sm font-semibold border border-[color:var(--wp-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
                 >
                   Zrušit
                 </button>
@@ -348,7 +349,7 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
             <button
               type="button"
               onClick={() => setShowConsentForm(true)}
-              className="rounded-lg px-3 py-2 text-sm font-semibold border border-slate-200 text-slate-800 hover:bg-slate-50"
+              className="rounded-lg px-3 py-2 text-sm font-semibold border border-[color:var(--wp-border)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
             >
               + Udělit souhlas
             </button>

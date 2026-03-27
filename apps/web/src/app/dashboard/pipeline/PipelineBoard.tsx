@@ -65,18 +65,32 @@ function getProductDesign(type: string) {
   if (t.includes("invest")) return { icon: <TrendingUp size={12} />, color: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-200 dark:bg-emerald-950/60 dark:border-emerald-700/60", label: "Investice" };
   if (t.includes("pojis")) return { icon: <Shield size={12} />, color: "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-200 dark:bg-rose-950/60 dark:border-rose-700/60", label: "Pojištění" };
   if (t.includes("úvěr")) return { icon: <PiggyBank size={12} />, color: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-200 dark:bg-purple-950/60 dark:border-purple-700/60", label: "Úvěr" };
-  return { icon: <CheckCircle2 size={12} />, color: "text-slate-600 bg-slate-50 border-slate-200 dark:text-slate-200 dark:bg-slate-800/80 dark:border-slate-600/60", label: type || "Jiné" };
+  return {
+    icon: <CheckCircle2 size={12} />,
+    color:
+      "text-[color:var(--wp-text-muted)] bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-border)]",
+    label: type || "Jiné",
+  };
 }
 
 function getUrgencyProps(dateString?: string | null) {
-  if (!dateString) return { class: "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-600/60", alert: null };
+  if (!dateString)
+    return {
+      class:
+        "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-muted)] border-[color:var(--wp-border)]",
+      alert: null,
+    };
   const date = new Date(dateString);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   if (date.getTime() < today.getTime()) return { class: "bg-red-50 text-red-700 border-red-200", alert: "Po termínu!" };
   if (date.getTime() === today.getTime()) return { class: "bg-orange-50 text-orange-700 border-orange-200", alert: null };
-  return { class: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-600/60", alert: null };
+  return {
+    class:
+      "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-muted)] border-[color:var(--wp-border)]",
+    alert: null,
+  };
 }
 
 function formatDate(dateString?: string | null) {

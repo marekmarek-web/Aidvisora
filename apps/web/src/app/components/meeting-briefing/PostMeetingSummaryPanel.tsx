@@ -163,8 +163,8 @@ export function PostMeetingSummaryPanel({
 
   if (loading && !summary) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <div className="flex items-center gap-2 text-[color:var(--wp-text-muted)]">
           <Sparkles size={18} className="animate-pulse" />
           <span className="text-sm font-medium">Generuji shrnutí…</span>
         </div>
@@ -174,9 +174,9 @@ export function PostMeetingSummaryPanel({
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-600 mb-4">Nepodařilo se vygenerovat shrnutí.</p>
-        <button type="button" onClick={() => loadSummary()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <p className="text-sm text-[color:var(--wp-text-muted)] mb-4">Nepodařilo se vygenerovat shrnutí.</p>
+        <button type="button" onClick={() => loadSummary()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
           Zkusit znovu
         </button>
       </div>
@@ -185,9 +185,9 @@ export function PostMeetingSummaryPanel({
 
   if (!summary) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-900 mb-2">Po schůzce – shrnutí a kroky</h3>
-        <p className="text-sm text-slate-600 mb-4">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <h3 className="text-sm font-bold text-[color:var(--wp-text)] mb-2">Po schůzce – shrnutí a kroky</h3>
+        <p className="text-sm text-[color:var(--wp-text-muted)] mb-4">
           Pro shrnutí přidejte zápisek ze schůzky nebo poznámky k události. Můžete také vložit poznámky níže.
         </p>
         {showRawNotesInput && (
@@ -196,7 +196,7 @@ export function PostMeetingSummaryPanel({
               value={rawNotes}
               onChange={(e) => setRawNotes(e.target.value)}
               placeholder="Vložte poznámky ze schůzky…"
-              className="w-full min-h-[120px] rounded-xl border border-slate-200 p-3 text-sm text-slate-800 placeholder:text-slate-400"
+              className="w-full min-h-[120px] rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-3 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-muted)]"
               rows={4}
             />
             <button
@@ -210,10 +210,10 @@ export function PostMeetingSummaryPanel({
           </>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href={`/portal/notes?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+          <Link href={`/portal/notes?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
             Přidat zápisek →
           </Link>
-          <Link href={`/portal/calendar?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+          <Link href={`/portal/calendar?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
             Kalendář →
           </Link>
         </div>
@@ -225,9 +225,9 @@ export function PostMeetingSummaryPanel({
 
   if (hasNoContent) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-900 mb-2">Po schůzce</h3>
-        <p className="text-sm text-slate-600 mb-4">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <h3 className="text-sm font-bold text-[color:var(--wp-text)] mb-2">Po schůzce</h3>
+        <p className="text-sm text-[color:var(--wp-text-muted)] mb-4">
           Pro kvalitní shrnutí přidejte zápisek ze schůzky nebo vložte poznámky a znovu vygenerujte.
         </p>
         {showRawNotesInput && (
@@ -236,7 +236,7 @@ export function PostMeetingSummaryPanel({
               value={rawNotes}
               onChange={(e) => setRawNotes(e.target.value)}
               placeholder="Poznámky ze schůzky…"
-              className="w-full min-h-[100px] rounded-xl border border-slate-200 p-3 text-sm"
+              className="w-full min-h-[100px] rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-3 text-sm text-[color:var(--wp-text)]"
               rows={3}
             />
             <button
@@ -256,33 +256,33 @@ export function PostMeetingSummaryPanel({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <h3 className="text-lg font-bold text-slate-900">Shrnutí a další kroky</h3>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+        <h3 className="text-lg font-bold text-[color:var(--wp-text)]">Shrnutí a další kroky</h3>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded">
           Návrh – zkontrolujte
         </span>
       </div>
 
       {summary.confidence === "low" && (
-        <div className="flex items-center gap-2 text-amber-700 text-sm bg-amber-50 border border-amber-200 rounded-xl p-3">
+        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm bg-amber-50 dark:bg-amber-950/35 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3">
           <AlertCircle size={18} />
           Nízká jistota – zkontrolujte výstupy před použitím.
         </div>
       )}
 
       {summary.summaryShort && (
-        <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+        <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <FileText size={16} className="text-slate-600" />
-            <h4 className="text-sm font-bold text-slate-900">Shrnutí schůzky</h4>
+            <FileText size={16} className="text-[color:var(--wp-text-muted)]" />
+            <h4 className="text-sm font-bold text-[color:var(--wp-text)]">Shrnutí schůzky</h4>
           </div>
-          <p className="text-sm text-slate-800 whitespace-pre-wrap">{summary.summaryShort}</p>
+          <p className="text-sm text-[color:var(--wp-text)] whitespace-pre-wrap">{summary.summaryShort}</p>
         </section>
       )}
 
       {summary.keyPoints.length > 0 && (
-        <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2">Klíčové body</h4>
-          <ul className="list-disc pl-4 text-sm text-slate-700 space-y-1">
+        <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2">Klíčové body</h4>
+          <ul className="list-disc pl-4 text-sm text-[color:var(--wp-text)] space-y-1">
             {summary.keyPoints.map((p, i) => (
               <li key={i}>{p}</li>
             ))}
@@ -291,9 +291,9 @@ export function PostMeetingSummaryPanel({
       )}
 
       {summary.agreedItems.length > 0 && (
-        <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2">Co bylo domluveno</h4>
-          <ul className="list-disc pl-4 text-sm text-slate-700 space-y-1">
+        <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2">Co bylo domluveno</h4>
+          <ul className="list-disc pl-4 text-sm text-[color:var(--wp-text)] space-y-1">
             {summary.agreedItems.map((a, i) => (
               <li key={i}>{a}</li>
             ))}
@@ -302,14 +302,14 @@ export function PostMeetingSummaryPanel({
       )}
 
       {suggestedTasksDeduped.length > 0 && (
-        <section className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+        <section className="rounded-xl border border-indigo-100 dark:border-indigo-800/40 bg-indigo-50/50 dark:bg-indigo-950/30 p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
             <CheckSquare size={16} /> Návrh úkolů
           </h4>
           <ul className="space-y-2">
             {suggestedTasksDeduped.map((t, i) => (
               <li key={i} className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-sm text-slate-800">{t.title}{t.dueDate ? ` (${t.dueDate})` : ""}</span>
+                <span className="text-sm text-[color:var(--wp-text)]">{t.title}{t.dueDate ? ` (${t.dueDate})` : ""}</span>
                 <button
                   type="button"
                   onClick={() => handleCreateTask(t.title, t.dueDate)}
@@ -324,11 +324,11 @@ export function PostMeetingSummaryPanel({
       )}
 
       {summary.suggestedNextMeeting && !createdEventId && (
-        <section className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+        <section className="rounded-xl border border-indigo-100 dark:border-indigo-800/40 bg-indigo-50/50 dark:bg-indigo-950/30 p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
             <Calendar size={16} /> Návrh další schůzky
           </h4>
-          <p className="text-sm text-slate-800 mb-2">{summary.suggestedNextMeeting}</p>
+          <p className="text-sm text-[color:var(--wp-text)] mb-2">{summary.suggestedNextMeeting}</p>
           <button
             type="button"
             onClick={() => handleCreateEvent(summary.suggestedNextMeeting!)}
@@ -340,11 +340,11 @@ export function PostMeetingSummaryPanel({
       )}
 
       {summary.suggestedOpportunity && !createdOppId && (
-        <section className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+        <section className="rounded-xl border border-indigo-100 dark:border-indigo-800/40 bg-indigo-50/50 dark:bg-indigo-950/30 p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
             <Briefcase size={16} /> Návrh obchodu
           </h4>
-          <p className="text-sm text-slate-800 mb-2">{summary.suggestedOpportunity}</p>
+          <p className="text-sm text-[color:var(--wp-text)] mb-2">{summary.suggestedOpportunity}</p>
           <button
             type="button"
             onClick={() => handleCreateOpportunity(summary.suggestedOpportunity!)}
@@ -356,29 +356,29 @@ export function PostMeetingSummaryPanel({
       )}
 
       {summary.emailDraft.body && (
-        <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+        <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
+          <h4 className="text-sm font-bold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
             <Mail size={16} /> Návrh e-mailu klientovi
           </h4>
-          <p className="text-xs text-slate-500 mb-1">{summary.emailDraft.subject}</p>
-          <div className="text-sm text-slate-700 whitespace-pre-wrap rounded-lg bg-white p-3 border border-slate-100 mb-2">
+          <p className="text-xs text-[color:var(--wp-text-muted)] mb-1">{summary.emailDraft.subject}</p>
+          <div className="text-sm text-[color:var(--wp-text)] whitespace-pre-wrap rounded-lg bg-[color:var(--wp-surface)] p-3 border border-[color:var(--wp-border)] mb-2">
             {summary.emailDraft.body}
           </div>
           <button
             type="button"
             onClick={copyEmail}
-            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-800 hover:bg-slate-200"
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-[color:var(--wp-surface-inset)] text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
           >
             <Copy size={16} /> Kopírovat do schránky
           </button>
         </section>
       )}
 
-      <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-        <Link href={`/portal/contacts/${contactId}`} className="hover:text-indigo-600">
+      <div className="flex flex-wrap gap-2 text-xs text-[color:var(--wp-text-muted)]">
+        <Link href={`/portal/contacts/${contactId}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
           Profil klienta <ArrowUpRight size={12} />
         </Link>
-        <Link href={`/portal/notes?contactId=${contactId}`} className="hover:text-indigo-600">
+        <Link href={`/portal/notes?contactId=${contactId}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
           Zápisky
         </Link>
       </div>

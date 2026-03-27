@@ -42,8 +42,8 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <div className="flex items-center gap-2 text-[color:var(--wp-text-muted)]">
           <Sparkles size={18} className="animate-pulse" />
           <span className="text-sm font-medium">Načítám briefing…</span>
         </div>
@@ -53,8 +53,8 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
 
   if (error || !brief) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-600 mb-4">
+      <div className="rounded-2xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
+        <p className="text-sm text-[color:var(--wp-text-muted)] mb-4">
           Nepodařilo se načíst přípravu na schůzku.
         </p>
         <Link
@@ -75,19 +75,19 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
     brief.analysisStatus === "missing";
 
   const block = (title: string, icon: React.ReactNode, children: React.ReactNode, badge?: "doporučení" | "návrh") => (
-    <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+    <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-600">
+        <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface)] border border-[color:var(--wp-border)] flex items-center justify-center text-[color:var(--wp-text-muted)]">
           {icon}
         </div>
-        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-bold text-[color:var(--wp-text)]">{title}</h3>
         {badge && (
-          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded">
             {badge}
           </span>
         )}
       </div>
-      <div className="text-sm text-slate-700">{children}</div>
+      <div className="text-sm text-[color:var(--wp-text)]">{children}</div>
     </section>
   );
 
@@ -96,24 +96,24 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Sparkles size={16} className="text-indigo-500" />
-          <span className="text-xs font-black uppercase tracking-widest text-slate-500">Příprava na schůzku</span>
+          <span className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-muted)]">Příprava na schůzku</span>
         </div>
-        <p className="text-sm text-slate-800">{brief.executiveSummary}</p>
+        <p className="text-sm text-[color:var(--wp-text)]">{brief.executiveSummary}</p>
         {brief.suggestedMainGoal && (
-          <p className="text-sm font-medium text-indigo-700">
+          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
             <Target size={14} className="inline mr-1 align-middle" />
             {brief.suggestedMainGoal}
           </p>
         )}
         {brief.warnings.length > 0 && (
-          <div className="flex items-center gap-2 text-amber-700 text-xs">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-xs">
             <AlertTriangle size={14} />
             {brief.warnings[0]}
           </div>
         )}
         <Link
           href={`/portal/contacts/${contactId}#briefing`}
-          className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
         >
           Celý briefing <ArrowUpRight size={14} />
         </Link>
@@ -124,22 +124,22 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-black text-slate-900">Příprava na schůzku</h2>
+        <h2 className="text-lg font-black text-[color:var(--wp-text)]">Příprava na schůzku</h2>
         {brief.householdName && (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--wp-text-muted)] bg-[color:var(--wp-surface-inset)] px-2 py-1 rounded-lg">
             <Users size={12} /> {brief.householdName}
           </span>
         )}
       </div>
 
       {hasLittleData && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
-          <p className="text-sm text-amber-900 mb-3">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/35 p-4">
+          <p className="text-sm text-amber-900 dark:text-amber-200 mb-3">
             Pro lepší briefing doplňte údaje o klientovi (analýza, produkty, zápisky).
           </p>
           <Link
             href={`/portal/contacts/${contactId}`}
-            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200"
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800/50 dark:hover:bg-amber-900/50"
           >
             Otevřít profil klienta <ArrowUpRight size={14} />
           </Link>
@@ -151,13 +151,13 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
       {brief.lastMeetingSummary ? (
         block("Co se řešilo minule", <FileText size={16} />, <p className="whitespace-pre-wrap">{brief.lastMeetingSummary}</p>)
       ) : (
-        <section className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+        <section className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <FileText size={16} className="text-slate-500" />
-            <h3 className="text-sm font-bold text-slate-900">Co se řešilo minule</h3>
+            <FileText size={16} className="text-[color:var(--wp-text-muted)]" />
+            <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Co se řešilo minule</h3>
           </div>
-          <p className="text-sm text-slate-500 mb-2">Zatím žádné zápisky ze schůzek.</p>
-          <Link href={`/portal/notes?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+          <p className="text-sm text-[color:var(--wp-text-muted)] mb-2">Zatím žádné zápisky ze schůzek.</p>
+          <Link href={`/portal/notes?contactId=${contactId}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
             Přidat zápisek →
           </Link>
         </section>
@@ -171,13 +171,13 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
               {brief.openTasks.slice(0, 5).map((t) => (
                 <li key={t.id}>
                   {t.title}
-                  {t.dueDate && <span className="text-slate-500 ml-1">({t.dueDate})</span>}
+                  {t.dueDate && <span className="text-[color:var(--wp-text-muted)] ml-1">({t.dueDate})</span>}
                 </li>
               ))}
-              {brief.openTasks.length > 5 && <li className="text-slate-500">+{brief.openTasks.length - 5} dalších</li>}
+              {brief.openTasks.length > 5 && <li className="text-[color:var(--wp-text-muted)]">+{brief.openTasks.length - 5} dalších</li>}
             </ul>
           )
-        : block("Otevřené úkoly", <CheckSquare size={16} />, <p className="text-slate-500">Žádné otevřené úkoly.</p>)}
+        : block("Otevřené úkoly", <CheckSquare size={16} />, <p className="text-[color:var(--wp-text-muted)]">Žádné otevřené úkoly.</p>)}
 
       {brief.openOpportunities.length > 0
         ? block(
@@ -186,22 +186,22 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
             <ul className="list-disc pl-4 space-y-1">
               {brief.openOpportunities.slice(0, 5).map((o) => (
                 <li key={o.id}>
-                  {o.title} <span className="text-slate-500">({o.stageName})</span>
+                  {o.title} <span className="text-[color:var(--wp-text-muted)]">({o.stageName})</span>
                 </li>
               ))}
             </ul>
           )
-        : block("Rozpracované obchody", <Briefcase size={16} />, <p className="text-slate-500">Žádné otevřené obchody.</p>)}
+        : block("Rozpracované obchody", <Briefcase size={16} />, <p className="text-[color:var(--wp-text-muted)]">Žádné otevřené obchody.</p>)}
 
       {brief.productsSummary.length > 0
         ? block("Produkty", <Package size={16} />, <p>{brief.productsSummary.join(", ")}</p>)
-        : block("Produkty", <Package size={16} />, <p className="text-slate-500">Žádné evidované produkty.</p>)}
+        : block("Produkty", <Package size={16} />, <p className="text-[color:var(--wp-text-muted)]">Žádné evidované produkty.</p>)}
 
       {block(
         "Stav analýzy",
         <BarChart3 size={16} />,
         brief.analysisStatus === "missing" ? (
-          <p className="text-slate-500">Chybí finanční analýza. <Link href={`/portal/analyses/financial?clientId=${contactId}`} className="text-indigo-600 font-semibold">Vytvořit analýzu</Link></p>
+          <p className="text-[color:var(--wp-text-muted)]">Chybí finanční analýza. <Link href={`/portal/analyses/financial?clientId=${contactId}`} className="text-indigo-600 dark:text-indigo-400 font-semibold">Vytvořit analýzu</Link></p>
         ) : (
           <p>
             {brief.analysisStatus === "draft" && "Rozpracovaná analýza."}
@@ -217,7 +217,7 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
         : block(
             "Servis",
             <CalendarClock size={16} />,
-            <p className="text-slate-500">Není vyplněno. <Link href={`/portal/contacts/${contactId}/edit`} className="text-indigo-600 font-semibold">Doplnit servisní termín</Link></p>
+            <p className="text-[color:var(--wp-text-muted)]">Není vyplněno. <Link href={`/portal/contacts/${contactId}/edit`} className="text-indigo-600 dark:text-indigo-400 font-semibold">Doplnit servisní termín</Link></p>
           )}
 
       {brief.topAiOpportunities.length > 0 &&
@@ -248,7 +248,7 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
       )}
 
       {brief.suggestedMainGoal &&
-        block("Hlavní cíl schůzky", <Target size={16} />, <p className="font-medium text-indigo-800">{brief.suggestedMainGoal}</p>, "návrh")}
+        block("Hlavní cíl schůzky", <Target size={16} />, <p className="font-medium text-indigo-800 dark:text-indigo-300">{brief.suggestedMainGoal}</p>, "návrh")}
 
       {brief.questionsToOpen.length > 0 &&
         block(
@@ -263,12 +263,12 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
         )}
 
       {brief.warnings.length > 0 && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+        <section className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/35 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className="text-amber-600" />
-            <h3 className="text-sm font-bold text-amber-900">Upozornění</h3>
+            <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />
+            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">Upozornění</h3>
           </div>
-          <ul className="list-disc pl-4 text-sm text-amber-800">
+          <ul className="list-disc pl-4 text-sm text-amber-800 dark:text-amber-200/90">
             {brief.warnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}
@@ -277,7 +277,7 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
       )}
 
       {brief.sourceSignals.length > 0 && (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-[color:var(--wp-text-muted)]">
           Zdroj: {brief.sourceSignals.map((s) => s.label).join(", ")}
         </p>
       )}

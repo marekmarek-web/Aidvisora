@@ -69,7 +69,7 @@ export default function MindmapPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-[color:var(--wp-main-scroll-bg)]">
         <p className="text-[color:var(--wp-text-secondary)] font-medium">Načítám mapu…</p>
       </div>
     );
@@ -77,9 +77,9 @@ export default function MindmapPage() {
 
   if (error && (contactId || householdId)) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-[#f8fafc] gap-4">
-        <p className="text-rose-600 font-medium">{error}</p>
-        <Link href="/portal/mindmap" className="text-indigo-600 hover:underline text-sm font-medium">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-[color:var(--wp-main-scroll-bg)] gap-4">
+        <p className="text-rose-600 dark:text-rose-400 font-medium">{error}</p>
+        <Link href="/portal/mindmap" className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">
           Zpět na výběr
         </Link>
       </div>
@@ -98,7 +98,7 @@ export default function MindmapPage() {
 
   if (!state) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] bg-[#f8fafc]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-[color:var(--wp-main-scroll-bg)]">
         <p className="text-[color:var(--wp-text-secondary)]">Žádná data.</p>
       </div>
     );
