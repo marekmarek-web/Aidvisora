@@ -23,7 +23,7 @@
     "cap:dev:remote": "node scripts/cap-dev-remote.js",
     "cap:dev:ngrok": "node scripts/cap-dev-ngrok.js",
     "emulator:android": "node scripts/start-android-emulator.js",
-    "brand:assets": "node scripts/generate-brand-assets.mjs",
+    "brand:assets": "node scripts/prepare-ai-button-alpha.mjs && node scripts/generate-brand-assets.mjs",
     "cap:assets": "pnpm brand:assets && npx capacitor-assets generate && node scripts/copy-pwa-icons-to-public.mjs"
   },
   "dependencies": {

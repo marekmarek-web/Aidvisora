@@ -2,7 +2,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+.wrapDark .caption {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Lesk na tmavém wordmarku (černé pozadí loga) */
+.wrapDark .shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 68%
+  );
+  background-size: 220% 100%;
+  mix-blend-mode: soft-light;
+  animation: aidvLogoShimmer 1.85s ease-in-out infinite;
 }
 
 .logoBox {
@@ -13,6 +30,12 @@
   line-height: 0;
 }
 
+.logoBoxWide {
+  max-width: min(92vw, 360px);
+  width: 100%;
+  border-radius: 14px;
+}
+
 .logo {
   display: block;
   height: auto;
@@ -20,6 +43,14 @@
   width: auto;
   opacity: 0.9;
   filter: grayscale(0.15);
+}
+
+.logoWide {
+  width: 100%;
+  max-width: min(92vw, 360px);
+  height: auto;
+  opacity: 1;
+  filter: none;
 }
 
 :global(html.dark) .logo {
@@ -53,6 +84,23 @@
   background-size: 220% 100%;
   mix-blend-mode: soft-light;
   animation: aidvLogoShimmer 2.4s ease-in-out infinite;
+}
+
+/* Přebije jemný dark-mode lesk, když je wordmark na vlastním černém podkladu */
+:global(html.dark) .wrapDark .shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 68%
+  );
+  background-size: 220% 100%;
+  animation: aidvLogoShimmer 1.85s ease-in-out infinite;
+}
+
+:global(html.dark) .logoWide {
+  filter: none;
+  opacity: 1;
 }
 
 @keyframes aidvLogoShimmer {

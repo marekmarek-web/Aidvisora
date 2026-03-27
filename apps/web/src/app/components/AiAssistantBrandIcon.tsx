@@ -4,6 +4,8 @@ import type { CSSProperties } from "react";
 import clsx from "clsx";
 
 export const AI_ASSISTANT_BRAND_LOGO_SRC = "/logos/Ai%20button.png";
+/** Černé pozadí vyřezané — barevné logo na čistě bílém chipu (screen blend na #fff by logo vybělil). */
+export const AI_ASSISTANT_LOGO_ALPHA_SRC = "/logos/ai-button-alpha.png";
 
 type Props = {
   /** Výška loga (šířka se řídí poměrem obrázku — není to vynucený čtverec). */
@@ -14,9 +16,10 @@ type Props = {
   /**
    * `default`: světlý režim = barevné „Ai“ (screen sloučí černé pozadí PNG s podkladem);
    * tmavý režim = bílá silueta přes luminance masku (bez černého čtverce).
-   * `blendOnly`: jen mix-blend-screen — hodí se na bílé kulaté tlačítko, kde bílá maska zmizí.
+   * `colorOnWhite`: barevné logo na bílém pozadí (PNG s alfa, žádný blend).
+   * `blendOnly`: mix-blend-screen — jen pokud podklad není čistá bílá (#fff vybělí logo).
    */
-  variant?: "default" | "blendOnly";
+  variant?: "default" | "blendOnly" | "colorOnWhite";
 };
 
 /**
@@ -28,6 +31,7 @@ export function AiAssistantBrandIcon({ size = 24, className, variant = "default"
   const src = AI_ASSISTANT_BRAND_LOGO_SRC;
   const h = size;
 
+  /** Luminance mask z barevného PNG: fialová má střední jas → bez filtru vypadá „šedě“. Kontrastem dostaneme plnou bílou siluetu. */
   const maskStyle: CSSProperties = {
     height: h,
     width: h,
@@ -40,7 +44,21 @@ export function AiAssistantBrandIcon({ size = 24, className, variant = "default"
     maskPosition: "center",
     WebkitMaskPosition: "center",
     maskMode: "luminance",
+    filter: "contrast(6) brightness(1.1)",
   };
+
+  if (variant === "colorOnWhite") {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- small static brand asset
+      <img
+        src={AI_ASSISTANT_LOGO_ALPHA_SRC}
+        alt=""
+        className={clsx("inline-block shrink-0 object-contain object-center", className)}
+        style={{ height: h, width: "auto", maxHeight: h }}
+        aria-hidden
+      />
+    );
+  }
 
   if (variant === "blendOnly") {
     return (

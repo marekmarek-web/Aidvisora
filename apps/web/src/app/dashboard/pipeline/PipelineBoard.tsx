@@ -656,7 +656,7 @@ export function PipelineBoard({
               aria-label="Otevřít AI asistenta"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white dark:bg-white">
-                <AiAssistantBrandIcon size={20} variant="blendOnly" className="max-h-full max-w-full" />
+                <AiAssistantBrandIcon size={20} variant="colorOnWhite" className="max-h-full max-w-full" />
               </span>
               <span className="hidden sm:inline">AI asistent</span>
             </button>

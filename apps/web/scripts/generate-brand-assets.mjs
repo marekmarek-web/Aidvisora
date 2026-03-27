@@ -25,7 +25,7 @@ const webIconBg = { r: 255, g: 255, b: 255, alpha: 1 };
  * Source file has generous padding; trim removes it so the mark fills favicon / native sizes.
  * threshold: tolerance vs top-left “background” (anti-alias fringe).
  */
-const trimThreshold = 24;
+const trimThreshold = 42;
 
 function sharpTrimmedMark(inputPath) {
   return sharp(inputPath).trim({ threshold: trimThreshold });
@@ -72,13 +72,25 @@ async function main() {
   await sharp(path.join(assetsDir, "splash.png")).png().toFile(path.join(assetsDir, "splash-dark.png"));
 
   const webSrc = webFaviconPath;
-  await sharpTrimmedMark(webSrc)
-    .resize(512, 512, { fit: "contain", background: webIconBg })
+  const favFill = Math.round(512 * 0.99);
+  const favLogoBuf = await sharpTrimmedMark(webSrc)
+    .resize(favFill, favFill, { fit: "inside", withoutEnlargement: false })
+    .toBuffer();
+  await sharp({
+    create: { width: 512, height: 512, channels: 4, background: webIconBg },
+  })
+    .composite([{ input: favLogoBuf, gravity: "center" }])
     .png()
     .toFile(path.join(publicDir, "favicon.png"));
 
-  await sharpTrimmedMark(webSrc)
-    .resize(180, 180, { fit: "contain", background: webIconBg })
+  const appleFill = Math.round(180 * 0.99);
+  const appleBuf = await sharpTrimmedMark(webSrc)
+    .resize(appleFill, appleFill, { fit: "inside", withoutEnlargement: false })
+    .toBuffer();
+  await sharp({
+    create: { width: 180, height: 180, channels: 4, background: webIconBg },
+  })
+    .composite([{ input: appleBuf, gravity: "center" }])
     .png()
     .toFile(path.join(publicDir, "apple-touch-icon.png"));
 

@@ -32,7 +32,8 @@ export type ContactRow = {
   serviceCycleMonths?: string | null;
   lastServiceDate?: string | null;
   nextServiceDue?: string | null;
-  gdprConsentAt?: Date | null;
+  /** ISO 8601 — serializovatelné pro RSC a klienta (Server Actions vrací string) */
+  gdprConsentAt?: string | null;
 };
 
 export async function getContactsList(): Promise<ContactRow[]> {
@@ -144,6 +145,9 @@ export async function getContact(id: string): Promise<ContactRow | null> {
     .limit(1);
   const row = rows[0];
   if (!row) return null;
+  const gdprIso =
+    row.gdprConsentAt != null ? new Date(row.gdprConsentAt as unknown as Date).toISOString() : null;
+  const base = { ...row, gdprConsentAt: gdprIso };
   if (row.referralContactId) {
     const [refContact] = await db
       .select({ firstName: contacts.firstName, lastName: contacts.lastName })
@@ -151,11 +155,11 @@ export async function getContact(id: string): Promise<ContactRow | null> {
       .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, row.referralContactId!)))
       .limit(1);
     return {
-      ...row,
+      ...base,
       referralContactName: refContact ? `${refContact.firstName} ${refContact.lastName}` : null,
     };
   }
-  return { ...row, referralContactName: null };
+  return { ...base, referralContactName: null };
 }
 
 export async function createContact(form: {

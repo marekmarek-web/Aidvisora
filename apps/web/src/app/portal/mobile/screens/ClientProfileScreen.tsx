@@ -112,7 +112,9 @@ function OverviewTab({
     ...(contact.city ? [{ icon: MapPin, label: "Město", value: `${contact.city}${contact.zip ? ` ${contact.zip}` : ""}` }] : []),
     ...(contact.leadSource ? [{ icon: Tag, label: "Zdroj", value: contact.leadSource }] : []),
     ...(contact.referralContactName ? [{ icon: User, label: "Doporučil/a", value: contact.referralContactName }] : []),
-    ...(contact.gdprConsentAt ? [{ icon: CheckCheck, label: "GDPR souhlas", value: formatDate(contact.gdprConsentAt.toISOString())! }] : []),
+    ...(contact.gdprConsentAt
+      ? [{ icon: CheckCheck, label: "GDPR souhlas", value: formatDate(contact.gdprConsentAt)! }]
+      : []),
     ...(contact.nextServiceDue ? [{ icon: Calendar, label: "Příští servis", value: formatDate(contact.nextServiceDue)! }] : []),
   ];
 
