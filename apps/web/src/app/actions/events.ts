@@ -10,6 +10,32 @@ import { events, contacts, tasks } from "db";
 import { eq, and, gte, lt, asc, desc, sql } from "db";
 import { logActivity } from "./activity";
 
+function instantMs(v: string | Date | null | undefined): number | null {
+  if (v == null || v === "") return null;
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/** Reset odeslání připomenutí jen při změně času nebo připomenutí (ne při úpravě názvu). */
+function scheduleTimesOrReminderChanged(
+  existing:
+    | { startAt: Date; endAt: Date | null; reminderAt: Date | null }
+    | undefined,
+  form: { startAt?: string; endAt?: string; reminderAt?: string | null },
+): boolean {
+  if (!existing) {
+    return form.startAt != null || form.endAt != null || form.reminderAt !== undefined;
+  }
+  if (form.startAt != null && instantMs(form.startAt) !== instantMs(existing.startAt)) return true;
+  if (form.endAt != null && instantMs(form.endAt) !== instantMs(existing.endAt)) return true;
+  if (form.reminderAt !== undefined) {
+    const next = form.reminderAt ? instantMs(form.reminderAt) : null;
+    const prev = instantMs(existing.reminderAt);
+    if (next !== prev) return true;
+  }
+  return false;
+}
+
 export type EventRow = {
   id: string;
   tenantId: string;
@@ -297,7 +323,8 @@ export async function updateEvent(
     endAt?: string;
     allDay?: boolean;
     location?: string;
-    reminderAt?: string;
+    /** `null` zruší připomenutí; vynechání pole ponechá DB beze změny. */
+    reminderAt?: string | null;
     contactId?: string;
     opportunityId?: string;
     status?: string;
@@ -309,7 +336,13 @@ export async function updateEvent(
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
   const [existing] = await db
-    .select({ googleEventId: events.googleEventId, googleCalendarId: events.googleCalendarId })
+    .select({
+      googleEventId: events.googleEventId,
+      googleCalendarId: events.googleCalendarId,
+      startAt: events.startAt,
+      endAt: events.endAt,
+      reminderAt: events.reminderAt,
+    })
     .from(events)
     .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
     .limit(1);
@@ -342,6 +375,8 @@ export async function updateEvent(
       // Google not connected or API error – DB update still proceeds
     }
   }
+  const scheduleChanged = scheduleTimesOrReminderChanged(existing, form);
+
   await db
     .update(events)
     .set({
@@ -353,7 +388,10 @@ export async function updateEvent(
       ...(form.location != null && { location: form.location.trim() || null }),
       ...(form.contactId != null && { contactId: form.contactId || null }),
       ...(form.opportunityId != null && { opportunityId: form.opportunityId || null }),
-      ...(form.reminderAt != null && { reminderAt: form.reminderAt ? new Date(form.reminderAt) : null }),
+      ...(form.reminderAt !== undefined && {
+        reminderAt: form.reminderAt ? new Date(form.reminderAt) : null,
+      }),
+      ...(scheduleChanged && { reminderNotifiedAt: null }),
       ...(form.status != null && { status: form.status.trim() || null }),
       ...(form.notes != null && { notes: form.notes.trim() || null }),
       ...(form.meetingLink != null && { meetingLink: form.meetingLink.trim() || null }),

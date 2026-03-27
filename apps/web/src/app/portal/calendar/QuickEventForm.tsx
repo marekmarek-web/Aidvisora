@@ -6,6 +6,8 @@ import type { ContactRow } from "@/app/actions/contacts";
 import { ContactSearchInput } from "@/app/components/ContactSearchInput";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import clsx from "clsx";
+import { formatDateTimeLocal } from "@/app/portal/calendar/date-utils";
+import { EventFormDateTimeSection } from "@/app/portal/calendar/EventFormDateTimeSection";
 
 function CheckSquare({ size, className }: { size: number; className?: string }) {
   return (
@@ -84,6 +86,10 @@ export function QuickEventForm({
   }));
   const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const qLabelClass = "block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5";
+  const qInputClass =
+    "w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 text-[color:var(--wp-text)]";
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -173,28 +179,17 @@ export function QuickEventForm({
             className="w-full text-xl font-bold text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] border-b-2 border-[color:var(--wp-surface-card-border)] hover:border-[color:var(--wp-border-strong)] focus:border-indigo-500 py-2 outline-none transition-colors bg-transparent"
             autoFocus
           />
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Začátek</label>
-              <input
-                type="datetime-local"
-                step={300}
-                value={form.startAt}
-                onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
-                className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Konec</label>
-              <input
-                type="datetime-local"
-                step={300}
-                value={form.endAt}
-                onChange={(e) => setForm((f) => ({ ...f, endAt: e.target.value }))}
-                className="w-full px-3 py-2.5 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-          </div>
+          <EventFormDateTimeSection
+            startAt={form.startAt}
+            endAt={form.endAt}
+            allDay={false}
+            onChangeStart={(v) => setForm((f) => ({ ...f, startAt: v }))}
+            onChangeEnd={(v) => setForm((f) => ({ ...f, endAt: v }))}
+            onChangeAllDay={() => {}}
+            hideAllDay
+            eLabelClass={qLabelClass}
+            eInputClass={qInputClass}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Kontakt</label>
@@ -247,5 +242,5 @@ export function QuickEventForm({
 function addHour(iso: string): string {
   const d = new Date(iso);
   d.setHours(d.getHours() + 1);
-  return d.toISOString().slice(0, 16);
+  return formatDateTimeLocal(d);
 }

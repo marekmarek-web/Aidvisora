@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, Plus, Edit2, Trash2, Mail, MoreVertical, X, RefreshCw, Clock, MapPin, Link2, AlignLeft, User, Briefcase, Bell, Check, Sparkles, Flag, CheckSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, Plus, Edit2, Trash2, Mail, MoreVertical, X, RefreshCw, MapPin, Link2, AlignLeft, User, Briefcase, Bell, Check, Info, Flag, CheckSquare, Calendar } from "lucide-react";
 import { listEvents, createEvent, updateEvent, deleteEvent, createFollowUp, type EventRow } from "@/app/actions/events";
 import { getContactsList, type ContactRow } from "@/app/actions/contacts";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
@@ -17,9 +17,10 @@ import {
   saveCalendarSettings,
   type CalendarSettings,
 } from "@/app/portal/calendar/calendar-settings";
-import { formatDateLocal } from "@/app/portal/calendar/date-utils";
+import { formatDateLocal, formatDateTimeLocal, localDateTimeInputToUtcIso } from "@/app/portal/calendar/date-utils";
 import { getEventCategory } from "@/app/portal/calendar/event-categories";
 import { WeekDayGrid } from "@/app/portal/calendar/WeekDayGrid";
+import { EventFormDateTimeSection } from "@/app/portal/calendar/EventFormDateTimeSection";
 import { CalendarContextPanel } from "@/app/portal/calendar/CalendarContextPanel";
 import { CalendarLeftPanel } from "@/app/portal/calendar/CalendarLeftPanel";
 import { CALENDAR_EVENT_CATEGORIES } from "@/app/portal/calendar/event-categories";
@@ -89,6 +90,23 @@ const REMINDER_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: "1 h před" },
   { value: 1440, label: "1 den před" },
 ];
+
+function formatEventReminderLabel(ev: EventRow): string {
+  if (!ev.reminderAt) return "Bez připomenutí";
+  const startMs = new Date(ev.startAt).getTime();
+  const remMs = new Date(ev.reminderAt).getTime();
+  const diffMin = Math.round((startMs - remMs) / 60000);
+  if (diffMin <= 0) return "Bez připomenutí";
+  const opt = REMINDER_OPTIONS.find((o) => o.value === diffMin);
+  if (opt && opt.value > 0) {
+    if (opt.value === 60) return "1 hodinu předem";
+    if (opt.value === 1440) return "1 den předem";
+    return opt.label.replace(" před", " předem").replace("min ", "minut ");
+  }
+  if (diffMin < 60) return `${diffMin} minut předem`;
+  if (diffMin < 1440) return `${Math.round(diffMin / 60)} hodin předem`;
+  return `${Math.round(diffMin / 1440)} dny předem`;
+}
 
 const EMPTY_FORM: EventFormData = { title: "", eventType: "schuzka", startAt: "", endAt: "", allDay: false, location: "", contactId: "", opportunityId: "", reminderMinutes: 30, status: "", notes: "", meetingLink: "" };
 
@@ -246,7 +264,7 @@ function NewTaskModal({
           {step === 1 && (
             <>
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-                <Sparkles size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <Info size={16} className="text-blue-500 mt-0.5 shrink-0" aria-hidden />
                 <p className="text-sm text-blue-700 font-medium">Přiřaďte úkol ke klientovi nebo obchodu pro lepší sledování.</p>
               </div>
               <div>
@@ -353,11 +371,14 @@ function EventDetailPopup({
 }) {
   const start = new Date(event.startAt);
   const end = event.endAt ? new Date(event.endAt) : null;
-  const dateTimeStr = `${start.toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" })} • ${formatTime(start)}${end ? `–${formatTime(end)}` : ""}`;
+  const typeInfo = getEventCategory(event.eventType);
+  const dateLine = event.allDay
+    ? `${start.toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" })} · Celý den`
+    : `${start.toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" })} · ${formatTime(start)}–${end ? formatTime(end) : "?"}`;
   const contact = event.contactId ? contacts.find((c) => c.id === event.contactId) : null;
   const mailtoHref = (() => {
     const subject = encodeURIComponent(event.title);
-    const body = encodeURIComponent(`${event.title}\n${dateTimeStr}\n${event.location || ""}\n${event.notes || ""}`);
+    const body = encodeURIComponent(`${event.title}\n${dateLine}\n${event.location || ""}\n${event.notes || ""}`);
     if (contact?.email) return `mailto:${contact.email}?subject=${subject}&body=${body}`;
     return `mailto:?subject=${subject}&body=${body}`;
   })();
@@ -367,51 +388,79 @@ function EventDetailPopup({
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm dark:bg-black/50"
       onClick={onClose}
     >
-      <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl border border-[color:var(--wp-surface-card-border)] w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-start justify-between gap-3 bg-[color:var(--wp-surface-muted)]/50">
-          <h2 className="text-lg font-black text-[color:var(--wp-text)] leading-tight truncate flex-1">{event.title}</h2>
-          <div className="flex items-center gap-1 shrink-0">
-            <button type="button" onClick={onEdit} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors" aria-label="Upravit" title="Upravit">
-              <Edit2 size={18} className="text-blue-600" />
-            </button>
-            <button type="button" onClick={onDelete} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-rose-600 transition-colors" aria-label="Smazat" title="Smazat">
-              <Trash2 size={18} />
-            </button>
-            <a href={mailtoHref} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors" aria-label="Poslat e-mailem" title="Poslat e-mailem">
-              <Mail size={18} />
-            </a>
-            <button type="button" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors" aria-label="Další" title="Další">
-              <MoreVertical size={18} />
-            </button>
-            <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)] transition-colors" aria-label="Zavřít">
-              <X size={18} />
-            </button>
-          </div>
+      <div
+        className="bg-[color:var(--wp-surface-muted)] rounded-2xl shadow-xl border border-[color:var(--wp-surface-card-border)] w-full max-w-md overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-end gap-0.5 px-3 pt-3 pb-1">
+          <button type="button" onClick={onEdit} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] transition-colors" aria-label="Upravit" title="Upravit">
+            <Edit2 size={18} />
+          </button>
+          <button type="button" onClick={onDelete} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] hover:text-rose-600 transition-colors" aria-label="Smazat" title="Smazat">
+            <Trash2 size={18} />
+          </button>
+          <a href={mailtoHref} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] transition-colors" aria-label="Poslat e-mailem" title="Poslat e-mailem">
+            <Mail size={18} />
+          </a>
+          <button type="button" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] transition-colors" aria-label="Další" title="Další">
+            <MoreVertical size={18} />
+          </button>
+          <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] transition-colors" aria-label="Zavřít">
+            <X size={18} />
+          </button>
         </div>
-        <div className="p-5 space-y-4">
-          <p className="text-sm text-[color:var(--wp-text-secondary)]">{dateTimeStr}</p>
+
+        <div className="px-5 pb-6 pt-1 space-y-4">
+          <div className="flex items-start gap-3">
+            <span
+              className="mt-1 size-3.5 shrink-0 rounded-sm shadow-sm ring-1 ring-black/5"
+              style={{ backgroundColor: typeInfo.color }}
+              aria-hidden
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-[color:var(--wp-text-tertiary)] mb-0.5">{typeInfo.label}</p>
+              <h2 className="text-xl font-bold text-[color:var(--wp-text)] leading-snug break-words">{event.title}</h2>
+              <p className="text-sm text-[color:var(--wp-text-secondary)] mt-2">{dateLine}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 text-sm text-[color:var(--wp-text-secondary)]">
+            <Bell size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
+            <span>{formatEventReminderLabel(event)}</span>
+          </div>
+
+          <div className="flex items-start gap-3 text-sm text-[color:var(--wp-text-secondary)]">
+            <Calendar size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
+            <span>WePlan kalendář</span>
+          </div>
+
           {event.meetingLink && (
-            <a href={event.meetingLink.startsWith("http") ? event.meetingLink : `https://${event.meetingLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 py-2 px-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-colors">
-              Pozvat přes odkaz
+            <a
+              href={event.meetingLink.startsWith("http") ? event.meetingLink : `https://${event.meetingLink}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 py-2 px-3 bg-[color:var(--wp-surface-card)] text-indigo-700 rounded-xl text-sm font-bold border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 transition-colors"
+            >
+              Otevřít odkaz
             </a>
           )}
           {event.location && (
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Místo</p>
-              <p className="text-sm font-medium text-[color:var(--wp-text)]">{event.location}</p>
+            <div className="flex items-start gap-3">
+              <MapPin size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
+              <p className="text-sm text-[color:var(--wp-text)]">{event.location}</p>
             </div>
           )}
           {event.contactName && (
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Účastník</p>
-              <Link href={event.contactId ? `/portal/contacts/${event.contactId}` : "#"} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">
+            <div className="flex items-start gap-3">
+              <User size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
+              <Link href={event.contactId ? `/portal/contacts/${event.contactId}` : "#"} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 break-words">
                 {event.contactName}
               </Link>
             </div>
           )}
           {event.notes && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Poznámka</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5">Poznámka</p>
               <p className="text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">{event.notes}</p>
             </div>
           )}
@@ -486,12 +535,15 @@ function EventDetailPopover({
 }
 
 /* ────────── Event Form Modal (premium design) ────────── */
+const EVENT_FORM_TYPE_ORDER = ["schuzka", "telefonat", "kafe", "mail", "ukol", "servis"] as const;
+
 const EVENT_PILL_STYLES: Record<string, { active: string; inactive: string }> = {
   schuzka:   { active: "bg-indigo-600 text-white shadow-lg shadow-indigo-200",  inactive: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100" },
   telefonat: { active: "bg-rose-500 text-white shadow-lg shadow-rose-200",      inactive: "bg-rose-50 text-rose-500 hover:bg-rose-100" },
   kafe:      { active: "bg-amber-500 text-white shadow-lg shadow-amber-200",    inactive: "bg-amber-50 text-amber-600 hover:bg-amber-100" },
   mail:      { active: "bg-purple-600 text-white shadow-lg shadow-purple-200",  inactive: "bg-purple-50 text-purple-600 hover:bg-purple-100" },
   ukol:      { active: "bg-emerald-600 text-white shadow-lg shadow-emerald-200", inactive: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" },
+  servis:    { active: "bg-teal-600 text-white shadow-lg shadow-teal-200",       inactive: "bg-teal-50 text-teal-700 hover:bg-teal-100" },
   priorita:  { active: "bg-red-600 text-white shadow-lg shadow-red-200",        inactive: "bg-red-50 text-red-600 hover:bg-red-100" },
 };
 
@@ -519,8 +571,11 @@ function EventFormModal({
       const now = new Date();
       now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
       const end = new Date(now.getTime() + 60 * 60 * 1000);
-      const fmt = (d: Date) => d.toISOString().slice(0, 16);
-      return { ...initial, startAt: fmt(now), endAt: fmt(end) };
+      return {
+        ...initial,
+        startAt: formatDateTimeLocal(now),
+        endAt: formatDateTimeLocal(end),
+      };
     }
     return initial;
   });
@@ -528,6 +583,14 @@ function EventFormModal({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{ title?: boolean; startAt?: boolean }>({});
   const { keyboardInset } = useKeyboardAware();
+
+  const typePills = useMemo(() => {
+    const ids: string[] = [...EVENT_FORM_TYPE_ORDER];
+    if (form.eventType && !ids.includes(form.eventType)) ids.push(form.eventType);
+    return ids
+      .map((id) => CALENDAR_EVENT_CATEGORIES.find((t) => t.id === id))
+      .filter((t): t is (typeof CALENDAR_EVENT_CATEGORIES)[number] => Boolean(t));
+  }, [form.eventType]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -574,9 +637,9 @@ function EventFormModal({
             className="flex-1 overflow-y-auto px-8 py-6 space-y-6"
             style={keyboardInset ? { paddingBottom: `${keyboardInset}px` } : undefined}
           >
-            {/* Activity type pills */}
-            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
-              {CALENDAR_EVENT_CATEGORIES.filter((t) => ["schuzka", "telefonat", "kafe", "mail", "ukol", "priorita"].includes(t.id)).map((t) => {
+            {/* Typ aktivity: mřížka 3×2, bez horizontálního scrollu */}
+            <div className="grid grid-cols-3 gap-2">
+              {typePills.map((t) => {
                 const isActive = form.eventType === t.id;
                 const ps = EVENT_PILL_STYLES[t.id] ?? {
                   active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
@@ -587,11 +650,19 @@ function EventFormModal({
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, eventType: t.id, reminderMinutes: (t.id === "ukol" || t.id === "priorita") ? 15 : 30 }))}
-                    className={`shrink-0 min-h-[44px] flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${isActive ? ps.active : ps.inactive}`}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        eventType: t.id,
+                        reminderMinutes: t.id === "ukol" ? 15 : 30,
+                      }))
+                    }
+                    className={`min-h-[44px] flex flex-col sm:flex-row items-center justify-center gap-1 px-2 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-center ${isActive ? ps.active : ps.inactive}`}
                   >
-                    <span className="text-base">{t.icon}</span>
-                    {t.label}
+                    <span className="text-base leading-none" aria-hidden>
+                      {t.icon}
+                    </span>
+                    <span className="leading-tight">{t.label}</span>
                   </button>
                 );
               })}
@@ -606,46 +677,31 @@ function EventFormModal({
               autoFocus
             />
 
-            {/* Date section */}
-            <div className="bg-[color:var(--wp-surface-muted)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] space-y-4">
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-[color:var(--wp-text-tertiary)]" />
-                <span className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Kdy se to koná?</span>
-              </div>
-
-              <label className="flex items-center gap-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.allDay}
-                  onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                  className="rounded w-4 h-4 border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
-                />
-                Celý den
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={eLabelClass}>Začátek</label>
-                  <input
-                    type="datetime-local"
-                    step={300}
-                    value={form.startAt}
-                    onChange={(e) => { setForm((f) => ({ ...f, startAt: e.target.value })); if (validationErrors.startAt) setValidationErrors((v) => ({ ...v, startAt: false })); }}
-                    className={`${eInputClass} ${validationErrors.startAt ? "!border-red-400 !ring-red-100" : ""}`}
-                  />
-                </div>
-                <div>
-                  <label className={eLabelClass}>Konec</label>
-                  <input
-                    type="datetime-local"
-                    step={300}
-                    value={form.endAt}
-                    onChange={(e) => setForm((f) => ({ ...f, endAt: e.target.value }))}
-                    className={eInputClass}
-                  />
-                </div>
-              </div>
-            </div>
+            <EventFormDateTimeSection
+              startAt={form.startAt}
+              endAt={form.endAt}
+              allDay={form.allDay}
+              onChangeStart={(v) => {
+                setForm((f) => ({ ...f, startAt: v }));
+                if (validationErrors.startAt) setValidationErrors((x) => ({ ...x, startAt: false }));
+              }}
+              onChangeEnd={(v) => setForm((f) => ({ ...f, endAt: v }))}
+              onChangeAllDay={(v) => {
+                setForm((f) => {
+                  if (v) {
+                    const d = f.startAt.slice(0, 10) || formatDate(new Date());
+                    const endD = (f.endAt || f.startAt).slice(0, 10) || d;
+                    return { ...f, allDay: true, startAt: `${d}T00:00`, endAt: `${endD}T23:59` };
+                  }
+                  const d = f.startAt.slice(0, 10) || formatDate(new Date());
+                  return { ...f, allDay: false, startAt: `${d}T09:00`, endAt: `${d}T10:00` };
+                });
+              }}
+              startInvalid={validationErrors.startAt}
+              onClearStartInvalid={() => setValidationErrors((x) => ({ ...x, startAt: false }))}
+              eLabelClass={eLabelClass}
+              eInputClass={eInputClass}
+            />
 
             {/* Context: Klient + Obchod */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -923,13 +979,48 @@ export function PortalCalendarView() {
   useEffect(() => { getOpenOpportunitiesList().then(setOpportunities).catch(() => setOpportunities([])); }, []);
 
   const handleSave = useCallback(async (form: EventFormData, id?: string) => {
-    const start = form.startAt ? new Date(form.startAt) : null;
-    const reminderAt = form.reminderMinutes > 0 && start ? new Date(start.getTime() - form.reminderMinutes * 60 * 1000).toISOString() : undefined;
+    const startIso = localDateTimeInputToUtcIso(form.startAt);
+    const endIso = localDateTimeInputToUtcIso(form.endAt);
+    const startLocal = form.startAt ? new Date(form.startAt) : null;
+    const reminderAtIso =
+      form.reminderMinutes > 0 && startLocal && !Number.isNaN(startLocal.getTime())
+        ? new Date(startLocal.getTime() - form.reminderMinutes * 60 * 1000).toISOString()
+        : null;
+    if (!startIso) {
+      toast.showToast("Neplatný začátek události.", "error");
+      return;
+    }
     if (id) {
-      await updateEvent(id, { title: form.title, eventType: form.eventType, startAt: form.startAt, endAt: form.endAt || undefined, allDay: form.allDay, location: form.location || undefined, reminderAt, contactId: form.contactId || undefined, opportunityId: form.opportunityId || undefined, status: form.status || undefined, notes: form.notes || undefined, meetingLink: form.meetingLink || undefined });
+      await updateEvent(id, {
+        title: form.title,
+        eventType: form.eventType,
+        startAt: startIso,
+        ...(endIso ? { endAt: endIso } : {}),
+        allDay: form.allDay,
+        location: form.location || undefined,
+        reminderAt: reminderAtIso,
+        contactId: form.contactId || undefined,
+        opportunityId: form.opportunityId || undefined,
+        status: form.status || undefined,
+        notes: form.notes || undefined,
+        meetingLink: form.meetingLink || undefined,
+      });
       toast.showToast("Aktivita upravena");
     } else {
-      await createEvent({ title: form.title, eventType: form.eventType, startAt: form.startAt, endAt: form.endAt || undefined, allDay: form.allDay, location: form.location || undefined, reminderAt, contactId: form.contactId || undefined, opportunityId: form.opportunityId || undefined, status: form.status || undefined, notes: form.notes || undefined, meetingLink: form.meetingLink || undefined });
+      await createEvent({
+        title: form.title,
+        eventType: form.eventType,
+        startAt: startIso,
+        endAt: endIso || undefined,
+        allDay: form.allDay,
+        location: form.location || undefined,
+        reminderAt: reminderAtIso ?? undefined,
+        contactId: form.contactId || undefined,
+        opportunityId: form.opportunityId || undefined,
+        status: form.status || undefined,
+        notes: form.notes || undefined,
+        meetingLink: form.meetingLink || undefined,
+      });
       toast.showToast("Aktivita vytvořena");
     }
     loadEvents();
@@ -1020,6 +1111,34 @@ export function PortalCalendarView() {
     loadEvents();
   }, [loadEvents, toast]);
 
+  const handleEventMove = useCallback(
+    async (eventId: string, targetDateStr: string, startMinutesFromMidnight: number) => {
+      const ev = events.find((e) => e.id === eventId);
+      if (!ev || ev.allDay) return;
+      const oldStart = new Date(ev.startAt);
+      const oldEnd = ev.endAt ? new Date(ev.endAt) : new Date(oldStart.getTime() + 60 * 60 * 1000);
+      const durationMs = oldEnd.getTime() - oldStart.getTime();
+      const [yy, mm, dd] = targetDateStr.split("-").map(Number);
+      const newStart = new Date(yy, mm - 1, dd, Math.floor(startMinutesFromMidnight / 60), startMinutesFromMidnight % 60, 0, 0);
+      const newEnd = new Date(newStart.getTime() + durationMs);
+      const delta = newStart.getTime() - oldStart.getTime();
+      try {
+        await updateEvent(eventId, {
+          startAt: newStart.toISOString(),
+          endAt: newEnd.toISOString(),
+          ...(ev.reminderAt != null && {
+            reminderAt: new Date(new Date(ev.reminderAt).getTime() + delta).toISOString(),
+          }),
+        });
+        toast.showToast("Aktivita přesunuta", "success");
+        loadEvents();
+      } catch {
+        toast.showToast("Nepodařilo se přesunout aktivitu.", "error");
+      }
+    },
+    [events, loadEvents, toast],
+  );
+
   function navigate(dir: -1 | 1) {
     setCurrentDate((prev) => {
       const d = new Date(prev);
@@ -1047,10 +1166,25 @@ export function PortalCalendarView() {
     if (reminderAt) {
       const diffM = Math.round((start.getTime() - reminderAt.getTime()) / 60000);
       if (diffM <= 15) reminderMinutes = 15;
+      else if (diffM <= 30) reminderMinutes = 30;
       else if (diffM <= 60) reminderMinutes = 60;
       else if (diffM <= 1440) reminderMinutes = 1440;
     }
-    setModal({ id: ev.id, title: ev.title, eventType: ev.eventType ?? "schuzka", startAt: start.toISOString().slice(0, 16), endAt: ev.endAt ? new Date(ev.endAt).toISOString().slice(0, 16) : "", allDay: ev.allDay ?? false, location: ev.location ?? "", contactId: ev.contactId ?? "", opportunityId: ev.opportunityId ?? "", reminderMinutes, status: ev.status ?? "", notes: ev.notes ?? "", meetingLink: ev.meetingLink ?? "" });
+    setModal({
+      id: ev.id,
+      title: ev.title,
+      eventType: ev.eventType ?? "schuzka",
+      startAt: formatDateTimeLocal(start),
+      endAt: ev.endAt ? formatDateTimeLocal(new Date(ev.endAt)) : "",
+      allDay: ev.allDay ?? false,
+      location: ev.location ?? "",
+      contactId: ev.contactId ?? "",
+      opportunityId: ev.opportunityId ?? "",
+      reminderMinutes,
+      status: ev.status ?? "",
+      notes: ev.notes ?? "",
+      meetingLink: ev.meetingLink ?? "",
+    });
     setDetailEvent(null);
   }
 
@@ -1312,6 +1446,7 @@ export function PortalCalendarView() {
                   currentTimeLineColor={settings.currentTimeLineColor}
                   currentTimeLineWidth={settings.currentTimeLineWidth}
                   eventTypeColors={settings.eventTypeColors}
+                  onEventMove={handleEventMove}
                 />
               </div>
             )}

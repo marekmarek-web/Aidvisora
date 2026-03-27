@@ -13,7 +13,7 @@ import {
   type EventRow,
 } from "@/app/actions/events";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
-import { formatDateLocal } from "@/app/portal/calendar/date-utils";
+import { formatDateLocal, formatDateTimeLocal, localDateTimeInputToUtcIso } from "@/app/portal/calendar/date-utils";
 import {
   DEFAULT_SETTINGS,
   saveCalendarSettings,
@@ -44,7 +44,7 @@ import { useCalendarEvents } from "./useCalendarEvents";
 import { useCalendarState } from "./useCalendarState";
 
 function eventToFormData(ev: EventRow): EventFormData & { id: string } {
-  const fmtDt = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 16) : "");
+  const fmtDt = (d: Date | null) => (d ? formatDateTimeLocal(new Date(d)) : "");
   let reminderMinutes = 30;
   if (ev.reminderAt && ev.startAt) {
     const diffMin = Math.round(
@@ -69,8 +69,8 @@ function eventToFormData(ev: EventRow): EventFormData & { id: string } {
   };
 }
 
-function reminderDate(startAt: string, minutes: number): string | undefined {
-  if (!minutes || !startAt) return undefined;
+function reminderDate(startAt: string, minutes: number): string | null {
+  if (!minutes || !startAt) return null;
   return new Date(new Date(startAt).getTime() - minutes * 60_000).toISOString();
 }
 
@@ -306,8 +306,11 @@ export function CalendarScreen({
       const date = new Date(`${dateStr}T00:00:00`);
       date.setHours(hour, 0, 0, 0);
       const end = new Date(date.getTime() + 60 * 60 * 1000);
-      const fmt = (d: Date) => d.toISOString().slice(0, 16);
-      setFormInitial({ ...EMPTY_FORM, startAt: fmt(date), endAt: fmt(end) });
+      setFormInitial({
+        ...EMPTY_FORM,
+        startAt: formatDateTimeLocal(date),
+        endAt: formatDateTimeLocal(end),
+      });
       setSaveError(null);
       setFormOpen(true);
     },
@@ -337,17 +340,24 @@ export function CalendarScreen({
       setSaving(true);
       setSaveError(null);
       try {
+        const startIso = localDateTimeInputToUtcIso(form.startAt);
+        const endIso = localDateTimeInputToUtcIso(form.endAt);
+        if (!startIso) {
+          setSaveError("Neplatný začátek události.");
+          return;
+        }
+        const reminderAtIso = reminderDate(form.startAt, form.reminderMinutes);
         if (id) {
           await updateEvent(id, {
             title: form.title,
             eventType: form.eventType,
-            startAt: form.startAt,
-            endAt: form.endAt,
+            startAt: startIso,
+            ...(endIso ? { endAt: endIso } : {}),
             allDay: form.allDay,
             location: form.location,
             contactId: form.contactId || undefined,
             opportunityId: form.opportunityId || undefined,
-            reminderAt: reminderDate(form.startAt, form.reminderMinutes),
+            reminderAt: reminderAtIso,
             status: form.status || undefined,
             notes: form.notes,
             meetingLink: form.meetingLink,
@@ -357,13 +367,13 @@ export function CalendarScreen({
           await createEvent({
             title: form.title,
             eventType: form.eventType,
-            startAt: form.startAt,
-            endAt: form.endAt,
+            startAt: startIso,
+            endAt: endIso || undefined,
             allDay: form.allDay,
             location: form.location,
             contactId: form.contactId || undefined,
             opportunityId: form.opportunityId || undefined,
-            reminderAt: reminderDate(form.startAt, form.reminderMinutes),
+            reminderAt: reminderAtIso || undefined,
             status: form.status || undefined,
             notes: form.notes,
             meetingLink: form.meetingLink,

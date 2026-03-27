@@ -47,6 +47,8 @@ export const events = pgTable("events", {
   allDay: boolean("all_day").default(false),
   location: text("location"),
   reminderAt: timestamp("reminder_at", { withTimezone: true }),
+  /** Nastaví cron po odeslání připomenutí; při změně začátku/připomenutí se nuluje v updateEvent. */
+  reminderNotifiedAt: timestamp("reminder_notified_at", { withTimezone: true }),
   assignedTo: text("assigned_to"),
   status: text("status"),
   notes: text("notes"),

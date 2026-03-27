@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef } from "react";
 import { Plus, User } from "lucide-react";
 import type { EventRow } from "@/app/actions/events";
 import { formatDateLocal } from "./date-utils";
@@ -11,7 +11,7 @@ import { CurrentTimeLine } from "./CurrentTimeLine";
 const START_HOUR = 7;
 const END_HOUR = 24;
 const PIXELS_PER_HOUR = 60;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR);
+const DRAG_MIME = "application/x-weplan-event-id";
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
@@ -40,6 +40,8 @@ export interface WeekDayGridProps {
   pixelsPerHour?: number;
   /** Custom colors per event type (id → hex). When set, event blocks use inline backgroundColor/borderLeftColor. */
   eventTypeColors?: Record<string, string>;
+  /** Přesun události v mřížce (den + začátek po 15 min). Celodenní události nelze táhnout. */
+  onEventMove?: (eventId: string, targetDateStr: string, startMinutesFromMidnight: number) => void;
 }
 
 const defaultStartHour = START_HOUR;
@@ -67,7 +69,10 @@ export function WeekDayGrid({
   endHour = defaultEndHour,
   pixelsPerHour = defaultPixelsPerHour,
   eventTypeColors,
+  onEventMove,
 }: WeekDayGridProps) {
+  const suppressClickEventIdRef = useRef<string | null>(null);
+
   const hours = useMemo(
     () => Array.from({ length: endHour - startHour }, (_, i) => i + startHour),
     [startHour, endHour]
@@ -82,6 +87,53 @@ export function WeekDayGrid({
       onSlotClick(dateStr, hour);
     },
     [onSlotClick]
+  );
+
+  const handleColumnDragOver = useCallback((e: React.DragEvent) => {
+    if (!onEventMove) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, [onEventMove]);
+
+  const findEventById = useCallback(
+    (eventId: string) => {
+      for (const list of eventsByDate.values()) {
+        const hit = list.find((x) => x.id === eventId);
+        if (hit) return hit;
+      }
+      return undefined;
+    },
+    [eventsByDate]
+  );
+
+  const handleColumnDrop = useCallback(
+    (e: React.DragEvent, targetDateStr: string) => {
+      if (!onEventMove) return;
+      e.preventDefault();
+      const id = e.dataTransfer.getData(DRAG_MIME);
+      if (!id) return;
+      const moved = findEventById(id);
+      if (!moved || moved.allDay) return;
+      const s = new Date(moved.startAt);
+      const en = moved.endAt ? new Date(moved.endAt) : new Date(s.getTime() + 60 * 60 * 1000);
+      const durMin = Math.max(15, Math.ceil((en.getTime() - s.getTime()) / 60000 / 15) * 15);
+
+      const col = e.currentTarget as HTMLElement;
+      const rect = col.getBoundingClientRect();
+      let y = e.clientY - rect.top;
+      y = Math.max(0, Math.min(rect.height - 1, y));
+      const minutesFromGridStart = (y / pixelsPerHour) * 60;
+      let absoluteMin = startHour * 60 + minutesFromGridStart;
+      absoluteMin = Math.round(absoluteMin / 15) * 15;
+      const maxStartMin = Math.max(startHour * 60, endHour * 60 - durMin);
+      const clamped = Math.min(Math.max(startHour * 60, absoluteMin), maxStartMin);
+      suppressClickEventIdRef.current = id;
+      window.setTimeout(() => {
+        if (suppressClickEventIdRef.current === id) suppressClickEventIdRef.current = null;
+      }, 200);
+      onEventMove(id, targetDateStr, clamped);
+    },
+    [onEventMove, pixelsPerHour, startHour, endHour, findEventById]
   );
 
   return (
@@ -156,6 +208,8 @@ export function WeekDayGrid({
                 key={ds}
                 className={`flex-1 border-r border-[color:var(--wp-surface-card-border)]/50 relative ${isPast ? "wp-cal-striped-past opacity-80" : ""}`}
                 style={{ height: totalHeight }}
+                onDragOver={onEventMove ? handleColumnDragOver : undefined}
+                onDrop={onEventMove ? (e) => handleColumnDrop(e, ds) : undefined}
               >
                 {/* Click-to-add: hour cells with hover + Plus; gray past hours in today column */}
                 <div className="absolute inset-0 flex flex-col z-0 wp-cal-modern-grid">
@@ -189,13 +243,25 @@ export function WeekDayGrid({
                   const selected = selectedEventId === ev.id;
                   const useInlineColor = Boolean(customColor);
 
+                  const draggable = Boolean(onEventMove && !ev.allDay);
+
                   return (
                     <button
                       key={ev.id}
                       type="button"
-                      className={`absolute left-1.5 right-1.5 rounded-xl p-2.5 border border-l-[3px] cursor-pointer transition-all duration-200 overflow-hidden text-left
+                      draggable={draggable}
+                      onDragStart={
+                        draggable
+                          ? (e) => {
+                              e.dataTransfer.setData(DRAG_MIME, ev.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }
+                          : undefined
+                      }
+                      className={`absolute left-1.5 right-1.5 rounded-xl p-2.5 border border-l-[3px] cursor-pointer transition-all duration-200 overflow-hidden text-left touch-manipulation
                         ${useInlineColor ? "text-gray-800 border-gray-300" : style.tailwindClass}
                         ${selected ? "ring-2 ring-indigo-400 ring-offset-1 shadow-lg scale-[1.02] z-30" : "hover:shadow-md hover:scale-[1.01] z-10"}
+                        ${draggable ? "active:cursor-grabbing cursor-grab" : ""}
                       `}
                       style={{
                         top: topPx,
@@ -205,6 +271,10 @@ export function WeekDayGrid({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (suppressClickEventIdRef.current === ev.id) {
+                          suppressClickEventIdRef.current = null;
+                          return;
+                        }
                         onEventClick(ev);
                       }}
                       title={`${style.label}: ${ev.title}${ev.contactName ? ` – ${ev.contactName}` : ""} – ${formatTime(start)}`}

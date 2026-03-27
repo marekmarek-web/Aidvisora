@@ -6,7 +6,6 @@ import {
   Bell,
   Briefcase,
   Check,
-  Clock,
   Link2,
   MapPin,
   User,
@@ -19,6 +18,8 @@ import {
   EVENT_STATUSES,
   type EventCategoryId,
 } from "@/app/portal/calendar/event-categories";
+import { formatDateLocal, formatDateTimeLocal } from "@/app/portal/calendar/date-utils";
+import { EventFormDateTimeSection } from "@/app/portal/calendar/EventFormDateTimeSection";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
@@ -102,8 +103,11 @@ export function CalendarEventForm({
       const now = new Date();
       now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
       const end = new Date(now.getTime() + 60 * 60 * 1000);
-      const fmt = (d: Date) => d.toISOString().slice(0, 16);
-      return { ...initial, startAt: fmt(now), endAt: fmt(end) };
+      return {
+        ...initial,
+        startAt: formatDateTimeLocal(now),
+        endAt: formatDateTimeLocal(end),
+      };
     }
     return initial;
   });
@@ -260,48 +264,31 @@ export function CalendarEventForm({
             autoFocus
           />
 
-          <div className="space-y-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4">
-            <div className="flex items-center gap-2">
-              <Clock size={16} className="text-[color:var(--wp-text-tertiary)]" />
-              <span className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Kdy</span>
-            </div>
-
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)]">
-              <input
-                type="checkbox"
-                checked={form.allDay}
-                onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                className="h-4 w-4 rounded border-[color:var(--wp-border-strong)] text-indigo-600 focus:ring-indigo-500"
-              />
-              Celý den
-            </label>
-
-            <div className="space-y-3">
-              <div>
-                <label className={labelClass}>Začátek</label>
-                <input
-                  type="datetime-local"
-                  step={300}
-                  value={form.startAt}
-                  onChange={(e) => {
-                    setForm((f) => ({ ...f, startAt: e.target.value }));
-                    if (validationErrors.startAt) setValidationErrors((v) => ({ ...v, startAt: false }));
-                  }}
-                  className={`${inputClass} ${validationErrors.startAt ? "!border-red-400 !ring-red-100" : ""}`}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Konec</label>
-                <input
-                  type="datetime-local"
-                  step={300}
-                  value={form.endAt}
-                  onChange={(e) => setForm((f) => ({ ...f, endAt: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </div>
+          <EventFormDateTimeSection
+            startAt={form.startAt}
+            endAt={form.endAt}
+            allDay={form.allDay}
+            onChangeStart={(v) => {
+              setForm((f) => ({ ...f, startAt: v }));
+              if (validationErrors.startAt) setValidationErrors((x) => ({ ...x, startAt: false }));
+            }}
+            onChangeEnd={(v) => setForm((f) => ({ ...f, endAt: v }))}
+            onChangeAllDay={(v) => {
+              setForm((f) => {
+                if (v) {
+                  const d = f.startAt.slice(0, 10) || formatDateLocal(new Date());
+                  const endD = (f.endAt || f.startAt).slice(0, 10) || d;
+                  return { ...f, allDay: true, startAt: `${d}T00:00`, endAt: `${endD}T23:59` };
+                }
+                const d = f.startAt.slice(0, 10) || formatDateLocal(new Date());
+                return { ...f, allDay: false, startAt: `${d}T09:00`, endAt: `${d}T10:00` };
+              });
+            }}
+            startInvalid={validationErrors.startAt}
+            onClearStartInvalid={() => setValidationErrors((x) => ({ ...x, startAt: false }))}
+            eLabelClass={labelClass}
+            eInputClass={inputClass}
+          />
 
           <div className="space-y-3">
             <div>
