@@ -111,7 +111,7 @@ export async function classifyContractDocument(
   fileUrl: string
 ): Promise<ClassificationResult> {
   const raw = await createResponseWithFile(fileUrl, CLASSIFICATION_PROMPT, {
-    routing: { category: "ai_review" },
+    routing: { category: "ai_review", maxOutputTokens: 2048 },
   });
   return parseClassificationResponse(raw);
 }

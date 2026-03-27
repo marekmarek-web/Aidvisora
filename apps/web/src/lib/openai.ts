@@ -1,11 +1,9 @@
 import OpenAI from "openai";
 import { withOpenAIRateLimitRetry } from "@/lib/openai-rate-limit";
+import { buildAiReviewResponsesCreateExtras } from "./openai-ai-review-params";
 
 const defaultModel = "gpt-5-mini";
 const fallbackModel = "gpt-4o-mini";
-
-/** Low temperature for deterministic JSON-style outputs (AI Review). */
-const AI_REVIEW_TEMPERATURE = 0;
 
 type ResponsesCreateBody = {
   model: string;
@@ -13,6 +11,9 @@ type ResponsesCreateBody = {
   prompt?: unknown;
   store: boolean;
   temperature?: number;
+  reasoning?: { effort: string };
+  text?: { verbosity: string };
+  max_output_tokens?: number;
 };
 
 /** Model routing for copilot vs AI Review (env overrides). */
@@ -20,7 +21,19 @@ export type OpenAIModelRoutingCategory = "default" | "copilot" | "ai_review";
 
 export type OpenAICallRoutingOptions = {
   category?: OpenAIModelRoutingCategory;
+  /** When category is `ai_review` and the resolved model is GPT-5 family, caps generated tokens. */
+  maxOutputTokens?: number;
 };
+
+export { isGpt5FamilyResponsesModel, buildAiReviewResponsesCreateExtras } from "./openai-ai-review-params";
+
+function aiReviewResponsesAugmentation(
+  routing: OpenAICallRoutingOptions | undefined,
+  resolvedModel: string
+): Record<string, unknown> {
+  if (routing?.category !== "ai_review") return {};
+  return buildAiReviewResponsesCreateExtras(resolvedModel, routing.maxOutputTokens);
+}
 
 /**
  * Resolves model: explicit options.model wins, then category-specific env, then OPENAI_MODEL, then default.
@@ -121,7 +134,7 @@ export async function createResponse(
       model: primaryModel,
       input,
       store,
-      ...(options?.routing?.category === "ai_review" ? { temperature: AI_REVIEW_TEMPERATURE } : {}),
+      ...aiReviewResponsesAugmentation(options?.routing, primaryModel),
     };
     response = await withOpenAIRateLimitRetry(
       () => client.responses.create(createBody as Parameters<OpenAI["responses"]["create"]>[0]),
@@ -133,7 +146,7 @@ export async function createResponse(
         model: fallbackModel,
         input,
         store,
-        ...(options?.routing?.category === "ai_review" ? { temperature: AI_REVIEW_TEMPERATURE } : {}),
+        ...aiReviewResponsesAugmentation(options?.routing, fallbackModel),
       };
       response = await withOpenAIRateLimitRetry(
         () => client.responses.create(fallbackBody as Parameters<OpenAI["responses"]["create"]>[0]),
@@ -272,7 +285,7 @@ export async function createResponseFromPrompt(
       model: primaryModel,
       prompt: promptPayload as Parameters<OpenAI["responses"]["create"]>[0]["prompt"],
       store,
-      ...(options?.routing?.category === "ai_review" ? { temperature: AI_REVIEW_TEMPERATURE } : {}),
+      ...aiReviewResponsesAugmentation(options?.routing, primaryModel),
     };
     const response = await client.responses.create(
       promptBody as Parameters<OpenAI["responses"]["create"]>[0]
@@ -340,7 +353,7 @@ export async function createResponseWithFile(
       model: primaryModel,
       input,
       store,
-      ...(options?.routing?.category === "ai_review" ? { temperature: AI_REVIEW_TEMPERATURE } : {}),
+      ...aiReviewResponsesAugmentation(options?.routing, primaryModel),
     };
     response = await withOpenAIRateLimitRetry(
       () => client.responses.create(fileBody as Parameters<OpenAI["responses"]["create"]>[0]),
@@ -352,7 +365,7 @@ export async function createResponseWithFile(
         model: fallbackModel,
         input,
         store,
-        ...(options?.routing?.category === "ai_review" ? { temperature: AI_REVIEW_TEMPERATURE } : {}),
+        ...aiReviewResponsesAugmentation(options?.routing, fallbackModel),
       };
       response = await withOpenAIRateLimitRetry(
         () => client.responses.create(fileFallbackBody as Parameters<OpenAI["responses"]["create"]>[0]),

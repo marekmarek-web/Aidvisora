@@ -84,7 +84,7 @@ export async function detectInputMode(
 
   try {
     const raw = await createResponseWithFile(fileUrl, DETECTION_PROMPT, {
-      routing: { category: "ai_review" },
+      routing: { category: "ai_review", maxOutputTokens: 2048 },
     });
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const jsonStr = jsonMatch ? jsonMatch[0] : raw;

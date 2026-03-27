@@ -28,7 +28,7 @@ export async function runAiReviewDecisionLlm(params: {
         validation_summary_json: params.validationSummaryJson,
       },
     },
-    { store: false, routing: { category: "ai_review" } }
+    { store: false, routing: { category: "ai_review", maxOutputTokens: 6144 } }
   );
   const durationMs = Date.now() - started;
   if (!res.ok) return { ok: false, durationMs };
@@ -51,7 +51,7 @@ export async function runAiReviewClientMatchLlm(params: {
         db_candidates_json: params.dbCandidatesJson,
       },
     },
-    { store: false, routing: { category: "ai_review" } }
+    { store: false, routing: { category: "ai_review", maxOutputTokens: 6144 } }
   );
   const durationMs = Date.now() - started;
   if (!res.ok) return { ok: false, durationMs };
