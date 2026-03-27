@@ -637,16 +637,30 @@ export function PortalSidebar({
                           />
                         </div>
                         {!collapsed && (
-                          <span className={`ml-3 flex-1 text-left text-sm whitespace-nowrap tracking-wide ${
-                            isActive ? "text-white font-bold" : isDark ? "text-white font-semibold" : item.isHighlighted ? "font-bold text-[color:var(--wp-text)]" : "font-semibold"
-                          }`}>
+                          <span
+                            className={`ml-3 flex-1 text-left text-sm whitespace-nowrap tracking-wide ${
+                              isActive
+                                ? "font-bold text-[color:var(--wp-nav-active-text)]"
+                                : isDark
+                                  ? "font-semibold text-white"
+                                  : item.isHighlighted
+                                    ? "font-bold text-[color:var(--wp-text)]"
+                                    : "font-semibold text-[color:var(--wp-text-secondary)]"
+                            }`}
+                          >
                             {item.label}
                           </span>
                         )}
                         {!collapsed && badge != null && (
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full transition-colors mr-2 shrink-0 ${
-                            isDark ? "bg-[color:var(--wp-surface-card)]/20 text-white" : isActive ? "bg-[color:var(--wp-surface-card)]/20 text-white" : "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
-                          }`}>
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full transition-colors mr-2 shrink-0 ${
+                              isDark
+                                ? "bg-[color:var(--wp-surface-card)]/20 text-white"
+                                : isActive
+                                  ? "bg-[color:var(--wp-nav-active-text)]/12 text-[color:var(--wp-nav-active-text)] ring-1 ring-[color:var(--wp-nav-active-border)]/40"
+                                  : "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
+                            }`}
+                          >
                             {badge > 99 ? "99+" : badge}
                           </span>
                         )}

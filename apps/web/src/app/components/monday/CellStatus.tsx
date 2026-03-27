@@ -31,7 +31,8 @@ interface CellStatusProps {
   onNoteChange?: (note: string) => void;
 }
 
-const EMPTY_BG = "#e5e5e5";
+/** Respects board.css light/dark (--board-empty-status-bg). */
+const EMPTY_BG = "var(--board-empty-status-bg, #e5e5e5)";
 
 export function CellStatus({ value, onChange, className = "", fullCell = false, note, onNoteChange }: CellStatusProps) {
   const [open, setOpen] = useState(false);
@@ -227,7 +228,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
       >
         <span className="flex items-center justify-center gap-1">
           {fullCell && isEmpty ? (
-            <Plus size={18} className="text-[color:var(--wp-text-tertiary)]" />
+            <Plus size={18} className="text-[color:var(--wp-text)] opacity-70 dark:opacity-90" />
           ) : (
             displayLabel
           )}

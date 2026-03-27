@@ -1257,3 +1257,67 @@ details:not([open]) .icon-tabler-circle-minus {
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* ─────────────────────────────────────────────────────────
+   Tmavý motiv: legacy board tokeny → wp-* (jinak tmavé buňky + #1e2430 text)
+   ───────────────────────────────────────────────────────── */
+.dark {
+  --text-main: var(--wp-text);
+  --text-muted: var(--wp-text-secondary);
+  --bg-app: var(--wp-bg);
+  --bg-board: var(--wp-surface);
+  --bg-group: var(--wp-surface);
+  --bg-header: color-mix(in srgb, var(--wp-surface-muted) 85%, transparent);
+  --bg-cell: var(--wp-surface-card);
+  --bg-cell-hover: rgba(255, 255, 255, 0.06);
+  --border-soft: var(--wp-border);
+  --border-strong: var(--wp-border-strong);
+}
+
+.dark .board-context-menu {
+  background: var(--wp-dropdown-surface);
+  border-color: var(--wp-dropdown-border);
+  box-shadow: var(--wp-dropdown-shadow);
+}
+.dark .board-context-item {
+  color: var(--wp-text);
+}
+.dark .board-context-item:hover {
+  background: var(--wp-surface-muted);
+}
+.dark .board-context-item.is-danger:hover {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.dark .add-row,
+.dark .add-row .board-cell,
+.dark .add-row td {
+  background: color-mix(in srgb, var(--wp-surface-card) 92%, transparent);
+}
+.dark .add-row-trigger {
+  color: var(--wp-text-secondary);
+}
+.dark .add-row-trigger:hover {
+  color: var(--wp-link);
+}
+
+.dark .avatar-dot {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--wp-border);
+  color: var(--wp-text-secondary);
+}
+
+.dark .monday-table .sticky-col::after,
+.dark .monday-table .sticky-col-th::after {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.25));
+}
+
+.dark .monday-board-wrap ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+.dark .monday-board-wrap ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+.dark .monday-board-wrap ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}

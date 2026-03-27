@@ -378,8 +378,9 @@
   --wp-surface-inset: rgba(8, 11, 24, 0.88);
   --wp-surface-muted: rgba(255, 255, 255, 0.04);
   --wp-bg-card: var(--wp-surface-card);
-  --wp-text-secondary: #cbd5e1;
-  --wp-text-tertiary: #94a3b8;
+  /* Čitelnější než čistě „šedá“ na tmavém canvasu (board, pipeline karty). */
+  --wp-text-secondary: #e2e8f0;
+  --wp-text-tertiary: #cbd5e1;
   --wp-text-inverse: #0f172a;
   --wp-icon-default: #94a3b8;
   --wp-icon-active: #a5b4fc;
