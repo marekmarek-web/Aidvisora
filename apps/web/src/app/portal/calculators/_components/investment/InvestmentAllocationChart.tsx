@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -15,6 +16,9 @@ export interface InvestmentAllocationChartProps {
 }
 
 export function InvestmentAllocationChart({ data }: InvestmentAllocationChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   const chartData = {
     labels: data.labels,
     datasets: [
@@ -34,6 +38,11 @@ export function InvestmentAllocationChart({ data }: InvestmentAllocationChartPro
     plugins: {
       legend: { display: false },
       tooltip: {
+        backgroundColor: isDark ? "#1e293b" : "#ffffff",
+        titleColor: isDark ? "#f1f5f9" : "#0f172a",
+        bodyColor: isDark ? "#e2e8f0" : "#0f172a",
+        borderColor: isDark ? "#334155" : "#e2e8f0",
+        borderWidth: 1,
         callbacks: {
           label: (c: { label: string; parsed: number }) =>
             ` ${c.label}: ${c.parsed}%`,

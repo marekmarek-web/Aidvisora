@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTheme } from "next-themes";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,6 +29,9 @@ export interface InvestmentGrowthChartProps {
 }
 
 export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   const chartData = useMemo(
     () => ({
       labels: data.labels,
@@ -74,8 +78,10 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#0f172a",
-          borderColor: "#334155",
+          backgroundColor: isDark ? "#1e293b" : "#ffffff",
+          titleColor: isDark ? "#f1f5f9" : "#0f172a",
+          bodyColor: isDark ? "#e2e8f0" : "#0f172a",
+          borderColor: isDark ? "#334155" : "#e2e8f0",
           borderWidth: 1,
           padding: 10,
           callbacks: {
@@ -87,10 +93,10 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
       scales: {
         y: {
           beginAtZero: false,
-          grid: { color: "#eef2ff" },
+          grid: { color: isDark ? "rgba(148,163,184,0.12)" : "#eef2ff" },
           border: { display: false },
           ticks: {
-            color: "#64748b",
+            color: isDark ? "#94a3b8" : "#64748b",
             callback: (v: number | string) =>
               Number(v) >= 1_000_000
                 ? `${(Number(v) / 1_000_000).toFixed(1)}M`
@@ -100,11 +106,11 @@ export function InvestmentGrowthChart({ data }: InvestmentGrowthChartProps) {
         x: {
           grid: { display: false },
           border: { display: false },
-          ticks: { maxTicksLimit: 6, color: "#94a3b8" },
+          ticks: { maxTicksLimit: 6, color: isDark ? "#94a3b8" : "#94a3b8" },
         },
       },
     }),
-    [],
+    [isDark],
   );
 
   return (

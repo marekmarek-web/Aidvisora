@@ -1,9 +1,8 @@
 import clsx from "clsx";
 
-/** Vnější plášť primárního create tlačítka (UX UI/button.txt, barvy --aidv-create-*). */
 /**
- * Stejný gradient jako sekce „Nástroje poradce“ (sidebar): v tmavém motivu nepoužívat plnou `bg-aidv-create`,
- * ta by přebila gradient (šedé „ploché“ tlačítko).
+ * Primární „Nový / Vytvořit“ tlačítko: světlý motiv `bg-aidv-create`, tmavý stejný gradient jako box „Nástroje poradce“
+ * (fuchsia → indigo), ne plná šedá z `--aidv-create-bg`.
  */
 export const createActionButtonSurfaceClassName = clsx(
   "relative inline-flex items-center justify-center gap-2",
