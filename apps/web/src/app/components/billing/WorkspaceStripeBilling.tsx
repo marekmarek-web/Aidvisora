@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CreditCard } from "lucide-react";
+import { AdvisorLegalConsentLabel } from "@/app/components/auth/AdvisorLegalConsentLabel";
 import type {
   CheckoutCatalogSnapshot,
   PlanInterval,
@@ -99,6 +100,7 @@ export function WorkspaceStripeBilling({
   const billingQuery = searchParams.get("billing");
   const [billingAction, setBillingAction] = useState<null | "checkout" | "portal">(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [subscriptionLegalConsent, setSubscriptionLegalConsent] = useState(false);
 
   const cat = billing?.checkoutCatalog;
   const usePicker = Boolean(cat?.useTierPicker);
@@ -127,13 +129,18 @@ export function WorkspaceStripeBilling({
     return tierSupports(cat, tier, interval);
   }, [billing?.checkoutAvailable, cat, usePicker, tier, interval]);
 
+  const canStartPaidCheckout = canSubmitCheckout && subscriptionLegalConsent;
+
   if (!billing) return null;
 
   async function startStripeCheckout() {
     setBillingError(null);
     setBillingAction("checkout");
     try {
-      const payload: Record<string, unknown> = { billingContext };
+      const payload: Record<string, unknown> = {
+        billingContext,
+        legalAcknowledged: true,
+      };
       if (usePicker) {
         payload.tier = tier;
         payload.interval = interval;
@@ -300,12 +307,23 @@ export function WorkspaceStripeBilling({
           Předplatné může spravovat administrátor nebo ředitel workspace.
         </p>
       ) : (
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+        <div className="flex flex-col gap-4">
+          {billing.checkoutAvailable ? (
+            <AdvisorLegalConsentLabel
+              checked={subscriptionLegalConsent}
+              onChange={setSubscriptionLegalConsent}
+              className="flex items-start gap-3 max-w-2xl text-sm text-[color:var(--wp-text-secondary)]"
+              textClassName="text-[color:var(--wp-text-secondary)]"
+              linkClassName="font-bold text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+              inputClassName="mt-1 h-5 w-5 shrink-0 rounded border-[color:var(--wp-surface-card-border)] accent-indigo-600"
+            />
+          ) : null}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           {billing.checkoutAvailable ? (
             <button
               type="button"
               onClick={() => void startStripeCheckout()}
-              disabled={billingAction !== null || !canSubmitCheckout}
+              disabled={billingAction !== null || !canStartPaidCheckout}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors min-h-[44px] disabled:opacity-60"
             >
               <CreditCard size={18} />
@@ -333,6 +351,7 @@ export function WorkspaceStripeBilling({
               Customer Portal je dostupný po prvním dokončeném předplatném.
             </p>
           )}
+          </div>
         </div>
       )}
     </div>

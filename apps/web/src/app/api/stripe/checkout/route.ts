@@ -52,7 +52,14 @@ export async function POST(request: Request) {
     billingContext?: unknown;
     tier?: unknown;
     interval?: unknown;
+    legalAcknowledged?: unknown;
   };
+  if (body.legalAcknowledged !== true) {
+    return NextResponse.json(
+      { error: "Před zahájením předplatného potvrďte souhlas s právními dokumenty." },
+      { status: 400 }
+    );
+  }
   const billingContext = parseBillingContext(body.billingContext);
   const tier = parsePlanTier(body.tier);
   const interval = parsePlanInterval(body.interval);
@@ -61,7 +68,10 @@ export async function POST(request: Request) {
   const multi = hasAnyMultiTierPrice();
 
   let priceId: string | null = null;
-  let subscriptionMetadata: Record<string, string> = { tenant_id: m.tenantId };
+  let subscriptionMetadata: Record<string, string> = {
+    tenant_id: m.tenantId,
+    checkout_legal_ack: "1",
+  };
 
   if (multi) {
     if (!tier || !interval) {

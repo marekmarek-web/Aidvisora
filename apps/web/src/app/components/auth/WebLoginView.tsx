@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
+import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
 import { GoogleIcon } from "./loginIcons";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
@@ -23,6 +24,8 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
     setName,
     gdprConsent,
     setGdprConsent,
+    advisorLegalConsent,
+    setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
@@ -213,8 +216,8 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                   <input type="checkbox" className="mt-1" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required />
                   <span>
                     Souhlasím s{" "}
-                    <Link href="/gdpr" target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-300 hover:underline">
-                      GDPR
+                    <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-300 hover:underline">
+                      zásadami zpracování osobních údajů
                     </Link>
                   </span>
                 </label>
@@ -301,6 +304,17 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                   </button>
                 </div>
               </div>
+
+              {role === "advisor" && !isLogin && (
+                <AdvisorLegalConsentLabel
+                  checked={advisorLegalConsent}
+                  onChange={setAdvisorLegalConsent}
+                  className="flex items-start gap-3 text-sm text-white/90"
+                  textClassName="text-white/90"
+                  linkClassName="font-bold text-indigo-300 hover:underline"
+                  inputClassName="mt-1 h-4 w-4 shrink-0 rounded border-white/30 accent-indigo-400"
+                />
+              )}
 
               {hasError && (
                 <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 flex items-start gap-3 text-rose-400 animate-in fade-in slide-in-from-top-2">
@@ -397,8 +411,8 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
           </span>
         </div>
         <div className="flex flex-wrap gap-6 justify-center font-black uppercase tracking-widest hover:[&>a]:text-white">
-          <Link href="/gdpr" className="transition-colors flex items-center gap-1.5 min-h-[44px]">
-            <ShieldCheck size={14} /> GDPR
+          <Link href="/privacy" className="transition-colors flex items-center gap-1.5 min-h-[44px]">
+            <ShieldCheck size={14} /> Ochrana údajů
           </Link>
           <Link href="/" className="transition-colors min-h-[44px] flex items-center">
             Zpět na úvod

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AlertCircle, ArrowRight, ChevronLeft, Eye, EyeOff, Lock, Mail, ScanFace } from "lucide-react";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
+import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
 import { AppleIcon, GoogleIcon } from "./loginIcons";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
@@ -27,6 +28,8 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
     setName,
     gdprConsent,
     setGdprConsent,
+    advisorLegalConsent,
+    setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
@@ -165,12 +168,12 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 <span>
                   Souhlasím s{" "}
                   <Link
-                    href="/gdpr"
+                    href="/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-bold hover:underline opacity-90 inline-flex min-h-[44px] items-center"
                   >
-                    GDPR
+                    zásadami zpracování osobních údajů
                   </Link>
                 </span>
               </label>
@@ -264,6 +267,17 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 </div>
               )}
             </div>
+
+            {!isClient && !isLogin && (
+              <AdvisorLegalConsentLabel
+                checked={advisorLegalConsent}
+                onChange={setAdvisorLegalConsent}
+                className="flex items-start gap-3 min-h-[44px] text-sm text-white/90 py-1"
+                textClassName="text-white/90"
+                linkClassName="font-bold text-white underline-offset-2 hover:underline"
+                inputClassName="h-5 w-5 shrink-0 rounded border-white/20 accent-emerald-500 mt-0.5"
+              />
+            )}
 
             {hasError && (
               <div className="flex items-center justify-center gap-2 text-rose-300 bg-rose-500/10 border border-rose-500/20 py-3.5 px-4 rounded-xl text-sm font-bold animate-in fade-in animate-subtle-shake backdrop-blur-sm">

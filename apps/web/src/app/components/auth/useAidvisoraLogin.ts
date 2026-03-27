@@ -54,6 +54,8 @@ export function useAidvisoraLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [gdprConsent, setGdprConsent] = useState(false);
+  /** Souhlas s OP / privacy / DPA + AI info při registraci poradce (e-mail i OAuth). */
+  const [advisorLegalConsent, setAdvisorLegalConsent] = useState(false);
   const [message, setMessage] = useState(() => getInitialLoginMessage(errorParam));
   const [isMounted, setIsMounted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -85,6 +87,14 @@ export function useAidvisoraLogin() {
     if (!forceNative || typeof document === "undefined") return;
     document.cookie = "mobile_ui_v1_beta=1; Path=/; Max-Age=31536000; SameSite=Lax";
   }, [forceNative]);
+
+  useEffect(() => {
+    if (isLogin) setAdvisorLegalConsent(false);
+  }, [isLogin]);
+
+  useEffect(() => {
+    if (role === "client") setAdvisorLegalConsent(false);
+  }, [role]);
 
   const isClient = role === "client";
   const hasError = Boolean(message);
@@ -156,6 +166,11 @@ export function useAidvisoraLogin() {
         }
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       } else {
+        if (!advisorLegalConsent) {
+          setIsLoading(false);
+          setMessage("Před vytvořením účtu potvrďte souhlas s právními dokumenty níže.");
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -173,11 +188,15 @@ export function useAidvisoraLogin() {
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       }
     },
-    [token, email, password, gdprConsent, role, isLogin, name, clientNextPath, advisorNextPath]
+    [token, email, password, gdprConsent, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
   );
 
   const handleOAuthSignIn = useCallback(
     async (provider: "google" | "apple") => {
+      if (role !== "client" && !isLogin && !token && !advisorLegalConsent) {
+        setMessage("Před pokračováním přes Google nebo Apple potvrďte souhlas s právními dokumenty.");
+        return;
+      }
       const supabase = createClient();
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
       const nextPath = role === "client" ? clientNextPath : advisorNextPath;
@@ -214,7 +233,7 @@ export function useAidvisoraLogin() {
         },
       });
     },
-    [forceNative, role, clientNextPath, advisorNextPath]
+    [forceNative, role, isLogin, token, advisorLegalConsent, clientNextPath, advisorNextPath]
   );
 
   const handleBiometricLogin = useCallback(() => {
@@ -247,6 +266,8 @@ export function useAidvisoraLogin() {
     setName,
     gdprConsent,
     setGdprConsent,
+    advisorLegalConsent,
+    setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
