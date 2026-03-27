@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Calendar as CalendarIcon, Phone, Mail, Coffee, X } from "lucide-react";
 import type { ContactRow } from "@/app/actions/contacts";
 import { ContactSearchInput } from "@/app/components/ContactSearchInput";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import clsx from "clsx";
 
 function CheckSquare({ size, className }: { size: number; className?: string }) {
   return (
@@ -229,7 +231,7 @@ export function QuickEventForm({
           <button
             type="submit"
             disabled={saving || !form.startAt}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-colors disabled:opacity-50"
+            className={clsx(portalPrimaryButtonClassName, "px-6 py-2.5 disabled:opacity-50")}
           >
             {saving ? "Ukládám…" : initialValues?.id ? "Uložit" : "Vytvořit"}
           </button>

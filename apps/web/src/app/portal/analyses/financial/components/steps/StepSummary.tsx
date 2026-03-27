@@ -8,7 +8,9 @@ import { formatCzk, financialAnalysisReportFilename } from "@/lib/analyses/finan
 import { uploadDocument } from "@/app/actions/documents";
 import { setFinancialAnalysisLastExportedAt } from "@/app/actions/financial-analyses";
 import { getAdvisorReportBranding } from "@/app/actions/preferences";
+import clsx from "clsx";
 import { FileText, Printer, CloudUpload, StickyNote, Monitor } from "lucide-react";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 type ReportTheme = "elegant" | "modern";
 const FALLBACK_BRANDING = {
@@ -270,7 +272,7 @@ export function StepSummary() {
             onClick={handleDownloadHTML}
             disabled={isDownloading}
             aria-busy={isDownloading}
-            className="min-h-[56px] flex items-center gap-3 px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 disabled:opacity-60 transition-colors"
+            className={clsx(portalPrimaryButtonClassName, "min-h-[56px] flex w-full items-center gap-3 px-5 py-3 disabled:opacity-60")}
           >
             <Monitor className="w-5 h-5 flex-shrink-0" />
             <div className="text-left">

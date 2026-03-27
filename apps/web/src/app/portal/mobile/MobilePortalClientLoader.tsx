@@ -1,13 +1,6 @@
 import { getDashboardKpis, type DashboardKpis } from "@/app/actions/dashboard";
-import { getTasksCounts, getTasksList, type TaskCounts, type TaskRow } from "@/app/actions/tasks";
-import { getContactsList, type ContactRow } from "@/app/actions/contacts";
-import { ensureDefaultStages, getPipeline, type StageWithOpportunities } from "@/app/actions/pipeline";
-import { getServiceRecommendationsForDashboard, type ServiceRecommendationWithContact } from "@/app/actions/service-engine";
-import { getMeetingNotesForBoard, type MeetingNoteForBoard } from "@/app/actions/meeting-notes";
-import { listFinancialAnalyses, type FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
-import { getProductionSummary, type ProductionSummary } from "@/app/actions/production";
-import { getBusinessPlanWidgetData } from "@/app/actions/business-plan";
-import type { BusinessPlanWidgetData } from "@/app/portal/today/DashboardEditable";
+import { getTasksCounts, type TaskCounts } from "@/app/actions/tasks";
+import { ensureDefaultStages } from "@/app/actions/pipeline";
 import type { RoleName } from "@/shared/rolePermissions";
 import { MobilePortalClient } from "./MobilePortalClient";
 
@@ -47,16 +40,7 @@ export async function MobilePortalClientLoader({
   roleName: RoleName;
 }) {
   let dashboardKpis: DashboardKpis = EMPTY_KPIS;
-  let tasks: TaskRow[] = [];
   let taskCounts: TaskCounts = EMPTY_COUNTS;
-  let contacts: ContactRow[] = [];
-  let pipeline: StageWithOpportunities[] = [];
-  let serviceRecommendations: ServiceRecommendationWithContact[] = [];
-  let meetingNotes: MeetingNoteForBoard[] = [];
-  let financialAnalyses: FinancialAnalysisListItem[] = [];
-  let productionSummary: ProductionSummary | null = null;
-  let productionError: string | null = null;
-  let businessPlanWidgetData: BusinessPlanWidgetData | null = null;
 
   try {
     await ensureDefaultStages();
@@ -64,57 +48,29 @@ export async function MobilePortalClientLoader({
     // ignore stage initialization errors for mobile fallback rendering
   }
 
-  const [
-    kpisRes, tasksRes, countsRes, contactsRes, pipelineRes,
-    serviceRes, notesRes, analysesRes, productionRes, businessPlanRes,
-  ] = await Promise.allSettled([
-    getDashboardKpis(),
-    getTasksList("all"),
-    getTasksCounts(),
-    getContactsList(),
-    getPipeline(),
-    getServiceRecommendationsForDashboard(10),
-    getMeetingNotesForBoard(),
-    listFinancialAnalyses(),
-    getProductionSummary("month"),
-    getBusinessPlanWidgetData(),
-  ]);
+  const [kpisRes, countsRes] = await Promise.allSettled([getDashboardKpis(), getTasksCounts()]);
 
   if (kpisRes.status === "fulfilled") dashboardKpis = kpisRes.value;
-  if (tasksRes.status === "fulfilled") tasks = tasksRes.value;
   if (countsRes.status === "fulfilled") taskCounts = countsRes.value;
-  if (contactsRes.status === "fulfilled") contacts = contactsRes.value;
-  if (pipelineRes.status === "fulfilled") pipeline = pipelineRes.value;
-  if (serviceRes.status === "fulfilled") serviceRecommendations = serviceRes.value;
-  if (notesRes.status === "fulfilled") meetingNotes = notesRes.value;
-  if (analysesRes.status === "fulfilled") financialAnalyses = analysesRes.value;
-  if (productionRes.status === "fulfilled") {
-    productionSummary = productionRes.value;
-  } else {
-    productionError =
-      productionRes.reason instanceof Error
-        ? productionRes.reason.message
-        : "Nepodařilo se načíst produkci.";
-  }
-  if (businessPlanRes.status === "fulfilled") businessPlanWidgetData = businessPlanRes.value;
 
   return (
     <MobilePortalClient
       advisorName={advisorName}
       initialKpis={dashboardKpis}
-      initialTasks={tasks}
+      initialTasks={[]}
       initialTaskCounts={taskCounts}
-      initialContacts={contacts}
-      initialPipeline={pipeline}
+      initialContacts={[]}
+      initialPipeline={[]}
       showTeamOverview={showTeamOverview}
-      serviceRecommendations={serviceRecommendations}
-      initialNotes={meetingNotes}
-      initialAnalyses={financialAnalyses}
-      productionSummary={productionSummary}
-      productionError={productionError}
-      businessPlanWidgetData={businessPlanWidgetData}
+      serviceRecommendations={[]}
+      initialNotes={[]}
+      initialAnalyses={[]}
+      productionSummary={null}
+      productionError={null}
+      businessPlanWidgetData={null}
       canWriteCalendar={canWriteCalendar}
       roleName={roleName}
+      deferDataHydration
     />
   );
 }

@@ -11,6 +11,8 @@ import { MindmapCanvas } from "./MindmapCanvas";
 import { MindmapToolbar } from "./MindmapToolbar";
 import { MindmapControls } from "./MindmapControls";
 import { MindmapSidePanel } from "./MindmapSidePanel";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { renderNodeByType, type NodeItemMenuAction } from "./NodeRenderers";
 
 type MindmapViewProps = {
@@ -290,7 +292,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={clsx(portalPrimaryButtonClassName, "px-4 py-2 text-xs disabled:opacity-50")}
             >
               {saving ? "Ukládám…" : "Uložit"}
             </button>
@@ -331,7 +333,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                         type="button"
                         onClick={() => { handleSave(); setMobileMenuOpen(false); }}
                         disabled={saving}
-                        className="w-full text-left px-4 py-3 text-sm font-bold text-indigo-600 disabled:opacity-50 min-h-[44px]"
+                        className={clsx(portalPrimaryButtonClassName, "mx-2 mb-1 w-[calc(100%-1rem)] justify-center px-4 py-3 text-sm disabled:opacity-50")}
                       >
                         {saving ? "Ukládám…" : "Uložit"}
                       </button>
@@ -362,7 +364,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
       <div ref={canvasContainerRef} className="flex-1 flex min-h-0 relative">
         <div ref={canvasExportRef} className="flex-1 min-w-0 relative flex flex-col bg-[#f8fafc]">
           {connectSourceId ? (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[55] px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-lg max-w-[90vw] text-center">
+            <div className={clsx(portalPrimaryButtonClassName, "pointer-events-none absolute top-3 left-1/2 z-[55] max-w-[90vw] -translate-x-1/2 px-3 py-2 text-xs shadow-lg")}>
               Vyberte cílový uzel pro spojení…
             </div>
           ) : null}
@@ -412,7 +414,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
               <button
                 type="button"
                 onClick={() => setSidePanelNodeId(selectedNode.id)}
-                className="min-h-[48px] px-6 rounded-2xl bg-indigo-600 text-white text-sm font-black shadow-lg active:scale-[0.98] transition-transform"
+                className={clsx(portalPrimaryButtonClassName, "min-h-[48px] rounded-2xl px-6 text-sm font-black shadow-lg")}
               >
                 Upravit uzel
               </button>
@@ -452,7 +454,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                       handleCenter();
                       setSettingsOpen(false);
                     }}
-                    className="min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold active:scale-[0.98] transition-transform"
+                    className={clsx(portalPrimaryButtonClassName, "text-sm")}
                   >
                     Vycentrovat mapu
                   </button>

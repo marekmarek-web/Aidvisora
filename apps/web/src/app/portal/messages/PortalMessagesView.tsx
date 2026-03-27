@@ -15,7 +15,9 @@ import {
   type ConversationListItem,
   type MessageAttachmentRow,
 } from "@/app/actions/messages";
+import clsx from "clsx";
 import { getContact, getContactsList, type ContactRow } from "@/app/actions/contacts";
+import { portalPrimaryButtonClassName, portalPrimaryIconButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const POLL_INTERVAL = 10_000;
 
@@ -243,7 +245,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
             <button
               type="button"
               onClick={openNewMessage}
-              className="shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+              className={clsx(portalPrimaryIconButtonClassName, "shadow-sm")}
               title="Napsat zprávu"
             >
               <Plus size={20} />
@@ -449,7 +451,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                   type="button"
                   onClick={handleSend}
                   disabled={isPending || (body.trim() === "" && files.length === 0)}
-                  className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                  className={clsx(portalPrimaryButtonClassName, "shrink-0 px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50")}
                 >
                   Odeslat
                 </button>

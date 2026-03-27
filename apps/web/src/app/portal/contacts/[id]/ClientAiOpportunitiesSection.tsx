@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Zap, ArrowUpRight, ChevronDown, ChevronUp, Info } from "lucide-react";
 import type { AiOpportunity, ClientAiOpportunitiesResult } from "@/lib/ai-opportunities/types";
+import clsx from "clsx";
 import { getCtaForOpportunity } from "@/lib/ai-opportunities/action-cta-mapping";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const INITIAL_VISIBLE = 4;
 const PRIORITY_BADGE: Record<1 | 2 | 3 | 4 | 5, string> = {
@@ -47,7 +49,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
         <div className="flex flex-wrap gap-3">
           <Link
             href={`/portal/analyses/financial?clientId=${contactId}`}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold transition-colors")}
           >
             Založit analýzu <ArrowUpRight size={14} aria-hidden />
           </Link>
@@ -119,7 +121,7 @@ export function ClientAiOpportunitiesSection({ contactId, data }: Props) {
             {primaryCta && (
               <Link
                 href={primaryCta.href}
-                className="mt-4 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors w-full sm:w-auto"
+                className={clsx(portalPrimaryButtonClassName, "mt-4 w-full px-4 py-2.5 font-semibold transition-colors sm:w-auto")}
               >
                 {primaryCta.label} <ArrowUpRight size={14} aria-hidden />
               </Link>

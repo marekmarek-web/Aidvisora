@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
@@ -26,27 +26,55 @@ export function DashboardAiAssistant() {
   const router = useRouter();
   const toast = useToast();
   const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const startedRef = useRef(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [phase, setPhase] = useState<"deferred" | "loading" | "ready" | "error">("deferred");
   const [error, setError] = useState<string | null>(null);
 
   const loadSummary = useCallback(async () => {
-    setLoading(true);
+    setPhase("loading");
     setError(null);
     try {
       const res = await fetch("/api/ai/dashboard-summary");
       if (!res.ok) throw new Error("Načtení shrnutí selhalo.");
       const data = await res.json();
       setSummary(data);
+      setPhase("ready");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chyba");
-    } finally {
-      setLoading(false);
+      setPhase("error");
     }
   }, []);
 
   useEffect(() => {
-    loadSummary();
+    let cancelled = false;
+    const start = () => {
+      if (cancelled || startedRef.current) return;
+      startedRef.current = true;
+      void loadSummary();
+    };
+    const el = rootRef.current;
+    const io =
+      el &&
+      new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) start();
+        },
+        { rootMargin: "320px", threshold: 0 },
+      );
+    if (el && io) io.observe(el);
+    const idleId =
+      typeof requestIdleCallback !== "undefined"
+        ? requestIdleCallback(() => start(), { timeout: 3500 })
+        : undefined;
+    const t = window.setTimeout(start, 4500);
+    return () => {
+      cancelled = true;
+      io?.disconnect();
+      if (idleId !== undefined && typeof cancelIdleCallback !== "undefined") cancelIdleCallback(idleId);
+      clearTimeout(t);
+    };
   }, [loadSummary]);
 
   const handleDraftEmail = async (clientId: string) => {
@@ -87,24 +115,29 @@ export function DashboardAiAssistant() {
   const cardShell =
     "group relative flex min-h-[280px] cursor-pointer flex-col justify-center overflow-hidden rounded-[32px] border border-fuchsia-500/20 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/5 p-8 text-[color:var(--wp-text)] transition-colors hover:border-fuchsia-500/30 dark:border-fuchsia-400/20 dark:from-fuchsia-500/12 dark:to-indigo-500/8";
 
-  if (loading && !summary) {
+  if (phase === "deferred" || phase === "loading") {
     return (
-      <div className={`${cardShell} items-center justify-center`}>
+      <div ref={rootRef} className={`${cardShell} items-center justify-center`}>
         <div className="animate-pulse flex flex-col items-center gap-3">
           <AiAssistantBrandIcon size={40} className="opacity-25" />
-          <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítám…</span>
+          <span className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+            {phase === "deferred" ? "Připravuji…" : "Načítám…"}
+          </span>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (phase === "error") {
     return (
-      <div className={cardShell}>
+      <div ref={rootRef} className={cardShell}>
         <p className="text-sm text-rose-600 dark:text-rose-400 mb-2">{error}</p>
         <button
           type="button"
-          onClick={loadSummary}
+          onClick={() => {
+            startedRef.current = false;
+            void loadSummary();
+          }}
           className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
         >
           Zkusit znovu
@@ -117,7 +150,7 @@ export function DashboardAiAssistant() {
   const suggestedActions = summary?.suggestedActions ?? [];
 
   return (
-    <div className={cardShell}>
+    <div ref={rootRef} className={cardShell}>
       <span
         className="pointer-events-none absolute -right-8 -top-8 flex h-44 w-44 items-center justify-center overflow-visible opacity-[0.12] transition-transform duration-700 will-change-transform group-hover:rotate-6 dark:opacity-[0.18]"
         aria-hidden

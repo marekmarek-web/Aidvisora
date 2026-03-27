@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { CalendarPlus, CheckSquare, X } from "lucide-react";
+import clsx from "clsx";
 import { createTeamEvent, createTeamTask } from "@/app/actions/team-events";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import type { TeamMemberInfo, TeamMemberMetrics, NewcomerAdaptation } from "@/app/actions/team-overview";
 
 type ModalType = "event" | "task" | null;
@@ -236,7 +238,7 @@ export function TeamCalendarModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 min-h-[44px] rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+              className={clsx(portalPrimaryButtonClassName, "flex-1 px-4 py-2 text-sm font-medium disabled:opacity-60")}
             >
               {saving ? "Vytvářím…" : type === "event" ? "Vytvořit událost" : "Vytvořit úkol"}
             </button>

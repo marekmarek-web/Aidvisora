@@ -13,6 +13,8 @@ import {
   MobileCard,
   MobileSection,
 } from "@/app/shared/mobile-ui/primitives";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export function HouseholdsListMobileScreen() {
   const router = useRouter();
@@ -108,7 +110,7 @@ export function HouseholdsListMobileScreen() {
                   setCreateError(null);
                   setCreateOpen(true);
                 }}
-                className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white text-sm font-bold"
+                className={clsx(portalPrimaryButtonClassName, "mt-3 px-5")}
               >
                 Vytvořit domácnost
               </button>
@@ -169,7 +171,7 @@ export function HouseholdsListMobileScreen() {
             type="button"
             onClick={handleCreate}
             disabled={createBusy || !newName.trim()}
-            className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50"
+            className={clsx(portalPrimaryButtonClassName, "w-full min-h-[48px] disabled:opacity-50")}
           >
             {createBusy ? "Vytvářím…" : "Vytvořit"}
           </button>

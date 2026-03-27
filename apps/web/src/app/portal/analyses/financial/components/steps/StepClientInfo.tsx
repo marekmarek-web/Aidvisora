@@ -7,7 +7,9 @@ import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
 import { createContact } from "@/app/actions/contacts";
 import { mapFaClientToContactForm, splitFullName } from "../faClientMapper";
 import { User, PlusCircle, UserPlus, ExternalLink, CheckCircle, Users } from "lucide-react";
+import clsx from "clsx";
 import { FaSyncDialog } from "../FaSyncDialog";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 function ageFromBirthYear(birthDate: string): number | null {
   if (!birthDate?.trim()) return null;
@@ -220,7 +222,7 @@ export function StepClientInfo() {
               type="button"
               disabled={creatingClient}
               onClick={handleCreateClient}
-              className="min-h-[44px] px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-500 transition-colors disabled:opacity-50"
+              className={clsx(portalPrimaryButtonClassName, "px-5 py-2.5 font-semibold disabled:opacity-50")}
             >
               <UserPlus className="w-4 h-4" />
               {creatingClient ? "Vytvářím…" : "Přidat klienta do CRM"}

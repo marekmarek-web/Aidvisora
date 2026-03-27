@@ -37,6 +37,7 @@ import {
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -465,7 +466,7 @@ export function TeamOverviewScreen({ deviceClass = "phone" }: { deviceClass?: De
             type="button"
             onClick={createAction}
             disabled={!actionTitle.trim()}
-            className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50"
+            className={cx(portalPrimaryButtonClassName, "w-full min-h-[48px] text-sm disabled:opacity-50")}
           >
             Vytvořit pro {members.length} členů
           </button>

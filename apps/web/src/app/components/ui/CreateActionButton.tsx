@@ -7,7 +7,12 @@ import clsx from "clsx";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { createActionButtonSurfaceClassName } from "@/lib/ui/create-action-button-styles";
 
-export { createActionButtonSurfaceClassName } from "@/lib/ui/create-action-button-styles";
+export {
+  createActionButtonSurfaceClassName,
+  portalPrimaryButtonClassName,
+  portalPrimaryIconButtonClassName,
+  portalPrimaryGradientBaseClassName,
+} from "@/lib/ui/create-action-button-styles";
 
 type CommonProps = {
   children: ReactNode;

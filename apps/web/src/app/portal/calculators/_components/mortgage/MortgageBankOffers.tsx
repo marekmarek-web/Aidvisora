@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { CheckCircle2, ChevronRight } from "lucide-react";
 import { formatCurrency, formatRate } from "@/lib/calculators/mortgage/formatters";
 import type { BankOffer } from "@/lib/calculators/mortgage/mortgage.types";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export interface MortgageBankOffersProps {
   offers: BankOffer[];
@@ -178,7 +179,10 @@ function BankOfferCard({
           <button
             type="button"
             onClick={() => onRequestOffer(offer.bank.name)}
-            className="min-h-[44px] min-w-[44px] shrink-0 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all text-sm touch-manipulation"
+            className={clsx(
+              portalPrimaryButtonClassName,
+              "min-h-[44px] min-w-0 shrink-0 px-4 py-2.5 text-sm shadow-md touch-manipulation",
+            )}
           >
             Chci nabídku
           </button>

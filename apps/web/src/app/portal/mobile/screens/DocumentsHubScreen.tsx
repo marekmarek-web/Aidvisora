@@ -46,6 +46,7 @@ import {
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { useCaptureCapabilities } from "@/lib/device/useCaptureCapabilities";
 import { humanizeAdvisorActionError } from "@/lib/ui/humanize-action-error";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -378,7 +379,7 @@ function DocumentDetailPanel({
                 type="button"
                 onClick={handleSaveMeta}
                 disabled={savingMeta}
-                className="min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold"
+                className={cx(portalPrimaryButtonClassName, "text-sm")}
               >
                 {savingMeta ? "Ukládám…" : "Uložit"}
               </button>

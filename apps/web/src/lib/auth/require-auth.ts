@@ -49,7 +49,7 @@ export const getCachedMembership = cache(async (userId: string) => {
 });
 
 /** Use in Server Components and Server Actions. Gets session, then membership; redirects to /login if unauthenticated, throws if no tenant membership. */
-export async function requireAuth(): Promise<AuthContext> {
+async function requireAuthUncached(): Promise<AuthContext> {
   if (isDemoMode()) {
     // Na /client vždy zobraz klientský portál (první kontakt tenanta). Jinak by DEV_CONTRACTS_USER_ID vrátil Admin a layout by přesměroval na /portal.
     const headersList = await headers();
@@ -116,8 +116,11 @@ export async function requireAuth(): Promise<AuthContext> {
   };
 }
 
+/** Deduped within one RSC/request — layout + page + parallel server calls share one resolution. */
+export const requireAuth = cache(requireAuthUncached);
+
 /** For Server Actions: pass auth from form/action; in RSC use requireAuth() and pass tenantId to client. */
-export async function requireAuthInAction(): Promise<AuthContext> {
+async function requireAuthInActionUncached(): Promise<AuthContext> {
   if (isDemoMode()) {
     const headersList = await headers();
     if (headersList.get("x-demo-client-zone") === "1") {
@@ -182,3 +185,6 @@ export async function requireAuthInAction(): Promise<AuthContext> {
     contactId: m.contactId ?? null,
   };
 }
+
+/** Deduped within one RSC/request so parallel server actions avoid repeated session/membership work. */
+export const requireAuthInAction = cache(requireAuthInActionUncached);

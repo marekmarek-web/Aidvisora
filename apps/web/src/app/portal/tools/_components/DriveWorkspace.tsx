@@ -5,6 +5,8 @@ import { useTheme } from "next-themes";
 import { DriveUploadDialog } from "./DriveUploadDialog";
 import { IntegrationConnectionGate } from "./IntegrationConnectionGate";
 import { isDrivePreviewSupportedInApp } from "@/lib/integrations/drive-preview-strategy";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import s from "./DriveWorkspace.module.css";
 
 const PREVIEW_WIDTH_STORAGE_KEY = "drivePreviewPaneWidth";
@@ -278,7 +280,7 @@ function RenameDialog({ name, onClose, onSave }: {
           onKeyDown={e => { if (e.key === "Enter") onSave(val); if (e.key === "Escape") onClose(); }} />
         <div className={s.dialogActions}>
           <button className={s.dialogBtnCancel} onClick={onClose}>Zrušit</button>
-          <button className={s.dialogBtnPrimary} disabled={!val.trim()} onClick={() => onSave(val)}>Uložit</button>
+          <button className={clsx(portalPrimaryButtonClassName, "text-xs")} disabled={!val.trim()} onClick={() => onSave(val)}>Uložit</button>
         </div>
       </div>
     </div>
@@ -303,7 +305,7 @@ function ShareDialog({ fileName, onClose, onShare }: {
           onKeyDown={e => { if (e.key === "Enter") onShare(email); if (e.key === "Escape") onClose(); }} />
         <div className={s.dialogActions}>
           <button className={s.dialogBtnCancel} onClick={onClose}>Zrušit</button>
-          <button className={s.dialogBtnPrimary} disabled={!email.trim()} onClick={() => onShare(email)}>Sdílet jako čtenář</button>
+          <button className={clsx(portalPrimaryButtonClassName, "text-xs")} disabled={!email.trim()} onClick={() => onShare(email)}>Sdílet jako čtenář</button>
         </div>
       </div>
     </div>

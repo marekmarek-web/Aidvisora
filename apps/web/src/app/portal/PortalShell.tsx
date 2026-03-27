@@ -18,6 +18,8 @@ import { useShareIntent } from "@/lib/share/useShareIntent";
 import { usePushNotifications } from "@/lib/push/usePushNotifications";
 import { mapPushNotificationToRoute } from "@/lib/push/routing";
 import { useCaptureCapabilities } from "@/lib/device/useCaptureCapabilities";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -341,7 +343,7 @@ function PortalShellInner({
                 onClick={() => {
                   void requestSystemPermission();
                 }}
-                className="min-h-[44px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className={clsx(portalPrimaryButtonClassName, "px-3 py-2 text-sm font-medium")}
               >
                 Povolit
               </button>

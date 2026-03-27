@@ -8,7 +8,9 @@ import { exportToFile } from "@/lib/analyses/financial/saveLoad";
 import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
 import { Download, FolderOpen, PlusCircle, CloudUpload, List, UserPlus } from "lucide-react";
 
+import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export function FinancialAnalysisToolbar() {
   const router = useRouter();
@@ -86,7 +88,7 @@ export function FinancialAnalysisToolbar() {
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors flex items-center gap-2 font-semibold disabled:opacity-50"
+        className={clsx(portalPrimaryButtonClassName, "min-h-[44px] min-w-[44px] rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50")}
         title="Uložit do Aidvisora"
       >
         <CloudUpload className="w-4 h-4" />

@@ -18,7 +18,9 @@ import { selectTotalMonthlySavings, selectTotalTargetCapital } from "@/lib/analy
 import { getGoalChartData } from "@/lib/analyses/financial/charts";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
 import { Target, Plus, Trash2, Pencil } from "lucide-react";
+import clsx from "clsx";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -224,7 +226,7 @@ export function StepGoals() {
               </div>
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={handleAdd} className="min-h-[44px] flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500">
+              <button type="button" onClick={handleAdd} className={clsx(portalPrimaryButtonClassName, "min-h-[44px] flex-1")}>
                 <Plus className="w-5 h-5" /> {editingId != null ? "Uložit" : "Přidat cíl"}
               </button>
               {editingId != null && (

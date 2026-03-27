@@ -32,7 +32,9 @@ import type { AiFeedbackVerdict, AiFeedbackActionTaken } from "@/app/actions/ai-
 import type { AiActionType } from "@/lib/ai/actions/action-suggestions";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { TeamCalendarModal, TeamCalendarButtons } from "./TeamCalendarModal";
+import clsx from "clsx";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
@@ -173,7 +175,7 @@ function TeamSummaryFollowUp({
         <button
           type="submit"
           disabled={saving || !title.trim()}
-          className="min-h-[44px] rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          className={clsx(portalPrimaryButtonClassName, "px-4 py-2 text-sm font-medium disabled:opacity-60")}
         >
           {saving ? "Vytvářím…" : "Vytvořit"}
         </button>

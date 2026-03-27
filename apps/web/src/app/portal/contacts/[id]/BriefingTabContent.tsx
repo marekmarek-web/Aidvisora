@@ -11,7 +11,9 @@ import {
   getLatestPreMeetingBriefing,
   getLatestMeetingGeneration,
 } from "@/app/actions/ai-generations";
+import clsx from "clsx";
 import { AiActionMenu } from "@/app/components/ai/AiActionMenu";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 type Props = { contactId: string };
 
@@ -108,7 +110,7 @@ export function BriefingTabContent({ contactId }: Props) {
             type="button"
             onClick={handlePrepareBriefing}
             disabled={briefingLoading}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+            className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold disabled:opacity-60")}
           >
             {briefingLoading ? (
               <Loader2 size={16} className="animate-spin" aria-hidden />
@@ -256,7 +258,7 @@ function AiFollowUpForm({
           type="button"
           onClick={() => onGenerate(notesToUse || "Žádný text.", meetingNoteId)}
           disabled={followUpLoading}
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+          className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold disabled:opacity-60")}
         >
           {followUpLoading ? (
             <Loader2 size={16} className="animate-spin" aria-hidden />

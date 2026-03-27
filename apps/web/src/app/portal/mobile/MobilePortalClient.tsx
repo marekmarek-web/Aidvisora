@@ -40,6 +40,11 @@ import {
   updateOpportunityStage,
   type StageWithOpportunities,
 } from "@/app/actions/pipeline";
+import { getServiceRecommendationsForDashboard } from "@/app/actions/service-engine";
+import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
+import { listFinancialAnalyses } from "@/app/actions/financial-analyses";
+import { getProductionSummary } from "@/app/actions/production";
+import { getBusinessPlanWidgetData } from "@/app/actions/business-plan";
 import { getNotificationBadgeCount } from "@/app/actions/notification-log";
 import { getUnreadConversationsCount } from "@/app/actions/messages";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
@@ -262,14 +267,15 @@ export function MobilePortalClient({
   initialContacts,
   initialPipeline,
   showTeamOverview = true,
-  serviceRecommendations = [],
-  initialNotes = [],
-  initialAnalyses = [],
-  productionSummary = null,
-  productionError = null,
-  businessPlanWidgetData = null,
+  serviceRecommendations: initialServiceRecommendations = [],
+  initialNotes: initialMeetingNotes = [],
+  initialAnalyses: initialFinancialAnalyses = [],
+  productionSummary: initialProductionSummary = null,
+  productionError: initialProductionError = null,
+  businessPlanWidgetData: initialBusinessPlanWidget = null,
   canWriteCalendar = true,
   roleName = "Advisor",
+  deferDataHydration = false,
 }: {
   advisorName: string;
   initialKpis: DashboardKpis;
@@ -286,6 +292,8 @@ export function MobilePortalClient({
   businessPlanWidgetData?: BusinessPlanWidgetData | null;
   canWriteCalendar?: boolean;
   roleName?: RoleName;
+  /** Načte úkoly, kontakty, pipeline a doplňková data po idle — rychlejší první paint shellu. */
+  deferDataHydration?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -302,6 +310,12 @@ export function MobilePortalClient({
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
   const [contacts, setContacts] = useState<ContactRow[]>(initialContacts);
   const [pipeline, setPipeline] = useState<StageWithOpportunities[]>(initialPipeline);
+  const [serviceRecommendations, setServiceRecommendations] = useState(initialServiceRecommendations);
+  const [meetingNotes, setMeetingNotes] = useState(initialMeetingNotes);
+  const [financialAnalyses, setFinancialAnalyses] = useState(initialFinancialAnalyses);
+  const [productionSummary, setProductionSummary] = useState(initialProductionSummary);
+  const [productionError, setProductionError] = useState(initialProductionError);
+  const [businessPlanWidgetData, setBusinessPlanWidgetData] = useState(initialBusinessPlanWidget);
   const [shellPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
@@ -320,7 +334,7 @@ export function MobilePortalClient({
   const [opportunityDraft, setOpportunityDraft] = useState<{ title: string; caseType: string; stageId: string; contactId: string; expectedValue: string; expectedCloseDate: string }>({
     title: "",
     caseType: "hypotéka",
-    stageId: initialPipeline[0]?.id ?? "",
+    stageId: "",
     contactId: "",
     expectedValue: "",
     expectedCloseDate: "",
@@ -328,6 +342,69 @@ export function MobilePortalClient({
   const [opportunityDetailOpen, setOpportunityDetailOpen] = useState(false);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
   const [quickNewOpen, setQuickNewOpen] = useState(false);
+
+  useEffect(() => {
+    setOpportunityDraft((d) => {
+      if (d.stageId || pipeline.length === 0) return d;
+      return { ...d, stageId: pipeline[0]!.id };
+    });
+  }, [pipeline]);
+
+  useEffect(() => {
+    if (!deferDataHydration) return;
+    let cancelled = false;
+    async function hydrate() {
+      const [
+        tasksRes,
+        countsRes,
+        contactsRes,
+        pipelineRes,
+        serviceRes,
+        notesRes,
+        analysesRes,
+        productionRes,
+        businessPlanRes,
+      ] = await Promise.allSettled([
+        getTasksList("all"),
+        getTasksCounts(),
+        getContactsList(),
+        getPipeline(),
+        getServiceRecommendationsForDashboard(10),
+        getMeetingNotesForBoard(),
+        listFinancialAnalyses(),
+        getProductionSummary("month"),
+        getBusinessPlanWidgetData(),
+      ]);
+      if (cancelled) return;
+      if (tasksRes.status === "fulfilled") setTasks(tasksRes.value);
+      if (countsRes.status === "fulfilled") setTaskCounts(countsRes.value);
+      if (contactsRes.status === "fulfilled") setContacts(contactsRes.value);
+      if (pipelineRes.status === "fulfilled") setPipeline(pipelineRes.value);
+      if (serviceRes.status === "fulfilled") setServiceRecommendations(serviceRes.value);
+      if (notesRes.status === "fulfilled") setMeetingNotes(notesRes.value);
+      if (analysesRes.status === "fulfilled") setFinancialAnalyses(analysesRes.value);
+      if (productionRes.status === "fulfilled") {
+        setProductionSummary(productionRes.value);
+        setProductionError(null);
+      } else {
+        setProductionError(
+          productionRes.reason instanceof Error
+            ? productionRes.reason.message
+            : "Nepodařilo se načíst produkci.",
+        );
+      }
+      if (businessPlanRes.status === "fulfilled") setBusinessPlanWidgetData(businessPlanRes.value);
+    }
+    const run = () => void hydrate();
+    const idleId =
+      typeof requestIdleCallback !== "undefined" ? requestIdleCallback(run, { timeout: 2800 }) : undefined;
+    const t = window.setTimeout(run, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      if (idleId !== undefined && typeof cancelIdleCallback !== "undefined") cancelIdleCallback(idleId);
+    };
+  }, [deferDataHydration]);
 
   const selectedContactId = parseContactIdFromPath(pathname);
   const selectedOpportunityPathId = parseOpportunityIdFromPath(pathname);
@@ -753,8 +830,8 @@ export function MobilePortalClient({
         kpis={kpis}
         advisorName={advisorName}
         serviceRecommendations={serviceRecommendations}
-        initialNotes={initialNotes}
-        initialAnalyses={initialAnalyses}
+        initialNotes={meetingNotes}
+        initialAnalyses={financialAnalyses}
         productionSummary={productionSummary}
         productionError={productionError}
         businessPlanWidgetData={businessPlanWidgetData}

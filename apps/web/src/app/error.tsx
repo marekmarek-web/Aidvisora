@@ -1,5 +1,8 @@
 "use client";
 
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+
 export default function GlobalError({
   error,
   reset,
@@ -40,7 +43,7 @@ export default function GlobalError({
         <div className="flex gap-3">
           <button
             onClick={reset}
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700"
+            className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold")}
           >
             Zkusit znovu
           </button>

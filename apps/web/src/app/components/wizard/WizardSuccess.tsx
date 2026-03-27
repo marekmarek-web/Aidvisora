@@ -1,6 +1,8 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export function WizardSuccess({
   headline,
@@ -35,7 +37,7 @@ export function WizardSuccess({
         <button
           type="button"
           onClick={onPrimary}
-          className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-md min-h-[44px]"
+          className={clsx(portalPrimaryButtonClassName, "flex-1 py-3")}
         >
           {primaryLabel}
         </button>

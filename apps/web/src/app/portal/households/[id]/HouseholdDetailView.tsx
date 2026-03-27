@@ -17,7 +17,9 @@ import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 import { HouseholdIconDisplay, HouseholdIconPicker } from "./HouseholdIconPicker";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import clsx from "clsx";
 import { User, UserCog, Share2, MapPin, Activity, Baby, Mail, Phone, Target, Briefcase, Plus, Trash2, ChevronRight } from "lucide-react";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
 
@@ -248,7 +250,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                         autoFocus
                         required
                       />
-                      <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
+                      <button type="submit" disabled={pending} className={clsx(portalPrimaryButtonClassName, "px-4 py-2 font-semibold disabled:opacity-50")}>
                         {pending ? "…" : "Uložit"}
                       </button>
                       <button type="button" onClick={() => { setRenaming(false); setNewName(household.name); }} className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
@@ -376,7 +378,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                         placeholder="Role"
                         icon={UserCog}
                       />
-                      <button type="submit" disabled={pending} className="rounded-xl bg-indigo-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px]">
+                      <button type="submit" disabled={pending} className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold disabled:opacity-50")}>
                         {pending ? "…" : "Přidat"}
                       </button>
                       <button

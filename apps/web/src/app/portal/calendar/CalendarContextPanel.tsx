@@ -7,7 +7,9 @@ import type { EventRow } from "@/app/actions/events";
 import type { TaskRow } from "@/app/actions/tasks";
 import { getEventCategory } from "./event-categories";
 import { PreMeetingBriefPanel } from "@/app/components/meeting-briefing/PreMeetingBriefPanel";
+import clsx from "clsx";
 import { CalendarEventAiActions } from "./CalendarEventAiActions";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
@@ -177,7 +179,7 @@ export function CalendarContextPanel({
                   href={selectedEvent.meetingLink.startsWith("http") ? selectedEvent.meetingLink : `https://${selectedEvent.meetingLink}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+                  className={clsx(portalPrimaryButtonClassName, "w-full rounded-lg py-2.5 text-sm shadow-sm")}
                 >
                   <Video size={16} /> Připojit se k hovoru
                 </a>

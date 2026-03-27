@@ -21,7 +21,8 @@ import { ContactSearchInput } from "@/app/components/ContactSearchInput";
 import { SkeletonLine } from "@/app/components/Skeleton";
 import { SwipeTaskItem } from "@/app/components/SwipeTaskItem";
 import { CustomDropdown as CustomDropdownUI } from "@/app/components/ui/CustomDropdown";
-import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import clsx from "clsx";
+import { CreateActionButton, portalPrimaryButtonClassName } from "@/app/components/ui/CreateActionButton";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -927,7 +928,7 @@ function TasksPageContent() {
 
               {isInputFocused && (
                 <div className="flex flex-wrap items-center gap-2 px-4 pb-4 md:pb-0 w-full md:w-auto animate-in fade-in duration-200">
-                  <button disabled={quickAddSubmitting} onMouseDown={(e) => { e.preventDefault(); handleQuickAdd(); }} className="flex items-center justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black shadow-sm transition-colors w-full md:w-auto shrink-0 mt-2 md:mt-0 disabled:opacity-50">
+                  <button disabled={quickAddSubmitting} onMouseDown={(e) => { e.preventDefault(); handleQuickAdd(); }} className={clsx(portalPrimaryButtonClassName, "flex items-center justify-center px-5 py-2.5 text-sm font-black w-full md:w-auto shrink-0 mt-2 md:mt-0 disabled:opacity-50")}>
                     {quickAddSubmitting ? "..." : "Vytvořit rychle"}
                   </button>
                 </div>
@@ -1023,7 +1024,7 @@ function TasksPageContent() {
                               className="px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium min-w-[160px] outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" />
                           </div>
                           <div className="flex gap-2">
-                            <button type="button" onClick={handleSaveEdit} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold">Uložit</button>
+                            <button type="button" onClick={handleSaveEdit} className={clsx(portalPrimaryButtonClassName, "px-5 py-2.5")}>Uložit</button>
                             <button type="button" onClick={() => setEditId(null)} className="px-5 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)]">Zrušit</button>
                           </div>
                         </div>
@@ -1191,7 +1192,7 @@ function TasksPageContent() {
           </div>
           <div className="flex gap-3 p-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[color:var(--wp-surface-card-border)] shrink-0">
             <button type="button" onClick={() => { setMobileEditId(null); setEditId(null); }} className="flex-1 px-5 py-3 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">Zrušit</button>
-            <button type="button" onClick={handleSaveEdit} className="flex-1 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold min-h-[44px]">Uložit</button>
+            <button type="button" onClick={handleSaveEdit} className={clsx(portalPrimaryButtonClassName, "flex-1 px-5 py-3 min-h-[44px]")}>Uložit</button>
           </div>
         </div>
       )}

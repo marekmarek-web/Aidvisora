@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import clsx from "clsx";
 import { MobileCard } from "@/app/shared/mobile-ui/primitives";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export function PlaceholderScreen({
   title,
@@ -28,7 +30,7 @@ export function PlaceholderScreen({
         <button
           type="button"
           onClick={() => router.push("/portal/today")}
-          className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-black active:scale-[0.99] transition-transform"
+          className={clsx(portalPrimaryButtonClassName, "w-full min-h-[48px] text-sm font-black")}
         >
           Zpět na nástěnku
         </button>

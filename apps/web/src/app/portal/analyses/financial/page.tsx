@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { loadFromStorage, clearStorage, hasPersistableFinancialDraft } from "@/lib/analyses/financial/saveLoad";
 import { FinancialAnalysisLayout } from "./components/FinancialAnalysisLayout";
+import clsx from "clsx";
 import { getFinancialAnalysis } from "@/app/actions/financial-analyses";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 function withTimeout<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
   return Promise.race([
@@ -126,7 +128,7 @@ export default function FinancialAnalysisPage() {
                 setShowDraftPrompt(false);
                 setLoadState("ok");
               }}
-              className="min-h-[44px] px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+              className={clsx(portalPrimaryButtonClassName, "px-5 py-3 font-semibold")}
             >
               Pokračovat
             </button>
@@ -179,7 +181,7 @@ export default function FinancialAnalysisPage() {
         <p className="text-[color:var(--wp-text-secondary)] text-sm mb-4">Zkontrolujte připojení nebo zkuste začít novou analýzu.</p>
         <Link
           href="/portal/analyses/financial"
-          className="min-h-[44px] px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
+          className={clsx(portalPrimaryButtonClassName, "inline-flex items-center justify-center px-6 py-3 font-semibold")}
         >
           Začít novou analýzu
         </Link>

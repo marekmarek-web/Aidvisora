@@ -18,6 +18,8 @@ import {
   updateBoardItem,
   deleteBoardItems,
 } from "@/app/actions/board";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
 import {
@@ -410,7 +412,7 @@ export function BoardMobileScreen() {
             action={
               <button
                 type="button"
-                className="min-h-[44px] rounded-xl bg-indigo-600 text-white px-4 text-sm font-semibold"
+                className={clsx(portalPrimaryButtonClassName, "px-4 text-sm font-semibold")}
                 onClick={() => {
                   setNewItemGroup(board.groups[0]?.id ?? "");
                   setCreateOpen(true);
@@ -586,7 +588,7 @@ export function BoardMobileScreen() {
             type="button"
             onClick={handleCreateItem}
             disabled={savePending || !newItemName.trim()}
-            className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold active:bg-indigo-700 disabled:opacity-50"
+            className={clsx(portalPrimaryButtonClassName, "w-full min-h-[48px] text-sm disabled:opacity-50")}
           >
             {savePending ? "Ukládám…" : "Vytvořit"}
           </button>

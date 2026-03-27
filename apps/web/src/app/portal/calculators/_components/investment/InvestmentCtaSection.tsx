@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import clsx from "clsx";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { Calculator, PiggyBank, HeartPulse } from "lucide-react";
 import { CalculatorCtaBlock } from "../core/CalculatorCtaBlock";
 
@@ -39,10 +41,13 @@ export function InvestmentCtaSection({ onPrimaryCta }: InvestmentCtaSectionProps
           <button
             type="button"
             onClick={onPrimaryCta}
-            className="group relative inline-block w-full sm:w-auto bg-gradient-to-r bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-5 px-8 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] overflow-hidden text-center"
+            className={clsx(
+              portalPrimaryButtonClassName,
+              "group relative inline-block w-full py-5 px-8 text-center text-lg font-extrabold uppercase tracking-wider shadow-lg sm:w-auto",
+            )}
           >
-            <div className="absolute top-0 left-0 w-full h-full bg-[color:var(--wp-surface-card)]/30 skew-x-[-20deg] animate-shimmer" />
-            <div className="relative flex items-center justify-center gap-3 text-lg uppercase tracking-wider">
+            <div className="absolute top-0 left-0 h-full w-full skew-x-[-20deg] animate-shimmer bg-[color:var(--wp-surface-card)]/30" />
+            <div className="relative flex items-center justify-center gap-3">
               Chci investiční plán
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

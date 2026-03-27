@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
-import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { CreateActionButton, portalPrimaryButtonClassName } from "@/app/components/ui/CreateActionButton";
+import clsx from "clsx";
 
 export function WizardFooter({
   onBack,
@@ -53,7 +54,7 @@ export function WizardFooter({
           type="button"
           onClick={onPrimary}
           disabled={primaryDisabled || primaryLoading}
-          className="flex min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-8 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-95 disabled:opacity-70"
+          className={clsx(portalPrimaryButtonClassName, "px-8 py-2.5")}
         >
           {primaryLoading ? (
             <>

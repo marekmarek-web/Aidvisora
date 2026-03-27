@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { getFaSyncPreview, syncFaToContacts } from "@/app/actions/fa-sync";
 import type { FaSyncPreview } from "@/lib/analyses/financial/contactSync";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
+import clsx from "clsx";
 import { Users, UserPlus, Home, CheckCircle, AlertTriangle, Loader2, X } from "lucide-react";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const ROLE_LABELS: Record<string, string> = {
   primary: "Hlavní klient",
@@ -173,7 +175,7 @@ export function FaSyncDialog({ analysisId, onClose, onDone }: {
               type="button"
               onClick={handleSync}
               disabled={syncing || selectedIndices.size === 0}
-              className="rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 min-h-[44px] flex items-center gap-2"
+              className={clsx(portalPrimaryButtonClassName, "min-h-[44px] px-5 py-2.5 disabled:opacity-50")}
             >
               {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               {syncing ? "Synchronizuji…" : `Vytvořit ${selectedIndices.size} kontakt${selectedIndices.size === 1 ? "" : selectedIndices.size < 5 ? "y" : "ů"}`}

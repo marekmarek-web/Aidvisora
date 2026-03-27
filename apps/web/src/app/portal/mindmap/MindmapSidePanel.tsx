@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { FileText, User, Briefcase, CheckSquare, Trash2, Tag, ClipboardCopy, ClipboardPaste } from "lucide-react";
 import type { MindmapNode } from "./types";
+import clsx from "clsx";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const NODE_TYPES: { value: MindmapNode["type"]; label: string }[] = [
   { value: "category", label: "Kategorie" },
@@ -190,7 +192,7 @@ export function MindmapSidePanel({
           <button
             type="button"
             onClick={applyEdits}
-            className="w-full py-2.5 px-4 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+            className={clsx(portalPrimaryButtonClassName, "w-full py-2.5 px-4 font-semibold")}
           >
             Uložit změny
           </button>

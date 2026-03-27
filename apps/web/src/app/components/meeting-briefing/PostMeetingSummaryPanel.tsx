@@ -20,7 +20,9 @@ import { createOpportunity } from "@/app/actions/pipeline";
 import { getOpportunityStages } from "@/app/actions/pipeline";
 import { getTasksByContactId } from "@/app/actions/tasks";
 import { submitAiFeedbackWithAction } from "@/app/actions/ai-actions";
+import clsx from "clsx";
 import type { PostMeetingSummary as PostMeetingSummaryType } from "@/lib/meeting-briefing/types";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 type Props = {
   contactId: string;
@@ -203,7 +205,7 @@ export function PostMeetingSummaryPanel({
               type="button"
               onClick={() => loadSummary({ rawNotes })}
               disabled={!rawNotes.trim() || loading}
-              className="mt-3 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              className={clsx(portalPrimaryButtonClassName, "mt-3 px-4 py-2.5 font-semibold disabled:opacity-50")}
             >
               <Sparkles size={16} /> Vygenerovat shrnutí
             </button>
@@ -243,7 +245,7 @@ export function PostMeetingSummaryPanel({
               type="button"
               onClick={() => loadSummary({ rawNotes })}
               disabled={!rawNotes.trim() || loading}
-              className="mt-3 inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              className={clsx(portalPrimaryButtonClassName, "mt-3 px-4 py-2.5 font-semibold disabled:opacity-50")}
             >
               Vygenerovat znovu
             </button>
@@ -313,7 +315,7 @@ export function PostMeetingSummaryPanel({
                 <button
                   type="button"
                   onClick={() => handleCreateTask(t.title, t.dueDate)}
-                  className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+                  className={clsx(portalPrimaryButtonClassName, "px-4 py-2 font-semibold")}
                 >
                   Vytvořit úkol
                 </button>
@@ -332,7 +334,7 @@ export function PostMeetingSummaryPanel({
           <button
             type="button"
             onClick={() => handleCreateEvent(summary.suggestedNextMeeting!)}
-            className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+            className={clsx(portalPrimaryButtonClassName, "px-4 py-2 font-semibold")}
           >
             Naplánovat schůzku
           </button>
@@ -348,7 +350,7 @@ export function PostMeetingSummaryPanel({
           <button
             type="button"
             onClick={() => handleCreateOpportunity(summary.suggestedOpportunity!)}
-            className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+            className={clsx(portalPrimaryButtonClassName, "px-4 py-2 font-semibold")}
           >
             Založit obchod
           </button>

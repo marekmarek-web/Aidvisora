@@ -16,7 +16,9 @@ import {
   ArrowUpRight,
   Users,
 } from "lucide-react";
+import clsx from "clsx";
 import { getPreMeetingBrief } from "@/app/actions/pre-meeting-brief";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import type { PreMeetingBrief } from "@/lib/meeting-briefing/types";
 
 type Props = {
@@ -59,7 +61,7 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
         </p>
         <Link
           href={`/portal/contacts/${contactId}`}
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+          className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold")}
         >
           Otevřít profil klienta <ArrowUpRight size={14} />
         </Link>

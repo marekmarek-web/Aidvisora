@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -31,10 +32,32 @@ import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import type { ProductionSummary } from "@/app/actions/production";
 import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
-import { MessengerPreview } from "@/app/components/dashboard/MessengerPreview";
 import { DashboardCard } from "@/app/components/dashboard/DashboardCard";
 import { DashboardMiniNotes } from "./DashboardMiniNotes";
-import { DashboardAiAssistant } from "./DashboardAiAssistant";
+import { DashboardSecondaryResolver } from "./DashboardSecondaryResolver";
+
+const pulseBar = "min-h-[120px] animate-pulse rounded-2xl bg-[color:var(--wp-surface-muted)]/80";
+
+const MessengerPreview = dynamic(
+  () => import("@/app/components/dashboard/MessengerPreview").then((m) => m.MessengerPreview),
+  { ssr: false, loading: () => <div className={pulseBar} /> },
+);
+
+const DashboardAiAssistant = dynamic(
+  () => import("./DashboardAiAssistant").then((m) => m.DashboardAiAssistant),
+  { ssr: false, loading: () => <div className="min-h-[280px] animate-pulse rounded-[32px] border border-fuchsia-500/10 bg-[color:var(--wp-surface-muted)]/50" /> },
+);
+
+const DashboardCalendarSidePanel = dynamic(
+  () => import("./DashboardCalendarSidePanel").then((m) => m.DashboardCalendarSidePanel),
+  { ssr: false, loading: () => null },
+);
+
+const TodayInCalendarWidget = dynamic(
+  () => import("@/app/components/dashboard/TodayInCalendarWidget").then((m) => m.TodayInCalendarWidget),
+  { ssr: false, loading: () => <div className={`mb-8 ${pulseBar}`} /> },
+);
+import type { BusinessPlanWidgetData, DashboardSecondaryBundle } from "./dashboard-secondary-types";
 import {
   WIDGET_IDS,
   DEFAULT_DASHBOARD_ORDER,
@@ -55,6 +78,8 @@ import { DashboardCalendarSidePanel } from "./DashboardCalendarSidePanel";
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
+
+export type { BusinessPlanWidgetData, DashboardSecondaryBundle } from "./dashboard-secondary-types";
 
 const STORAGE_KEY = "aidvisora_dashboard_widgets";
 
@@ -140,31 +165,56 @@ const WIDGET_ICON_COLORS: Partial<Record<WidgetId, string>> = {
   financialAnalyses: "text-blue-600",
 };
 
-export type BusinessPlanWidgetData = {
-  periodLabel: string;
-  overallHealth: string;
-  metrics: { metricType: string; label: string; actual: number; target: number; health: string; unit: string }[];
-};
+function DashboardBentoSkeleton({ visibleOrder }: { visibleOrder: WidgetId[] }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 pb-8">
+      {visibleOrder.map((id) => {
+        const isAiAssistant = id === "aiAssistant";
+        const isNotes = id === "notes";
+        const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " md:col-span-2" : ""}`;
+        return (
+          <div
+            key={id}
+            className={`${colSpan} min-h-[200px] animate-pulse rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80`}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
-export function DashboardEditable({
-  kpis,
-  serviceRecommendations = [],
-  initialNotes = [],
-  advisorName = null,
-  initialAnalyses = [],
-  productionSummary = null,
-  productionError = null,
-  businessPlanWidgetData = null,
-}: {
-  kpis: DashboardKpis;
-  serviceRecommendations?: ServiceRecommendationWithContact[];
-  initialNotes?: MeetingNoteForBoard[];
-  advisorName?: string | null;
-  initialAnalyses?: FinancialAnalysisListItem[];
-  productionSummary?: ProductionSummary | null;
-  productionError?: string | null;
-  businessPlanWidgetData?: BusinessPlanWidgetData | null;
-}) {
+type DashboardEditableProps =
+  | {
+      kpis: DashboardKpis;
+      advisorName?: string | null;
+      secondaryDataPromise: Promise<DashboardSecondaryBundle>;
+    }
+  | {
+      kpis: DashboardKpis;
+      advisorName?: string | null;
+      secondaryDataPromise?: undefined;
+      serviceRecommendations?: ServiceRecommendationWithContact[];
+      initialNotes?: MeetingNoteForBoard[];
+      initialAnalyses?: FinancialAnalysisListItem[];
+      productionSummary?: ProductionSummary | null;
+      productionError?: string | null;
+      businessPlanWidgetData?: BusinessPlanWidgetData | null;
+    };
+
+export function DashboardEditable(props: DashboardEditableProps) {
+  const { kpis, advisorName = null } = props;
+  const isStreamingSecondary =
+    "secondaryDataPromise" in props && props.secondaryDataPromise != null;
+  const inlineSecondary: DashboardSecondaryBundle | undefined = !isStreamingSecondary
+    ? {
+        serviceRecommendations: props.serviceRecommendations ?? [],
+        initialNotes: props.initialNotes ?? [],
+        initialAnalyses: props.initialAnalyses ?? [],
+        productionSummary: props.productionSummary ?? null,
+        productionError: props.productionError ?? null,
+        businessPlanWidgetData: props.businessPlanWidgetData ?? null,
+      }
+    : undefined;
   const [config, setConfig] = useState<DashboardConfig>({ order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] });
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const { open: drawerOpen, setOpen: setCalendarDrawerOpen } = useDashboardCalendarDrawer();
@@ -270,7 +320,7 @@ export function DashboardEditable({
     [config],
   );
 
-  const renderWidgetContent = (id: WidgetId) => {
+  const renderWidgetContent = (id: WidgetId, sec: DashboardSecondaryBundle) => {
     switch (id) {
       case "aiAssistant":
         return <DashboardAiAssistant />;
@@ -356,16 +406,16 @@ export function DashboardEditable({
         );
       }
       case "production": {
-        const totalPremium = productionSummary?.totalPremium ?? 0;
-        const totalAnnual = productionSummary?.totalAnnual ?? 0;
-        const totalCount = productionSummary?.totalCount ?? 0;
-        const periodLabel = productionSummary?.periodLabel ?? "";
+        const totalPremium = sec.productionSummary?.totalPremium ?? 0;
+        const totalAnnual = sec.productionSummary?.totalAnnual ?? 0;
+        const totalCount = sec.productionSummary?.totalCount ?? 0;
+        const periodLabel = sec.productionSummary?.periodLabel ?? "";
         const target: number | null = null;
         const pct = target && target > 0 ? Math.round((totalPremium / target) * 100) : 0;
-        if (productionError) {
+        if (sec.productionError) {
           return (
             <div className="flex flex-col h-full justify-center items-center text-center">
-              <p className="text-sm text-rose-600 mb-2">{productionError}</p>
+              <p className="text-sm text-rose-600 mb-2">{sec.productionError}</p>
               <Link
                 href="/portal/production"
                 className="text-xs font-bold text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
@@ -375,7 +425,7 @@ export function DashboardEditable({
             </div>
           );
         }
-        if (productionSummary === null) {
+        if (sec.productionSummary === null) {
           return (
             <div className="flex flex-col h-full justify-center">
               <div className="animate-pulse space-y-4">
@@ -424,7 +474,7 @@ export function DashboardEditable({
         );
       }
       case "businessPlan": {
-        const data = businessPlanWidgetData;
+        const data = sec.businessPlanWidgetData;
         const HEALTH_LABELS: Record<string, string> = {
           achieved: "Splněno",
           exceeded: "Překročeno",
@@ -479,7 +529,7 @@ export function DashboardEditable({
         );
       }
       case "clientCare": {
-        const recs = serviceRecommendations.slice(0, 5);
+        const recs = sec.serviceRecommendations.slice(0, 5);
         const service = kpis.serviceDueContacts.slice(0, 3);
         const ann = kpis.upcomingAnniversaries.slice(0, 3);
         const hasRecs = recs.length > 0;
@@ -573,11 +623,11 @@ export function DashboardEditable({
           if (diff < 7) return `Před ${diff} dny`;
           return new Date(d).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" });
         };
-        return initialAnalyses.length === 0 ? (
+        return sec.initialAnalyses.length === 0 ? (
           <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádné finanční analýzy.</p>
         ) : (
           <div className="space-y-3 flex-1">
-            {initialAnalyses.slice(0, 3).map((a) => (
+            {sec.initialAnalyses.slice(0, 3).map((a) => (
               <Link
                 key={a.id}
                 href={`/portal/analyses/financial?id=${encodeURIComponent(a.id)}`}
@@ -599,11 +649,149 @@ export function DashboardEditable({
         );
       }
       case "notes":
-        return <DashboardMiniNotes initialNotes={initialNotes} />;
+        return <DashboardMiniNotes initialNotes={sec.initialNotes} />;
       default:
         return null;
     }
   };
+
+  function renderBentoGrid(sec: DashboardSecondaryBundle) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 pb-8">
+        {visibleOrder.map((id) => {
+          const isAiAssistant = id === "aiAssistant";
+          const isMyTasks = id === "myTasks";
+          const isNotes = id === "notes";
+          const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " md:col-span-2" : ""}`;
+          const dragClass = `${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`;
+
+          if (isAiAssistant) {
+            return (
+              <div
+                key={id}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, id)}
+                className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
+              >
+                <div className="relative">
+                  <span
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      handleDragStart(e, id);
+                    }}
+                    onDragEnd={handleDragEnd}
+                    className="absolute top-4 right-4 z-10 inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded-lg bg-white/10 p-2 transition-colors hover:bg-white/20 active:cursor-grabbing"
+                    aria-label="Chytit a přesunout widget"
+                  >
+                    <GripVertical size={16} className="text-indigo-200" />
+                  </span>
+                  <DashboardAiAssistant />
+                </div>
+              </div>
+            );
+          }
+
+          if (isMyTasks) {
+            const body = renderWidgetContent(id, sec);
+            return (
+              <div
+                key={id}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, id)}
+                className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
+              >
+                <div className="relative flex min-h-[280px] flex-col rounded-[32px] border border-[color:var(--wp-surface-card-border)] border-t-4 border-t-amber-500 bg-[color:var(--wp-surface-card)] p-6 shadow-[var(--wp-shadow-card)] sm:p-8">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-xl font-black text-amber-900 dark:text-amber-100 md:text-2xl">
+                      <CheckSquare size={20} className="text-amber-500" /> Moje úkoly
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <Link href="/portal/tasks" className="p-2 text-amber-400 hover:text-amber-600 transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
+                        <Plus size={20} />
+                      </Link>
+                      <span
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, id);
+                        }}
+                        onDragEnd={handleDragEnd}
+                        className="p-2 min-h-[44px] min-w-[44px] text-amber-300 hover:text-amber-500 cursor-grab active:cursor-grabbing rounded transition-colors inline-flex items-center justify-center"
+                        aria-label="Chytit a přesunout widget"
+                      >
+                        <GripVertical size={16} />
+                      </span>
+                    </div>
+                  </div>
+                  {body}
+                  <div className="mt-auto flex w-full justify-center px-2 pt-6">
+                    <CreateActionButton href="/portal/tasks" icon={ChevronRight} className="max-w-full shadow-md">
+                      Zobrazit všechny úkoly
+                    </CreateActionButton>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          const body = renderWidgetContent(id, sec);
+          const WidgetIconComponent = WIDGET_ICONS[id];
+          const footerLink = WIDGET_HREF[id];
+          const footerLabel =
+            id === "production"
+              ? "Otevřít produkci"
+              : id === "activeDeals"
+                ? "Otevřít Board"
+                : id === "clientCare"
+                  ? "Servisní přehled"
+                  : id === "financialAnalyses"
+                    ? "Všechny analýzy"
+                    : id === "businessPlan"
+                      ? "Otevřít business plán"
+                      : "Více";
+          const topBorderClass = config.widgetColors?.[id]
+            ? WIDGET_TOP_BORDER_BY_COLOR[config.widgetColors[id]!]
+            : WIDGET_TOP_BORDER_BY_SECTION[WIDGET_SECTION[id]];
+
+          return (
+            <div
+              key={id}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, id)}
+              className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
+            >
+              <DashboardCard
+                title={WIDGET_LABELS[id]}
+                icon={WidgetIconComponent}
+                footerLink={footerLink}
+                footerLabel={footerLabel}
+                backgroundClass="bg-[color:var(--wp-surface-card)]"
+                topBorderClass={topBorderClass}
+                iconColorClass={WIDGET_ICON_COLORS[id]}
+                rightElement={
+                  <span
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      handleDragStart(e, id);
+                    }}
+                    onDragEnd={handleDragEnd}
+                    className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded p-2 text-[color:var(--wp-text-tertiary)] transition-colors hover:text-[color:var(--wp-text-secondary)] active:cursor-grabbing dark:text-[color:var(--wp-text-secondary)] dark:hover:text-[color:var(--wp-text-tertiary)]"
+                    aria-label="Chytit a přesunout widget"
+                  >
+                    <GripVertical size={16} />
+                  </span>
+                }
+              >
+                {body}
+              </DashboardCard>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   const greetingName = advisorName?.trim() || "poradce";
   const dateLabel = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -730,120 +918,16 @@ export function DashboardEditable({
           })}
         </div>
 
-        {/* 3. BENTO WIDGET GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 pb-8">
-          {visibleOrder.map((id) => {
-            const isAiAssistant = id === "aiAssistant";
-            const isMyTasks = id === "myTasks";
-            const isNotes = id === "notes";
-            const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " md:col-span-2" : ""}`;
-            const dragClass = `${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`;
-
-            if (isAiAssistant) {
-              return (
-                <div
-                  key={id}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, id)}
-                  className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
-                >
-                  <div className="relative">
-                    <span
-                      draggable
-                      onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
-                      onDragEnd={handleDragEnd}
-                      className="absolute top-4 right-4 z-10 inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded-lg bg-white/10 p-2 transition-colors hover:bg-white/20 active:cursor-grabbing"
-                      aria-label="Chytit a přesunout widget"
-                    >
-                      <GripVertical size={16} className="text-indigo-200" />
-                    </span>
-                    <DashboardAiAssistant />
-                  </div>
-                </div>
-              );
-            }
-
-            if (isMyTasks) {
-              const body = renderWidgetContent(id);
-              return (
-                <div
-                  key={id}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, id)}
-                  className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
-                >
-                  <div className="relative flex min-h-[280px] flex-col rounded-[32px] border border-[color:var(--wp-surface-card-border)] border-t-4 border-t-amber-500 bg-[color:var(--wp-surface-card)] p-6 shadow-[var(--wp-shadow-card)] sm:p-8">
-                    <div className="mb-6 flex items-center justify-between">
-                      <h3 className="flex items-center gap-2 text-xl font-black text-amber-900 dark:text-amber-100 md:text-2xl">
-                        <CheckSquare size={20} className="text-amber-500" /> Moje úkoly
-                      </h3>
-                      <div className="flex items-center gap-1">
-                        <Link href="/portal/tasks" className="p-2 text-amber-400 hover:text-amber-600 transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
-                          <Plus size={20} />
-                        </Link>
-                        <span
-                          draggable
-                          onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
-                          onDragEnd={handleDragEnd}
-                          className="p-2 min-h-[44px] min-w-[44px] text-amber-300 hover:text-amber-500 cursor-grab active:cursor-grabbing rounded transition-colors inline-flex items-center justify-center"
-                          aria-label="Chytit a přesunout widget"
-                        >
-                          <GripVertical size={16} />
-                        </span>
-                      </div>
-                    </div>
-                    {body}
-                    <div className="mt-auto flex w-full justify-center px-2 pt-6">
-                      <CreateActionButton href="/portal/tasks" icon={ChevronRight} className="max-w-full shadow-md">
-                        Zobrazit všechny úkoly
-                      </CreateActionButton>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            const body = renderWidgetContent(id);
-            const WidgetIconComponent = WIDGET_ICONS[id];
-            const footerLink = WIDGET_HREF[id];
-            const footerLabel = id === "production" ? "Otevřít produkci" : id === "activeDeals" ? "Otevřít Board" : id === "clientCare" ? "Servisní přehled" : id === "financialAnalyses" ? "Všechny analýzy" : id === "businessPlan" ? "Otevřít business plán" : "Více";
-            const topBorderClass = config.widgetColors?.[id]
-              ? WIDGET_TOP_BORDER_BY_COLOR[config.widgetColors[id]!]
-              : WIDGET_TOP_BORDER_BY_SECTION[WIDGET_SECTION[id]];
-
-            return (
-              <div
-                key={id}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, id)}
-                className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
-              >
-                <DashboardCard
-                  title={WIDGET_LABELS[id]}
-                  icon={WidgetIconComponent}
-                  footerLink={footerLink}
-                  footerLabel={footerLabel}
-                  backgroundClass="bg-[color:var(--wp-surface-card)]"
-                  topBorderClass={topBorderClass}
-                  iconColorClass={WIDGET_ICON_COLORS[id]}
-                  rightElement={
-                    <span
-                      draggable
-                      onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, id); }}
-                      onDragEnd={handleDragEnd}
-                      className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-grab items-center justify-center rounded p-2 text-[color:var(--wp-text-tertiary)] transition-colors hover:text-[color:var(--wp-text-secondary)] active:cursor-grabbing dark:text-[color:var(--wp-text-secondary)] dark:hover:text-[color:var(--wp-text-tertiary)]"
-                      aria-label="Chytit a přesunout widget"
-                    >
-                      <GripVertical size={16} />
-                    </span>
-                  }
-                >
-                  {body}
-                </DashboardCard>
-              </div>
-            );
-          })}
-        </div>
+        {/* 3. BENTO WIDGET GRID — secondary data streams after KPIs */}
+        {isStreamingSecondary && "secondaryDataPromise" in props && props.secondaryDataPromise ? (
+          <Suspense fallback={<DashboardBentoSkeleton visibleOrder={visibleOrder} />}>
+            <DashboardSecondaryResolver promise={props.secondaryDataPromise}>
+              {(sec) => renderBentoGrid(sec)}
+            </DashboardSecondaryResolver>
+          </Suspense>
+        ) : (
+          renderBentoGrid(inlineSecondary!)
+        )}
 
       </main>
 

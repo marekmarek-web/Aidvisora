@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import clsx from "clsx";
 import { updatePortalProfile } from "@/app/actions/auth";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 export type PortalProfileInitial = {
   email: string;
@@ -87,7 +89,7 @@ export function PortalProfileForm({ initial }: { initial: PortalProfileInitial }
         <button
           type="submit"
           disabled={saving}
-          className="min-h-[44px] px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={clsx(portalPrimaryButtonClassName, "px-5 py-2.5 font-semibold disabled:cursor-not-allowed disabled:opacity-50")}
         >
           {saving ? "Ukládám…" : "Uložit"}
         </button>

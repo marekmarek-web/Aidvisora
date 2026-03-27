@@ -7,7 +7,8 @@ import { getProductionSummary } from "@/app/actions/production";
 import { getBusinessPlanWidgetData } from "@/app/actions/business-plan";
 import { getContactsCount } from "@/app/actions/contacts";
 import { requireAuth, getCachedSupabaseUser } from "@/lib/auth/require-auth";
-import { perfLog } from "@/lib/perf-log";
+import { perfLog, perfLogSince } from "@/lib/perf-log";
+import type { DashboardSecondaryBundle } from "./dashboard-secondary-types";
 import { DashboardEditable } from "./DashboardEditable";
 import { AidvisoraLogoShimmerLoader } from "@/app/components/AidvisoraLogoShimmerLoader";
 
@@ -50,11 +51,11 @@ async function DashboardLoaded({
   perfStart: number;
 }) {
   let productionError: string | null = null;
-  const [kpis, serviceRecommendations, notes, analyses, production, businessPlanWidgetData] = await Promise.all([
-    getDashboardKpis().catch((e) => {
-      console.error("[DashboardLoaded] getDashboardKpis", e);
-      return FALLBACK_KPIS;
-    }),
+  const kpisPromise = getDashboardKpis().catch((e) => {
+    console.error("[DashboardLoaded] getDashboardKpis", e);
+    return FALLBACK_KPIS;
+  });
+  const secondaryPromise: Promise<DashboardSecondaryBundle> = Promise.all([
     getServiceRecommendationsForDashboard(10).catch(() => []),
     getMeetingNotesForBoard().catch(() => []),
     listFinancialAnalyses().catch(() => []),
@@ -63,18 +64,24 @@ async function DashboardLoaded({
       return null;
     }),
     getBusinessPlanWidgetData().catch(() => null),
-  ]);
-  perfLog("portal/today", perfStart);
+  ]).then(([serviceRecommendations, initialNotes, initialAnalyses, productionSummary, businessPlanWidgetData]) => ({
+    serviceRecommendations,
+    initialNotes,
+    initialAnalyses,
+    productionSummary,
+    productionError,
+    businessPlanWidgetData,
+  }));
+
+  const kpis = await kpisPromise;
+  perfLogSince("portal/today-kpis", perfStart);
+  void secondaryPromise.then(() => perfLog("portal/today-secondary", perfStart));
+
   return (
     <DashboardEditable
       kpis={kpis}
-      serviceRecommendations={serviceRecommendations}
-      initialNotes={notes}
       advisorName={advisorName}
-      initialAnalyses={analyses}
-      productionSummary={production}
-      productionError={productionError}
-      businessPlanWidgetData={businessPlanWidgetData}
+      secondaryDataPromise={secondaryPromise}
     />
   );
 }

@@ -45,7 +45,9 @@ import {
   type PlanProgressResult,
   type TeamBusinessPlanMemberSummary,
 } from "@/app/actions/business-plan";
+import clsx from "clsx";
 import { SkeletonBlock } from "@/app/components/Skeleton";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 
 const PERIOD_OPTIONS: { id: PeriodType; label: string }[] = [
   { id: "month", label: "Měsíc" },
@@ -483,7 +485,7 @@ export function BusinessPlanView() {
             <button
               type="button"
               onClick={openParamsModal}
-              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95 min-h-[44px]"
+              className={clsx(portalPrimaryButtonClassName, "min-h-[44px] gap-2 px-6 py-3.5 text-sm shadow-lg")}
             >
               <Plus size={18} strokeWidth={2.5} /> Nastavit můj business plán
             </button>
@@ -501,7 +503,7 @@ export function BusinessPlanView() {
             <button
               type="button"
               onClick={openParamsModal}
-              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold min-h-[44px]"
+              className={clsx(portalPrimaryButtonClassName, "min-h-[44px] gap-2 px-6 py-3.5 text-sm")}
             >
               <Plus size={18} /> Doplnit cíle
             </button>
@@ -938,7 +940,7 @@ export function BusinessPlanView() {
                     setManualSaving(false);
                   }
                 }}
-                className="flex items-center gap-2 px-6 py-2.5 min-h-[44px] bg-indigo-600 text-white rounded-xl font-bold text-sm"
+                className={clsx(portalPrimaryButtonClassName, "min-h-[44px] gap-2 px-6 py-2.5 text-sm")}
               >
                 <Save size={16} /> Uložit
               </button>
@@ -994,7 +996,7 @@ export function BusinessPlanView() {
               <button type="button" onClick={() => setIsVisionModalOpen(false)} className="px-4 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold text-sm hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
                 Zrušit
               </button>
-              <button type="button" onClick={saveVision} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md min-h-[44px]">
+              <button type="button" onClick={saveVision} className={clsx(portalPrimaryButtonClassName, "min-h-[44px] gap-2 px-6 py-2 text-sm shadow-md")}>
                 <Save size={16} /> Uložit vizi
               </button>
             </div>
@@ -1059,7 +1061,7 @@ export function BusinessPlanView() {
                 <button type="button" onClick={() => setIsParamsModalOpen(false)} className="px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl font-bold text-sm hover:bg-[color:var(--wp-surface-muted)] shadow-sm min-h-[44px]">
                   Zrušit
                 </button>
-                <button type="submit" disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md disabled:opacity-50 min-h-[44px]">
+                <button type="submit" disabled={saving} className={clsx(portalPrimaryButtonClassName, "min-h-[44px] gap-2 px-6 py-2.5 text-sm shadow-md disabled:opacity-50")}>
                   <Check size={16} strokeWidth={3} /> {isConfigured ? "Uložit změny" : "Aktivovat plán"}
                 </button>
               </div>
