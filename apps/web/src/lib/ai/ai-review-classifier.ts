@@ -41,6 +41,66 @@ export type RunAiReviewClassifierResult =
   | { ok: true; data: AiClassifierOutput; durationMs: number }
   | { ok: false; error: string; durationMs: number };
 
+/** Prompt Builder doc classifier v2 — variable names must match the deployed prompt. */
+export function buildDocClassifierPromptVariables(params: {
+  documentTextExcerpt: string;
+  filename?: string | null;
+  pageCount?: number | null;
+  inputMode?: string | null;
+  adobeSignals?: string | null;
+}): { variables: Record<string, string>; fallbacksApplied: string[] } {
+  const fallbacksApplied: string[] = [];
+
+  const fn = params.filename?.trim();
+  const filename = fn && fn.length > 0 ? fn : (fallbacksApplied.push("filename"), "unknown");
+
+  let pageNum = params.pageCount;
+  if (typeof pageNum !== "number" || !Number.isFinite(pageNum) || pageNum < 1) {
+    fallbacksApplied.push("page_count");
+    pageNum = 1;
+  }
+  const page_count = String(Math.floor(pageNum));
+
+  const im = params.inputMode?.trim();
+  const input_mode = im && im.length > 0 ? im : (fallbacksApplied.push("input_mode"), "unknown");
+
+  const excerpt = params.documentTextExcerpt.trim();
+  let text_excerpt = excerpt.length > 0 ? selectExcerptForExtraction(excerpt).text : "";
+  if (!text_excerpt.trim()) {
+    fallbacksApplied.push("text_excerpt");
+    text_excerpt = "(no excerpt)";
+  }
+
+  const ad = params.adobeSignals?.trim();
+  const adobe_signals = ad && ad.length > 0 ? ad : (fallbacksApplied.push("adobe_signals"), "none");
+
+  const source_channel = "ai_review";
+
+  return {
+    variables: {
+      filename,
+      page_count,
+      input_mode,
+      text_excerpt,
+      adobe_signals,
+      source_channel,
+    },
+    fallbacksApplied,
+  };
+}
+
+function logClassifierPromptInputShape(payload: {
+  text_excerpt_length: number;
+  adobe_signals_length: number;
+  filename_length: number;
+  page_count: string;
+  input_mode: string;
+  source_channel: string;
+  fallbacks_applied: string[];
+}): void {
+  console.info("[ai-review-classifier] prompt_input_shape", JSON.stringify(payload));
+}
+
 /**
  * Runs classifier: Prompt Builder when ID + enough text, otherwise file + inline JSON instruction.
  */
@@ -48,6 +108,10 @@ export async function runAiReviewClassifier(params: {
   fileUrl: string;
   mimeType?: string | null;
   documentTextExcerpt: string;
+  filename?: string | null;
+  pageCount?: number | null;
+  inputMode?: string | null;
+  adobeSignals?: string | null;
 }): Promise<RunAiReviewClassifierResult> {
   const started = Date.now();
   const promptId = getAiReviewPromptId("docClassifierV2");
@@ -57,13 +121,27 @@ export async function runAiReviewClassifier(params: {
   try {
     let raw: string;
     if (promptId && excerpt.length >= 500) {
+      const { variables, fallbacksApplied } = buildDocClassifierPromptVariables({
+        documentTextExcerpt: params.documentTextExcerpt,
+        filename: params.filename,
+        pageCount: params.pageCount,
+        inputMode: params.inputMode,
+        adobeSignals: params.adobeSignals,
+      });
+      logClassifierPromptInputShape({
+        text_excerpt_length: variables.text_excerpt.length,
+        adobe_signals_length: variables.adobe_signals.length,
+        filename_length: variables.filename.length,
+        page_count: variables.page_count,
+        input_mode: variables.input_mode,
+        source_channel: variables.source_channel,
+        fallbacks_applied: fallbacksApplied,
+      });
       const res = await createResponseFromPrompt(
         {
           promptId,
           version,
-          variables: {
-            document_text: selectExcerptForExtraction(excerpt).text,
-          },
+          variables,
         },
         { store: false, routing: { category: "ai_review" } }
       );

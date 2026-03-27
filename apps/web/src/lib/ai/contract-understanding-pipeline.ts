@@ -114,6 +114,8 @@ export type ContractPipelineOptions = {
   /** Markdown/OCR text snippet for rule-based classification overrides (e.g. Adobe preprocess). */
   ruleBasedTextHint?: string | null;
   preprocessMeta?: PipelinePreprocessMeta | null;
+  /** Original upload file name for Prompt Builder classifier (basename). */
+  sourceFileName?: string | null;
 };
 
 export async function runContractUnderstandingPipeline(

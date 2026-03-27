@@ -3,6 +3,7 @@
  * so the client can poll instead of holding a long POST.
  */
 
+import path from "node:path";
 import type { AuditRequestContext } from "@/lib/audit";
 import { logAudit } from "@/lib/audit";
 import { updateContractReview } from "@/lib/ai/review-queue-repository";
@@ -178,6 +179,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
   const pipelineResult = await runContractUnderstandingPipeline(preprocessedUrl, mimeType, {
     ruleBasedTextHint: adobePreprocessResult?.markdownContent ?? null,
     preprocessMeta,
+    sourceFileName: path.basename(storagePath),
   });
   pipelineDurationMs = Date.now() - pipelineStartedAt;
 

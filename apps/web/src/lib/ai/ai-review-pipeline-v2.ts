@@ -68,6 +68,19 @@ function mergePreprocessIntoTrace(trace: ExtractionTrace, meta?: PipelinePreproc
   }
 }
 
+/** Compact JSON for classifier `adobe_signals` — no document body. */
+function buildAdobeSignalsSummary(meta?: PipelinePreprocessMeta | null): string {
+  if (!meta) return "";
+  return JSON.stringify({
+    adobePreprocessed: Boolean(meta.adobePreprocessed),
+    preprocessStatus: meta.preprocessStatus ?? null,
+    preprocessMode: meta.preprocessMode ?? null,
+    preprocessWarningCount: meta.preprocessWarnings?.length ?? 0,
+    readabilityScore: typeof meta.readabilityScore === "number" ? meta.readabilityScore : null,
+    ocrConfidenceEstimate: typeof meta.ocrConfidenceEstimate === "number" ? meta.ocrConfidenceEstimate : null,
+  });
+}
+
 function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {
   console.info(`[ai-review-v2] ${phase}`, JSON.stringify(payload));
 }
@@ -350,14 +363,21 @@ export async function runAiReviewV2Pipeline(
 
   trace.inputMode = inputModeResult.inputMode;
   trace.extractionMode = inputModeResult.extractionMode;
-  trace.pageCount = inputModeResult.pageCount;
+  trace.pageCount =
+    inputModeResult.pageCount ?? options?.preprocessMeta?.pageCountEstimate ?? trace.pageCount;
   trace.warnings = [...(trace.warnings ?? []), ...inputModeResult.extractionWarnings];
 
   const hint = (options?.ruleBasedTextHint ?? "").trim();
+  const classifierPageCount =
+    inputModeResult.pageCount ?? options?.preprocessMeta?.pageCountEstimate ?? trace.pageCount ?? null;
   const clsRes = await runAiReviewClassifier({
     fileUrl,
     mimeType,
     documentTextExcerpt: hint,
+    filename: options?.sourceFileName ?? null,
+    pageCount: classifierPageCount,
+    inputMode: inputModeResult.inputMode,
+    adobeSignals: buildAdobeSignalsSummary(options?.preprocessMeta ?? null),
   });
   trace.classifierDurationMs = clsRes.durationMs;
   if (!clsRes.ok) {
