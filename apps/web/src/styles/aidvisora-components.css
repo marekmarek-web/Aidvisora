@@ -364,10 +364,10 @@
   mix-blend-mode: screen;
 }
 
-/* Dark: bez screen blend – bloby nezesvětlují hlavní panel */
+/* Dark: bez screen blend; blob tokeny jsou transparent – necháme opacity 0, ať se neobjeví náhodný tint */
 .dark .wp-portal-blob {
   mix-blend-mode: normal;
-  opacity: 0.55;
+  opacity: 0;
 }
 
 /* Jeden hlavní panel vpravo: border, stín, blur; na mobilu bez „rámečku“ */

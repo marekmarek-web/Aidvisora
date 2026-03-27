@@ -1,6 +1,6 @@
 /**
- * Native (Capacitor Android/iOS): `logos/Aidvisora logo A.png` → assets/icon*.png + splash.
- * Web favicon / apple-touch (prohlížeč): `logos/Aidvisora favicon.png` pokud existuje, jinak stejný jako native.
+ * Native (Capacitor Android/iOS): `logos/Aidvisora logo new fav.png` → assets/icon*.png + splash.
+ * Web favicon / apple-touch: stejný zdroj (mark „A“).
  */
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -11,8 +11,9 @@ import sharp from "sharp";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.join(__dirname, "..");
 const monorepoRoot = path.join(webRoot, "..", "..");
-const nativeLogoPath = path.join(monorepoRoot, "logos", "Aidvisora logo A.png");
-const webFaviconPath = path.join(monorepoRoot, "logos", "Aidvisora favicon.png");
+const brandMarkPath = path.join(monorepoRoot, "logos", "Aidvisora logo new fav.png");
+const nativeLogoPath = brandMarkPath;
+const webFaviconPath = brandMarkPath;
 const assetsDir = path.join(webRoot, "assets");
 const publicDir = path.join(webRoot, "public");
 
@@ -21,7 +22,7 @@ const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
 
 async function main() {
   if (!existsSync(nativeLogoPath)) {
-    console.error("Missing native app logo:", nativeLogoPath);
+    console.error("Missing brand mark (favicon / native):", nativeLogoPath);
     process.exit(1);
   }
 
@@ -59,7 +60,7 @@ async function main() {
 
   await sharp(path.join(assetsDir, "splash.png")).png().toFile(path.join(assetsDir, "splash-dark.png"));
 
-  const webSrc = existsSync(webFaviconPath) ? webFaviconPath : path.join(assetsDir, "icon-only.png");
+  const webSrc = webFaviconPath;
   await sharp(webSrc)
     .resize(512, 512, { fit: "inside", withoutEnlargement: true })
     .png()
@@ -71,9 +72,7 @@ async function main() {
     .toFile(path.join(publicDir, "apple-touch-icon.png"));
 
   console.log(
-    "Wrote assets from native logo, public favicon from",
-    existsSync(webFaviconPath) ? "Aidvisora favicon.png" : "native icon",
-    "(run pnpm cap:assets for WebP + Android/iOS icons)",
+    "Wrote assets from Aidvisora logo new fav.png (run pnpm cap:assets for WebP + Android/iOS icons)",
   );
 }
 

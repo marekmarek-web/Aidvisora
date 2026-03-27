@@ -613,9 +613,15 @@ export default function PremiumLandingPage() {
       {/* --- FIXNÍ NAVIGACE --- */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav py-4 shadow-2xl shadow-black/50" : "bg-transparent py-6"}`}>
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-            <Image src="/Aidvisora logo A.png" alt="" width={40} height={40} priority className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
-            <span className="font-jakarta font-bold text-2xl tracking-tight text-white hidden sm:inline">Aidvisora</span>
+          <Link href="/" className="flex items-center gap-3 cursor-pointer group min-h-[44px] min-w-[44px]">
+            <Image
+              src="/logos/Aidvisora%20logo%20new.png"
+              alt="Aidvisora"
+              width={220}
+              height={48}
+              priority
+              className="h-10 w-auto max-w-[min(220px,55vw)] object-contain object-left brightness-0 invert sm:h-11"
+            />
           </Link>
 
           <div className="hidden lg:flex items-center gap-8 xl:gap-10 font-inter font-medium text-sm text-slate-400">
@@ -1819,8 +1825,14 @@ export default function PremiumLandingPage() {
             
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
-                <Image src="/Aidvisora logo A.png" alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-contain shrink-0 brightness-0 invert" aria-hidden />
-                <span className="font-jakarta font-bold text-2xl tracking-tight text-white">Aidvisora</span>
+                <Image
+                  src="/logos/Aidvisora%20logo%20new.png"
+                  alt="Aidvisora"
+                  width={220}
+                  height={48}
+                  loading="lazy"
+                  className="h-10 w-auto max-w-[220px] object-contain object-left brightness-0 invert"
+                />
               </Link>
               <p className="text-sm max-w-sm leading-relaxed mb-6">Pracovní systém pro finanční poradce a týmy. CRM, klientská zóna a workflow na jednom místě.</p>
               <p className="text-xs">
@@ -1855,11 +1867,21 @@ export default function PremiumLandingPage() {
             </div>
 
           </div>
-          <div className="max-w-[1400px] mx-auto pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between text-xs">
-            <p>&copy; 2026 Aidvisora s.r.o. Všechna práva vyhrazena.</p>
-            <div className="flex items-center gap-6 mt-4 md:mt-0">
-               <span className="flex items-center gap-1">Vyvinuto s <span className="text-rose-500 text-base">♥</span> v Praze</span>
-            </div>
+          <div className="max-w-[1400px] mx-auto pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <p>
+              &copy; {new Date().getFullYear()} Aidvisora. Všechna práva vyhrazena.
+            </p>
+            <p className="text-center md:text-right">
+              Vytvořila{" "}
+              <a
+                href="https://www.m2digitalagency.cz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-300 hover:text-white underline-offset-2 hover:underline font-semibold"
+              >
+                M2DigitalAgency
+              </a>
+            </p>
           </div>
         </ScrollReveal>
       </footer>

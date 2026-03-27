@@ -1,5 +1,6 @@
 import type { SectionCtx } from '../types';
 import { esc, fmtBigCzk } from '../helpers';
+import { REPORT_BRAND_LOGO_SRC } from '../branding';
 
 function heroDecorativeSVG(): string {
   return `<svg viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -38,7 +39,9 @@ export function renderHero(ctx: SectionCtx): string {
   <div class="hero-lines">${heroDecorativeSVG()}</div>
   <div class="page-inner" style="position:relative;z-index:2">
     <div class="hero-top">
-      <div class="hero-wordmark">AIDVISORA</div>
+      <div class="hero-brand-logo">
+        <img src="${REPORT_BRAND_LOGO_SRC}" alt="" class="hero-logo-img" width="220" height="48">
+      </div>
       <div class="hero-badge">Finanční plán ${planYear}</div>
     </div>
     <div class="hero-center">
@@ -80,7 +83,9 @@ export function renderCompanyHero(ctx: SectionCtx): string {
   <div class="page-bar" style="background:var(--gold-500,#d97706)"></div>
   <div class="page-inner" style="position:relative;z-index:2">
     <div class="hero-top">
-      <div class="hero-wordmark">AIDVISORA — FIREMNÍ ČÁST</div>
+      <div class="hero-brand-logo">
+        <img src="${REPORT_BRAND_LOGO_SRC}" alt="" class="hero-logo-img" width="220" height="48">
+      </div>
       <div class="hero-badge" style="background:rgba(217,119,6,.12);border-color:rgba(217,119,6,.25);color:var(--gold-400,#d97706)">FIRMA</div>
     </div>
     <div class="hero-center">

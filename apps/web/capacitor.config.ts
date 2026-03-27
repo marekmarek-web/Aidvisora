@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: process.env.NODE_ENV !== "production",
   },
-  // Ikony / splash: `pnpm cap:assets` (zdroj native loga `logos/Aidvisora logo A.png` v generate-brand-assets.mjs).
+  // Ikony / splash: `pnpm cap:assets` (zdroj `logos/Aidvisora logo new fav.png` v generate-brand-assets.mjs).
 };
 
 export default config;

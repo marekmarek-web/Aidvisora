@@ -23,9 +23,9 @@ export function LandingFooter({ activeTheme: _activeTheme }: LandingFooterProps)
           aria-label="Aidvisora – úvod"
         >
           <img
-            src="/aidvisora-logo.png"
+            src="/logos/Aidvisora%20logo%20new.png"
             alt=""
-            className="h-8 w-auto max-w-[140px] object-contain"
+            className="h-8 w-auto max-w-[140px] object-contain brightness-0 invert"
             width={140}
             height={32}
           />

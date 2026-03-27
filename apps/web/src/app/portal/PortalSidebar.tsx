@@ -419,7 +419,7 @@ export function PortalSidebar({
           className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent opacity-80"
           aria-hidden
         />
-        {/* Header – collapsed: symbol A; expanded: logos/Aidvisora logo.png → public/logos */}
+        {/* Header – collapsed: mark; expanded: full logo → public/logos */}
         <div
           className={[
             "h-24 flex items-center justify-between flex-shrink-0 border-b px-5 md:px-6",
@@ -434,7 +434,7 @@ export function PortalSidebar({
             {collapsed ? (
               <img
                 key="logo-a"
-                src="/Aidvisora logo A.png"
+                src="/logos/Aidvisora%20logo%20new%20fav.png"
                 alt="Aidvisora"
                 className="h-10 w-10 object-contain object-center flex-shrink-0"
                 style={isDark ? { filter: "brightness(0) invert(1)" } : undefined}
@@ -442,7 +442,7 @@ export function PortalSidebar({
             ) : (
               <img
                 key="logo-big"
-                src="/logos/Aidvisora%20logo.png"
+                src="/logos/Aidvisora%20logo%20new.png"
                 alt="Aidvisora"
                 className="h-16 max-h-16 w-auto max-w-full object-contain object-left flex-shrink-0"
                 style={isDark ? { filter: "brightness(0) invert(1)" } : undefined}

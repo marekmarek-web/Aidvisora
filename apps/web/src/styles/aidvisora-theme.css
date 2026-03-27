@@ -37,6 +37,8 @@
 
   /* Portal canvas + plovoucí panely (UX main banner txt) */
   --wp-app-canvas-bg: #fafafc;
+  /* Jednotná void barva za obsahem (dark: shodná s app canvas; light: alias) */
+  --wp-content-canvas-bg: var(--wp-app-canvas-bg);
   /* txt: indigo-400/20, purple-400/20 */
   --wp-portal-blob-1: rgba(129, 140, 248, 0.2);
   --wp-portal-blob-2: rgba(192, 132, 252, 0.2);
@@ -322,18 +324,20 @@
   --wp-shell-main-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 
   --wp-app-canvas-bg: #040814;
-  --wp-portal-blob-1: rgba(79, 70, 229, 0.1);
-  --wp-portal-blob-2: rgba(147, 51, 234, 0.1);
+  --wp-content-canvas-bg: var(--wp-app-canvas-bg);
+  /* Bez barevného tintu za panely – čistý void */
+  --wp-portal-blob-1: transparent;
+  --wp-portal-blob-2: transparent;
   --wp-sidebar-card-bg: rgba(15, 21, 40, 0.8);
   --wp-sidebar-card-border: rgba(255, 255, 255, 0.1);
   --wp-sidebar-card-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
-  /* Neprůhledný hlavní panel – žádný „filtr“ přes canvas */
-  --wp-main-panel-bg: #050b16;
+  /* Hlavní panel + scroll = stejný canvas jako gutter (žádný šedý odstín #050b16) */
+  --wp-main-panel-bg: var(--wp-content-canvas-bg);
   --wp-main-panel-border: rgba(255, 255, 255, 0.12);
   --wp-main-panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
   --wp-main-panel-backdrop-blur: 0px;
-  --wp-main-scroll-bg: #050b16;
-  --wp-canvas-dot-color: rgba(255, 255, 255, 0.04);
+  --wp-main-scroll-bg: var(--wp-content-canvas-bg);
+  --wp-canvas-dot-color: rgba(255, 255, 255, 0.015);
   --wp-skeleton-bg: rgba(255, 255, 255, 0.1);
   --wp-scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --wp-scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);

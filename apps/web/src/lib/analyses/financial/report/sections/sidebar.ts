@@ -2,6 +2,7 @@ import type { SectionCtx } from '../types';
 import { esc } from '../helpers';
 import type { InvestmentEntry } from '../../types';
 import { FUND_DETAILS } from '../../constants';
+import { REPORT_BRAND_LOGO_SRC } from '../branding';
 
 function navIcon(type: string): string {
   const icons: Record<string, string> = {
@@ -72,11 +73,7 @@ export function renderSidebar(ctx: SectionCtx): string {
   return `<aside class="sidebar" id="sidebar">
   <div class="sb-brand">
     <div class="sb-logo">
-      <div class="sb-logo-mark">
-        <img src="/logos/Aidvisora%20logo.png" alt="Aidvisora logo" class="sb-logo-img" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='inline'">
-        <span class="sb-logo-fallback" style="display:none">A</span>
-      </div>
-      <div class="sb-logo-name">Aidvisora</div>
+      <img src="${REPORT_BRAND_LOGO_SRC}" alt="" class="sb-logo-full" onerror="this.style.display='none'">
     </div>
     <div class="sb-client-box">
       <div class="sb-client-label">Klient</div>

@@ -33,11 +33,8 @@ body{font-family:var(--ff-sans);background:var(--stone-100);color:var(--stone-70
 .sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--navy-900);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;overflow-x:hidden}
 .sidebar::after{content:'';position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:1}
 .sb-brand{padding:var(--s8) var(--s6) var(--s6);border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:2}
-.sb-logo{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
-.sb-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--gold-500) 0%,var(--gold-300) 100%);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-family:var(--ff-serif);font-size:16px;color:var(--navy-900);flex-shrink:0;box-shadow:0 2px 8px rgba(201,168,76,0.3)}
-.sb-logo-img{display:block;max-width:24px;max-height:24px;object-fit:contain;filter:brightness(0) invert(1) contrast(1.1)}
-.sb-logo-fallback{font-family:var(--ff-serif);font-size:16px;line-height:1}
-.sb-logo-name{font-size:16px;font-weight:700;color:var(--white);letter-spacing:-0.3px}
+.sb-logo{display:flex;align-items:center;margin-bottom:var(--s5);line-height:0}
+.sb-logo-full{display:block;width:100%;max-width:200px;height:auto;max-height:44px;object-fit:contain;object-position:left center}
 .sb-client-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r-md);padding:var(--s3) var(--s4)}
 .sb-client-label{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,0.25);margin-bottom:3px}
 .sb-client-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);line-height:1.3}
@@ -84,8 +81,9 @@ body{font-family:var(--ff-sans);background:var(--stone-100);color:var(--stone-70
 .hero .page-inner{justify-content:space-between;padding:var(--s16) var(--s16) var(--s12)}
 .hero-lines{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .hero-lines svg{position:absolute;bottom:0;right:0;width:60%;height:auto;opacity:0.04}
-.hero-top{display:flex;justify-content:space-between;align-items:flex-start}
-.hero-wordmark{font-family:var(--ff-serif);font-size:15px;color:rgba(255,255,255,0.35);letter-spacing:1px}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s4)}
+.hero-brand-logo{display:flex;align-items:center;line-height:0;flex-shrink:0}
+.hero-logo-img{display:block;height:40px;width:auto;max-width:min(220px,52vw);object-fit:contain;object-position:left center}
 .hero-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-500);background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);padding:5px 12px;border-radius:99px}
 .hero-center{padding:var(--s20) 0 var(--s12)}
 .hero-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gold-400);margin-bottom:var(--s5);display:flex;align-items:center;gap:var(--s3)}

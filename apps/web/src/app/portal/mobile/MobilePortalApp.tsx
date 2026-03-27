@@ -20,7 +20,7 @@ export async function MobilePortalApp({ showTeamOverview = true }: { showTeamOve
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] flex flex-col bg-[color:var(--wp-surface-muted)]">
+        <div className="flex min-h-[100dvh] flex-col bg-[color:var(--wp-app-canvas-bg)]">
           <div className="px-4 pt-[var(--safe-area-top)] pb-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
             <div className="h-10 w-40 rounded-lg bg-[color:var(--wp-surface-muted)] animate-pulse" />
           </div>

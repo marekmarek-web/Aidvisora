@@ -106,12 +106,12 @@ export function ActionCenterScreen({
   const urgentCount = items.filter((i) => i.severity === "urgent").length;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
-      <div className="sticky top-0 z-10 bg-[color:var(--wp-surface-card)] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 pt-4 pb-3">
+    <div className="flex flex-col h-full bg-[color:var(--wp-app-canvas-bg)]">
+      <div className="sticky top-0 z-10 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Akční centrum</h1>
+            <Bell className="w-5 h-5 text-[color:var(--wp-text-muted)]" />
+            <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Akční centrum</h1>
             {urgentCount > 0 && (
               <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
                 {urgentCount}
@@ -122,7 +122,7 @@ export function ActionCenterScreen({
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="text-sm text-blue-600 dark:text-blue-400 font-medium disabled:opacity-50"
+              className="text-sm font-medium text-indigo-600 disabled:opacity-50 dark:text-indigo-400"
             >
               {refreshing ? "Načítání..." : "Obnovit"}
             </button>
@@ -155,14 +155,14 @@ export function ActionCenterScreen({
                 <div className="mt-0.5">{getIcon(item.type)}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <span className="truncate text-sm font-medium text-[color:var(--wp-text)]">
                       {item.title}
                     </span>
                     <StatusBadge tone={getSeverityTone(item.severity)}>
                       {item.severity === "urgent" ? "Urgentní" : item.severity === "warning" ? "Varování" : "Info"}
                     </StatusBadge>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                  <p className="line-clamp-2 text-xs text-[color:var(--wp-text-secondary)]">
                     {item.description}
                   </p>
                   {item.quickActions.length > 0 && (
@@ -181,7 +181,7 @@ export function ActionCenterScreen({
                     </div>
                   )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 mt-1 shrink-0" />
+                <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[color:var(--wp-text-tertiary)]" />
               </div>
             </MobileCard>
             </div>

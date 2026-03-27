@@ -130,9 +130,12 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
       </svg>
 
       <div className="absolute top-6 left-0 right-0 px-4 sm:px-8 flex justify-between items-center z-20 max-w-[1200px] mx-auto w-full">
-        <Link href="/" className="flex items-center gap-3 min-h-[44px] min-w-[44px]">
-          <img src="/Aidvisora logo A.png" alt="" className="h-9 w-9 object-contain shrink-0 brightness-0 invert" aria-hidden />
-          <span className="font-jakarta font-black text-lg tracking-tight text-white hidden sm:block">Aidvisora</span>
+        <Link href="/" className="flex items-center min-h-[44px] min-w-[44px]">
+          <img
+            src="/logos/Aidvisora%20logo%20new.png"
+            alt="Aidvisora"
+            className="h-9 w-auto max-w-[200px] object-contain object-left shrink-0 brightness-0 invert"
+          />
         </Link>
         {!token && (
           <div className="flex flex-wrap gap-4 sm:gap-6 text-sm font-bold justify-end">
@@ -188,7 +191,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
           <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-6 sm:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] shadow-indigo-900/20 relative overflow-hidden">
             <div className="flex flex-col items-center mb-8">
               <img
-                src="/Aidvisora logo.png"
+                src="/logos/Aidvisora%20logo%20new.png"
                 alt="Aidvisora"
                 className="h-12 w-auto max-w-[200px] mb-5 object-contain brightness-0 invert"
               />
@@ -365,9 +368,24 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
         </div>
       )}
 
-      <div className="absolute bottom-6 w-full px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 z-20 text-[11px] font-black uppercase tracking-widest text-slate-500 max-w-[1200px] mx-auto left-0 right-0">
-        <div className="hidden sm:block">© {new Date().getFullYear()} Aidvisora s.r.o.</div>
-        <div className="flex flex-wrap gap-6 justify-center hover:[&>a]:text-white">
+      <div className="absolute bottom-6 w-full px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 z-20 text-[11px] text-slate-500 max-w-[1200px] mx-auto left-0 right-0">
+        <div className="flex flex-col gap-1 normal-case font-medium tracking-normal text-center sm:text-left text-[10px] sm:text-[11px]">
+          <span>
+            © {new Date().getFullYear()} Aidvisora. Všechna práva vyhrazena.
+          </span>
+          <span>
+            Vytvořila{" "}
+            <a
+              href="https://www.m2digitalagency.cz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-white underline-offset-2 hover:underline font-semibold"
+            >
+              M2DigitalAgency
+            </a>
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-6 justify-center font-black uppercase tracking-widest hover:[&>a]:text-white">
           <Link href="/gdpr" className="transition-colors flex items-center gap-1.5 min-h-[44px]">
             <ShieldCheck size={14} /> GDPR
           </Link>

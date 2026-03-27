@@ -44,9 +44,9 @@ export function LandingHeader({ activeTheme }: LandingHeaderProps) {
           aria-label="Aidvisora – úvod"
         >
           <img
-            src="/aidvisora-logo.png"
+            src="/logos/Aidvisora%20logo%20new.png"
             alt="Aidvisora"
-            className="h-10 w-auto max-w-[200px] object-contain sm:h-12 sm:max-w-[240px]"
+            className="h-10 w-auto max-w-[200px] object-contain brightness-0 invert sm:h-12 sm:max-w-[240px]"
             width={240}
             height={48}
           />

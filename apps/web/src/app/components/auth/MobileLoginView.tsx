@@ -139,7 +139,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
 
           <div className="flex flex-col items-center mb-10 animate-in fade-in duration-500">
             <img
-              src="/Aidvisora logo.png"
+              src="/logos/Aidvisora%20logo%20new.png"
               alt="Aidvisora"
               className="w-[220px] max-w-[82%] mb-5 object-contain"
               style={{ filter: "brightness(0) invert(1)" }}

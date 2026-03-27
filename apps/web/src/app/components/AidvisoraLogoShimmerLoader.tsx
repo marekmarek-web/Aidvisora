@@ -6,10 +6,10 @@ export function AidvisoraLogoShimmerLoader() {
     <div className={s.wrap}>
       <div className={s.logoBox}>
         <Image
-          src="/logos/Aidvisora-logo-A.png"
+          src="/logos/Aidvisora%20logo%20new%20fav.png"
           alt=""
-          width={200}
-          height={56}
+          width={120}
+          height={120}
           className={s.logo}
           priority
         />
