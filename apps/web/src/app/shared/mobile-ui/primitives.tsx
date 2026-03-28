@@ -22,8 +22,9 @@ export function MobileAppShell({
     <div
       className={cx(
         "flex min-h-screen flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
-        deviceClass === "phone" && "pb-[calc(96px+var(--safe-area-bottom))]",
-        deviceClass === "tablet" && "pb-[calc(72px+var(--safe-area-bottom))]",
+        /* Extra inset: bottom nav + protruding center FAB (Safari / thumb zone) */
+        deviceClass === "phone" && "pb-[calc(112px+var(--safe-area-bottom))]",
+        deviceClass === "tablet" && "pb-[calc(84px+var(--safe-area-bottom))]",
         deviceClass === "desktop" && "pb-0",
         className
       )}
@@ -142,18 +143,18 @@ export function MobileBottomNav({
       onClick={centerFab.onClick}
       aria-label={centerFab.ariaLabel ?? "Nový – rychlé akce"}
       className={cx(
-        "flex shrink-0 items-center justify-center rounded-full border-4 border-[color:var(--wp-surface-card)] bg-aidv-create text-white shadow-lg shadow-indigo-950/20 transition-transform active:scale-95",
-        deviceClass === "tablet" ? "w-12 h-12 -translate-y-1" : "w-14 h-14 -translate-y-2"
+        "flex shrink-0 items-center justify-center rounded-full border-2 border-[color:var(--wp-surface-card)] bg-aidv-create text-white shadow-md shadow-indigo-950/15 transition-transform active:scale-95",
+        deviceClass === "tablet" ? "w-11 h-11 -translate-y-0.5" : "w-12 h-12 -translate-y-1"
       )}
     >
-      <Plus size={deviceClass === "tablet" ? 22 : 26} strokeWidth={2.5} className="shrink-0" />
+      <Plus size={deviceClass === "tablet" ? 20 : 22} strokeWidth={2.25} className="shrink-0" />
     </button>
   ) : null;
 
   return (
     <nav
       className={cx(
-        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur",
+        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/98 backdrop-blur-sm",
         "pb-[max(0.5rem,var(--safe-area-bottom))]",
         "pl-[max(0.25rem,env(safe-area-inset-left,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))]"
       )}
@@ -398,7 +399,7 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(90px+var(--safe-area-bottom))] right-[max(1rem,env(safe-area-inset-right,0px))]"
+      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(102px+var(--safe-area-bottom))] right-[max(1rem,env(safe-area-inset-right,0px))]"
       aria-label={label}
       title={label}
     >
@@ -1119,7 +1120,7 @@ export function Toast({
       role="status"
       aria-live="polite"
       className={cx(
-        "fixed bottom-[calc(96px+var(--safe-area-bottom))] inset-x-4 z-[201] rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg",
+        "fixed bottom-[calc(112px+var(--safe-area-bottom))] inset-x-4 z-[201] rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg",
         "animate-in slide-in-from-bottom duration-300",
         variant === "success" && "bg-emerald-600 text-white",
         variant === "error" && "bg-rose-600 text-white",
