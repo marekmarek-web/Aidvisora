@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Bell, Calendar as CalendarIcon, Clock, MapPin, Video, User, X, Edit2, Trash2, Zap, ArrowRight } from "lucide-react";
+import { Bell, Calendar as CalendarIcon, Clock, MapPin, Video, User, X, Edit2, Trash2, Zap, ArrowRight, Send } from "lucide-react";
 import type { EventRow } from "@/app/actions/events";
 import type { TaskRow } from "@/app/actions/tasks";
 import { getEventCategory } from "./event-categories";
 import { formatTimeQuarterHourDisplay } from "./date-utils";
+import {
+  buildEventMailtoHref,
+  EventDetailInfoBlock,
+  EventTypeChipGrid,
+  formatEventDetailDateLine,
+  getEventAccentStyle,
+} from "./event-detail-ui";
 import { PreMeetingBriefPanel } from "@/app/components/meeting-briefing/PreMeetingBriefPanel";
 import clsx from "clsx";
 import { CalendarEventAiActions } from "./CalendarEventAiActions";
@@ -79,11 +86,13 @@ export interface CalendarContextPanelProps {
   onRefresh: () => void;
   /** Called when user clicks "Přidat úkol"; parent should open new-task modal with this date. */
   onAddTask?: (dateStr: string) => void;
+  onChangeEventType?: (event: EventRow, nextType: string) => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
   /** Zavře detail vybrané události (např. návrat na agendu v panelu). */
   onCloseSelectedEvent?: () => void;
   isMobile?: boolean;
+  eventTypeColors?: Record<string, string>;
 }
 
 export function CalendarContextPanel({
@@ -99,9 +108,11 @@ export function CalendarContextPanel({
   onMarkDone,
   onToggleTask,
   onAddTask,
+  onChangeEventType,
   onToggleCollapsed,
   onCloseSelectedEvent,
   isMobile = false,
+  eventTypeColors,
 }: CalendarContextPanelProps) {
   const freeSlots = useMemo(
     () => getFreeSlots(dayEvents, selectedDate),
@@ -123,14 +134,11 @@ export function CalendarContextPanel({
     const start = new Date(selectedEvent.startAt);
     const end = selectedEvent.endAt ? new Date(selectedEvent.endAt) : null;
     const timeStr = `${formatTime(start)}${end ? ` – ${formatTime(end)}` : ""}`;
-    const dateLongLabel = start.toLocaleDateString("cs-CZ", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
     const typeCat = getEventCategory(selectedEvent.eventType);
     const hasVideoLink = selectedEvent.meetingLink && (selectedEvent.eventType === "telefonat" || selectedEvent.meetingLink.includes("meet") || selectedEvent.meetingLink.includes("zoom"));
+    const dateLine = formatEventDetailDateLine(selectedEvent);
+    const accentStyle = getEventAccentStyle(selectedEvent, eventTypeColors);
+    const mailtoHref = buildEventMailtoHref(selectedEvent);
 
     return (
       <aside
@@ -140,49 +148,79 @@ export function CalendarContextPanel({
       >
         {wrapMobile(
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-[color:var(--wp-surface-card-border)] flex items-start justify-between bg-[color:var(--wp-surface-muted)]/50">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1.5">
-                <CalendarIcon size={12} /> Datum
-              </div>
-              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">{dateLongLabel}</p>
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
-                  style={{ borderLeft: `3px solid ${typeCat.color}` }}
-                >
-                  {typeCat.icon} {typeCat.label}
-                </span>
-              </div>
-              <h2 className="text-lg font-black text-[color:var(--wp-text)] leading-tight break-words">{selectedEvent.title}</h2>
-            </div>
-            {(onCloseSelectedEvent || onToggleCollapsed) && (
+          <div className="h-1.5 w-full" style={accentStyle} />
+          <div className="px-5 py-4">
+            <div className="mb-4 flex items-center justify-end gap-1.5">
               <button
                 type="button"
-                onClick={() => {
-                  onCloseSelectedEvent?.();
-                  if (!onCloseSelectedEvent) onToggleCollapsed?.();
-                }}
-                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] rounded-md transition-colors shadow-sm shrink-0"
-                aria-label={onCloseSelectedEvent ? "Zavřít detail události" : "Zavřít panel"}
+                onClick={() => onOpenFullEdit(selectedEvent)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                aria-label="Upravit"
               >
-                <X size={14} />
+                <Edit2 size={16} />
               </button>
-            )}
+              <a
+                href={mailtoHref}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                aria-label="Poslat e-mail"
+              >
+                <Send size={16} />
+              </a>
+              <button
+                type="button"
+                onClick={() => onDeleteEvent(selectedEvent)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                aria-label="Smazat"
+              >
+                <Trash2 size={16} />
+              </button>
+              <div className="mx-1 h-5 w-px bg-slate-200" />
+              {(onCloseSelectedEvent || onToggleCollapsed) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCloseSelectedEvent?.();
+                    if (!onCloseSelectedEvent) onToggleCollapsed?.();
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-800"
+                  aria-label={onCloseSelectedEvent ? "Zavřít detail události" : "Zavřít panel"}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            <div className="mb-5 px-1">
+              <h2 className="text-2xl font-extrabold leading-tight text-[#0B1021] break-words">{selectedEvent.title}</h2>
+              <p className="mt-1 text-xs font-bold text-[color:var(--wp-text-secondary)]">
+                {typeCat.label}
+              </p>
+            </div>
+
+            <EventTypeChipGrid
+              eventType={selectedEvent.eventType}
+              eventTypeColors={eventTypeColors}
+              onChangeType={onChangeEventType ? (nextType) => onChangeEventType(selectedEvent, nextType) : undefined}
+              className="mb-5 px-1"
+            />
+
+            <div className="space-y-2 px-1">
+              <EventDetailInfoBlock icon={Clock} label="Kdy" accentStyle={accentStyle}>
+                <p className="text-sm font-semibold text-slate-800">{dateLine}</p>
+                {!selectedEvent.allDay ? (
+                  <p className="mt-0.5 text-xs text-slate-500">Čas zobrazen po čtvrthodinách</p>
+                ) : null}
+              </EventDetailInfoBlock>
+              <EventDetailInfoBlock icon={MapPin} label="Místo" subdued={!selectedEvent.location}>
+                <p className={selectedEvent.location ? "text-sm font-medium text-slate-700" : "text-sm font-medium text-slate-500"}>
+                  {selectedEvent.location?.trim() || "Místo nebylo zadáno."}
+                </p>
+              </EventDetailInfoBlock>
+            </div>
           </div>
 
           <div className="p-5 space-y-6 flex-1 overflow-y-auto wp-cal-hide-scrollbar">
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
-                  <Clock size={14} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Čas</p>
-                  <p className="text-sm font-bold text-[color:var(--wp-text)]">{timeStr}</p>
-                  <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-0.5">Zobrazeno po čtvrthodinách</p>
-                </div>
-              </div>
               {selectedEvent.reminderAt && (
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
@@ -196,17 +234,17 @@ export function CalendarContextPanel({
                   </div>
                 </div>
               )}
-              {selectedEvent.location && (
+              {hasVideoLink ? (
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center text-[color:var(--wp-text-secondary)] shrink-0">
-                    {hasVideoLink ? <Video size={14} /> : <MapPin size={14} />}
+                    <Video size={14} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Místo</p>
-                    <p className="text-sm font-bold text-[color:var(--wp-text)]">{selectedEvent.location}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Forma</p>
+                    <p className="text-sm font-bold text-[color:var(--wp-text)]">Online hovor</p>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {selectedEvent.meetingLink && (
@@ -272,7 +310,7 @@ export function CalendarContextPanel({
             )}
           </div>
 
-          <div className="p-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] grid grid-cols-2 gap-2">
+          <div className="p-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => onOpenFullEdit(selectedEvent)}
@@ -280,6 +318,12 @@ export function CalendarContextPanel({
             >
               <Edit2 size={14} className="text-blue-600" /> Upravit
             </button>
+            <a
+              href={mailtoHref}
+              className="flex items-center justify-center gap-2 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-2 text-xs font-bold text-[color:var(--wp-text-secondary)]"
+            >
+              <Send size={14} /> Poslat
+            </a>
             <button
               type="button"
               onClick={() => onDeleteEvent(selectedEvent)}

@@ -567,6 +567,23 @@ export function CalendarScreen({
     [reload, showToast, canWriteCalendar],
   );
 
+  const handleChangeEventType = useCallback(
+    async (eventId: string, nextType: string) => {
+      if (!canWriteCalendar) return;
+      try {
+        await updateEvent(eventId, { eventType: nextType });
+        setSelectedEvent((current) =>
+          current && current.id === eventId ? { ...current, eventType: nextType } : current,
+        );
+        showToast("Typ aktivity upraven", "success");
+        reload();
+      } catch {
+        showToast("Nepodařilo se změnit typ aktivity", "error");
+      }
+    },
+    [canWriteCalendar, reload, showToast],
+  );
+
   const handleFollowUp = useCallback(
     async (ev: EventRow, type: "event" | "task") => {
       if (!canWriteCalendar) return;
@@ -751,6 +768,8 @@ export function CalendarScreen({
           canWriteCalendar={canWriteCalendar}
           contactPhone={contactForSelected?.phone}
           contactEmail={contactForSelected?.email}
+          eventTypeColors={settings?.eventTypeColors}
+          onChangeType={(nextType) => handleChangeEventType(selectedEvent.id, nextType)}
           deviceClass={dc}
         />
       ) : null}

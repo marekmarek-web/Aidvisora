@@ -5,7 +5,7 @@ export const EVENT_FORM_PRIMARY_TYPE_ORDER = [
   "kafe",
   "mail",
   "ukol",
-  "servis",
+  "priorita",
 ] as const;
 
 export type EventFormPrimaryTypeId = (typeof EVENT_FORM_PRIMARY_TYPE_ORDER)[number];

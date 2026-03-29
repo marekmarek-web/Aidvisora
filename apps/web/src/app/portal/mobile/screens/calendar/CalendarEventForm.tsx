@@ -17,6 +17,9 @@ import {
   CALENDAR_EVENT_CATEGORIES,
   EVENT_STATUSES,
   type EventCategoryId,
+  getChipClasses,
+  getChipInlineStyle,
+  getEventCategory,
 } from "@/app/portal/calendar/event-categories";
 import {
   DEFAULT_EVENT_DURATION_MS,
@@ -67,16 +70,6 @@ const REMINDER_OPTIONS = [
   { value: 1440, label: "1 den před" },
 ] as const;
 
-const EVENT_PILL_STYLES: Record<string, { active: string; inactive: string }> = {
-  schuzka:   { active: "bg-indigo-600 text-white shadow-lg shadow-indigo-200",  inactive: "bg-indigo-50 text-indigo-600" },
-  telefonat: { active: "bg-rose-500 text-white shadow-lg shadow-rose-200",      inactive: "bg-rose-50 text-rose-500" },
-  kafe:      { active: "bg-amber-500 text-white shadow-lg shadow-amber-200",    inactive: "bg-amber-50 text-amber-600" },
-  mail:      { active: "bg-purple-600 text-white shadow-lg shadow-purple-200",  inactive: "bg-purple-50 text-purple-600" },
-  ukol:      { active: "bg-emerald-600 text-white shadow-lg shadow-emerald-200", inactive: "bg-emerald-50 text-emerald-600" },
-  servis:    { active: "bg-teal-600 text-white shadow-lg shadow-teal-200",       inactive: "bg-teal-50 text-teal-700" },
-  priorita:  { active: "bg-red-600 text-white shadow-lg shadow-red-200",        inactive: "bg-red-50 text-red-600" },
-};
-
 const PRIMARY_TYPE_IDS = new Set<string>(EVENT_FORM_PRIMARY_TYPE_ORDER);
 
 const SECONDARY_TYPES: EventCategoryId[] = CALENDAR_EVENT_CATEGORIES.filter(
@@ -90,6 +83,7 @@ export function CalendarEventForm({
   initial,
   contacts,
   opportunities,
+  eventTypeColors,
   saving,
   saveError,
   onSave,
@@ -99,6 +93,7 @@ export function CalendarEventForm({
   initial: EventFormData & { id?: string };
   contacts: ContactRow[];
   opportunities: OpportunityOption[];
+  eventTypeColors?: Record<string, string>;
   saving: boolean;
   saveError: string | null;
   onSave: (form: EventFormData, id?: string) => void;
@@ -191,15 +186,11 @@ export function CalendarEventForm({
           className="flex-1 space-y-5 overflow-y-auto px-4 py-5"
           style={keyboardInset ? { paddingBottom: `${keyboardInset + 80}px` } : undefined}
         >
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2">
             {EVENT_FORM_PRIMARY_TYPE_ORDER.map((id) => {
-              const t = CALENDAR_EVENT_CATEGORIES.find((c) => c.id === id);
-              if (!t) return null;
+              const t = getEventCategory(id);
               const isActive = form.eventType === t.id;
-              const ps = EVENT_PILL_STYLES[t.id] ?? {
-                active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
-                inactive: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
-              };
+              const colorOverride = eventTypeColors?.[t.id];
               return (
                 <button
                   key={t.id}
@@ -211,9 +202,8 @@ export function CalendarEventForm({
                       reminderMinutes: t.id === "ukol" || t.id === "priorita" ? 15 : 30,
                     }))
                   }
-                  className={`flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-center text-xs font-bold transition-all active:scale-[0.97] sm:flex-row sm:text-sm ${
-                    isActive ? ps.active : ps.inactive
-                  }`}
+                  className={`flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-center text-xs font-bold transition-all active:scale-[0.97] sm:flex-row sm:text-sm ${getChipClasses(t.id, isActive, colorOverride)}`}
+                  style={getChipInlineStyle(t.id, isActive, colorOverride)}
                 >
                   <span className="text-base leading-none">{t.icon}</span>
                   <span className="leading-tight">{t.label}</span>
@@ -225,10 +215,7 @@ export function CalendarEventForm({
             <div className="flex flex-wrap gap-2">
               {CALENDAR_EVENT_CATEGORIES.filter((t) => SECONDARY_TYPES.includes(t.id)).map((t) => {
                 const isActive = form.eventType === t.id;
-                const ps = EVENT_PILL_STYLES[t.id] ?? {
-                  active: "bg-[color:var(--wp-text-secondary)] text-white shadow-lg dark:bg-[color:var(--wp-text-tertiary)]",
-                  inactive: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
-                };
+                const colorOverride = eventTypeColors?.[t.id];
                 return (
                   <button
                     key={t.id}
@@ -240,9 +227,8 @@ export function CalendarEventForm({
                         reminderMinutes: t.id === "ukol" || t.id === "priorita" ? 15 : 30,
                       }))
                     }
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-[0.97] ${
-                      isActive ? ps.active : ps.inactive
-                    }`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-[0.97] ${getChipClasses(t.id, isActive, colorOverride)}`}
+                    style={getChipInlineStyle(t.id, isActive, colorOverride)}
                   >
                     <span>{t.icon}</span>
                     {t.label}

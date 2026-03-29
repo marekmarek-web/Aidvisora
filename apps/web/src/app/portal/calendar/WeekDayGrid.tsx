@@ -6,6 +6,7 @@ import type { EventRow } from "@/app/actions/events";
 import { DEFAULT_EVENT_DURATION_MS, formatDateLocal } from "./date-utils";
 import { getEventStyle } from "./event-categories";
 import { CurrentTimeLine } from "./CurrentTimeLine";
+import { useCalendarPointerDrag } from "../mobile/screens/calendar/useCalendarPointerDrag";
 
 /** 7:00–23:00, 60px per hour */
 const START_HOUR = 7;
@@ -42,6 +43,12 @@ export interface WeekDayGridProps {
   eventTypeColors?: Record<string, string>;
   /** Přesun události v mřížce (den + začátek po 15 min). Celodenní události nelze táhnout. */
   onEventMove?: (eventId: string, targetDateStr: string, startMinutesFromMidnight: number) => void;
+  onEventResize?: (eventId: string, targetDateStr: string, endMinutesFromMidnight: number) => void;
+  onDragCreate?: (
+    targetDateStr: string,
+    startMinutesFromMidnight: number,
+    endMinutesFromMidnight: number,
+  ) => void;
 }
 
 const defaultStartHour = START_HOUR;
@@ -70,8 +77,12 @@ export function WeekDayGrid({
   pixelsPerHour = defaultPixelsPerHour,
   eventTypeColors,
   onEventMove,
+  onEventResize,
+  onDragCreate,
 }: WeekDayGridProps) {
   const suppressClickEventIdRef = useRef<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dayColumnRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const hours = useMemo(
     () => Array.from({ length: endHour - startHour }, (_, i) => i + startHour),
@@ -136,6 +147,19 @@ export function WeekDayGrid({
     [onEventMove, pixelsPerHour, startHour, endHour, findEventById]
   );
 
+  const pointerDrag = useCalendarPointerDrag({
+    visibleDays: weekDays,
+    scrollRef,
+    dayColumnRefs,
+    startHour,
+    endHour,
+    pixelsPerHour,
+    enabled: Boolean(onEventMove || onEventResize || onDragCreate),
+    onEventMove,
+    onEventResize,
+    onDragCreate,
+  });
+
   return (
     <div className="wp-cal-week-day-grid flex-1 flex flex-col overflow-hidden min-h-0">
       {/* Sticky header – na mobilu kompaktnější */}
@@ -168,7 +192,7 @@ export function WeekDayGrid({
         })}
       </div>
 
-      <div className="flex-1 overflow-auto min-h-0 wp-cal-hide-scrollbar relative">
+      <div ref={scrollRef} className="flex-1 overflow-auto min-h-0 wp-cal-hide-scrollbar relative">
         <div
           className="flex min-h-[660px]"
           style={{
@@ -194,7 +218,7 @@ export function WeekDayGrid({
           </div>
 
           {/* Day columns: modern-grid bg + click cells + events */}
-          {weekDays.map((day) => {
+          {weekDays.map((day, dayIndex) => {
             const ds = formatDateLocal(day);
             const isToday = ds === todayStr;
             const isPast = ds < todayStr;
@@ -206,6 +230,9 @@ export function WeekDayGrid({
             return (
               <div
                 key={ds}
+                ref={(node) => {
+                  dayColumnRefs.current[dayIndex] = node;
+                }}
                 className={`flex-1 border-r border-[color:var(--wp-surface-card-border)]/50 relative ${isPast ? "wp-cal-striped-past opacity-80" : ""}`}
                 style={{ height: totalHeight }}
                 onDragOver={onEventMove ? handleColumnDragOver : undefined}
@@ -219,6 +246,7 @@ export function WeekDayGrid({
                       <div
                         key={h}
                         onClick={() => handleSlotClick(ds, h)}
+                        onPointerDown={(event) => pointerDrag.onSlotPointerDown(event, ds)}
                         className={`border-b border-transparent hover:border-indigo-200 hover:bg-indigo-50/50 cursor-pointer transition-colors group/cell flex items-center pl-2 shrink-0 ${isPastHour ? "wp-cal-past-hour-today" : ""}`}
                         style={{ height: pixelsPerHour }}
                       >
@@ -250,6 +278,7 @@ export function WeekDayGrid({
                       key={ev.id}
                       type="button"
                       draggable={draggable}
+                      onPointerDown={(event) => pointerDrag.onEventPointerDown(event, ev)}
                       onDragStart={
                         draggable
                           ? (e) => {
@@ -258,10 +287,11 @@ export function WeekDayGrid({
                             }
                           : undefined
                       }
-                      className={`absolute left-1.5 right-1.5 rounded-xl p-2.5 border border-l-[3px] cursor-pointer transition-all duration-200 overflow-hidden text-left touch-manipulation
+                      className={`absolute left-1.5 right-1.5 rounded-xl border border-l-[3px] p-2.5 text-left transition-all duration-200 overflow-hidden touch-manipulation
                         ${useInlineColor ? "text-gray-800 border-gray-300" : style.tailwindClass}
                         ${selected ? "ring-2 ring-indigo-400 ring-offset-1 shadow-lg scale-[1.02] z-30" : "hover:shadow-md hover:scale-[1.01] z-10"}
                         ${draggable ? "active:cursor-grabbing cursor-grab" : ""}
+                        ${pointerDrag.activeEventId === ev.id ? "opacity-40" : ""}
                       `}
                       style={{
                         top: topPx,
@@ -271,7 +301,11 @@ export function WeekDayGrid({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (suppressClickEventIdRef.current === ev.id) {
+                        if (
+                          suppressClickEventIdRef.current === ev.id ||
+                          pointerDrag.suppressClickEventId === ev.id ||
+                          pointerDrag.activeEventId === ev.id
+                        ) {
                           suppressClickEventIdRef.current = null;
                           return;
                         }
@@ -289,9 +323,23 @@ export function WeekDayGrid({
                           <User size={10} /> {ev.contactName}
                         </div>
                       )}
+                      <span
+                        className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize touch-none"
+                        onPointerDown={(event) => pointerDrag.onResizePointerDown(event, ev)}
+                        aria-hidden
+                      />
                     </button>
                   );
                 })}
+                {pointerDrag.preview?.dateStr === ds ? (
+                  <div
+                    className="pointer-events-none absolute left-1.5 right-1.5 z-20 rounded-xl border border-dashed border-indigo-300 bg-indigo-200/35 shadow-sm"
+                    style={{
+                      top: pointerDrag.preview.topPx,
+                      height: Math.max(pointerDrag.preview.heightPx, 12),
+                    }}
+                  />
+                ) : null}
               </div>
             );
           })}
