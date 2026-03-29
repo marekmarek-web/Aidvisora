@@ -24,7 +24,7 @@ export function ContactHouseholdCard({
       >
         <div className="flex items-center gap-4 mb-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[color:var(--wp-surface-card)] bg-[color:var(--wp-text-secondary)] text-xs font-black text-white">
-            {household.name.slice(0, 2).toUpperCase()}
+            {(household.name || "?").slice(0, 2).toUpperCase()}
           </div>
           <div>
             <h4 className="font-bold text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors">{household.name}</h4>

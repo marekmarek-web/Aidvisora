@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, CheckCircle2, LayoutList, Briefcase } from "lucide-react";
 import { getPipelineByContact } from "@/app/actions/pipeline";
-import { useContactTab } from "./ContactTabLayout";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import { PipelineBoard } from "@/app/dashboard/pipeline/PipelineBoard";
 import { PipelineBoardSkeleton } from "@/app/dashboard/pipeline/PipelineBoardSkeleton";
@@ -155,26 +154,5 @@ export function ContactOpportunityBoard({
         )}
       </div>
     </div>
-  );
-}
-
-/** Lazy wrapper: mountuje board až při aktivní záložce Obchody. */
-export function ContactOpportunityBoardLazy({
-  contactId,
-  contactFirstName,
-  contactLastName,
-}: {
-  contactId: string;
-  contactFirstName?: string;
-  contactLastName?: string;
-}) {
-  const activeTabId = useContactTab();
-  if (activeTabId !== "obchody") return null;
-  return (
-    <ContactOpportunityBoard
-      contactId={contactId}
-      contactFirstName={contactFirstName}
-      contactLastName={contactLastName}
-    />
   );
 }

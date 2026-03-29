@@ -17,9 +17,14 @@ import { SendPaymentPdfButton } from "@/app/dashboard/contacts/[id]/SendPaymentP
 import { ContactActivityTimeline } from "@/app/dashboard/contacts/[id]/ContactActivityTimeline";
 import { ChatThread } from "@/app/components/ChatThread";
 import { ClientFinancialSummary } from "@/app/components/contacts/ClientFinancialSummary";
-import { ContactTabLayout } from "./ContactTabLayout";
+import { ContactTabNav } from "./ContactTabNav";
+import {
+  parseContactTabFromSearchParams,
+  contactDetailQueryWithoutTab,
+  type ContactTabId,
+} from "./contact-detail-tabs";
 import { ContactTasksAndEvents } from "./ContactTasksAndEvents";
-import { ContactOpportunityBoardLazy } from "./ContactOpportunityBoard";
+import { ContactOpportunityBoard } from "./ContactOpportunityBoard";
 import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactOpenTasksPreview } from "./ContactOpenTasksPreview";
 import { ContactNotesSection } from "./ContactNotesSection";
@@ -37,16 +42,21 @@ import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { ContactPaymentSetupsSection } from "./ContactPaymentSetupsSection";
 import { ClientReferralSection } from "./ClientReferralSection";
 import { ClientTimeline } from "./ClientTimeline";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { BriefingTabContent } from "./BriefingTabContent";
 import { InviteToClientZoneButton } from "@/app/dashboard/contacts/[id]/InviteToClientZoneButton";
 
-export default async function ContactDetailPage({
-  params,
-}: {
+type PageProps = {
   params: Promise<{ id: string }>;
-}) {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function ContactDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const sp = await searchParams;
+  const tab: ContactTabId = parseContactTabFromSearchParams(sp);
+  const baseQueryNoTab = contactDetailQueryWithoutTab(sp);
+
   const contact = await getContact(id);
   if (!contact) notFound();
 
@@ -67,24 +77,12 @@ export default async function ContactDetailPage({
 
   const overviewContent = (
     <div className="space-y-8">
-      {/* První blok: KPI úplně nahoru */}
       <ContactOverviewKpi contactId={id} />
-
-      {/* Finanční souhrn – hlavní obraz z analýzy */}
       <ClientFinancialSummaryBlock contactId={id} />
-
-      {/* Servis a doporučení */}
       <ClientServiceBlock contactId={id} />
-
       <ContactPaymentSetupsSection contactId={id} />
-
-      {/* Referral systém – kdo doporučil, koho doporučil, hodnota, timing */}
       <ClientReferralSection contactId={id} />
-
-      {/* Pokrytí produktů na celou šířku */}
       <ClientCoverageWidget contactId={id} />
-
-      {/* Třetí blok: poznámky, produkty, finanční analýzy + Domácnost */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
           <ContactLastNotePreview contactId={id} />
@@ -95,8 +93,6 @@ export default async function ContactDetailPage({
           {household && <ContactHouseholdCard household={household} />}
         </aside>
       </div>
-
-      {/* Třetí blok: Úkoly a AI analýza (shrnutí, příležitosti, next best action) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ContactOpenTasksPreview contactId={id} />
         <ContactAiGenerationsBlock contactId={id} initialGenerations={latestGenerations} />
@@ -153,25 +149,55 @@ export default async function ContactDetailPage({
     </div>
   );
 
-  const tabs = [
-    { id: "prehled" as const, label: "Přehled", content: overviewContent },
-    { id: "timeline" as const, label: "Timeline", content: timelineContent },
-    { id: "smlouvy" as const, label: "Produkty", content: smlouvyContent },
-    { id: "dokumenty" as const, label: "Dokumenty", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50"><h2 className="text-lg font-black text-[color:var(--wp-text)]">Dokumenty</h2></div><div className="p-6"><DocumentsSection contactId={id} /></div></div> },
-    { id: "zapisky" as const, label: "Zápisky", content: zapiskyContent },
-    { id: "aktivita" as const, label: "Aktivita", content: aktivitaContent },
-    { id: "ukoly" as const, label: "Úkoly a schůzky", content: <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden"><div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50"><h2 className="text-lg font-black text-[color:var(--wp-text)]">Úkoly a schůzky</h2></div><div className="p-6"><ContactTasksAndEvents contactId={id} /></div></div> },
-    { id: "obchody" as const, label: "Obchody", content: (
-      <div className="flex flex-col flex-1 min-h-0 w-full">
-        <ContactOpportunityBoardLazy contactId={id} contactFirstName={contact.firstName ?? undefined} contactLastName={contact.lastName ?? undefined} />
+  const dokumentyContent = (
+    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)]">Dokumenty</h2>
       </div>
-    ) },
-    { id: "briefing" as const, label: "Briefing", content: (
-      <Suspense fallback={<div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6">Načítání…</div>}>
-        <BriefingTabContent contactId={id} />
-      </Suspense>
-    ) },
-  ];
+      <div className="p-6">
+        <DocumentsSection contactId={id} />
+      </div>
+    </div>
+  );
+
+  const ukolyContent = (
+    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+        <h2 className="text-lg font-black text-[color:var(--wp-text)]">Úkoly a schůzky</h2>
+      </div>
+      <div className="p-6">
+        <ContactTasksAndEvents contactId={id} />
+      </div>
+    </div>
+  );
+
+  const obchodyContent = (
+    <div className="flex flex-col flex-1 min-h-0 w-full">
+      <ContactOpportunityBoard
+        contactId={id}
+        contactFirstName={contact.firstName ?? undefined}
+        contactLastName={contact.lastName ?? undefined}
+      />
+    </div>
+  );
+
+  const briefingContent = (
+    <Suspense fallback={<div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6">Načítání…</div>}>
+      <BriefingTabContent contactId={id} />
+    </Suspense>
+  );
+
+  const tabBody: Record<ContactTabId, ReactNode> = {
+    prehled: overviewContent,
+    timeline: timelineContent,
+    smlouvy: smlouvyContent,
+    dokumenty: dokumentyContent,
+    zapisky: zapiskyContent,
+    aktivita: aktivitaContent,
+    ukoly: ukolyContent,
+    obchody: obchodyContent,
+    briefing: briefingContent,
+  };
 
   const initials = [contact.firstName, contact.lastName].map((s) => s?.charAt(0) ?? "").join("").toUpperCase() || "?";
   const addressLine = [contact.street, [contact.city, contact.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
@@ -283,7 +309,8 @@ export default async function ContactDetailPage({
           </div>
         </div>
 
-        <ContactTabLayout tabs={tabs} defaultTab="prehled" />
+        <ContactTabNav activeTab={tab} baseQueryNoTab={baseQueryNoTab} />
+        <div className="pt-6 pb-8">{tabBody[tab]}</div>
       </main>
     </div>
   );
