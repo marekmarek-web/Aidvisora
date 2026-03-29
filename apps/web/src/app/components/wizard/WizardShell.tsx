@@ -36,26 +36,25 @@ export function WizardShell({
 }: WizardShellProps) {
   const ref = useRef<HTMLDivElement>(null);
   const previousActive = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const isMobile = useIsMobile();
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose],
-  );
 
   useEffect(() => {
     if (!open) return;
     const active = document.activeElement as HTMLElement | null;
     previousActive.current = active;
     if (active && ref.current && !ref.current.contains(active)) active.blur();
-    document.addEventListener("keydown", handleKeyDown);
+
+    function onDocumentKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onCloseRef.current();
+    }
+    document.addEventListener("keydown", onDocumentKeyDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", onDocumentKeyDown);
       previousActive.current?.focus?.();
     };
-  }, [open, handleKeyDown]);
+  }, [open]);
 
   useEffect(() => {
     if (!open || !ref.current) return;
