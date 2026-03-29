@@ -8,6 +8,11 @@ export interface WizardShellProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /**
+   * When this changes (e.g. wizard step), move focus to the first meaningful field
+   * (skips the close button). Include in deps: `isMobile` layout swap re-runs the effect.
+   */
+  focusContentKey?: string | number;
 }
 
 function useIsMobile() {
@@ -27,6 +32,7 @@ export function WizardShell({
   onClose,
   title,
   children,
+  focusContentKey,
 }: WizardShellProps) {
   const ref = useRef<HTMLDivElement>(null);
   const previousActive = useRef<HTMLElement | null>(null);
@@ -54,39 +60,51 @@ export function WizardShell({
   useEffect(() => {
     if (!open || !ref.current) return;
     const el = ref.current;
-    const focusables = Array.from(
-      el.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    const closeBtn = el.querySelector<HTMLElement>('[aria-label="Zavřít"]');
-    const firstInContent =
-      focusables.find((node) => node !== closeBtn) ?? focusables[0];
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (!el.contains(document.activeElement)) {
+
+    function getTrapEndpoints() {
+      const focusables = Array.from(
+        el.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      const closeBtn = el.querySelector<HTMLElement>('[aria-label="Zavřít"]');
+      const firstInContent =
+        focusables.find((node) => node !== closeBtn) ?? focusables[0];
+      const last = focusables[focusables.length - 1];
+      return { firstInContent, last };
+    }
+
+    function moveFocusToFirstField() {
       requestAnimationFrame(() => {
         if (!el.isConnected) return;
+        const { firstInContent } = getTrapEndpoints();
         firstInContent?.focus();
       });
     }
+
+    if (focusContentKey !== undefined) {
+      moveFocusToFirstField();
+    } else if (!el.contains(document.activeElement)) {
+      moveFocusToFirstField();
+    }
+
     function trap(e: KeyboardEvent) {
       if (e.key !== "Tab") return;
+      const { firstInContent, last } = getTrapEndpoints();
+      if (!firstInContent || !last) return;
       if (e.shiftKey) {
-        if (document.activeElement === first) {
+        if (document.activeElement === firstInContent) {
           e.preventDefault();
-          last?.focus();
+          last.focus();
         }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first?.focus();
-        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        firstInContent.focus();
       }
     }
     el.addEventListener("keydown", trap);
     return () => el.removeEventListener("keydown", trap);
-  }, [open]);
+  }, [open, isMobile, focusContentKey]);
 
   const [backdropTarget, setBackdropTarget] = useState<EventTarget | null>(null);
   const handleBackdropMouseDown = useCallback((e: React.MouseEvent) => {

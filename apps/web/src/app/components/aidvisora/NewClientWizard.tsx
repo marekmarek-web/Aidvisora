@@ -178,12 +178,17 @@ export function NewClientWizard({
   if (!open) return null;
 
   return (
-    <WizardShell open={open} onClose={handleClose} title="Nový klient">
+    <WizardShell
+      open={open}
+      onClose={handleClose}
+      title="Nový klient"
+      focusContentKey={isSuccess ? undefined : step}
+    >
       <WizardHeader title="Nový klient" onClose={handleClose} />
       {!isSuccess && (
         <WizardStepper steps={WIZARD_STEPS} currentStep={step + 1} />
       )}
-      <WizardBody withSlide={!isSuccess} focusFirstFieldKey={isSuccess ? undefined : step}>
+      <WizardBody withSlide={!isSuccess}>
         {isSuccess ? (
           <WizardSuccess
             headline="Klient úspěšně vytvořen!"

@@ -164,12 +164,17 @@ export function NewContractWizard({
   ];
 
   return (
-    <WizardShell open={open} onClose={handleClose} title="Nová smlouva">
+    <WizardShell
+      open={open}
+      onClose={handleClose}
+      title="Nová smlouva"
+      focusContentKey={isSuccess ? undefined : step}
+    >
       <WizardHeader title="Nová smlouva" onClose={handleClose} />
       {!isSuccess && (
         <WizardStepper steps={WIZARD_STEPS} currentStep={step + 1} />
       )}
-      <WizardBody withSlide={!isSuccess} focusFirstFieldKey={isSuccess ? undefined : step}>
+      <WizardBody withSlide={!isSuccess}>
         {isSuccess ? (
           <WizardSuccess
             headline="Smlouva přidána"

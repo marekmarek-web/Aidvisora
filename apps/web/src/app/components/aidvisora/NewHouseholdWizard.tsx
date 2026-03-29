@@ -81,12 +81,17 @@ export function NewHouseholdWizard({
   if (!open) return null;
 
   return (
-    <WizardShell open={open} onClose={handleClose} title="Nová domácnost">
+    <WizardShell
+      open={open}
+      onClose={handleClose}
+      title="Nová domácnost"
+      focusContentKey={isSuccess ? undefined : step}
+    >
       <WizardHeader title="Nová domácnost" onClose={handleClose} />
       {!isSuccess && (
         <WizardStepper steps={WIZARD_STEPS} currentStep={step + 1} />
       )}
-      <WizardBody withSlide={!isSuccess} focusFirstFieldKey={isSuccess ? undefined : step}>
+      <WizardBody withSlide={!isSuccess}>
         {isSuccess ? (
           <WizardSuccess
             headline="Domácnost vytvořena"
