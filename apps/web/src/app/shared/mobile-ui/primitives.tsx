@@ -1,6 +1,13 @@
 "use client";
 
-import { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useState } from "react";
+import {
+  type ButtonHTMLAttributes,
+  type CSSProperties,
+  type ReactNode,
+  createElement,
+  useEffect,
+  useState,
+} from "react";
 import { X, Plus, AlertCircle, Wifi, WifiOff, PackageOpen, RefreshCw } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
@@ -414,12 +421,21 @@ function OverlayContainer({
   children,
   fullScreen,
   labelId,
+  panelClassName,
+  panelStyle,
+  overlayClassName,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   fullScreen?: boolean;
   labelId?: string;
+  /** Extra classes on the sheet panel (e.g. z-index). */
+  panelClassName?: string;
+  /** e.g. `{ bottom: 'calc(112px + env(safe-area-inset-bottom))' }` to clear app bottom nav. */
+  panelStyle?: CSSProperties;
+  /** Classes on the fixed full-screen overlay wrapper (e.g. z-[220]). */
+  overlayClassName?: string;
 }) {
   // Lock body scroll when open
   useEffect(() => {
@@ -440,7 +456,7 @@ function OverlayContainer({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[100]"
+      className={cx("fixed inset-0 z-[100]", overlayClassName)}
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelId}
@@ -459,8 +475,19 @@ function OverlayContainer({
           "animate-in slide-in-from-bottom duration-300 ease-out",
           fullScreen
             ? "top-0 bottom-0 rounded-none pt-[var(--safe-area-top)] pb-[var(--safe-area-bottom)]"
-            : "bottom-0 max-h-[85vh] rounded-t-3xl pb-[var(--safe-area-bottom)]"
+            : "max-h-[min(92dvh,900px)] rounded-t-3xl",
+          !fullScreen && panelStyle?.bottom == null && "bottom-0 pb-[var(--safe-area-bottom)]",
+          !fullScreen && panelStyle?.bottom != null && "pb-[var(--safe-area-bottom)]",
+          panelClassName
         )}
+        style={
+          fullScreen
+            ? panelStyle
+            : {
+                ...panelStyle,
+                maxHeight: panelStyle?.maxHeight ?? "min(92dvh, 900px)",
+              }
+        }
       >
         {children}
       </div>
@@ -473,27 +500,42 @@ export function BottomSheet({
   onClose,
   title,
   children,
+  zIndexClass = "z-[100]",
+  /** Lift sheet above app bottom nav / FAB (CSS length, e.g. calc(112px + env(safe-area-inset-bottom))). */
+  bottomOffset,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  zIndexClass?: string;
+  bottomOffset?: string;
 }) {
   const labelId = `bs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <OverlayContainer open={open} onClose={onClose} labelId={labelId}>
-      <div className="px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between gap-2">
-        <h3 id={labelId} className="font-black text-sm">{title}</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Zavřít panel"
-          className="min-h-[36px] min-w-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] grid place-items-center hover:bg-[color:var(--wp-surface-muted)] transition-colors"
-        >
-          <X size={16} />
-        </button>
+    <OverlayContainer
+      open={open}
+      onClose={onClose}
+      labelId={labelId}
+      overlayClassName={zIndexClass}
+      panelStyle={bottomOffset ? { bottom: bottomOffset, top: "auto" } : undefined}
+    >
+      <div className="flex max-h-[inherit] min-h-0 flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] px-4 py-3 pt-[max(0.75rem,var(--safe-area-top))]">
+          <h3 id={labelId} className="font-black text-sm">
+            {title}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Zavřít panel"
+            className="grid min-h-[40px] min-w-[40px] place-items-center rounded-lg border border-[color:var(--wp-surface-card-border)] transition-colors hover:bg-[color:var(--wp-surface-muted)]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">{children}</div>
       </div>
-      <div className="overflow-y-auto max-h-[calc(85vh-60px)] p-4">{children}</div>
     </OverlayContainer>
   );
 }

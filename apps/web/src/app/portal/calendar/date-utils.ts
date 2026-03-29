@@ -19,14 +19,77 @@ export function formatDateTimeLocal(d: Date): string {
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+const LOCAL_DATETIME_INPUT_RE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/;
+
+/**
+ * Parse `YYYY-MM-DDTHH:mm` from datetime-local as **local wall time** (same interpretation in browser and Node).
+ * `new Date("2026-03-28T14:45")` is local in browsers but UTC in Node — that mismatch caused 1–2h (or more) shifts
+ * when server actions did `new Date(form.startAt)` on ISO strings from the client.
+ */
+export function parseLocalDateTimeInputToUtcMs(naiveLocal: string | undefined | null): number | null {
+  if (!naiveLocal?.trim()) return null;
+  const m = naiveLocal.trim().match(LOCAL_DATETIME_INPUT_RE);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const h = Number(m[4]);
+  const mi = Number(m[5]);
+  const sec = m[6] != null ? Number(m[6]) : 0;
+  if (![y, mo, d, h, mi, sec].every((x) => Number.isFinite(x))) return null;
+  const local = new Date(y, mo - 1, d, h, mi, sec, 0);
+  const t = local.getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+export function utcMsToIsoString(ms: number): string {
+  return new Date(ms).toISOString();
+}
+
+/** Default IANA zone for all-day Google Calendar API (civil date on event). */
+export const CALENDAR_ALL_DAY_TIMEZONE = "Europe/Prague";
+
+/** Civil `YYYY-MM-DD` for an instant in a given IANA timezone (server-safe via Intl). */
+export function formatCalendarDateInTimeZone(d: Date, timeZone: string = CALENDAR_ALL_DAY_TIMEZONE): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/** Add whole calendar days to a `YYYY-MM-DD` string (Gregorian, UTC date math). */
+export function addCalendarDaysYyyyMmDd(yyyyMmDd: string, days: number): string {
+  const [y, mo, d] = yyyyMmDd.split("-").map(Number);
+  if (!y || !mo || !d) return yyyyMmDd;
+  const x = new Date(Date.UTC(y, mo - 1, d + days));
+  return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Parse datetime string from client: ISO with offset/Z → standard parse; bare `YYYY-MM-DDTHH:mm` → local wall time.
+ */
+export function parseInstantFromClientPayload(s: string): Date {
+  const t = s.trim();
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(t)) {
+    const d = new Date(t);
+    return d;
+  }
+  const ms = parseLocalDateTimeInputToUtcMs(t);
+  if (ms != null) return new Date(ms);
+  return new Date(t);
+}
+
 /** Výchozí délka nové časované aktivity (30 min). */
 export const DEFAULT_EVENT_DURATION_MS = 30 * 60 * 1000;
 
 /** Přičte ms k hodnotě `YYYY-MM-DDTHH:mm` v lokálním čase. */
 export function addMsToLocalDateTime(naiveLocal: string, ms: number): string {
-  const d = new Date(naiveLocal.trim());
-  if (Number.isNaN(d.getTime())) return naiveLocal;
-  return formatDateTimeLocal(new Date(d.getTime() + ms));
+  const t = parseLocalDateTimeInputToUtcMs(naiveLocal);
+  if (t == null) return naiveLocal;
+  return formatDateTimeLocal(new Date(t + ms));
 }
 
 /** Zobrazení času po čtvrthodinách (jen UI; nemění uložený okamžik). */
@@ -44,14 +107,21 @@ export function formatTimeQuarterHourDisplay(d: Date): string {
 }
 
 /**
- * Pouze v prohlížeči: `datetime-local` bez časové zóny → jednoznačné UTC ISO pro server actions.
- * Na serveru Node parsuje `YYYY-MM-DDTHH:mm` jako UTC a posune čas o pásmo uživatele.
+ * `datetime-local` value (no timezone suffix) → UTC ISO instant for API / DB.
+ * Uses the same local-wall-time parsing in browser and Node (see `parseLocalDateTimeInputToUtcMs`).
  */
 export function localDateTimeInputToUtcIso(naiveLocal: string | undefined): string | undefined {
-  if (!naiveLocal?.trim()) return undefined;
-  const d = new Date(naiveLocal.trim());
-  if (Number.isNaN(d.getTime())) return undefined;
-  return d.toISOString();
+  const ms = parseLocalDateTimeInputToUtcMs(naiveLocal);
+  if (ms == null) return undefined;
+  return utcMsToIsoString(ms);
+}
+
+/** Reminder instant: `minutes` before local wall start from `datetime-local` string. */
+export function reminderUtcIsoFromLocalStart(naiveLocalStart: string, minutes: number): string | null {
+  if (!minutes) return null;
+  const startMs = parseLocalDateTimeInputToUtcMs(naiveLocalStart);
+  if (startMs == null) return null;
+  return utcMsToIsoString(startMs - minutes * 60_000);
 }
 
 /**
