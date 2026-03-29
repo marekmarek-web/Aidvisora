@@ -25,3 +25,9 @@ resend api.txt
 # Capacitor temporary/build artifacts
 apps/web/.capacitor
 apps/web/capacitor-app/.capacitor
+
+# Legal sources: v repu držíme jen docx + *-sections.json (prepare-legal-content); zbytek je šrot z extrakce
+legals/_tmp_*/
+legals/_extract_*.txt
+legals/*.zip
+legals/_op.zip

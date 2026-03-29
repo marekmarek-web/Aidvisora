@@ -1,0 +1,83 @@
+---
+description: Legal/compliance positioning for Aidvisora — SaaS for advisors only; no client-facing financial advice framing; AI outputs internal and informative.
+alwaysApply: true
+---
+
+# Aidvisora — Compliance & UX guard
+
+**Positioning:** Aidvisora is **exclusively** a SaaS/ICT tool for **financial advisors**. It must **not** read as a financial advisor, investment advisor, insurance intermediary, or entity that gives **clients** recommendations. All AI outputs are **internal**, **informative**, and subject to the advisor’s sole judgment. **Clients must not** see AI recommendations or personalized product proposals.
+
+On every change to code, copy, UI, marketing, onboarding, feature naming, API field labels, exports, and PDFs, apply the rules below.
+
+## 1. Forbidden meanings and phrasing (avoid in user-facing product copy)
+
+Do **not** use (Czech or equivalent):
+
+- doporučujeme (as platform voice to client or as “advice”)
+- doporučení pro klienta (product/investment sense)
+- nejlepší produkt / nejvýhodnější produkt
+- optimální řešení / vhodné pro klienta (suitability)
+- AI poradce / AI navrhne produkt
+- automatické doporučení / náhrada poradce
+- vyhodnocení vhodnosti produktu
+- skóre vhodnosti klienta; scoring klienta pro hypotéku / pojištění / investici
+- schválit / zamítnout klienta
+- produkt ranking pro klienta
+- personalizované investiční doporučení
+
+**CRM internal automation** (tasks, coaching): prefer “interní upozornění”, “návrh draftu”, “oblast k ověření”, not “doporučujeme” as if the **platform** advises the end client.
+
+## 2. Preferred phrasing
+
+Prefer:
+
+- informativní souhrn / interní podklad pro poradce
+- zjištěné skutečnosti / extrahované údaje
+- potenciální nesrovnalosti / oblasti k ověření poradcem
+- draft interních úkolů / návrh evidence do CRM
+- upozornění na chybějící údaje
+- administrativní a analytická podpora poradce
+
+## 3. Functional boundaries
+
+**AI may:** read PDFs/photos, extract data, structure CRM fields, compare document vs. records, flag discrepancies, draft internal checklists, draft internal notes/tasks, support admin and record-keeping.
+
+**AI must not:** recommend a specific product, contract, or provider; recommend changing investments/insurance/mortgage **to the client**; determine product suitability for the client; give the client a final recommendation; auto-send client-facing output as advice; produce credit/pricing/risk **decisions** for clients; replace human advisor judgment.
+
+## 4. UI/UX
+
+- Label **all** AI sections in the **advisor** CRM as **internal** and **informative**.
+- Show the standard notice (use shared component `AdvisorAiOutputNotice`): *Výstup je pouze informativní interní podklad pro poradce. Nejde o doporučení klientovi.*
+- **Client portal:** no AI product advice; no copy that implies personalized financial advice. Calculators: **generic**, illustrative; no advisory language.
+- **Referral vocabulary:** Czech “doporučení” in **referral** context (who referred the client) is a normal CRM term. Prefer clear labels where ambiguous (“Kdo klienta doporučil”, “Referral”, “Síť kontaktů”) so it is not confused with investment advice.
+
+## 5. Text / compliance rewrite workflow
+
+When generating or editing copy:
+
+1. Replace risky words with safe variants from section 2.
+2. Remove statements that sound like financial advice to a client.
+3. Keep only administrative, record-keeping, and informative meaning.
+
+Shared prompt suffix for advisor-facing AI lives in `apps/web/src/lib/ai/compliance-prompt-suffix.ts` — keep it aligned with this rule.
+
+## 6. PR / commit review checklist
+
+Scan for:
+
+- Component and route names
+- Button labels and empty states
+- Onboarding copy
+- Tooltips and modals
+- Email templates
+- Marketing headlines/subheads
+- AI output labels
+- Client portal strings
+- API response fields exposed to UI
+- Exports and PDFs
+
+If risky phrasing or behavior appears, propose safer wording and refactor so Aidvisora stays an **internal** advisor tool without **product recommendation** to clients.
+
+## 7. Health / analytics naming
+
+Internal **CRM health** or **team activity** metrics (e.g. `health-scoring` for advisor usage) are **not** client credit/insurance scoring. Do not label them in ways that imply client suitability or approval/denial.
