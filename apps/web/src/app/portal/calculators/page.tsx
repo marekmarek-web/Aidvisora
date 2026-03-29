@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TrendingUp, Calculator, PiggyBank, HeartPulse, FileText, ChevronRight } from "lucide-react";
 import { getCalculators } from "@/lib/calculators/core/registry";
 import type { CalculatorIconId } from "@/lib/calculators/core/types";
+import { RECENT_CALCULATIONS_PLACEHOLDER } from "@/lib/calculators/recent-calculations-placeholder";
 import { ListPageShell, ListPageEmpty } from "@/app/components/list-page";
 
 type IconProps = { className?: string; size?: number | string; strokeWidth?: number | string };
@@ -48,13 +49,6 @@ function getTheme(category: string): ThemeId {
   if (category === "life") return "life";
   return "investment";
 }
-
-/** Placeholder: připraveno na napojení live dat (např. poslední otevřené kalkulačky / analýzy). */
-const RECENT_PLACEHOLDER = [
-  { id: "1", client: "Rodina Novákova", type: "Hypotéka 4.5M", date: "Před 2 hodinami", href: "/portal/calculators/mortgage" },
-  { id: "2", client: "Ing. Lucie Opalenská", type: "Investiční plán", date: "Včera", href: "/portal/calculators/investment" },
-  { id: "3", client: "Petr Malý", type: "Životní pojištění", date: "10. března 2026", href: "/portal/calculators/life" },
-];
 
 export default function CalculatorsPage() {
   const calculators = getCalculators();
@@ -161,14 +155,14 @@ export default function CalculatorsPage() {
             Nedávné propočty
           </h2>
           <Link
-            href="/portal/calculators"
-            className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+            href="/portal/calculators/history"
+            className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
-            Zobrazit všechny <ChevronRight size={16} />
+            Zobrazit všechny <ChevronRight size={16} aria-hidden />
           </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {RECENT_PLACEHOLDER.map((item) => (
+          {RECENT_CALCULATIONS_PLACEHOLDER.slice(0, 3).map((item) => (
             <Link
               key={item.id}
               href={item.href}
