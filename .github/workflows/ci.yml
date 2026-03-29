@@ -52,6 +52,7 @@ jobs:
         working-directory: apps/web
         run: pnpm exec playwright install chromium --with-deps
 
+      # Playwright uses `pnpm start` when CI=true (see apps/web/playwright.config.ts) — needs prior `pnpm build`.
       - name: E2E smoke
         working-directory: apps/web
         run: pnpm test:e2e
