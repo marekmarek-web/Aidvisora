@@ -238,6 +238,13 @@ function pgErrorCode(e: unknown): string | undefined {
   return typeof c === "string" ? c : undefined;
 }
 
+/** Postgres: column "foo" of relation "contacts" does not exist */
+function pgMissingColumnName(e: unknown): string | null {
+  const msg = e instanceof Error ? e.message : String(e);
+  const m = /column\s+"([^"]+)"\s+of\s+relation\s+"([^"]+)"\s+does\s+not\s+exist/i.exec(msg);
+  return m?.[1] ?? null;
+}
+
 /**
  * Vrací výsledek místo throw u očekávaných chyb — v produkci Next.js jinak skryje zprávu z Server Action
  * a klient uvidí jen obecný „Server Components render“ text.
@@ -315,11 +322,12 @@ export async function createContact(form: {
       };
     }
     if (code === "42703") {
-      return {
-        ok: false,
-        message:
-          "Schéma databáze v Supabase neodpovídá aplikaci (chybí sloupec). Spusťte migrace z repozitáře: packages/db/migrations (nebo packages/db/supabase-schema.sql).",
-      };
+      const col = pgMissingColumnName(e);
+      const hint =
+        col != null
+          ? `V tabulce contacts chybí sloupec „${col}“. V Supabase SQL Editoru spusťte soubor packages/db/migrations/contacts_columns_app_sync.sql (nebo aktuální packages/db/supabase-schema.sql).`
+          : "Schéma databáze v Supabase neodpovídá aplikaci (chybí sloupec). V Supabase SQL Editoru spusťte packages/db/migrations/contacts_columns_app_sync.sql.";
+      return { ok: false, message: hint };
     }
     if (code === "23502") {
       return {

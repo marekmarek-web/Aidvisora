@@ -497,7 +497,16 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS city text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS zip text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tags text[];
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lifecycle_stage text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lead_source text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lead_source_url text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS priority text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS archived_reason text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS preferred_channel text;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS do_not_email boolean NOT NULL DEFAULT false;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS do_not_push boolean NOT NULL DEFAULT false;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS best_contact_time text;
 
 -- 15. mindmap (strategická mapa klienta/domácnosti nebo libovolná standalone mapa)
 CREATE TABLE IF NOT EXISTS mindmap_maps (
