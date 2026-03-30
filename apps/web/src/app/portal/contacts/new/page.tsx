@@ -32,7 +32,7 @@ export default function NewContactPage() {
     try {
       const rawTags = (fd.get("tags") as string) || "";
       const parsedTags = rawTags.split(",").map((t) => t.trim()).filter(Boolean);
-      const id = await createContact({
+      const result = await createContact({
         firstName: (fd.get("firstName") as string) || "",
         lastName: (fd.get("lastName") as string) || "",
         email: (fd.get("email") as string) || undefined,
@@ -49,8 +49,8 @@ export default function NewContactPage() {
         priority: priority || undefined,
         referralContactId: referralContactId || undefined,
       });
-      if (id) router.push(`/portal/contacts/${id}`);
-      else setError("Vytvoření se nepovedlo.");
+      if (result.ok) router.push(`/portal/contacts/${result.id}`);
+      else setError(result.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chyba");
     } finally {

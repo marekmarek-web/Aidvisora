@@ -30,7 +30,7 @@ export default function NewContactPage() {
     const form = e.currentTarget;
     const fd = new FormData(form);
     try {
-      const id = await createContact({
+      const result = await createContact({
         firstName: (fd.get("firstName") as string) || "",
         lastName: (fd.get("lastName") as string) || "",
         email: (fd.get("email") as string) || undefined,
@@ -40,8 +40,8 @@ export default function NewContactPage() {
         referralContactId: referralContactId || undefined,
         priority: priority || undefined,
       });
-      if (id) router.push(`/dashboard/contacts/${id}`);
-      else setError("Vytvoření se nepovedlo.");
+      if (result.ok) router.push(`/dashboard/contacts/${result.id}`);
+      else setError(result.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chyba");
     } finally {

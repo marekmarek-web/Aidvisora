@@ -94,15 +94,15 @@ export function StepClientInfo() {
     setCreatingClient(true);
     try {
       const form = mapFaClientToContactForm(client);
-      const newId = await createContact(form);
-      if (!newId) throw new Error("Nepodařilo se vytvořit kontakt.");
-      setData({ clientId: newId });
+      const created = await createContact(form);
+      if (!created.ok) throw new Error(created.message);
+      setData({ clientId: created.id });
       saveToStorage();
       if (analysisId) {
         await saveFinancialAnalysisDraft({
           id: analysisId,
-          contactId: newId,
-          payload: { data: { ...data, clientId: newId } as unknown as Record<string, unknown>, currentStep },
+          contactId: created.id,
+          payload: { data: { ...data, clientId: created.id } as unknown as Record<string, unknown>, currentStep },
         });
       }
       setJustCreated(true);

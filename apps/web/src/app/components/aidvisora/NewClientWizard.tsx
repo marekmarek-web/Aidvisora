@@ -124,7 +124,7 @@ export function NewClientWizard({
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      const id = await createContact({
+      const result = await createContact({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email || undefined,
@@ -140,11 +140,11 @@ export function NewClientWizard({
         lifecycleStage: form.lifecycleStage || undefined,
         priority: form.priority || undefined,
       });
-      if (id) {
-        setCreatedId(id);
+      if (result.ok) {
+        setCreatedId(result.id);
         setIsSuccess(true);
       } else {
-        setError("Vytvoření se nepovedlo.");
+        setError(result.message);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chyba při vytváření.");

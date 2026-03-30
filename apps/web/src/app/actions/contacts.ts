@@ -232,6 +232,20 @@ function isPgUniqueViolation(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: string }).code === "23505";
 }
 
+function pgErrorCode(e: unknown): string | undefined {
+  if (typeof e !== "object" || e === null || !("code" in e)) return undefined;
+  const c = (e as { code?: unknown }).code;
+  return typeof c === "string" ? c : undefined;
+}
+
+/**
+ * Vrací výsledek místo throw u očekávaných chyb — v produkci Next.js jinak skryje zprávu z Server Action
+ * a klient uvidí jen obecný „Server Components render“ text.
+ */
+export type CreateContactResult =
+  | { ok: true; id: string }
+  | { ok: false; message: string };
+
 export async function createContact(form: {
   firstName: string;
   lastName: string;
@@ -251,10 +265,12 @@ export async function createContact(form: {
   leadSourceUrl?: string;
   priority?: string;
   notes?: string;
-}) {
+}): Promise<CreateContactResult> {
   try {
     const auth = await requireAuthInAction();
-    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    if (!hasPermission(auth.roleName, "contacts:write")) {
+      return { ok: false, message: "Nemáte oprávnění vytvářet kontakty." };
+    }
     const [row] = await db
       .insert(contacts)
       .values({
@@ -279,18 +295,45 @@ export async function createContact(form: {
         notes: form.notes?.trim() || null,
       })
       .returning({ id: contacts.id });
-    return row?.id ?? null;
+    const id = row?.id;
+    if (!id) {
+      return { ok: false, message: "Kontakt se nepodařilo vytvořit. Zkuste to znovu." };
+    }
+    return { ok: true, id };
   } catch (e) {
     if (isRedirectError(e)) throw e;
-    if (isPgUniqueViolation(e)) {
-      throw new Error("V tomto workspace už existuje kontakt se stejným e-mailem.");
-    }
     console.error("[createContact]", e);
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "Forbidden") {
-      throw new Error("Nemáte oprávnění vytvářet kontakty.");
+    if (isPgUniqueViolation(e)) {
+      return { ok: false, message: "V tomto workspace už existuje kontakt se stejným e-mailem." };
     }
-    throw new Error("Kontakt se nepodařilo vytvořit. Zkuste to znovu.");
+    const code = pgErrorCode(e);
+    if (code === "23503") {
+      return {
+        ok: false,
+        message:
+          "Neplatná vazba v databázi (např. doporučující kontakt). Zkuste odebrat „Doporučen od“ nebo zvolit jiný kontakt.",
+      };
+    }
+    if (code === "42703") {
+      return {
+        ok: false,
+        message:
+          "Schéma databáze v Supabase neodpovídá aplikaci (chybí sloupec). Spusťte migrace z repozitáře: packages/db/migrations (nebo packages/db/supabase-schema.sql).",
+      };
+    }
+    if (code === "23502") {
+      return {
+        ok: false,
+        message: "Uložení se nepovedlo: databáze odmítla záznam (chybí povinné pole). Zkontrolujte migrace.",
+      };
+    }
+    if (e instanceof Error && e.message === "Unauthorized") {
+      return { ok: false, message: "Nejste přihlášeni nebo vypršela relace. Obnovte stránku a přihlaste se znovu." };
+    }
+    if (e instanceof Error && e.message.startsWith("Unauthorized:")) {
+      return { ok: false, message: "Tento účet nemůže zakládat kontakty v poradenském portálu." };
+    }
+    return { ok: false, message: "Kontakt se nepodařilo vytvořit. Zkuste to znovu." };
   }
 }
 

@@ -114,7 +114,7 @@ export async function syncFaToContacts(params: SyncFaToContactsParams): Promise<
       const notes: string[] = [];
       if (person.sports) notes.push(`Sporty: ${person.sports}`);
 
-      contactId = await createContact({
+      const createdResult = await createContact({
         firstName: person.firstName || "Kontakt",
         lastName: person.lastName || (person.faRole === "child" ? `Dítě ${(person.faIndex ?? 0) + 1}` : "."),
         email: person.email,
@@ -125,6 +125,10 @@ export async function syncFaToContacts(params: SyncFaToContactsParams): Promise<
         notes: notes.length ? notes.join("\n") : undefined,
         lifecycleStage: person.faRole === "primary" ? "client" : undefined,
       });
+      if (!createdResult.ok) {
+        throw new Error(createdResult.message);
+      }
+      contactId = createdResult.id;
       created = true;
     }
 
