@@ -3,7 +3,8 @@ import "server-only";
 import { db } from "db";
 import { advisorPreferences } from "db";
 import { and, eq } from "db";
-import { getDefaultQuickActionsConfig, type QuickActionsConfig } from "@/lib/quick-actions";
+import { getDefaultQuickActionsConfig } from "@/lib/quick-actions";
+import type { QuickActionsConfig } from "@/lib/quick-actions";
 
 /**
  * Načte quickActions z DB pro daného uživatele/tenanta (RSC + sdílená logika se server action).

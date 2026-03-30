@@ -34,11 +34,8 @@ import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uplo
 import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
 import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
 import { listTenantMembers } from "@/app/actions/team";
-import {
-  QUICK_ACTIONS_CATALOG,
-  getDefaultQuickActionsConfig,
-  type QuickActionId,
-} from "@/lib/quick-actions";
+import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick-actions";
+import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
 import { useToast } from "@/app/components/Toast";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";

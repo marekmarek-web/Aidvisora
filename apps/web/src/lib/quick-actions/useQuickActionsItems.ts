@@ -6,10 +6,8 @@ import {
   QUICK_ACTIONS_CATALOG,
   DEFAULT_QUICK_ACTIONS_ORDER,
   getDefaultQuickActionsConfig,
-  type QuickActionId,
-  type QuickActionItem,
-  type QuickActionsConfig,
 } from "@/lib/quick-actions";
+import type { QuickActionId, QuickActionItem, QuickActionsConfig } from "@/lib/quick-actions";
 
 function normalizeQuickActionsConfig(c: QuickActionsConfig): {
   order: QuickActionId[];
