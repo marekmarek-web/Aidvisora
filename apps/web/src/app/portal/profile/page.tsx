@@ -6,6 +6,16 @@ import { db, tenants, advisorPreferences, memberships } from "db";
 import { eq, and } from "db";
 import { AdvisorProfileView } from "./AdvisorProfileView";
 import { listSupervisorOptions, type SupervisorOption } from "@/app/actions/auth";
+import { getPublicBookingSettings } from "@/app/actions/public-booking-settings";
+import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
+
+const EMPTY_PUBLIC_BOOKING: PublicBookingSettingsDTO = {
+  publicBookingEnabled: false,
+  publicBookingToken: null,
+  bookingSlotMinutes: 30,
+  bookingBufferMinutes: 0,
+  bookingAvailability: null,
+};
 
 function isRedirectError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
@@ -22,6 +32,8 @@ const FALLBACK_INITIAL = {
   currentSupervisorId: null as string | null,
   supervisorOptions: [] as SupervisorOption[],
   billing: undefined as WorkspaceBillingSnapshot | undefined,
+  publicBooking: EMPTY_PUBLIC_BOOKING,
+  canonicalBaseUrl: "",
 };
 
 export default async function ProfilePage() {
@@ -77,10 +89,14 @@ export default async function ProfilePage() {
       .limit(1);
     const supervisorOptions = await listSupervisorOptions().catch(() => []);
 
-    const billing = await getWorkspaceBillingSnapshot({
-      tenantId: auth.tenantId,
-      roleName: auth.roleName,
-    });
+    const [billing, publicBooking] = await Promise.all([
+      getWorkspaceBillingSnapshot({
+        tenantId: auth.tenantId,
+        roleName: auth.roleName,
+      }),
+      getPublicBookingSettings(),
+    ]);
+    const canonicalBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
     initial = {
       email,
@@ -93,6 +109,8 @@ export default async function ProfilePage() {
       currentSupervisorId: membershipRow?.parentId ?? null,
       supervisorOptions,
       billing,
+      publicBooking,
+      canonicalBaseUrl,
     };
   } catch {
     isFallback = true;

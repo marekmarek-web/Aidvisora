@@ -135,79 +135,120 @@ function normalizeTagsForRsc(value: unknown): string[] | null {
   return value.map((t) => String(t));
 }
 
+function isRedirectError(e: unknown): boolean {
+  const d = typeof e === "object" && e !== null ? (e as { digest?: string }).digest : undefined;
+  return typeof d === "string" && d.startsWith("NEXT_REDIRECT");
+}
+
+/** Sloupce často chybějící na starších DB — bez nich zkusíme dotaz znovu. */
+function isPgUndefinedColumn(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "42703";
+}
+
+const contactDetailCoreSelect = {
+  id: contacts.id,
+  firstName: contacts.firstName,
+  lastName: contacts.lastName,
+  email: contacts.email,
+  phone: contacts.phone,
+  title: contacts.title,
+  referralSource: contacts.referralSource,
+  referralContactId: contacts.referralContactId,
+  birthDate: contacts.birthDate,
+  street: contacts.street,
+  city: contacts.city,
+  zip: contacts.zip,
+  tags: contacts.tags,
+  lifecycleStage: contacts.lifecycleStage,
+  avatarUrl: contacts.avatarUrl,
+} as const;
+
+const contactDetailExtendedSelect = {
+  ...contactDetailCoreSelect,
+  personalId: contacts.personalId,
+  leadSource: contacts.leadSource,
+  leadSourceUrl: contacts.leadSourceUrl,
+  priority: contacts.priority,
+  serviceCycleMonths: contacts.serviceCycleMonths,
+  lastServiceDate: contacts.lastServiceDate,
+  nextServiceDue: contacts.nextServiceDue,
+  gdprConsentAt: contacts.gdprConsentAt,
+} as const;
+
 async function loadContact(id: string): Promise<ContactRow | null> {
-  const auth = await requireAuthInAction();
-  // Neházet — throw rozbije RSC v produkci (obecný digest). Stejně jako missing row → null.
-  if (!hasPermission(auth.roleName, "contacts:read")) return null;
-  const rows = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-      title: contacts.title,
-      referralSource: contacts.referralSource,
-      referralContactId: contacts.referralContactId,
-      birthDate: contacts.birthDate,
-      personalId: contacts.personalId,
-      street: contacts.street,
-      city: contacts.city,
-      zip: contacts.zip,
-      tags: contacts.tags,
-      lifecycleStage: contacts.lifecycleStage,
-      leadSource: contacts.leadSource,
-      leadSourceUrl: contacts.leadSourceUrl,
-      priority: contacts.priority,
-      avatarUrl: contacts.avatarUrl,
-      serviceCycleMonths: contacts.serviceCycleMonths,
-      lastServiceDate: contacts.lastServiceDate,
-      nextServiceDue: contacts.nextServiceDue,
-      gdprConsentAt: contacts.gdprConsentAt,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)))
-    .limit(1);
-  const row = rows[0];
-  if (!row) return null;
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
-  let referralContactName: string | null = null;
-  if (row.referralContactId) {
-    const [refContact] = await db
-      .select({ firstName: contacts.firstName, lastName: contacts.lastName })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, row.referralContactId)))
-      .limit(1);
-    referralContactName = refContact ? `${refContact.firstName} ${refContact.lastName}` : null;
+    let row: Record<string, unknown> | undefined;
+    try {
+      const rows = await db
+        .select(contactDetailExtendedSelect)
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)))
+        .limit(1);
+      row = rows[0] as Record<string, unknown> | undefined;
+    } catch (e) {
+      if (isRedirectError(e)) throw e;
+      if (!isPgUndefinedColumn(e)) throw e;
+      console.warn("[getContact] extended columns missing, using core select");
+      const rows = await db
+        .select(contactDetailCoreSelect)
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)))
+        .limit(1);
+      row = rows[0] as Record<string, unknown> | undefined;
+    }
+
+    if (!row) return null;
+
+    const referralContactId = row.referralContactId as string | null;
+    let referralContactName: string | null = null;
+    if (referralContactId) {
+      try {
+        const [refContact] = await db
+          .select({ firstName: contacts.firstName, lastName: contacts.lastName })
+          .from(contacts)
+          .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, referralContactId)))
+          .limit(1);
+        referralContactName = refContact ? `${refContact.firstName} ${refContact.lastName}` : null;
+      } catch (refErr) {
+        if (isRedirectError(refErr)) throw refErr;
+        console.warn("[getContact] referral name lookup failed", refErr);
+      }
+    }
+
+    return {
+      id: row.id as string,
+      firstName: row.firstName as string,
+      lastName: row.lastName as string,
+      email: row.email as string | null,
+      phone: row.phone as string | null,
+      title: row.title as string | null,
+      referralSource: row.referralSource as string | null,
+      referralContactId,
+      referralContactName,
+      birthDate: dateLikeToOptionalYmd(row.birthDate),
+      personalId: (row.personalId as string | null | undefined) ?? null,
+      street: row.street as string | null,
+      city: row.city as string | null,
+      zip: row.zip as string | null,
+      tags: normalizeTagsForRsc(row.tags),
+      lifecycleStage: row.lifecycleStage as string | null,
+      leadSource: (row.leadSource as string | null | undefined) ?? null,
+      leadSourceUrl: (row.leadSourceUrl as string | null | undefined) ?? null,
+      priority: (row.priority as string | null | undefined) ?? null,
+      avatarUrl: row.avatarUrl as string | null,
+      serviceCycleMonths: (row.serviceCycleMonths as string | null | undefined) ?? null,
+      lastServiceDate: dateLikeToOptionalYmd(row.lastServiceDate),
+      nextServiceDue: dateLikeToOptionalYmd(row.nextServiceDue),
+      gdprConsentAt: gdprConsentToIsoOrNull(row.gdprConsentAt),
+    };
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    console.error("[getContact]", e);
+    return null;
   }
-
-  // Explicitní plain object — žádný spread z driveru (Date / neočekávané typy) přes RSC.
-  return {
-    id: row.id,
-    firstName: row.firstName,
-    lastName: row.lastName,
-    email: row.email,
-    phone: row.phone,
-    title: row.title,
-    referralSource: row.referralSource,
-    referralContactId: row.referralContactId,
-    referralContactName,
-    birthDate: dateLikeToOptionalYmd(row.birthDate),
-    personalId: row.personalId,
-    street: row.street,
-    city: row.city,
-    zip: row.zip,
-    tags: normalizeTagsForRsc(row.tags),
-    lifecycleStage: row.lifecycleStage,
-    leadSource: row.leadSource,
-    leadSourceUrl: row.leadSourceUrl,
-    priority: row.priority,
-    avatarUrl: row.avatarUrl,
-    serviceCycleMonths: row.serviceCycleMonths,
-    lastServiceDate: dateLikeToOptionalYmd(row.lastServiceDate),
-    nextServiceDue: dateLikeToOptionalYmd(row.nextServiceDue),
-    gdprConsentAt: gdprConsentToIsoOrNull(row.gdprConsentAt),
-  };
 }
 
 /** Dedup v rámci jednoho requestu; vrací výhradně JSON-kompatibilní ContactRow pro RSC. */
@@ -221,11 +262,6 @@ function sanitizeOptionalUuid(value: string | undefined): string | null {
   const t = value?.trim();
   if (!t) return null;
   return CONTACT_UUID_RE.test(t) ? t : null;
-}
-
-function isRedirectError(e: unknown): boolean {
-  const d = typeof e === "object" && e !== null ? (e as { digest?: string }).digest : undefined;
-  return typeof d === "string" && d.startsWith("NEXT_REDIRECT");
 }
 
 function isPgUniqueViolation(e: unknown): boolean {

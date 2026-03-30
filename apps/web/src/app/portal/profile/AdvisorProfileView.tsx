@@ -11,10 +11,7 @@ import {
   Phone,
   Building,
   CheckCircle,
-  Link as LinkIcon,
   Key,
-  Copy,
-  Check,
   AlertCircle,
   ChevronRight,
   MapPin,
@@ -38,6 +35,8 @@ import {
   updateAdvisorReportBranding,
   uploadReportLogo,
 } from "@/app/actions/preferences";
+import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
+import { PublicBookingSetupBlock } from "@/app/portal/setup/PublicBookingSetupBlock";
 
 const VALID_TABS = ["osobni", "rezervace", "integrace", "notifikace", "fakturace"] as const;
 type TabId = (typeof VALID_TABS)[number];
@@ -58,6 +57,8 @@ export type AdvisorProfileInitial = {
   currentSupervisorId?: string | null;
   supervisorOptions?: SupervisorOption[];
   billing?: WorkspaceBillingSnapshot;
+  publicBooking: PublicBookingSettingsDTO;
+  canonicalBaseUrl: string;
 };
 
 function parseFullName(full: string | null): { firstName: string; lastName: string } {
@@ -142,7 +143,6 @@ export function AdvisorProfileView({
     router.replace(`${pathname}?tab=${tabId}`);
   };
 
-  const [copied, setCopied] = useState(false);
   const [firstName, setFirstName] = useState(parsed.firstName);
   const [lastName, setLastName] = useState(parsed.lastName);
   const [phone, setPhone] = useState(initial.phone ?? "");
@@ -274,15 +274,6 @@ export function AdvisorProfileView({
   };
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
-  const bookingLink = "www.aidvisora.cz/rezervace"; // placeholder
-
-  const handleCopyLink = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(bookingLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const handleSave = async () => {
     setError(null);
@@ -676,33 +667,7 @@ export function AdvisorProfileView({
 
           {/* Pravý sloupec */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Rezervační odkaz */}
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl sm:rounded-[24px] p-6 text-white shadow-lg shadow-indigo-900/20 relative overflow-hidden group">
-              <Globe className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10 group-hover:scale-110 transition-transform duration-700 pointer-events-none" aria-hidden />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-4 flex items-center gap-2">
-                <LinkIcon size={12} aria-hidden /> Váš rezervační odkaz
-              </h3>
-              <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">
-                Pošlete tento odkaz klientům, aby si mohli sami naplánovat schůzku přímo do vašeho kalendáře.
-              </p>
-              <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
-                <span className="text-xs font-medium truncate opacity-90">{bookingLink}</span>
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center hover:bg-[color:var(--wp-surface-card)]/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
-                  title="Kopírovat odkaz"
-                >
-                  {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                </button>
-              </div>
-              <Link
-                href="/portal/calendar"
-                className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px]"
-              >
-                Nastavit dostupnost <ChevronRight size={14} aria-hidden />
-              </Link>
-            </div>
+            <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
 
             {/* Logo do reportu PDF */}
             <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
@@ -855,36 +820,8 @@ export function AdvisorProfileView({
         )}
 
         {activeTab === "rezervace" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            <div className="lg:col-span-2">
-              <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl sm:rounded-[24px] p-6 sm:p-8 text-white shadow-lg shadow-indigo-900/20 relative overflow-hidden group">
-                <Globe className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10 group-hover:scale-110 transition-transform duration-700 pointer-events-none" aria-hidden />
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-4 flex items-center gap-2">
-                  <LinkIcon size={12} aria-hidden /> Rezervační odkaz
-                </h2>
-                <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">
-                  Pošlete tento odkaz klientům, aby si mohli sami naplánovat schůzku přímo do vašeho kalendáře.
-                </p>
-                <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4">
-                  <span className="text-xs font-medium truncate opacity-90">{bookingLink}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center hover:bg-[color:var(--wp-surface-card)]/30 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]"
-                    title="Kopírovat odkaz"
-                  >
-                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                  </button>
-                </div>
-                <Link
-                  href="/portal/calendar"
-                  className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px] inline-flex"
-                >
-                  Nastavit dostupnost <ChevronRight size={14} aria-hidden />
-                </Link>
-              </div>
-            </div>
-            <div className="lg:col-span-1" />
+          <div className="max-w-xl">
+            <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
           </div>
         )}
 

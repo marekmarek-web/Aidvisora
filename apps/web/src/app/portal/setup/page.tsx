@@ -4,11 +4,12 @@ import { getWorkspaceBillingSnapshot } from "@/lib/stripe/workspace-billing";
 import { db, tenants, advisorPreferences } from "db";
 import { eq, and } from "db";
 import { SetupView } from "./SetupView";
+import { getPublicBookingSettings } from "@/app/actions/public-booking-settings";
 
 export default async function SetupPage() {
   const auth = await requireAuth();
 
-  const [user, prefRows, tenantRows, billing] = await Promise.all([
+  const [user, prefRows, tenantRows, billing, publicBooking] = await Promise.all([
     getCachedSupabaseUser(),
     db
       .select({ phone: advisorPreferences.phone })
@@ -20,7 +21,10 @@ export default async function SetupPage() {
       tenantId: auth.tenantId,
       roleName: auth.roleName,
     }),
+    getPublicBookingSettings(),
   ]);
+
+  const canonicalBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
   const email = user?.email ?? "";
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? null;
@@ -52,6 +56,8 @@ export default async function SetupPage() {
           networkCompany: initialNetworkCompany,
           publicRole: typeof meta.public_role === "string" ? meta.public_role : "",
           bio: typeof meta.bio === "string" ? meta.bio : "",
+          publicBooking,
+          canonicalBaseUrl,
         }}
       />
     </Suspense>

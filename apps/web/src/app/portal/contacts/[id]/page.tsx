@@ -219,7 +219,11 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
     briefing: briefingContent,
   };
 
-  const initials = [contact.firstName, contact.lastName].map((s) => s?.charAt(0) ?? "").join("").toUpperCase() || "?";
+  const initials =
+    [contact.firstName, contact.lastName]
+      .map((s) => String(s ?? "").charAt(0))
+      .join("")
+      .toUpperCase() || "?";
   const addressLine = [contact.street, [contact.city, contact.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
 
   const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Kontakt";

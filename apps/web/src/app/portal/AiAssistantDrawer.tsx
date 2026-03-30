@@ -23,10 +23,10 @@ import {
   importContactsCsv,
   importContactsFromSpreadsheet,
   type CsvPreview,
-  type ColumnMapping,
 } from "@/app/actions/csv-import";
+import { DEFAULT_CONTACT_IMPORT_MAPPING, type ColumnMapping } from "@/lib/contacts/import-types";
+import { ImportColumnMappingBlock } from "@/app/dashboard/contacts/ImportColumnMappingBlock";
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
-import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice";
 
@@ -105,7 +105,7 @@ export function AiAssistantDrawer() {
   const [importContactsStep, setImportContactsStep] = useState<"idle" | "mapping" | "preview" | "done">("idle");
   const [importContactsFile, setImportContactsFile] = useState<File | null>(null);
   const [importContactsPreview, setImportContactsPreview] = useState<CsvPreview | null>(null);
-  const [importContactsMapping, setImportContactsMapping] = useState<ColumnMapping>({ firstName: 0, lastName: 1, email: 2, phone: 3 });
+  const [importContactsMapping, setImportContactsMapping] = useState<ColumnMapping>(DEFAULT_CONTACT_IMPORT_MAPPING);
   const [importContactsResult, setImportContactsResult] = useState<{ imported: number; skipped: number; errors: { row: number; message: string }[] } | null>(null);
   const [importContactsLoading, setImportContactsLoading] = useState(false);
 
@@ -352,6 +352,7 @@ export function AiAssistantDrawer() {
     setImportContactsFile(file);
     setImportContactsPreview(null);
     setImportContactsResult(null);
+    setImportContactsMapping(DEFAULT_CONTACT_IMPORT_MAPPING);
     setImportContactsStep("mapping");
     setImportContactsLoading(true);
     const fd = new FormData();
@@ -376,12 +377,34 @@ export function AiAssistantDrawer() {
     }
   };
 
+  const handleImportContactsSheetChange = async (sheet: string) => {
+    if (!importContactsFile || !isExcelFile(importContactsFile)) return;
+    setImportContactsLoading(true);
+    const fd = new FormData();
+    fd.set("file", importContactsFile);
+    fd.set("sheetName", sheet);
+    try {
+      const p = await getSpreadsheetPreview(fd);
+      if (p) {
+        setImportContactsPreview(p);
+        setImportContactsMapping(DEFAULT_CONTACT_IMPORT_MAPPING);
+      }
+    } catch {
+      toast.showToast("Načtení listu selhalo.", "error");
+    } finally {
+      setImportContactsLoading(false);
+    }
+  };
+
   const handleImportContactsConfirm = async () => {
     if (!importContactsFile || !importContactsPreview) return;
     setImportContactsLoading(true);
     setImportContactsResult(null);
     const fd = new FormData();
     fd.set("file", importContactsFile);
+    if (isExcelFile(importContactsFile) && importContactsPreview.activeSheet) {
+      fd.set("sheetName", importContactsPreview.activeSheet);
+    }
     try {
       const result = isExcelFile(importContactsFile)
         ? await importContactsFromSpreadsheet(fd, importContactsMapping)
@@ -403,6 +426,7 @@ export function AiAssistantDrawer() {
     setImportContactsFile(null);
     setImportContactsPreview(null);
     setImportContactsResult(null);
+    setImportContactsMapping(DEFAULT_CONTACT_IMPORT_MAPPING);
     setImportContactsStep("idle");
   };
 
@@ -583,22 +607,17 @@ export function AiAssistantDrawer() {
               {importContactsStep === "mapping" && importContactsPreview && !importContactsLoading && (
                 <>
                   <p className="text-xs text-[color:var(--wp-text-secondary)] mb-2">Soubor: {importContactsFile?.name}</p>
-                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-2">Namapujte sloupce:</p>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {(["firstName", "lastName", "email", "phone"] as const).map((field) => (
-                      <div key={field} className="flex flex-col gap-0.5">
-                        <label className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
-                          {field === "firstName" ? "Jméno" : field === "lastName" ? "Příjmení" : field === "email" ? "E-mail" : "Telefon"}
-                        </label>
-                        <CustomDropdown
-                          value={String(importContactsMapping[field])}
-                          onChange={(id) => setImportContactsMapping((m) => ({ ...m, [field]: Number(id) }))}
-                          options={importContactsPreview.headers.map((h, i) => ({ id: String(i), label: `${i}: ${h || "(prázdný)"}` }))}
-                          placeholder="Sloupec"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <ImportColumnMappingBlock
+                    headers={importContactsPreview.headers}
+                    mapping={importContactsMapping}
+                    onMappingChange={setImportContactsMapping}
+                    sheetNames={importContactsPreview.sheetNames}
+                    activeSheet={importContactsPreview.activeSheet}
+                    onActiveSheetChange={
+                      importContactsFile && isExcelFile(importContactsFile) ? handleImportContactsSheetChange : undefined
+                    }
+                    variant="drawer"
+                  />
                   <div className="flex gap-2">
                     <button
                       type="button"

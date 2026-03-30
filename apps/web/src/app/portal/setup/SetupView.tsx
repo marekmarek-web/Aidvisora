@@ -13,8 +13,6 @@ import {
   MapPin,
   Shield,
   Camera,
-  Link as LinkIcon,
-  Copy,
   ChevronRight,
   ChevronUp,
   ChevronDown,
@@ -46,6 +44,8 @@ import { useToast } from "@/app/components/Toast";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
+import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
+import { PublicBookingSetupBlock } from "@/app/portal/setup/PublicBookingSetupBlock";
 
 const TABS = [
   { id: "osobni", label: "Osobní údaje", keywords: ["osobní", "údaje", "fakturace", "heslo", "zabezpečení", "2fa", "rychlé", "demo"] },
@@ -73,6 +73,8 @@ export type SetupInitial = {
   networkCompany?: string;
   publicRole?: string;
   bio?: string;
+  publicBooking: PublicBookingSettingsDTO;
+  canonicalBaseUrl: string;
 };
 
 function parseFullName(full: string | null): { firstName: string; lastName: string } {
@@ -310,22 +312,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [publicRole, setPublicRole] = useState(initial.publicRole ?? "");
   const [company, setCompany] = useState(initial.networkCompany ?? initial.tenantName);
   const [bio, setBio] = useState(initial.bio ?? "");
-  const [copied, setCopied] = useState(false);
-  /** Resolved on client only — avoids SSR/client mismatch (hydration) on the profil tab. */
-  const [bookingLink, setBookingLink] = useState("");
-  useEffect(() => {
-    setBookingLink(`${window.location.origin}/portal/calendar`);
-  }, []);
-
-  const handleCopyLink = useCallback(() => {
-    if (!bookingLink) return;
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(bookingLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [bookingLink]);
-
   // --- Quick actions
   const [quickOrder, setQuickOrder] = useState<QuickActionId[]>([]);
   const [quickVisible, setQuickVisible] = useState<Record<string, boolean>>({});
@@ -1067,20 +1053,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               </div>
             </div>
             <div className="lg:col-span-1 space-y-6">
-              <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[24px] p-6 text-white shadow-lg relative overflow-hidden">
-                <LinkIcon className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10" aria-hidden />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-4 flex items-center gap-2">Váš rezervační odkaz</h3>
-                <p className="text-sm font-bold text-indigo-50 mb-4 leading-relaxed">Pošlete tento odkaz klientům pro naplánování schůzky.</p>
-                <div className="bg-[color:var(--wp-surface-card)]/10 border border-white/20 p-3 rounded-xl flex items-center justify-between gap-2 backdrop-blur-md mb-4 cursor-pointer hover:bg-[color:var(--wp-surface-card)]/20 transition-colors min-h-[44px]" onClick={handleCopyLink} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && handleCopyLink()}>
-                  <span className="text-xs font-medium truncate opacity-90">
-                    {bookingLink || "Načítám odkaz…"}
-                  </span>
-                  <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-card)]/20 flex items-center justify-center flex-shrink-0">{copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}</div>
-                </div>
-                <Link href="/portal/calendar" className="text-xs font-black uppercase tracking-widest text-white hover:text-indigo-200 transition-colors flex items-center gap-1 min-h-[44px] inline-flex items-center">
-                  Nastavit dostupnost <ChevronRight size={14} />
-                </Link>
-              </div>
+              <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
                   <h3 className="font-black text-[color:var(--wp-text)]">Licence a Oprávnění ČNB</h3>

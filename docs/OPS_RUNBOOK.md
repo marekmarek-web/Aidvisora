@@ -37,6 +37,14 @@ Ověření ručně z terminálu:
 
 ---
 
+## Veřejná rezervace schůzek (`/rezervace/{token}`)
+
+- **Migrace:** `packages/db/migrations/add_advisor_public_booking.sql` (sloupce na `advisor_preferences`, unikátní index na `public_booking_token`).
+- **Odkaz pro klienty:** Kanonická báze musí být v **`NEXT_PUBLIC_APP_URL`** (bez koncového `/`) – stejně jako u pozvánek do klientské zóny; v Nastavení účtu se zobrazí `${NEXT_PUBLIC_APP_URL}/rezervace/{token}`.
+- **Omezení v1:** Volné sloty a kolize se počítají z **událostí v Postgresu** (`events`) přiřazených danému poradci (`assigned_to`). Události, které existují **jen v Google Kalendáři** a nejsou uložené v CRM, se jako obsazené **nemusí** promítnout. Poradce si může dostupnost sladit v CRM nebo spoléhat na záznamy událostí v databázi.
+
+---
+
 ## Kde co udělat (Supabase + Vercel + Sentry) – stručně
 
 ### 1) SQL migrace (Supabase)

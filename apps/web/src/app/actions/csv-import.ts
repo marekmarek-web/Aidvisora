@@ -6,19 +6,22 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contacts } from "db";
 import { eq } from "db";
+import type { ContactRowInput, ColumnMapping } from "@/lib/contacts/import-types";
+import { mapColumnsToContact } from "@/lib/contacts/map-columns-to-contact";
 
 export type CsvImportResult = { imported: number; skipped: number; errors: { row: number; message: string }[] };
 
-export type ContactRowInput = { firstName: string; lastName: string; email?: string | null; phone?: string | null };
+export type CsvPreview = {
+  headers: string[];
+  rows: string[][];
+  hasHeader: boolean;
+  totalRows?: number;
+  sheetNames?: string[];
+  activeSheet?: string;
+};
 
-export type ColumnMapping = { firstName: number; lastName: number; email: number; phone: number };
-export type CsvPreview = { headers: string[]; rows: string[][]; hasHeader: boolean; totalRows?: number };
-
-/** Shared insert logic: duplicate check by email/phone, then insert. Used by CSV, Excel and AI (PDF) flows. Do not export to client. */
-async function importContactRows(
-  rows: ContactRowInput[],
-  tenantId: string
-): Promise<CsvImportResult> {
+/** Shared insert logic: duplicate check by email/phone, then insert. Used by CSV, Excel and AI (PDF) flows. */
+async function importContactRows(rows: ContactRowInput[], tenantId: string): Promise<CsvImportResult> {
   const errors: { row: number; message: string }[] = [];
   let imported = 0;
   let skipped = 0;
@@ -50,7 +53,17 @@ async function importContactRows(
       continue;
     }
     try {
-      await db.insert(contacts).values({ tenantId, firstName, lastName, email, phone });
+      await db.insert(contacts).values({
+        tenantId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        lifecycleStage: r.lifecycleStage ?? null,
+        tags: r.tags?.length ? r.tags : null,
+        notes: r.notes ?? null,
+        leadSource: "import",
+      });
       imported++;
       if (emailNorm) existingByEmail.add(emailNorm);
       if (phoneNorm) existingByPhone.add(phoneNorm);
@@ -87,7 +100,11 @@ export async function getCsvPreview(formData: FormData): Promise<CsvPreview | nu
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   const header = (lines[0] ?? "").toLowerCase();
-  const hasHeader = header.includes("jméno") || header.includes("first") || header.includes("email") || header.includes("name");
+  const hasHeader =
+    header.includes("jméno") ||
+    header.includes("first") ||
+    header.includes("email") ||
+    header.includes("name");
   const start = hasHeader ? 1 : 0;
   const headers = parseCsvLine(lines[0] ?? "");
   const rows: string[][] = [];
@@ -114,13 +131,7 @@ export async function importContactsCsv(
   const rows: ContactRowInput[] = [];
   for (let i = start; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i]);
-    const get = (idx: number) => (cols[idx] ?? "").trim();
-    rows.push({
-      firstName: get(mapping.firstName),
-      lastName: get(mapping.lastName),
-      email: get(mapping.email) || undefined,
-      phone: get(mapping.phone) || undefined,
-    });
+    rows.push(mapColumnsToContact(cols, mapping));
   }
   return importContactRows(rows, auth.tenantId);
 }
@@ -131,6 +142,15 @@ function cellToString(v: unknown): string {
   return String(v).trim();
 }
 
+function resolveSheetName(wb: XLSX.WorkBook, requested: unknown): string {
+  const names = wb.SheetNames;
+  if (!names.length) return "";
+  if (typeof requested === "string" && requested.length > 0 && names.includes(requested)) {
+    return requested;
+  }
+  return names[0] ?? "";
+}
+
 export async function getSpreadsheetPreview(formData: FormData): Promise<CsvPreview | null> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
@@ -138,9 +158,10 @@ export async function getSpreadsheetPreview(formData: FormData): Promise<CsvPrev
   if (!file) return null;
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
-  const sheetName = wb.SheetNames[0];
+  const sheetName = resolveSheetName(wb, formData.get("sheetName"));
   if (!sheetName) return null;
   const ws = wb.Sheets[sheetName];
+  if (!ws) return null;
   const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
   if (!raw.length) return null;
   const toRow = (row: unknown[]): string[] => row.map((c) => cellToString(c));
@@ -148,35 +169,34 @@ export async function getSpreadsheetPreview(formData: FormData): Promise<CsvPrev
   const dataRows = raw.slice(1).filter((row) => row.some((c) => cellToString(c as unknown) !== ""));
   const totalRows = dataRows.length;
   const rows = dataRows.slice(0, 10).map((r) => toRow(r as unknown[]));
-  return { headers, rows, hasHeader: true, totalRows };
+  return {
+    headers,
+    rows,
+    hasHeader: true,
+    totalRows,
+    sheetNames: wb.SheetNames,
+    activeSheet: sheetName,
+  };
 }
 
-export async function importContactsFromSpreadsheet(
-  formData: FormData,
-  mapping: ColumnMapping
-): Promise<CsvImportResult> {
+export async function importContactsFromSpreadsheet(formData: FormData, mapping: ColumnMapping): Promise<CsvImportResult> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
   const file = formData.get("file") as File | null;
   if (!file) return { imported: 0, skipped: 0, errors: [{ row: 0, message: "Soubor nebyl vybrán." }] };
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
-  const sheetName = wb.SheetNames[0];
+  const sheetName = resolveSheetName(wb, formData.get("sheetName"));
   if (!sheetName) return { imported: 0, skipped: 0, errors: [{ row: 0, message: "Prázdný sešit." }] };
   const ws = wb.Sheets[sheetName];
+  if (!ws) return { imported: 0, skipped: 0, errors: [{ row: 0, message: "List nebyl nalezen." }] };
   const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
   if (raw.length < 2) return { imported: 0, skipped: 0, errors: [] };
   const toRow = (row: unknown[]): string[] => row.map((c) => cellToString(c));
   const dataRows = raw.slice(1).filter((row) => row.some((c) => cellToString(c as unknown) !== ""));
   const rows: ContactRowInput[] = dataRows.map((r) => {
     const cols = toRow(r as unknown[]);
-    const get = (idx: number) => (cols[idx] ?? "").trim();
-    return {
-      firstName: get(mapping.firstName),
-      lastName: get(mapping.lastName),
-      email: get(mapping.email) || undefined,
-      phone: get(mapping.phone) || undefined,
-    };
+    return mapColumnsToContact(cols, mapping);
   });
   return importContactRows(rows, auth.tenantId);
 }

@@ -1,5 +1,8 @@
-import { pgTable, text, uuid, timestamp, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, jsonb, unique, integer, boolean } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
+
+/** ISO weekday 1 = Monday … 7 = Sunday; each day has ordered non-overlapping windows "HH:mm". */
+export type BookingWeeklyAvailability = Record<string, { start: string; end: string }[]>;
 
 /** Per-user (advisor) preferences; quick_actions drives the "+ Nový" menu in the header. */
 export const advisorPreferences = pgTable(
@@ -15,6 +18,11 @@ export const advisorPreferences = pgTable(
     phone: text("phone"),
     website: text("website"),
     reportLogoUrl: text("report_logo_url"),
+    publicBookingToken: text("public_booking_token"),
+    publicBookingEnabled: boolean("public_booking_enabled").default(false).notNull(),
+    bookingAvailability: jsonb("booking_availability").$type<BookingWeeklyAvailability | null>(),
+    bookingSlotMinutes: integer("booking_slot_minutes").default(30).notNull(),
+    bookingBufferMinutes: integer("booking_buffer_minutes").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
