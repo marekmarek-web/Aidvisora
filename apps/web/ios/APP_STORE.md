@@ -77,7 +77,7 @@ V `Info.plist` je `ITSAppUsesNonExemptEncryption` = `false` (běžné HTTPS). V 
 
 ## 8. Xcode: „Missing package product CapApp-SPM“
 
-Obvykle jde o nevyřešené Swift Package závislosti (lokální balíček `CapApp-SPM` táhne Capacitor pluginy z `node_modules`). V repu je **pnpm patch** na `@supernotes/capacitor-send-intent@7.0.0`: (1) `capacitor-swift-pm` **8.x** (kvůli kolizi s document scannerem), (2) název SPM produktu **`SupernotesCapacitorSendIntent`** (upstream exportuje dříve `SendIntent`, což Xcode hlásí jako „product … not found“).
+Obvykle jde o nevyřešené Swift Package závislosti (lokální balíček `CapApp-SPM` táhne Capacitor pluginy z `node_modules`). V repu je **pnpm patch** na `@supernotes/capacitor-send-intent@7.0.0`: (1) `capacitor-swift-pm` **8.x** (kvůli kolizi s document scannerem), (2) SPM **produkt** `SupernotesCapacitorSendIntent` (kvůli CapApp-SPM), ale ve Swift kódu importujte modul targetu: **`import SendIntentPlugin`** (ne název produktu).
 
 Postup po `git pull`:
 

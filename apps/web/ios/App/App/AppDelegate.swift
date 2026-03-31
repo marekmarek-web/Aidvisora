@@ -1,6 +1,6 @@
 import UIKit
 import Capacitor
-import SupernotesCapacitorSendIntent
+import SendIntentPlugin
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
