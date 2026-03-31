@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/analyses/financial/formatters";
+import { COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK } from "@/lib/analyses/financial/constants";
+
+export { COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK as CURRENCY_CZK_MONTHLY_PREMIUM_MAX };
 
 /** Textové pole s českým formátem tisíců (hodnota v Kč jako číslo). */
 export function CurrencyCzkInput({
@@ -11,6 +14,8 @@ export function CurrencyCzkInput({
   unitLabel,
   id,
   className = "",
+  /** Pokud je nastaveno, hodnota se po zadání ořízne na 0…clampMax (např. měsíční pojistné). */
+  clampMax,
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
@@ -18,6 +23,7 @@ export function CurrencyCzkInput({
   unitLabel: string;
   id?: string;
   className?: string;
+  clampMax?: number;
 }) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState("");
@@ -35,14 +41,16 @@ export function CurrencyCzkInput({
       setText("");
       return;
     }
-    const n = Math.round(Number(raw));
-    if (Number.isNaN(n)) {
+    let n = Math.round(Number(raw));
+    if (!Number.isFinite(n) || Number.isNaN(n)) {
       setText(value != null ? formatCurrency(value) : "");
       return;
     }
+    if (n < 0) n = 0;
+    if (clampMax != null && n > clampMax) n = clampMax;
     onChange(n);
     setText(formatCurrency(n));
-  }, [text, value, onChange]);
+  }, [text, value, onChange, clampMax]);
 
   return (
     <div className={`relative w-full ${className}`}>
@@ -61,7 +69,7 @@ export function CurrencyCzkInput({
           setFocused(false);
           commit();
         }}
-        className="w-full min-h-[40px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 py-2 pr-20 text-sm"
+        className="w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 pr-[5.5rem] text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] caret-[color:var(--wp-text)]"
       />
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[color:var(--wp-text-tertiary)]">{unitLabel}</span>
     </div>

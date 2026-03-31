@@ -31,6 +31,23 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { CurrencyCzkInput } from "../CurrencyCzkInput";
+import { COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK } from "@/lib/analyses/financial/constants";
+
+/** Ochrana před zobrazením nesmyslné „úspory“ při poškozených datech nebo omylem obřích částkách. */
+function safeMonthlySavingsCzk(
+  current: number | null | undefined,
+  proposed: number | null | undefined,
+): number | null {
+  const max = COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK;
+  if (current == null || proposed == null) return null;
+  if (!Number.isFinite(current) || !Number.isFinite(proposed)) return null;
+  if (current < 0 || proposed < 0) return null;
+  if (current > max || proposed > max) return null;
+  if (current <= proposed) return null;
+  const diff = current - proposed;
+  if (diff > max) return null;
+  return diff;
+}
 
 const BENEFIT_OPTIONS: { key: "dps" | "dip" | "izp"; label: string; subtitle: string; Icon: typeof PiggyBank; iconBg: string }[] = [
   { key: "dps", label: "DPS", subtitle: "Penzijní připojištění", Icon: PiggyBank, iconBg: "bg-blue-100 text-blue-600" },
@@ -325,8 +342,7 @@ export function StepBenefitsRisks() {
               const d = riskDetails[rk];
               const curPrem = d?.currentPremiumMonthly;
               const propPrem = d?.proposedPremiumMonthly;
-              const monthlySaving =
-                curPrem != null && propPrem != null && curPrem > propPrem ? curPrem - propPrem : null;
+              const monthlySaving = safeMonthlySavingsCzk(curPrem, propPrem);
               return (
               <div
                 key={key}
@@ -373,7 +389,7 @@ export function StepBenefitsRisks() {
                         min={0}
                         value={riskDetails[key]?.contractYears ?? ""}
                         onChange={(e) => setRiskDetail(key, { contractYears: parseInt(e.target.value, 10) || undefined })}
-                        className="w-full px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm min-h-[40px]"
+                        className="w-full min-w-0 px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg bg-[color:var(--wp-surface-card)] text-sm text-[color:var(--wp-text)] min-h-[44px]"
                       />
                     </div>
                   </div>
@@ -381,32 +397,34 @@ export function StepBenefitsRisks() {
                 {risks[key] && (
                   <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] space-y-2">
                     <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wide">Pojistné – srovnání</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
+                    <div className="grid grid-cols-1 gap-3 min-w-0 lg:grid-cols-3 lg:items-end lg:gap-4">
+                      <div className="min-w-0">
                         <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Aktuálně platí</span>
                         <CurrencyCzkInput
                           value={d?.currentPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { currentPremiumMonthly: v })}
                           placeholder="0"
                           unitLabel="Kč/měs."
+                          clampMax={COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK}
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Návrh (nově)</span>
                         <CurrencyCzkInput
                           value={d?.proposedPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { proposedPremiumMonthly: v })}
                           placeholder="0"
                           unitLabel="Kč/měs."
+                          clampMax={COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK}
                         />
                       </div>
-                      <div className="flex flex-col justify-end min-h-[40px] rounded-lg bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-3 py-2">
+                      <div className="flex min-w-0 flex-col justify-end gap-0.5 rounded-lg bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-3 py-2.5 min-h-[44px]">
                         <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Úspora měsíčně</span>
-                        <span className="text-sm font-bold text-emerald-700">
+                        <span className="text-sm font-bold text-emerald-700 break-words">
                           {monthlySaving != null && monthlySaving > 0 ? formatCzk(monthlySaving) : "—"}
                         </span>
                         {monthlySaving != null && monthlySaving > 0 && (
-                          <span className="text-xs text-[color:var(--wp-text-secondary)]">Rok: {formatCzk(monthlySaving * 12)}</span>
+                          <span className="text-xs text-[color:var(--wp-text-secondary)] break-words">Rok: {formatCzk(monthlySaving * 12)}</span>
                         )}
                       </div>
                     </div>

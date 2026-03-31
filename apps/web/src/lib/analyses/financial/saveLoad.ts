@@ -3,9 +3,9 @@
  * Extracted from financni-analyza.html (Phase 1).
  */
 
-import type { FinancialAnalysisData, PersistedState } from './types';
+import type { FinancialAnalysisData, PersistedState, CompanyRiskLineDetail } from './types';
 import { getDefaultState, getDefaultInvestments } from './defaultState';
-import { STORAGE_KEY, TOTAL_STEPS } from './constants';
+import { STORAGE_KEY, TOTAL_STEPS, COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK } from './constants';
 import { computeGoalComputed } from './calculations';
 import { exportFilename } from './formatters';
 
@@ -182,14 +182,26 @@ export function mergeLoadedState(
   if (p.companyRiskDetails && typeof p.companyRiskDetails === 'object') {
     const rd = p.companyRiskDetails as Record<string, unknown>;
     data.companyRiskDetails = {};
-    ['property', 'interruption', 'liability'].forEach((key) => {
+    const clampMonthlyPremium = (raw: unknown): number | undefined => {
+      const v = Number(raw);
+      if (!Number.isFinite(v) || Number.isNaN(v) || v < 0) return undefined;
+      const n = Math.round(v);
+      return Math.min(n, COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK);
+    };
+    (['property', 'interruption', 'liability', 'director', 'fleet', 'cyber'] as const).forEach((key) => {
       const item = rd[key];
       if (item && typeof item === 'object') {
         const obj = item as Record<string, unknown>;
-        (data.companyRiskDetails as Record<string, { limit?: number; contractYears?: number }>)[key] = {
-          limit: Number(obj.limit) || undefined,
-          contractYears: Number(obj.contractYears) || undefined,
-        };
+        const row: CompanyRiskLineDetail = {};
+        if (key === 'property' || key === 'interruption' || key === 'liability') {
+          row.limit = Number(obj.limit) || undefined;
+          row.contractYears = Number(obj.contractYears) || undefined;
+        }
+        const cur = clampMonthlyPremium(obj.currentPremiumMonthly);
+        const proposed = clampMonthlyPremium(obj.proposedPremiumMonthly);
+        if (cur !== undefined) row.currentPremiumMonthly = cur;
+        if (proposed !== undefined) row.proposedPremiumMonthly = proposed;
+        (data.companyRiskDetails as Record<string, CompanyRiskLineDetail>)[key] = row;
       }
     });
   }

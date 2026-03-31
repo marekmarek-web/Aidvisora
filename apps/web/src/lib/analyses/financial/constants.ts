@@ -412,6 +412,9 @@ export const LTV_OPTIONS = [80, 90] as const;
 
 export const STORAGE_KEY = 'financial_plan_state';
 
+/** Horní mez měsíčního pojistného (Kč) u srovnání v kroku „Pojištění firmy“ – UI i načtení z uložené analýzy. */
+export const COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK = 10_000_000;
+
 export const RENTA_INFLATION = 0.03;
 export const RENTA_WITHDRAWAL_RATE = 0.06;
 
