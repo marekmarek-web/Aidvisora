@@ -7,9 +7,11 @@ import {
   DEFAULT_QUICK_ACTIONS_ORDER,
   getDefaultQuickActionsConfig,
 } from "@/lib/quick-actions";
-import type { QuickActionId, QuickActionItem, QuickActionsConfig } from "@/lib/quick-actions";
+import type { QuickActionId, QuickActionItem } from "@/lib/quick-actions";
 
-function normalizeQuickActionsConfig(c: QuickActionsConfig): {
+type QuickActionsShape = ReturnType<typeof getDefaultQuickActionsConfig>;
+
+function normalizeQuickActionsConfig(c: QuickActionsShape): {
   order: QuickActionId[];
   visible: Record<string, boolean>;
 } {
@@ -30,7 +32,7 @@ function normalizeQuickActionsConfig(c: QuickActionsConfig): {
  * @param initialConfig – z RSC (layout), okamžitě `ready` bez skeletonu; server action v pozadí sladí změny z Nastavení.
  */
 export function useQuickActionsItems(
-  initialConfig?: QuickActionsConfig | null
+  initialConfig?: QuickActionsShape | null
 ): { items: QuickActionItem[]; ready: boolean } {
   const seeded = initialConfig != null;
   const [order, setOrder] = useState<QuickActionId[]>(() => {

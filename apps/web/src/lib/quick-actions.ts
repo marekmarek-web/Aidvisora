@@ -50,7 +50,7 @@ export const DEFAULT_QUICK_ACTIONS_ORDER: QuickActionId[] = QUICK_ACTIONS_CATALO
   (a) => a.id
 );
 
-export function getDefaultQuickActionsConfig(): QuickActionsConfig {
+export function getDefaultQuickActionsConfig(): { order: string[]; visible: Record<string, boolean> } {
   const order = [...DEFAULT_QUICK_ACTIONS_ORDER];
   const visible: Record<string, boolean> = {};
   QUICK_ACTIONS_CATALOG.forEach((a) => {

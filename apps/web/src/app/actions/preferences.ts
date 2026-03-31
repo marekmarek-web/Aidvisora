@@ -5,7 +5,6 @@ import { db } from "db";
 import { advisorPreferences } from "db";
 import { eq, and } from "db";
 import { getDefaultQuickActionsConfig } from "@/lib/quick-actions";
-import type { QuickActionsConfig } from "@/lib/quick-actions";
 import { loadQuickActionsConfig } from "@/lib/quick-actions/load-quick-actions-config";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
@@ -22,9 +21,10 @@ export type AdvisorReportBranding = {
   website: string | null;
 };
 
-export type { QuickActionsConfig };
+/** Shape of quick-actions JSON; kept as ReturnType so Turbopack never emits a stray `QuickActionsConfig` identifier from this module. */
+export type QuickActionsStoredConfig = ReturnType<typeof getDefaultQuickActionsConfig>;
 
-export async function getQuickActionsConfig(): Promise<QuickActionsConfig> {
+export async function getQuickActionsConfig(): Promise<QuickActionsStoredConfig> {
   try {
     const auth = await requireAuthInAction();
     return await loadQuickActionsConfig(auth.tenantId, auth.userId);
