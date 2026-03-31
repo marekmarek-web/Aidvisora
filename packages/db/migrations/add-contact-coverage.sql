@@ -21,3 +21,7 @@ CREATE TABLE IF NOT EXISTS contact_coverage (
 -- Pokud aplikace stále hlásí chybu načítání: v Supabase je u nových tabulek často zapnuté RLS.
 -- Přístup k tabulce má jen backend (server actions), takže RLS pro tento tabulku vypněte:
 ALTER TABLE contact_coverage DISABLE ROW LEVEL SECURITY;
+
+-- Sloupce pro vazbu na finanční analýzu (Drizzle schéma); u DB vytvořených ze starší migrace:
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_analysis_id uuid REFERENCES financial_analyses(id) ON DELETE SET NULL;
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_item_id uuid REFERENCES fa_plan_items(id) ON DELETE SET NULL;

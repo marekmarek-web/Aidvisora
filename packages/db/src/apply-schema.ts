@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS contact_coverage (
   updated_by text,
   UNIQUE(tenant_id, contact_id, item_key)
 );
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_analysis_id uuid REFERENCES financial_analyses(id) ON DELETE SET NULL;
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_item_id uuid REFERENCES fa_plan_items(id) ON DELETE SET NULL;
 `;
 
 const client = postgres(connectionString, { max: 1, prepare: false });

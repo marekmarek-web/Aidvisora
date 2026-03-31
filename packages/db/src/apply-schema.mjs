@@ -210,6 +210,8 @@ CREATE TABLE IF NOT EXISTS fa_plan_items (
 );
 CREATE INDEX IF NOT EXISTS fa_plan_items_analysis_idx ON fa_plan_items (analysis_id);
 CREATE INDEX IF NOT EXISTS fa_plan_items_contact_idx ON fa_plan_items (contact_id);
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_analysis_id uuid REFERENCES financial_analyses(id) ON DELETE SET NULL;
+ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_item_id uuid REFERENCES fa_plan_items(id) ON DELETE SET NULL;
 `;
 
 // Globální partneři (tenant_id NULL) – vidí je každý tenant v dropdownu (po jednom, aby nepadl multi-statement)

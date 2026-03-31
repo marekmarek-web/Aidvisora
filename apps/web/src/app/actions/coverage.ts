@@ -19,6 +19,14 @@ export type GetCoverageResult = {
   summary: CoverageSummary;
 };
 
+function isRecoverableContactCoverageSchemaError(message: string): boolean {
+  return (
+    /contact_coverage.*does not exist|relation "contact_coverage" does not exist/i.test(message) ||
+    /column "fa_analysis_id" does not exist/i.test(message) ||
+    /column "fa_item_id" does not exist/i.test(message)
+  );
+}
+
 export async function getCoverageForContact(contactId: string): Promise<GetCoverageResult> {
   try {
     const auth = await requireAuthInAction();
@@ -28,14 +36,27 @@ export async function getCoverageForContact(contactId: string): Promise<GetCover
       throw new Error("Forbidden");
     }
 
-    const [contractsList, pipelineStages, coverageRows] = await Promise.all([
+    const [contractsList, pipelineStages] = await Promise.all([
       getContractsByContact(contactId),
       getPipelineByContact(contactId),
-      db
+    ]);
+
+    let coverageRows: (typeof contactCoverage.$inferSelect)[] = [];
+    try {
+      coverageRows = await db
         .select()
         .from(contactCoverage)
-        .where(and(eq(contactCoverage.tenantId, auth.tenantId), eq(contactCoverage.contactId, contactId))),
-    ]);
+        .where(and(eq(contactCoverage.tenantId, auth.tenantId), eq(contactCoverage.contactId, contactId)));
+    } catch (coverageErr) {
+      const msg = coverageErr instanceof Error ? coverageErr.message : String(coverageErr);
+      if (!isRecoverableContactCoverageSchemaError(msg)) throw coverageErr;
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "[getCoverageForContact] contact_coverage schema mismatch; using contracts/pipeline only. Run pnpm run db:apply-schema or add missing columns on Supabase.",
+          msg
+        );
+      }
+    }
 
     const contractsForCoverage = contractsList.map((c) => ({ id: c.id, segment: c.segment }));
     const openOpportunities: { id: string; caseType: string }[] = [];
@@ -71,6 +92,11 @@ export async function getCoverageForContact(contactId: string): Promise<GetCover
     if (/contact_coverage.*does not exist|relation "contact_coverage" does not exist/i.test(message)) {
       throw new Error(
         "Tabulka contact_coverage v této databázi chybí. Spusťte v terminálu: pnpm run db:apply-schema (nebo v Supabase SQL Editoru spusťte obsah souboru packages/db/migrations/add-contact-coverage.sql)."
+      );
+    }
+    if (/column "fa_analysis_id" does not exist|column "fa_item_id" does not exist/i.test(message)) {
+      throw new Error(
+        "Tabulka contact_coverage nemá sloupce fa_analysis_id / fa_item_id. Spusťte pnpm run db:apply-schema nebo v Supabase SQL Editoru přidejte sloupce z packages/db/migrations/add-contact-coverage.sql."
       );
     }
     throw err instanceof Error ? err : new Error("Nepodařilo se načíst pokrytí produktů");
