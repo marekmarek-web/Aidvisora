@@ -7,6 +7,8 @@ import { detectInputMode, type InputModeResult } from "./input-mode-detection";
 import type { ClassificationResult } from "./document-classification";
 import {
   buildExtractionPrompt,
+  buildFileBasedExtractionPrompt,
+  buildRescueExtractionPrompt,
   selectExcerptForExtraction,
   validateExtractionByType,
   wrapExtractionPromptWithDocumentText,
@@ -65,6 +67,55 @@ import type {
 import { getPipelineVersionInfo } from "./pipeline-versioning";
 import type { DocumentReviewEnvelope } from "./document-review-types";
 import { resolveHybridInvestmentDocumentType } from "./ai-review-document-type-signals";
+import { resolveDocumentSchema } from "./document-schema-router";
+
+/**
+ * Returns true when none of the required fields for this document type have a non-empty extracted value.
+ */
+function hasZeroRequiredFieldValues(
+  extractedFields: Record<string, { value?: unknown; status?: string } | undefined>,
+  documentType: ContractDocumentType
+): boolean {
+  const schema = resolveDocumentSchema(documentType);
+  const required = schema.extractionRules.required;
+  for (const path of required) {
+    const key = path.replace(/^extractedFields\./, "");
+    const field = extractedFields[key];
+    if (field && typeof field.value === "string" && field.value.trim() && field.status !== "missing") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Runs an ultra-focused rescue extraction when the primary PDF pass returned 0 required fields.
+ * Returns a partial extractedFields record with only the fields found, or null if the call fails.
+ */
+async function runRescueExtractionPass(
+  fileUrl: string,
+  documentType: ContractDocumentType
+): Promise<Record<string, { value: string; status: string; confidence: number }> | null> {
+  try {
+    const rescuePrompt = buildRescueExtractionPrompt(documentType);
+    const raw = await createResponseWithFile(fileUrl, rescuePrompt, {
+      routing: { category: "ai_review" },
+    });
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: Record<string, { value: string; status: string; confidence: number }> = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      if (val !== null && val !== undefined && String(val).trim()) {
+        out[key] = { value: String(val).trim(), status: "extracted", confidence: 0.75 };
+      }
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  } catch {
+    return null;
+  }
+}
 
 function mergePreprocessIntoTrace(trace: ExtractionTrace, meta?: PipelinePreprocessMeta | null): void {
   if (!meta) return;
@@ -863,11 +914,8 @@ export async function runAiReviewV2Pipeline(
       rawExtraction = await createResponse(wrapped, { routing: { category: "ai_review" } });
     } else {
       trace.extractionSecondPass = "pdf";
-      const pdfGuard =
-        "DŮLEŽITÉ: Výstup MUSÍ být jediný platný JSON objekt se strukturou { documentClassification, documentMeta, extractedFields, parties, ... }. " +
-        "NEVRACEJ klasifikaci, doporučení ani diagnostiku. Extrahuj VŠECHNA viditelná pole z dokumentu do extractedFields. " +
-        "Každé pole v extractedFields musí mít tvar { value, status, confidence }.\n\n";
-      rawExtraction = await createResponseWithFile(fileUrl, pdfGuard + extractionPrompt, {
+      const fileBasedPrompt = buildFileBasedExtractionPrompt(documentType);
+      rawExtraction = await createResponseWithFile(fileUrl, fileBasedPrompt, {
         routing: { category: "ai_review" },
       });
     }
@@ -945,6 +993,16 @@ export async function runAiReviewV2Pipeline(
       });
       allReasons.push("partial_extraction_coerced");
       validationOutcome = { ok: true, data: coercedData };
+      // Rescue pass: if coercion left 0 required fields with values and we came via file-based path, retry with focused prompt.
+      if (trace.extractionSecondPass === "pdf" && hasZeroRequiredFieldValues(coercedData.extractedFields ?? {}, documentType)) {
+        const rescued = await runRescueExtractionPass(fileUrl, documentType);
+        if (rescued) {
+          for (const [k, v] of Object.entries(rescued)) {
+            coercedData.extractedFields[k] = v as DocumentReviewEnvelope["extractedFields"][string];
+          }
+          trace.warnings = [...(trace.warnings ?? []), "rescue_extraction_merged"];
+        }
+      }
     }
   }
 
@@ -998,6 +1056,16 @@ export async function runAiReviewV2Pipeline(
       allReasons.push("hybrid_contract_signals_detected");
     }
     trace.warnings = [...(trace.warnings ?? []), "extraction_validation_soft_fail"];
+    // Rescue pass: stub has 0 required fields with values and extraction was file-based — retry with focused prompt.
+    if (trace.extractionSecondPass === "pdf" && hasZeroRequiredFieldValues(stub.extractedFields ?? {}, documentType)) {
+      const rescued = await runRescueExtractionPass(fileUrl, documentType);
+      if (rescued) {
+        for (const [k, v] of Object.entries(rescued)) {
+          stub.extractedFields[k] = v as DocumentReviewEnvelope["extractedFields"][string];
+        }
+        trace.warnings = [...(trace.warnings ?? []), "rescue_extraction_merged"];
+      }
+    }
     console.warn("[ai-review] extraction_validation_stub_fallback", {
       documentType,
       promptKey,

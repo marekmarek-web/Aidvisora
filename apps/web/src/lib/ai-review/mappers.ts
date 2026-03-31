@@ -163,9 +163,23 @@ function humanizeReasonForAdvisor(reason: string): string | null {
   return null;
 }
 
+/** Internal pipeline paths that appear in Zod validation messages — advisor-irrelevant noise. */
+const INTERNAL_PATH_KEYWORDS = ["documentClassification", "documentMeta", "extractedFields."];
+
+function isInternalStructuralWarning(warning: { code?: string; message: string; field?: string }): boolean {
+  if (warning.code === "extraction_schema_validation") {
+    return INTERNAL_PATH_KEYWORDS.some((kw) => warning.message.includes(kw));
+  }
+  if (warning.code === "partial_extraction_coerced" || warning.code === "partial_extraction_merged") {
+    return false;
+  }
+  return false;
+}
+
 function humanizeValidationMessage(
   warning: { code?: string; message: string; field?: string }
-): { title: string; description: string } {
+): { title: string; description: string } | null {
+  if (isInternalStructuralWarning(warning)) return null;
   const label = fieldLabelForPath(warning.field);
   if (warning.code === "MISSING_REQUIRED_FIELD" && label) {
     return {
@@ -472,9 +486,17 @@ function buildRecommendations(
   const recs: AIRecommendation[] = [];
   let idx = 0;
 
+  // Track field paths already covered by a MISSING_REQUIRED_FIELD compliance entry
+  // to avoid duplicating them in the error-fields warning loop below.
+  const fieldPathsCoveredByCompliance = new Set<string>();
+
   const warnings = (detail.validationWarnings as Array<{ code?: string; message: string; field?: string }> | undefined) ?? [];
   for (const w of warnings) {
     const human = humanizeValidationMessage(w);
+    if (!human) continue;
+    if (w.field && w.code === "MISSING_REQUIRED_FIELD") {
+      fieldPathsCoveredByCompliance.add(w.field);
+    }
     recs.push({
       id: `vw-${idx++}`,
       type: "compliance",
@@ -490,8 +512,12 @@ function buildRecommendations(
     });
   }
 
-  const errorFields = groups.flatMap((g) => g.fields).filter((f) => f.status === "error");
+  const allFields = groups.flatMap((g) => g.fields);
+  const errorFields = allFields.filter((f) => f.status === "error");
   for (const f of errorFields) {
+    // Skip if a compliance entry already covers this field path
+    const fieldPath = `extractedFields.${f.id.replace(/^.*\./, "")}`;
+    if (fieldPathsCoveredByCompliance.has(fieldPath) || fieldPathsCoveredByCompliance.has(f.id)) continue;
     recs.push({
       id: `missing-${f.id}`,
       type: "warning",
@@ -707,6 +733,9 @@ function appendSyntheticEnvelopeGroups(
     "partial_extraction_merged",
     "ai_review_router_manual",
     "not_supported_for_direct_extraction",
+    // These produce generic messages that duplicate the per-field "Chybí: X" entries — advisor-irrelevant at this level.
+    "missing_required_data",
+    "critical_review_warning",
   ]);
 
   const statusFields: ExtractedField[] = [];
@@ -718,6 +747,8 @@ function appendSyntheticEnvelopeGroups(
       if (!w?.message?.trim()) return;
       if (HIDDEN_REVIEW_WARNING_CODES.has(w.code ?? "")) return;
       const msg = w.message.trim();
+      // Skip messages that reference internal JSON paths — not meaningful to advisors.
+      if (INTERNAL_PATH_KEYWORDS.some((kw) => msg.includes(kw))) return;
       if (seenStatusMessages.has(msg)) return;
       seenStatusMessages.add(msg);
       statusFields.push(
@@ -748,6 +779,7 @@ function appendSyntheticEnvelopeGroups(
     vw.forEach((w, i) => {
       if (!w?.message?.trim()) return;
       const human = humanizeValidationMessage(w);
+      if (!human) return;
       if (seenStatusMessages.has(human.description)) return;
       seenStatusMessages.add(human.description);
       statusFields.push(

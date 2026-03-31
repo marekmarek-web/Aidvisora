@@ -56,6 +56,126 @@ export function buildExtractionPrompt(
   return buildSchemaPrompt(definition, isScanFallback);
 }
 
+const FILE_BASED_FIELD_LABELS: Record<string, string> = {
+  contractNumber: "Číslo smlouvy",
+  existingPolicyNumber: "Číslo pojistky",
+  insurer: "Pojišťovna",
+  institutionName: "Instituce",
+  productName: "Název produktu",
+  policyStartDate: "Počátek pojištění",
+  policyEndDate: "Konec pojištění",
+  startDate: "Počátek smlouvy",
+  endDate: "Konec smlouvy",
+  investmentStrategy: "Investiční strategie",
+  totalMonthlyPremium: "Měsíční pojistné",
+  riskPremium: "Rizikové pojistné",
+  investmentPremium: "Investiční pojistné",
+  premiumAmount: "Pojistné",
+  documentStatus: "Stav dokumentu",
+  fullName: "Jméno klienta",
+  clientFullName: "Jméno klienta",
+  birthDate: "Datum narození",
+  personalId: "Rodné číslo",
+  beneficiaries: "Oprávněné osoby",
+  loanAmount: "Výše úvěru",
+  installmentAmount: "Splátka",
+  interestRate: "Úroková sazba",
+  iban: "IBAN",
+  variableSymbol: "Variabilní symbol",
+  employer: "Zaměstnavatel",
+  employerName: "Zaměstnavatel",
+  netWage: "Čistá mzda",
+  grossWage: "Hrubá mzda",
+  investmentFunds: "Fondy",
+  fundAllocation: "Alokace fondů",
+  platform: "Platforma",
+  provider: "Poskytovatel",
+  businessCaseNumber: "Číslo obchodního případu",
+};
+
+function fieldKey(path: string): string {
+  return path.replace(/^extractedFields\./, "").replace(/_if_present$/, "").replace(/_if_available$/, "").replace(/_or_\w+$/, "");
+}
+
+/**
+ * Simplified extraction prompt for file-based PDF path (no text hint available).
+ * Much shorter than buildSchemaPrompt — avoids overwhelming the model with nested structures
+ * when it must read the PDF visually.
+ */
+export function buildFileBasedExtractionPrompt(documentType: ContractDocumentType): string {
+  const definition = resolveDocumentSchema(documentType);
+  const required = definition.extractionRules.required;
+  const optional = definition.extractionRules.optional.slice(0, 8);
+
+  const fieldLines = (paths: string[], prefix: string) =>
+    paths.map((p) => {
+      const key = fieldKey(p);
+      const label = FILE_BASED_FIELD_LABELS[key] ?? key;
+      return `  "${key}": { "value": "<${label}>", "status": "extracted", "confidence": 0.9 }`;
+    }).join(",\n");
+
+  const requiredExample = fieldLines(required, "");
+  const optionalKeys = optional.map((p) => `"${fieldKey(p)}"`).join(", ");
+
+  return `Jsi extrakční systém pro finanční dokumenty. Přečti přiložené PDF a extrahuj data.
+
+POVINNÁ POLE (musí být vyplněna nebo status "missing"):
+${required.map((p) => {
+    const key = fieldKey(p);
+    const label = FILE_BASED_FIELD_LABELS[key] ?? key;
+    return `- ${key} = ${label}`;
+  }).join("\n")}
+
+VOLITELNÁ POLE (vyplň pokud nalezeno): ${optionalKeys}
+
+Vrať POUZE platný JSON v přesně tomto formátu:
+{
+  "documentClassification": {
+    "primaryType": "${documentType}",
+    "lifecycleStatus": "final_contract",
+    "documentIntent": "${definition.defaultIntent}",
+    "confidence": 0.9,
+    "reasons": ["popis z dokumentu"]
+  },
+  "documentMeta": {
+    "issuer": "<název vydavatele>",
+    "pageCount": <počet stran>,
+    "scannedVsDigital": "digital"
+  },
+  "extractedFields": {
+${requiredExample}
+  },
+  "parties": {},
+  "reviewWarnings": [],
+  "suggestedActions": []
+}
+
+Pro každé povinné pole, které NENAJDEŠ: použij status "missing" a value "".
+Každé pole v extractedFields MUSÍ mít: value, status, confidence.
+NEPIŠ žádný text mimo JSON. Žádné vysvětlení.`;
+}
+
+/**
+ * Ultra-focused rescue prompt for a second pass when 0 required fields were found.
+ * Returns flat JSON (not full envelope) — caller merges into extractedFields.
+ */
+export function buildRescueExtractionPrompt(documentType: ContractDocumentType): string {
+  const definition = resolveDocumentSchema(documentType);
+  const required = definition.extractionRules.required;
+
+  const fieldPairs = required.map((p) => {
+    const key = fieldKey(p);
+    const label = FILE_BASED_FIELD_LABELS[key] ?? key;
+    return `  "${key}": "<${label} nebo null>"`;
+  }).join(",\n");
+
+  return `Z přiloženého PDF extrahuj POUZE tyto údaje. Vrať POUZE JSON objekt, žádný jiný text:
+{
+${fieldPairs}
+}
+Pokud údaj v dokumentu nenajdeš, napiš null. Žádné vysvětlení, pouze JSON.`;
+}
+
 /** Target max chars sent to extraction LLM (full doc rarely needed). */
 export const EXTRACTION_DOCUMENT_TEXT_MAX_CHARS = 28_000;
 const HEAD_FRACTION = 0.72;

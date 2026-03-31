@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   FileText,
   User,
@@ -28,6 +29,7 @@ import {
   ListChecks,
   Wrench,
   Bug,
+  ExternalLink,
 } from "lucide-react";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
@@ -38,6 +40,7 @@ import type {
   ExtractedGroup,
   ExtractedField,
   AIRecommendation,
+  DraftAction,
   FieldFilter,
   FieldStatus,
   ExtractionReviewState,
@@ -310,6 +313,32 @@ function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
   );
 }
 
+const ACTION_ROUTE_MAP: Record<string, string> = {
+  create_client: "/portal/contacts/new",
+  create_new_client: "/portal/contacts/new",
+  create_or_link_client: "/portal/contacts/new",
+  link_existing_client: "/portal/contacts",
+  attach_to_existing_client: "/portal/contacts",
+  link_client: "/portal/contacts",
+  create_task: "/portal/tasks",
+  create_service_task: "/portal/tasks",
+  create_service_review_task: "/portal/tasks",
+  create_task_followup: "/portal/tasks",
+  create_manual_review_task: "/portal/tasks",
+  link_household: "/portal/households",
+  create_or_update_pipeline_deal: "/portal/pipeline",
+  create_or_update_business_plan_item: "/portal/pipeline",
+  create_opportunity: "/portal/pipeline",
+  propose_financial_analysis_refresh: "/portal/analyses",
+  propose_financial_analysis_update: "/portal/analyses",
+  schedule_consultation: "/portal/tasks",
+  prepare_comparison: "/portal/analyses",
+};
+
+function resolveActionHref(action: DraftAction): string | null {
+  return ACTION_ROUTE_MAP[action.type] ?? null;
+}
+
 function WorkActionsCard({ doc }: { doc: ExtractionDocument }) {
   const actions = doc.draftActions ?? [];
   return (
@@ -321,7 +350,7 @@ function WorkActionsCard({ doc }: { doc: ExtractionDocument }) {
         <Wrench size={14} className="text-indigo-500" /> Navrhované pracovní kroky
       </h3>
       <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4">
-        Návrhy kroků v CRM nebo portálu — ověřte údaje a potvrďte akci v horní liště (Schválit / Použít).
+        Kliknutím otevřete příslušnou sekci portálu. Automatické akce (smlouva, platba) se provedou při schválení v horní liště.
       </p>
       {actions.length === 0 ? (
         <p className="text-sm text-[color:var(--wp-text-secondary)]">
@@ -329,15 +358,36 @@ function WorkActionsCard({ doc }: { doc: ExtractionDocument }) {
         </p>
       ) : (
         <ul className="space-y-2">
-          {actions.map((a, i) => (
-            <li
-              key={`${a.type}-${i}`}
-              className="flex items-start gap-2 text-sm font-medium text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)]/50 rounded-xl px-4 py-3 border border-[color:var(--wp-surface-card-border)]"
-            >
-              <ArrowRight size={16} className="text-indigo-500 shrink-0 mt-0.5" />
-              <span>{a.label}</span>
-            </li>
-          ))}
+          {actions.map((a, i) => {
+            const href = resolveActionHref(a);
+            const baseClass =
+              "flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-3 border transition-colors w-full text-left";
+            if (href) {
+              return (
+                <li key={`${a.type}-${i}`}>
+                  <Link
+                    href={href}
+                    className={`${baseClass} text-indigo-700 bg-indigo-50/60 border-indigo-200 hover:bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/20 dark:border-indigo-800 dark:hover:bg-indigo-900/40`}
+                  >
+                    <ExternalLink size={15} className="text-indigo-500 shrink-0" />
+                    <span className="flex-1">{a.label}</span>
+                    <ArrowRight size={14} className="text-indigo-400 shrink-0" />
+                  </Link>
+                </li>
+              );
+            }
+            return (
+              <li
+                key={`${a.type}-${i}`}
+                className={`${baseClass} text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)]/50 border-[color:var(--wp-surface-card-border)] cursor-default`}
+                title="Tato akce se provede automaticky při schválení"
+              >
+                <ArrowRight size={15} className="text-indigo-400 shrink-0" />
+                <span className="flex-1">{a.label}</span>
+                <span className="text-[10px] text-[color:var(--wp-text-tertiary)] font-normal shrink-0">při schválení</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
