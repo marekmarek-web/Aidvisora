@@ -3,7 +3,7 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, tasks, contacts, opportunities, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
+import { db, tasks, contacts, opportunities, meetingNotes, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
 import { logActivity } from "./activity";
 
 export type TaskRow = {
@@ -403,4 +403,120 @@ export async function reopenTask(id: string): Promise<void> {
     console.error("[reopenTask]", e);
     throw new Error(e instanceof Error ? e.message : "Úkol se nepodařilo znovu otevřít.");
   }
+}
+
+function isForeignKeyError(e: unknown): boolean {
+  const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  return msg.includes("foreign key") || msg.includes("violates foreign key");
+}
+
+/** Přenese úkol do Zápisků (meeting_note) a smaže úkol — atomicky v transakci. */
+export async function moveTaskToNotesBoard(taskId: string): Promise<{ noteId: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) {
+    throw new Error("Nemáte oprávnění k úpravě úkolů.");
+  }
+  if (!hasPermission(auth.roleName, "meeting_notes:write")) {
+    throw new Error("Nemáte oprávnění k vytváření zápisků.");
+  }
+
+  const taskRows = await db
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      description: tasks.description,
+      contactId: tasks.contactId,
+      opportunityId: tasks.opportunityId,
+      dueDate: tasks.dueDate,
+    })
+    .from(tasks)
+    .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, taskId)))
+    .limit(1);
+
+  const task = taskRows[0];
+  if (!task) {
+    throw new Error("Úkol nebyl nalezen.");
+  }
+
+  const meetingAt = new Date();
+  const domain = "komplex";
+  const desc = task.description?.trim() ?? "";
+  const obsahLines = ["Přeneseno z úkolu (interní evidencia v CRM)."];
+  if (desc) obsahLines.push(desc);
+  const obsah = obsahLines.join("\n\n");
+  const dueStr = task.dueDate ? String(task.dueDate) : "";
+  const dalsi_kroky = dueStr ? `Termín z úkolu: ${dueStr}` : "";
+
+  const content: Record<string, unknown> = {
+    title: task.title.trim(),
+    obsah,
+    ...(dalsi_kroky ? { dalsi_kroky } : {}),
+  };
+
+  const attempts: { contactId: string | null; opportunityId: string | null }[] = [];
+  const seen = new Set<string>();
+  const addAttempt = (contactId: string | null, opportunityId: string | null) => {
+    const k = `${contactId ?? ""}::${opportunityId ?? ""}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    attempts.push({ contactId, opportunityId });
+  };
+  addAttempt(task.contactId, task.opportunityId);
+  addAttempt(null, task.opportunityId);
+  addAttempt(null, null);
+
+  let lastError: unknown = null;
+  for (const { contactId, opportunityId } of attempts) {
+    try {
+      const noteId = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(meetingNotes)
+          .values({
+            tenantId: auth.tenantId,
+            contactId,
+            opportunityId,
+            templateId: null,
+            meetingAt,
+            domain,
+            content,
+            createdBy: auth.userId,
+          })
+          .returning({ id: meetingNotes.id });
+
+        const newNoteId = row?.id;
+        if (!newNoteId) throw new Error("Nepodařilo se vytvořit zápisek.");
+
+        await tx
+          .delete(tasks)
+          .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, taskId)));
+
+        return newNoteId;
+      });
+
+      try {
+        await logActivity("meeting_note", noteId, "create_from_task", { taskId, title: task.title });
+      } catch {
+        /* ignore */
+      }
+      try {
+        await logActivity("task", taskId, "move_to_notes", { noteId });
+      } catch {
+        /* ignore */
+      }
+
+      return { noteId };
+    } catch (e) {
+      lastError = e;
+      if (isForeignKeyError(e)) continue;
+      console.error("[moveTaskToNotesBoard]", e);
+      throw new Error(
+        e instanceof Error ? e.message : "Přenos úkolu do zápisků se nezdařil. Zkuste to znovu.",
+      );
+    }
+  }
+
+  console.error("[moveTaskToNotesBoard] exhausted FK retries", lastError);
+  throw new Error(
+    "Nepodařilo se uložit zápisek (odkaz na klienta nebo obchod není platný). Zkuste úkol upravit a opakovat akci.",
+  );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   getTasksList,
   getTasksCounts,
@@ -12,6 +12,7 @@ import {
   deleteTask,
   completeTask,
   reopenTask,
+  moveTaskToNotesBoard,
   type TaskRow,
   type TaskCounts,
 } from "@/app/actions/tasks";
@@ -49,6 +50,7 @@ import {
   Briefcase,
   ChevronDown,
   LayoutDashboard,
+  FileText,
 } from "lucide-react";
 
 type Filter = "all" | "today" | "week" | "overdue" | "completed";
@@ -683,7 +685,17 @@ function NewTaskWizard({
 /* ==========================================
    MORE ACTIONS DROPDOWN
    ========================================== */
-function MoreActionsMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+function MoreActionsMenu({
+  onEdit,
+  onDelete,
+  onMoveToNotes,
+  moveToNotesLoading,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+  onMoveToNotes: () => void;
+  moveToNotesLoading?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyles, setMenuStyles] = useState<React.CSSProperties>({});
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -694,22 +706,66 @@ function MoreActionsMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: (
     e.stopPropagation();
     if (!isOpen && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setMenuStyles({ top: rect.bottom + 4, left: rect.right - 160 });
+      setMenuStyles({ top: rect.bottom + 4, left: rect.right - 220 });
     }
     setIsOpen(!isOpen);
   };
 
   return (
     <>
-      <button ref={btnRef} type="button" onClick={toggle} className="p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-all" aria-label="Více možností">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2.5 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] rounded-xl transition-all"
+        aria-label="Více možností"
+        aria-expanded={isOpen}
+      >
         <MoreVertical size={16} />
       </button>
       {isOpen && mounted && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
-          <div className="fixed w-40 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-xl py-1 z-[9999]" style={menuStyles}>
-            <button type="button" onClick={() => { onEdit(); setIsOpen(false); }} className="w-full px-4 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] text-left transition-colors">Upravit</button>
-            <button type="button" onClick={() => { onDelete(); setIsOpen(false); }} className="w-full px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 text-left transition-colors">Smazat</button>
+          <div
+            className="fixed min-w-[13.5rem] max-w-[min(100vw-1rem,16rem)] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-xl py-1 z-[9999]"
+            style={menuStyles}
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onEdit();
+                setIsOpen(false);
+              }}
+              className="w-full min-h-[44px] px-4 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] text-left transition-colors"
+            >
+              Upravit
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={moveToNotesLoading}
+              onClick={() => {
+                onMoveToNotes();
+                setIsOpen(false);
+              }}
+              className="w-full min-h-[44px] px-4 py-2.5 text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] text-left transition-colors flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <FileText size={16} className="shrink-0 text-amber-600" aria-hidden />
+              {moveToNotesLoading ? "Ukládám…" : "Na board Zápisků"}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onDelete();
+                setIsOpen(false);
+              }}
+              className="w-full min-h-[44px] px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 text-left transition-colors"
+            >
+              Smazat
+            </button>
           </div>
         </>,
         document.body
@@ -723,6 +779,7 @@ function MoreActionsMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: (
    ========================================== */
 function TasksPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialSettings = loadSettings();
 
   const initialFilter = (() => {
@@ -752,6 +809,8 @@ function TasksPageContent() {
   const [editId, setEditId] = useState<string | null>(null);
   const [mobileEditId, setMobileEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: "", description: "", contactId: "", dueDate: "" });
+  const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
+  const [moveToNotesError, setMoveToNotesError] = useState<string | null>(null);
 
   useEffect(() => {
     const contactId = searchParams.get("contactId");
@@ -844,6 +903,29 @@ function TasksPageContent() {
     if (!window.confirm("Opravdu smazat tento úkol?")) return;
     await deleteTask(id);
     await reload();
+  }
+
+  async function handleMoveToNotes(taskId: string) {
+    setMoveToNotesError(null);
+    if (
+      !window.confirm(
+        "Úkol bude odebrán ze seznamu Úkolů a uložen jako interní zápisek na board Zápisky (pouze pro práci poradce v CRM). Pokračovat?",
+      )
+    ) {
+      return;
+    }
+    setMovingTaskId(taskId);
+    try {
+      const { noteId } = await moveTaskToNotesBoard(taskId);
+      setEditId(null);
+      setMobileEditId(null);
+      router.push(`/portal/notes?noteId=${encodeURIComponent(noteId)}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Akci se nepodařilo dokončit.";
+      setMoveToNotesError(msg);
+    } finally {
+      setMovingTaskId(null);
+    }
   }
 
   async function handleMoveToToday(id: string) {
@@ -964,6 +1046,19 @@ function TasksPageContent() {
             </div>
           )}
 
+          {moveToNotesError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" role="alert">
+              <p className="text-sm font-medium text-rose-800">{moveToNotesError}</p>
+              <button
+                type="button"
+                onClick={() => setMoveToNotesError(null)}
+                className="shrink-0 min-h-[44px] px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-900 text-sm font-semibold rounded-lg transition-colors"
+              >
+                Zavřít
+              </button>
+            </div>
+          )}
+
           {/* Task list */}
           <div className="space-y-3 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {loading ? (
@@ -993,16 +1088,41 @@ function TasksPageContent() {
                 {/* Mobile: swipe list */}
                 <div className="block md:hidden space-y-1">
                   {visibleTasks.map((t) => (
-                    <SwipeTaskItem key={t.id} id={t.id} title={t.title}
-                      subtitle={[t.contactName, formatDate(t.dueDate)].filter(Boolean).join(" · ")}
-                      onDelete={(id) => { if (window.confirm("Opravdu smazat tento úkol?")) handleDelete(id); }}
-                      onEdit={() => openMobileEdit(t)}
-                      leftSlot={
-                        <button type="button" onClick={() => handleToggle(t)} className="flex-shrink-0 p-1" aria-label={t.completedAt ? "Označit jako nedokončené" : "Označit jako hotovo"}>
-                          {t.completedAt ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} className="text-[color:var(--wp-text-tertiary)]" />}
-                        </button>
-                      }
-                    />
+                    <div key={t.id} className="flex items-stretch gap-1">
+                      <div className="min-w-0 flex-1">
+                        <SwipeTaskItem
+                          id={t.id}
+                          title={t.title}
+                          subtitle={[t.contactName, formatDate(t.dueDate)].filter(Boolean).join(" · ")}
+                          onDelete={(id) => {
+                            if (window.confirm("Opravdu smazat tento úkol?")) handleDelete(id);
+                          }}
+                          onEdit={() => openMobileEdit(t)}
+                          leftSlot={
+                            <button
+                              type="button"
+                              onClick={() => handleToggle(t)}
+                              className="flex-shrink-0 p-1"
+                              aria-label={t.completedAt ? "Označit jako nedokončené" : "Označit jako hotovo"}
+                            >
+                              {t.completedAt ? (
+                                <CheckCircle2 size={24} className="text-emerald-500" />
+                              ) : (
+                                <Circle size={24} className="text-[color:var(--wp-text-tertiary)]" />
+                              )}
+                            </button>
+                          }
+                        />
+                      </div>
+                      <div className="flex shrink-0 items-center self-center border-l border-[color:var(--wp-surface-card-border)] pl-1">
+                        <MoreActionsMenu
+                          onEdit={() => openMobileEdit(t)}
+                          onDelete={() => handleDelete(t.id)}
+                          onMoveToNotes={() => handleMoveToNotes(t.id)}
+                          moveToNotesLoading={movingTaskId === t.id}
+                        />
+                      </div>
+                    </div>
                   ))}
                 </div>
 
@@ -1080,7 +1200,12 @@ function TasksPageContent() {
                               )}
                             </>
                           )}
-                          <MoreActionsMenu onEdit={() => startEdit(task)} onDelete={() => handleDelete(task.id)} />
+                          <MoreActionsMenu
+                            onEdit={() => startEdit(task)}
+                            onDelete={() => handleDelete(task.id)}
+                            onMoveToNotes={() => handleMoveToNotes(task.id)}
+                            moveToNotesLoading={movingTaskId === task.id}
+                          />
                         </div>
                       </div>
                     );
