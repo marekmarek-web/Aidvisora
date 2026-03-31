@@ -32,7 +32,7 @@ function hasLowEvidence(
   if (!field) return true;
   if (readability && isHighTrustReadingContext(readability) && isSatisfied(field)) {
     const c = field.confidence;
-    if (typeof c !== "number" || c >= 0.5) return false;
+    if (typeof c === "number" && c >= 0.5) return false;
   }
   return typeof field.confidence !== "number" || field.confidence < 0.55 || !field.evidenceSnippet;
 }
@@ -185,4 +185,3 @@ export function runVerificationPass(
     completeness,
   };
 }
-
