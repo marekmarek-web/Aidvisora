@@ -38,7 +38,6 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
     formRef,
     handleSubmit,
     handleOAuthSignIn,
-    handleBiometricLogin,
   } = login;
 
   const inputClass = `w-full pl-12 pr-12 py-4 bg-white/10 border border-white/10 rounded-[20px] text-base font-bold text-white outline-none focus:bg-white/15 focus:ring-4 transition-all placeholder:text-slate-400 placeholder:font-medium backdrop-blur-md ${
@@ -307,9 +306,10 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
               {isLogin && IS_BIOMETRIC_UI && (
                 <button
                   type="button"
-                  onClick={handleBiometricLogin}
-                  className="w-14 h-14 min-w-[56px] min-h-[56px] bg-white/10 backdrop-blur-md border border-white/20 rounded-[20px] flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-[0.95] shrink-0"
-                  aria-label="Přihlásit pomocí biometrie"
+                  disabled={isLoading}
+                  onClick={() => handleOAuthSignIn("apple")}
+                  className="w-14 h-14 min-w-[56px] min-h-[56px] bg-white/10 backdrop-blur-md border border-white/20 rounded-[20px] flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-[0.95] shrink-0 disabled:opacity-70"
+                  aria-label="Přihlásit přes Apple"
                 >
                   <ScanFace size={24} strokeWidth={1.5} />
                 </button>

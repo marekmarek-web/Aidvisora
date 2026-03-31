@@ -236,15 +236,6 @@ export function useAidvisoraLogin() {
     [forceNative, role, isLogin, token, advisorLegalConsent, clientNextPath, advisorNextPath]
   );
 
-  const handleBiometricLogin = useCallback(() => {
-    if (isLoading) return;
-    if (!isLogin && !token) {
-      setMessage("Biometrické přihlášení je dostupné pouze pro přihlášení.");
-      return;
-    }
-    formRef.current?.requestSubmit();
-  }, [isLoading, isLogin, token]);
-
   return {
     forceNative,
     token,
@@ -276,7 +267,6 @@ export function useAidvisoraLogin() {
     formRef,
     handleSubmit,
     handleOAuthSignIn,
-    handleBiometricLogin,
   };
 }
 

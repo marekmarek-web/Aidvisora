@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
 import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
-import { GoogleIcon } from "./loginIcons";
+import { AppleIcon, GoogleIcon } from "./loginIcons";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
 export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
@@ -351,20 +351,29 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                   <div className="h-[1px] bg-white flex-1" />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleOAuthSignIn("google")}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 min-h-[48px] bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-white font-bold text-sm transition-colors shadow-sm"
-                >
-                  <GoogleIcon /> Pokračovat s Google
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignIn("google")}
+                    className="w-full flex flex-1 items-center justify-center gap-3 py-3.5 min-h-[48px] bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-white font-bold text-sm transition-colors shadow-sm"
+                  >
+                    <GoogleIcon /> Pokračovat s Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignIn("apple")}
+                    className="w-full flex flex-1 items-center justify-center gap-3 py-3.5 min-h-[48px] bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-white font-bold text-sm transition-colors shadow-sm"
+                  >
+                    <AppleIcon /> Pokračovat s Apple
+                  </button>
+                </div>
               </>
             )}
 
             {token && (
               <p className="mt-6 text-center text-xs font-medium text-slate-400 leading-relaxed">
-                Pro dokončení pozvánky použijte e-mail a heslo (stejný e-mail jako v pozvánce). Přihlášení přes Google zde
-                není k dispozici.
+                Pro dokončení pozvánky použijte e-mail a heslo (stejný e-mail jako v pozvánce). Přihlášení přes Google ani
+                Apple zde není k dispozici.
               </p>
             )}
 
