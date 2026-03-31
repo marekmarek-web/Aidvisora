@@ -23,6 +23,8 @@ import { selectSchemaForType } from "./document-schema-router";
 import { applyRuleBasedClassificationOverride } from "./document-classification-overrides";
 import { mapPrimaryToNormalized } from "./normalized-document-taxonomy";
 import { runVerificationPass } from "./document-verification";
+import { applyExtractedFieldAliasNormalizations } from "./extraction-field-alias-normalize";
+import { deriveEnvelopeFlags } from "./derive-envelope-flags";
 import { resolveSensitivityProfile } from "./document-sensitivity";
 import { inferDocumentRelationships } from "./document-relationships";
 import { isOpenAIRateLimitError } from "./openai-rate-limit";
@@ -548,6 +550,8 @@ export async function runContractUnderstandingPipeline(
     allReasons.push("supporting_document_review");
   }
 
+  applyExtractedFieldAliasNormalizations(data);
+
   const lifecycle = data.documentClassification.lifecycleStatus;
   if (isProposalOrModelationLifecycle(lifecycle)) {
     allReasons.push("proposal_or_modelation_not_final_contract");
@@ -582,6 +586,7 @@ export async function runContractUnderstandingPipeline(
   if (advisorFields.some((k) => data.extractedFields[k]?.status === "extracted")) {
     data.contentFlags.containsAdvisorData = true;
   }
+  deriveEnvelopeFlags(data);
   const extractionConfidence =
     typeof data.documentMeta.overallConfidence === "number"
       ? data.documentMeta.overallConfidence
@@ -601,26 +606,62 @@ export async function runContractUnderstandingPipeline(
     allReasons.push(...envelopeValidation.reasonsForReview);
   }
 
+  const efU = data.extractedFields;
+  const legacyPaymentAmountU = (() => {
+    const keys = [
+      "totalMonthlyPremium",
+      "premiumAmount",
+      "monthlyPremium",
+      "regularAmount",
+      "installmentAmount",
+      "loanAmount",
+      "oneOffAmount",
+    ] as const;
+    for (const k of keys) {
+      const f = efU[k];
+      if (f && f.status === "extracted" && f.value != null && String(f.value).trim() !== "") {
+        return f.value as number | string;
+      }
+    }
+    return null;
+  })();
+  const legacyPaymentFreqU =
+    (efU.paymentFrequency?.status === "extracted" && efU.paymentFrequency.value != null
+      ? efU.paymentFrequency.value
+      : null) ??
+    (efU.premiumFrequency?.status === "extracted" && efU.premiumFrequency.value != null
+      ? efU.premiumFrequency.value
+      : null);
+
   const legacyValidationPayload = {
-    contractNumber: data.extractedFields.contractNumber?.value as string | null,
-    institutionName: data.extractedFields.institutionName?.value as string | null,
+    contractNumber: efU.contractNumber?.value as string | null,
+    institutionName: (efU.institutionName?.value ?? efU.insurer?.value) as string | null,
     client: {
-      email: data.extractedFields.clientEmail?.value as string | null,
-      phone: data.extractedFields.clientPhone?.value as string | null,
-      personalId: data.extractedFields.maskedPersonalId?.value as string | null,
-      companyId: data.extractedFields.companyId?.value as string | null,
+      email: (efU.clientEmail?.value ?? efU.email?.value) as string | null,
+      phone: (efU.clientPhone?.value ?? efU.phone?.value) as string | null,
+      personalId: efU.maskedPersonalId?.value as string | null,
+      companyId: efU.companyId?.value as string | null,
     },
     paymentDetails: {
-      amount: data.extractedFields.loanAmount?.value as number | string | null,
-      currency: data.extractedFields.currency?.value as string | null,
-      frequency: data.extractedFields.paymentFrequency?.value as string | null,
+      amount: legacyPaymentAmountU,
+      currency: efU.currency?.value as string | null,
+      frequency: legacyPaymentFreqU as string | null,
+      iban: efU.iban?.value as string | null,
+      accountNumber: efU.bankAccount?.value as string | null,
+      variableSymbol: efU.variableSymbol?.value as string | null,
     },
-    effectiveDate: data.extractedFields.policyStartDate?.value as string | null,
-    expirationDate: data.extractedFields.policyEndDate?.value as string | null,
+    effectiveDate: efU.policyStartDate?.value as string | null,
+    expirationDate: efU.policyEndDate?.value as string | null,
   };
   const validation: ValidationResult = validateExtractedContract(legacyValidationPayload);
   inferDocumentRelationships(data);
-  const verification = runVerificationPass(data, schemaDefinition);
+  const verification = runVerificationPass(data, schemaDefinition, {
+    readability: {
+      inputMode: inputModeStr,
+      textCoverageEstimate: textCov,
+      preprocessStatus: options?.preprocessMeta?.preprocessStatus,
+    },
+  });
   data.sensitivityProfile = resolveSensitivityProfile(data);
   data.reviewWarnings = verification.warnings;
   data.dataCompleteness = verification.completeness;

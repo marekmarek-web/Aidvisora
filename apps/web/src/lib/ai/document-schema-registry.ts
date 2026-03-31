@@ -288,7 +288,14 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
   pension_contract: {
     primaryType: "pension_contract",
     allowedLifecycle: ["final_contract", "proposal", "annex", "unknown"],
-    subtypeHints: ["doplnkove_penzijni_sporeni", "transformovany_fond", "penzijni_pripojisteni"],
+    subtypeHints: [
+      "doplňkové_penzijní_spoření_DPS",
+      "penzijní_připojištění_PP",
+      "transformovaný_fond_v_rámci_DPS",
+      "transformovany_fond",
+      "doplnkove_penzijni_sporeni",
+      "penzijni_pripojisteni",
+    ],
     defaultIntent: "creates_new_product",
     extractionRules: {
       required: [
@@ -311,7 +318,10 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
       notApplicableRules: ["loan-specific fields are not_applicable"],
       matchingKeys: ["participantFullName", "birthDate", "maskedPersonalId", "email", "phone", "address"],
       crmMappingTarget: "contracts(segment=PP)",
-      reviewRules: ["distinguish DPS from transformed fund"],
+      reviewRules: [
+        "DPS (doplňkové penzijní spoření) a PP (penzijní připojištění) jsou různé produkty — neoznačuj jeden jako druhý",
+        "transformovaný fond u DPS ≠ samostatná investiční platforma typu FUNDOO/Amundi",
+      ],
       suggestedActionRules: [
         "create_or_link_client",
         "create_contract_record",
@@ -405,7 +415,14 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
   investment_payment_instruction: {
     primaryType: "investment_payment_instruction",
     allowedLifecycle: ["confirmation", "statement", "unknown"],
-    subtypeHints: ["fundoo_investment", "amundi_investment", "conseq_investment"],
+    subtypeHints: [
+      "fundoo_pravidelna_investice",
+      "fundoo_jednorazova_investice",
+      "amundi_typicky_poskytovatel",
+      "fundoo_investment",
+      "amundi_investment",
+      "conseq_investment",
+    ],
     defaultIntent: "reference_only",
     extractionRules: {
       required: [
@@ -440,6 +457,8 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
       crmMappingTarget: "payment_setup+portal",
       reviewRules: [
         "investment payment instruction is never a contract",
+        "FUNDOO = pouze investice (pravidelná nebo jednorázová); typický správce/platforma Amundi — ne DPS ani PP",
+        "DIP je jiný režim než čistý fondový příkaz; při stopách obou označ nižší jistotu",
         "validate IBAN and account format",
         "separate CZK/EUR/USD instructions if present",
       ],
@@ -575,7 +594,12 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
   investment_subscription_document: {
     primaryType: "investment_subscription_document",
     allowedLifecycle: ["proposal", "final_contract", "onboarding_form", "unknown"],
-    subtypeHints: ["fund_subscription", "investment_order_form"],
+    subtypeHints: [
+      "fundoo_amundi_subscription",
+      "fund_subscription",
+      "investment_order_form",
+      "pravidelna_nebo_jednorazova_investice",
+    ],
     defaultIntent: "creates_new_product",
     extractionRules: {
       required: ["extractedFields.investorFullName", "extractedFields.productName"],
@@ -584,7 +608,10 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
       notApplicableRules: ["bank-statement specific fields are not_applicable"],
       matchingKeys: ["investorFullName", "birthDate", "maskedPersonalId", "email"],
       crmMappingTarget: "contracts(segment=INV)",
-      reviewRules: ["ensure lifecycle not misclassified as final when proposal"],
+      reviewRules: [
+        "ensure lifecycle not misclassified as final when proposal",
+        "FUNDOO / Amundi úpis = investice, ne smlouva DPS ani PP",
+      ],
       suggestedActionRules: ["create_or_link_client", "create_contract_record", "create_task"],
     },
   },
@@ -1136,6 +1163,22 @@ Vždy extrahuj referenci na existující číslo smlouvy (existingPolicyNumber).
 Nikdy neoznačuj jako novou smlouvu.
 `;
 
+/** Czech market: DPS vs PP vs FUNDOO vs DIP — injected for pension & investment-related extraction. */
+const CZECH_PENSION_VS_INVESTMENT_ADDENDUM = `
+České pojmenování produktů (nepřekládej zkratky):
+- DPS = doplňkové penzijní spoření. PP = penzijní připojištění. Jsou to různé režimy/produkty — v productName a subtype je rozliš.
+- FUNDOO značí investici výhradně jako pravidelnou nebo jednorázovou; často Amundi jako správce nebo platforma. Není to smlouva DPS ani PP.
+- DIP = dlouhodobý investiční produkt (daňový rámec). Liší se od běžného fondového příkazu (např. FUNDOO) i od DPS; při nejasnosti sniž confidence a uveď důvod v reasons.
+`;
+
+const PRIMARY_TYPES_WITH_CZECH_MARKET_ADDENDUM = new Set<string>([
+  "pension_contract",
+  "investment_payment_instruction",
+  "investment_subscription_document",
+  "investment_service_agreement",
+  "investment_modelation",
+]);
+
 function getTypeSpecificAddendum(primaryType: string): string {
   if (primaryType === "payment_instruction" || primaryType === "investment_payment_instruction") {
     return PAYMENT_INSTRUCTION_PROMPT_ADDENDUM;
@@ -1162,7 +1205,9 @@ export function buildSchemaPrompt(
   const scanHint = isScanFallback
     ? "Dokument je pravděpodobně scan. U nečitelných dat použij status inferred_low_confidence nebo not_found. Pokud je kvalita nízká, přidej reviewWarning."
     : "";
-  const typeAddendum = getTypeSpecificAddendum(schemaDef.primaryType);
+  const typeAddendum =
+    getTypeSpecificAddendum(schemaDef.primaryType) +
+    (PRIMARY_TYPES_WITH_CZECH_MARKET_ADDENDUM.has(schemaDef.primaryType) ? CZECH_PENSION_VS_INVESTMENT_ADDENDUM : "");
   return `Jsi extrakční engine pro finanční dokumenty.\n${scanHint}\n\n` +
     `Dokument klasifikace:\n` +
     `- primaryType: ${schemaDef.primaryType}\n` +

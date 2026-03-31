@@ -21,6 +21,7 @@ import type { ContractDocumentType } from "./document-classification";
 import { selectSchemaForType } from "./document-schema-router";
 import { mapPrimaryToNormalized } from "./normalized-document-taxonomy";
 import { runVerificationPass } from "./document-verification";
+import { applyExtractedFieldAliasNormalizations } from "./extraction-field-alias-normalize";
 import { resolveSensitivityProfile } from "./document-sensitivity";
 import { inferDocumentRelationships } from "./document-relationships";
 import { isOpenAIRateLimitError } from "./openai-rate-limit";
@@ -214,6 +215,8 @@ function finalizeContractPayload(params: {
     allReasons.push("supporting_document_review");
   }
 
+  applyExtractedFieldAliasNormalizations(data);
+
   const lifecycle = data.documentClassification.lifecycleStatus;
   if (isProposalOrModelationLifecycle(lifecycle)) {
     allReasons.push("proposal_or_modelation_not_final_contract");
@@ -261,6 +264,7 @@ function finalizeContractPayload(params: {
     const keys = [
       "totalMonthlyPremium",
       "premiumAmount",
+      "monthlyPremium",
       "regularAmount",
       "installmentAmount",
       "loanAmount",
@@ -301,7 +305,7 @@ function finalizeContractPayload(params: {
 
   const legacyValidationPayload = {
     contractNumber: ef.contractNumber?.value as string | null,
-    institutionName: ef.institutionName?.value as string | null,
+    institutionName: (ef.institutionName?.value ?? ef.insurer?.value) as string | null,
     client: {
       email: (ef.clientEmail?.value ?? ef.email?.value) as string | null,
       phone: (ef.clientPhone?.value ?? ef.phone?.value) as string | null,
@@ -321,7 +325,13 @@ function finalizeContractPayload(params: {
   };
   const validation: ValidationResult = validateExtractedContract(legacyValidationPayload);
   inferDocumentRelationships(data);
-  const verification = runVerificationPass(data, schemaDefinition);
+  const verification = runVerificationPass(data, schemaDefinition, {
+    readability: {
+      inputMode: inputModeStr,
+      textCoverageEstimate: textCov,
+      preprocessStatus: options?.preprocessMeta?.preprocessStatus,
+    },
+  });
   data.sensitivityProfile = resolveSensitivityProfile(data);
   data.reviewWarnings = verification.warnings;
   data.dataCompleteness = verification.completeness;
@@ -656,8 +666,10 @@ export async function runAiReviewV2Pipeline(
     };
   }
 
-  // Payment branch
+  // Payment branch (klasifikátor může vrátit investment_payment_instruction pro FUNDOO / Amundi atd.)
   if (promptKey === "paymentInstructionsExtraction") {
+    const paymentPrimaryType: "payment_instruction" | "investment_payment_instruction" =
+      effectivePrimary === "investment_payment_instruction" ? "investment_payment_instruction" : "payment_instruction";
     trace.selectedSchema = "payment_instruction_dedicated_v2";
     const extStart = Date.now();
     const payRes = await tryExtractPaymentWithPrompt(fileUrl, mimeType, hint, {
@@ -683,10 +695,9 @@ export async function runAiReviewV2Pipeline(
         confidence: 0.15,
         needsHumanReview: true,
       };
-      const payPrimary = "payment_instruction";
       const payData = buildPaymentInstructionEnvelope({
         extraction: fallbackExtraction,
-        primaryType: payPrimary,
+        primaryType: paymentPrimaryType,
         pageCount: inputModeResult.pageCount ?? trace.pageCount ?? undefined,
       });
       payData.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
@@ -705,7 +716,7 @@ export async function runAiReviewV2Pipeline(
         reasonsForReview: [...new Set([...allReasons, "payment_extraction_failed"])],
         inputMode: inputModeResult.inputMode,
         extractionMode: inputModeResult.extractionMode,
-        detectedDocumentType: payPrimary,
+        detectedDocumentType: paymentPrimaryType,
         extractionTrace: trace,
         validationWarnings: payData.reviewWarnings,
         fieldConfidenceMap: null,
@@ -715,7 +726,7 @@ export async function runAiReviewV2Pipeline(
 
     const payData = buildPaymentInstructionEnvelope({
       extraction: payRes.data,
-      primaryType: "payment_instruction",
+      primaryType: paymentPrimaryType,
       pageCount: inputModeResult.pageCount ?? trace.pageCount ?? undefined,
     });
     payData.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
@@ -750,7 +761,7 @@ export async function runAiReviewV2Pipeline(
       reasonsForReview: [...new Set([...allReasons, ...(pv.needsHumanReview ? ["payment_needs_review"] : [])])],
       inputMode: inputModeResult.inputMode,
       extractionMode: inputModeResult.extractionMode,
-      detectedDocumentType: "payment_instruction",
+      detectedDocumentType: paymentPrimaryType,
       extractionTrace: trace,
       validationWarnings: payData.reviewWarnings,
       fieldConfidenceMap: null,

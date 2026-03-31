@@ -198,7 +198,7 @@ Pro Fázi 2: payload = normalizovaný objekt (migrateImportedData bez side-effec
 ## 6. Seznamy konstant a produktů
 
 - **Obor (industry):** office (Kancelář/IT), services (Služby), light-manufacturing (Lehká výroba), heavy-manufacturing (Těžká výroba), construction (Stavebnictví), transport (Doprava).
-- **Benefity – typy:** DPS (Penzijní připojištění), DIP (Dlouhodobé investice), IŽP (Životní pojištění).
+- **Benefity – typy:** DPS (doplňkové penzijní spoření), PP (penzijní připojištění), DIP (dlouhodobý investiční produkt), IŽP (životní pojištění).
 - **Rizika (firemní pojištění):** property (Majetek), interruption (Přerušení provozu), liability (Odpovědnost), director (D&O), fleet (Flotila), cyber (Kyber). První tři mají detail: limit (Kč), contractYears.
 - **Investiční profil:** dynamic 9 %, balanced 7 %, conservative 5 % (INV_STRATEGY_RATES). conservativeMode sníží rate o 2 %.
 - **Fondy (investments):** productKey + type + default annualRate: imperial lump 12 %, creif lump 6 %, atris lump 6 %, penta lump 9 % (volba 10 %), ishares monthly 12 %, fidelity2040 monthly 7 %, conseq pension 9,5 %. getProductName(key) → zobrazený název (AlgoImperial, CREIF, ATRIS, PENTA, iShares MSCI World, Fidelity Target 2040, Conseq Globální).

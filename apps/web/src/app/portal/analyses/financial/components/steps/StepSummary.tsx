@@ -178,7 +178,7 @@ export function StepSummary() {
       if (analysisId) await setFinancialAnalysisLastExportedAt(analysisId);
     } catch (e) {
       console.error("[StepSummary] handleSaveReportToDocuments failed", e);
-      alert(normalizeExportError(e, "Nepodařilo se uložit report."));
+      setExportError(normalizeExportError(e, "Nepodařilo se uložit report."));
     } finally {
       setSavingToDocs(false);
     }

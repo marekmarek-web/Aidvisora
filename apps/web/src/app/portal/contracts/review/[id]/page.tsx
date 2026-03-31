@@ -11,6 +11,7 @@ import {
   confirmCreateNewClient,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { AIReviewExtractionShell } from "@/app/components/ai-review/AIReviewExtractionShell";
 import { mapApiToExtractionDocument } from "@/lib/ai-review/mappers";
 import type { ExtractionDocument } from "@/lib/ai-review/types";
@@ -84,6 +85,7 @@ export default function ContractReviewDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [doc, setDoc] = useState<ExtractionDocument | null>(null);
   const [rawExtractedPayload, setRawExtractedPayload] = useState<Record<string, unknown> | null>(null);
@@ -236,8 +238,18 @@ export default function ContractReviewDetailPage() {
   }, [router]);
 
   const handleDiscard = useCallback(async () => {
-    const msg = "Smazat soubor z úložiště i z revize? Tím odeberete dokument a související data.";
-    if (!window.confirm(msg)) return;
+    const message =
+      "Smazat soubor z úložiště i z revize? Tím odeberete dokument a související data.";
+    if (
+      !(await confirm({
+        title: "Smazat revizi",
+        message,
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setActionLoading("delete");
     try {
       const res = await fetch(`/api/contracts/review/${id}`, { method: "DELETE" });
@@ -253,7 +265,7 @@ export default function ContractReviewDetailPage() {
     } finally {
       setActionLoading(null);
     }
-  }, [id, router, toast]);
+  }, [confirm, id, router, toast]);
 
   const handleApprove = useCallback(
     async (editedFields: Record<string, string>) => {

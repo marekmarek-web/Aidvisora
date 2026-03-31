@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../draft-actions", () => ({
   buildAllDraftActions: () => [],
+  pruneRedundantDraftActions: <T>(actions: T[]) => actions,
 }));
 
 import { formatExtractedValue, mapApiToExtractionDocument } from "../../ai-review/mappers";

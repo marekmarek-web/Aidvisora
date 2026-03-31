@@ -24,6 +24,7 @@ import {
   duplicateStandaloneMap,
 } from "@/app/actions/mindmap";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 function formatUpdated(updatedAt: Date): string {
   const d = new Date(updatedAt);
@@ -75,6 +76,7 @@ export function MindmapListClient({
   onRefresh?: () => void;
 }) {
   const router = useRouter();
+  const askConfirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState("");
   const [newMapName, setNewMapName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -83,6 +85,9 @@ export function MindmapListClient({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ mapId: string } | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
 
   const totalCount = clientMaps.length + standaloneMaps.length;
 
@@ -117,25 +122,43 @@ export function MindmapListClient({
     }
   }
 
-  async function handleRename(mapId: string, currentName: string) {
+  function openRenameModal(mapId: string, currentName: string) {
     setOpenMenuId(null);
-    const newName = window.prompt("Nový název mapy:", currentName);
-    if (newName == null || newName.trim() === "") return;
-    setRenamingId(mapId);
+    setRenameTarget({ mapId });
+    setRenameDraft(currentName);
+  }
+
+  async function submitRename() {
+    if (!renameTarget) return;
+    const trimmed = renameDraft.trim();
+    if (!trimmed) return;
+    setRenamingId(renameTarget.mapId);
+    setRenameSaving(true);
     setError(null);
     try {
-      await renameStandaloneMap(mapId, newName.trim());
+      await renameStandaloneMap(renameTarget.mapId, trimmed);
+      setRenameTarget(null);
       onRefresh?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nepodařilo se přejmenovat");
     } finally {
       setRenamingId(null);
+      setRenameSaving(false);
     }
   }
 
   async function handleDelete(mapId: string) {
     setOpenMenuId(null);
-    if (!confirm("Opravdu chcete smazat tuto mapu? Akci nelze vrátit.")) return;
+    if (
+      !(await askConfirm({
+        title: "Smazat mapu",
+        message: "Opravdu chcete smazat tuto mapu? Akci nelze vrátit.",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setDeletingId(mapId);
     setError(null);
     try {
@@ -388,7 +411,7 @@ export function MindmapListClient({
                                 </Link>
                                 <button
                                   type="button"
-                                  onClick={() => handleRename(m.id, m.name)}
+                                  onClick={() => openRenameModal(m.id, m.name)}
                                   disabled={renamingId === m.id}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] rounded-lg disabled:opacity-50"
                                 >
@@ -426,6 +449,69 @@ export function MindmapListClient({
           </div>
         </section>
       </main>
+
+      {renameTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center"
+          role="presentation"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
+            aria-label="Zavřít"
+            onClick={() => !renameSaving && setRenameTarget(null)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mindmap-rename-title"
+            className="relative z-[101] w-full max-w-md rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-xl dark:shadow-black/40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="mindmap-rename-title"
+              className="text-lg font-bold text-[color:var(--wp-text)] [font-family:var(--font-jakarta),var(--font-primary),system-ui,sans-serif]"
+            >
+              Přejmenovat mapu
+            </h2>
+            <label className="mt-4 block text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">
+              Nový název
+              <input
+                type="text"
+                value={renameDraft}
+                onChange={(e) => setRenameDraft(e.target.value)}
+                className="mt-2 w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                autoFocus
+                disabled={renameSaving}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void submitRename();
+                  }
+                }}
+              />
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                disabled={renameSaving}
+                onClick={() => setRenameTarget(null)}
+                className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-card)] disabled:opacity-50"
+              >
+                Zrušit
+              </button>
+              <button
+                type="button"
+                disabled={renameSaving || !renameDraft.trim()}
+                onClick={() => void submitRename()}
+                className="min-h-[44px] rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {renameSaving ? "Ukládám…" : "Uložit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

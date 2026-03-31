@@ -47,6 +47,42 @@ describe("mapAiClassifierToPrimaryType", () => {
       )
     ).toBe("liability_insurance_offer");
   });
+
+  it("maps payment_instructions + investment family to investment_payment_instruction (e.g. FUNDOO/Amundi)", () => {
+    expect(
+      mapAiClassifierToPrimaryType(
+        cls({
+          documentType: "payment_instructions",
+          productFamily: "investment",
+          productSubtype: "unknown",
+        })
+      )
+    ).toBe("investment_payment_instruction");
+  });
+
+  it("maps payment_instructions + fundoo subtype to investment_payment_instruction", () => {
+    expect(
+      mapAiClassifierToPrimaryType(
+        cls({
+          documentType: "payment_instructions",
+          productFamily: "banking",
+          productSubtype: "fundoo",
+        })
+      )
+    ).toBe("investment_payment_instruction");
+  });
+
+  it("maps generic payment_instructions to payment_instruction", () => {
+    expect(
+      mapAiClassifierToPrimaryType(
+        cls({
+          documentType: "payment_instructions",
+          productFamily: "life_insurance",
+          productSubtype: "risk_life_insurance",
+        })
+      )
+    ).toBe("payment_instruction");
+  });
 });
 
 describe("primaryTypeFallbackFromPromptKey", () => {

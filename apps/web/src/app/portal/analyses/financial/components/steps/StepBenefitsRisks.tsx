@@ -35,8 +35,8 @@ import { COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK } from "@/lib/analyses/financial/c
 import { safeMonthlySavingsCzk } from "@/lib/analyses/financial/company-risk-premium";
 
 const BENEFIT_OPTIONS: { key: "dps" | "dip" | "izp"; label: string; subtitle: string; Icon: typeof PiggyBank; iconBg: string }[] = [
-  { key: "dps", label: "DPS", subtitle: "Penzijní připojištění", Icon: PiggyBank, iconBg: "bg-blue-100 text-blue-600" },
-  { key: "dip", label: "DIP", subtitle: "Dlouhodobé investice", Icon: TrendingUp, iconBg: "bg-emerald-100 text-emerald-600" },
+  { key: "dps", label: "DPS", subtitle: "Doplňkové penzijní spoření (ne PP)", Icon: PiggyBank, iconBg: "bg-blue-100 text-blue-600" },
+  { key: "dip", label: "DIP", subtitle: "Dlouhodobý investiční produkt (DIP)", Icon: TrendingUp, iconBg: "bg-emerald-100 text-emerald-600" },
   { key: "izp", label: "IŽP", subtitle: "Životní pojištění", Icon: Umbrella, iconBg: "bg-violet-100 text-violet-600" },
 ];
 

@@ -159,7 +159,13 @@ function toLegacyProjection(envelope: DocumentReviewEnvelope): ExtractedContract
   return {
     documentType: envelope.documentClassification.primaryType,
     contractNumber: String(fieldValue(envelope, "contractNumber") ?? ""),
-    institutionName: String(fieldValue(envelope, "insurer") ?? fieldValue(envelope, "lender") ?? fieldValue(envelope, "bankName") ?? ""),
+    institutionName: String(
+      fieldValue(envelope, "insurer") ??
+        fieldValue(envelope, "institutionName") ??
+        fieldValue(envelope, "lender") ??
+        fieldValue(envelope, "bankName") ??
+        ""
+    ),
     productName: String(fieldValue(envelope, "productName") ?? ""),
     client: {
       fullName,
@@ -188,12 +194,23 @@ function toLegacyProjection(envelope: DocumentReviewEnvelope): ExtractedContract
       currency: String(fieldValue(envelope, "currency") ?? ""),
       frequency: String(fieldValue(envelope, "paymentFrequency") ?? ""),
       iban: String(fieldValue(envelope, "ibanMasked") ?? fieldValue(envelope, "iban") ?? ""),
-      accountNumber: String(fieldValue(envelope, "accountNumberMasked") ?? fieldValue(envelope, "accountNumber") ?? ""),
+      accountNumber: String(
+        fieldValue(envelope, "bankAccount") ??
+          fieldValue(envelope, "accountNumberMasked") ??
+          fieldValue(envelope, "accountNumber") ??
+          ""
+      ),
       bankCode: String(fieldValue(envelope, "bankCode") ?? ""),
       variableSymbol: String(fieldValue(envelope, "variableSymbol") ?? ""),
       firstPaymentDate: String(fieldValue(envelope, "firstInstallmentDate") ?? ""),
     },
-    effectiveDate: String(fieldValue(envelope, "policyStartDate") ?? fieldValue(envelope, "disbursementDate") ?? ""),
+    effectiveDate: String(
+      fieldValue(envelope, "policyStartDate") ??
+        fieldValue(envelope, "effectiveDate") ??
+        fieldValue(envelope, "disbursementDate") ??
+        fieldValue(envelope, "startDate") ??
+        ""
+    ),
     expirationDate: String(fieldValue(envelope, "policyEndDate") ?? fieldValue(envelope, "lastInstallmentDate") ?? ""),
     notes: envelope.reviewWarnings.map((w) => w.message),
     missingFields: [],
@@ -263,6 +280,19 @@ function dedupeActions(actions: DraftActionBase[]): DraftActionBase[] {
   });
 }
 
+/** Drop redundant CRM steps when a superset action is already present. */
+export function pruneRedundantDraftActions(actions: DraftActionBase[]): DraftActionBase[] {
+  const types = new Set(actions.map((a) => a.type));
+  let out = actions;
+  if (types.has("create_or_update_contract_record")) {
+    out = out.filter((a) => a.type !== "create_contract");
+  }
+  if (types.has("propose_financial_analysis_refresh") && types.has("propose_financial_analysis_update")) {
+    out = out.filter((a) => a.type !== "propose_financial_analysis_update");
+  }
+  return out;
+}
+
 export function buildAllDraftActions(
   extracted: ExtractedContractSchema | DocumentReviewEnvelope
 ): DraftActionBase[] {
@@ -284,14 +314,16 @@ export function buildAllDraftActions(
     const premiums = computeDraftPremiumsFromEnvelope(maybeEnvelope, segment);
     const inst = String(
       fieldValue(maybeEnvelope, "insurer") ??
+        fieldValue(maybeEnvelope, "institutionName") ??
         fieldValue(maybeEnvelope, "lender") ??
         fieldValue(maybeEnvelope, "bankName") ??
         ""
     ).trim();
     const eff = String(
       fieldValue(maybeEnvelope, "policyStartDate") ??
-        fieldValue(maybeEnvelope, "disbursementDate") ??
         fieldValue(maybeEnvelope, "effectiveDate") ??
+        fieldValue(maybeEnvelope, "disbursementDate") ??
+        fieldValue(maybeEnvelope, "startDate") ??
         ""
     ).trim();
     actions.push({
@@ -529,7 +561,7 @@ export function buildAllDraftActions(
     });
   }
 
-  return dedupeActions(actions);
+  return dedupeActions(pruneRedundantDraftActions(actions));
 }
 
 /** Canonical Aidvisor draft type names + optional removal of portal payment drafts when blocked. */

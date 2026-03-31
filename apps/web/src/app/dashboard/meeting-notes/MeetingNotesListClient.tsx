@@ -13,6 +13,7 @@ import type {
 } from "@/app/actions/meeting-notes";
 import type { ContactRow } from "@/app/actions/contacts";
 import { MeetingNotesForm } from "./MeetingNotesForm";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export function MeetingNotesListClient({
   initialNotes,
@@ -23,6 +24,7 @@ export function MeetingNotesListClient({
   templates: TemplateRow[];
   contacts: ContactRow[];
 }) {
+  const askConfirm = useConfirm();
   const [notes, setNotes] = useState(initialNotes);
   const [editingNote, setEditingNote] = useState<MeetingNoteDetail | null>(null);
 
@@ -37,7 +39,16 @@ export function MeetingNotesListClient({
   }
 
   async function handleDelete(noteId: string) {
-    if (!window.confirm("Opravdu chcete smazat tento zápisek?")) return;
+    if (
+      !(await askConfirm({
+        title: "Smazat zápisek",
+        message: "Opravdu chcete smazat tento zápisek?",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await deleteMeetingNote(noteId);
     reload();
   }

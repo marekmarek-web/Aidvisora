@@ -21,6 +21,7 @@ import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import type { ProcessingStatus, ReviewStatus } from "@/lib/ai-review/types";
 
 type ReviewItem = {
@@ -150,6 +151,7 @@ function formatUploadDate(createdAt: string): string {
 
 export default function ContractReviewListPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const { setOpen: setAiDrawerOpen } = useAiAssistantDrawer();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,10 +232,19 @@ export default function ContractReviewListPage() {
     e.preventDefault();
     e.stopPropagation();
     const warn = isProcessing(row);
-    const msg = warn
+    const message = warn
       ? "Položka se stále zpracovává. Opravdu smazat soubor z úložiště i z revize?"
       : "Smazat soubor z úložiště i z revize?";
-    if (!window.confirm(msg)) return;
+    if (
+      !(await confirm({
+        title: "Smazat položku revize",
+        message,
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setDeletingId(row.id);
     setError(null);
     try {

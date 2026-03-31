@@ -20,6 +20,7 @@ import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import clsx from "clsx";
 import { User, UserCog, Share2, MapPin, Activity, Baby, Mail, Phone, Target, Briefcase, Plus, Trash2, ChevronRight } from "lucide-react";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
 
@@ -60,6 +61,7 @@ function isChildMember(member: { role: string | null; birthDate?: string | null 
 
 export function HouseholdDetailView({ household, contacts, opportunities }: HouseholdDetailViewProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
   const [renaming, setRenaming] = useState(false);
@@ -146,11 +148,22 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
   }
 
   function handleRemoveMember(memberId: string) {
-    if (!confirm("Opravdu odebrat tohoto člena z domácnosti?")) return;
-    startTransition(async () => {
-      await removeHouseholdMember(memberId);
-      router.refresh();
-    });
+    void (async () => {
+      if (
+        !(await confirm({
+          title: "Odebrat člena",
+          message: "Opravdu chcete odebrat tohoto člena z domácnosti?",
+          confirmLabel: "Odebrat",
+          variant: "destructive",
+        }))
+      ) {
+        return;
+      }
+      startTransition(async () => {
+        await removeHouseholdMember(memberId);
+        router.refresh();
+      });
+    })();
   }
 
   const existingContactIds = new Set(household.members.map((m) => m.contactId));

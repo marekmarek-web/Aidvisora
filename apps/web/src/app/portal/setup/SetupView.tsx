@@ -38,6 +38,7 @@ import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick
 import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
@@ -164,6 +165,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const router = useRouter();
   const pathname = usePathname();
   const toast = useToast();
+  const confirm = useConfirm();
   const tabParam = searchParams.get("tab");
   const providerParam = searchParams.get("provider");
   const [activeTab, setActiveTabState] = useState<TabId>(() => {
@@ -459,7 +461,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   }, []);
 
   const handleCalendarDisconnect = useCallback(async () => {
-    if (!window.confirm("Opravdu chcete odpojit Google Kalendář? Události v aplikaci se již nebudou zobrazovat.")) return;
+    if (
+      !(await confirm({
+        title: "Odpojit Google Kalendář",
+        message: "Opravdu chcete odpojit Google Kalendář? Události v aplikaci se již nebudou zobrazovat.",
+        confirmLabel: "Odpojit",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setCalendarDisconnecting(true);
     setCalendarStatusError(null);
     try {
@@ -476,7 +487,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     } finally {
       setCalendarDisconnecting(false);
     }
-  }, [fetchCalendarStatus, toast]);
+  }, [confirm, fetchCalendarStatus, toast]);
 
   const handleCalendarSync = useCallback(async () => {
     setCalendarSyncing(true);
@@ -514,7 +525,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   }, []);
   const handleDriveConnect = useCallback(() => { window.location.href = "/api/integrations/google-drive/connect"; }, []);
   const handleDriveDisconnect = useCallback(async () => {
-    if (!window.confirm("Opravdu chcete odpojit Google Drive?")) return;
+    if (
+      !(await confirm({
+        title: "Odpojit Google Drive",
+        message: "Opravdu chcete odpojit Google Drive?",
+        confirmLabel: "Odpojit",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setDriveDisconnecting(true);
     try {
       const res = await fetch("/api/drive/disconnect", { method: "POST" });
@@ -522,7 +542,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       else { const d = (await res.json().catch(() => ({}))) as { error?: string }; toast.showToast(d.error ?? "Odpojení se nepovedlo.", "error"); }
     } catch { toast.showToast("Odpojení se nepovedlo.", "error"); }
     finally { setDriveDisconnecting(false); }
-  }, [fetchDriveStatus, toast]);
+  }, [confirm, fetchDriveStatus, toast]);
 
   // --- Gmail handlers
   const fetchGmailStatus = useCallback(async () => {
@@ -538,7 +558,16 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   }, []);
   const handleGmailConnect = useCallback(() => { window.location.href = "/api/integrations/gmail/connect"; }, []);
   const handleGmailDisconnect = useCallback(async () => {
-    if (!window.confirm("Opravdu chcete odpojit Gmail?")) return;
+    if (
+      !(await confirm({
+        title: "Odpojit Gmail",
+        message: "Opravdu chcete odpojit Gmail?",
+        confirmLabel: "Odpojit",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     setGmailDisconnecting(true);
     try {
       const res = await fetch("/api/gmail/disconnect", { method: "POST" });
@@ -546,7 +575,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       else { const d = (await res.json().catch(() => ({}))) as { error?: string }; toast.showToast(d.error ?? "Odpojení se nepovedlo.", "error"); }
     } catch { toast.showToast("Odpojení se nepovedlo.", "error"); }
     finally { setGmailDisconnecting(false); }
-  }, [fetchGmailStatus, toast]);
+  }, [confirm, fetchGmailStatus, toast]);
 
   const fetchAiHealth = useCallback(async () => {
     try {

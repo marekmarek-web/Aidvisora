@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/documents";
 import type { DocumentRow } from "@/app/actions/documents";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export function OpportunityOffersTab({
   opportunityId,
@@ -16,6 +17,7 @@ export function OpportunityOffersTab({
   opportunityId: string;
   contactId: string | null;
 }) {
+  const confirm = useConfirm();
   const [list, setList] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,16 @@ export function OpportunityOffersTab({
   useEffect(() => load(), [opportunityId]);
 
   async function onDelete(id: string) {
-    if (!confirm("Opravdu smazat tento dokument?")) return;
+    if (
+      !(await confirm({
+        title: "Smazat dokument",
+        message: "Opravdu chcete smazat tento dokument?",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await deleteDocument(id);
     load();
   }

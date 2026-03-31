@@ -9,6 +9,8 @@ import {
 } from "@/app/actions/meeting-notes";
 import type { MeetingNoteRowWithContent } from "@/app/actions/meeting-notes";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export function OpportunityNotesTab({
   opportunityId,
@@ -17,6 +19,8 @@ export function OpportunityNotesTab({
   opportunityId: string;
   contactId: string | null;
 }) {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [list, setList] = useState<MeetingNoteRowWithContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,7 +38,7 @@ export function OpportunityNotesTab({
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!contactId) {
-      alert("Přiřaďte obchodu klienta pro přidání poznámky.");
+      toast.showToast("Přiřaďte obchodu klienta pro přidání poznámky.", "error");
       return;
     }
     const form = e.currentTarget;
@@ -53,14 +57,23 @@ export function OpportunityNotesTab({
       form.reset();
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Chyba");
+      toast.showToast(err instanceof Error ? err.message : "Chyba", "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat poznámku?")) return;
+    if (
+      !(await confirm({
+        title: "Smazat poznámku",
+        message: "Opravdu chcete tuto poznámku trvale smazat?",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await deleteMeetingNote(id);
     load();
   }

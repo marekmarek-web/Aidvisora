@@ -11,8 +11,10 @@ import type { DocumentRow } from "@/app/actions/documents";
 import type { ContractRow } from "@/app/actions/contracts";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { ProcessingStatusBadge } from "@/app/components/documents/ProcessingStatusBadge";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export function DocumentsSection({ contactId }: { contactId: string }) {
+  const askConfirm = useConfirm();
   const [list, setList] = useState<DocumentRow[]>([]);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,16 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
   }
 
   async function onDelete(docId: string) {
-    if (!window.confirm("Opravdu chcete smazat tento dokument?")) return;
+    if (
+      !(await askConfirm({
+        title: "Smazat dokument",
+        message: "Opravdu chcete smazat tento dokument?",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await deleteDocument(docId);
     load();
   }

@@ -17,7 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   consumer_loan_contract: "smlouvu o spotřebitelském úvěru",
   consumer_loan_with_payment_protection: "smlouvu o úvěru s pojištěním splátek",
   mortgage_document: "dokument k hypotéce",
-  pension_contract: "smlouvu o penzijním spoření",
+  pension_contract: "smlouvu k DPS (doplňkové penzijní spoření) nebo PP (penzijní připojištění)",
   investment_service_agreement: "smlouvu o investičních službách",
   investment_subscription_document: "upisovací dokument k investici",
   investment_modelation: "modelaci investice",

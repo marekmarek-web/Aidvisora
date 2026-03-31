@@ -11,9 +11,13 @@ import { Download, FolderOpen, PlusCircle, CloudUpload, List, UserPlus } from "l
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export function FinancialAnalysisToolbar() {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const data = useFinancialAnalysisStore((s) => s.data);
@@ -42,7 +46,7 @@ export function FinancialAnalysisToolbar() {
       }
     } catch (e) {
       const msg = typeof e === "object" && e && "message" in e ? String((e as Error).message) : "Nepodařilo se uložit.";
-      alert(msg);
+      toast.showToast(msg, "error");
     } finally {
       setSaving(false);
     }
@@ -68,7 +72,11 @@ export function FinancialAnalysisToolbar() {
       const text = ev.target?.result as string;
       if (text) {
         const ok = loadFromFile(text);
-        if (!ok) alert("Nepodařilo se načíst soubor. Zkontrolujte, že jde o platný export finanční analýzy (JSON).");
+        if (!ok)
+          toast.showToast(
+            "Nepodařilo se načíst soubor. Zkontrolujte, že jde o platný export finanční analýzy (JSON).",
+            "error",
+          );
       }
     };
     reader.readAsText(file);
@@ -76,10 +84,21 @@ export function FinancialAnalysisToolbar() {
   };
 
   const handleReset = () => {
-    if (typeof window !== "undefined" && window.confirm("Opravdu chcete smazat všechny zadané údaje a začít nový plán?")) {
+    void (async () => {
+      if (
+        !(await confirm({
+          title: "Začít znovu",
+          message: "Opravdu chcete smazat všechny zadané údaje a začít nový plán?",
+          confirmLabel: "Smazat a začít znovu",
+          cancelLabel: "Zrušit",
+          variant: "destructive",
+        }))
+      ) {
+        return;
+      }
       reset();
       router.push("/portal/analyses/financial");
-    }
+    })();
   };
 
   return (

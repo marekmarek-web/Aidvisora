@@ -16,6 +16,7 @@ import type {
 } from "@/app/actions/compliance";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { Shield, FileCheck } from "lucide-react";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 const RISK_BADGE: Record<string, string> = {
   low: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
@@ -24,6 +25,7 @@ const RISK_BADGE: Record<string, string> = {
 };
 
 export function ComplianceSection({ contactId }: { contactId: string }) {
+  const askConfirm = useConfirm();
   const [tab, setTab] = useState<"aml" | "consents">("aml");
   const [amlList, setAmlList] = useState<AmlChecklistRow[]>([]);
   const [consentList, setConsentList] = useState<ConsentRow[]>([]);
@@ -99,7 +101,16 @@ export function ComplianceSection({ contactId }: { contactId: string }) {
   }
 
   async function handleRevoke(consentId: string) {
-    if (!confirm("Opravdu odvolat tento souhlas?")) return;
+    if (
+      !(await askConfirm({
+        title: "Odvolat souhlas",
+        message: "Opravdu chcete odvolat tento souhlas?",
+        confirmLabel: "Odvolat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await revokeConsent(consentId);
     loadData();
   }

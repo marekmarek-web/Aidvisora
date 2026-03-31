@@ -37,7 +37,12 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
   const fam = n(c.productFamily);
   const sub = n(c.productSubtype);
 
-  if (dt === "payment_instructions") return "payment_instruction";
+  if (dt === "payment_instructions") {
+    if (fam === "investment" || sub.includes("fundoo") || sub.includes("amundi")) {
+      return "investment_payment_instruction";
+    }
+    return "payment_instruction";
+  }
   // Life insurance — proposals / modelations / contracts (must run before generic fallback).
   if (fam === "life_insurance") {
     if (dt === "proposal" || dt === "offer") return "life_insurance_proposal";

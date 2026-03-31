@@ -145,7 +145,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
-  // §3 Investment
+  // §3 Investment (vč. FUNDOO / Amundi — čistá investice, ne DPS/PP)
   if (fam === "investment") {
     if (dt === "contract") {
       return { outcome: "extract", promptKey: "investmentContractExtraction", reasonCodes: ["investment_contract"] };
@@ -158,7 +158,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
-  // §4 PP / DPS
+  // §4 PP (penzijní připojištění) a DPS (doplňkové penzijní spoření) — nelze zaměňovat
   if (fam === "pp" || fam === "dps") {
     if (dt === "contract") {
       return { outcome: "extract", promptKey: "retirementProductExtraction", reasonCodes: ["pension_contract"] };
@@ -174,7 +174,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
-  // §5 DIP
+  // §5 DIP (dlouhodobý investiční produkt; pozor na záměnu s fondovým příkazem / FUNDOO)
   if (fam === "dip") {
     if (dt === "contract") {
       return { outcome: "extract", promptKey: "dipExtraction", reasonCodes: ["dip_contract"] };

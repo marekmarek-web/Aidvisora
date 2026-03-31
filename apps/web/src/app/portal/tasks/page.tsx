@@ -24,6 +24,7 @@ import { SwipeTaskItem } from "@/app/components/SwipeTaskItem";
 import { CustomDropdown as CustomDropdownUI } from "@/app/components/ui/CustomDropdown";
 import clsx from "clsx";
 import { CreateActionButton, portalPrimaryButtonClassName } from "@/app/components/ui/CreateActionButton";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -780,6 +781,7 @@ function MoreActionsMenu({
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const confirm = useConfirm();
   const initialSettings = loadSettings();
 
   const initialFilter = (() => {
@@ -900,7 +902,16 @@ function TasksPageContent() {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Opravdu smazat tento úkol?")) return;
+    if (
+      !(await confirm({
+        title: "Smazat úkol",
+        message: "Opravdu chcete smazat tento úkol?",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     await deleteTask(id);
     await reload();
   }
@@ -908,9 +919,12 @@ function TasksPageContent() {
   async function handleMoveToNotes(taskId: string) {
     setMoveToNotesError(null);
     if (
-      !window.confirm(
-        "Úkol bude odebrán ze seznamu Úkolů a uložen jako interní zápisek na board Zápisky (pouze pro práci poradce v CRM). Pokračovat?",
-      )
+      !(await confirm({
+        title: "Přesunout do zápisků",
+        message:
+          "Úkol bude odebrán ze seznamu Úkolů a uložen jako interní zápisek na board Zápisky (pouze pro práci poradce v CRM). Pokračovat?",
+        confirmLabel: "Přesunout",
+      }))
     ) {
       return;
     }
@@ -1095,7 +1109,7 @@ function TasksPageContent() {
                           title={t.title}
                           subtitle={[t.contactName, formatDate(t.dueDate)].filter(Boolean).join(" · ")}
                           onDelete={(id) => {
-                            if (window.confirm("Opravdu smazat tento úkol?")) handleDelete(id);
+                            void handleDelete(id);
                           }}
                           onEdit={() => openMobileEdit(t)}
                           leftSlot={

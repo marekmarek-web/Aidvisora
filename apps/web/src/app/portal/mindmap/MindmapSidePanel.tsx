@@ -7,6 +7,7 @@ import type { MindmapNode } from "./types";
 import clsx from "clsx";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 const NODE_TYPES: { value: MindmapNode["type"]; label: string }[] = [
   { value: "category", label: "Kategorie" },
@@ -52,6 +53,7 @@ export function MindmapSidePanel({
   onPasteNodeData,
   hasClipboard = false,
 }: MindmapSidePanelProps) {
+  const confirm = useConfirm();
   const [editTitle, setEditTitle] = useState("");
   const [editSubtitle, setEditSubtitle] = useState("");
   const [editValue, setEditValue] = useState("");
@@ -320,11 +322,21 @@ export function MindmapSidePanel({
             <button
               type="button"
               onClick={() => {
-                if (window.confirm("Opravdu smazat tento uzel?")) {
+                void (async () => {
+                  if (
+                    !(await confirm({
+                      title: "Smazat uzel",
+                      message: "Opravdu chcete smazat tento uzel?",
+                      confirmLabel: "Smazat",
+                      variant: "destructive",
+                    }))
+                  ) {
+                    return;
+                  }
                   onDeleteNode(node.id);
-                }
+                })();
               }}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-rose-200 text-rose-700 text-sm font-medium hover:bg-rose-50"
+              className="flex min-h-[44px] items-center gap-2 px-3 py-2 rounded-xl border border-rose-200 text-rose-700 text-sm font-medium hover:bg-rose-50"
             >
               <Trash2 size={16} /> Smazat uzel
             </button>

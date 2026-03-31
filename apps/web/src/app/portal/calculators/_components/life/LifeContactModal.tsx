@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/calculators/life/formatters";
 import type { LifeState } from "@/lib/calculators/life/life.types";
 import type { LifeResult } from "@/lib/calculators/life/life.types";
+import { useToast } from "@/app/components/Toast";
 
 export type LifeModalType = "general" | "proposal" | "check";
 
@@ -45,6 +46,7 @@ export function LifeContactModal({
   result,
   onSubmitSuccess,
 }: LifeContactModalProps) {
+  const toast = useToast();
   const backdropRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -134,14 +136,14 @@ export function LifeContactModal({
               .map((e) => e.message)
               .join(", ")
           : "Chyba při odesílání.";
-        alert(msg);
+        toast.showToast(msg, "error");
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = "Zkusit znovu";
         }
       }
     } catch {
-      alert("Oops! Nastal problém s odesláním formuláře.");
+      toast.showToast("Odeslání se nepodařilo. Zkuste to znovu.", "error");
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = "Zkusit znovu";

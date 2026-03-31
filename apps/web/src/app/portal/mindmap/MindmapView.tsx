@@ -14,12 +14,16 @@ import { MindmapSidePanel } from "./MindmapSidePanel";
 import clsx from "clsx";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { renderNodeByType, type NodeItemMenuAction } from "./NodeRenderers";
+import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 type MindmapViewProps = {
   initial: MindmapState;
 };
 
 export function MindmapView({ initial }: MindmapViewProps) {
+  const toast = useToast();
+  const confirm = useConfirm();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasExportRef = useRef<HTMLDivElement>(null);
   const {
@@ -199,13 +203,24 @@ export function MindmapView({ initial }: MindmapViewProps) {
       }
       if (action === "delete") {
         if (node.type === "core") {
-          window.alert("Kořenový uzel nelze smazat.");
+          toast.showToast("Kořenový uzel nelze smazat.", "error");
           return;
         }
-        if (!window.confirm("Opravdu smazat tento uzel?")) return;
-        deleteNode(node.id);
-        setSelectedNodeId((s) => (s === node.id ? null : s));
-        setSidePanelNodeId((s) => (s === node.id ? null : s));
+        void (async () => {
+          if (
+            !(await confirm({
+              title: "Smazat uzel",
+              message: "Opravdu chcete smazat tento uzel?",
+              confirmLabel: "Smazat",
+              variant: "destructive",
+            }))
+          ) {
+            return;
+          }
+          deleteNode(node.id);
+          setSelectedNodeId((s) => (s === node.id ? null : s));
+          setSidePanelNodeId((s) => (s === node.id ? null : s));
+        })();
         return;
       }
       if (action === "duplicate") {
@@ -227,7 +242,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
         );
       }
     },
-    [addNode, deleteNode, findParentId, setSelectedNodeId, setSidePanelNodeId]
+    [addNode, confirm, deleteNode, findParentId, setSelectedNodeId, setSidePanelNodeId, toast]
   );
 
   const handleExportPng = useCallback(async () => {
@@ -243,17 +258,20 @@ export function MindmapView({ initial }: MindmapViewProps) {
       a.download = `mindmap-${safe}.png`;
       a.click();
     } catch {
-      window.alert("Export se nepodařil. Zkuste jiný prohlížeč nebo menší mapu.");
+      toast.showToast("Export se nepodařil. Zkuste jiný prohlížeč nebo menší mapu.", "error");
     } finally {
       setExportBusy(false);
       setMobileMenuOpen(false);
     }
-  }, [initial.entityName]);
+  }, [initial.entityName, toast]);
 
   const handleAiStrategyStub = useCallback(() => {
-    window.alert("Funkce AI návrhu strategie bude brzy k dispozici. Zatím použijte asistenta v portálu.");
+    toast.showToast(
+      "Funkce AI návrhu strategie bude brzy k dispozici. Zatím použijte asistenta v portálu.",
+      "info",
+    );
     setMobileMenuOpen(false);
-  }, []);
+  }, [toast]);
 
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] text-[color:var(--wp-text)] overflow-hidden pb-[env(safe-area-inset-bottom)]">

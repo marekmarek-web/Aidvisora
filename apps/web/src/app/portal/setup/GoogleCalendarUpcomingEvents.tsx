@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, Calendar, MapPin, Plus, Pencil, Trash2, User, Bri
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { BaseModal } from "@/app/components/BaseModal";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { getContactsList, type ContactRow } from "@/app/actions/contacts";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
 import { retryFetchWithTimeout } from "@/lib/network/retry";
@@ -72,6 +73,7 @@ function defaultEnd(): Date {
 
 export function GoogleCalendarUpcomingEvents() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +242,16 @@ export function GoogleCalendarUpcomingEvents() {
 
   const handleDelete = useCallback(
     async (ev: CalendarEventItem) => {
-      if (!window.confirm("Opravdu chcete smazat tuto událost z Google Kalendáře?")) return;
+      if (
+        !(await confirm({
+          title: "Smazat událost",
+          message: "Opravdu chcete smazat tuto událost z Google Kalendáře?",
+          confirmLabel: "Smazat",
+          variant: "destructive",
+        }))
+      ) {
+        return;
+      }
       setDeletingId(ev.id);
       try {
         const res = await retryFetchWithTimeout(
@@ -264,7 +275,7 @@ export function GoogleCalendarUpcomingEvents() {
         setDeletingId(null);
       }
     },
-    [buildIdempotencyKey, fetchEvents, toast]
+    [buildIdempotencyKey, confirm, fetchEvents, toast]
   );
 
   const handleCreateSubmit = async (e: React.FormEvent) => {

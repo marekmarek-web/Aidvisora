@@ -1,5 +1,6 @@
 import type { DocumentReviewEnvelope, PrimaryDocumentType } from "../ai/document-review-types";
-import { buildAllDraftActions } from "../ai/draft-actions";
+import { buildAllDraftActions, pruneRedundantDraftActions } from "../ai/draft-actions";
+import type { DraftActionBase } from "../ai/review-queue";
 import { getDocumentTypeLabel } from "../ai/document-messages";
 import { getReasonMessage } from "../ai/reason-codes";
 import { formatAiClassifierForAdvisor } from "./czech-labels";
@@ -19,6 +20,7 @@ function formatMoneyLine(env: DocumentReviewEnvelope): string {
   const amt =
     str(fv(env, "totalMonthlyPremium")) ||
     str(fv(env, "premiumAmount")) ||
+    str(fv(env, "monthlyPremium")) ||
     str(fv(env, "regularAmount")) ||
     str(fv(env, "installmentAmount"));
   const freq = str(fv(env, "paymentFrequency")) || str(fv(env, "premiumFrequency"));
@@ -89,13 +91,14 @@ function mergeWorkActions(envelope: DocumentReviewEnvelope): DraftAction[] {
     label: a.label?.trim() || "Návrh kroku",
     payload: (a.payload ?? {}) as Record<string, unknown>,
   }));
+  const merged = pruneRedundantDraftActions([...deterministic, ...fromLlm] as DraftActionBase[]);
   const seen = new Set<string>();
   const out: DraftAction[] = [];
-  for (const a of [...deterministic, ...fromLlm]) {
+  for (const a of merged) {
     const k = `${a.type}:${a.label}`;
     if (seen.has(k)) continue;
     seen.add(k);
-    out.push(a);
+    out.push(a as DraftAction);
   }
   return out.slice(0, 16);
 }

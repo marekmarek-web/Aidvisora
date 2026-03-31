@@ -129,13 +129,13 @@ export const AI_REVIEW_REGISTRY: Record<AiReviewPromptKey, AiReviewRegistryEntry
     key: "retirementProductExtraction",
     category: "ai_review",
     envKey: AI_REVIEW_ENV_KEYS.retirementProductExtraction,
-    purpose: "PP / DPS product extraction",
+    purpose: "DPS (doplňkové penzijní spoření) a PP (penzijní připojištění) — zvlášť, nezaměňovat",
   },
   dipExtraction: {
     key: "dipExtraction",
     category: "ai_review",
     envKey: AI_REVIEW_ENV_KEYS.dipExtraction,
-    purpose: "DIP extraction",
+    purpose: "DIP (dlouhodobý investiční produkt); liší se od FUNDOO a od DPS",
   },
   buildingSavingsExtraction: {
     key: "buildingSavingsExtraction",

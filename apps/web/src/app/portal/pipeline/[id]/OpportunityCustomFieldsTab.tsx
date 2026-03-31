@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { updateOpportunity } from "@/app/actions/pipeline";
 import type { OpportunityDetail } from "@/app/actions/pipeline";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { useToast } from "@/app/components/Toast";
 
 const SECTIONS: {
   key: string;
@@ -78,6 +79,7 @@ export function OpportunityCustomFieldsTab({
   onUpdate?: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
 
@@ -103,11 +105,11 @@ export function OpportunityCustomFieldsTab({
       await updateOpportunity(opportunity.id, { customFields: values });
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Chyba při ukládání");
+      toast.showToast(err instanceof Error ? err.message : "Chyba při ukládání", "error");
     } finally {
       setSaving(false);
     }
-  }, [opportunity.id, values, router]);
+  }, [opportunity.id, router, toast, values]);
 
   return (
     <div className="space-y-6">

@@ -20,8 +20,8 @@ const FAMILY: Record<string, string> = {
   life_insurance: "Životní pojištění",
   non_life_insurance: "Neživotní pojištění",
   investment: "Investice",
-  pp: "Penzijní připojištění",
-  dps: "Doplňkové důchodové spoření",
+  pp: "Penzijní připojištění (PP)",
+  dps: "Doplňkové penzijní spoření (DPS)",
   dip: "Dlouhodobý investiční produkt (DIP)",
   building_savings: "Stavební spoření",
   loan: "Úvěr",
@@ -50,6 +50,8 @@ const SUBTYPE: Record<string, string> = {
   direct_debit_mandate: "Inkasní mandát",
   confirmation_of_contract: "Potvrzení smlouvy",
   confirmation_of_payment: "Potvrzení platby",
+  fundoo: "FUNDOO (pravidelná / jednorázová investice, typicky Amundi)",
+  amundi_platform: "Amundi / investiční platforma",
   unknown: "Neurčeno",
 };
 

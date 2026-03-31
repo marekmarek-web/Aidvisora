@@ -31,6 +31,7 @@ import {
   useToast,
 } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -122,6 +123,7 @@ function OpportunityDetailSheet({
   onAfterMutation: () => void;
 }) {
   const { toast, showToast, dismissToast } = useToast();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(opp.title);
@@ -196,8 +198,19 @@ function OpportunityDetailSheet({
             <button
               type="button"
               onClick={() => {
-                if (!window.confirm("Smazat tento případ?")) return;
-                runMutation(() => deleteOpportunity(opp.id), "Případ byl smazán.");
+                void (async () => {
+                  if (
+                    !(await confirm({
+                      title: "Smazat případ",
+                      message: "Opravdu chcete smazat tento případ?",
+                      confirmLabel: "Smazat",
+                      variant: "destructive",
+                    }))
+                  ) {
+                    return;
+                  }
+                  runMutation(() => deleteOpportunity(opp.id), "Případ byl smazán.");
+                })();
               }}
               disabled={pending}
               className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-rose-200 text-sm font-bold text-rose-600 active:scale-[0.98] transition-transform disabled:opacity-50"
@@ -287,8 +300,18 @@ function OpportunityDetailSheet({
                 type="button"
                 disabled={pending}
                 onClick={() => {
-                  if (!window.confirm("Označit jako vyhraný?")) return;
-                  runMutation(() => closeOpportunity(opp.id, true), "Případ uzavřen jako vyhraný.");
+                  void (async () => {
+                    if (
+                      !(await confirm({
+                        title: "Uzavřít případ",
+                        message: "Označit tento případ jako vyhraný?",
+                        confirmLabel: "Vyhraný",
+                      }))
+                    ) {
+                      return;
+                    }
+                    runMutation(() => closeOpportunity(opp.id, true), "Případ uzavřen jako vyhraný.");
+                  })();
                 }}
                 className="min-h-[44px] rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-black flex items-center justify-center gap-1 active:scale-[0.98] disabled:opacity-50"
               >
@@ -298,8 +321,19 @@ function OpportunityDetailSheet({
                 type="button"
                 disabled={pending}
                 onClick={() => {
-                  if (!window.confirm("Označit jako prohraný?")) return;
-                  runMutation(() => closeOpportunity(opp.id, false), "Případ uzavřen jako prohraný.");
+                  void (async () => {
+                    if (
+                      !(await confirm({
+                        title: "Uzavřít případ",
+                        message: "Označit tento případ jako prohraný?",
+                        confirmLabel: "Prohraný",
+                        variant: "destructive",
+                      }))
+                    ) {
+                      return;
+                    }
+                    runMutation(() => closeOpportunity(opp.id, false), "Případ uzavřen jako prohraný.");
+                  })();
                 }}
                 className="min-h-[44px] rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-black flex items-center justify-center gap-1 active:scale-[0.98] disabled:opacity-50"
               >

@@ -8,11 +8,13 @@ import { safeNameForFile } from "@/lib/analyses/financial/formatters";
 import { uploadDocument } from "@/app/actions/documents";
 import { setCompanyAnalysisLastExportedAt } from "@/app/actions/company-financial-analyses";
 import { FileText, CloudUpload } from "lucide-react";
+import { useToast } from "@/app/components/Toast";
 
 /**
  * Step 5 – Výstup. Generuje firemní report a umožňuje uložit do dokumentů.
  */
 export function StepCompanyOutput() {
+  const toast = useToast();
   const payload = useCompanyFaStore((s) => s.payload);
   const analysisId = useCompanyFaStore((s) => s.analysisId);
   const companyId = useCompanyFaStore((s) => s.companyId);
@@ -56,7 +58,10 @@ export function StepCompanyOutput() {
       if (analysisId) await setCompanyAnalysisLastExportedAt(analysisId);
     } catch (e) {
       console.error(e);
-      alert(typeof e === "object" && e && "message" in e ? (e as Error).message : "Nepodařilo se uložit report.");
+      toast.showToast(
+        typeof e === "object" && e && "message" in e ? (e as Error).message : "Nepodařilo se uložit report.",
+        "error",
+      );
     } finally {
       setSavingToDocs(false);
     }

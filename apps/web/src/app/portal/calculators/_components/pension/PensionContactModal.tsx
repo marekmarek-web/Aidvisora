@@ -5,6 +5,8 @@ import { formatCurrency } from "@/lib/calculators/pension/formatters";
 import type { PensionState } from "@/lib/calculators/pension/pension.types";
 import type { PensionResult } from "@/lib/calculators/pension/pension.types";
 
+import { useToast } from "@/app/components/Toast";
+
 const FORMSUBMIT_URL = "https://formsubmit.co/ajax/kontakt@marek-marek.cz";
 
 export interface PensionContactModalProps {
@@ -22,6 +24,7 @@ export function PensionContactModal({
   result,
   onSubmitSuccess,
 }: PensionContactModalProps) {
+  const toast = useToast();
   const backdropRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -100,14 +103,14 @@ export function PensionContactModal({
         const msg = Array.isArray((data as { errors?: Array<{ message: string }> }).errors)
           ? (data as { errors: Array<{ message: string }> }).errors.map((e) => e.message).join(", ")
           : "Chyba při odesílání.";
-        alert(msg);
+        toast.showToast(msg, "error");
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = "Zkusit znovu";
         }
       }
     } catch {
-      alert("Oops! Nastal problém s odesláním formuláře.");
+      toast.showToast("Odeslání se nepodařilo. Zkuste to znovu.", "error");
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = "Zkusit znovu";

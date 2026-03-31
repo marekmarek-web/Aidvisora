@@ -36,6 +36,7 @@ import {
   FloatingActionButton,
 } from "@/app/shared/mobile-ui/primitives";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 function mergeColumnsWithDefaults(saved: Column[]): Column[] {
   const byId = new Map(saved.map((c) => [c.id, c]));
@@ -184,6 +185,7 @@ export function BoardMobileScreen() {
   const viewIdFromQuery = searchParams.get("viewId");
   const itemIdFromQuery = searchParams.get("item");
   const deviceClass = useDeviceClass();
+  const confirm = useConfirm();
 
   const [board, setBoard] = useState<Board | undefined>(undefined);
   const [dbViewId, setDbViewId] = useState<string | undefined>(undefined);
@@ -322,17 +324,29 @@ export function BoardMobileScreen() {
 
   function handleDeleteItem() {
     if (!selectedItem) return;
-    if (!confirm("Opravdu chcete smazat tuto položku?")) return;
-    startSaveTransition(async () => {
-      try {
-        await deleteBoardItems([selectedItem.id]);
-        setDetailOpen(false);
-        setSelectedItem(null);
-        loadBoard();
-      } catch {
-        /* retry from UI */
+    const itemId = selectedItem.id;
+    void (async () => {
+      if (
+        !(await confirm({
+          title: "Smazat položku",
+          message: "Opravdu chcete smazat tuto položku?",
+          confirmLabel: "Smazat",
+          variant: "destructive",
+        }))
+      ) {
+        return;
       }
-    });
+      startSaveTransition(async () => {
+        try {
+          await deleteBoardItems([itemId]);
+          setDetailOpen(false);
+          setSelectedItem(null);
+          loadBoard();
+        } catch {
+          /* retry from UI */
+        }
+      });
+    })();
   }
 
   function handleStatusChange(columnId: string, newValue: string) {

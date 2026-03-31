@@ -38,6 +38,7 @@ import {
   MobileSection,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -94,6 +95,7 @@ export function HouseholdDetailScreen({
   contacts: ContactRow[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [detail, setDetail] = useState<HouseholdDetail | null>(null);
   const [opportunities, setOpportunities] = useState<OpportunityByHouseholdRow[]>([]);
   const [analyses, setAnalyses] = useState<FinancialAnalysisListItem[]>([]);
@@ -206,8 +208,12 @@ export function HouseholdDetailScreen({
 
   async function handleDeleteHousehold() {
     if (
-      typeof window !== "undefined" &&
-      !window.confirm("Opravdu smazat tuto domácnost? Tato akce je nevratná.")
+      !(await confirm({
+        title: "Smazat domácnost",
+        message: "Opravdu chcete smazat tuto domácnost? Tato akce je nevratná.",
+        confirmLabel: "Smazat",
+        variant: "destructive",
+      }))
     ) {
       return;
     }

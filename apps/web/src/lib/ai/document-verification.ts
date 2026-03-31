@@ -5,6 +5,8 @@ import type {
   ReviewWarning,
 } from "./document-review-types";
 import type { DocumentSchemaDefinition } from "./document-schema-registry";
+import type { ReadabilityContext } from "../ai-review/advisor-confidence-policy";
+import { isHighTrustReadingContext } from "../ai-review/advisor-confidence-policy";
 
 function getField(
   fields: Record<string, ExtractedField>,
@@ -23,8 +25,15 @@ function isSatisfied(field: ExtractedField | undefined): boolean {
   return false;
 }
 
-function hasLowEvidence(field: ExtractedField | undefined): boolean {
+function hasLowEvidence(
+  field: ExtractedField | undefined,
+  readability?: ReadabilityContext
+): boolean {
   if (!field) return true;
+  if (readability && isHighTrustReadingContext(readability) && isSatisfied(field)) {
+    const c = field.confidence;
+    if (typeof c !== "number" || c >= 0.5) return false;
+  }
   return typeof field.confidence !== "number" || field.confidence < 0.55 || !field.evidenceSnippet;
 }
 
@@ -35,20 +44,26 @@ export type VerificationResult = {
   completeness: DataCompleteness;
 };
 
+export type RunVerificationPassOptions = {
+  readability?: ReadabilityContext;
+};
+
 export function runVerificationPass(
   envelope: DocumentReviewEnvelope,
-  schemaDefinition: DocumentSchemaDefinition
+  schemaDefinition: DocumentSchemaDefinition,
+  options?: RunVerificationPassOptions
 ): VerificationResult {
   const warnings: ReviewWarning[] = [...envelope.reviewWarnings];
   const reasons = new Set<string>();
   const fields = envelope.extractedFields;
+  const readability = options?.readability;
 
   let requiredSatisfied = 0;
   for (const key of schemaDefinition.extractionRules.required) {
     const field = getField(fields, key);
     if (isSatisfied(field)) {
       requiredSatisfied += 1;
-      if (hasLowEvidence(field)) {
+      if (hasLowEvidence(field, readability)) {
         warnings.push({
           code: "LOW_EVIDENCE_REQUIRED",
           message: `Pole ${key} má slabou evidenci.`,

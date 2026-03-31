@@ -25,6 +25,8 @@ import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses
 import { deleteFinancialAnalysisPermanently, setFinancialAnalysisStatus } from "@/app/actions/financial-analyses";
 import { formatUpdated, TABS, matchesTab, isCompleted, type TabId } from "./analyses-page-utils";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export default function AnalysesPageClient({
   analyses,
@@ -34,6 +36,8 @@ export default function AnalysesPageClient({
   loadError?: string | null;
 }) {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -80,7 +84,15 @@ export default function AnalysesPageClient({
 
   async function handleArchive(id: string) {
     setOpenMenuId(null);
-    if (!confirm("Opravdu chcete archivovat tuto analýzu?")) return;
+    if (
+      !(await confirm({
+        title: "Archivovat analýzu",
+        message: "Opravdu chcete archivovat tuto analýzu?",
+        confirmLabel: "Archivovat",
+      }))
+    ) {
+      return;
+    }
     setArchivingId(id);
     try {
       await setFinancialAnalysisStatus(id, "archived");
@@ -101,7 +113,7 @@ export default function AnalysesPageClient({
       router.refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Smazání se nepodařilo.";
-      alert(msg);
+      toast.showToast(msg, "error");
     } finally {
       setDeletingId(null);
     }
