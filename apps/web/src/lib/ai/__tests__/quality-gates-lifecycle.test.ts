@@ -48,14 +48,15 @@ function minimalRow(overrides: Partial<ContractReviewRow> = {}): ContractReviewR
 }
 
 describe("evaluateApplyReadiness lifecycle guard", () => {
-  it("blocks apply when envelope lifecycle is proposal", () => {
+  it("sets apply barrier when envelope lifecycle is proposal", () => {
     const row = minimalRow({
       extractedPayload: {
         documentClassification: { lifecycleStatus: "proposal" },
       },
     });
     const g = evaluateApplyReadiness(row);
-    expect(g.blockedReasons).toContain("NON_FINAL_LIFECYCLE");
+    expect(g.applyBarrierReasons).toContain("NON_FINAL_LIFECYCLE");
+    expect(g.blockedReasons).not.toContain("NON_FINAL_LIFECYCLE");
   });
 
   it("blocks when LLM client match is ambiguous", () => {

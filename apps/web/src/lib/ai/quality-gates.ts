@@ -9,9 +9,17 @@ export type ApplyReadiness = "ready_for_apply" | "review_required" | "blocked_fo
 
 export type ApplyGateResult = {
   readiness: ApplyReadiness;
+  /** Hard blocks: bad classification, pipeline failure, ambiguous client, payment critical gaps, etc. */
   blockedReasons: string[];
+  /** Blocks portal/CRM apply until override — non-final proposals/modelations (not red “Blokováno” in UI). */
+  applyBarrierReasons: string[];
   warnings: string[];
 };
+
+/** All gate codes that must be cleared (or overridden) before apply. */
+export function applyReasonsPendingOverride(gate: ApplyGateResult): string[] {
+  return [...gate.blockedReasons, ...gate.applyBarrierReasons];
+}
 
 export type PaymentApplyPayload = {
   amount?: string | number | null;
@@ -70,6 +78,7 @@ function hasPaymentTarget(p: PaymentApplyPayload): boolean {
 
 export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult {
   const blocked: string[] = [];
+  const applyBarrier: string[] = [];
   const warnings: string[] = [];
   const trace: ExtractionTrace | null = row.extractionTrace;
   const docType = row.detectedDocumentType ?? trace?.documentType ?? "";
@@ -87,19 +96,22 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
   }
 
   if (PROPOSAL_TYPES.has(normalizedType) || PROPOSAL_TYPES.has(docType)) {
-    blocked.push("PROPOSAL_NOT_FINAL");
+    applyBarrier.push("PROPOSAL_NOT_FINAL");
   }
 
   const payload = row.extractedPayload as Record<string, unknown> | null | undefined;
   const docClass = payload?.documentClassification as Record<string, unknown> | undefined;
-  const lifecycle = typeof docClass?.lifecycleStatus === "string" ? docClass.lifecycleStatus : "";
+  const lifecycleFromEnvelope =
+    typeof docClass?.lifecycleStatus === "string" ? docClass.lifecycleStatus : "";
+  const lifecycleFromRow = typeof row.lifecycleStatus === "string" ? row.lifecycleStatus : "";
+  const lifecycle = lifecycleFromEnvelope || lifecycleFromRow;
   if (
     lifecycle === "proposal" ||
     lifecycle === "modelation" ||
     lifecycle === "offer" ||
     lifecycle === "illustration"
   ) {
-    blocked.push("NON_FINAL_LIFECYCLE");
+    applyBarrier.push("NON_FINAL_LIFECYCLE");
   }
 
   if (UNSUPPORTED_FOR_DIRECT_APPLY.has(normalizedType) || UNSUPPORTED_FOR_DIRECT_APPLY.has(docType)) {
@@ -148,10 +160,11 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
 
   const extractionRoute = trace?.extractionRoute;
   if (extractionRoute === "payment_instructions") {
-    const payload = extractPaymentFromRow(row);
-    if (payload) {
-      const payGate = evaluatePaymentApplyReadiness(payload);
+    const payPayload = extractPaymentFromRow(row);
+    if (payPayload) {
+      const payGate = evaluatePaymentApplyReadiness(payPayload);
       blocked.push(...payGate.blockedReasons);
+      applyBarrier.push(...payGate.applyBarrierReasons);
       warnings.push(...payGate.warnings);
     }
   }
@@ -159,11 +172,11 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
   const readiness: ApplyReadiness =
     blocked.length > 0
       ? "blocked_for_apply"
-      : warnings.length > 0
+      : warnings.length > 0 || applyBarrier.length > 0
         ? "review_required"
         : "ready_for_apply";
 
-  return { readiness, blockedReasons: blocked, warnings };
+  return { readiness, blockedReasons: blocked, applyBarrierReasons: applyBarrier, warnings };
 }
 
 export function evaluatePaymentApplyReadiness(p: PaymentApplyPayload): ApplyGateResult {
@@ -205,7 +218,7 @@ export function evaluatePaymentApplyReadiness(p: PaymentApplyPayload): ApplyGate
         ? "review_required"
         : "ready_for_apply";
 
-  return { readiness, blockedReasons: blocked, warnings };
+  return { readiness, blockedReasons: blocked, applyBarrierReasons: [], warnings };
 }
 
 function extractPaymentFromRow(row: ContractReviewRow): PaymentApplyPayload | null {

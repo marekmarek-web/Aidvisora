@@ -207,11 +207,12 @@ export async function applyContractReviewDrafts(
     return { ok: false, error: "U neúspěšné položky nelze aplikovat akce." };
   }
 
-  const { evaluateApplyReadiness } = await import("@/lib/ai/quality-gates");
+  const { evaluateApplyReadiness, applyReasonsPendingOverride } = await import("@/lib/ai/quality-gates");
   const gate = evaluateApplyReadiness(row);
-  if (gate.readiness === "blocked_for_apply") {
+  const pendingApply = applyReasonsPendingOverride(gate);
+  if (pendingApply.length > 0) {
     const overrides = options?.overrideGateReasons ?? [];
-    const remaining = gate.blockedReasons.filter((r) => !overrides.includes(r));
+    const remaining = pendingApply.filter((r) => !overrides.includes(r));
     if (remaining.length > 0) {
       return {
         ok: false,

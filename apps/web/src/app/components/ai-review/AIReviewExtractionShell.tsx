@@ -404,6 +404,15 @@ export function AIReviewExtractionShell({
               </div>
             ) : null}
             {doc.applyGate &&
+            (doc.applyGate.applyBarrierReasons?.length ?? 0) > 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                <strong>Aplikace do portálu:</strong> dokument vypadá jako návrh, modelace nebo nefinální fáze —
+                extrahovaná data můžete kontrolovat, ale{" "}
+                <span className="font-semibold">nelze je automaticky aplikovat jako finální smlouvu</span> bez
+                výslovného override (kódy: {doc.applyGate.applyBarrierReasons.join(", ")}).
+              </div>
+            ) : null}
+            {doc.applyGate &&
             doc.applyGate.warnings.length > 0 ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                 <strong>Varování:</strong>{" "}

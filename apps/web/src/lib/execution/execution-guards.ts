@@ -41,9 +41,18 @@ function checkQualityGates(action: ExecutionAction, _ctx: ExecutionContext): Gua
   const snapshot = action.qualityGateSnapshot;
   if (!snapshot) return null;
 
+  const blocked = Array.isArray(snapshot.blockedReasons) ? (snapshot.blockedReasons as string[]) : [];
+  const barriers = Array.isArray(snapshot.applyBarrierReasons) ? (snapshot.applyBarrierReasons as string[]) : [];
+  const pending = [...blocked, ...barriers];
+  if (pending.length > 0) {
+    return { allowed: false, blockedReasons: pending, requiredOverrides: pending };
+  }
   if (snapshot.readiness === "blocked_for_apply") {
-    const reasons = Array.isArray(snapshot.blockedReasons) ? snapshot.blockedReasons as string[] : ["QUALITY_GATE_BLOCKED"];
-    return { allowed: false, blockedReasons: reasons, requiredOverrides: reasons };
+    return {
+      allowed: false,
+      blockedReasons: ["QUALITY_GATE_BLOCKED"],
+      requiredOverrides: ["QUALITY_GATE_BLOCKED"],
+    };
   }
   return null;
 }

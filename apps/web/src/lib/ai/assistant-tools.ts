@@ -174,7 +174,12 @@ async function handlePrepareContractApply(
   const { evaluateApplyReadiness } = await import("./quality-gates");
   const gate = evaluateApplyReadiness(row);
   return {
-    data: { readiness: gate.readiness, blockedReasons: gate.blockedReasons, warnings: gate.warnings },
+    data: {
+      readiness: gate.readiness,
+      blockedReasons: gate.blockedReasons,
+      applyBarrierReasons: gate.applyBarrierReasons,
+      warnings: gate.warnings,
+    },
     sourceReferences: [{ sourceType: "review", sourceId: reviewId, freshness: "live", visibilityScope: "tenant" }],
     warnings: gate.warnings,
   };

@@ -44,7 +44,7 @@ const REGISTRY: ReasonCode[] = [
   { code: "no_client_match", severity: "warning", humanMessage: "Nenalezena shoda klienta v CRM.", retryRecommended: false },
 
   // Apply gates
-  { code: "proposal_not_final", severity: "blocking", humanMessage: "Dokument je návrh/modelace — nelze aplikovat jako finální smlouvu.", retryRecommended: false },
+  { code: "proposal_not_final", severity: "warning", humanMessage: "Dokument je návrh/modelace — aplikace jako finální smlouva vyžaduje override.", retryRecommended: false },
   { code: "envelope_classification_conflict", severity: "blocking", humanMessage: "Konflikt klasifikace — typ neodpovídá obsahu.", retryRecommended: false },
 
   // Pipeline

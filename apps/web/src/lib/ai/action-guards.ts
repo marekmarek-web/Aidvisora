@@ -4,6 +4,7 @@
  */
 
 import type { ActionPayload, ExecutionMode } from "./action-catalog";
+import { applyReasonsPendingOverride, evaluateApplyReadiness } from "./quality-gates";
 
 export type ActionGuardContext = {
   tenantId: string;
@@ -55,16 +56,20 @@ function checkQualityGate(action: ActionPayload, ctx: ActionGuardContext): Guard
   if (!ctx.reviewRow) return null;
 
   try {
-    const { evaluateApplyReadiness } = require("./quality-gates");
-    const gate = evaluateApplyReadiness(ctx.reviewRow);
-    if (gate.readiness === "blocked_for_apply") {
+    const gate = evaluateApplyReadiness(
+      ctx.reviewRow as unknown as Parameters<typeof evaluateApplyReadiness>[0],
+    );
+    const pending = applyReasonsPendingOverride(gate);
+    if (pending.length > 0) {
       return {
         allowed: false,
-        blockedReasons: gate.blockedReasons,
-        requiredOverrides: gate.blockedReasons,
+        blockedReasons: pending,
+        requiredOverrides: pending,
       };
     }
-  } catch { /* quality gates not available */ }
+  } catch {
+    /* best-effort: partial review row or gate module edge case */
+  }
   return null;
 }
 

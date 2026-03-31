@@ -52,12 +52,32 @@ describe("validateExecution", () => {
     const result = validateExecution(
       makeAction({
         actionType: "portal_apply_execute",
-        qualityGateSnapshot: { readiness: "blocked_for_apply", blockedReasons: ["LOW_CONFIDENCE"] },
+        qualityGateSnapshot: {
+          readiness: "blocked_for_apply",
+          blockedReasons: ["LOW_CONFIDENCE"],
+          applyBarrierReasons: [],
+        },
       }),
       makeCtx(),
     );
     expect(result.allowed).toBe(false);
     expect(result.blockedReasons).toContain("LOW_CONFIDENCE");
+  });
+
+  it("blocks portal apply when snapshot has only applyBarrierReasons", () => {
+    const result = validateExecution(
+      makeAction({
+        actionType: "portal_apply_execute",
+        qualityGateSnapshot: {
+          readiness: "review_required",
+          blockedReasons: [],
+          applyBarrierReasons: ["PROPOSAL_NOT_FINAL"],
+        },
+      }),
+      makeCtx(),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.blockedReasons).toContain("PROPOSAL_NOT_FINAL");
   });
 
   it("blocks duplicate action within dedup window", () => {

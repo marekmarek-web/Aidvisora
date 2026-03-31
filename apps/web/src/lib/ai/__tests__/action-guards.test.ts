@@ -117,4 +117,28 @@ describe("validateActionExecution", () => {
     const result = validateActionExecution(action, ctx);
     expect(result.allowed).toBe(true);
   });
+
+  it("blocks prepare_contract_apply for proposal/modelation (apply barrier)", () => {
+    const action = buildActionPayload("prepare_contract_apply", "review", "r1");
+    const ctx = baseCtx({
+      roleName: "Manager",
+      reviewRow: {
+        tenantId: "t1",
+        reviewStatus: "approved",
+        matchedClientId: "c1",
+        matchedClientCandidates: [],
+        processingStatus: "extracted",
+        confidence: 0.9,
+        detectedDocumentType: "life_insurance_modelation",
+        extractionTrace: {
+          classificationConfidence: 0.9,
+          normalizedPipelineClassification: "insurance_modelation",
+          extractionRoute: "contract_intake",
+        },
+      },
+    });
+    const result = validateActionExecution(action, ctx);
+    expect(result.allowed).toBe(false);
+    expect(result.blockedReasons).toContain("PROPOSAL_NOT_FINAL");
+  });
 });

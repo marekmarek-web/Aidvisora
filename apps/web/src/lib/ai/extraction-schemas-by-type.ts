@@ -116,7 +116,7 @@ export function validateExtractionByType(
   raw: string,
   documentType: ContractDocumentType
 ): { ok: true; data: ExtractedContractByType } | { ok: false; issues: z.ZodIssue[] } {
-  const parsed = safeParseReviewEnvelope(raw);
+  const parsed = safeParseReviewEnvelope(raw, { expectedPrimaryType: documentType });
   if (!parsed.ok) return parsed;
   // Force classification fallback when model drifts type.
   if (parsed.data.documentClassification.primaryType !== documentType) {

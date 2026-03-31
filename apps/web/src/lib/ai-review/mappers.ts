@@ -707,6 +707,13 @@ export function mapApiToExtractionDocument(
     classificationReasons: detail.classificationReasons as string[] | undefined,
     fieldConfidenceMap,
     pipelineInsights: insights,
-    applyGate: detail.applyGate as ExtractionDocument["applyGate"],
+    applyGate: (() => {
+      const g = detail.applyGate as ExtractionDocument["applyGate"] | undefined;
+      if (!g) return undefined;
+      return {
+        ...g,
+        applyBarrierReasons: g.applyBarrierReasons ?? [],
+      };
+    })(),
   };
 }

@@ -166,6 +166,7 @@ export type ExtractionDocument = {
   applyGate?: {
     readiness: "ready_for_apply" | "review_required" | "blocked_for_apply";
     blockedReasons: string[];
+    applyBarrierReasons: string[];
     warnings: string[];
   };
   /** Human-readable pipeline sub-step while status is processing (from API `processingStage`). */

@@ -247,6 +247,13 @@ export async function buildReviewDetailContext(
     if (gate.blockedReasons.length > 0) {
       facts.push({ key: "blockedReasons", value: gate.blockedReasons.join(", "), category: "quality" });
     }
+    if (gate.applyBarrierReasons.length > 0) {
+      facts.push({
+        key: "applyBarrierReasons",
+        value: gate.applyBarrierReasons.join(", "),
+        category: "quality",
+      });
+    }
     warnings.push(...gate.warnings);
   } catch { /* best-effort */ }
 
@@ -269,6 +276,9 @@ export async function buildReviewDetailContext(
   const recommendedActions: string[] = [];
   if (gate?.readiness === "ready_for_apply") recommendedActions.push("Aplikovat review do CRM.");
   if (gate?.readiness === "blocked_for_apply") recommendedActions.push("Zkontrolovat důvody blokace.");
+  if ((gate?.applyBarrierReasons?.length ?? 0) > 0) {
+    recommendedActions.push("Dokument nelze aplikovat jako finální smlouvu bez override — zkontrolujte typ (návrh/modelace).");
+  }
   if (row.reviewStatus === "pending") recommendedActions.push("Schválit nebo zamítnout review.");
 
   return sanitizeContext({

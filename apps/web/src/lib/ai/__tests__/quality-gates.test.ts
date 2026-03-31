@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  evaluateApplyReadiness,
-  evaluatePaymentApplyReadiness,
-  type ApplyGateResult,
-} from "../quality-gates";
+import { evaluateApplyReadiness, evaluatePaymentApplyReadiness } from "../quality-gates";
 import type { ContractReviewRow } from "../review-queue-repository";
 
 function baseRow(partial: Partial<ContractReviewRow> = {}): ContractReviewRow {
@@ -76,15 +72,17 @@ describe("evaluateApplyReadiness", () => {
     const result = evaluateApplyReadiness(baseRow());
     expect(result.readiness).toBe("ready_for_apply");
     expect(result.blockedReasons).toEqual([]);
+    expect(result.applyBarrierReasons).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
 
-  it("blocks proposals/modelations", () => {
+  it("sets apply barrier (not hard block) for proposals/modelations", () => {
     const result = evaluateApplyReadiness(
       baseRow({ detectedDocumentType: "insurance_proposal" }),
     );
-    expect(result.readiness).toBe("blocked_for_apply");
-    expect(result.blockedReasons).toContain("PROPOSAL_NOT_FINAL");
+    expect(result.readiness).toBe("review_required");
+    expect(result.blockedReasons).not.toContain("PROPOSAL_NOT_FINAL");
+    expect(result.applyBarrierReasons).toContain("PROPOSAL_NOT_FINAL");
   });
 
   it("blocks unsupported document types", () => {
@@ -201,6 +199,7 @@ describe("evaluatePaymentApplyReadiness", () => {
     });
     expect(result.readiness).toBe("ready_for_apply");
     expect(result.blockedReasons).toEqual([]);
+    expect(result.applyBarrierReasons).toEqual([]);
   });
 
   it("blocks when amount is missing", () => {

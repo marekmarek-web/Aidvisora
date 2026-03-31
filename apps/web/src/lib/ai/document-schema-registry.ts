@@ -7,6 +7,7 @@ import {
   type DocumentReviewEnvelope,
   documentReviewEnvelopeSchema,
 } from "./document-review-types";
+import { coerceReviewEnvelopeParsedJson } from "./envelope-parse-coerce";
 
 export type DocumentFieldRuleSet = {
   required: string[];
@@ -1202,7 +1203,15 @@ export function buildSchemaPrompt(
     typeAddendum;
 }
 
-export function safeParseReviewEnvelope(raw: string): {
+export type SafeParseReviewEnvelopeOptions = {
+  /** Align invalid/missing primaryType with pipeline classification before Zod. */
+  expectedPrimaryType?: string;
+};
+
+export function safeParseReviewEnvelope(
+  raw: string,
+  options?: SafeParseReviewEnvelopeOptions,
+): {
   ok: true;
   data: DocumentReviewEnvelope;
 } | {
@@ -1220,8 +1229,21 @@ export function safeParseReviewEnvelope(raw: string): {
       issues: [{ code: "custom", path: [], message: e instanceof Error ? e.message : String(e) }],
     };
   }
-  const result = documentReviewEnvelopeSchema.safeParse(parsed);
+
+  const exp = options?.expectedPrimaryType;
+  const tryParse = (value: unknown) => documentReviewEnvelopeSchema.safeParse(value);
+
+  let result = tryParse(parsed);
   if (result.success) return { ok: true, data: result.data };
+
+  let coerced = coerceReviewEnvelopeParsedJson(parsed, { mode: "light", expectedPrimaryType: exp });
+  result = tryParse(coerced);
+  if (result.success) return { ok: true, data: result.data };
+
+  coerced = coerceReviewEnvelopeParsedJson(parsed, { mode: "aggressive", expectedPrimaryType: exp });
+  result = tryParse(coerced);
+  if (result.success) return { ok: true, data: result.data };
+
   return { ok: false, issues: result.error.issues };
 }
 
