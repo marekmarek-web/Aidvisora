@@ -334,9 +334,12 @@ export function StepBenefitsRisks() {
       )}
 
       {activeTab === "risks" && (
-        <div className="bg-[color:var(--wp-surface-muted)] p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
-          <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-4">Jaká pojištění má firma?</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-[color:var(--wp-surface-muted)] p-4 sm:p-6 rounded-2xl border border-[color:var(--wp-surface-card-border)]">
+          <h3 className="text-lg sm:text-xl font-bold text-[color:var(--wp-text)] mb-2 sm:mb-4">Jaká pojištění má firma?</h3>
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mb-5 sm:mb-6">
+            Klepnutím vyberete krytí; u aktivních karet doplňte částky – čísla jsou dobře vidět při psaní.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 sm:gap-5">
             {RISK_OPTIONS.map(({ key, label, subtitle, Icon, iconBg, hasDetail, tooltip }) => {
               const rk = key as keyof CompanyRiskDetails;
               const d = riskDetails[rk];
@@ -346,35 +349,35 @@ export function StepBenefitsRisks() {
               return (
               <div
                 key={key}
-                className={`bg-[color:var(--wp-surface-card)] border-2 rounded-xl p-4 transition-all ${
-                  risks[key] ? "border-indigo-500" : "border-[color:var(--wp-surface-card-border)]"
-                } ${hasDetail ? "" : ""}`}
+                className={`bg-[color:var(--wp-surface-card)] border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all min-w-0 ${
+                  risks[key] ? "border-indigo-500 ring-1 ring-indigo-500/15" : "border-[color:var(--wp-surface-card-border)]"
+                }`}
               >
-                <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
+                <label className="flex items-center gap-4 cursor-pointer min-h-[52px] touch-manipulation">
                   <input
                     type="checkbox"
                     checked={!!risks[key]}
                     onChange={(e) => setRisks({ [key]: e.target.checked })}
                     className="sr-only"
                   />
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                    <Icon className="w-5 h-5" />
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                    <Icon className="w-6 h-6" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[color:var(--wp-text)]">{label}</div>
-                    {subtitle && <div className="text-xs text-[color:var(--wp-text-secondary)]">{subtitle}</div>}
+                    <div className="text-base sm:text-lg font-bold text-[color:var(--wp-text)] leading-snug">{label}</div>
+                    {subtitle && <div className="text-sm text-[color:var(--wp-text-secondary)] mt-0.5">{subtitle}</div>}
                   </div>
                   {tooltip && (
                     <span title={tooltip} className="flex-shrink-0 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)]">
                       <Info className="w-4 h-4" />
                     </span>
                   )}
-                  {risks[key] && <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />}
+                  {risks[key] && <Check className="w-6 h-6 text-emerald-500 flex-shrink-0" strokeWidth={2.5} />}
                 </label>
                 {hasDetail && risks[key] && (key === "property" || key === "interruption" || key === "liability") && (
-                  <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] space-y-2">
+                  <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)] space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-0.5">Pojistný limit</label>
+                      <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Pojistný limit</label>
                       <CurrencyCzkInput
                         value={riskDetails[key]?.limit}
                         onChange={(v: number | undefined) => setRiskDetail(key, { limit: v })}
@@ -383,23 +386,24 @@ export function StepBenefitsRisks() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-0.5">Stáří smlouvy (roky)</label>
+                      <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1.5">Stáří smlouvy (roky)</label>
                       <input
                         type="number"
                         min={0}
                         value={riskDetails[key]?.contractYears ?? ""}
                         onChange={(e) => setRiskDetail(key, { contractYears: parseInt(e.target.value, 10) || undefined })}
-                        className="w-full min-w-0 px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg bg-[color:var(--wp-surface-card)] text-sm text-[color:var(--wp-text)] min-h-[44px]"
+                        className="w-full min-w-0 min-h-[52px] rounded-xl border-2 border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 text-base font-semibold tabular-nums text-[color:var(--wp-text)] shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+                        style={{ color: "var(--wp-text)" }}
                       />
                     </div>
                   </div>
                 )}
                 {risks[key] && (
-                  <div className="mt-3 pt-3 border-t border-[color:var(--wp-surface-card-border)] space-y-2">
-                    <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wide">Pojistné – srovnání</p>
-                    <div className="grid grid-cols-1 gap-3 min-w-0 lg:grid-cols-3 lg:items-end lg:gap-4">
+                  <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)] space-y-4">
+                    <p className="text-sm font-bold text-[color:var(--wp-text)]">Pojistné – srovnání</p>
+                    <div className="grid grid-cols-1 gap-4 min-w-0 md:grid-cols-3 md:items-end md:gap-4">
                       <div className="min-w-0">
-                        <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Aktuálně platí</span>
+                        <span className="mb-1.5 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Aktuálně platí</span>
                         <CurrencyCzkInput
                           value={d?.currentPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { currentPremiumMonthly: v })}
@@ -409,7 +413,7 @@ export function StepBenefitsRisks() {
                         />
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1">Návrh (nově)</span>
+                        <span className="mb-1.5 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Návrh (nově)</span>
                         <CurrencyCzkInput
                           value={d?.proposedPremiumMonthly}
                           onChange={(v: number | undefined) => setRiskDetail(rk, { proposedPremiumMonthly: v })}
@@ -418,13 +422,15 @@ export function StepBenefitsRisks() {
                           clampMax={COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK}
                         />
                       </div>
-                      <div className="flex min-w-0 flex-col justify-end gap-0.5 rounded-lg bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] px-3 py-2.5 min-h-[44px]">
-                        <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Úspora měsíčně</span>
-                        <span className="text-sm font-bold text-emerald-700 break-words">
+                      <div className="flex min-h-[52px] min-w-0 flex-col justify-center gap-1 rounded-xl border-2 border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 md:min-h-0 md:justify-end">
+                        <span className="text-xs font-bold uppercase tracking-wide text-[color:var(--wp-text-secondary)]">Úspora měsíčně</span>
+                        <span className="text-lg font-bold tabular-nums text-emerald-700 break-words dark:text-emerald-400">
                           {monthlySaving != null && monthlySaving > 0 ? formatCzk(monthlySaving) : "—"}
                         </span>
                         {monthlySaving != null && monthlySaving > 0 && (
-                          <span className="text-xs text-[color:var(--wp-text-secondary)] break-words">Rok: {formatCzk(monthlySaving * 12)}</span>
+                          <span className="text-sm font-semibold tabular-nums text-[color:var(--wp-text-secondary)] break-words">
+                            Rok: {formatCzk(monthlySaving * 12)}
+                          </span>
                         )}
                       </div>
                     </div>

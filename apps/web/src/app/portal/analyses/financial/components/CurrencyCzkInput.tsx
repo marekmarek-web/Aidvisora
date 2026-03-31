@@ -57,7 +57,9 @@ export function CurrencyCzkInput({
       <input
         id={id}
         type="text"
-        inputMode="numeric"
+        inputMode="decimal"
+        autoComplete="off"
+        spellCheck={false}
         placeholder={placeholder}
         value={focused ? text : value != null && !Number.isNaN(value) ? formatCurrency(value) : ""}
         onFocus={() => {
@@ -69,9 +71,12 @@ export function CurrencyCzkInput({
           setFocused(false);
           commit();
         }}
-        className="w-full min-h-[44px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 pr-[5.5rem] text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] caret-[color:var(--wp-text)]"
+        className="w-full min-h-[52px] rounded-xl border-2 border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 pr-[6.25rem] text-base font-semibold tabular-nums tracking-tight text-[color:var(--wp-text)] shadow-sm placeholder:font-normal placeholder:text-[color:var(--wp-text-tertiary)] caret-indigo-600 selection:bg-indigo-200/50 selection:text-[color:var(--wp-text)] focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 dark:caret-indigo-400 dark:selection:bg-indigo-500/30"
+        style={{ color: "var(--wp-text)" }}
       />
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[color:var(--wp-text-tertiary)]">{unitLabel}</span>
+      <span className="pointer-events-none absolute right-3 top-1/2 max-w-[5.5rem] -translate-y-1/2 text-right text-[11px] font-bold leading-tight text-[color:var(--wp-text-secondary)] sm:text-xs">
+        {unitLabel}
+      </span>
     </div>
   );
 }
