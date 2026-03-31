@@ -1,13 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
+import { cookies, headers } from "next/headers";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, MessageSquare } from "lucide-react";
 import { getContact } from "@/app/actions/contacts";
 import { getHouseholdForContact } from "@/app/actions/households";
 import { ContractsSection } from "@/app/dashboard/contacts/[id]/ContractsSection";
-import { DocumentsSection } from "@/app/dashboard/contacts/[id]/DocumentsSection";
 import { SendPaymentPdfButton } from "@/app/dashboard/contacts/[id]/SendPaymentPdfButton";
 import { ContactActivityTimeline } from "@/app/dashboard/contacts/[id]/ContactActivityTimeline";
-import { ChatThread } from "@/app/components/ChatThread";
 import { ClientFinancialSummary } from "@/app/components/contacts/ClientFinancialSummary";
 import { ContactTabNav } from "./ContactTabNav";
 import {
@@ -16,7 +17,6 @@ import {
   type ContactTabId,
 } from "./contact-detail-tabs";
 import { ContactTasksAndEvents } from "./ContactTasksAndEvents";
-import { ContactOpportunityBoard } from "./ContactOpportunityBoard";
 import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactOpenTasksPreview } from "./ContactOpenTasksPreview";
 import { ContactNotesSection } from "./ContactNotesSection";
@@ -33,10 +33,66 @@ import { ClientServiceBlock } from "./ClientServiceBlock";
 import { ContactDetailEditButton } from "./ContactDetailEditButton";
 import { ContactPaymentSetupsSection } from "./ContactPaymentSetupsSection";
 import { ClientReferralSection } from "./ClientReferralSection";
-import { ClientTimeline } from "./ClientTimeline";
 import { Suspense, type ReactNode } from "react";
-import { BriefingTabContent } from "./BriefingTabContent";
 import { InviteToClientZoneButton } from "@/app/dashboard/contacts/[id]/InviteToClientZoneButton";
+import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
+
+const DynamicContactOpportunityBoard = dynamic(
+  () =>
+    import("./ContactOpportunityBoard").then((m) => m.ContactOpportunityBoard),
+  {
+    loading: () => (
+      <div className="min-h-[320px] animate-pulse rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+    ),
+  },
+);
+
+const DynamicClientTimeline = dynamic(
+  () => import("./ClientTimeline").then((m) => m.ClientTimeline),
+  {
+    loading: () => (
+      <div className="min-h-[200px] animate-pulse rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+    ),
+  },
+);
+
+const DynamicChatThread = dynamic(
+  () => import("@/app/components/ChatThread").then((m) => m.ChatThread),
+  {
+    loading: () => (
+      <div className="min-h-[160px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+    ),
+  },
+);
+
+const DynamicDocumentsSection = dynamic(
+  () => import("@/app/dashboard/contacts/[id]/DocumentsSection").then((m) => m.DocumentsSection),
+  {
+    loading: () => (
+      <div className="min-h-[200px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+    ),
+  },
+);
+
+const DynamicBriefingTabContent = dynamic(
+  () => import("./BriefingTabContent").then((m) => m.BriefingTabContent),
+  {
+    loading: () => (
+      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 text-sm text-[color:var(--wp-text-secondary)]">
+        Načítání…
+      </div>
+    ),
+  },
+);
+
+const DynamicContactActivityTimeline = dynamic(
+  () => import("@/app/dashboard/contacts/[id]/ContactActivityTimeline").then((m) => m.ContactActivityTimeline),
+  {
+    loading: () => (
+      <div className="min-h-[120px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+    ),
+  },
+);
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -52,6 +108,154 @@ function isRedirectError(e: unknown): boolean {
   return typeof d === "string" && d.startsWith("NEXT_REDIRECT");
 }
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id: rawId } = await params;
+  const contactId = rawId?.trim() ?? "";
+  if (!contactId || !CONTACT_ID_UUID_RE.test(contactId)) {
+    return { title: "Kontakt · Aidvisora" };
+  }
+  try {
+    const contact = await getContact(contactId);
+    if (!contact) return { title: "Kontakt · Aidvisora" };
+    const name = [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Kontakt";
+    return { title: `${name} · Aidvisora` };
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    return { title: "Kontakt · Aidvisora" };
+  }
+}
+
+type ContactRow = NonNullable<Awaited<ReturnType<typeof getContact>>>;
+type HouseholdForContact = Awaited<ReturnType<typeof getHouseholdForContact>>;
+type LatestGenerations = Awaited<ReturnType<typeof getLatestClientGenerations>>;
+
+function ContactTabBody({
+  tab,
+  contactId,
+  contact,
+  household,
+  latestGenerations,
+}: {
+  tab: ContactTabId;
+  contactId: string;
+  contact: ContactRow;
+  household: HouseholdForContact;
+  latestGenerations: LatestGenerations;
+}): ReactNode {
+  switch (tab) {
+    case "prehled":
+      return (
+        <div className="space-y-8">
+          <ContactOverviewKpi contactId={contactId} />
+          <ClientFinancialSummaryBlock contactId={contactId} />
+          <ClientServiceBlock contactId={contactId} />
+          <ContactPaymentSetupsSection contactId={contactId} />
+          <ClientReferralSection contactId={contactId} />
+          <ClientCoverageWidget contactId={contactId} />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="xl:col-span-2 space-y-6">
+              <ContactLastNotePreview contactId={contactId} />
+              <ContactProductsPreview contactId={contactId} />
+              <ContactFinancialAnalysesSection contactId={contactId} />
+            </div>
+            <aside className="xl:col-span-1 space-y-6">
+              {household && <ContactHouseholdCard household={household} />}
+            </aside>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ContactOpenTasksPreview contactId={contactId} />
+            <ContactAiGenerationsBlock contactId={contactId} initialGenerations={latestGenerations} />
+          </div>
+        </div>
+      );
+    case "timeline":
+      return (
+        <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="p-6">
+            <DynamicClientTimeline contactId={contactId} />
+          </div>
+        </div>
+      );
+    case "smlouvy":
+      return (
+        <div className="space-y-6 md:space-y-8">
+          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+            <div className="p-6">
+              <ContractsSection contactId={contactId} />
+              <ClientFinancialSummary contactId={contactId} />
+              <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
+                <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>
+                <SendPaymentPdfButton contactId={contactId} />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    case "aktivita":
+      return (
+        <div className="space-y-6 md:space-y-8">
+          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+            <div className="p-6">
+              <DynamicContactActivityTimeline contactId={contactId} />
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+              <h2 className="text-lg font-black text-[color:var(--wp-text)]">Zprávy</h2>
+            </div>
+            <div className="p-6">
+              <DynamicChatThread contactId={contactId} currentUserType="advisor" />
+            </div>
+          </div>
+        </div>
+      );
+    case "zapisky":
+      return (
+        <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="p-6">
+            <ContactNotesSection contactId={contactId} />
+          </div>
+        </div>
+      );
+    case "dokumenty":
+      return (
+        <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)]">Dokumenty</h2>
+          </div>
+          <div className="p-6">
+            <DynamicDocumentsSection contactId={contactId} />
+          </div>
+        </div>
+      );
+    case "ukoly":
+      return (
+        <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)]">Úkoly a schůzky</h2>
+          </div>
+          <div className="p-6">
+            <ContactTasksAndEvents contactId={contactId} />
+          </div>
+        </div>
+      );
+    case "obchody":
+      return (
+        <div className="flex flex-col flex-1 min-h-0 w-full">
+          <DynamicContactOpportunityBoard
+            contactId={contactId}
+            contactFirstName={contact.firstName ?? undefined}
+            contactLastName={contact.lastName ?? undefined}
+          />
+        </div>
+      );
+    case "briefing":
+      return <DynamicBriefingTabContent contactId={contactId} />;
+    default:
+      return null;
+  }
+}
+
 export default async function ContactDetailPage({ params, searchParams }: PageProps) {
   const { id: rawId } = await params;
   const contactId = rawId?.trim() ?? "";
@@ -62,6 +266,13 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
   if (!contactId || !CONTACT_ID_UUID_RE.test(contactId)) {
     notFound();
   }
+
+  const headerList = await headers();
+  const cookieStore = await cookies();
+  const mobileUiEnabled = isMobileUiV1EnabledForRequest({
+    userAgent: headerList.get("user-agent"),
+    cookieStore,
+  });
 
   let contact: Awaited<ReturnType<typeof getContact>>;
   try {
@@ -74,144 +285,30 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
     notFound();
   }
 
-  let household: Awaited<ReturnType<typeof getHouseholdForContact>> = null;
-  let latestGenerations: Awaited<ReturnType<typeof getLatestClientGenerations>> = {
+  if (mobileUiEnabled) {
+    return (
+      <span className="sr-only" aria-hidden data-contact-detail-mobile-skip>
+        {contact.firstName} {contact.lastName}
+      </span>
+    );
+  }
+
+  let household: HouseholdForContact = null;
+  let latestGenerations: LatestGenerations = {
     clientSummary: null,
     clientOpportunities: null,
     nextBestAction: null,
   };
-  try {
-    [household, latestGenerations] = await Promise.all([
-      getHouseholdForContact(contactId),
-      getLatestClientGenerations(contactId),
-    ]);
-  } catch {
-    /* Sekundární data – stránka klienta zůstane, chybějící bloky se doplní prázdně */
+  if (tab === "prehled") {
+    try {
+      [household, latestGenerations] = await Promise.all([
+        getHouseholdForContact(contactId),
+        getLatestClientGenerations(contactId),
+      ]);
+    } catch {
+      /* Sekundární data – přehled doplní prázdné bloky */
+    }
   }
-
-  const overviewContent = (
-    <div className="space-y-8">
-      <ContactOverviewKpi contactId={contactId} />
-      <ClientFinancialSummaryBlock contactId={contactId} />
-      <ClientServiceBlock contactId={contactId} />
-      <ContactPaymentSetupsSection contactId={contactId} />
-      <ClientReferralSection contactId={contactId} />
-      <ClientCoverageWidget contactId={contactId} />
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-6">
-          <ContactLastNotePreview contactId={contactId} />
-          <ContactProductsPreview contactId={contactId} />
-          <ContactFinancialAnalysesSection contactId={contactId} />
-        </div>
-        <aside className="xl:col-span-1 space-y-6">
-          {household && <ContactHouseholdCard household={household} />}
-        </aside>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ContactOpenTasksPreview contactId={contactId} />
-        <ContactAiGenerationsBlock contactId={contactId} initialGenerations={latestGenerations} />
-      </div>
-    </div>
-  );
-
-  const smlouvyContent = (
-    <div className="space-y-6 md:space-y-8">
-      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="p-6">
-          <ContractsSection contactId={contactId} />
-          <ClientFinancialSummary contactId={contactId} />
-          <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
-            <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>
-            <SendPaymentPdfButton contactId={contactId} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const aktivitaContent = (
-    <div className="space-y-6 md:space-y-8">
-      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="p-6">
-          <ContactActivityTimeline contactId={contactId} />
-        </div>
-      </div>
-      <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-          <h2 className="text-lg font-black text-[color:var(--wp-text)]">Zprávy</h2>
-        </div>
-        <div className="p-6">
-          <ChatThread contactId={contactId} currentUserType="advisor" />
-        </div>
-      </div>
-    </div>
-  );
-
-  const zapiskyContent = (
-    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-      <div className="p-6">
-        <ContactNotesSection contactId={contactId} />
-      </div>
-    </div>
-  );
-
-  const timelineContent = (
-    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-      <div className="p-6">
-        <ClientTimeline contactId={contactId} />
-      </div>
-    </div>
-  );
-
-  const dokumentyContent = (
-    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-        <h2 className="text-lg font-black text-[color:var(--wp-text)]">Dokumenty</h2>
-      </div>
-      <div className="p-6">
-        <DocumentsSection contactId={contactId} />
-      </div>
-    </div>
-  );
-
-  const ukolyContent = (
-    <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-        <h2 className="text-lg font-black text-[color:var(--wp-text)]">Úkoly a schůzky</h2>
-      </div>
-      <div className="p-6">
-        <ContactTasksAndEvents contactId={contactId} />
-      </div>
-    </div>
-  );
-
-  const obchodyContent = (
-    <div className="flex flex-col flex-1 min-h-0 w-full">
-      <ContactOpportunityBoard
-        contactId={contactId}
-        contactFirstName={contact.firstName ?? undefined}
-        contactLastName={contact.lastName ?? undefined}
-      />
-    </div>
-  );
-
-  const briefingContent = (
-    <Suspense fallback={<div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6">Načítání…</div>}>
-      <BriefingTabContent contactId={contactId} />
-    </Suspense>
-  );
-
-  const tabBody: Record<ContactTabId, ReactNode> = {
-    prehled: overviewContent,
-    timeline: timelineContent,
-    smlouvy: smlouvyContent,
-    dokumenty: dokumentyContent,
-    zapisky: zapiskyContent,
-    aktivita: aktivitaContent,
-    ukoly: ukolyContent,
-    obchody: obchodyContent,
-    briefing: briefingContent,
-  };
 
   const initials =
     [contact.firstName, contact.lastName]
@@ -232,6 +329,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
         <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           <Link
             href="/portal/contacts"
+            prefetch={false}
             className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shrink-0 min-h-[44px]"
           >
             <ArrowLeft size={16} /> Zpět na kontakty
@@ -308,6 +406,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
               )}
               <Link
                 href={`/portal/messages?contact=${contactId}`}
+                prefetch={false}
                 className="flex items-center justify-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-sm font-black transition-colors w-full sm:w-auto min-h-[44px]"
               >
                 <MessageSquare size={16} /> Zpráva
@@ -328,7 +427,15 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
         >
           <ContactTabNav activeTab={tab} baseQueryNoTab={baseQueryNoTab} />
         </Suspense>
-        <div className="pt-6 pb-8">{tabBody[tab]}</div>
+        <div className="pt-6 pb-8">
+          <ContactTabBody
+            tab={tab}
+            contactId={contactId}
+            contact={contact}
+            household={household}
+            latestGenerations={latestGenerations}
+          />
+        </div>
       </main>
     </div>
   );

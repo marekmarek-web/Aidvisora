@@ -434,6 +434,7 @@ export function PortalSidebar({
         >
           <Link
             href="/portal"
+            prefetch={false}
             className={`flex items-center overflow-hidden ${collapsed ? "justify-center w-full" : "min-w-0"}`}
             aria-label="Aidvisora – přejít na nástěnku"
           >
@@ -568,6 +569,7 @@ export function PortalSidebar({
                       >
                         <Link
                           href={item.href}
+                          prefetch={false}
                           className={`w-full flex items-center relative overflow-hidden transition-all duration-300
                             ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] justify-between rounded-[14px] px-4 py-3"}
                             ${isDark
@@ -606,6 +608,7 @@ export function PortalSidebar({
                     >
                       <Link
                         href={item.href}
+                        prefetch={false}
                         className={`w-full flex items-center relative overflow-hidden transition-all duration-300
                           ${collapsed ? "min-h-[44px] justify-center rounded-2xl p-3" : "min-h-[44px] rounded-[14px] px-4 py-3"}
                           ${isDark
@@ -678,6 +681,7 @@ export function PortalSidebar({
             <div className={`px-3 mt-4 pt-4 border-t ${isDark ? "border-white/10" : "border-[color:var(--wp-surface-card-border)]"}`}>
               <Link
                 href="/klientska-zona"
+                prefetch={false}
                 className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl min-h-[44px] transition-colors ${
                   isDark
                     ? "text-white/90 hover:bg-[color:var(--wp-surface-card)]/10"
@@ -701,6 +705,7 @@ export function PortalSidebar({
           <div className="w-full px-5 py-4">
             <Link
               href="/portal/setup?tab=profil"
+              prefetch={false}
               className={`flex items-center group cursor-pointer p-2 -m-2 rounded-xl transition-colors w-full max-w-full ${collapsed ? "justify-center" : "justify-between"} ${isDark ? "hover:bg-[color:var(--wp-surface-card)]/10" : "hover:bg-[color:var(--wp-surface-card)]"}`}
               title={collapsed ? (userName ?? userEmail ?? "Profil") : undefined}
             >

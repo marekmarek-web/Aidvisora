@@ -16,6 +16,15 @@ function buildHref(pathname: string, tab: ContactTabId, baseQueryNoTab: string):
   return q ? `${pathname}?${q}` : `${pathname}?tab=${tab}`;
 }
 
+/** Jen detail kontaktu (ne /new ani vnořené cesty) — migrace hash → query nesmí běžet po navigaci pryč. */
+function isContactDetailPathForHashSync(pathname: string): boolean {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length !== 3 || parts[0] !== "portal" || parts[1] !== "contacts") return false;
+  const id = parts[2];
+  if (!id || id === "new") return false;
+  return true;
+}
+
 /** Přesměruje staré záložky `#prehled` na `?tab=` (jednorázově po načtení). */
 function HashToQuerySync({ baseQueryNoTab }: { baseQueryNoTab: string }) {
   const pathname = usePathname();
@@ -23,13 +32,22 @@ function HashToQuerySync({ baseQueryNoTab }: { baseQueryNoTab: string }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    let cancelled = false;
     if (searchParams.get("tab")) return;
+    if (!isContactDetailPathForHashSync(pathname)) return;
     const raw = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
     const tabPart = raw.split("&")[0] as ContactTabId;
     if (!tabPart || !CONTACT_TAB_IDS.includes(tabPart)) return;
     const p = new URLSearchParams(baseQueryNoTab);
     p.set("tab", tabPart);
-    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+    const nextUrl = `${pathname}?${p.toString()}`;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      router.replace(nextUrl, { scroll: false });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [baseQueryNoTab, pathname, router, searchParams]);
 
   return null;
@@ -59,6 +77,7 @@ export function ContactTabNav({
             key={tab}
             href={buildHref(pathname, tab, baseQueryNoTab)}
             scroll={false}
+            prefetch={false}
             className={`relative pb-4 pt-2 text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap min-h-[44px] flex items-center ${
               activeTab === tab
                 ? "text-indigo-600"
