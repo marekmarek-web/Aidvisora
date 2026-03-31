@@ -652,12 +652,15 @@ export function mergeFieldEditsIntoExtractedPayload(
 }
 
 function dedupeDraftActions(actions: DraftAction[]): DraftAction[] {
-  const seen = new Set<string>();
+  const seenByType = new Set<string>();
+  const seenByLabel = new Set<string>();
   const out: DraftAction[] = [];
   for (const a of actions) {
-    const k = `${a.type}:${a.label}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
+    const typeKey = `${a.type}:${a.label}`;
+    const labelKey = a.label.trim().toLowerCase();
+    if (seenByType.has(typeKey) || seenByLabel.has(labelKey)) continue;
+    seenByType.add(typeKey);
+    seenByLabel.add(labelKey);
     out.push(a);
   }
   return out;
@@ -694,92 +697,35 @@ function appendSyntheticEnvelopeGroups(
     originalAiValue: value,
   });
 
-  const dc = envelope.documentClassification as Record<string, unknown> | undefined;
-  if (dc && typeof dc === "object") {
-    const recFields: ExtractedField[] = [
-      mkField(
-        "synthetic.dc.primaryType",
-        "synthetic_recognition",
-        "Primární typ (obálka)",
-        formatExtractedValue(dc.primaryType),
-        "warning"
-      ),
-      mkField(
-        "synthetic.dc.lifecycleStatus",
-        "synthetic_recognition",
-        "Životní cyklus dokumentu",
-        formatExtractedValue(dc.lifecycleStatus),
-        "warning"
-      ),
-      mkField(
-        "synthetic.dc.documentIntent",
-        "synthetic_recognition",
-        "Záměr dokumentu",
-        formatExtractedValue(dc.documentIntent),
-        "warning"
-      ),
-      mkField(
-        "synthetic.dc.confidence",
-        "synthetic_recognition",
-        "Jistota klasifikace (obálka)",
-        formatExtractedValue(dc.confidence),
-        "warning"
-      ),
-    ];
-    if (dc.subtype != null && String(dc.subtype).trim()) {
-      recFields.push(
-        mkField(
-          "synthetic.dc.subtype",
-          "synthetic_recognition",
-          "Podtyp / produkt (hint)",
-          formatExtractedValue(dc.subtype),
-          "warning"
-        )
-      );
-    }
-    out.push({
-      id: "synthetic_recognition",
-      name: "Rozpoznání dokumentu",
-      iconName: "FileText",
-      fields: recFields,
-    });
-  }
+  // synthetic_recognition and synthetic_meta are technical internals —
+  // advisors see document type in the header and metadata in "Technické detaily".
+  // Only emit synthetic_status with deduplicated, advisor-useful messages.
 
-  const dm = envelope.documentMeta as Record<string, unknown> | undefined;
-  if (dm && typeof dm === "object" && Object.keys(dm).length > 0) {
-    const metaFields: ExtractedField[] = [];
-    const add = (key: string, label: string, v: unknown) => {
-      if (v == null || v === "") return;
-      metaFields.push(
-        mkField(`synthetic.dm.${key}`, "synthetic_meta", label, formatExtractedValue(v), "warning")
-      );
-    };
-    add("overallConfidence", "Celková jistota (obálka)", dm.overallConfidence);
-    add("pageCount", "Počet stran", dm.pageCount);
-    add("scannedVsDigital", "Digitál / sken", dm.scannedVsDigital);
-    add("textCoverageEstimate", "Odhad pokrytí textem", dm.textCoverageEstimate);
-    add("preprocessStatus", "Předzpracování", dm.preprocessStatus);
-    if (metaFields.length > 0) {
-      out.push({
-        id: "synthetic_meta",
-        name: "Metadata dokumentu",
-        iconName: "Building2",
-        fields: metaFields,
-      });
-    }
-  }
+  const HIDDEN_REVIEW_WARNING_CODES = new Set([
+    "extraction_schema_validation",
+    "partial_extraction_coerced",
+    "partial_extraction_merged",
+    "ai_review_router_manual",
+    "not_supported_for_direct_extraction",
+  ]);
 
   const statusFields: ExtractedField[] = [];
+  const seenStatusMessages = new Set<string>();
+
   const rw = envelope.reviewWarnings as Array<{ code?: string; message?: string; severity?: string }> | undefined;
   if (Array.isArray(rw)) {
     rw.forEach((w, i) => {
       if (!w?.message?.trim()) return;
+      if (HIDDEN_REVIEW_WARNING_CODES.has(w.code ?? "")) return;
+      const msg = w.message.trim();
+      if (seenStatusMessages.has(msg)) return;
+      seenStatusMessages.add(msg);
       statusFields.push(
         mkField(
           `synthetic.rw.${i}`,
           "synthetic_status",
           "Kontrola extrakce",
-          w.message,
+          msg,
           w.severity === "critical" ? "error" : "warning"
         )
       );
@@ -790,6 +736,8 @@ function appendSyntheticEnvelopeGroups(
     reasons.forEach((r, i) => {
       const human = humanizeReasonForAdvisor(String(r));
       if (!human) return;
+      if (seenStatusMessages.has(human)) return;
+      seenStatusMessages.add(human);
       statusFields.push(
         mkField(`synthetic.reason.${i}`, "synthetic_status", "Co zkontrolovat", human, "warning")
       );
@@ -800,6 +748,8 @@ function appendSyntheticEnvelopeGroups(
     vw.forEach((w, i) => {
       if (!w?.message?.trim()) return;
       const human = humanizeValidationMessage(w);
+      if (seenStatusMessages.has(human.description)) return;
+      seenStatusMessages.add(human.description);
       statusFields.push(
         mkField(
           `synthetic.vw.${i}`,
@@ -810,21 +760,6 @@ function appendSyntheticEnvelopeGroups(
         )
       );
     });
-  }
-  const completeness = envelope.dataCompleteness as Record<string, unknown> | undefined;
-  if (completeness && typeof completeness === "object") {
-    const score = completeness.score;
-    if (score != null) {
-      statusFields.push(
-        mkField(
-          "synthetic.completeness",
-          "synthetic_status",
-          "Úplnost dat (skóre)",
-          formatExtractedValue(score),
-          "warning"
-        )
-      );
-    }
   }
   if (statusFields.length > 0) {
     out.push({

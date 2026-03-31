@@ -92,15 +92,18 @@ function mergeWorkActions(envelope: DocumentReviewEnvelope): DraftAction[] {
     payload: (a.payload ?? {}) as Record<string, unknown>,
   }));
   const merged = pruneRedundantDraftActions([...deterministic, ...fromLlm] as DraftActionBase[]);
-  const seen = new Set<string>();
+  const seenByType = new Set<string>();
+  const seenByLabel = new Set<string>();
   const out: DraftAction[] = [];
   for (const a of merged) {
-    const k = `${a.type}:${a.label}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
+    const typeKey = `${a.type}:${a.label}`;
+    const labelKey = (a.label ?? "").trim().toLowerCase();
+    if (seenByType.has(typeKey) || seenByLabel.has(labelKey)) continue;
+    seenByType.add(typeKey);
+    seenByLabel.add(labelKey);
     out.push(a as DraftAction);
   }
-  return out.slice(0, 16);
+  return out.slice(0, 10);
 }
 
 function buildDebugSnapshot(

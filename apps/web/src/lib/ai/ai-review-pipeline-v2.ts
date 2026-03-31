@@ -459,6 +459,9 @@ export async function runAiReviewV2Pipeline(
   mergePreprocessIntoTrace(trace, options?.preprocessMeta ?? null);
 
   const hint = (options?.ruleBasedTextHint ?? "").trim();
+  if (hint.length === 0) {
+    trace.warnings = [...(trace.warnings ?? []), "empty_hint_file_based_extraction"];
+  }
   const inferredInputMode = tryInferInputModeFromPreprocess(options?.preprocessMeta ?? null, hint.length);
 
   let inputModeResult: Awaited<ReturnType<typeof detectInputMode>>;
@@ -860,7 +863,11 @@ export async function runAiReviewV2Pipeline(
       rawExtraction = await createResponse(wrapped, { routing: { category: "ai_review" } });
     } else {
       trace.extractionSecondPass = "pdf";
-      rawExtraction = await createResponseWithFile(fileUrl, extractionPrompt, {
+      const pdfGuard =
+        "DŮLEŽITÉ: Výstup MUSÍ být jediný platný JSON objekt se strukturou { documentClassification, documentMeta, extractedFields, parties, ... }. " +
+        "NEVRACEJ klasifikaci, doporučení ani diagnostiku. Extrahuj VŠECHNA viditelná pole z dokumentu do extractedFields. " +
+        "Každé pole v extractedFields musí mít tvar { value, status, confidence }.\n\n";
+      rawExtraction = await createResponseWithFile(fileUrl, pdfGuard + extractionPrompt, {
         routing: { category: "ai_review" },
       });
     }

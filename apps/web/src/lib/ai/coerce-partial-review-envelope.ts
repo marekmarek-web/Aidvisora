@@ -48,6 +48,37 @@ const NON_FIELD_TOP_LEVEL_KEYS = new Set<string>([
   "reasonsForReview",
   "processingStatus",
   "processingStage",
+  // Classifier output fields that must never become extractedFields
+  "documentType",
+  "documentTypeLabel",
+  "normalizedDocumentType",
+  "productFamily",
+  "productFamilyLabel",
+  "productSubtype",
+  "productSubtypeLabel",
+  "businessIntent",
+  "businessIntentLabel",
+  "recommendedRoute",
+  "supportedForDirectExtraction",
+  "documentTypeUncertain",
+  "warnings",
+  "reasons",
+  "rawClassification",
+  // Envelope sub-object keys that may leak to top-level
+  "primaryType",
+  "lifecycleStatus",
+  "documentIntent",
+  "subtype",
+  "type",
+  "route",
+  "pipelineRoute",
+  "extractionRoute",
+  "scannedVsDigital",
+  "overallConfidence",
+  "textCoverageEstimate",
+  "pageCount",
+  "preprocessStatus",
+  "preprocessMode",
 ]);
 
 export function parseJsonObjectFromAiReviewRaw(raw: string): Record<string, unknown> | null {
@@ -98,11 +129,24 @@ function coerceExtractedFields(raw: unknown): Record<string, Record<string, unkn
   return out;
 }
 
+function looksLikeFieldValue(val: unknown): boolean {
+  if (val == null) return false;
+  if (typeof val === "string") return val.trim().length > 0;
+  if (typeof val === "number") return true;
+  if (typeof val === "boolean") return false;
+  if (Array.isArray(val)) return false;
+  if (typeof val === "object") {
+    const o = val as Record<string, unknown>;
+    return "value" in o || "status" in o;
+  }
+  return false;
+}
+
 function collectTopLevelFieldCandidates(parsed: Record<string, unknown>): Record<string, Record<string, unknown>> {
   const out: Record<string, Record<string, unknown>> = {};
   for (const [key, val] of Object.entries(parsed)) {
     if (key.startsWith("_") || RESERVED_ENVELOPE_KEYS.has(key) || NON_FIELD_TOP_LEVEL_KEYS.has(key)) continue;
-    if (val == null) continue;
+    if (!looksLikeFieldValue(val)) continue;
     out[key] = normalizeExtractedFieldCell(key, val);
   }
   return out;

@@ -84,6 +84,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     preprocessDurationMs = Date.now() - preprocessStartedAt;
     const preprocessMsg = preprocessErr instanceof Error ? preprocessErr.message : String(preprocessErr);
     console.warn("[contracts/process] Adobe preprocessing failed, continuing with original", preprocessMsg);
+    console.warn("[contracts/process] HINT WILL BE EMPTY — extraction will rely on file-based LLM only", { reviewId: id, mimeType });
   }
 
   const pipelineStartedAt = Date.now();
@@ -115,11 +116,22 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
             adobePreprocessed: false,
           };
 
+  const markdownAvailable = !!(adobePreprocessResult?.markdownContent?.trim());
+  if (!markdownAvailable && mimeType === "application/pdf") {
+    (preprocessMeta as Record<string, unknown>).preprocessStatus =
+      (preprocessMeta as Record<string, unknown>).preprocessStatus ?? "no_text_extracted";
+    const warns = ((preprocessMeta as Record<string, unknown>).preprocessWarnings ?? []) as string[];
+    warns.push("no_markdown_content_for_pdf");
+    (preprocessMeta as Record<string, unknown>).preprocessWarnings = warns;
+    console.warn("[contracts/process] No markdown content extracted from PDF — pipeline will use file-based LLM", { reviewId: id });
+  }
+
   console.info(
     "[contracts/process] preprocess_done",
     JSON.stringify({
       reviewId: id,
       preprocessStatus: preprocessMeta.preprocessStatus,
+      markdownAvailable,
       durationMs: preprocessDurationMs,
     })
   );

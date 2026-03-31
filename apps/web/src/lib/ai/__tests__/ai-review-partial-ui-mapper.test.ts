@@ -86,8 +86,8 @@ describe("mapApiToExtractionDocument partial / synthetic", () => {
     expect(doc.groups.length).toBeGreaterThan(0);
     expect(doc.reviewUiMeta?.usedSyntheticGroups).toBe(true);
     const names = doc.groups.map((g) => g.name).join(" ");
-    expect(names).toContain("Rozpoznání");
     expect(names).toContain("Stav a kontrola");
+    expect(names).not.toContain("Rozpoznání");
     const values = doc.groups.flatMap((g) => g.fields).map((f) => f.value).join(" | ");
     expect(values).not.toContain("onboarding_form");
     expect(values).not.toContain("contract_intake");

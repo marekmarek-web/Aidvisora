@@ -277,7 +277,7 @@ function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
   return (
     <div
       data-section="advisor"
-      className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-5 md:p-6"
+      className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-4 md:p-5"
     >
       <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1 flex items-center gap-2">
         <ListChecks size={14} className="text-indigo-500" /> Přehled pro poradce
@@ -315,7 +315,7 @@ function WorkActionsCard({ doc }: { doc: ExtractionDocument }) {
   return (
     <div
       data-section="workflow"
-      className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-5 md:p-6"
+      className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-4 md:p-5"
     >
       <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3 flex items-center gap-2">
         <Wrench size={14} className="text-indigo-500" /> Navrhované pracovní kroky
@@ -379,7 +379,7 @@ function InternalDebugCard({ doc }: { doc: ExtractionDocument }) {
 function ExecutiveSummaryCard({ doc }: { doc: ExtractionDocument }) {
   const { diagnostics: d } = doc;
   return (
-    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-5 md:p-6">
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-4 md:p-5">
       <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3 flex items-center gap-2">
         <Info size={14} className="text-indigo-500" /> Shrnutí dokumentu
       </h3>
@@ -436,7 +436,7 @@ function AIRecommendationsCard({
   }
 
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 rounded-[20px] border border-indigo-100 shadow-sm p-5 md:p-6 relative overflow-hidden">
+    <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 rounded-[20px] border border-indigo-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
       <div className="relative z-10">
         <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-800 mb-4 flex items-center gap-2">
@@ -534,35 +534,20 @@ function ReviewAttentionBanner({
 }) {
   if (warningCount === 0 && errorCount === 0) return null;
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 md:p-5 flex items-start gap-3 shadow-sm">
-      <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-bold text-amber-900 mb-1">
-          Vyžadována vaše kontrola
-        </h4>
-        <p className="text-xs font-medium text-amber-800/80 leading-relaxed">
-          {errorCount > 0 && (
-            <>
-              <span className="font-bold">{errorCount} chybějících nebo nečitelných údajů</span>
-              {warningCount > 0 ? " a " : ". "}
-            </>
-          )}
-          {warningCount > 0 && (
-            <span className="font-bold">
-              {errorCount > 0 ? "další " : ""}
-              {warningCount} údajů k ověření oproti originálu
-            </span>
-          )}
-          {(warningCount > 0 || errorCount > 0) &&
-            " Zkontrolujte vyznačená pole s náhledem dokumentu vpravo."}
-        </p>
-        <button
-          onClick={onShowProblems}
-          className="mt-2 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900 transition-colors flex items-center gap-1"
-        >
-          Přejít na problémy <ArrowRight size={12} />
-        </button>
-      </div>
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center gap-2.5">
+      <AlertCircle size={16} className="text-amber-600 shrink-0" />
+      <p className="text-xs font-medium text-amber-900 leading-snug flex-1 min-w-0">
+        {errorCount > 0 && <span className="font-bold">{errorCount} chybí</span>}
+        {errorCount > 0 && warningCount > 0 && " · "}
+        {warningCount > 0 && <span>{warningCount} k ověření</span>}
+        {" — "}zkontrolujte oproti PDF.
+      </p>
+      <button
+        onClick={onShowProblems}
+        className="text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900 transition-colors flex items-center gap-1 shrink-0"
+      >
+        Zobrazit <ArrowRight size={12} />
+      </button>
     </div>
   );
 }
@@ -870,7 +855,7 @@ function ExtraRecommendationsCard({
   if (visible.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-emerald-50/50 to-blue-50/30 rounded-[20px] border border-emerald-100 shadow-sm p-5 md:p-6">
+    <div className="bg-gradient-to-br from-emerald-50/50 to-blue-50/30 rounded-[20px] border border-emerald-100 shadow-sm p-4 md:p-5">
       <h3 className="text-[11px] font-black uppercase tracking-widest text-emerald-800 mb-4 flex items-center gap-2">
         <TrendingUp size={16} className="text-emerald-500" />
         Další interní podněty od AI
@@ -961,16 +946,14 @@ export function ExtractionLeftPanel({
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto custom-scroll p-4 md:p-6 lg:p-10"
+        className="flex-1 overflow-y-auto custom-scroll p-4 md:p-5 lg:p-6"
       >
-        <div className="w-full space-y-6 md:space-y-8">
+        <div className="w-full space-y-4 md:space-y-5">
           <div data-section="summary">
             <DocumentMetaHeader doc={doc} />
           </div>
 
           <ExecutiveSummaryCard doc={doc} />
-
-          <AdvisorOverviewCard doc={doc} />
 
           <ReviewAttentionBanner
             warningCount={doc.diagnostics.warningCount}
