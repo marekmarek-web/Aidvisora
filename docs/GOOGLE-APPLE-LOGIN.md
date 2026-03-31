@@ -37,6 +37,8 @@ Přihlášení přes Google už v kódu je (tlačítko „Přihlásit se přes G
 
 **iOS (Capacitor):** OAuth po `/auth/native-bridge` přesměruje na **`aidvisora://auth/callback?code=…`**. V `Info.plist` musí být v `CFBundleURLSchemes` jak **`aidvisor`**, tak **`aidvisora`** (jinak Safari hlásí „address is invalid“).
 
+**Android vs iOS:** Stránka `/auth/native-bridge` používá jako druhý krok URL typu **`intent://…`** jen na **Androidu** (Chrome Custom Tabs). Na iOS by `intent://` bylo neplatné a rozbilo návrat do aplikace.
+
 ---
 
 ## 2. Apple (Sign in with Apple)

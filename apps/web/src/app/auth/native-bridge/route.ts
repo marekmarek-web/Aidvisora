@@ -8,9 +8,10 @@ import { NextResponse } from "next/server";
  * must be exchanged client-side in the Capacitor WebView so the session
  * cookies end up in the correct cookie store (WebView, not Chrome Custom Tab).
  *
- * Flow: Chrome Custom Tab → this route → JS redirect → aidvisora://auth/callback?code=…
- *       → Android intent filter → back to app → NativeOAuthDeepLinkBridge
- *       → exchangeCodeForSession(code) in WebView → session created
+ * Flow: In-app browser (SFSafariViewController / Chrome Custom Tab) → this route
+ *       → JS: aidvisora://auth/callback?code=… (all platforms)
+ *       → optional intent:// fallback after 800ms **Android only** (iOS would show invalid URL)
+ *       → app opens → NativeOAuthDeepLinkBridge → exchangeCodeForSession in WebView
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -50,7 +51,11 @@ function bridgeHtml(deepLink: string) {
 <style>@keyframes s{to{transform:rotate(360deg)}}</style>
 <script>
 location.href=${JSON.stringify(deepLink)};
-setTimeout(function(){location.href=${JSON.stringify(intentUrl)}},800);
+setTimeout(function(){
+  if(/Android/i.test(navigator.userAgent||"")){
+    location.href=${JSON.stringify(intentUrl)};
+  }
+},800);
 setTimeout(function(){document.getElementById("m").style.display="block"},2500);
 </script>
 </div></body></html>`;
