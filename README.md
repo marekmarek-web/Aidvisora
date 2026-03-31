@@ -70,6 +70,13 @@ CRM pro finanční poradce v ČR – MVP dle specifikace (domácnosti, pipeline,
    ```
    Otevřete [http://localhost:3000](http://localhost:3000).
 
+## iOS / Xcode
+
+- **Lokální Xcode build a debug:** `apps/web/ios/XCODE_SETUP.md`
+- **App Store / TestFlight / signing / privacy:** `apps/web/ios/APP_STORE.md`
+
+Pro iOS vždy pracuj s projektem `apps/web/ios/App/App.xcodeproj` v kanonické kopii repa.
+
 ## Nasazení (production mimo localhost)
 
 Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
@@ -123,6 +130,7 @@ Nejjednodušší je **Vercel** (Next.js, automatické deploye z GitHubu).
 ## Struktura
 
 - `apps/web` – Next.js aplikace (Aidvisora)
+- `apps/web/ios/XCODE_SETUP.md` – iOS lokální běh v Xcode, debug režimy, SPM workflow
 - **`apps/web/ios/APP_STORE.md`** – iOS (Capacitor): App Store Connect, signing, APNs, privacy manifest, šablona review poznámek
 - `packages/db` – Drizzle schema, client, seed
 - `docs/` – PRD, ASSUMPTIONS, ROADMAP, DATA_MODEL, API, SECURITY, COMPLIANCE_CZ, UI_POLICY

@@ -1,5 +1,7 @@
 # Přihlášení přes Google a Apple (Supabase)
 
+Tento dokument řeší **OAuth konfiguraci a návrat přihlášení**. Pokud se iOS aplikace normálně sestaví a spustí, ale login nebo návrat do aplikace selhává, je to typicky problém auth/web vrstvy, ne obecného Xcode setupu. Pro samotné lokální Xcode prostředí viz `apps/web/ios/XCODE_SETUP.md`.
+
 ## 1. Google
 
 ### V Google Cloud Console

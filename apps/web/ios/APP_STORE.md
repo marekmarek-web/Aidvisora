@@ -3,6 +3,8 @@
 Kanónická kopie Xcode projektu je v **git repozitáři** pod  
 `apps/web/ios/` (např. `~/Developer/Aidvisora`). Nepracujte proti duplicitní kopii v `Documents/…`, aby signing a CI nešly mimo sebe.
 
+Pro **lokální běh a debug v Xcode** použij nejdřív `XCODE_SETUP.md`. Tento soubor řeší hlavně App Store / TestFlight / release proces.
+
 ## 1. Identifikátory (Developer Portal + App Store Connect)
 
 Vytvořte / ověřte v [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list):
@@ -45,6 +47,12 @@ pnpm cap:sync
 ```
 
 Poté v Xcode: schéma **App**, **Any iOS Device (arm64)** → **Product → Archive** → Validate → Distribute.
+
+Pro běžný lokální debug nepřepínej na archive workflow zbytečně brzy:
+
+- rychlý běh proti produkčnímu webu: `pnpm cap:sync`
+- lokální frontend v appce: `pnpm dev` a pak `pnpm cap:dev`
+- před `Run`: `Reset Package Caches` → `Resolve Package Versions` → `Clean Build Folder`
 
 Export z příkazové řádky (volitelně, po archivu):
 
