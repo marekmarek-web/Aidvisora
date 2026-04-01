@@ -103,6 +103,8 @@ export function AiAssistantDrawer() {
   const contactsImportFileRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Zabrání dvojitému odeslání před tím, než React znovu vyrenderuje s chatLoading. */
+  const chatSubmitLockRef = useRef(false);
   const uploadZoneRef = useRef<HTMLDivElement>(null);
 
   const [importContactsStep, setImportContactsStep] = useState<"idle" | "mapping" | "preview" | "done">("idle");
@@ -129,7 +131,8 @@ export function AiAssistantDrawer() {
 
   const handleSendChat = async () => {
     const msg = input.trim();
-    if (!msg || chatLoading) return;
+    if (!msg || chatLoading || chatSubmitLockRef.current) return;
+    chatSubmitLockRef.current = true;
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setChatLoading(true);
@@ -162,10 +165,13 @@ export function AiAssistantDrawer() {
       setInput(msg);
     } finally {
       setChatLoading(false);
+      chatSubmitLockRef.current = false;
     }
   };
 
   const handleUrgent = async () => {
+    if (chatLoading || chatSubmitLockRef.current) return;
+    chatSubmitLockRef.current = true;
     setMessages((prev) => [...prev, { role: "user", content: "Co je dnes urgentní?" }]);
     setChatLoading(true);
     try {
@@ -187,6 +193,7 @@ export function AiAssistantDrawer() {
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setChatLoading(false);
+      chatSubmitLockRef.current = false;
     }
   };
 

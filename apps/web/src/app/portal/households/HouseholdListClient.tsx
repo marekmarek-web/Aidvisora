@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Home, Plus, ChevronDown, ChevronUp, User, Baby, Filter, Building2 } from "lucide-react";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { deleteHousehold } from "@/app/actions/households";
@@ -57,7 +59,15 @@ function MetricCard({
 
 export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
+
+  const refreshListAndCaches = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    router.refresh();
+  }, [queryClient, router]);
   const [pending, startTransition] = useTransition();
   const [showWizard, setShowWizard] = useState(false);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -100,7 +110,7 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
     startTransition(async () => {
       await deleteHousehold(id);
       toast.showToast("Domácnost smazána");
-      router.refresh();
+      refreshListAndCaches();
     });
   }
 
@@ -299,8 +309,8 @@ export function HouseholdListClient({ list }: { list: HouseholdRowWithMembers[] 
 
       <NewHouseholdWizard
         open={showWizard}
-        onClose={() => { setShowWizard(false); router.refresh(); }}
-        onSuccess={() => { toast.showToast("Domácnost vytvořena"); router.refresh(); }}
+        onClose={() => { setShowWizard(false); refreshListAndCaches(); }}
+        onSuccess={() => { toast.showToast("Domácnost vytvořena"); refreshListAndCaches(); }}
       />
       <ConfirmDeleteModal
         open={deleteModalId !== null}

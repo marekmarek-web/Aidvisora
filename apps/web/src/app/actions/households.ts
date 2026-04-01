@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, households, householdMembers, contacts, eq, and, asc } from "db";
+import { db, households, householdMembers, contacts, eq, and, asc, sql, inArray } from "db";
 import { createPortalNotification } from "./portal-notifications";
 import { logActivity } from "./activity";
 
@@ -31,38 +31,52 @@ export type HouseholdDetail = {
 export async function getHouseholdsList(): Promise<HouseholdRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "households:read")) throw new Error("Forbidden");
-  const rows = await db.select({ id: households.id, name: households.name }).from(households).where(eq(households.tenantId, auth.tenantId)).orderBy(asc(households.name));
-  const withCount = await Promise.all(rows.map(async (r) => {
-    const members = await db.select({ id: householdMembers.id }).from(householdMembers).where(eq(householdMembers.householdId, r.id));
-    return { ...r, memberCount: members.length };
-  }));
-  return withCount;
+  return db
+    .select({
+      id: households.id,
+      name: households.name,
+      memberCount: sql<number>`count(${householdMembers.id})::int`,
+    })
+    .from(households)
+    .leftJoin(householdMembers, eq(householdMembers.householdId, households.id))
+    .where(eq(households.tenantId, auth.tenantId))
+    .groupBy(households.id, households.name)
+    .orderBy(asc(households.name));
 }
 
 export async function getHouseholdsWithMembers(): Promise<HouseholdRowWithMembers[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "households:read")) throw new Error("Forbidden");
   const rows = await db.select({ id: households.id, name: households.name }).from(households).where(eq(households.tenantId, auth.tenantId)).orderBy(asc(households.name));
-  const withMembers = await Promise.all(
-    rows.map(async (r) => {
-      const members = await db
-        .select({
-          id: householdMembers.id,
-          role: householdMembers.role,
-          firstName: contacts.firstName,
-          lastName: contacts.lastName,
-        })
-        .from(householdMembers)
-        .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
-        .where(eq(householdMembers.householdId, r.id));
-      return {
-        id: r.id,
-        name: r.name,
-        members: members.map((m) => ({ id: m.id, firstName: m.firstName, lastName: m.lastName, role: m.role })),
-      };
+  if (rows.length === 0) return [];
+  const householdIds = rows.map((r) => r.id);
+  const memberRows = await db
+    .select({
+      householdId: householdMembers.householdId,
+      id: householdMembers.id,
+      role: householdMembers.role,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
     })
-  );
-  return withMembers;
+    .from(householdMembers)
+    .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
+    .where(inArray(householdMembers.householdId, householdIds));
+  const byHousehold = new Map<string, HouseholdMemberSummary[]>();
+  for (const m of memberRows) {
+    const list = byHousehold.get(m.householdId) ?? [];
+    list.push({
+      id: m.id,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      role: m.role,
+    });
+    byHousehold.set(m.householdId, list);
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    members: byHousehold.get(r.id) ?? [],
+  }));
 }
 
 export type HouseholdForContact = {

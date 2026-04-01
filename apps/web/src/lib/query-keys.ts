@@ -3,6 +3,8 @@ export const queryKeys = {
   contacts: {
     all: ["contacts"] as const,
     list: () => [...queryKeys.contacts.all, "list"] as const,
+    /** Dokumenty + smlouvy u kontaktu (DocumentsSection). */
+    documentsBundle: (contactId: string) => [...queryKeys.contacts.all, "documentsBundle", contactId] as const,
   },
   tasks: {
     all: ["tasks"] as const,

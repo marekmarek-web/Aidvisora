@@ -161,7 +161,17 @@ Změřte na produkčním buildu nebo preview; zapisujte LCP, INP, CLS (Google po
 | Produkční logy (AI) | `console.info` / diagnostická `console.warn` v [`ai-service`](../apps/web/src/lib/ai/ai-service.ts), [`contract-understanding-pipeline`](../apps/web/src/lib/ai/contract-understanding-pipeline.ts), [`ai-review-classifier`](../apps/web/src/lib/ai/ai-review-classifier.ts), [`ai-review-pipeline-v2`](../apps/web/src/lib/ai/ai-review-pipeline-v2.ts) podmíněny `NODE_ENV !== "production"` kde jde o vývojářský šum. |
 | Kalendář | [`PortalCalendarView`](../apps/web/src/app/portal/PortalCalendarView.tsx) již používá `useMemo` pro rozsahy dnů, agregaci událostí a popisky – další optimalizace až podle profileru. |
 
-**Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ doplňte po měření; bundle: `pnpm --filter web analyze` (webpack) generuje report do `apps/web/.next/analyze/`.
+### Výkon – fáze 3 (navazující)
+
+| Oblast | Změna |
+|--------|--------|
+| Dokumenty u kontaktu | [`queryKeys.contacts.documentsBundle`](../apps/web/src/lib/query-keys.ts) + `useQuery` v [`DocumentsSection`](../apps/web/src/app/dashboard/contacts/[id]/DocumentsSection.tsx); invalidace po uploadu/smazání místo opakovaného efektového fetchu. |
+| `router.refresh` + cache | U detailu obchodu a domácností: před `router.refresh()` se volá `invalidateQueries` na `queryKeys.pipeline` / `contacts` / `tasks` tam, kde už existuje TanStack cache ([`DealDetailHeader`](../apps/web/src/app/portal/pipeline/[id]/DealDetailHeader.tsx), [`HouseholdDetailView`](../apps/web/src/app/portal/households/[id]/HouseholdDetailView.tsx), [`HouseholdListClient`](../apps/web/src/app/portal/households/HouseholdListClient.tsx), …). |
+| Pipeline UI | [`PipelineBoard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx): vytažená karta příležitosti, stabilnější handlery pro DnD (`useCallback`). |
+| DB – N+1 / select | [`getHouseholdsList`](../apps/web/src/app/actions/households.ts): jeden dotaz s `GROUP BY` + `count` místo dotazu na členy pro každou domácnost; [`getHouseholdsWithMembers`](../apps/web/src/app/actions/households.ts): dva dotazy (seznam + `inArray` členů); [`getContactDependencyCounts`](../apps/web/src/app/actions/contacts.ts) a [`addTagToContacts`](../apps/web/src/app/actions/contacts.ts): paralelní čtení / zápis; [`getPipeline`](../apps/web/src/app/actions/pipeline.ts) / [`getPipelineByContact`](../apps/web/src/app/actions/pipeline.ts): zúžený select stupňů; [`getContractsByContact`](../apps/web/src/app/actions/contracts.ts): explicitní sloupce místo `select()`. Indexy a EXPLAIN: [`PERFORMANCE-EXPLAIN-HINTS.md`](PERFORMANCE-EXPLAIN-HINTS.md), [`packages/db/supabase-schema.sql`](../packages/db/supabase-schema.sql). |
+| AI drawer | [`AiAssistantDrawer`](../apps/web/src/app/portal/AiAssistantDrawer.tsx): synchronní zámek (`ref`) proti dvojímu odeslání chatu / „urgentní“ shrnutí dřív, než stihne naskočit `chatLoading`. Streaming odpovědi (`/api/ai/assistant/chat`) zůstává samostatná větší úprava. |
+
+**Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ doplňte po měření v cílovém prostředí. Bundle: `pnpm --filter web analyze` (webpack, viz Fáze 0) generuje `apps/web/.next/analyze/nodejs.html` a `edge.html` – slouží k orientaci ve velkých chunky; čísla závisí na lokálním buildu.
 
 ---
 

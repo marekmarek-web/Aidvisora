@@ -122,7 +122,11 @@ export async function getPipeline(): Promise<StageWithOpportunities[]> {
   if (!hasPermission(auth.roleName, "opportunities:read")) throw new Error("Forbidden");
 
   const stages = await db
-    .select()
+    .select({
+      id: opportunityStages.id,
+      name: opportunityStages.name,
+      sortOrder: opportunityStages.sortOrder,
+    })
     .from(opportunityStages)
     .where(eq(opportunityStages.tenantId, auth.tenantId))
     .orderBy(asc(opportunityStages.sortOrder));
@@ -204,7 +208,11 @@ export async function getPipelineByContact(contactId: string): Promise<StageWith
   if (!hasPermission(auth.roleName, "opportunities:read")) throw new Error("Forbidden");
 
   const stages = await db
-    .select()
+    .select({
+      id: opportunityStages.id,
+      name: opportunityStages.name,
+      sortOrder: opportunityStages.sortOrder,
+    })
     .from(opportunityStages)
     .where(eq(opportunityStages.tenantId, auth.tenantId))
     .orderBy(asc(opportunityStages.sortOrder));

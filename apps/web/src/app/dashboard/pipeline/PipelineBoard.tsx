@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useEffect } from "react";
+import { useState, useTransition, useCallback, useEffect, type DragEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
@@ -168,6 +168,163 @@ function Modal({
         </div>
         <div className="p-6">{children}</div>
       </div>
+    </div>
+  );
+}
+
+/** Izolovaná karta obchodu – méně práce pro překreslení rodiče při změnách mimo tuto kartu. */
+function PipelineOpportunityCard({
+  opp,
+  themeAccent,
+  isDragging,
+  isMenuOpen,
+  onDragStart,
+  onDragEnd,
+  onShellClick,
+  onEdit,
+  onMenuToggle,
+  onMenuBackdrop,
+  onMenuEdit,
+  onMenuContactNav,
+  onMenuDelete,
+}: {
+  opp: OpportunityCard;
+  themeAccent: string;
+  isDragging: boolean;
+  isMenuOpen: boolean;
+  onDragStart: (e: DragEvent) => void;
+  onDragEnd: () => void;
+  onShellClick: () => void;
+  onEdit: (e: MouseEvent) => void;
+  onMenuToggle: (e: MouseEvent) => void;
+  onMenuBackdrop: (e: MouseEvent) => void;
+  onMenuEdit: (e: MouseEvent) => void;
+  onMenuContactNav: (e: MouseEvent) => void;
+  onMenuDelete: (e: MouseEvent) => void;
+}) {
+  const product = getProductDesign(opp.caseType);
+  const urgency = getUrgencyProps(opp.expectedCloseDate);
+  const dateShort = formatDateShort(opp.expectedCloseDate);
+  const isTodayOrYesterday = dateShort === "Dnes" || dateShort === "Včera";
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onClick={onShellClick}
+      className={`group relative flex shrink-0 cursor-grab flex-col rounded-[20px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:shadow-lg active:cursor-grabbing dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.45)] ${themeAccent} border-b-[3px] ${isDragging ? "scale-95 opacity-40" : ""}`}
+    >
+      <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] opacity-0 transition-opacity group-hover:opacity-100">
+        <GripVertical size={14} />
+      </div>
+
+      <div className="flex justify-between items-start mb-3 pl-2">
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black tracking-wide uppercase border ${product.color}`}>
+          {product.icon} {product.label}
+        </div>
+        <div className="rounded border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-sm font-bold text-[color:var(--wp-text)]">
+          {formatValue(opp.expectedValue, undefined)}
+        </div>
+      </div>
+
+      <div className="mb-3 pl-2">
+        <h4 className="font-pipeline-display mb-1 text-[15px] font-bold leading-snug text-[color:var(--wp-text)] transition-colors group-hover:text-indigo-500 dark:group-hover:text-indigo-400">
+          {opp.title}
+        </h4>
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)]">
+          <User size={12} className="text-[color:var(--wp-text-tertiary)]" /> {opp.contactName || "Bez kontaktu"}
+        </div>
+      </div>
+
+      {urgency.alert && (
+        <div className="mb-3 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-start gap-1.5 border ml-2 bg-rose-50 text-rose-700 border-rose-200">
+          <AlertCircle size={14} className="shrink-0 mt-0.5" />
+          <span className="leading-snug">{urgency.alert}</span>
+        </div>
+      )}
+
+      <div className="ml-2 mt-auto flex flex-col gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-2.5">
+        <div className="flex items-start gap-2">
+          <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-[color:var(--wp-text-tertiary)]" />
+          <span className="text-[12px] font-semibold leading-snug text-[color:var(--wp-text-secondary)]">Otevřít detail</span>
+        </div>
+        <div className="flex items-center justify-between border-t border-[color:var(--wp-surface-card-border)] pt-2">
+          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${urgency.class}`}>
+            {isTodayOrYesterday ? <Clock size={10} /> : <CalendarClock size={10} />}
+            {dateShort}
+          </div>
+          <div className="flex gap-1">
+            {opp.contactId && (
+              <>
+                <Link
+                  href={`/portal/contacts/${opp.contactId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-400"
+                  title="Zavolat"
+                >
+                  <Phone size={12} />
+                </Link>
+                <Link
+                  href={`/portal/contacts/${opp.contactId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-blue-500/15 hover:text-blue-600 dark:hover:text-blue-400"
+                  title="Napsat e-mail"
+                >
+                  <Mail size={12} />
+                </Link>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
+              title="Upravit"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={onMenuToggle}
+              className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
+              title="Možnosti"
+            >
+              <MoreHorizontal size={12} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {isMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={onMenuBackdrop} aria-hidden />
+          <div className="absolute bottom-14 right-2 z-20 min-w-[140px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-1 shadow-lg">
+            <button
+              type="button"
+              onClick={onMenuEdit}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
+            >
+              <Edit2 size={14} /> Upravit
+            </button>
+            {opp.contactId && (
+              <Link
+                href={`/portal/contacts/${opp.contactId}`}
+                onClick={onMenuContactNav}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
+              >
+                <Phone size={14} /> Otevřít kontakt
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={onMenuDelete}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400"
+            >
+              <Trash2 size={14} /> Smazat
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -516,45 +673,48 @@ export function PipelineBoard({
     }
   }
 
-  function handleCardDragStart(e: React.DragEvent, oppId: string, stageId: string) {
+  const handleCardDragStart = useCallback((e: DragEvent, oppId: string, stageId: string) => {
     setDraggedOppId(oppId);
     setDragSourceStageId(stageId);
     e.dataTransfer.setData(DRAG_TYPE, JSON.stringify({ opportunityId: oppId, stageId }));
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setDragImage(e.currentTarget, 0, 0);
-  }
+  }, []);
 
-  function handleCardDragEnd() {
+  const handleCardDragEnd = useCallback(() => {
     setDraggedOppId(null);
     setDragSourceStageId(null);
     setDropTargetStageId(null);
-  }
+  }, []);
 
-  function handleColumnDragOver(e: React.DragEvent, stageId: string) {
+  const handleColumnDragOver = useCallback((e: DragEvent, stageId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     if (e.dataTransfer.types.includes(DRAG_TYPE)) setDropTargetStageId(stageId);
-  }
+  }, []);
 
-  function handleColumnDragLeave(e: React.DragEvent) {
+  const handleColumnDragLeave = useCallback((e: DragEvent) => {
     const related = e.relatedTarget as Node | null;
     if (!related || !e.currentTarget.contains(related)) setDropTargetStageId(null);
-  }
+  }, []);
 
-  function handleColumnDrop(e: React.DragEvent, targetStageId: string) {
-    e.preventDefault();
-    setDropTargetStageId(null);
-    const raw = e.dataTransfer.getData(DRAG_TYPE);
-    if (!raw) return;
-    try {
-      const { opportunityId, stageId: sourceStageId } = JSON.parse(raw);
-      if (opportunityId && targetStageId !== sourceStageId) moveTo(opportunityId, targetStageId);
-    } catch {
-      // ignore
-    }
-    setDraggedOppId(null);
-    setDragSourceStageId(null);
-  }
+  const handleColumnDrop = useCallback(
+    (e: DragEvent, targetStageId: string) => {
+      e.preventDefault();
+      setDropTargetStageId(null);
+      const raw = e.dataTransfer.getData(DRAG_TYPE);
+      if (!raw) return;
+      try {
+        const { opportunityId, stageId: sourceStageId } = JSON.parse(raw);
+        if (opportunityId && targetStageId !== sourceStageId) moveTo(opportunityId, targetStageId);
+      } catch {
+        // ignore
+      }
+      setDraggedOppId(null);
+      setDragSourceStageId(null);
+    },
+    [moveTo]
+  );
 
   const filteredStages = localStages.map((stage) => {
     const opps = stage.opportunities.filter((opp) => {
@@ -717,102 +877,47 @@ export function PipelineBoard({
                         </div>
                       ) : (
                         stage.opportunities.map((opp) => {
-                          const product = getProductDesign(opp.caseType);
-                          const urgency = getUrgencyProps(opp.expectedCloseDate);
                           const isDragging = draggedOppId === opp.id;
                           const isMenuOpen = openMenuOppId === opp.id;
-                          const dateShort = formatDateShort(opp.expectedCloseDate);
-                          const isTodayOrYesterday = dateShort === "Dnes" || dateShort === "Včera";
-
                           return (
-                            <div
+                            <PipelineOpportunityCard
                               key={opp.id}
-                              draggable
+                              opp={opp}
+                              themeAccent={theme.accent}
+                              isDragging={isDragging}
+                              isMenuOpen={isMenuOpen}
                               onDragStart={(e) => handleCardDragStart(e, opp.id, stage.id)}
                               onDragEnd={handleCardDragEnd}
-                              onClick={() => { if (!isMenuOpen) router.push(`/portal/pipeline/${opp.id}`); }}
-                              className={`group relative flex shrink-0 cursor-grab flex-col rounded-[20px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:shadow-lg active:cursor-grabbing dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.45)] ${theme.accent} border-b-[3px] ${isDragging ? "scale-95 opacity-40" : ""}`}
-                            >
-                              <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] opacity-0 transition-opacity group-hover:opacity-100">
-                                <GripVertical size={14} />
-                              </div>
-
-                              <div className="flex justify-between items-start mb-3 pl-2">
-                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black tracking-wide uppercase border ${product.color}`}>
-                                  {product.icon} {product.label}
-                                </div>
-                                <div className="rounded border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-sm font-bold text-[color:var(--wp-text)]">
-                                  {formatValue(opp.expectedValue, undefined)}
-                                </div>
-                              </div>
-
-                              <div className="mb-3 pl-2">
-                                <h4 className="font-pipeline-display mb-1 text-[15px] font-bold leading-snug text-[color:var(--wp-text)] transition-colors group-hover:text-indigo-500 dark:group-hover:text-indigo-400">
-                                  {opp.title}
-                                </h4>
-                                <div className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)]">
-                                  <User size={12} className="text-[color:var(--wp-text-tertiary)]" /> {opp.contactName || "Bez kontaktu"}
-                                </div>
-                              </div>
-
-                              {urgency.alert && (
-                                <div className="mb-3 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-start gap-1.5 border ml-2 bg-rose-50 text-rose-700 border-rose-200">
-                                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                                  <span className="leading-snug">{urgency.alert}</span>
-                                </div>
-                              )}
-
-                              <div className="ml-2 mt-auto flex flex-col gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-2.5">
-                                <div className="flex items-start gap-2">
-                                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-[color:var(--wp-text-tertiary)]" />
-                                  <span className="text-[12px] font-semibold leading-snug text-[color:var(--wp-text-secondary)]">
-                                    Otevřít detail
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between border-t border-[color:var(--wp-surface-card-border)] pt-2">
-                                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${urgency.class}`}>
-                                    {isTodayOrYesterday ? <Clock size={10} /> : <CalendarClock size={10} />}
-                                    {dateShort}
-                                  </div>
-                                  <div className="flex gap-1">
-                                    {opp.contactId && (
-                                      <>
-                                        <Link href={`/portal/contacts/${opp.contactId}`} onClick={(e) => e.stopPropagation()} className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-400" title="Zavolat"><Phone size={12} /></Link>
-                                        <Link href={`/portal/contacts/${opp.contactId}`} onClick={(e) => e.stopPropagation()} className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-blue-500/15 hover:text-blue-600 dark:hover:text-blue-400" title="Napsat e-mail"><Mail size={12} /></Link>
-                                      </>
-                                    )}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setEditOpp(opp); }} className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]" title="Upravit"><Edit2 size={12} /></button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(isMenuOpen ? null : opp.id); }}
-                                      className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
-                                      title="Možnosti"
-                                    >
-                                      <MoreHorizontal size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {isMenuOpen && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); }} aria-hidden />
-                                  <div className="absolute bottom-14 right-2 z-20 min-w-[140px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-1 shadow-lg">
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setEditOpp(opp); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]">
-                                      <Edit2 size={14} /> Upravit
-                                    </button>
-                                    {opp.contactId && (
-                                      <Link href={`/portal/contacts/${opp.contactId}`} onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]">
-                                        <Phone size={14} /> Otevřít kontakt
-                                      </Link>
-                                    )}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setOpenMenuOppId(null); setDeleteConfirmId(opp.id); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400">
-                                      <Trash2 size={14} /> Smazat
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                              onShellClick={() => {
+                                if (!isMenuOpen) router.push(`/portal/pipeline/${opp.id}`);
+                              }}
+                              onEdit={(e) => {
+                                e.stopPropagation();
+                                setEditOpp(opp);
+                              }}
+                              onMenuToggle={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuOppId(isMenuOpen ? null : opp.id);
+                              }}
+                              onMenuBackdrop={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuOppId(null);
+                              }}
+                              onMenuEdit={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuOppId(null);
+                                setEditOpp(opp);
+                              }}
+                              onMenuContactNav={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuOppId(null);
+                              }}
+                              onMenuDelete={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuOppId(null);
+                                setDeleteConfirmId(opp.id);
+                              }}
+                            />
                           );
                         })
                       )}

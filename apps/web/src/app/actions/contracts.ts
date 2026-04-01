@@ -41,7 +41,24 @@ export async function getContractsByContact(contactId: string): Promise<Contract
     throw new Error("Forbidden");
   }
   const rows = await db
-    .select()
+    .select({
+      id: contracts.id,
+      contactId: contracts.contactId,
+      segment: contracts.segment,
+      type: contracts.type,
+      partnerId: contracts.partnerId,
+      productId: contracts.productId,
+      partnerName: contracts.partnerName,
+      productName: contracts.productName,
+      premiumAmount: contracts.premiumAmount,
+      premiumAnnual: contracts.premiumAnnual,
+      contractNumber: contracts.contractNumber,
+      startDate: contracts.startDate,
+      anniversaryDate: contracts.anniversaryDate,
+      note: contracts.note,
+      createdAt: contracts.createdAt,
+      updatedAt: contracts.updatedAt,
+    })
     .from(contracts)
     .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)))
     .orderBy(asc(contracts.startDate));

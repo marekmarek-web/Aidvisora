@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Briefcase } from "lucide-react";
 import Link from "next/link";
 import {
@@ -19,7 +21,14 @@ function parseExpectedValue(s: string | null): number {
 
 export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDetail }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [pending, startTransition] = useTransition();
+
+  const refreshOpportunityAndCaches = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+    router.refresh();
+  }, [queryClient, router]);
   const closedAt = opportunity.closedAt;
 
   const initialProb =
@@ -51,12 +60,12 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
     startTransition(async () => {
       try {
         await updateOpportunity(opportunity.id, { expectedValue: str });
-        router.refresh();
+        refreshOpportunityAndCaches();
       } catch {
         /* ignore */
       }
     });
-  }, [opportunity.id, router]);
+  }, [opportunity.id, refreshOpportunityAndCaches]);
 
   const flushProbability = useCallback(() => {
     const p = Math.min(100, Math.max(0, Math.round(probabilityRef.current)));
@@ -64,12 +73,12 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
     startTransition(async () => {
       try {
         await updateOpportunity(opportunity.id, { probability: p });
-        router.refresh();
+        refreshOpportunityAndCaches();
       } catch {
         /* ignore */
       }
     });
-  }, [opportunity.id, router]);
+  }, [opportunity.id, refreshOpportunityAndCaches]);
 
   const priceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const probDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,14 +110,14 @@ export function DealDetailHeader({ opportunity }: { opportunity: OpportunityDeta
     if (closedAt) return;
     startTransition(async () => {
       await updateOpportunityStage(opportunity.id, stageId);
-      router.refresh();
+      refreshOpportunityAndCaches();
     });
   }
 
   function handleClose(won: boolean) {
     startTransition(async () => {
       await closeOpportunity(opportunity.id, won);
-      router.refresh();
+      refreshOpportunityAndCaches();
     });
   }
 

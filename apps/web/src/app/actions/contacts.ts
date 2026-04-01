@@ -554,11 +554,28 @@ export async function getContactDependencyCounts(id: string): Promise<{
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
   const { contracts: contractsTable, opportunities, documents, tasks, financialAnalyses } = await import("db");
-  const [c] = await db.select({ count: sql<number>`count(*)::int` }).from(contractsTable).where(and(eq(contractsTable.contactId, id), eq(contractsTable.tenantId, auth.tenantId)));
-  const [o] = await db.select({ count: sql<number>`count(*)::int` }).from(opportunities).where(and(eq(opportunities.contactId, id), eq(opportunities.tenantId, auth.tenantId)));
-  const [d] = await db.select({ count: sql<number>`count(*)::int` }).from(documents).where(and(eq(documents.contactId, id), eq(documents.tenantId, auth.tenantId)));
-  const [t] = await db.select({ count: sql<number>`count(*)::int` }).from(tasks).where(and(eq(tasks.contactId, id), eq(tasks.tenantId, auth.tenantId)));
-  const [a] = await db.select({ count: sql<number>`count(*)::int` }).from(financialAnalyses).where(and(eq(financialAnalyses.contactId, id), eq(financialAnalyses.tenantId, auth.tenantId)));
+  const [[c], [o], [d], [t], [a]] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contractsTable)
+      .where(and(eq(contractsTable.contactId, id), eq(contractsTable.tenantId, auth.tenantId))),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(opportunities)
+      .where(and(eq(opportunities.contactId, id), eq(opportunities.tenantId, auth.tenantId))),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(documents)
+      .where(and(eq(documents.contactId, id), eq(documents.tenantId, auth.tenantId))),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tasks)
+      .where(and(eq(tasks.contactId, id), eq(tasks.tenantId, auth.tenantId))),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(financialAnalyses)
+      .where(and(eq(financialAnalyses.contactId, id), eq(financialAnalyses.tenantId, auth.tenantId))),
+  ]);
   return {
     contracts: c?.count ?? 0,
     opportunities: o?.count ?? 0,
@@ -587,13 +604,15 @@ export async function addTagToContacts(ids: string[], tag: string): Promise<void
     .select({ id: contacts.id, tags: contacts.tags })
     .from(contacts)
     .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, ids)));
-  for (const r of rows) {
-    const next = Array.from(new Set([...(r.tags ?? []), trimmed]));
-    await db
-      .update(contacts)
-      .set({ tags: next, updatedAt: new Date() })
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, r.id)));
-  }
+  await Promise.all(
+    rows.map((r) => {
+      const next = Array.from(new Set([...(r.tags ?? []), trimmed]));
+      return db
+        .update(contacts)
+        .set({ tags: next, updatedAt: new Date() })
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, r.id)));
+    })
+  );
 }
 
 /** Nastaví štítky kontaktu (pouze sloupec tags). Pro použití na kartě klienta. */

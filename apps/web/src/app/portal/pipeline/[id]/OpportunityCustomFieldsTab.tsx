@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Save } from "lucide-react";
 import { updateOpportunity } from "@/app/actions/pipeline";
 import type { OpportunityDetail } from "@/app/actions/pipeline";
@@ -79,6 +81,7 @@ export function OpportunityCustomFieldsTab({
   onUpdate?: () => void;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
@@ -103,13 +106,15 @@ export function OpportunityCustomFieldsTab({
     setSaving(true);
     try {
       await updateOpportunity(opportunity.id, { customFields: values });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
       router.refresh();
     } catch (err) {
       toast.showToast(err instanceof Error ? err.message : "Chyba při ukládání", "error");
     } finally {
       setSaving(false);
     }
-  }, [opportunity.id, router, toast, values]);
+  }, [opportunity.id, queryClient, router, toast, values]);
 
   return (
     <div className="space-y-6">

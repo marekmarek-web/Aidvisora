@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import {
   updateHousehold,
@@ -61,8 +63,16 @@ function isChildMember(member: { role: string | null; birthDate?: string | null 
 
 export function HouseholdDetailView({ household, contacts, opportunities }: HouseholdDetailViewProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
+
+  const refreshHouseholdAndCaches = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    router.refresh();
+  }, [queryClient, router]);
 
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(household.name);
@@ -100,7 +110,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
     startTransition(async () => {
       await updateHousehold(household.id, newName, household.icon);
       setRenaming(false);
-      router.refresh();
+      refreshHouseholdAndCaches();
     });
   }
 
@@ -108,7 +118,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
     startTransition(async () => {
       await updateHousehold(household.id, household.name, iconId);
       setIconPickerOpen(false);
-      router.refresh();
+      refreshHouseholdAndCaches();
     });
   }
 
@@ -120,6 +130,8 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
     startTransition(async () => {
       await deleteHousehold(household.id);
       setDeleteModalOpen(false);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
       router.push("/portal/households");
       router.refresh();
     });
@@ -143,7 +155,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
       setNewLastName("");
       setAddMode("select");
       setAddingMember(false);
-      router.refresh();
+      refreshHouseholdAndCaches();
     });
   }
 
@@ -161,7 +173,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
       }
       startTransition(async () => {
         await removeHouseholdMember(memberId);
-        router.refresh();
+        refreshHouseholdAndCaches();
       });
     })();
   }

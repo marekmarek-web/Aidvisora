@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getDocumentsForContact,
   updateDocumentVisibleToClient,
@@ -11,48 +13,49 @@ import type { DocumentRow } from "@/app/actions/documents";
 import type { ContractRow } from "@/app/actions/contracts";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { ProcessingStatusBadge } from "@/app/components/documents/ProcessingStatusBadge";
+import { DocumentPdfPreviewDialog } from "@/app/components/documents/DocumentPdfPreviewDialog";
 import { useConfirm } from "@/app/components/ConfirmDialog";
+
+async function fetchDocumentsBundle(contactId: string): Promise<{ docs: DocumentRow[]; contracts: ContractRow[] }> {
+  const [docs, contracts] = await Promise.all([getDocumentsForContact(contactId), getContractsByContact(contactId)]);
+  return { docs, contracts };
+}
 
 export function DocumentsSection({ contactId }: { contactId: string }) {
   const askConfirm = useConfirm();
-  const [list, setList] = useState<DocumentRow[]>([]);
-  const [contracts, setContracts] = useState<ContractRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const qk = queryKeys.contacts.documentsBundle(contactId);
+
+  const {
+    data,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: qk,
+    queryFn: () => fetchDocumentsBundle(contactId),
+    staleTime: 45_000,
+  });
+
+  const list = data?.docs ?? [];
+  const contracts = data?.contracts ?? [];
+
   const [visibleToClient, setVisibleToClient] = useState<Record<string, boolean>>({});
-  const [search, setSearch] = useState("");
-  const [previewId, setPreviewId] = useState<string | null>(null);
-
-  const load = useCallback(
-    (opts?: { silent?: boolean }) => {
-      const silent = !!opts?.silent;
-      if (!silent) {
-        setLoading(true);
-      }
-      setLoadError(null);
-      Promise.all([getDocumentsForContact(contactId), getContractsByContact(contactId)])
-        .then(([docs, cts]) => {
-          setList(docs);
-          setContracts(cts);
-          setVisibleToClient(
-            docs.reduce((acc, d) => ({ ...acc, [d.id]: !!d.visibleToClient }), {} as Record<string, boolean>)
-          );
-        })
-        .catch((err) => {
-          setList([]);
-          setContracts([]);
-          setLoadError(err instanceof Error ? err.message : "Nepodařilo se načíst dokumenty.");
-        })
-        .finally(() => {
-          if (!silent) setLoading(false);
-        });
-    },
-    [contactId]
-  );
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!data?.docs) return;
+    setVisibleToClient(
+      data.docs.reduce((acc, d) => ({ ...acc, [d.id]: !!d.visibleToClient }), {} as Record<string, boolean>)
+    );
+  }, [data?.docs]);
+
+  const invalidateBundle = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: qk });
+  }, [queryClient, qk]);
+
+  const [search, setSearch] = useState("");
+  const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -62,7 +65,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
     [list, search]
   );
 
-  async function onToggleVisible(docId: string, value: boolean) {
+  async function handleToggleVisibleToClient(docId: string, value: boolean) {
     await updateDocumentVisibleToClient(docId, value);
     setVisibleToClient((prev) => ({ ...prev, [docId]: value }));
   }
@@ -79,15 +82,24 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
       return;
     }
     await deleteDocument(docId);
-    load({ silent: true });
+    invalidateBundle();
   }
 
-  if (loading) return <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám dokumenty…</p>;
-  if (loadError) {
+  const loadError = isError ? (error instanceof Error ? error.message : "Nepodařilo se načíst dokumenty.") : null;
+  const showInitialSpinner = isPending && !data;
+
+  if (showInitialSpinner) {
+    return <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám dokumenty…</p>;
+  }
+  if (loadError && !data) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
         <p className="text-red-600 text-sm mb-3">{loadError}</p>
-        <button type="button" onClick={() => load()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -96,7 +108,14 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
 
   return (
     <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
-      <h2 className="font-semibold text-[color:var(--wp-text)] mb-4">Dokumenty</h2>
+      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <h2 className="font-semibold text-[color:var(--wp-text)]">Dokumenty</h2>
+        {isFetching && data && (
+          <span className="text-xs text-[color:var(--wp-text-muted)]" aria-live="polite">
+            Aktualizuji…
+          </span>
+        )}
+      </div>
 
       <input
         type="text"
@@ -138,7 +157,7 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                 <input
                   type="checkbox"
                   checked={visibleToClient[d.id] ?? false}
-                  onChange={(e) => onToggleVisible(d.id, e.target.checked)}
+                  onChange={(e) => handleToggleVisibleToClient(d.id, e.target.checked)}
                   className="rounded border-[color:var(--wp-border-strong)]"
                 />
                 Viditelné klientovi
@@ -146,10 +165,10 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
               {d.mimeType === "application/pdf" && (
                 <button
                   type="button"
-                  onClick={() => setPreviewId(previewId === d.id ? null : d.id)}
+                  onClick={() => setPreviewDoc(d)}
                   className="text-xs font-medium px-3 py-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] text-[var(--wp-accent)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                 >
-                  {previewId === d.id ? "Zavřít náhled" : "Náhled"}
+                  Náhled
                 </button>
               )}
               <button
@@ -160,14 +179,6 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                 Smazat
               </button>
             </div>
-            {previewId === d.id && (
-              <iframe
-                src={`/api/documents/${d.id}/download`}
-                className="mt-2 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)]"
-                style={{ height: 400 }}
-                title={`Náhled – ${d.name}`}
-              />
-            )}
           </li>
         ))}
       </ul>
@@ -182,8 +193,19 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
           id: c.id,
           label: `${c.segment} – ${c.partnerName ?? "—"} (${c.contractNumber ?? c.id.slice(0, 8)})`,
         }))}
-        onUploaded={() => load({ silent: true })}
+        onUploaded={() => invalidateBundle()}
         className="max-w-md"
+      />
+
+      <DocumentPdfPreviewDialog
+        doc={previewDoc}
+        visibleToClient={previewDoc ? (visibleToClient[previewDoc.id] ?? false) : false}
+        onClose={() => setPreviewDoc(null)}
+        onToggleVisible={(value) => {
+          if (!previewDoc) return;
+          void handleToggleVisibleToClient(previewDoc.id, value);
+        }}
+        downloadHref={previewDoc ? `/api/documents/${previewDoc.id}/download` : ""}
       />
     </div>
   );
