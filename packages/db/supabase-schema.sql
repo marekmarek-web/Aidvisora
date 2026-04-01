@@ -250,6 +250,7 @@ CREATE TABLE IF NOT EXISTS contracts (
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS premium_amount numeric(12,2);
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS premium_annual numeric(12,2);
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS advisor_id text;
+ALTER TABLE contracts ALTER COLUMN advisor_id DROP NOT NULL;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 -- Legacy DBs: column was contact_id; Drizzle app expects client_id (see packages/db/migrations/contracts-contact-id-to-client-id.sql)
 DO $$
@@ -270,7 +271,7 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'contracts' AND column_name = 'client_id'
   ) THEN
     UPDATE contracts SET client_id = COALESCE(client_id, contact_id);
-    ALTER TABLE contracts DROP COLUMN contact_id;
+    ALTER TABLE contracts DROP COLUMN contact_id CASCADE;
   END IF;
 END $$;
 

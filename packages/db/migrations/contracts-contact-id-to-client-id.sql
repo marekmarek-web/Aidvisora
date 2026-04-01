@@ -2,6 +2,7 @@
 -- 1) Legacy contact_id → client_id (rename, or merge + drop if both columns exist).
 -- 2) Ensure advisor_id + archived_at exist (inserts use advisor_id).
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS advisor_id text;
+ALTER TABLE contracts ALTER COLUMN advisor_id DROP NOT NULL;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 DO $$
 BEGIN
@@ -23,6 +24,6 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'contracts' AND column_name = 'client_id'
   ) THEN
     UPDATE contracts SET client_id = COALESCE(client_id, contact_id);
-    ALTER TABLE contracts DROP COLUMN contact_id;
+    ALTER TABLE contracts DROP COLUMN contact_id CASCADE;
   END IF;
 END $$;

@@ -86,6 +86,17 @@ function pgMissingColumnName(e: unknown): string | null {
   return m?.[1] ?? null;
 }
 
+/** Postgres 23502: sloupec s NOT NULL (postgres driver často přidává .column). */
+function pgNotNullViolationColumn(e: unknown): string | null {
+  if (typeof e === "object" && e !== null) {
+    const col = (e as { column?: string }).column;
+    if (typeof col === "string" && col.length > 0) return col;
+  }
+  const msg = e instanceof Error ? e.message : String(e);
+  const m = /null value in column "([^"]+)"/i.exec(msg);
+  return m?.[1] ?? null;
+}
+
 /**
  * Vrací výsledek místo throw u očekávaných chyb — v produkci Next.js jinak skryje zprávu z Server Action
  * a klient uvidí jen obecný „Server Components render“ text.
@@ -135,6 +146,13 @@ export async function createContract(
     if (form.productId && !productName) {
       const [pr] = await db.select({ name: products.name }).from(products).where(eq(products.id, form.productId)).limit(1);
       if (pr) productName = pr.name;
+    }
+
+    if (!auth.tenantId?.trim()) {
+      return {
+        ok: false,
+        message: "Chybí workspace (tenant). Obnovte stránku nebo dokončete registraci.",
+      };
     }
 
     const [row] = await db
@@ -187,9 +205,27 @@ export async function createContract(
       };
     }
     if (code === "23502") {
+      const col = pgNotNullViolationColumn(e);
+      if (col === "contact_id") {
+        return {
+          ok: false,
+          message:
+            "Tabulka contracts má ještě starý sloupec contact_id vedle client_id — INSERT ho nevyplní a Postgres ho odmítne. V Supabase SQL Editoru spusťte packages/db/migrations/contracts-contact-id-to-client-id.sql (sloučí a odstraní contact_id). Případně: ALTER TABLE contracts DROP COLUMN contact_id CASCADE;",
+        };
+      }
+      if (col === "advisor_id") {
+        return {
+          ok: false,
+          message:
+            "Sloupec advisor_id je v databázi stále povinný. Spusťte: ALTER TABLE contracts ALTER COLUMN advisor_id DROP NOT NULL;",
+        };
+      }
       return {
         ok: false,
-        message: "Uložení se nepovedlo: databáze odmítla záznam (chybí povinné pole). Zkontrolujte migrace.",
+        message:
+          col != null
+            ? `Uložení se nepovedlo: povinný sloupec v databázi („${col}“) nemá hodnotu. Zkontrolujte migrace nebo kontaktujte správce.`
+            : "Uložení se nepovedlo: databáze odmítla záznam (chybí povinné pole). Zkontrolujte migrace.",
       };
     }
     if (e instanceof Error && e.message === "Unauthorized") {

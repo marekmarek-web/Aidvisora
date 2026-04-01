@@ -48,7 +48,7 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'contracts' AND column_name = 'client_id'
   ) THEN
     UPDATE contracts SET client_id = COALESCE(client_id, contact_id);
-    ALTER TABLE contracts DROP COLUMN contact_id;
+    ALTER TABLE contracts DROP COLUMN contact_id CASCADE;
   END IF;
 END $$;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS segment text;
