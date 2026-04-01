@@ -16,12 +16,13 @@ import {
   userProfiles,
   advisorPreferences,
 } from "db";
-import { eq, and, ne, gt, inArray, isNull } from "db";
+import { eq, and, ne, gt, inArray, isNull, sql } from "db";
 import { sendEmail } from "@/lib/email/send-email";
 import type { SendResult } from "@/lib/email/send-email";
 import { clientPortalInviteTemplate } from "@/lib/email/templates";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
+import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";
 
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
@@ -31,22 +32,40 @@ export async function ensureMembership(): Promise<EnsureMembershipResult> {
 const INVITE_EXPIRY_DAYS = 7;
 
 export type SendClientZoneInvitationResult =
-  | { ok: true; inviteLink: string; emailSent: boolean; emailError?: string }
+  | { ok: true; inviteLink: string; loginEmail: string; temporaryPassword: string; emailSent: boolean; emailError?: string }
   | { ok: false; error: string };
 
-const CLIENT_INVITATION_AUDIT_COLUMNS = [
+const CLIENT_INVITATION_OPTIONAL_COLUMNS = [
+  "auth_user_id",
   "invited_by_user_id",
+  "temporary_password_sent_at",
+  "password_change_required_at",
+  "password_changed_at",
   "email_sent_at",
   "last_email_error",
   "revoked_at",
 ] as const;
 const TENANT_OPTIONAL_COLUMNS = ["notification_email"] as const;
 
+type ClientInvitationRecord = {
+  id: string;
+  tenantId: string;
+  contactId: string;
+  email: string;
+  token: string;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
+  authUserId: string | null;
+  passwordChangeRequiredAt: Date | null;
+  passwordChangedAt: Date | null;
+};
+
 function isMissingClientInvitationAuditColumnError(err: unknown): boolean {
   const message = String((err as { message?: string } | null)?.message ?? err).toLowerCase();
   return (
     message.includes("client_invitations") &&
-    CLIENT_INVITATION_AUDIT_COLUMNS.some((column) => message.includes(column))
+    CLIENT_INVITATION_OPTIONAL_COLUMNS.some((column) => message.includes(column))
   );
 }
 
@@ -78,9 +97,12 @@ async function insertClientInvitation(params: {
   tenantId: string;
   contactId: string;
   email: string;
+  authUserId: string;
   token: string;
   expiresAt: Date;
   invitedByUserId: string;
+  temporaryPasswordSentAt: Date;
+  passwordChangeRequiredAt: Date;
 }) {
   try {
     const [inserted] = await db
@@ -89,9 +111,12 @@ async function insertClientInvitation(params: {
         tenantId: params.tenantId,
         contactId: params.contactId,
         email: params.email,
+        authUserId: params.authUserId,
         token: params.token,
         expiresAt: params.expiresAt,
         invitedByUserId: params.invitedByUserId,
+        temporaryPasswordSentAt: params.temporaryPasswordSentAt,
+        passwordChangeRequiredAt: params.passwordChangeRequiredAt,
       })
       .returning({ id: clientInvitations.id } as any);
     return inserted;
@@ -110,6 +135,165 @@ async function insertClientInvitation(params: {
       .returning({ id: clientInvitations.id } as any);
     return inserted;
   }
+}
+
+async function getClientInvitationByToken(token: string): Promise<ClientInvitationRecord | null> {
+  try {
+    const rows = await db
+      .select({
+        id: clientInvitations.id,
+        tenantId: clientInvitations.tenantId,
+        contactId: clientInvitations.contactId,
+        email: clientInvitations.email,
+        token: clientInvitations.token,
+        expiresAt: clientInvitations.expiresAt,
+        acceptedAt: clientInvitations.acceptedAt,
+        revokedAt: clientInvitations.revokedAt,
+        authUserId: clientInvitations.authUserId,
+        passwordChangeRequiredAt: clientInvitations.passwordChangeRequiredAt,
+        passwordChangedAt: clientInvitations.passwordChangedAt,
+      } as any)
+      .from(clientInvitations as any)
+      .where(eq(clientInvitations.token, token) as any)
+      .limit(1);
+    return (rows[0] as ClientInvitationRecord | undefined) ?? null;
+  } catch (err) {
+    if (!isMissingClientInvitationAuditColumnError(err)) throw err;
+    const rows = await db
+      .select({
+        id: clientInvitations.id,
+        tenantId: clientInvitations.tenantId,
+        contactId: clientInvitations.contactId,
+        email: clientInvitations.email,
+        token: clientInvitations.token,
+        expiresAt: clientInvitations.expiresAt,
+        acceptedAt: clientInvitations.acceptedAt,
+        revokedAt: clientInvitations.revokedAt,
+      } as any)
+      .from(clientInvitations as any)
+      .where(eq(clientInvitations.token, token) as any)
+      .limit(1);
+    const row = rows[0] as
+      | Omit<ClientInvitationRecord, "authUserId" | "passwordChangeRequiredAt" | "passwordChangedAt">
+      | undefined;
+    if (!row) return null;
+    return {
+      ...row,
+      authUserId: null,
+      passwordChangeRequiredAt: null,
+      passwordChangedAt: null,
+    };
+  }
+}
+
+async function updateClientInvitationState(invitationId: string, values: Record<string, unknown>) {
+  try {
+    await db
+      .update(clientInvitations as any)
+      .set(values)
+      .where(eq(clientInvitations.id, invitationId) as any);
+  } catch (err) {
+    if (!isMissingClientInvitationAuditColumnError(err)) throw err;
+    const fallbackValues: Record<string, unknown> = {};
+    if ("acceptedAt" in values) fallbackValues.acceptedAt = values.acceptedAt;
+    if ("emailSentAt" in values) fallbackValues.emailSentAt = values.emailSentAt;
+    if ("lastEmailError" in values) fallbackValues.lastEmailError = values.lastEmailError;
+    if ("revokedAt" in values) fallbackValues.revokedAt = values.revokedAt;
+    if (Object.keys(fallbackValues).length === 0) return;
+    await db
+      .update(clientInvitations as any)
+      .set(fallbackValues)
+      .where(eq(clientInvitations.id, invitationId) as any);
+  }
+}
+
+async function findPendingClientPasswordChangeTokenByEmail(email: string | null | undefined) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  try {
+    const rows = await db
+      .select({ token: clientInvitations.token } as any)
+      .from(clientInvitations as any)
+      .where(
+        and(
+          sql`lower(${clientInvitations.email}) = ${normalizedEmail}`,
+          gt(clientInvitations.expiresAt, new Date()),
+          isNull(clientInvitations.revokedAt),
+          isNull(clientInvitations.passwordChangedAt),
+        ) as any,
+      )
+      .limit(1);
+    return (rows[0]?.token as string | undefined) ?? null;
+  } catch (err) {
+    if (!isMissingClientInvitationAuditColumnError(err)) throw err;
+    return null;
+  }
+}
+
+async function ensureClientRole(tenantId: string) {
+  const [clientRole] = await db
+    .select({ id: roles.id } as any)
+    .from(roles as any)
+    .where(and(eq(roles.tenantId, tenantId), eq(roles.name, "Client")) as any)
+    .limit(1);
+  return clientRole;
+}
+
+async function finalizeClientInvitationAccess(invitation: ClientInvitationRecord, userId: string, gdprConsent?: boolean) {
+  const membershipRows = await db
+    .select({ id: memberships.id, roleName: roles.name } as any)
+    .from(memberships as any)
+    .innerJoin(roles as any, eq(memberships.roleId, roles.id) as any)
+    .where(and(eq(memberships.tenantId, invitation.tenantId), eq(memberships.userId, userId)) as any)
+    .limit(1);
+  const membershipRow = membershipRows[0] as { id: string; roleName: string } | undefined;
+
+  if (membershipRow && membershipRow.roleName !== "Client") {
+    return { ok: false as const, error: "Tento účet už používá jinou roli. Pro klientský portál použijte jiný e-mail." };
+  }
+
+  if (!membershipRow) {
+    const clientRole = await ensureClientRole(invitation.tenantId);
+    if (!clientRole) return { ok: false as const, error: "Role Client v tenantu chybí" };
+    await db.insert(memberships as any).values({
+      tenantId: invitation.tenantId,
+      userId,
+      roleId: clientRole.id,
+    });
+  }
+
+  const [linkedContact] = await db
+    .select({ userId: clientContacts.userId } as any)
+    .from(clientContacts as any)
+    .where(and(eq(clientContacts.tenantId, invitation.tenantId), eq(clientContacts.contactId, invitation.contactId)) as any)
+    .limit(1);
+
+  if (linkedContact && linkedContact.userId !== userId) {
+    return { ok: false as const, error: "Kontakt už je propojený s jiným klientským účtem." };
+  }
+
+  if (!linkedContact) {
+    await db.insert(clientContacts as any).values({
+      tenantId: invitation.tenantId,
+      userId,
+      contactId: invitation.contactId,
+    });
+  }
+
+  await updateClientInvitationState(invitation.id, {
+    acceptedAt: invitation.acceptedAt ?? new Date(),
+    authUserId: userId,
+  });
+
+  if (gdprConsent) {
+    await db
+      .update(contacts as any)
+      .set({ gdprConsentAt: new Date(), updatedAt: new Date() })
+      .where(eq(contacts.id, invitation.contactId) as any);
+  }
+
+  return { ok: true as const };
 }
 
 async function updateClientInvitationEmailStatus(invitationId: string, sendResult: SendResult) {
@@ -170,6 +354,7 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
         email: contacts.email,
         tenantId: contacts.tenantId,
         firstName: contacts.firstName,
+        lastName: contacts.lastName,
       } as any)
       .from(contacts as any)
       .where(and(eq(contacts.tenantId, membership.tenantId), eq(contacts.id, contactId)) as any)
@@ -177,18 +362,29 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
     if (!contact) return { ok: false, error: "Kontakt nenalezen" };
     if (!contact.email) return { ok: false, error: "U kontaktu chybí e-mail" };
 
+    const preparedAccount = await provisionClientInviteAccount({
+      email: contact.email.trim(),
+      fullName: `${contact.firstName?.trim() ?? ""} ${contact.lastName?.trim() ?? ""}`.trim() || null,
+      tenantId: contact.tenantId,
+      contactId: contact.id,
+    });
+
     await revokePendingClientInvitations(contact.tenantId, contact.id);
 
     const token = crypto.randomUUID().replace(/-/g, "");
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
+    const passwordChangeRequiredAt = new Date();
     const inserted = await insertClientInvitation({
       tenantId: contact.tenantId,
       contactId: contact.id,
-      email: contact.email.trim(),
+      email: contact.email.trim().toLowerCase(),
+      authUserId: preparedAccount.userId,
       token,
       expiresAt,
       invitedByUserId: user.id,
+      temporaryPasswordSentAt: new Date(),
+      passwordChangeRequiredAt,
     });
 
     const baseUrl = getServerAppBaseUrl();
@@ -200,6 +396,9 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
       registerUrl: inviteLink,
       contactFirstName: contact.firstName?.trim() ?? "",
       tenantName: tenantRow?.name ?? undefined,
+      loginEmail: contact.email.trim(),
+      temporaryPassword: preparedAccount.temporaryPassword,
+      reusedExistingAccount: preparedAccount.reusedExistingUser,
       expiresInDays: INVITE_EXPIRY_DAYS,
       gdprUrl: `${baseUrl}/gdpr`,
       termsUrl: `${baseUrl}/terms`,
@@ -224,6 +423,8 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
     return {
       ok: true,
       inviteLink,
+      loginEmail: contact.email.trim(),
+      temporaryPassword: preparedAccount.temporaryPassword,
       emailSent: sendResult.ok,
       emailError: sendResult.ok ? undefined : sendResult.error,
     };
@@ -240,57 +441,101 @@ export async function acceptClientInvitation(token: string, gdprConsent?: boolea
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Nejprve se přihlaste nebo zaregistrujte" };
-  const [inv] = await db
-    .select()
-    .from(clientInvitations as any)
-    .where(
-      and(
-        eq(clientInvitations.token, token),
-        gt(clientInvitations.expiresAt, new Date()),
-        isNull(clientInvitations.revokedAt),
-      ) as any,
-    )
-    .limit(1);
+  const inv = await getClientInvitationByToken(token);
   if (!inv) return { ok: false, error: "Pozvánka neexistuje nebo vypršela" };
-  if (inv.acceptedAt) return { ok: false, error: "Pozvánka již byla využita" };
+  if (inv.expiresAt <= new Date() || inv.revokedAt) return { ok: false, error: "Pozvánka neexistuje nebo vypršela" };
   const email = user.email?.toLowerCase();
   if (email !== inv.email.toLowerCase()) return { ok: false, error: "E-mail se neshoduje s pozvánkou" };
-  const [clientRole] = await db
-    .select({ id: roles.id } as any)
-    .from(roles as any)
-    .where(and(eq(roles.tenantId, inv.tenantId), eq(roles.name, "Client")) as any)
-    .limit(1);
-  if (!clientRole) return { ok: false, error: "Role Client v tenantu chybí" };
-  await db.insert(memberships as any).values({
-    tenantId: inv.tenantId,
-    userId: user.id,
-    roleId: clientRole.id,
-  });
-  await db.insert(clientContacts as any).values({
-    tenantId: inv.tenantId,
-    userId: user.id,
-    contactId: inv.contactId,
-  });
-  await db
-    .update(clientInvitations as any)
-    .set({ acceptedAt: new Date() })
-    .where(eq(clientInvitations.id, inv.id) as any);
-  if (gdprConsent) {
-    await db
-      .update(contacts as any)
-      .set({ gdprConsentAt: new Date(), updatedAt: new Date() })
-      .where(eq(contacts.id, inv.contactId) as any);
+  const access = await finalizeClientInvitationAccess(inv, user.id, gdprConsent);
+  return access.ok ? { ok: true } : access;
+}
+
+export async function continueClientInvitationAfterLogin(
+  token: string,
+): Promise<{ ok: true; nextStep: "change_password" | "portal" } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Nejprve se přihlaste." };
+
+  const invitation = await getClientInvitationByToken(token);
+  if (!invitation || invitation.expiresAt <= new Date() || invitation.revokedAt) {
+    return { ok: false, error: "Pozvánka neexistuje nebo vypršela" };
   }
+  if (user.email?.trim().toLowerCase() !== invitation.email.trim().toLowerCase()) {
+    return { ok: false, error: "Přihlaste se stejným e-mailem, na který byla pozvánka odeslána." };
+  }
+  if (invitation.authUserId && invitation.authUserId !== user.id) {
+    return { ok: false, error: "Pozvánka je připravená pro jiný klientský účet." };
+  }
+
+  await updateClientInvitationState(invitation.id, { authUserId: user.id });
+
+  if (invitation.passwordChangeRequiredAt && !invitation.passwordChangedAt) {
+    return { ok: true, nextStep: "change_password" };
+  }
+
+  const access = await finalizeClientInvitationAccess(invitation, user.id);
+  if (!access.ok) return access;
+  return { ok: true, nextStep: "portal" };
+}
+
+export async function completeClientInvitationFirstLogin(
+  token: string,
+  newPassword: string,
+  gdprConsent: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Nejprve se přihlaste." };
+
+  const invitation = await getClientInvitationByToken(token);
+  if (!invitation || invitation.expiresAt <= new Date() || invitation.revokedAt) {
+    return { ok: false, error: "Pozvánka neexistuje nebo vypršela" };
+  }
+  if (user.email?.trim().toLowerCase() !== invitation.email.trim().toLowerCase()) {
+    return { ok: false, error: "Přihlaste se stejným e-mailem, na který byla pozvánka odeslána." };
+  }
+  const trimmedPassword = newPassword.trim();
+  if (trimmedPassword.length < 8) {
+    return { ok: false, error: "Nové heslo musí mít alespoň 8 znaků." };
+  }
+  if (!gdprConsent) {
+    return { ok: false, error: "Před dokončením přístupu potvrďte zásady zpracování osobních údajů." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: trimmedPassword });
+  if (error) return { ok: false, error: error.message };
+
+  const access = await finalizeClientInvitationAccess(invitation, user.id, gdprConsent);
+  if (!access.ok) return access;
+
+  await updateClientInvitationState(invitation.id, {
+    authUserId: user.id,
+    passwordChangedAt: new Date(),
+    acceptedAt: invitation.acceptedAt ?? new Date(),
+  });
+
   return { ok: true };
 }
 
 /** Po přihlášení do klientské zóny bez pozvánky: ověří existující roli Client. */
-export async function ensureClientPortalAccess(): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function ensureClientPortalAccess(): Promise<
+  { ok: true; redirectTo?: string }
+  | { ok: false; error: string }
+> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Nejste přihlášeni." };
+  const pendingPasswordChangeToken = await findPendingClientPasswordChangeTokenByEmail(user.email);
+  if (pendingPasswordChangeToken) {
+    return { ok: true, redirectTo: `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(pendingPasswordChangeToken)}` };
+  }
   const m = await getMembership(user.id);
   if (m?.roleName === "Client") return { ok: true };
   return {

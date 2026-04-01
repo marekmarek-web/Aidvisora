@@ -22,14 +22,13 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
     setPassword,
     name,
     setName,
-    gdprConsent,
-    setGdprConsent,
     advisorLegalConsent,
     setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
     isClient,
+    isInviteFlow,
     hasError,
     formRef,
     handleSubmit,
@@ -37,7 +36,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
   } = login;
 
   return (
-    <div className="min-h-dvh bg-[#0a0f29] font-inter text-slate-300 flex flex-col justify-center items-center relative overflow-hidden selection:bg-indigo-500 selection:text-white px-4 py-8 sm:py-12">
+    <div className="min-h-dvh bg-[#0a0f29] font-inter text-slate-300 flex flex-col justify-start sm:justify-center items-center relative overflow-x-hidden selection:bg-indigo-500 selection:text-white px-4 py-8 sm:py-12">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
@@ -140,7 +139,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
             className="h-9 w-auto max-w-[200px] object-contain object-left shrink-0 brightness-0 invert"
           />
         </Link>
-        {!token && (
+        {!isInviteFlow && (
           <div className="flex flex-wrap gap-4 sm:gap-6 text-sm font-bold justify-end">
             <button
               type="button"
@@ -161,35 +160,37 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
       </div>
 
       {isMounted && (
-        <div className="relative z-10 w-full max-w-[440px] px-2 sm:px-6 animate-card mt-16 sm:mt-12">
-          <div className="flex bg-white/5 border border-white/10 rounded-full p-1 mb-8 mx-auto w-fit backdrop-blur-md shadow-lg">
-            <button
-              type="button"
-              onClick={() => {
-                setRole("advisor");
-                setIsLogin(true);
-                setMessage("");
-              }}
-              className={`px-5 sm:px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
-                role === "advisor" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Poradce
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRole("client");
-                setIsLogin(true);
-                setMessage("");
-              }}
-              className={`px-5 sm:px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
-                role === "client" ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Klient
-            </button>
-          </div>
+        <div className="relative z-10 w-full max-w-[460px] px-2 sm:px-6 animate-card mt-16 sm:mt-12">
+          {!isInviteFlow && (
+            <div className="flex bg-white/5 border border-white/10 rounded-full p-1 mb-8 mx-auto w-fit backdrop-blur-md shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("advisor");
+                  setIsLogin(true);
+                  setMessage("");
+                }}
+                className={`px-5 sm:px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
+                  role === "advisor" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Poradce
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("client");
+                  setIsLogin(true);
+                  setMessage("");
+                }}
+                className={`px-5 sm:px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
+                  role === "client" ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Klient
+              </button>
+            </div>
+          )}
 
           <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-6 sm:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] shadow-indigo-900/20 relative overflow-hidden">
             <div className="flex flex-col items-center mb-8">
@@ -199,10 +200,12 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                 className="h-12 w-auto max-w-[200px] mb-5 object-contain brightness-0 invert"
               />
               <h1 className="font-jakarta text-2xl md:text-3xl font-bold text-white tracking-tight mb-2 text-center">
-                {role === "client" ? "Klientský portál" : isLogin ? "Vítejte zpět" : "Založit účet"}
+                {isInviteFlow ? "Přihlášení do klientského portálu" : role === "client" ? "Klientský portál" : isLogin ? "Vítejte zpět" : "Založit účet"}
               </h1>
               <p className="text-slate-400 text-sm font-medium text-center">
-                {role === "client"
+                {isInviteFlow
+                  ? "Použijte e-mail a jednorázové heslo z pozvánky. Po prvním přihlášení si nastavíte vlastní heslo."
+                  : role === "client"
                   ? "Přihlaste se ke svým smlouvám a financím."
                   : isLogin
                     ? "Přihlaste se do svého pracovního prostředí."
@@ -211,18 +214,6 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
             </div>
 
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-              {token && (
-                <label className="flex items-start gap-3 text-sm text-white/90">
-                  <input type="checkbox" className="mt-1" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required />
-                  <span>
-                    Souhlasím s{" "}
-                    <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-300 hover:underline">
-                      zásadami zpracování osobních údajů
-                    </Link>
-                  </span>
-                </label>
-              )}
-
               {role === "advisor" && !isLogin && (
                 <div>
                   <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Jméno a příjmení</label>
@@ -264,7 +255,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               <div>
                 <div className="flex justify-between items-center mb-2 ml-1 gap-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Heslo</label>
-                  {isLogin && (
+                  {isLogin && !isInviteFlow && (
                     <Link
                       href="/forgot-password"
                       className={`text-xs font-bold transition-colors min-h-[44px] flex items-center ${
@@ -371,13 +362,16 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
             )}
 
             {token && (
-              <p className="mt-6 text-center text-xs font-medium text-slate-400 leading-relaxed">
-                Pro dokončení pozvánky použijte e-mail a heslo (stejný e-mail jako v pozvánce). Přihlášení přes Google ani
-                Apple zde není k dispozici.
-              </p>
+              <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left text-xs text-emerald-50/90">
+                <p className="font-semibold text-emerald-200">Účet už je pro vás připravený.</p>
+                <p className="mt-2 leading-relaxed">
+                  Přihlaste se stejným e-mailem, na který vám přišla pozvánka. Po úspěšném přihlášení budete vyzváni ke změně
+                  dočasného hesla a potvrzení ochrany osobních údajů.
+                </p>
+              </div>
             )}
 
-            {role === "advisor" && (
+            {role === "advisor" && !isInviteFlow && (
               <p className="mt-8 text-center text-sm font-medium text-slate-400">
                 {isLogin ? "Nemáte ještě účet?" : "Již máte účet?"}
                 <button
@@ -393,7 +387,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               </p>
             )}
 
-            {role === "client" && (
+            {role === "client" && !isInviteFlow && (
               <p className="mt-8 text-center text-xs font-medium text-slate-400 leading-relaxed">
                 Přístup do klientské zóny zakládá výhradně váš finanční poradce. Pokud účet nemáte, prosím kontaktujte ho.
               </p>
@@ -402,7 +396,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
         </div>
       )}
 
-      <div className="absolute bottom-6 w-full px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 z-20 text-[11px] text-slate-500 max-w-[1200px] mx-auto left-0 right-0">
+      <div className="relative mt-8 w-full px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 z-20 text-[11px] text-slate-500 max-w-[1200px] mx-auto left-0 right-0 sm:absolute sm:bottom-6">
         <div className="flex flex-col gap-1 normal-case font-medium tracking-normal text-center sm:text-left text-[10px] sm:text-[11px]">
           <span>
             © {new Date().getFullYear()} Aidvisora. Všechna práva vyhrazena.

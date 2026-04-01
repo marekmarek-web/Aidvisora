@@ -207,6 +207,9 @@ export function clientPortalInviteTemplate(params: {
   registerUrl: string;
   contactFirstName: string;
   tenantName?: string;
+  loginEmail: string;
+  temporaryPassword: string;
+  reusedExistingAccount?: boolean;
   expiresInDays: number;
   gdprUrl: string;
   termsUrl: string;
@@ -221,7 +224,21 @@ export function clientPortalInviteTemplate(params: {
       ${who} vám zpřístupnil(a) klientskou zónu v aplikaci Aidvisora — přehled smluv, dokumentů a zpráv na jednom místě.
     </p>
     <p style="font-size: 14px; line-height: 1.5;">
-      Účet si založíte nebo přihlásíte kliknutím na tlačítko níže. Odkaz je platný přibližně <strong>${params.expiresInDays}</strong> dní.
+      ${
+        params.reusedExistingAccount
+          ? "Váš přístup byl znovu připraven a dočasně jsme obnovili heslo pro první vstup."
+          : "Váš účet byl připraven a můžete se ihned přihlásit."
+      }
+      Odkaz je platný přibližně <strong>${params.expiresInDays}</strong> dní.
+    </p>
+    <div style="margin: 18px 0; padding: 14px 16px; border-radius: 12px; background: #f4f7ff; border: 1px solid #dbe5ff;">
+      <p style="margin: 0 0 8px; font-size: 13px; color: #44546f;"><strong>Přihlašovací e-mail</strong></p>
+      <p style="margin: 0 0 12px; font-size: 14px; color: #172b4d;">${params.loginEmail}</p>
+      <p style="margin: 0 0 8px; font-size: 13px; color: #44546f;"><strong>Dočasné heslo</strong></p>
+      <p style="margin: 0; font-size: 18px; letter-spacing: 1px; font-weight: 700; color: #172b4d;">${params.temporaryPassword}</p>
+    </div>
+    <p style="font-size: 14px; line-height: 1.5;">
+      Po prvním přihlášení si nastavíte vlastní heslo a dokončíte aktivaci klientského portálu.
     </p>
     <p style="margin: 20px 0;">
       <a href="${params.registerUrl}" style="display: inline-block; padding: 12px 20px; background: #0073ea; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Otevřít klientskou zónu</a>

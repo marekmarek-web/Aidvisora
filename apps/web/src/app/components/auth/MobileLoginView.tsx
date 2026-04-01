@@ -26,14 +26,13 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
     setPassword,
     name,
     setName,
-    gdprConsent,
-    setGdprConsent,
     advisorLegalConsent,
     setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
     isClient,
+    isInviteFlow,
     hasError,
     formRef,
     handleSubmit,
@@ -99,7 +98,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
           className={`flex-1 flex flex-col relative z-10 overflow-y-auto hide-scroll px-6 pb-8 ${keyboardOpen ? "pt-14" : "pt-16"}`}
           style={{ paddingBottom: `calc(var(--safe-area-bottom) + ${keyboardInset}px + 1rem)` }}
         >
-          {!isLogin && (
+          {!isLogin && !isInviteFlow && (
             <button
               type="button"
               onClick={() => setIsLogin(true)}
@@ -110,34 +109,36 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
             </button>
           )}
 
-          <div className="flex bg-white/10 p-1 rounded-full w-fit mx-auto mb-6 backdrop-blur-md border border-white/10 shadow-lg">
-            <button
-              type="button"
-              onClick={() => {
-                setRole("advisor");
-                setIsLogin(true);
-                setMessage("");
-              }}
-              className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
-                !isClient ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Poradce
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRole("client");
-                setIsLogin(true);
-                setMessage("");
-              }}
-              className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
-                isClient ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Klient
-            </button>
-          </div>
+          {!isInviteFlow && (
+            <div className="flex bg-white/10 p-1 rounded-full w-fit mx-auto mb-6 backdrop-blur-md border border-white/10 shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("advisor");
+                  setIsLogin(true);
+                  setMessage("");
+                }}
+                className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
+                  !isClient ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Poradce
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("client");
+                  setIsLogin(true);
+                  setMessage("");
+                }}
+                className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 min-h-[44px] ${
+                  isClient ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Klient
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col items-center mb-10 animate-in fade-in duration-500">
             <img
@@ -147,37 +148,20 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
               style={{ filter: "brightness(0) invert(1)" }}
             />
             <h1 className="font-display text-3xl font-black text-white tracking-tight mb-2 text-center">
-              {isClient ? "Klientská zóna" : isLogin ? "Vítejte zpět" : "Založit účet"}
+              {isInviteFlow ? "První vstup do portálu" : isClient ? "Klientská zóna" : isLogin ? "Vítejte zpět" : "Založit účet"}
             </h1>
             <p className="text-slate-400 text-sm font-medium text-center max-w-[250px]">
-              {isClient ? "Přihlaste se ke svým financím." : isLogin ? "Přihlaste se do pracovního prostředí." : "Získejte přehled o svých klientech."}
+              {isInviteFlow
+                ? "Použijte údaje z pozvánky. Hned poté si nastavíte vlastní heslo."
+                : isClient
+                  ? "Přihlaste se ke svým financím."
+                  : isLogin
+                    ? "Přihlaste se do pracovního prostředí."
+                    : "Získejte přehled o svých klientech."}
             </p>
           </div>
 
           <form ref={formRef} onSubmit={handleSubmit} className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 flex flex-col">
-            {token && (
-              <label className="flex items-center gap-3 min-h-[44px] text-sm text-white/90 py-1">
-                <input
-                  type="checkbox"
-                  checked={gdprConsent}
-                  onChange={(e) => setGdprConsent(e.target.checked)}
-                  required
-                  className="h-5 w-5 shrink-0 rounded border-white/20 accent-emerald-500"
-                />
-                <span>
-                  Souhlasím s{" "}
-                  <Link
-                    href="/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-bold hover:underline opacity-90 inline-flex min-h-[44px] items-center"
-                  >
-                    zásadami zpracování osobních údajů
-                  </Link>
-                </span>
-              </label>
-            )}
-
             {!isLogin && !isClient && (
               <div>
                 <div className="relative group">
@@ -250,7 +234,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              {isLogin && (
+              {isLogin && !isInviteFlow && (
                 <div className="flex justify-end mt-3">
                   <button
                     type="button"
@@ -342,12 +326,12 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 </div>
               </div>
             ) : (
-              <p className="text-center text-[11px] font-medium text-slate-500 leading-relaxed px-2 pt-2">
-                Pro dokončení pozvánky použijte e-mail a heslo. OAuth zde není k dispozici.
-              </p>
+              <div className="rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-[11px] font-medium text-emerald-100 leading-relaxed">
+                Použijte e-mail a jednorázové heslo z pozvánky. Po přihlášení vás provedeme nastavením nového hesla.
+              </div>
             )}
 
-            {!isClient ? (
+            {!isClient && !isInviteFlow ? (
               <div className="text-center pt-4">
                 <p className="text-sm font-medium text-slate-400">
                   {isLogin ? "Nemáte ještě účet?" : "Zpět na přihlášení."}
@@ -366,7 +350,9 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
             ) : (
               <div className="text-center pt-4">
                 <p className="text-[11px] font-medium text-slate-500 leading-relaxed px-4">
-                  Přístup do klientské zóny zakládá váš poradce. Pokud nemáte údaje, kontaktujte jej.
+                  {isInviteFlow
+                    ? "Pokud jste pozvánku nečekali nebo vám údaje nefungují, obraťte se na svého poradce."
+                    : "Přístup do klientské zóny zakládá váš poradce. Pokud nemáte údaje, kontaktujte jej."}
                 </p>
               </div>
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
 import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
@@ -8,11 +8,13 @@ import { MortgageInputPanel } from "./MortgageInputPanel";
 import { MortgageResultsPanel } from "./MortgageResultsPanel";
 import { MortgageBankOffers } from "./MortgageBankOffers";
 import { MortgageAmortSection } from "./MortgageAmortSection";
+import { BANKS_DATA } from "@/lib/calculators/mortgage/mortgage.config";
 import {
-  BANKS_DATA,
-  DEFAULT_STATE,
-  LIMITS,
-} from "@/lib/calculators/mortgage/mortgage.config";
+  MORTGAGE_CALCULATOR_SESSION_KEY,
+  defaultLoanFormState,
+  defaultMortgageFormState,
+  parseMortgageCalculatorSession,
+} from "@/lib/calculators/mortgage/mortgageSessionStorage";
 import {
   calculateResult,
   getCalculatedLtv,
@@ -30,24 +32,52 @@ import { buildMortgagePdfSections } from "@/lib/calculators/pdf";
 import { CalculatorPdfExportButton } from "@/components/calculators/CalculatorPdfExportButton";
 
 export function MortgageCalculatorPage() {
-  const [state, setState] = useState<MortgageState>({
-    ...DEFAULT_STATE,
-    product: "mortgage",
-    mortgageType: "standard",
-    loanType: "consumer",
-    loan: LIMITS.mortgage.default,
-    own: 600_000,
-    extra: 0,
-    term: 30,
-    fix: 5,
-    type: "new",
-    ltvLock: 90,
-  });
+  const [state, setState] = useState<MortgageState>(defaultMortgageFormState);
+  const productDraftsRef = useRef<Partial<Record<"mortgage" | "loan", MortgageState>>>({});
+  const skipPersistOnceRef = useRef(true);
   const [liveRates, setLiveRates] = useState<NormalizedOffer[] | null>(null);
   const defaultAllowedBanks = useMemo(
     () => BANKS_DATA.filter((bank) => ALLOWED_BANK_IDS.includes(bank.id as (typeof ALLOWED_BANK_IDS)[number])),
     []
   );
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(MORTGAGE_CALCULATOR_SESSION_KEY);
+      if (raw) {
+        const parsed = parseMortgageCalculatorSession(raw);
+        if (parsed) {
+          productDraftsRef.current.mortgage = parsed.mortgage;
+          productDraftsRef.current.loan = parsed.loan;
+          setState(parsed.lastActive === "mortgage" ? parsed.mortgage : parsed.loan);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (skipPersistOnceRef.current) {
+      skipPersistOnceRef.current = false;
+      return;
+    }
+    productDraftsRef.current[state.product] = state;
+    const mortgage = productDraftsRef.current.mortgage ?? defaultMortgageFormState();
+    const loan = productDraftsRef.current.loan ?? defaultLoanFormState();
+    try {
+      sessionStorage.setItem(
+        MORTGAGE_CALCULATOR_SESSION_KEY,
+        JSON.stringify({
+          mortgage,
+          loan,
+          lastActive: state.product,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [state]);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -120,13 +150,24 @@ export function MortgageCalculatorPage() {
             state={state}
             onStateChange={setState}
             onProductChange={(product) =>
-              setState((s) => ({
-                ...s,
-                product,
-                ...(product === "mortgage"
-                  ? { loan: LIMITS.mortgage.default, own: 600_000, term: 30, fix: 5, type: "new" as const, ltvLock: 90 as number | null }
-                  : { loan: LIMITS.loan.default, own: 0, term: 12, type: "new" as const, ltvLock: null }),
-              }))
+              setState((s) => {
+                const prev = s.product;
+                if (prev === product) return s;
+                productDraftsRef.current[prev] = { ...s };
+                const restored = productDraftsRef.current[product];
+                if (restored) {
+                  return { ...restored, product };
+                }
+                return product === "mortgage"
+                  ? {
+                      ...s,
+                      ...defaultMortgageFormState(),
+                    }
+                  : {
+                      ...s,
+                      ...defaultLoanFormState(),
+                    };
+              })
             }
             onTypeChange={(type) => setState((s) => ({ ...s, type }))}
           />

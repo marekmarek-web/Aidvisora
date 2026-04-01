@@ -157,7 +157,9 @@ export async function middleware(request: NextRequest) {
   }
   if (request.nextUrl.pathname === "/prihlaseni" && user) {
     const errorParam = request.nextUrl.searchParams.get("error");
+    const hasInviteToken = request.nextUrl.searchParams.has("token");
     if (
+      hasInviteToken ||
       errorParam === "auth_error" ||
       errorParam === "database_error" ||
       errorParam === "client_no_access"

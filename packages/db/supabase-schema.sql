@@ -131,7 +131,11 @@ CREATE TABLE IF NOT EXISTS client_invitations (
   accepted_at timestamptz
 );
 ALTER TABLE client_invitations
+  ADD COLUMN IF NOT EXISTS auth_user_id text,
   ADD COLUMN IF NOT EXISTS invited_by_user_id text,
+  ADD COLUMN IF NOT EXISTS temporary_password_sent_at timestamptz,
+  ADD COLUMN IF NOT EXISTS password_change_required_at timestamptz,
+  ADD COLUMN IF NOT EXISTS password_changed_at timestamptz,
   ADD COLUMN IF NOT EXISTS email_sent_at timestamptz,
   ADD COLUMN IF NOT EXISTS last_email_error text,
   ADD COLUMN IF NOT EXISTS revoked_at timestamptz;

@@ -81,10 +81,7 @@ function buildResponsesCreateBody(params: {
 }): ResponsesCreateBody {
   const augmented = aiReviewResponsesAugmentation(params.routing, params.model) as ResponsesCreateBody;
   const text = params.textFormat
-    ? {
-        ...(augmented.text ?? {}),
-        format: params.textFormat,
-      }
+    ? { format: params.textFormat }
     : augmented.text;
   return {
     ...augmented,
@@ -331,7 +328,6 @@ export async function createResponseStructured<T>(
         type: "json_schema",
         name: schemaName,
         schema: jsonSchema,
-        strict: true,
       },
     });
     response = await withOpenAIRateLimitRetry(
@@ -356,7 +352,6 @@ export async function createResponseStructured<T>(
           type: "json_schema",
           name: schemaName,
           schema: jsonSchema,
-          strict: true,
         },
       });
       response = await withOpenAIRateLimitRetry(

@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership, getDemoClientContactId } from "./get-membership";
 import type { RoleName } from "@/shared/rolePermissions";
+import { db, clientInvitations, and, gt, isNull, sql } from "db";
 import {
   isDemoMode,
   DEMO_TENANT_ID,
@@ -32,6 +33,34 @@ function getDemoAuthContext(): AuthContext {
     roleName: "Admin" as RoleName,
     contactId: null,
   };
+}
+
+async function findPendingClientPasswordChangeRedirect(email: string | null | undefined): Promise<string | null> {
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  try {
+    const rows = await db
+      .select({ token: clientInvitations.token })
+      .from(clientInvitations)
+      .where(
+        and(
+          sql`lower(${clientInvitations.email}) = ${normalizedEmail}`,
+          gt(clientInvitations.expiresAt, new Date()),
+          isNull(clientInvitations.revokedAt),
+          isNull(clientInvitations.passwordChangedAt),
+        ),
+      )
+      .limit(1);
+    const token = rows[0]?.token?.trim();
+    return token ? `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(token)}` : null;
+  } catch (err) {
+    const message = String((err as { message?: string } | null)?.message ?? err).toLowerCase();
+    if (message.includes("client_invitations") && message.includes("password_changed_at")) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /** Deduped within one RSC/request; use from server components and server actions. */
@@ -173,6 +202,10 @@ async function requireClientZoneAuthUncached(): Promise<AuthContext> {
   const user = await getCachedSupabaseUser();
   if (!user) {
     redirect("/prihlaseni?error=auth_error");
+  }
+  const pendingPasswordChangeRedirect = await findPendingClientPasswordChangeRedirect(user.email);
+  if (pendingPasswordChangeRedirect) {
+    redirect(pendingPasswordChangeRedirect);
   }
   const m = await getCachedMembership(user.id);
   if (!m) {

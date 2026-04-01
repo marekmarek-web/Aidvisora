@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
-import { acceptClientInvitation, ensureClientPortalAccess } from "@/app/actions/auth";
+import { continueClientInvitationAfterLogin, ensureClientPortalAccess } from "@/app/actions/auth";
 
 export type LoginRole = "advisor" | "client";
 
@@ -53,7 +53,6 @@ export function useAidvisoraLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [gdprConsent, setGdprConsent] = useState(false);
   /** Souhlas s OP / privacy / DPA + AI info při registraci poradce (e-mail i OAuth). */
   const [advisorLegalConsent, setAdvisorLegalConsent] = useState(false);
   const [message, setMessage] = useState(() => getInitialLoginMessage(errorParam));
@@ -97,6 +96,7 @@ export function useAidvisoraLogin() {
   }, [role]);
 
   const isClient = role === "client";
+  const isInviteFlow = Boolean(token);
   const hasError = Boolean(message);
 
   const handleSubmit = useCallback(
@@ -108,32 +108,21 @@ export function useAidvisoraLogin() {
       const supabase = createClient();
 
       if (token) {
-        let { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          const isInvalidCredentials =
-            error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("credentials");
-          if (isInvalidCredentials) {
-            const signUpRes = await supabase.auth.signUp({ email, password });
-            error = signUpRes.error;
-            if (
-              error?.message?.toLowerCase().includes("already registered") ||
-              error?.message?.toLowerCase().includes("already exists")
-            ) {
-              setMessage("Tento e-mail již má účet. Zadejte své heslo a odešlete znovu (přihlášení).");
-              setIsLoading(false);
-              return;
-            }
-          }
-        }
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           setIsLoading(false);
-          setMessage(error.message);
+          setMessage("Nepodařilo se přihlásit. Použijte e-mail a jednorázové heslo z pozvánky.");
           return;
         }
-        const result = await acceptClientInvitation(token, gdprConsent);
+
+        const result = await continueClientInvitationAfterLogin(token);
         setIsLoading(false);
         if (!result.ok) {
           setMessage(result.error);
+          return;
+        }
+        if (result.nextStep === "change_password") {
+          window.location.href = `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(token)}`;
           return;
         }
         window.location.href = "/client";
@@ -151,6 +140,10 @@ export function useAidvisoraLogin() {
         setIsLoading(false);
         if (!access.ok) {
           setMessage(access.error);
+          return;
+        }
+        if (access.redirectTo) {
+          window.location.href = access.redirectTo;
           return;
         }
         window.location.href = clientNextPath;
@@ -188,7 +181,7 @@ export function useAidvisoraLogin() {
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       }
     },
-    [token, email, password, gdprConsent, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
+    [token, email, password, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
   );
 
   const handleOAuthSignIn = useCallback(
@@ -255,14 +248,13 @@ export function useAidvisoraLogin() {
     setPassword,
     name,
     setName,
-    gdprConsent,
-    setGdprConsent,
     advisorLegalConsent,
     setAdvisorLegalConsent,
     message,
     setMessage,
     isMounted,
     isClient,
+    isInviteFlow,
     hasError,
     formRef,
     handleSubmit,

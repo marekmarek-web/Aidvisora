@@ -658,7 +658,7 @@ export async function runAiReviewV2Pipeline(
         extractionTrace: trace,
       };
     } catch (e) {
-      trace.failedStep = "combined_structured_extraction";
+      trace.failedStep = undefined;
       trace.extractionDurationMs = Date.now() - combinedStart;
       trace.warnings = [
         ...(trace.warnings ?? []),
@@ -675,13 +675,9 @@ export async function runAiReviewV2Pipeline(
           details: e instanceof Error ? e.message : String(e),
         };
       }
-      return {
-        ok: false,
-        processingStatus: "failed",
-        errorMessage: "Kombinovaná extrakce dokumentu selhala.",
-        extractionTrace: trace,
-        details: e instanceof Error ? e.message : String(e),
-      };
+      console.warn("[ai-review-v2] combined_single_call_failed, falling back to classifier+prompt flow", {
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 

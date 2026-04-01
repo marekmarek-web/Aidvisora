@@ -7,6 +7,8 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     link?: string;
+    loginEmail?: string;
+    temporaryPassword?: string;
     emailSent?: boolean;
     emailError?: string;
     error?: string;
@@ -20,6 +22,8 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
       if (res.ok) {
         setResult({
           link: res.inviteLink,
+          loginEmail: res.loginEmail,
+          temporaryPassword: res.temporaryPassword,
           emailSent: res.emailSent,
           emailError: res.emailError,
         });
@@ -55,15 +59,25 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
       {result?.link && (
         <div className="rounded-lg bg-monday-row-hover border border-monday-border p-3 text-sm space-y-2">
           <p className="font-medium text-monday-text">
-            {result.emailSent ? "Pozvánka odeslána na e-mail klienta." : "E-mail se nepodařilo odeslat automaticky."}
+            {result.emailSent ? "Pozvánka s přístupovými údaji byla odeslána na e-mail klienta." : "E-mail s přístupovými údaji se nepodařilo odeslat automaticky."}
           </p>
           {!result.emailSent && (
             <p className="text-monday-text-muted text-xs">
               {result.emailError === "RESEND_API_KEY not set"
-                ? "Nastavte RESEND_API_KEY (a ověřenou doménu odesílatele), nebo zkopírujte odkaz níže a pošlete klientovi sami."
+                ? "Nastavte RESEND_API_KEY (a ověřenou doménu odesílatele), nebo klientovi pošlete odkaz i dočasné heslo ručně."
                 : result.emailError
-                  ? `Důvod: ${result.emailError}. Zkopírujte odkaz a pošlete klientovi.`
-                  : "Zkopírujte odkaz a pošlete klientovi sami."}
+                  ? `Důvod: ${result.emailError}. Pošlete klientovi ručně odkaz i dočasné heslo níže.`
+                  : "Pošlete klientovi ručně odkaz i dočasné heslo níže."}
+            </p>
+          )}
+          {result.loginEmail && (
+            <p className="text-monday-text-muted text-xs">
+              Přihlašovací e-mail: <span className="font-medium text-monday-text">{result.loginEmail}</span>
+            </p>
+          )}
+          {result.temporaryPassword && (
+            <p className="text-monday-text-muted text-xs">
+              Dočasné heslo: <span className="font-medium text-monday-text">{result.temporaryPassword}</span>
             </p>
           )}
           <p className="text-monday-text-muted break-all text-xs">{result.link}</p>
