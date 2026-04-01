@@ -354,8 +354,8 @@ export function ClientDashboardLayout({
 
       <div className="flex flex-wrap gap-4 items-center">
         <ClientZoneExportButton />
-        <Link href="/gdpr" className="text-sm text-indigo-600 font-bold hover:underline inline-flex min-h-[44px] items-center">
-          Ochrana osobních údajů (GDPR)
+        <Link href="/privacy" className="text-sm text-indigo-600 font-bold hover:underline inline-flex min-h-[44px] items-center">
+          Ochrana osobních údajů
         </Link>
       </div>
 

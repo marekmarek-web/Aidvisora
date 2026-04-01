@@ -356,44 +356,92 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         {busy ? <LoadingSkeleton rows={2} /> : null}
 
         {tab === "home" && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute ? (
-          <>
-            <MobileSection title="Finanční přehled">
-              <div className="grid grid-cols-2 gap-2">
-                <MobileCard className="p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">AUM</p>
-                  <p className="text-lg font-black mt-1">{quickStats.assetsUnderManagement.toLocaleString("cs-CZ")} Kč</p>
-                </MobileCard>
-                <MobileCard className="p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Měsíční investice</p>
-                  <p className="text-lg font-black mt-1">{quickStats.monthlyInvestments.toLocaleString("cs-CZ")} Kč</p>
-                </MobileCard>
-                <MobileCard className="p-3 col-span-2">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Krytí rizik</p>
-                  <p className="text-lg font-black mt-1">{quickStats.riskCoveragePercent}%</p>
-                  <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, Math.min(100, quickStats.riskCoveragePercent))}%` }} />
+          contracts.length === 0 && documents.length === 0 ? (
+            <>
+              <MobileCard className="p-5 bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
                   </div>
-                </MobileCard>
-              </div>
-            </MobileSection>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Přístup aktivní</span>
+                </div>
+                <h2 className="text-xl font-black mb-1">Vítejte, {initialData.profile?.firstName || "Kliente"}</h2>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Vaše klientská zóna je připravená. Najdete tu dokumenty, zprávy a vše důležité od poradce.
+                </p>
+              </MobileCard>
 
-            <MobileSection title="Rychlé akce">
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setRequestModalOpen(true)} className="min-h-[52px] rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-bold">
-                  Nový požadavek
-                </button>
-                <button type="button" onClick={() => router.push("/client/messages")} className="min-h-[52px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-bold">
-                  Napsat poradci
-                </button>
-                <button type="button" onClick={() => router.push("/client/documents")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
-                  Otevřít trezor
-                </button>
-                <button type="button" onClick={() => router.push("/client/portfolio")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
-                  Moje portfolio
-                </button>
-              </div>
-            </MobileSection>
-          </>
+              <MobileSection title="Co můžete udělat">
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => router.push("/client/messages")} className="min-h-[52px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-bold">
+                    Napsat poradci
+                  </button>
+                  <button type="button" onClick={() => setRequestModalOpen(true)} className="min-h-[52px] rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-bold">
+                    Nový požadavek
+                  </button>
+                  <button type="button" onClick={() => router.push("/client/documents")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
+                    Dokumenty
+                  </button>
+                  <button type="button" onClick={() => router.push("/client/profile")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
+                    Můj profil
+                  </button>
+                </div>
+              </MobileSection>
+
+              {initialData.advisor && (
+                <MobileCard className="p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Váš poradce</p>
+                  <p className="text-sm font-bold text-slate-900">{initialData.advisor.fullName}</p>
+                  {initialData.advisor.email && (
+                    <p className="text-xs text-slate-500 mt-0.5">{initialData.advisor.email}</p>
+                  )}
+                </MobileCard>
+              )}
+
+              <p className="text-xs text-slate-400 font-medium px-1 leading-relaxed">
+                Jakmile váš poradce přidá smlouvy a dokumenty, zobrazí se zde automaticky.
+              </p>
+            </>
+          ) : (
+            <>
+              <MobileSection title="Finanční přehled">
+                <div className="grid grid-cols-2 gap-2">
+                  <MobileCard className="p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">AUM</p>
+                    <p className="text-lg font-black mt-1">{quickStats.assetsUnderManagement.toLocaleString("cs-CZ")} Kč</p>
+                  </MobileCard>
+                  <MobileCard className="p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Měsíční investice</p>
+                    <p className="text-lg font-black mt-1">{quickStats.monthlyInvestments.toLocaleString("cs-CZ")} Kč</p>
+                  </MobileCard>
+                  <MobileCard className="p-3 col-span-2">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Krytí rizik</p>
+                    <p className="text-lg font-black mt-1">{quickStats.riskCoveragePercent}%</p>
+                    <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, Math.min(100, quickStats.riskCoveragePercent))}%` }} />
+                    </div>
+                  </MobileCard>
+                </div>
+              </MobileSection>
+
+              <MobileSection title="Rychlé akce">
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setRequestModalOpen(true)} className="min-h-[52px] rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-bold">
+                    Nový požadavek
+                  </button>
+                  <button type="button" onClick={() => router.push("/client/messages")} className="min-h-[52px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-bold">
+                    Napsat poradci
+                  </button>
+                  <button type="button" onClick={() => router.push("/client/documents")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
+                    Otevřít trezor
+                  </button>
+                  <button type="button" onClick={() => router.push("/client/portfolio")} className="min-h-[52px] rounded-xl border border-slate-200 text-slate-700 text-sm font-bold">
+                    Moje portfolio
+                  </button>
+                </div>
+              </MobileSection>
+            </>
+          )
         ) : null}
 
         {(tab === "messages" || pathname.startsWith("/client/messages")) && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute ? (

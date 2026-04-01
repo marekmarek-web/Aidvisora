@@ -202,7 +202,7 @@ export function reminderBeforeDeadlineTemplate(params: {
   return { subject: `Připomínka: ${params.deadlineType} – ${params.contactName}`, html };
 }
 
-/** Pozvánka do klientské zóny (odkaz na registraci / přihlášení s tokenem). */
+/** Pozvánka do klientské zóny s předpřipraveným účtem a dočasným heslem. */
 export function clientPortalInviteTemplate(params: {
   registerUrl: string;
   contactFirstName: string;
@@ -216,20 +216,20 @@ export function clientPortalInviteTemplate(params: {
 }) {
   const who = params.tenantName?.trim() ? params.tenantName.trim() : "váš poradce";
   const html = layout(`
-    <h2 style="font-size: 16px; margin: 0 0 12px;">Přístup do klientské zóny</h2>
+    <h2 style="font-size: 16px; margin: 0 0 12px;">Váš přístup do klientské zóny je připravený</h2>
     <p style="font-size: 14px; line-height: 1.5;">
       Dobrý den${params.contactFirstName ? `, ${params.contactFirstName}` : ""},
     </p>
     <p style="font-size: 14px; line-height: 1.5;">
-      ${who} vám zpřístupnil(a) klientskou zónu v aplikaci Aidvisora — přehled smluv, dokumentů a zpráv na jednom místě.
+      ${who} vám zpřístupnil(a) klientskou zónu v&nbsp;Aidvisoře — přehled smluv, dokumentů a&nbsp;zpráv na jednom místě.
     </p>
     <p style="font-size: 14px; line-height: 1.5;">
       ${
         params.reusedExistingAccount
-          ? "Váš přístup byl znovu připraven a dočasně jsme obnovili heslo pro první vstup."
-          : "Váš účet byl připraven a můžete se ihned přihlásit."
+          ? "Přístup byl znovu připraven a dočasné heslo obnoveno."
+          : "Účet je připravený a můžete se ihned přihlásit."
       }
-      Odkaz je platný přibližně <strong>${params.expiresInDays}</strong> dní.
+      Odkaz je platný <strong>${params.expiresInDays} dní</strong>.
     </p>
     <div style="margin: 18px 0; padding: 14px 16px; border-radius: 12px; background: #f4f7ff; border: 1px solid #dbe5ff;">
       <p style="margin: 0 0 8px; font-size: 13px; color: #44546f;"><strong>Přihlašovací e-mail</strong></p>
@@ -237,11 +237,16 @@ export function clientPortalInviteTemplate(params: {
       <p style="margin: 0 0 8px; font-size: 13px; color: #44546f;"><strong>Dočasné heslo</strong></p>
       <p style="margin: 0; font-size: 18px; letter-spacing: 1px; font-weight: 700; color: #172b4d;">${params.temporaryPassword}</p>
     </div>
-    <p style="font-size: 14px; line-height: 1.5;">
-      Po prvním přihlášení si nastavíte vlastní heslo a dokončíte aktivaci klientského portálu.
+    <p style="font-size: 14px; line-height: 1.5; margin-bottom: 4px;">
+      <strong>Jak to funguje:</strong>
     </p>
+    <ol style="font-size: 14px; line-height: 1.6; padding-left: 20px; margin: 0 0 16px;">
+      <li>Klikněte na tlačítko níže a zadejte e-mail + dočasné heslo</li>
+      <li>Nastavíte si vlastní heslo</li>
+      <li>Jste v klientské zóně</li>
+    </ol>
     <p style="margin: 20px 0;">
-      <a href="${params.registerUrl}" style="display: inline-block; padding: 12px 20px; background: #0073ea; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Otevřít klientskou zónu</a>
+      <a href="${params.registerUrl}" style="display: inline-block; padding: 12px 24px; background: #0073ea; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Dokončit přístup</a>
     </p>
     <p style="font-size: 12px; line-height: 1.5; color: #676879;">
       Pokud tlačítko nefunguje, zkopírujte odkaz do prohlížeče:<br />
@@ -249,12 +254,10 @@ export function clientPortalInviteTemplate(params: {
     </p>
     <p style="font-size: 12px; line-height: 1.5; color: #676879; margin-top: 16px;">
       <a href="${params.gdprUrl}" style="color: #0073ea;">Zásady zpracování osobních údajů</a>
-      ·
-      <a href="${params.termsUrl}" style="color: #0073ea;">Obchodní podmínky</a>
     </p>
   `);
   return {
-    subject: "Přístup do klientské zóny Aidvisora",
+    subject: "Přístup do klientské zóny je připravený — Aidvisora",
     html,
   };
 }

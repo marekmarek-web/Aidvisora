@@ -48,7 +48,9 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/register") {
     const url = request.nextUrl.clone();
     url.pathname = "/prihlaseni";
-    url.searchParams.set("register", "1");
+    if (!url.searchParams.has("token")) {
+      url.searchParams.set("register", "1");
+    }
     return NextResponse.redirect(url);
   }
 
@@ -171,6 +173,13 @@ export async function middleware(request: NextRequest) {
     url.searchParams.delete("next");
     return NextResponse.redirect(url);
   }
+  if (request.nextUrl.pathname.startsWith("/prihlaseni/nastavit-heslo")) {
+    const out = NextResponse.next({ request: { headers: forwardHeaders } });
+    for (const c of response.cookies.getAll()) {
+      out.cookies.set(c.name, c.value);
+    }
+    return out;
+  }
 
   const out = NextResponse.next({ request: { headers: forwardHeaders } });
   for (const c of response.cookies.getAll()) {
@@ -183,6 +192,7 @@ export const config = {
   matcher: [
     "/",
     "/prihlaseni",
+    "/prihlaseni/:path*",
     "/dashboard/:path*",
     "/client/:path*",
     "/board/:path*",

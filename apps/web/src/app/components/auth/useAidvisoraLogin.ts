@@ -47,7 +47,7 @@ export function useAidvisoraLogin() {
   const errorParam = searchParams.get("error");
 
   const [role, setRole] = useState<LoginRole>(() => (token ? "client" : "advisor"));
-  const [isLogin, setIsLogin] = useState(() => !registerParam && !token);
+  const [isLogin, setIsLogin] = useState(() => token ? true : !registerParam);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -111,7 +111,7 @@ export function useAidvisoraLogin() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           setIsLoading(false);
-          setMessage("Nepodařilo se přihlásit. Použijte e-mail a jednorázové heslo z pozvánky.");
+          setMessage("Nesprávný e-mail nebo dočasné heslo. Zkontrolujte údaje z pozvánky.");
           return;
         }
 

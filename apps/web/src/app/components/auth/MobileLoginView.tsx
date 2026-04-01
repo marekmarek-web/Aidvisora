@@ -140,19 +140,19 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
             </div>
           )}
 
-          <div className="flex flex-col items-center mb-10 animate-in fade-in duration-500">
+          <div className={`flex flex-col items-center animate-in fade-in duration-500 ${isInviteFlow ? "mb-6" : "mb-10"}`}>
             <img
               src="/logos/Aidvisora%20logo%20new.png"
               alt="Aidvisora"
-              className="w-[220px] max-w-[82%] mb-5 object-contain"
+              className={`max-w-[82%] object-contain ${isInviteFlow ? "w-[160px] mb-3" : "w-[220px] mb-5"}`}
               style={{ filter: "brightness(0) invert(1)" }}
             />
-            <h1 className="font-display text-3xl font-black text-white tracking-tight mb-2 text-center">
-              {isInviteFlow ? "První vstup do portálu" : isClient ? "Klientská zóna" : isLogin ? "Vítejte zpět" : "Založit účet"}
+            <h1 className={`font-display font-black text-white tracking-tight mb-1.5 text-center ${isInviteFlow ? "text-2xl" : "text-3xl"}`}>
+              {isInviteFlow ? "Dokončení přístupu" : isClient ? "Klientská zóna" : isLogin ? "Vítejte zpět" : "Založit účet"}
             </h1>
             <p className="text-slate-400 text-sm font-medium text-center max-w-[250px]">
               {isInviteFlow
-                ? "Použijte údaje z pozvánky. Hned poté si nastavíte vlastní heslo."
+                ? "Váš účet je připravený. Zadejte údaje z pozvánky."
                 : isClient
                   ? "Přihlaste se ke svým financím."
                   : isLogin
@@ -196,7 +196,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 <input
                   type="email"
                   required
-                  placeholder="Váš e-mail"
+                  placeholder={isInviteFlow ? "E-mail z pozvánky" : "Váš e-mail"}
                   inputMode="email"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -219,7 +219,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  placeholder="Heslo"
+                  placeholder={isInviteFlow ? "Dočasné heslo z pozvánky" : "Heslo"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete={isLogin ? "current-password" : "new-password"}
@@ -281,13 +281,13 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    {isClient ? "Vstoupit" : isLogin ? "Přihlásit" : "Vytvořit účet"}
+                    {isInviteFlow ? "Pokračovat" : isClient ? "Vstoupit" : isLogin ? "Přihlásit" : "Vytvořit účet"}
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
 
-              {isLogin && IS_BIOMETRIC_UI && (
+              {isLogin && IS_BIOMETRIC_UI && !isInviteFlow && (
                 <button
                   type="button"
                   disabled={isLoading}
@@ -326,8 +326,9 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 </div>
               </div>
             ) : (
-              <div className="rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-[11px] font-medium text-emerald-100 leading-relaxed">
-                Použijte e-mail a jednorázové heslo z pozvánky. Po přihlášení vás provedeme nastavením nového hesla.
+              <div className="rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-[11px] font-medium text-emerald-100 leading-relaxed space-y-1">
+                <p className="font-bold text-emerald-200">Krok 1 ze 2</p>
+                <p>Zadejte e-mail a dočasné heslo. V dalším kroku si nastavíte vlastní heslo.</p>
               </div>
             )}
 
@@ -348,11 +349,11 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
                 </p>
               </div>
             ) : (
-              <div className="text-center pt-4">
+              <div className="text-center pt-2">
                 <p className="text-[11px] font-medium text-slate-500 leading-relaxed px-4">
                   {isInviteFlow
-                    ? "Pokud jste pozvánku nečekali nebo vám údaje nefungují, obraťte se na svého poradce."
-                    : "Přístup do klientské zóny zakládá váš poradce. Pokud nemáte údaje, kontaktujte jej."}
+                    ? "Údaje nefungují? Obraťte se na svého poradce."
+                    : "Přístup do klientské zóny zakládá váš poradce."}
                 </p>
               </div>
             )}

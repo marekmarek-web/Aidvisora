@@ -388,7 +388,7 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
     });
 
     const baseUrl = getServerAppBaseUrl();
-    const inviteLink = `${baseUrl}/register?token=${token}`;
+    const inviteLink = `${baseUrl}/prihlaseni?token=${token}`;
 
     const tenantRow = await getTenantInviteEmailContext(contact.tenantId);
 

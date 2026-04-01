@@ -9,7 +9,9 @@ import { getClientRequests } from "@/app/actions/client-portal-requests";
 import { getPortalNotificationsForClient } from "@/app/actions/portal-notifications";
 import { getClientDashboardMetrics } from "@/app/actions/client-dashboard";
 import { getClientFinancialSummaryForContact } from "@/app/actions/client-financial-summary";
+import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
 import { ClientDashboardLayout } from "./ClientDashboardLayout";
+import { ClientWelcomeView } from "./ClientWelcomeView";
 
 export default async function ClientZonePage() {
   const auth = await requireAuth();
@@ -36,6 +38,7 @@ export default async function ClientZonePage() {
     quickStats,
     notifications,
     financialSummaryRaw,
+    advisor,
   ] = await Promise.all([
     getContractsByContact(auth.contactId),
     getDocumentsForClient(auth.contactId),
@@ -44,7 +47,21 @@ export default async function ClientZonePage() {
     getClientDashboardMetrics(auth.contactId),
     getPortalNotificationsForClient(),
     getClientFinancialSummaryForContact(auth.contactId),
+    getAssignedAdvisorForClient(auth.contactId).catch(() => null),
   ]);
+
+  const isFirstRun = contractsList.length === 0 && documentsList.length === 0;
+
+  if (isFirstRun) {
+    return (
+      <ClientWelcomeView
+        firstName={contact?.firstName || "Kliente"}
+        advisorName={advisor?.fullName}
+        advisorEmail={advisor?.email}
+        advisorInitials={advisor?.initials}
+      />
+    );
+  }
 
   const financialSummary =
     financialSummaryRaw.status === "missing" || !financialSummaryRaw.primaryAnalysisId

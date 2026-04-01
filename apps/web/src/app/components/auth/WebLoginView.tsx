@@ -200,11 +200,11 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                 className="h-12 w-auto max-w-[200px] mb-5 object-contain brightness-0 invert"
               />
               <h1 className="font-jakarta text-2xl md:text-3xl font-bold text-white tracking-tight mb-2 text-center">
-                {isInviteFlow ? "Přihlášení do klientského portálu" : role === "client" ? "Klientský portál" : isLogin ? "Vítejte zpět" : "Založit účet"}
+                {isInviteFlow ? "Dokončení přístupu" : role === "client" ? "Klientský portál" : isLogin ? "Vítejte zpět" : "Založit účet"}
               </h1>
-              <p className="text-slate-400 text-sm font-medium text-center">
+              <p className="text-slate-400 text-sm font-medium text-center max-w-xs mx-auto">
                 {isInviteFlow
-                  ? "Použijte e-mail a jednorázové heslo z pozvánky. Po prvním přihlášení si nastavíte vlastní heslo."
+                  ? "Váš účet je připravený. Zadejte e-mail a dočasné heslo z pozvánky."
                   : role === "client"
                   ? "Přihlaste se ke svým smlouvám a financím."
                   : isLogin
@@ -254,7 +254,9 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
 
               <div>
                 <div className="flex justify-between items-center mb-2 ml-1 gap-2">
-                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Heslo</label>
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                    {isInviteFlow ? "Dočasné heslo" : "Heslo"}
+                  </label>
                   {isLogin && !isInviteFlow && (
                     <Link
                       href="/forgot-password"
@@ -277,7 +279,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                   <input
                     type={showPassword ? "text" : "password"}
                     required
-                    placeholder="••••••••"
+                    placeholder={isInviteFlow ? "Heslo z pozvánky" : "••••••••"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete={isLogin ? "current-password" : "new-password"}
@@ -327,7 +329,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    {role === "client" ? "Vstoupit do portálu" : isLogin ? "Přihlásit se" : "Vytvořit účet"}
+                    {isInviteFlow ? "Pokračovat" : role === "client" ? "Vstoupit do portálu" : isLogin ? "Přihlásit se" : "Vytvořit účet"}
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -362,11 +364,13 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
             )}
 
             {token && (
-              <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left text-xs text-emerald-50/90">
-                <p className="font-semibold text-emerald-200">Účet už je pro vás připravený.</p>
-                <p className="mt-2 leading-relaxed">
-                  Přihlaste se stejným e-mailem, na který vám přišla pozvánka. Po úspěšném přihlášení budete vyzváni ke změně
-                  dočasného hesla a potvrzení ochrany osobních údajů.
+              <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left text-xs text-emerald-50/90 space-y-2">
+                <p className="font-semibold text-emerald-200 flex items-center gap-2">
+                  <ShieldCheck size={14} className="shrink-0 text-emerald-300" />
+                  Krok 1 ze 2
+                </p>
+                <p className="leading-relaxed">
+                  Zadejte e-mail a dočasné heslo z pozvánky. V dalším kroku si nastavíte vlastní heslo.
                 </p>
               </div>
             )}
@@ -397,30 +401,19 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
       )}
 
       <div className="relative mt-8 w-full px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 z-20 text-[11px] text-slate-500 max-w-[1200px] mx-auto left-0 right-0 sm:absolute sm:bottom-6">
-        <div className="flex flex-col gap-1 normal-case font-medium tracking-normal text-center sm:text-left text-[10px] sm:text-[11px]">
-          <span>
-            © {new Date().getFullYear()} Aidvisora. Všechna práva vyhrazena.
-          </span>
-          <span>
-            Vytvořila{" "}
-            <a
-              href="https://www.m2digitalagency.cz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-400 hover:text-white underline-offset-2 hover:underline font-semibold"
-            >
-              M2DigitalAgency
-            </a>
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-6 justify-center font-black uppercase tracking-widest hover:[&>a]:text-white">
-          <Link href="/privacy" className="transition-colors flex items-center gap-1.5 min-h-[44px]">
-            <ShieldCheck size={14} /> Ochrana údajů
-          </Link>
-          <Link href="/" className="transition-colors min-h-[44px] flex items-center">
-            Zpět na úvod
-          </Link>
-        </div>
+        <span className="normal-case font-medium tracking-normal text-center sm:text-left text-[10px] sm:text-[11px]">
+          © {new Date().getFullYear()} Aidvisora. Všechna práva vyhrazena.
+        </span>
+        {!isInviteFlow && (
+          <div className="flex flex-wrap gap-6 justify-center font-black uppercase tracking-widest hover:[&>a]:text-white">
+            <Link href="/privacy" className="transition-colors flex items-center gap-1.5 min-h-[44px]">
+              <ShieldCheck size={14} /> Ochrana údajů
+            </Link>
+            <Link href="/" className="transition-colors min-h-[44px] flex items-center">
+              Zpět na úvod
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
