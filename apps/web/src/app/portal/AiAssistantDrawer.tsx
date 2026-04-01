@@ -31,6 +31,8 @@ import { ImportColumnMappingBlock } from "@/app/dashboard/contacts/ImportColumnM
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import { isLikelyPdfUpload } from "@/lib/security/file-signature";
 import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice";
+import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
+import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
 type ClientCandidate = { clientId: string; displayName?: string };
@@ -133,35 +135,51 @@ export function AiAssistantDrawer() {
     const msg = input.trim();
     if (!msg || chatLoading || chatSubmitLockRef.current) return;
     chatSubmitLockRef.current = true;
-    setMessages((prev) => [...prev, { role: "user", content: msg }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: msg },
+      { role: "assistant", content: "", suggestedActions: [], warnings: [] },
+    ]);
     setInput("");
     setChatLoading(true);
     queueMicrotask(() => inputRef.current?.focus());
     try {
-      const res = await fetch("/api/ai/assistant/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.showToast(data.error ?? "Odeslání selhalo.", "error");
-        setMessages((prev) => prev.slice(0, -1));
-        setInput(msg);
-        return;
-      }
-      setMessages((prev) => [
-        ...prev,
+      const complete = await postAssistantChatStreaming(
         {
-          role: "assistant",
-          content: data.message ?? "",
-          suggestedActions: data.suggestedActions ?? [],
-          warnings: data.warnings ?? [],
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg }),
         },
-      ]);
+        (chunk) => {
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.role === "assistant") {
+              next[next.length - 1] = {
+                ...last,
+                content: last.content + chunk,
+              };
+            }
+            return next;
+          });
+        }
+      );
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === "assistant") {
+          next[next.length - 1] = {
+            role: "assistant",
+            content: complete.message ?? "",
+            suggestedActions: mapActionPayloadsToSuggestedActions(complete.suggestedActions ?? []),
+            warnings: complete.warnings ?? [],
+          };
+        }
+        return next;
+      });
     } catch {
       toast.showToast("Odeslání zprávy selhalo.", "error");
-      setMessages((prev) => prev.slice(0, -1));
+      setMessages((prev) => prev.slice(0, -2));
       setInput(msg);
     } finally {
       setChatLoading(false);

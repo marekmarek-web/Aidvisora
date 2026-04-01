@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
+import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
+import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -305,38 +307,53 @@ export function AiAssistantChatScreen() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const assistantId = nextId();
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      {
+        id: assistantId,
+        role: "assistant",
+        text: "",
+        timestamp: new Date(),
+      },
+    ]);
     setInput("");
     setIsTyping(true);
     setError(null);
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/ai/assistant/chat", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ message: trimmed }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data?.error ?? `Chyba ${res.status}`);
-        }
-
-        const assistantMsg: ChatMessage = {
-          id: nextId(),
-          role: "assistant",
-          text: data.message ?? "Odpověď není k dispozici.",
-          timestamp: new Date(),
-          suggestedActions: data.suggestedActions ?? [],
-          referencedEntities: data.referencedEntities ?? [],
-          warnings: data.warnings ?? [],
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
+        const complete = await postAssistantChatStreaming(
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ message: trimmed }),
+          },
+          (chunk) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, text: m.text + chunk } : m
+              )
+            );
+          }
+        );
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  text: complete.message ?? "Odpověď není k dispozici.",
+                  suggestedActions: mapActionPayloadsToSuggestedActions(complete.suggestedActions ?? []),
+                  referencedEntities: complete.referencedEntities ?? [],
+                  warnings: complete.warnings ?? [],
+                }
+              : m
+          )
+        );
       } catch (e) {
         setError(e instanceof Error ? e.message : "Nepodařilo se kontaktovat asistenta.");
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
         const errMsg: ChatMessage = {
           id: nextId(),
           role: "assistant",
@@ -355,6 +372,7 @@ export function AiAssistantChatScreen() {
     if (files.length === 0) return;
     setIsTyping(true);
     setError(null);
+    let pendingStreamAssistantId: string | undefined;
 
     const userMsg: ChatMessage = {
       id: nextId(),
@@ -389,24 +407,49 @@ export function AiAssistantChatScreen() {
       const uploadData = await uploadRes.json();
       const docName = uploadData?.name ?? files[0]?.name ?? "soubor";
 
-      const chatRes = await fetch("/api/ai/assistant/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: `Analyzuj nahraný soubor: ${docName}` }),
-      });
-      const chatData = await chatRes.json();
-
-      const assistantMsg: ChatMessage = {
-        id: nextId(),
-        role: "assistant",
-        text: chatData.message ?? `Soubor ${docName} byl nahrán.`,
-        timestamp: new Date(),
-        suggestedActions: chatData.suggestedActions ?? [],
-        referencedEntities: chatData.referencedEntities ?? [],
-        warnings: chatData.warnings ?? [],
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+      const streamId = nextId();
+      pendingStreamAssistantId = streamId;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: streamId,
+          role: "assistant",
+          text: "",
+          timestamp: new Date(),
+        },
+      ]);
+      const complete = await postAssistantChatStreaming(
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: `Analyzuj nahraný soubor: ${docName}` }),
+        },
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamId ? { ...m, text: m.text + chunk } : m
+            )
+          );
+        }
+      );
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamId
+            ? {
+                ...m,
+                text: complete.message ?? `Soubor ${docName} byl nahrán.`,
+                suggestedActions: mapActionPayloadsToSuggestedActions(complete.suggestedActions ?? []),
+                referencedEntities: complete.referencedEntities ?? [],
+                warnings: complete.warnings ?? [],
+              }
+            : m
+        )
+      );
     } catch (e) {
+      if (pendingStreamAssistantId) {
+        const rid = pendingStreamAssistantId;
+        setMessages((prev) => prev.filter((m) => m.id !== rid));
+      }
       setError(e instanceof Error ? e.message : "Nahrání souboru selhalo.");
     } finally {
       setFiles([]);
