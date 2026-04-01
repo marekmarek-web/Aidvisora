@@ -12,7 +12,7 @@ export default async function ContactsPage() {
 
   return (
     <div className="p-4 space-y-8">
-      <ContactsPageClient list={list} />
+      <ContactsPageClient initialList={list} />
       <section id="import" className="max-w-[1600px] mx-auto scroll-mt-4">
         <h2 className="text-lg font-bold text-[color:var(--wp-text)] mb-3">Import</h2>
         <CsvImportForm />

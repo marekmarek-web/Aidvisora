@@ -30,6 +30,8 @@ import type { CoverageStatus } from "@/app/lib/coverage/types";
 import { getAllCoverageItemKeys } from "@/app/lib/coverage/item-keys";
 import { useToast } from "@/app/components/Toast";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 /** Zobrazené názvy kategorií podle spec „pokryti produktu.txt“. */
 const DISPLAY_CATEGORY_NAMES: Record<string, string> = {
@@ -201,6 +203,7 @@ function CoverageActionsMenu({
   onTaskCreated: () => void;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -230,6 +233,12 @@ function CoverageActionsMenu({
     };
   }, [open]);
 
+  function invalidatePipelineTasksContacts() {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+  }
+
   async function handleCreateOpportunity() {
     setLoading(true);
     setOpen(false);
@@ -238,7 +247,7 @@ function CoverageActionsMenu({
       onOpportunityCreated();
       toast.showToast("Obchod založen", "success");
       if (newId) router.push(`/portal/pipeline/${newId}`);
-      else router.refresh();
+      else invalidatePipelineTasksContacts();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Obchod se nepodařilo vytvořit";
       toast.showToast(msg, "error");
@@ -255,7 +264,7 @@ function CoverageActionsMenu({
       onTaskCreated();
       toast.showToast("Úkol vytvořen", "success");
       router.push(`/portal/contacts/${contactId}#ukoly`);
-      if (!taskId) router.refresh();
+      if (!taskId) invalidatePipelineTasksContacts();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Úkol se nepodařilo vytvořit";
       toast.showToast(msg, "error");
@@ -351,6 +360,7 @@ function CreateFaOpportunityButton({
   onCreated: () => void;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -361,7 +371,10 @@ function CreateFaOpportunityButton({
       onCreated();
       toast.showToast("Obchod založen z FA", "success");
       if (newId) router.push(`/portal/pipeline/${newId}`);
-      else router.refresh();
+      else {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Obchod se nepodařilo vytvořit";
       toast.showToast(msg, "error");

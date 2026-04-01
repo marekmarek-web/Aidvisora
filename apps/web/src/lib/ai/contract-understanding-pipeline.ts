@@ -60,6 +60,7 @@ export type PipelinePreprocessMeta = {
 };
 
 function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === "production") return;
   console.info(
     `[contract-pipeline] ${phase}`,
     JSON.stringify({

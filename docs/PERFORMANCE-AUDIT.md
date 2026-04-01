@@ -147,6 +147,24 @@ Změřte na produkčním buildu nebo preview; zapisujte LCP, INP, CLS (Google po
 
 ---
 
+## Fáze 2 – pokračování (TanStack Query, méně RSC refreshů)
+
+| Oblast | Změna |
+|--------|--------|
+| TanStack Query | [`PortalQueryProvider`](../apps/web/src/app/portal/PortalQueryProvider.tsx) + [`PortalAppProviders`](../apps/web/src/app/portal/PortalAppProviders.tsx) v [`portal/layout.tsx`](../apps/web/src/app/portal/layout.tsx) (desktop i mobilní větev). Klíče v [`query-keys.ts`](../apps/web/src/lib/query-keys.ts). |
+| Kontakty | [`ContactsPageClient`](../apps/web/src/app/portal/contacts/ContactsPageClient.tsx): `useQuery` + `invalidateQueries` místo `router.refresh` u hromadných akcí; desktop: postupné načítání řádků („Načíst další“). |
+| Úkoly | [`portal/tasks/page.tsx`](../apps/web/src/app/portal/tasks/page.tsx): seznam úkolů a počty přes `useQuery` (`queryKeys.tasks.board`, invalidace `queryKeys.tasks.all`). |
+| Pipeline | [`PipelinePageClient`](../apps/web/src/app/portal/pipeline/PipelinePageClient.tsx) + `useQuery` pro [`getPipeline`](../apps/web/src/app/actions/pipeline.ts); [`PipelineBoard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx) po mutacích invaliduje `pipeline` + `contacts` místo `router.refresh()`. |
+| Import CSV / AI drawer | [`CsvImportForm`](../apps/web/src/app/dashboard/contacts/CsvImportForm.tsx), [`AiAssistantDrawer`](../apps/web/src/app/portal/AiAssistantDrawer.tsx): po importu kontaktů invalidace `queryKeys.contacts`; drobná UX úprava fokusu vstupu po odeslání chatu. |
+| Pokrytí produktů | [`ClientCoverageWidget`](../apps/web/src/app/components/contacts/ClientCoverageWidget.tsx): náhrada záložního `router.refresh` za invalidaci pipeline/úkolů/kontaktů. |
+| DB / EXPLAIN | [`PERFORMANCE-EXPLAIN-HINTS.md`](PERFORMANCE-EXPLAIN-HINTS.md) – vzorové dotazy pro ruční kontrolu indexů v produkci. |
+| Produkční logy (AI) | `console.info` / diagnostická `console.warn` v [`ai-service`](../apps/web/src/lib/ai/ai-service.ts), [`contract-understanding-pipeline`](../apps/web/src/lib/ai/contract-understanding-pipeline.ts), [`ai-review-classifier`](../apps/web/src/lib/ai/ai-review-classifier.ts), [`ai-review-pipeline-v2`](../apps/web/src/lib/ai/ai-review-pipeline-v2.ts) podmíněny `NODE_ENV !== "production"` kde jde o vývojářský šum. |
+| Kalendář | [`PortalCalendarView`](../apps/web/src/app/portal/PortalCalendarView.tsx) již používá `useMemo` pro rozsahy dnů, agregaci událostí a popisky – další optimalizace až podle profileru. |
+
+**Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ doplňte po měření; bundle: `pnpm --filter web analyze` (webpack) generuje report do `apps/web/.next/analyze/`.
+
+---
+
 ## Závěr
 
 Checklist všech fází je **dokumentovaný v repu**; číselné metriky Lighthouse vyplňte po měření v cílovém prostředí. Iterace: baseline metriky → P1–P2 → regrese.

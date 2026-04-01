@@ -48,6 +48,7 @@ function auditLog(params: {
   success: boolean;
   error?: string;
 }): void {
+  if (process.env.NODE_ENV === "production") return;
   console.info("[AI]", {
     userId: params.userId,
     entityType: params.entityType,

@@ -89,9 +89,10 @@ describe("mapApiToExtractionDocument envelope path", () => {
       ""
     );
     const ids = doc.groups.map((g) => g.id);
-    expect(ids).toContain("extractedFields");
     expect(ids).not.toContain("documentClassification");
     expect(ids).not.toContain("contentFlags");
+    const flatFieldIds = doc.groups.flatMap((g) => g.fields.map((f) => f.id));
+    expect(flatFieldIds.some((id) => id.startsWith("extractedFields."))).toBe(true);
   });
 
   it("buildAdvisorReviewViewModel surfaces Czech sensitivity line for health_data", () => {

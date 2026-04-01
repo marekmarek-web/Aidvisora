@@ -1,0 +1,28 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { getPipeline } from "@/app/actions/pipeline";
+import type { StageWithOpportunities } from "@/app/actions/pipeline";
+import { queryKeys } from "@/lib/query-keys";
+import { PipelineBoard } from "@/app/dashboard/pipeline/PipelineBoard";
+
+type ContactOption = { id: string; firstName: string; lastName: string };
+
+export function PipelinePageClient({
+  initialStages,
+  contacts,
+  totalPotential,
+}: {
+  initialStages: StageWithOpportunities[];
+  contacts: ContactOption[];
+  totalPotential: number;
+}) {
+  const { data: stages = initialStages } = useQuery({
+    queryKey: queryKeys.pipeline.board(),
+    queryFn: () => getPipeline(),
+    initialData: initialStages,
+    staleTime: 30_000,
+  });
+
+  return <PipelineBoard stages={stages} contacts={contacts} totalPotential={totalPotential} />;
+}

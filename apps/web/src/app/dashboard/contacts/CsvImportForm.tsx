@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getCsvPreview,
   getSpreadsheetPreview,
@@ -18,7 +19,7 @@ const WIZARD_STEPS = ["upload", "mapping", "preview", "done"] as const;
 type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export function CsvImportForm() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<WizardStep>("upload");
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -82,7 +83,7 @@ export function CsvImportForm() {
         : await importContactsCsv(fd, mapping, preview.hasHeader);
       setResult(r);
       setStep("done");
-      if (r.imported > 0) router.refresh();
+      if (r.imported > 0) void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getContactsCount } from "@/app/actions/contacts";
 import { PortalShell } from "./PortalShell";
+import { PortalAppProviders } from "./PortalAppProviders";
 import { MobilePortalApp } from "./mobile/MobilePortalApp";
 import { PortalThemeProvider } from "./PortalThemeProvider";
 import { PORTAL_THEME_STORAGE_PREFLIGHT } from "./theme-storage-preflight";
@@ -72,11 +73,13 @@ export default async function PortalLayout({
           {PORTAL_THEME_STORAGE_PREFLIGHT}
         </Script>
         <PortalThemeProvider>
-          <MobilePortalApp showTeamOverview={showTeamOverview} />
-          {/* RSC slot: deep link / refresh musí vyhodnotit vnořené stránky (analýzy, dokumenty, …). */}
-          <div className="sr-only" aria-hidden data-portal-mobile-rsc-slot>
-            {children}
-          </div>
+          <PortalAppProviders>
+            <MobilePortalApp showTeamOverview={showTeamOverview} />
+            {/* RSC slot: deep link / refresh musí vyhodnotit vnořené stránky (analýzy, dokumenty, …). */}
+            <div className="sr-only" aria-hidden data-portal-mobile-rsc-slot>
+              {children}
+            </div>
+          </PortalAppProviders>
         </PortalThemeProvider>
       </>
     );
@@ -87,9 +90,11 @@ export default async function PortalLayout({
         {PORTAL_THEME_STORAGE_PREFLIGHT}
       </Script>
       <PortalThemeProvider>
-        <PortalShell showTeamOverview={showTeamOverview} initialQuickActions={initialQuickActions}>
-          {children}
-        </PortalShell>
+        <PortalAppProviders>
+          <PortalShell showTeamOverview={showTeamOverview} initialQuickActions={initialQuickActions}>
+            {children}
+          </PortalShell>
+        </PortalAppProviders>
       </PortalThemeProvider>
     </>
   );

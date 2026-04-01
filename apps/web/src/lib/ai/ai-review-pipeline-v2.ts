@@ -151,6 +151,7 @@ function buildAdobeSignalsSummary(meta?: PipelinePreprocessMeta | null): string 
 }
 
 function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === "production") return;
   console.info(`[ai-review-v2] ${phase}`, JSON.stringify(payload));
 }
 
@@ -675,9 +676,11 @@ export async function runAiReviewV2Pipeline(
           details: e instanceof Error ? e.message : String(e),
         };
       }
-      console.warn("[ai-review-v2] combined_single_call_failed, falling back to classifier+prompt flow", {
-        error: e instanceof Error ? e.message : String(e),
-      });
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[ai-review-v2] combined_single_call_failed, falling back to classifier+prompt flow", {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
     }
   }
 
@@ -1078,29 +1081,33 @@ export async function runAiReviewV2Pipeline(
       : [];
 
   if (!validationOutcome.ok) {
-    console.warn("[ai-review] extraction_validation_soft_fail", {
-      documentType,
-      aiReviewExtractionPromptKey: trace.aiReviewExtractionPromptKey,
-      extractionRoute: trace.extractionRoute,
-      normalizedPipelineClassification: trace.normalizedPipelineClassification,
-      issueCount: validationOutcome.issues.length,
-      topPaths: validationOutcome.issues.slice(0, 8).map((i) => i.path.join(".") || "(root)"),
-      responseKeys: parsedExtractionTopKeys,
-      rawHeadLength: Math.min(240, rawExtraction.length),
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[ai-review] extraction_validation_soft_fail", {
+        documentType,
+        aiReviewExtractionPromptKey: trace.aiReviewExtractionPromptKey,
+        extractionRoute: trace.extractionRoute,
+        normalizedPipelineClassification: trace.normalizedPipelineClassification,
+        issueCount: validationOutcome.issues.length,
+        topPaths: validationOutcome.issues.slice(0, 8).map((i) => i.path.join(".") || "(root)"),
+        responseKeys: parsedExtractionTopKeys,
+        rawHeadLength: Math.min(240, rawExtraction.length),
+      });
+    }
     const coercedData = parsedExtractionObj
       ? tryCoerceReviewEnvelopeAfterValidationFailure(parsedExtractionObj, documentType, classification)
       : null;
     if (coercedData) {
       trace.warnings = [...(trace.warnings ?? []), "extraction_validation_coerced"];
-      console.warn("[ai-review] extraction_validation_coerced", {
-        documentType,
-        promptKey,
-        extractionRoute: trace.extractionRoute,
-        normalizedPipelineClassification: trace.normalizedPipelineClassification,
-        extractedFieldCount: Object.keys(coercedData.extractedFields ?? {}).length,
-        originalIssueCount: validationOutcome.issues.length,
-      });
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[ai-review] extraction_validation_coerced", {
+          documentType,
+          promptKey,
+          extractionRoute: trace.extractionRoute,
+          normalizedPipelineClassification: trace.normalizedPipelineClassification,
+          extractedFieldCount: Object.keys(coercedData.extractedFields ?? {}).length,
+          originalIssueCount: validationOutcome.issues.length,
+        });
+      }
       for (const message of zodIssuesToAdvisorBriefMessages(validationOutcome.issues, 8)) {
         coercedData.reviewWarnings.push({
           code: "extraction_schema_validation",
@@ -1189,12 +1196,14 @@ export async function runAiReviewV2Pipeline(
         trace.warnings = [...(trace.warnings ?? []), "rescue_extraction_merged"];
       }
     }
-    console.warn("[ai-review] extraction_validation_stub_fallback", {
-      documentType,
-      promptKey,
-      mergedExtractedFieldCount: mergedFieldKeys.length,
-      emptyStateReason: mergedFieldKeys.length > 0 ? "stub_with_partial_fields" : "stub_empty_fields",
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[ai-review] extraction_validation_stub_fallback", {
+        documentType,
+        promptKey,
+        mergedExtractedFieldCount: mergedFieldKeys.length,
+        emptyStateReason: mergedFieldKeys.length > 0 ? "stub_with_partial_fields" : "stub_empty_fields",
+      });
+    }
     return {
       ok: true,
       processingStatus: "review_required",

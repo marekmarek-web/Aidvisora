@@ -100,6 +100,7 @@ function logClassifierPromptInputShape(payload: {
   source_channel: string;
   fallbacks_applied: string[];
 }): void {
+  if (process.env.NODE_ENV === "production") return;
   console.info("[ai-review-classifier] prompt_input_shape", JSON.stringify(payload));
 }
 

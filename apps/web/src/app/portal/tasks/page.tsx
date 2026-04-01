@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "rea
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getTasksList,
   getTasksCounts,
@@ -781,6 +783,7 @@ function MoreActionsMenu({
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const confirm = useConfirm();
   const initialSettings = loadSettings();
 
@@ -791,13 +794,7 @@ function TasksPageContent() {
     return "all";
   })();
 
-  const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [contacts, setContacts] = useState<ContactRow[]>([]);
-  const [opportunityOptions, setOpportunityOptions] = useState<Array<{ id: string; title: string }>>([]);
   const [filter, setFilter] = useState<Filter>(initialFilter);
-  const [counts, setCounts] = useState<TaskCounts>({ all: 0, today: 0, week: 0, overdue: 0, completed: 0 });
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [settings, setSettings] = useState<TaskSettings>(initialSettings);
 
@@ -821,26 +818,29 @@ function TasksPageContent() {
     if (filterParam && FILTERS.some((f) => f.key === filterParam)) setFilter(filterParam as Filter);
   }, [searchParams]);
 
-  const reload = useCallback(async (f?: Filter) => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const [rows, c] = await Promise.all([getTasksList(f ?? filter), getTasksCounts()]);
-      setTasks(rows);
-      setCounts(c);
-    } catch {
-      setLoadError(true);
-      setTasks([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
+  const { data: taskBoard, isPending: loading, isError: loadError } = useQuery({
+    queryKey: queryKeys.tasks.board(filter),
+    queryFn: async () => {
+      const [rows, c] = await Promise.all([getTasksList(filter), getTasksCounts()]);
+      return { rows, counts: c };
+    },
+  });
+  const tasks = taskBoard?.rows ?? [];
+  const counts = taskBoard?.counts ?? { all: 0, today: 0, week: 0, overdue: 0, completed: 0 };
 
-  useEffect(() => {
-    reload();
-    getContactsList().then(setContacts).catch(() => {});
-    getOpenOpportunitiesForSelect().then(setOpportunityOptions).catch(() => {});
-  }, [reload]);
+  const { data: contacts = [] } = useQuery({
+    queryKey: queryKeys.contacts.list(),
+    queryFn: getContactsList,
+    staleTime: 120_000,
+  });
+
+  const { data: opportunityOptions = [] } = useQuery({
+    queryKey: queryKeys.pipeline.openForSelect,
+    queryFn: getOpenOpportunitiesForSelect,
+    staleTime: 120_000,
+  });
+
+  const invalidateTasks = useCallback(() => queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all }), [queryClient]);
 
   const filteredBySearch = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -848,23 +848,15 @@ function TasksPageContent() {
     return tasks.filter((t) => t.title.toLowerCase().includes(q) || t.contactName?.toLowerCase().includes(q));
   }, [tasks, searchQuery]);
 
-  async function handleFilterChange(f: Filter) {
+  function handleFilterChange(f: Filter) {
     setFilter(f);
     setEditId(null);
-    setLoading(true);
-    try {
-      const [rows, c] = await Promise.all([getTasksList(f), getTasksCounts()]);
-      setTasks(rows);
-      setCounts(c);
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function handleToggle(task: TaskRow) {
     if (task.completedAt) await reopenTask(task.id);
     else await completeTask(task.id);
-    await reload();
+    await invalidateTasks();
   }
 
   async function handleQuickAdd() {
@@ -874,7 +866,7 @@ function TasksPageContent() {
       await createTask({ title: newTaskTitle.trim(), dueDate: new Date().toISOString().slice(0, 10) });
       setNewTaskTitle("");
       setIsInputFocused(false);
-      await reload();
+      await invalidateTasks();
     } finally {
       setQuickAddSubmitting(false);
     }
@@ -898,7 +890,7 @@ function TasksPageContent() {
     await updateTask(editId, { title: editForm.title, description: editForm.description, contactId: editForm.contactId, dueDate: editForm.dueDate });
     setEditId(null);
     setMobileEditId(null);
-    await reload();
+    await invalidateTasks();
   }
 
   async function handleDelete(id: string) {
@@ -913,7 +905,7 @@ function TasksPageContent() {
       return;
     }
     await deleteTask(id);
-    await reload();
+    await invalidateTasks();
   }
 
   async function handleMoveToNotes(taskId: string) {
@@ -944,7 +936,7 @@ function TasksPageContent() {
 
   async function handleMoveToToday(id: string) {
     await updateTask(id, { dueDate: new Date().toISOString().slice(0, 10) });
-    await reload();
+    await invalidateTasks();
   }
 
   function openMobileEdit(task: TaskRow) {
@@ -1056,7 +1048,7 @@ function TasksPageContent() {
           {loadError && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3" role="alert">
               <p className="text-sm font-medium text-amber-800">Nepodařilo se načíst úkoly.</p>
-              <button type="button" onClick={() => reload()} className="shrink-0 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold rounded-lg transition-colors">Zkusit znovu</button>
+              <button type="button" onClick={() => invalidateTasks()} className="shrink-0 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold rounded-lg transition-colors">Zkusit znovu</button>
             </div>
           )}
 
@@ -1301,7 +1293,7 @@ function TasksPageContent() {
 
       {/* Wizard */}
       {isWizardOpen && (
-        <NewTaskWizard onClose={() => setIsWizardOpen(false)} onCreated={() => reload()} contacts={contacts} opportunities={opportunityOptions} />
+        <NewTaskWizard onClose={() => setIsWizardOpen(false)} onCreated={() => invalidateTasks()} contacts={contacts} opportunities={opportunityOptions} />
       )}
 
       {/* Settings */}

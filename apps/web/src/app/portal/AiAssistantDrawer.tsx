@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   X,
   Send,
@@ -90,6 +92,7 @@ export function AiAssistantDrawer() {
   const { open, setOpen } = useAiAssistantDrawer();
   const { isNative } = useNativePlatform();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -130,6 +133,7 @@ export function AiAssistantDrawer() {
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setChatLoading(true);
+    queueMicrotask(() => inputRef.current?.focus());
     try {
       const res = await fetch("/api/ai/assistant/chat", {
         method: "POST",
@@ -412,7 +416,7 @@ export function AiAssistantDrawer() {
       setImportContactsResult(result);
       setImportContactsStep("done");
       if (result.imported > 0) {
-        router.refresh();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
         toast.showToast(`Importováno ${result.imported} klientů.`);
       }
     } catch {

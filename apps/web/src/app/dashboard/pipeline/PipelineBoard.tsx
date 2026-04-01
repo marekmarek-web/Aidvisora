@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   updateOpportunityStage,
   createOpportunity,
@@ -187,7 +189,6 @@ function CreateForm({
   hideContactSelector?: boolean;
   onMutationComplete?: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [caseType, setCaseType] = useState(CASE_TYPES[0].value);
@@ -213,7 +214,6 @@ function CreateForm({
           expectedValue: expectedValue || undefined,
           expectedCloseDate: expectedCloseDate || undefined,
         });
-        router.refresh();
         onMutationComplete?.();
         onDone();
       } catch (error) {
@@ -319,7 +319,6 @@ function EditForm({
   onDone: () => void;
   onMutationComplete?: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState(opp.title);
   const [caseType, setCaseType] = useState(opp.caseType);
@@ -341,7 +340,6 @@ function EditForm({
           expectedValue: expectedValue || null,
           expectedCloseDate: expectedCloseDate || null,
         });
-        router.refresh();
         onMutationComplete?.();
         onDone();
       } catch (error) {
@@ -432,10 +430,21 @@ export function PipelineBoard({
   totalPotential?: number;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const aiAssistant = useOptionalAiAssistantDrawer();
   const [, startTransition] = useTransition();
   const [localStages, setLocalStages] = useState<StageWithOpportunities[]>(stages);
+
+  const syncPipelineData = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.pipeline.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+  }, [queryClient]);
+
+  const afterMutation = useCallback(() => {
+    syncPipelineData();
+    onMutationComplete?.();
+  }, [syncPipelineData, onMutationComplete]);
   const [createStageId, setCreateStageId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -482,20 +491,18 @@ export function PipelineBoard({
         const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
         try {
           await updateOpportunityStage(opportunityId, stageId);
-          router.refresh();
-          onMutationComplete?.();
+          afterMutation();
           if (process.env.NODE_ENV !== "production") {
             const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
             console.info("[perf] pipeline-move-ms", Math.round(t1 - t0), { opportunityId, stageId });
           }
         } catch (error) {
           toast.showToast(error instanceof Error ? error.message : "Přesun se nepodařil.", "error");
-          router.refresh();
-          onMutationComplete?.();
+          afterMutation();
         }
       });
     },
-    [router, startTransition, onMutationComplete, toast]
+    [startTransition, afterMutation, toast]
   );
 
   async function doDelete(id: string) {
@@ -503,8 +510,7 @@ export function PipelineBoard({
     try {
       await deleteOpportunity(id);
       setDeleteConfirmId(null);
-      router.refresh();
-      onMutationComplete?.();
+      afterMutation();
     } finally {
       setDeletePending(false);
     }
@@ -837,7 +843,7 @@ export function PipelineBoard({
             onDone={() => setCreateStageId(null)}
             defaultContactId={contactContext?.contactId}
             hideContactSelector={!!contactContext}
-            onMutationComplete={onMutationComplete}
+            onMutationComplete={afterMutation}
           />
         )}
       </Modal>
@@ -850,7 +856,7 @@ export function PipelineBoard({
             stages={localStages}
             contacts={contacts}
             onDone={() => setEditOpp(null)}
-            onMutationComplete={onMutationComplete}
+            onMutationComplete={afterMutation}
           />
         )}
       </Modal>

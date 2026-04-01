@@ -3,6 +3,8 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Download, Upload, Phone, Mail, CheckSquare, ArrowRight, MessageSquare, Tags, UserCog, UserPlus } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { NewClientWizard } from "@/app/components/aidvisora/NewClientWizard";
@@ -16,7 +18,7 @@ import {
   ListPageNoResults,
 } from "@/app/components/list-page";
 import { SkeletonLine, SkeletonTableRow } from "@/app/components/Skeleton";
-import { exportContactsCsv, updateContactsLifecycle, addTagToContacts, type ContactRow } from "@/app/actions/contacts";
+import { exportContactsCsv, getContactsList, updateContactsLifecycle, addTagToContacts, type ContactRow } from "@/app/actions/contacts";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 
 const LIFECYCLE_TABS: { value: string; label: string }[] = [
@@ -31,6 +33,9 @@ const LIFECYCLE_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Všechny fáze" },
   ...LIFECYCLE_TABS.filter((t) => t.value),
 ];
+
+/** Desktop: zobrazit po částech, aby DOM nepřetížil tisíce řádků. */
+const CONTACTS_VISIBLE_CHUNK = 150;
 
 function getInitials(c: ContactRow): string {
   const f = (c.firstName ?? "").trim();
@@ -71,9 +76,16 @@ function lifecycleBadge(stage: string | null | undefined): { label: string; clas
   }
 }
 
-export function ContactsPageClient({ list }: { list: ContactRow[] }) {
+export function ContactsPageClient({ initialList }: { initialList: ContactRow[] }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const { data: list = initialList } = useQuery({
+    queryKey: queryKeys.contacts.list(),
+    queryFn: () => getContactsList(),
+    initialData: initialList,
+    staleTime: 60_000,
+  });
   const [wizardOpen, setWizardOpen] = useState(false);
   const [lifecycleFilter, setLifecycleFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
@@ -85,6 +97,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
   const [bulkPending, setBulkPending] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
   const tableLoadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(CONTACTS_VISIBLE_CHUNK);
   const toast = useToast();
 
   useEffect(() => {
@@ -100,6 +113,46 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
     tableLoadingTimerRef.current = setTimeout(() => setTableLoading(false), 250);
   }, []);
 
+  const uniqueTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of list) {
+      if (c.tags) for (const t of c.tags) set.add(t);
+    }
+    return Array.from(set).sort();
+  }, [list]);
+
+  useEffect(() => {
+    setVisibleLimit(CONTACTS_VISIBLE_CHUNK);
+  }, [lifecycleFilter, tagFilter, searchQuery, list.length]);
+
+  const filteredList = useMemo(() => {
+    return list.filter((c) => {
+      if (lifecycleFilter && (c.lifecycleStage ?? "") !== lifecycleFilter) return false;
+      if (tagFilter && (!c.tags || !c.tags.includes(tagFilter))) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+        const email = (c.email ?? "").toLowerCase();
+        const phone = (c.phone ?? "").toLowerCase();
+        if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [list, lifecycleFilter, tagFilter, searchQuery]);
+
+  const displayedList = useMemo(
+    () => filteredList.slice(0, visibleLimit),
+    [filteredList, visibleLimit]
+  );
+
+  const selectedContactsWithEmail = useMemo(() => {
+    return filteredList.filter((c) => selectedIds.has(c.id) && c.email?.trim());
+  }, [filteredList, selectedIds]);
+  const bulkMailtoHref = useMemo(() => {
+    if (selectedContactsWithEmail.length === 0) return undefined;
+    return `mailto:${selectedContactsWithEmail.map((c) => c.email).filter(Boolean).join(",")}`;
+  }, [selectedContactsWithEmail]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -112,6 +165,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
     if (selectedIds.size === filteredList.length) setSelectedIds(new Set());
     else setSelectedIds(new Set(filteredList.map((c) => c.id)));
   };
+  const showLoadMore = filteredList.length > visibleLimit;
   async function handleBulkLifecycle() {
     if (!bulkLifecycle || selectedIds.size === 0) return;
     setBulkPending(true);
@@ -120,7 +174,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
       toast.showToast("Fáze upravena");
       setSelectedIds(new Set());
       setBulkLifecycle("");
-      router.refresh();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
     } catch {
       toast.showToast("Změna se nezdařila", "error");
     } finally {
@@ -135,7 +189,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
       toast.showToast("Štítek přidán");
       setSelectedIds(new Set());
       setBulkTag("");
-      router.refresh();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
     } catch {
       toast.showToast("Přidání štítku se nezdařilo", "error");
     } finally {
@@ -161,37 +215,6 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
       setExporting(false);
     }
   }
-
-  const uniqueTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of list) {
-      if (c.tags) for (const t of c.tags) set.add(t);
-    }
-    return Array.from(set).sort();
-  }, [list]);
-
-  const filteredList = useMemo(() => {
-    return list.filter((c) => {
-      if (lifecycleFilter && (c.lifecycleStage ?? "") !== lifecycleFilter) return false;
-      if (tagFilter && (!c.tags || !c.tags.includes(tagFilter))) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().toLowerCase();
-        const name = `${c.firstName} ${c.lastName}`.toLowerCase();
-        const email = (c.email ?? "").toLowerCase();
-        const phone = (c.phone ?? "").toLowerCase();
-        if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [list, lifecycleFilter, tagFilter, searchQuery]);
-
-  const selectedContactsWithEmail = useMemo(() => {
-    return filteredList.filter((c) => selectedIds.has(c.id) && c.email?.trim());
-  }, [filteredList, selectedIds]);
-  const bulkMailtoHref = useMemo(() => {
-    if (selectedContactsWithEmail.length === 0) return undefined;
-    return `mailto:${selectedContactsWithEmail.map((c) => c.email).filter(Boolean).join(",")}`;
-  }, [selectedContactsWithEmail]);
 
   const handleResetSearchAndFilters = () => {
     setSearchQuery("");
@@ -353,7 +376,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                 </div>
               )}
               {!tableLoading &&
-                filteredList.map((c) => {
+                displayedList.map((c) => {
                   const isSelected = selectedIds.has(c.id);
                   const colorClass = avatarColor(`${c.firstName} ${c.lastName}`);
                   const badge = lifecycleBadge(c.lifecycleStage);
@@ -442,9 +465,21 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                 })}
               {!tableLoading && (
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] px-2">
-                  Zobrazeno {filteredList.length} kontaktů
+                  Zobrazeno {displayedList.length}
+                  {filteredList.length !== displayedList.length ? ` z ${filteredList.length}` : ""} kontaktů
                   {(lifecycleFilter || tagFilter || searchQuery.trim()) && ` (z ${list.length} celkem)`}
                 </p>
+              )}
+              {showLoadMore && !tableLoading && (
+                <div className="px-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleLimit((n) => n + CONTACTS_VISIBLE_CHUNK)}
+                    className="w-full min-h-[44px] rounded-[var(--wp-radius-sm)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]"
+                  >
+                    Načíst další ({filteredList.length - displayedList.length} zbývá)
+                  </button>
+                </div>
               )}
             </div>
 
@@ -492,7 +527,7 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredList.map((c) => {
+                    {displayedList.map((c) => {
                       const isSelected = selectedIds.has(c.id);
                       const initials = getInitials(c);
                       const colorClass = avatarColor(`${c.firstName} ${c.lastName}`);
@@ -626,11 +661,21 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
                 </table>
               </div>
               {/* Footer: Zobrazeno X kontaktů (desktop only) */}
-              <div className="hidden md:flex px-4 md:px-6 py-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 items-center justify-between">
+              <div className="hidden md:flex flex-col sm:flex-row gap-2 px-4 md:px-6 py-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 items-center justify-between">
                 <span className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
-                  Zobrazeno {filteredList.length} kontaktů
+                  Zobrazeno {displayedList.length}
+                  {filteredList.length !== displayedList.length ? ` z ${filteredList.length}` : ""} kontaktů
                   {(lifecycleFilter || tagFilter || searchQuery.trim()) && ` (z ${list.length} celkem)`}
                 </span>
+                {showLoadMore && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleLimit((n) => n + CONTACTS_VISIBLE_CHUNK)}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 min-h-[44px] px-3 rounded-[var(--wp-radius-sm)] border border-indigo-200 bg-[color:var(--wp-surface-card)]"
+                  >
+                    Načíst další ({filteredList.length - displayedList.length})
+                  </button>
+                )}
               </div>
             </div>
           </>
@@ -640,10 +685,10 @@ export function ContactsPageClient({ list }: { list: ContactRow[] }) {
       <NewClientWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        onCreated={(id) => {
+        onCreated={async (id) => {
           toast.showToast("Kontakt vytvořen");
+          await queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
           router.push(`/portal/contacts/${id}`);
-          router.refresh();
         }}
       />
     </>
