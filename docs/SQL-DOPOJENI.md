@@ -24,3 +24,23 @@ Při **nové** migraci nebo významné úpravě `.sql` přidejte **jeden řádek
 |-------|--------|--------|
 | 2026-04-01 | Realtime toast (poradenský portál): `opportunities` v `supabase_realtime`, RLS SELECT pro členy tenanta; ověřovací dotazy v souboru | [advisor-portal-opportunities-realtime-rls.sql](../packages/db/migrations/advisor-portal-opportunities-realtime-rls.sql) |
 | 2026-04-01 | Supabase Performance Advisor: RLS initplan (`SELECT` kolem `auth.*`), sloučené permissive politiky, duplicitní index `mindmap_maps`, FA politiky | [supabase-performance-advisor-2026-04-01.sql](../packages/db/migrations/supabase-performance-advisor-2026-04-01.sql) |
+
+---
+
+## Rozkliknutelné záznamy (stejné soubory — rychlý náhled)
+
+<details>
+<summary><strong>advisor-portal-opportunities-realtime-rls.sql</strong> — Realtime + RLS pro <code>opportunities</code></summary>
+
+Odkaz: [`packages/db/migrations/advisor-portal-opportunities-realtime-rls.sql`](../packages/db/migrations/advisor-portal-opportunities-realtime-rls.sql)
+
+</details>
+
+<details>
+<summary><strong>supabase-performance-advisor-2026-04-01.sql</strong> — výkon a politiky</summary>
+
+Odkaz: [`packages/db/migrations/supabase-performance-advisor-2026-04-01.sql`](../packages/db/migrations/supabase-performance-advisor-2026-04-01.sql)
+
+</details>
+
+<!-- Nový záznam: přidej řádek do tabulky Log a nový blok <details> nad tento komentář (nejnovější v tabulce i v detailech vždy poslední). -->
