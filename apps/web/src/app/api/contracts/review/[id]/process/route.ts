@@ -114,24 +114,55 @@ export async function POST(
     const storagePath = review.storagePath!;
     const requestContext = buildRequestContext(request);
 
+    const SAFETY_TIMEOUT_MS = (maxDuration - 15) * 1000;
+
     after(async () => {
-      try {
-        await runContractReviewProcessing({
-          id,
-          userId,
-          tenantId,
-          fileUrl,
-          mimeType,
-          storagePath,
-          requestContext,
-          processingStartedAtMs,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error("[contracts/review/[id]/process] after() processing failed", message);
+      let safetyTimer: ReturnType<typeof setTimeout> | undefined;
+      const safetyPromise = new Promise<"timeout">((resolve) => {
+        safetyTimer = setTimeout(() => resolve("timeout"), SAFETY_TIMEOUT_MS);
+      });
+
+      const processingPromise = (async () => {
+        try {
+          await runContractReviewProcessing({
+            id,
+            userId,
+            tenantId,
+            fileUrl,
+            mimeType,
+            storagePath,
+            requestContext,
+            processingStartedAtMs,
+          });
+          return "done" as const;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error("[contracts/review/[id]/process] after() processing failed", message);
+          await updateContractReview(id, tenantId, {
+            processingStatus: "failed",
+            errorMessage: "Zpracování smlouvy selhalo (neočekávaná chyba).",
+          }).catch(() => {});
+          await logAudit({
+            tenantId,
+            userId,
+            action: "extraction_failed",
+            entityType: "contract_review",
+            entityId: id,
+            requestContext,
+            meta: { reason: "after_unhandled", message: message.slice(0, 200) },
+          }).catch(() => {});
+          return "error" as const;
+        }
+      })();
+
+      const result = await Promise.race([processingPromise, safetyPromise]);
+      if (safetyTimer) clearTimeout(safetyTimer);
+
+      if (result === "timeout") {
+        console.error("[contracts/review/[id]/process] safety timeout – marking as failed", { id, elapsedMs: Date.now() - processingStartedAtMs });
         await updateContractReview(id, tenantId, {
           processingStatus: "failed",
-          errorMessage: "Zpracování smlouvy selhalo (neočekávaná chyba).",
+          errorMessage: "Zpracování překročilo časový limit serveru. Zkuste to prosím znovu.",
         }).catch(() => {});
         await logAudit({
           tenantId,
@@ -140,7 +171,7 @@ export async function POST(
           entityType: "contract_review",
           entityId: id,
           requestContext,
-          meta: { reason: "after_unhandled", message: message.slice(0, 200) },
+          meta: { reason: "safety_timeout", elapsedMs: Date.now() - processingStartedAtMs },
         }).catch(() => {});
       }
     });
