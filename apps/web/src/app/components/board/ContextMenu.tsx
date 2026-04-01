@@ -84,18 +84,20 @@ export function ContextMenu({ items, anchorRect, anchorEl, anchorGap = 4, onClos
         if (item.type === "separator") return <div key={i} className="b-menu-sep" />;
         if (item.type === "submenu")
           return (
-            <div key={i} className="relative">
+            <div key={i} className="w-full min-w-0">
               <button
                 type="button"
-                className="b-menu-item"
+                className="b-menu-item w-full"
                 onClick={() => setOpenSubmenuIdx(openSubmenuIdx === i ? null : i)}
               >
                 {item.icon && <span className="w-4 h-4 flex items-center justify-center">{item.icon}</span>}
-                <span className="flex-1">{item.label}</span>
-                <span className="text-[10px] opacity-60">▶</span>
+                <span className="flex-1 text-left">{item.label}</span>
+                <span className="text-[10px] opacity-60" aria-hidden>
+                  {openSubmenuIdx === i ? "▼" : "▶"}
+                </span>
               </button>
               {openSubmenuIdx === i && (
-                <div className="b-menu absolute left-full top-0 ml-1">
+                <div className="border-l border-[color:var(--board-border)] ml-2 my-0.5 pl-2 flex flex-col gap-0">
                   {item.children.map((child, ci) => {
                     if (child.type === "separator") return <div key={ci} className="b-menu-sep" />;
                     if (child.type === "action")
@@ -103,7 +105,7 @@ export function ContextMenu({ items, anchorRect, anchorEl, anchorGap = 4, onClos
                         <button
                           key={ci}
                           type="button"
-                          className={`b-menu-item ${child.danger ? "is-danger" : ""}`}
+                          className={`b-menu-item text-[13px] ${child.danger ? "is-danger" : ""}`}
                           onClick={() => {
                             child.onClick();
                             onClose();

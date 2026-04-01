@@ -119,7 +119,7 @@ export function HeaderCell({
           },
         ]
       : []),
-    ...(onChangeType
+    ...(onChangeType && column.type !== "item"
       ? [
           {
             type: "submenu" as const,

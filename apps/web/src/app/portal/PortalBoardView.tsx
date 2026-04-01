@@ -348,9 +348,14 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     const newCol = {
       id: `col_${nextId()}`,
       title: "Nový sloupec",
-      type: "text" as ColumnType,
-      width: 120,
+      type: "status" as ColumnType,
+      width: 112,
+      minWidth: 96,
+      maxWidth: 200,
       hidden: false,
+      resizable: true,
+      hasSummary: true,
+      supportsNote: true,
     };
     setBoard((b) => ({
       ...b,
