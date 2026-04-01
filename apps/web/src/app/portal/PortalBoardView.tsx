@@ -136,6 +136,14 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     listBoardViews().then(setViewsList).catch(() => setViewsList([]));
   }, [dbViewId]);
 
+  /** Když aktivní view id neodpovídá žádnému záznamu (např. dříve v1 vs UUID z DB), tabulka neměla sloupce. */
+  useEffect(() => {
+    if (board.views.length === 0) return;
+    if (!board.views.some((v) => v.id === activeViewId)) {
+      setActiveViewId(board.views[0].id);
+    }
+  }, [board.views, activeViewId]);
+
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sortColumnId, setSortColumnId] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -620,7 +628,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
             <BoardHeader
               boardName={board.name}
               views={viewsList.length > 0 ? viewsList : board.views.map((v) => ({ id: v.id, name: v.name }))}
-              activeViewId={dbViewId ?? activeViewId}
+              activeViewId={activeViewId}
               onViewChange={onViewChange}
               onAddView={onAddView}
               onViewNameChange={dbViewId ? onViewNameChange : undefined}

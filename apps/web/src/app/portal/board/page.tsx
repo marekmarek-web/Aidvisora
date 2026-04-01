@@ -62,10 +62,11 @@ export default async function BoardPage({
       groups[0].itemIds.push(...orphanItems.map((i) => i.id));
     }
 
+    // View id musí být stejné jako board_views.id — jinak BoardHeader/dbViewId nespáruje aktivní view se sloupci (bylo v1 vs UUID → prázdná tabulka).
     initialBoard = {
-      id: dbViewId,
+      id: data.view.id,
       name: data.view.name,
-      views: [{ id: "v1", name: data.view.name, columns }],
+      views: [{ id: data.view.id, name: data.view.name, columns }],
       groups,
       items,
     };

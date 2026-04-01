@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 
-export function BoardTopbar({ boardName = "Plán rozděleno" }: { boardName?: string }) {
+export function BoardTopbar({ boardName = "" }: { boardName?: string }) {
   const [viewOpen, setViewOpen] = useState(false);
 
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between h-12 px-4 bg-monday-surface border-b border-monday-border shrink-0">
       {/* Left: board name + view dropdown */}
       <div className="flex items-center gap-2">
-        <h1 className="text-monday-text font-semibold text-[15px]">{boardName}</h1>
+        <h1 className="text-monday-text font-semibold text-[15px]">{boardName.trim() || "Nástěnka"}</h1>
         <div className="relative">
           <button
             type="button"

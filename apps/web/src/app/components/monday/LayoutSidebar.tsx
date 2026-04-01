@@ -44,7 +44,7 @@ export function LayoutSidebar() {
               href="/board"
               className="flex items-center gap-2 px-3 py-2 rounded-[var(--monday-radius)] text-monday-text text-sm font-medium bg-monday-row-hover"
             >
-              Plán rozděleno
+              Nástěnka
             </Link>
           </li>
         </ul>
