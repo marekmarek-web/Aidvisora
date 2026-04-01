@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
 import { getOrCreateBoardView } from "@/app/actions/board";
-import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
+import { resolveBoardColumns } from "@/app/board/resolve-board-columns";
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
 
 const PortalBoardView = dynamic(
@@ -11,16 +11,6 @@ const PortalBoardView = dynamic(
     ),
   },
 );
-
-/** Sloučí sloupce z API s výchozím setem – nikdy nezobrazíme jen „Jméno klienta“, vždy kompletní sloupce. */
-function mergeColumnsWithDefaults(saved: Column[]): Column[] {
-  const byId = new Map(saved.map((c) => [c.id, c]));
-  return DEFAULT_BOARD_COLUMNS.map((def) => {
-    const s = byId.get(def.id);
-    if (s) return { ...def, ...s };
-    return { ...def };
-  });
-}
 
 export default async function BoardPage({
   searchParams,
@@ -36,7 +26,7 @@ export default async function BoardPage({
     dbViewId = data.view.id;
 
     const savedColumns: Column[] = (data.view.columnsConfig as Column[]) ?? [];
-    const columns = savedColumns.length > 0 ? mergeColumnsWithDefaults(savedColumns) : [...DEFAULT_BOARD_COLUMNS];
+    const columns = resolveBoardColumns(savedColumns);
     const groupConfigs = (data.view.groupsConfig ?? []) as Array<{
       id: string;
       name: string;

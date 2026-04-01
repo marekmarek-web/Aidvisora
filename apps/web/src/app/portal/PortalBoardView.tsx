@@ -12,7 +12,7 @@ import { BoardGroup } from "@/app/components/board/BoardGroup";
 import { SelectionBar } from "@/app/components/monday/SelectionBar";
 import { RightPanel } from "@/app/components/monday/RightPanel";
 import type { Board, Column, ColumnType, Group, Item } from "@/app/components/monday/types";
-import { createSeedBoard, nextId, nextViewIdSeq, DEFAULT_CELLS } from "@/app/board/seed-data";
+import { createSeedBoard, nextId, nextViewIdSeq } from "@/app/board/seed-data";
 import { loadPortalState, savePortalState } from "@/app/lib/portal-state";
 import {
   listBoardViews,
@@ -226,7 +226,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
   );
   const onViewNameChange = useCallback(
     (name: string) => {
-      const trimmed = name.trim() || board.name;
+      const trimmed = name.trim();
       setBoard((b) => ({
         ...b,
         name: trimmed,
@@ -234,7 +234,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
       }));
       if (dbViewId) updateBoardViewName(dbViewId, trimmed).catch(() => {});
     },
-    [activeViewId, dbViewId, board.name]
+    [activeViewId, dbViewId]
   );
   const onAddView = useCallback(() => {
     if (dbViewId) {
@@ -449,13 +449,21 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     });
   }, []);
   const onAddItem = useCallback((groupId: string) => {
-    const id = nextId();
-    const newItem: Item = { id, name: "Nový řádek", cells: { ...DEFAULT_CELLS } };
-    setBoard((b) => ({
-      ...b,
-      items: { ...b.items, [id]: newItem },
-      groups: b.groups.map((g) => (g.id === groupId ? { ...g, itemIds: [...g.itemIds, id] } : g)),
-    }));
+    setBoard((b) => {
+      const view = b.views.find((v) => v.id === activeViewIdRef.current);
+      const cols = view?.columns ?? [];
+      const cells: Record<string, string | number> = {};
+      for (const c of cols) {
+        if (c.type !== "item") cells[c.id] = "";
+      }
+      const id = nextId();
+      const newItem: Item = { id, name: "Nový řádek", cells };
+      return {
+        ...b,
+        items: { ...b.items, [id]: newItem },
+        groups: b.groups.map((g) => (g.id === groupId ? { ...g, itemIds: [...g.itemIds, id] } : g)),
+      };
+    });
   }, []);
   const onGroupToggleCollapse = useCallback((groupId: string) => {
     setBoard((b) => ({

@@ -1,5 +1,24 @@
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
 
+/** Prázdný board pro nový tenant – jen sloupec jména, jedna skupina bez předvyplněného názvu. */
+export const BLANK_BOARD_COLUMNS: Column[] = [
+  {
+    id: "item",
+    title: "Jméno klienta",
+    type: "item",
+    width: 260,
+    minWidth: 220,
+    maxWidth: 400,
+    hidden: false,
+    sticky: true,
+    resizable: true,
+  },
+];
+
+export const BLANK_GROUPS: Group[] = [
+  { id: "g1", name: "", color: "#579bfc", collapsed: false, itemIds: [] },
+];
+
 /** Výchozí sloupce boardu – jeden zdroj pravdy; šířky dle doporučení (Monday/Notion vibe). */
 export const DEFAULT_BOARD_COLUMNS: Column[] = [
   { id: "item", title: "Jméno klienta", type: "item", width: 260, minWidth: 220, maxWidth: 400, hidden: false, sticky: true, resizable: true },

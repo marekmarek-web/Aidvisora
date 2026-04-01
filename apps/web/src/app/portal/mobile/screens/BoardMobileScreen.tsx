@@ -20,7 +20,8 @@ import {
 } from "@/app/actions/board";
 import clsx from "clsx";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
-import { DEFAULT_BOARD_COLUMNS } from "@/app/board/seed-data";
+import { resolveBoardColumns } from "@/app/board/resolve-board-columns";
+import { BLANK_BOARD_COLUMNS } from "@/app/board/seed-data";
 import type { Board, Column, Group, Item } from "@/app/components/monday/types";
 import {
   getStatusLabels,
@@ -37,15 +38,6 @@ import {
 } from "@/app/shared/mobile-ui/primitives";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 import { useConfirm } from "@/app/components/ConfirmDialog";
-
-function mergeColumnsWithDefaults(saved: Column[]): Column[] {
-  const byId = new Map(saved.map((c) => [c.id, c]));
-  return DEFAULT_BOARD_COLUMNS.map((def) => {
-    const s = byId.get(def.id);
-    if (s) return { ...def, ...s };
-    return { ...def };
-  });
-}
 
 function StatusPill({ value, labels }: { value: string; labels: StatusLabel[] }) {
   if (!value || value === "") return <span className="text-xs text-[color:var(--wp-text-tertiary)]">—</span>;
@@ -219,8 +211,7 @@ export function BoardMobileScreen() {
         setDbViewId(id);
 
         const savedColumns: Column[] = (data.view.columnsConfig as Column[]) ?? [];
-        const columns =
-          savedColumns.length > 0 ? mergeColumnsWithDefaults(savedColumns) : [...DEFAULT_BOARD_COLUMNS];
+        const columns = resolveBoardColumns(savedColumns);
         const groupConfigs = (data.view.groupsConfig ?? []) as Array<{
           id: string;
           name: string;
@@ -277,8 +268,8 @@ export function BoardMobileScreen() {
     }
   }, [itemIdFromQuery, board]);
 
-  const columns = board?.views[0]?.columns ?? DEFAULT_BOARD_COLUMNS;
-  const statusCols = columns.filter((c) => c.type === "status" && !c.hidden);
+  const columns = board?.views[0]?.columns ?? BLANK_BOARD_COLUMNS;
+  const statusCols = columns.filter((c: Column) => c.type === "status" && !c.hidden);
 
   const allItems = board ? Object.values(board.items) : [];
   const filteredItems = searchQuery.trim()
@@ -492,7 +483,7 @@ export function BoardMobileScreen() {
             {/* Status cells */}
             <div className="space-y-3">
               <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Produkty</p>
-              {statusCols.map((col) => {
+              {statusCols.map((col: Column) => {
                 const val = String(selectedItem.cells[col.id] ?? "");
                 return (
                   <div key={col.id} className="flex items-center justify-between min-h-[44px]">

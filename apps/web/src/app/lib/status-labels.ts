@@ -10,6 +10,7 @@ export const STATUS_LABELS_UPDATED_EVENT = "aidvisora_labels_updated";
 
 const STORAGE_KEY = "aidvisora_labels";
 
+/** Původní výchozí sada (migrace / testy); nový uživatel začíná s prázdným seznamem v localStorage. */
 export const DEFAULT_STATUS_OPTIONS: StatusLabel[] = [
   { id: "hotovo", label: "Hotovo", color: "#00c875" },
   { id: "rozděláno", label: "Rozděláno", color: "#fdab3d" },
@@ -21,13 +22,13 @@ export const DEFAULT_STATUS_OPTIONS: StatusLabel[] = [
 ];
 
 export function getStatusLabels(): StatusLabel[] {
-  if (typeof window === "undefined") return [...DEFAULT_STATUS_OPTIONS];
+  if (typeof window === "undefined") return [];
   migrateLocalStorageKey("weplan_labels", STORAGE_KEY);
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [...DEFAULT_STATUS_OPTIONS];
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as StatusLabel[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return [...DEFAULT_STATUS_OPTIONS];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [];
     const normalized = parsed
       .map((item, idx) => {
         if (!item || typeof item !== "object") return null;
@@ -37,15 +38,20 @@ export function getStatusLabels(): StatusLabel[] {
         return { id, label, color } satisfies StatusLabel;
       })
       .filter((item): item is StatusLabel => item !== null);
-    return normalized.length > 0 ? normalized : [...DEFAULT_STATUS_OPTIONS];
+    return normalized.length > 0 ? normalized : [];
   } catch {
-    return [...DEFAULT_STATUS_OPTIONS];
+    return [];
   }
 }
 
 export function setStatusLabels(labels: StatusLabel[]): void {
   if (typeof window === "undefined") return;
   try {
+    if (labels.length === 0) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+      return;
+    }
     const sanitized = labels
       .map((label, idx) => ({
         id: label.id?.trim() || `label_${idx}`,
@@ -53,7 +59,11 @@ export function setStatusLabels(labels: StatusLabel[]): void {
         color: label.color?.trim() || "#579bfc",
       }))
       .slice(0, 50);
-    if (sanitized.length === 0) return;
+    if (sanitized.length === 0) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+      return;
+    }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
     window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
   } catch {
@@ -62,5 +72,9 @@ export function setStatusLabels(labels: StatusLabel[]): void {
 }
 
 export function getStatusById(labels: StatusLabel[], id: string): StatusLabel {
-  return labels.find((s) => s.id === id) ?? labels[0] ?? DEFAULT_STATUS_OPTIONS[0];
+  const empty: StatusLabel = { id: "", label: "", color: "#e5e5e5" };
+  if (!id?.trim()) return empty;
+  const found = labels.find((s) => s.id === id);
+  if (found) return found;
+  return { id, label: id, color: "#c4c4c4" };
 }

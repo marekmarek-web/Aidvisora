@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   ChevronUp,
@@ -23,6 +23,10 @@ interface EditLabelsEditorProps {
 export function EditLabelsEditor({ open, onClose }: EditLabelsEditorProps) {
   const [labels, setLabels] = useState<StatusLabel[]>(() => getStatusLabels());
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (open) setLabels(getStatusLabels());
+  }, [open]);
 
   const colors = useMemo(
     () => ["#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#374151", "#ef4444"],
@@ -76,7 +80,9 @@ export function EditLabelsEditor({ open, onClose }: EditLabelsEditorProps) {
   };
 
   const handleSave = () => {
-    if (labels.length > 0) {
+    if (labels.length === 0) {
+      setStatusLabels([]);
+    } else {
       const normalized = labels.map((label, idx) => ({
         id: label.id || `label_${idx}_${Date.now()}`,
         label: label.label.trim() || `Štítek ${idx + 1}`,
@@ -186,8 +192,7 @@ export function EditLabelsEditor({ open, onClose }: EditLabelsEditorProps) {
               <button
                 type="button"
                 onClick={() => removeLabel(i)}
-                disabled={labels.length <= 1}
-                className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg text-[color:var(--wp-text-tertiary)] transition-colors disabled:opacity-20 min-h-[44px] min-w-[44px]"
+                className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg text-[color:var(--wp-text-tertiary)] transition-colors min-h-[44px] min-w-[44px]"
                 aria-label="Smazat"
               >
                 <Trash2 size={18} />

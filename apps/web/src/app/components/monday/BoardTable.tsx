@@ -12,6 +12,7 @@ import type { Column, ColumnType, Group, Item } from "./types";
 
 const STATUS_DONE_ID = "hotovo";
 const STATUS_IN_PROGRESS_ID = "rozděláno";
+const GROUP_NAME_PLACEHOLDER = "Skupina bez názvu";
 /** Single source for action column width; must match colgroup and last th/td */
 const ACTION_COLUMN_WIDTH = 60;
 
@@ -114,7 +115,10 @@ export function BoardTable({
         onClear={onClearSelection}
         onDelete={onDeleteSelected}
         onMoveToGroup={onMoveSelectedToGroup}
-        groupOptions={groups.map((g) => ({ id: g.id, name: g.name }))}
+        groupOptions={groups.map((g) => ({
+          id: g.id,
+          name: g.name.trim() ? g.name : GROUP_NAME_PLACEHOLDER,
+        }))}
       />
       <div className="board-scroll overflow-auto flex-1 relative px-6 py-4">
         {loading && (
@@ -159,12 +163,12 @@ export function BoardTable({
                       value={editingGroupName}
                       onChange={(e) => setEditingGroupName(e.target.value)}
                       onBlur={() => {
-                        onGroupRename(group.id, editingGroupName.trim() || group.name);
+                        onGroupRename(group.id, editingGroupName.trim());
                         setEditingGroupId(null);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          onGroupRename(group.id, editingGroupName.trim() || group.name);
+                          onGroupRename(group.id, editingGroupName.trim());
                           setEditingGroupId(null);
                         }
                         if (e.key === "Escape") setEditingGroupId(null);
@@ -175,8 +179,11 @@ export function BoardTable({
                       autoFocus
                     />
                   ) : (
-                    <h2 className="group-title" style={{ color: group.color }}>
-                      {group.name}
+                    <h2
+                      className={`group-title ${!group.name.trim() ? "opacity-75" : ""}`}
+                      style={{ color: group.color }}
+                    >
+                      {group.name.trim() ? group.name : GROUP_NAME_PLACEHOLDER}
                     </h2>
                   )}
                   <span className="group-count">{groupItems.length} klientů</span>

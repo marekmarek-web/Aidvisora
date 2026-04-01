@@ -5,7 +5,15 @@ import { db } from "db";
 import { boardViews, boardItems } from "db";
 import { contacts } from "db";
 import { eq, and, asc } from "db";
-import type { Column, Group } from "@/app/components/monday/types";
+import type { Column } from "@/app/components/monday/types";
+import { BLANK_BOARD_COLUMNS, BLANK_GROUPS } from "@/app/board/seed-data";
+
+const BLANK_GROUPS_FOR_DB = BLANK_GROUPS.map(({ id, name, color, collapsed }) => ({
+  id,
+  name,
+  color,
+  collapsed,
+}));
 
 export type BoardViewRow = {
   id: string;
@@ -26,23 +34,6 @@ export type BoardItemRow = {
   sortOrder: number;
 };
 
-const DEFAULT_COLUMNS: Column[] = [
-  { id: "item", title: "Jméno klienta", type: "item", width: 220, hidden: false },
-  { id: "firma", title: "Firma", type: "text", width: 120, hidden: false },
-  { id: "zp", title: "ZP", type: "status", width: 100, hidden: false },
-  { id: "investice_j", title: "Investice J", type: "status", width: 100, hidden: false },
-  { id: "investice_p", title: "Investice P", type: "status", width: 100, hidden: false },
-  { id: "uver", title: "Úvěr/Kons..", type: "status", width: 100, hidden: false },
-  { id: "dps", title: "DPS", type: "status", width: 80, hidden: false },
-  { id: "pov", title: "POV", type: "status", width: 80, hidden: false },
-  { id: "nem_dom", title: "NEM-DOM", type: "status", width: 90, hidden: false },
-];
-
-const DEFAULT_GROUPS = [
-  { id: "g1", name: "Nové", color: "#579bfc", collapsed: false },
-  { id: "g2", name: "Rozpracované", color: "#00c875", collapsed: false },
-];
-
 export async function listBoardViews(): Promise<{ id: string; name: string }[]> {
   const auth = await requireAuthInAction();
   const rows = await db
@@ -58,8 +49,8 @@ export async function createBoardView(options: {
   copyColumnsFromViewId?: string | null;
 }): Promise<string> {
   const auth = await requireAuthInAction();
-  let columnsConfig: unknown = DEFAULT_COLUMNS;
-  let groupsConfig: unknown = DEFAULT_GROUPS;
+  let columnsConfig: unknown = BLANK_BOARD_COLUMNS;
+  let groupsConfig: unknown = BLANK_GROUPS_FOR_DB;
   if (options.copyColumnsFromViewId) {
     const [source] = await db
       .select()
@@ -134,9 +125,9 @@ export async function getOrCreateBoardView(viewId?: string | null): Promise<{
       .insert(boardViews)
       .values({
         tenantId: auth.tenantId,
-        name: "Plan rozděleno",
-        columnsConfig: DEFAULT_COLUMNS as unknown as Record<string, unknown>,
-        groupsConfig: DEFAULT_GROUPS as unknown as Record<string, unknown>,
+        name: "",
+        columnsConfig: BLANK_BOARD_COLUMNS as unknown as Record<string, unknown>,
+        groupsConfig: BLANK_GROUPS_FOR_DB as unknown as Record<string, unknown>,
       })
       .returning();
     view = created;
@@ -219,7 +210,7 @@ export async function updateBoardViewName(viewId: string, name: string): Promise
   const auth = await requireAuthInAction();
   await db
     .update(boardViews)
-    .set({ name: name.trim() || "Default", updatedAt: new Date() })
+    .set({ name: name.trim(), updatedAt: new Date() })
     .where(and(eq(boardViews.tenantId, auth.tenantId), eq(boardViews.id, viewId)));
 }
 

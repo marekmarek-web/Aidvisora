@@ -2,6 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 
+const BOARD_TITLE_PLACEHOLDER = "Pojmenujte nástěnku";
+
+function titleOrPlaceholder(name: string): string {
+  return name.trim() ? name : BOARD_TITLE_PLACEHOLDER;
+}
+
 export type ViewItem = { id: string; name: string };
 
 interface BoardHeaderProps {
@@ -27,6 +33,7 @@ export function BoardHeader({
   const ref = useRef<HTMLDivElement>(null);
   const activeView = views.find((v) => v.id === activeViewId);
   const displayName = activeView?.name ?? boardName;
+  const showTitlePlaceholder = !boardName.trim();
 
   useEffect(() => setEditNameVal(displayName), [displayName]);
   useEffect(() => {
@@ -43,12 +50,12 @@ export function BoardHeader({
           value={editNameVal}
           onChange={(e) => setEditNameVal(e.target.value)}
           onBlur={() => {
-            onViewNameChange(editNameVal.trim() || displayName);
+            onViewNameChange(editNameVal.trim());
             setEditingName(false);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              onViewNameChange(editNameVal.trim() || displayName);
+              onViewNameChange(editNameVal.trim());
               setEditingName(false);
             }
             if (e.key === "Escape") {
@@ -68,10 +75,14 @@ export function BoardHeader({
           className="text-monday-text font-semibold text-[15px] cursor-text px-1 py-0.5 rounded-[4px] hover:bg-monday-row-hover border border-transparent hover:border-monday-border min-w-[80px] inline-block"
           title="Klikni pro úpravu názvu"
         >
-          {boardName || " "}
+          <span className={showTitlePlaceholder ? "text-monday-text-muted font-medium" : ""}>
+            {titleOrPlaceholder(boardName)}
+          </span>
         </span>
       ) : (
-        <span className="text-monday-text font-semibold text-[15px] px-1">{boardName}</span>
+        <span className={`text-monday-text font-semibold text-[15px] px-1 ${!boardName.trim() ? "text-monday-text-muted" : ""}`}>
+          {titleOrPlaceholder(boardName)}
+        </span>
       )}
       <div className="relative flex items-center gap-1" ref={ref}>
         {!editingName && (
@@ -81,7 +92,7 @@ export function BoardHeader({
               onClick={() => setOpen((o) => !o)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-monday-text-muted text-[13px] hover:bg-monday-row-hover border border-monday-border"
             >
-              {displayName}
+              {titleOrPlaceholder(displayName)}
               <span className="text-[10px]">▼</span>
             </button>
             {open && (
@@ -105,7 +116,7 @@ export function BoardHeader({
                     }}
                     className={`wp-dropdown-item ${v.id === activeViewId ? "text-monday-blue font-medium" : ""}`}
                   >
-                    {v.name}
+                    {titleOrPlaceholder(v.name)}
                   </button>
                 ))}
                 <div className="wp-dropdown-divider" />

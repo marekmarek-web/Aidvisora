@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { Column } from "./types";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { getStatusLabels, STATUS_LABELS_UPDATED_EVENT } from "@/app/lib/status-labels";
 import { Filter } from "lucide-react";
 
 interface ToolbarProps {
@@ -32,8 +33,8 @@ interface ToolbarProps {
   onGroupByChange: (v: "none" | "status") => void;
 }
 
-const FAKE_PEOPLE = [{ id: "all", name: "Všichni" }, { id: "1", name: "Saša" }, { id: "2", name: "Jana" }];
-const STATUS_FILTER_OPTIONS = ["hotovo", "rozděláno", "k-podpisu", "zatím-ne", "domluvit"];
+/** Dokud není napojení na členy tenantu, pouze „Všichni“. */
+const PERSON_FILTER_OPTIONS = [{ id: "all", name: "Všichni" }];
 
 export function Toolbar(props: ToolbarProps) {
   const {
@@ -68,6 +69,13 @@ export function Toolbar(props: ToolbarProps) {
   const hideRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const personRef = useRef<HTMLDivElement>(null);
+  const [statusLabelsVersion, setStatusLabelsVersion] = useState(0);
+  useEffect(() => {
+    const h = () => setStatusLabelsVersion((v) => v + 1);
+    window.addEventListener(STATUS_LABELS_UPDATED_EVENT, h);
+    return () => window.removeEventListener(STATUS_LABELS_UPDATED_EVENT, h);
+  }, []);
+  const statusLabelsList = useMemo(() => getStatusLabels(), [statusLabelsVersion]);
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3">
@@ -92,7 +100,7 @@ export function Toolbar(props: ToolbarProps) {
           <>
             <div className="fixed inset-0 z-30" onClick={() => onPersonOpenChange(false)} />
             <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] bg-monday-surface border border-monday-border rounded-[var(--monday-radius)] shadow-[var(--monday-shadow)] z-40">
-              {FAKE_PEOPLE.map((p) => (
+              {PERSON_FILTER_OPTIONS.map((p) => (
                 <button key={p.id} type="button" onClick={() => { onAssignedToChange(p.id === "all" ? null : p.id); onPersonOpenChange(false); }} className="w-full text-left px-3 py-2 text-[13px] hover:bg-monday-row-hover">
                   {p.name}
                 </button>
@@ -108,13 +116,20 @@ export function Toolbar(props: ToolbarProps) {
             <div className="fixed inset-0 z-30" onClick={() => onFilterOpenChange(false)} />
             <div className="absolute left-0 top-full mt-1 p-3 min-w-[200px] bg-monday-surface border border-monday-border rounded-[var(--monday-radius)] shadow-[var(--monday-shadow)] z-40">
               <p className="text-[11px] font-semibold text-monday-text-muted uppercase mb-2">STAV</p>
-              <CustomDropdown
-                value={filterStatus ?? ""}
-                onChange={(id) => onFilterStatusChange(id || null)}
-                options={[{ id: "", label: "Všechny" }, ...STATUS_FILTER_OPTIONS.map((s) => ({ id: s, label: s }))]}
-                placeholder="Všechny"
-                icon={Filter}
-              />
+              {statusLabelsList.length === 0 ? (
+                <p className="text-[13px] text-monday-text-muted">Nejdřív si v buňce stavu vytvořte štítky (Upravit štítky).</p>
+              ) : (
+                <CustomDropdown
+                  value={filterStatus ?? ""}
+                  onChange={(id) => onFilterStatusChange(id || null)}
+                  options={[
+                    { id: "", label: "Všechny" },
+                    ...statusLabelsList.map((s) => ({ id: s.id, label: s.label })),
+                  ]}
+                  placeholder="Všechny"
+                  icon={Filter}
+                />
+              )}
             </div>
           </>
         )}

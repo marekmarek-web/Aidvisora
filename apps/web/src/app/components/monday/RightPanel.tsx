@@ -76,7 +76,11 @@ export function RightPanel({
   const [draftText, setDraftText] = useState("");
   const [feedNotes, setFeedNotes] = useState<MeetingNoteFeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
-  const [smartBusy, setSmartBusy] = useState<"task" | "note" | "event" | "post" | null>(null);
+  const [smartBusy, setSmartBusy] = useState<"task" | "note" | "event" | null>(null);
+  /** Poznámky jen u řádku nástěnky (ne CRM), dokud je poradce neuloží přes „Do zápisků“. */
+  const [localThreadByItem, setLocalThreadByItem] = useState<
+    Record<string, { id: string; text: string; createdAt: string }[]>
+  >({});
 
   const loadFeed = useCallback(async () => {
     if (!contactId) {
@@ -130,33 +134,24 @@ export function RightPanel({
       ? "fixed inset-0 z-[var(--z-drawer-panel,101)] w-full max-w-full bg-[color:var(--wp-surface-card)] flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.08)] md:relative md:inset-auto md:z-auto md:h-full md:max-w-[560px] md:w-[min(100%,560px)] md:flex-shrink-0 md:rounded-l-[24px] border-l border-[color:var(--wp-surface-card-border)]"
       : "w-full max-w-[560px] min-w-0 md:w-[min(100%,560px)] flex-shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] flex flex-col h-full shadow-[-4px_0_24px_rgba(0,0,0,0.06)]";
 
-  async function handleSmartPost() {
+  function handleAddThreadPost() {
     const text = draftText.trim();
     if (!text) {
-      showToast("Napište text záznamu.", "error");
+      showToast("Napište text příspěvku.", "error");
       return;
     }
-    setSmartBusy("post");
-    try {
-      const id = await createMeetingNote({
-        contactId: contactId ?? null,
-        meetingAt: new Date().toISOString().slice(0, 16),
-        domain: "board",
-        content: { obsah: text },
-      });
-      if (id) {
-        appendActivity?.(itemId, { action: "board_post" });
-        showToast("Záznam byl uložen do zápisků.", "success");
-        setDraftText("");
-        await loadFeed();
-      } else {
-        showToast("Záznam se nepodařilo uložit.", "error");
-      }
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : "Uložení se nepodařilo.", "error");
-    } finally {
-      setSmartBusy(null);
-    }
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const entry = { id, text, createdAt: new Date().toISOString() };
+    setLocalThreadByItem((prev) => ({
+      ...prev,
+      [itemId]: [...(prev[itemId] ?? []), entry],
+    }));
+    appendActivity?.(itemId, { action: "board_thread_post" });
+    setDraftText("");
+    showToast("Přidáno do poznámek u řádku.", "success");
   }
 
   async function handleSmartTask() {
@@ -415,13 +410,34 @@ export function RightPanel({
                 <button
                   type="button"
                   disabled={!!smartBusy || !draftText.trim()}
-                  onClick={() => void handleSmartPost()}
+                  onClick={() => handleAddThreadPost()}
                   className={`${portalPrimaryButtonClassName} min-h-[44px] px-5 text-sm font-bold disabled:opacity-50`}
                 >
-                  {smartBusy === "post" ? "Ukládám…" : "Přidat příspěvek"}
+                  Přidat příspěvek
                 </button>
               </div>
             </div>
+
+            {(localThreadByItem[itemId] ?? []).length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+                  Poznámky u řádku (jen zde, ne v CRM)
+                </p>
+                <ul className="space-y-2">
+                  {(localThreadByItem[itemId] ?? []).map((p) => (
+                    <li
+                      key={p.id}
+                      className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 text-sm shadow-sm"
+                    >
+                      <p className="text-[11px] font-semibold text-[color:var(--wp-text-tertiary)] mb-1">
+                        {new Date(p.createdAt).toLocaleString("cs-CZ")}
+                      </p>
+                      <p className="text-[color:var(--wp-text)] whitespace-pre-wrap leading-relaxed">{p.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {!contactId ? (
               <p className="text-sm text-[color:var(--wp-text-secondary)] text-center py-6 rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)]">
@@ -498,7 +514,8 @@ export function RightPanel({
                     {entry.action === "note_created" && "Uložen zápisek z panelu nástěnky"}
                     {entry.action === "event_created" && "Vytvořena událost z panelu nástěnky"}
                     {entry.action === "board_post" && "Přidán příspěvek z panelu nástěnky"}
-                    {!["status_change", "edit", "product_change", "task_created", "note_created", "event_created", "board_post"].includes(entry.action) &&
+                    {entry.action === "board_thread_post" && "Poznámka u řádku (panel nástěnky)"}
+                    {!["status_change", "edit", "product_change", "task_created", "note_created", "event_created", "board_post", "board_thread_post"].includes(entry.action) &&
                       entry.action}
                     {entry.meta?.label != null && ` – ${entry.meta.label}`}
                     {entry.meta?.partnerName != null && entry.meta?.productName != null && (

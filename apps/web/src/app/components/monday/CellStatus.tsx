@@ -116,7 +116,7 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
   }, [open, noteOpen]);
 
   const isEmpty = !value || value.trim() === "";
-  const current = getLabelById(options, isEmpty ? "hotovo" : value);
+  const current = getLabelById(options, isEmpty ? "" : value);
   const displayLabel = isEmpty ? "" : current.label;
   const bgColor = isEmpty ? EMPTY_BG : current.color;
   const textClass = isEmpty ? "text-[color:var(--wp-text-secondary)]" : "text-white font-bold";
@@ -139,6 +139,11 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
         <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] border-b border-[color:var(--wp-surface-card-border)]/60 mb-1">
           Stav – klikni pro změnu
         </div>
+        {options.length === 0 && (
+          <p className="px-3 py-2 text-[13px] text-[color:var(--wp-text-secondary)]">
+            Zatím nemáte žádné štítky. Přidejte je přes „Upravit štítky“ níže.
+          </p>
+        )}
         {[...options, { id: "", label: "Vymazat (Prázdné)", color: EMPTY_BG }].map((opt) => (
           <button
             key={opt.id || "_empty"}
@@ -224,7 +229,11 @@ export function CellStatus({ value, onChange, className = "", fullCell = false, 
         }}
         className={`w-full h-full flex items-center justify-center text-sm font-semibold tracking-wide cursor-pointer transition-all duration-200 border-0 ${fullCell ? "min-h-[44px] h-full status-pill rounded-[var(--radius-sm)]" : "wp-pill min-h-[24px] text-[12px] font-bold"} ${textClass} ${isEmpty && fullCell ? "hover:bg-[#d4d4d4] hover:text-[color:var(--wp-text-secondary)]" : ""} ${!isEmpty && fullCell ? "hover:opacity-95" : ""}`}
         style={{ backgroundColor: bgColor }}
-        title={displayLabel ? `Status: ${displayLabel}. Klikni pro změnu.` : "Klikni a vyber stav (Hotovo, Rozděláno, …)"}
+        title={
+          displayLabel
+            ? `Status: ${displayLabel}. Klikni pro změnu.`
+            : "Klikni a vyber stav nebo si nejdřív nastavte štítky."
+        }
       >
         <span className="flex items-center justify-center gap-1">
           {fullCell && isEmpty ? (
