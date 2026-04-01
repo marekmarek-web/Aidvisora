@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, Plus, Edit2, Trash2, Mail, X, RefreshCw, MapPin, Link2, AlignLeft, User, Briefcase, Bell, Check, Info, Flag, CheckSquare, Calendar, Send, Clock, Video, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, Plus, Edit2, Trash2, Mail, X, RefreshCw, MapPin, Link2, AlignLeft, User, Briefcase, Bell, Check, Info, Flag, CheckSquare, Send, Clock, Video, ArrowRight } from "lucide-react";
 import { listEvents, createEvent, updateEvent, deleteEvent, createFollowUp, type EventRow } from "@/app/actions/events";
 import { getContactsList, type ContactRow } from "@/app/actions/contacts";
 import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
@@ -544,11 +544,6 @@ function EventDetailPopup({
             <div className="flex items-start gap-3 text-sm text-[color:var(--wp-text-secondary)]">
               <Bell size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
               <span>{formatEventReminderLabel(event)}</span>
-            </div>
-
-            <div className="flex items-start gap-3 text-sm text-[color:var(--wp-text-secondary)]">
-              <Calendar size={18} className="shrink-0 mt-0.5 text-[color:var(--wp-text-tertiary)]" aria-hidden />
-              <span>WePlan kalendář</span>
             </div>
 
             {hasVideoLink ? (
