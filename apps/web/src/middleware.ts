@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { AIDV_PROXY_AUTH_USER_HEADER } from "@/lib/auth/proxy-headers";
+import { getPublicSupabaseKey } from "@/lib/supabase/get-public-supabase-key";
+import {
+  CLIENT_INVITE_QUERY_PARAM,
+  LEGACY_CLIENT_INVITE_QUERY_PARAM,
+  parseClientInviteTokenFromUrl,
+} from "@/lib/auth/client-invite-url";
 
 const PRODUCTION_DOMAIN = "https://www.aidvisora.cz";
 
@@ -48,7 +54,15 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/register") {
     const url = request.nextUrl.clone();
     url.pathname = "/prihlaseni";
-    if (!url.searchParams.has("token")) {
+    const inviteToken = parseClientInviteTokenFromUrl(request.nextUrl.searchParams);
+    if (inviteToken) {
+      url.searchParams.delete(LEGACY_CLIENT_INVITE_QUERY_PARAM);
+      url.searchParams.delete(CLIENT_INVITE_QUERY_PARAM);
+      url.searchParams.set(CLIENT_INVITE_QUERY_PARAM, inviteToken);
+      url.searchParams.delete("register");
+    } else {
+      url.searchParams.delete(LEGACY_CLIENT_INVITE_QUERY_PARAM);
+      url.searchParams.delete(CLIENT_INVITE_QUERY_PARAM);
       url.searchParams.set("register", "1");
     }
     return NextResponse.redirect(url);
@@ -65,11 +79,11 @@ export async function middleware(request: NextRequest) {
   const isGmailApi = pathname.startsWith("/api/gmail");
   const isIntegrationsApi = pathname.startsWith("/api/integrations");
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabasePublicKey = getPublicSupabaseKey();
 
-  if ((isContractsApi || isAiAssistantApi || isCalendarApi || isDriveApi || isGmailApi || isIntegrationsApi) && supabaseUrl && supabaseAnonKey) {
+  if ((isContractsApi || isAiAssistantApi || isCalendarApi || isDriveApi || isGmailApi || isIntegrationsApi) && supabaseUrl && supabasePublicKey) {
     const response = NextResponse.next({ request });
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -115,7 +129,7 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabasePublicKey) {
     return NextResponse.next();
   }
 
@@ -125,7 +139,7 @@ export async function middleware(request: NextRequest) {
     forwardHeaders.set("x-pathname", pathname);
   }
   let response = NextResponse.next({ request: { headers: forwardHeaders } });
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -159,7 +173,7 @@ export async function middleware(request: NextRequest) {
   }
   if (request.nextUrl.pathname === "/prihlaseni" && user) {
     const errorParam = request.nextUrl.searchParams.get("error");
-    const hasInviteToken = request.nextUrl.searchParams.has("token");
+    const hasInviteToken = parseClientInviteTokenFromUrl(request.nextUrl.searchParams) !== null;
     if (
       hasInviteToken ||
       errorParam === "auth_error" ||

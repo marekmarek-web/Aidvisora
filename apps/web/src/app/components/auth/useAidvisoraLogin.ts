@@ -6,6 +6,11 @@ import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 import { continueClientInvitationAfterLogin, ensureClientPortalAccess } from "@/app/actions/auth";
+import {
+  CLIENT_INVITE_QUERY_PARAM,
+  parseClientInviteTokenFromUrl,
+  buildClientInvitePasswordSetupSearch,
+} from "@/lib/auth/client-invite-url";
 
 export type LoginRole = "advisor" | "client";
 
@@ -42,12 +47,12 @@ export function useAidvisoraLogin() {
   const nextParam = searchParams.get("next");
   const advisorNextPath = normalizeNextParam(nextParam, "/portal/today");
   const clientNextPath = normalizeNextParam(nextParam, "/client");
-  const token = searchParams.get("token");
+  const clientInviteToken = parseClientInviteTokenFromUrl(searchParams);
   const registerParam = searchParams.get("register");
   const errorParam = searchParams.get("error");
 
-  const [role, setRole] = useState<LoginRole>(() => (token ? "client" : "advisor"));
-  const [isLogin, setIsLogin] = useState(() => token ? true : !registerParam);
+  const [role, setRole] = useState<LoginRole>(() => (clientInviteToken ? "client" : "advisor"));
+  const [isLogin, setIsLogin] = useState(() => (clientInviteToken ? true : !searchParams.get("register")));
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -64,13 +69,13 @@ export function useAidvisoraLogin() {
   }, []);
 
   useEffect(() => {
-    if (token) setRole("client");
-  }, [token]);
+    if (clientInviteToken) setRole("client");
+  }, [clientInviteToken]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!clientInviteToken) return;
     let cancelled = false;
-    void fetch(`/api/invite/metadata?token=${encodeURIComponent(token)}`)
+    void fetch(`/api/invite/metadata?${CLIENT_INVITE_QUERY_PARAM}=${encodeURIComponent(clientInviteToken)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { ok?: boolean; email?: string } | null) => {
         if (cancelled || !data?.ok || typeof data.email !== "string") return;
@@ -80,7 +85,7 @@ export function useAidvisoraLogin() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [clientInviteToken]);
 
   useEffect(() => {
     if (!forceNative || typeof document === "undefined") return;
@@ -96,7 +101,7 @@ export function useAidvisoraLogin() {
   }, [role]);
 
   const isClient = role === "client";
-  const isInviteFlow = Boolean(token);
+  const isInviteFlow = Boolean(clientInviteToken);
   const hasError = Boolean(message);
 
   const handleSubmit = useCallback(
@@ -107,7 +112,7 @@ export function useAidvisoraLogin() {
 
       const supabase = createClient();
 
-      if (token) {
+      if (clientInviteToken) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           setIsLoading(false);
@@ -115,14 +120,14 @@ export function useAidvisoraLogin() {
           return;
         }
 
-        const result = await continueClientInvitationAfterLogin(token);
+        const result = await continueClientInvitationAfterLogin(clientInviteToken);
         setIsLoading(false);
         if (!result.ok) {
           setMessage(result.error);
           return;
         }
         if (result.nextStep === "change_password") {
-          window.location.href = `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(token)}`;
+          window.location.href = `/prihlaseni/nastavit-heslo?${buildClientInvitePasswordSetupSearch(clientInviteToken)}`;
           return;
         }
         window.location.href = "/client";
@@ -181,12 +186,12 @@ export function useAidvisoraLogin() {
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       }
     },
-    [token, email, password, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
+    [clientInviteToken, email, password, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
   );
 
   const handleOAuthSignIn = useCallback(
     async (provider: "google" | "apple") => {
-      if (role !== "client" && !isLogin && !token && !advisorLegalConsent) {
+      if (role !== "client" && !isLogin && !clientInviteToken && !advisorLegalConsent) {
         setMessage("Před pokračováním přes Google nebo Apple potvrďte souhlas s právními dokumenty.");
         return;
       }
@@ -226,12 +231,12 @@ export function useAidvisoraLogin() {
         },
       });
     },
-    [forceNative, role, isLogin, token, advisorLegalConsent, clientNextPath, advisorNextPath]
+    [forceNative, role, isLogin, clientInviteToken, advisorLegalConsent, clientNextPath, advisorNextPath]
   );
 
   return {
     forceNative,
-    token,
+    token: clientInviteToken,
     registerParam,
     advisorNextPath,
     clientNextPath,

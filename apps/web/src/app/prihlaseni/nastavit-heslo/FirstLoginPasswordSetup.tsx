@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 import { completeClientInvitationFirstLogin } from "@/app/actions/auth";
+import { CLIENT_INVITE_QUERY_PARAM, parseClientInviteTokenFromUrl } from "@/lib/auth/client-invite-url";
 
 type InviteMeta = {
   ok?: boolean;
@@ -14,7 +15,7 @@ type InviteMeta = {
 
 export function FirstLoginPasswordSetup() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token")?.trim() ?? "";
+  const token = parseClientInviteTokenFromUrl(searchParams) ?? "";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,7 +30,7 @@ export function FirstLoginPasswordSetup() {
     if (!token) return;
     let cancelled = false;
 
-    void fetch(`/api/invite/metadata?token=${encodeURIComponent(token)}`)
+    void fetch(`/api/invite/metadata?${CLIENT_INVITE_QUERY_PARAM}=${encodeURIComponent(token)}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((data: InviteMeta | null) => {
         if (cancelled || !data?.ok) return;

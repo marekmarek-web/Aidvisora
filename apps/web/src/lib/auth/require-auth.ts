@@ -15,6 +15,7 @@ import {
   DEMO_ROLE_ADMIN_ID,
   DEMO_ROLE_CLIENT_ID,
 } from "./demo";
+import { buildClientInvitePasswordSetupSearch } from "@/lib/auth/client-invite-url";
 
 export type AuthContext = {
   userId: string;
@@ -52,8 +53,10 @@ async function findPendingClientPasswordChangeRedirect(email: string | null | un
         ),
       )
       .limit(1);
-    const token = rows[0]?.token?.trim();
-    return token ? `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(token)}` : null;
+    const inviteToken = rows[0]?.token?.trim();
+    return inviteToken
+      ? `/prihlaseni/nastavit-heslo?${buildClientInvitePasswordSetupSearch(inviteToken)}`
+      : null;
   } catch (err) {
     const message = String((err as { message?: string } | null)?.message ?? err).toLowerCase();
     if (message.includes("client_invitations") && message.includes("password_changed_at")) {
@@ -203,11 +206,14 @@ async function requireClientZoneAuthUncached(): Promise<AuthContext> {
   if (!user) {
     redirect("/prihlaseni?error=auth_error");
   }
+  const m = await getCachedMembership(user.id);
+  if (m && (m.roleName as string) !== "Client") {
+    redirect("/portal");
+  }
   const pendingPasswordChangeRedirect = await findPendingClientPasswordChangeRedirect(user.email);
   if (pendingPasswordChangeRedirect) {
     redirect(pendingPasswordChangeRedirect);
   }
-  const m = await getCachedMembership(user.id);
   if (!m) {
     redirect("/prihlaseni?error=client_no_access");
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, clientInvitations, contacts, eq, and, gt, isNull } from "db";
 import { getClientIp, rateLimitByKey } from "@/lib/rate-limit-ip";
+import { parseClientInviteTokenFromUrl } from "@/lib/auth/client-invite-url";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
   }
 
-  const token = new URL(request.url).searchParams.get("token")?.trim() ?? "";
+  const token = parseClientInviteTokenFromUrl(new URL(request.url).searchParams) ?? "";
   if (token.length < 16 || token.length > 128) {
     return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 400 });
   }

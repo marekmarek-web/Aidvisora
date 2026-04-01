@@ -23,6 +23,7 @@ import { clientPortalInviteTemplate } from "@/lib/email/templates";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";
+import { buildClientInviteLoginSearch, buildClientInvitePasswordSetupSearch } from "@/lib/auth/client-invite-url";
 
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
@@ -388,7 +389,7 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
     });
 
     const baseUrl = getServerAppBaseUrl();
-    const inviteLink = `${baseUrl}/prihlaseni?token=${token}`;
+    const inviteLink = `${baseUrl}/prihlaseni?${buildClientInviteLoginSearch(token)}`;
 
     const tenantRow = await getTenantInviteEmailContext(contact.tenantId);
 
@@ -532,11 +533,21 @@ export async function ensureClientPortalAccess(): Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Nejste přihlášeni." };
+  const m = await getMembership(user.id);
+  if (m && m.roleName !== "Client") {
+    return {
+      ok: false,
+      error:
+        "Účet nemá přiřazený klientský přístup. Požádejte svého poradce o pozvánku do klientské zóny (e-mail s odkazem).",
+    };
+  }
   const pendingPasswordChangeToken = await findPendingClientPasswordChangeTokenByEmail(user.email);
   if (pendingPasswordChangeToken) {
-    return { ok: true, redirectTo: `/prihlaseni/nastavit-heslo?token=${encodeURIComponent(pendingPasswordChangeToken)}` };
+    return {
+      ok: true,
+      redirectTo: `/prihlaseni/nastavit-heslo?${buildClientInvitePasswordSetupSearch(pendingPasswordChangeToken)}`,
+    };
   }
-  const m = await getMembership(user.id);
   if (m?.roleName === "Client") return { ok: true };
   return {
     ok: false,

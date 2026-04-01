@@ -12,11 +12,16 @@ function optionalStringMin(minLen: number) {
 const optionalNonEmptyString = () => optionalStringMin(1);
 const optionalCronSecret = () => optionalStringMin(8);
 
-const serverSchema = z.object({
-  DATABASE_URL: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+const serverSchema = z
+  .object({
+    DATABASE_URL: z.string().min(1),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+    /** Legacy JWT anon; alternativa viz publishable klíče níže. */
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalStringMin(1),
+    /** Nový klíč z Supabase dashboardu (často jen tento). */
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: optionalStringMin(1),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: optionalStringMin(1),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   OPENAI_API_KEY: optionalNonEmptyString(),
   CRON_SECRET: optionalCronSecret(),
   SENTRY_DSN: optionalNonEmptyString(),
@@ -33,7 +38,22 @@ const serverSchema = z.object({
   NEXT_PUBLIC_SKIP_AUTH: z.enum(["true", "false", ""]).optional(),
   /** When "true", hides client portal AI help (nav-only chat). */
   NEXT_PUBLIC_DISABLE_CLIENT_PORTAL_AI: z.enum(["true", "false", ""]).optional(),
-});
+  })
+  .superRefine((data, ctx) => {
+    const hasPublicKey = Boolean(
+      data.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
+        data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    );
+    if (!hasPublicKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Nastavte NEXT_PUBLIC_SUPABASE_ANON_KEY nebo NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY (Supabase → Project Settings → API).",
+        path: ["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+      });
+    }
+  });
 
 function validateEnv() {
   const result = serverSchema.safeParse(process.env);
