@@ -9,6 +9,7 @@ import { executeIdempotent } from "@/lib/security/idempotency";
 import { detectMagicMimeTypeFromBytes, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
 import { isUuid, sanitizeStorageSegment, toTrimmedString } from "@/lib/security/validation";
 import { computeDocumentFingerprint } from "@/lib/documents/processing/fingerprint";
+import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 import type { DocumentSourceChannel } from "db";
 
 export const dynamic = "force-dynamic";
@@ -303,6 +304,20 @@ export async function POST(request: Request) {
           name,
         },
       }).catch(() => {});
+
+      if (visibleToClient && contactId) {
+        try {
+          await notifyClientAdvisorSharedDocument({
+            tenantId: membership.tenantId,
+            contactId,
+            documentId: inserted.id,
+            documentName: name,
+            reason: "upload",
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
 
       return {
         status: 200,

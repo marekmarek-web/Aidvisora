@@ -9,6 +9,7 @@ import {
   applyContractReviewDrafts,
   selectMatchedClient,
   confirmCreateNewClient,
+  linkContractReviewFileToContactDocuments,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
@@ -96,6 +97,8 @@ export default function ContractReviewDetailPage() {
   const [processingStatus, setProcessingStatus] = useState<string | null>(null);
   const [processingStepHint, setProcessingStepHint] = useState<string | undefined>();
   const [scanRetryBusy, setScanRetryBusy] = useState(false);
+  const [matchedClientId, setMatchedClientId] = useState<string | null>(null);
+  const [linkDocBusy, setLinkDocBusy] = useState(false);
   const pollTimeoutRef = useRef<number | null>(null);
   const pollBackoffMsRef = useRef(2500);
   const processingStartedRef = useRef(false);
@@ -124,6 +127,7 @@ export default function ContractReviewDetailPage() {
       }
       const data = await res.json();
       setProcessingStatus(data.processingStatus ?? null);
+      setMatchedClientId(typeof data.matchedClientId === "string" ? data.matchedClientId : null);
       const mapped = mapApiToExtractionDocument(data, pdfUrl);
       setDoc(mapped);
     } catch (e) {
@@ -155,6 +159,7 @@ export default function ContractReviewDetailPage() {
         const data = await res.json();
         const status: string = data.processingStatus ?? "";
         setProcessingStatus(status);
+        setMatchedClientId(typeof data.matchedClientId === "string" ? data.matchedClientId : null);
         const hint = processingStepHintFromTrace(data.extractionTrace);
         if (hint) setProcessingStepHint(hint);
         if (status !== "uploaded" && status !== "processing") {
@@ -372,6 +377,28 @@ export default function ContractReviewDetailPage() {
     [id, toast, load]
   );
 
+  const handleLinkToClientDocuments = useCallback(
+    async (visibleToClient: boolean) => {
+      setLinkDocBusy(true);
+      try {
+        const result = await linkContractReviewFileToContactDocuments(id, { visibleToClient });
+        if (result.ok) {
+          toast.showToast(
+            visibleToClient
+              ? "Soubor je v dokumentech klienta a viditelný v portálu."
+              : "Soubor je v dokumentech klienta (zatím jen interně).",
+            "success"
+          );
+        } else {
+          toast.showToast(result.error ?? "Chyba", "error");
+        }
+      } finally {
+        setLinkDocBusy(false);
+      }
+    },
+    [id, toast]
+  );
+
   const handleConfirmCreateNew = useCallback(async () => {
     setActionLoading("createNew");
     try {
@@ -481,6 +508,33 @@ export default function ContractReviewDetailPage() {
             Dokument je zpracovaný, ale kritická pole nejsou dostatečně jistá. Zkontrolujte extrahované hodnoty před
             schválením; návrh platby do portálu se nevytvoří, dokud stav neodpovídá pravidlům kvality.
           </p>
+        </div>
+      ) : null}
+      {matchedClientId ? (
+        <div className="mx-4 md:mx-6 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm">
+          <p className="font-bold text-[color:var(--wp-text)] mb-2">Dokumenty klienta</p>
+          <p className="text-[color:var(--wp-text-secondary)] mb-3 leading-relaxed">
+            Přidejte tento soubor do stejné dokumentové vrstvy jako ruční nahrávání u kontaktu. Úložiště se nekopíruje —
+            jen se vytvoří odkaz v CRM.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              disabled={linkDocBusy}
+              onClick={() => void handleLinkToClientDocuments(false)}
+              className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 text-sm font-bold text-[color:var(--wp-text)] disabled:opacity-50"
+            >
+              {linkDocBusy ? "Ukládám…" : "Přidat do dokumentů (interně)"}
+            </button>
+            <button
+              type="button"
+              disabled={linkDocBusy}
+              onClick={() => void handleLinkToClientDocuments(true)}
+              className="min-h-[44px] rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white disabled:opacity-50"
+            >
+              Přidat a zobrazit v klientském portálu
+            </button>
+          </div>
         </div>
       ) : null}
       <AIReviewExtractionShell

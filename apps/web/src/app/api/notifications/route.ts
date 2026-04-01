@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedApiUserId } from "@/lib/auth/api-auth-user";
 import { getMembership } from "@/lib/auth/get-membership";
-import { db, advisorNotifications, eq, and, desc } from "db";
+import { db, advisorNotifications, eq, and, desc, inArray } from "db";
 
 export async function GET(request: Request) {
   const userId = await getAuthenticatedApiUserId();
@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const type = url.searchParams.get("type");
+  const typesCsv = url.searchParams.get("types");
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50"), 100);
 
   const conditions = [
@@ -20,7 +21,17 @@ export async function GET(request: Request) {
     eq(advisorNotifications.targetUserId, userId),
   ];
   if (status) conditions.push(eq(advisorNotifications.status, status));
-  if (type?.trim()) conditions.push(eq(advisorNotifications.type, type.trim()));
+  const typesList = typesCsv
+    ? typesCsv
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  if (typesList.length > 0) {
+    conditions.push(inArray(advisorNotifications.type, typesList));
+  } else if (type?.trim()) {
+    conditions.push(eq(advisorNotifications.type, type.trim()));
+  }
 
   const items = await db.select()
     .from(advisorNotifications)

@@ -8,6 +8,7 @@ import { eq, and, desc } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logActivity } from "./activity";
 import { logAudit } from "@/lib/audit";
+import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 import { createPortalNotification } from "./portal-notifications";
 
 export type DocumentRow = {
@@ -188,6 +189,19 @@ export async function uploadDocument(
         meta: { contactId: contactId ?? undefined, opportunityId: options.opportunityId, name },
       });
     } catch {}
+    if (contactId && options.visibleToClient) {
+      try {
+        await notifyClientAdvisorSharedDocument({
+          tenantId: auth.tenantId,
+          contactId,
+          documentId: newId,
+          documentName: name,
+          reason: "upload",
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
   }
   return newId;
 }
@@ -195,10 +209,34 @@ export async function uploadDocument(
 export async function updateDocumentVisibleToClient(documentId: string, visibleToClient: boolean) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) throw new Error("Forbidden");
+  const [existing] = await db
+    .select({
+      visibleToClient: documents.visibleToClient,
+      contactId: documents.contactId,
+      name: documents.name,
+    })
+    .from(documents)
+    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)))
+    .limit(1);
+  if (!existing) throw new Error("Dokument nenalezen.");
+  const wasVisible = !!existing.visibleToClient;
   await db
     .update(documents)
     .set({ visibleToClient, updatedAt: new Date() })
     .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)));
+  if (visibleToClient && !wasVisible && existing.contactId) {
+    try {
+      await notifyClientAdvisorSharedDocument({
+        tenantId: auth.tenantId,
+        contactId: existing.contactId,
+        documentId,
+        documentName: existing.name,
+        reason: "visibility_on",
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
 }
 
 export async function deleteDocument(id: string) {
@@ -225,6 +263,25 @@ export async function updateDocument(
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) throw new Error("Forbidden");
+  let prevVisible: boolean | null = null;
+  let contactIdForNotify: string | null = null;
+  let docName = "";
+  if (data.visibleToClient === true) {
+    const [row] = await db
+      .select({
+        visibleToClient: documents.visibleToClient,
+        contactId: documents.contactId,
+        name: documents.name,
+      })
+      .from(documents)
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)))
+      .limit(1);
+    if (row) {
+      prevVisible = row.visibleToClient;
+      contactIdForNotify = row.contactId;
+      docName = row.name;
+    }
+  }
   await db
     .update(documents)
     .set({
@@ -236,6 +293,23 @@ export async function updateDocument(
     })
     .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)));
   try { await logActivity("document", id, "update", { fields: Object.keys(data) }); } catch {}
+  if (
+    data.visibleToClient === true &&
+    contactIdForNotify &&
+    prevVisible === false
+  ) {
+    try {
+      await notifyClientAdvisorSharedDocument({
+        tenantId: auth.tenantId,
+        contactId: contactIdForNotify,
+        documentId: id,
+        documentName: data.name ?? docName,
+        reason: "visibility_on",
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
 }
 
 export async function logDocumentDownload(documentId: string) {

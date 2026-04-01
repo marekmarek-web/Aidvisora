@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { ClientRequestItem } from "@/app/lib/client-portal/request-types";
+import type { MaterialRequestListItem } from "@/app/actions/advisor-material-requests";
 import { ClientZoneExportButton } from "./ClientZoneExportButton";
 import { NewRequestModal } from "./NewRequestModal";
 import { AiSupportButton } from "./AiSupportButton";
@@ -53,6 +54,7 @@ type ClientDashboardLayoutProps = {
   documentsCount: number;
   latestNotification: { title: string; body: string | null } | null;
   financialSummary: ClientPortalFinancialSummary | null;
+  advisorMaterialRequests: MaterialRequestListItem[];
 };
 
 function formatMoney(value: number): string {
@@ -70,6 +72,7 @@ export function ClientDashboardLayout({
   documentsCount,
   latestNotification,
   financialSummary,
+  advisorMaterialRequests,
 }: ClientDashboardLayoutProps) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 

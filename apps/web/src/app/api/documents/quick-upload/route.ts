@@ -11,6 +11,7 @@ import { computeDocumentFingerprint } from "@/lib/documents/processing/fingerpri
 import { processDocument } from "@/lib/documents/processing/orchestrator";
 import { buildPdfFromImageBuffers } from "@/lib/scan/build-pdf-from-images-server";
 import { logAudit } from "@/lib/audit";
+import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 import type { DocumentSourceChannel } from "db";
 
 export const dynamic = "force-dynamic";
@@ -241,6 +242,20 @@ export async function POST(request: Request) {
       request,
       meta: { contactId: contactId ?? undefined, uploadSource, name: docName, quickUpload: true },
     }).catch(() => {});
+
+    if (visibleToClient && contactId) {
+      try {
+        await notifyClientAdvisorSharedDocument({
+          tenantId: membership.tenantId,
+          contactId,
+          documentId: inserted.id,
+          documentName: docName,
+          reason: "upload",
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
 
     const docRow = {
       id: inserted.id,

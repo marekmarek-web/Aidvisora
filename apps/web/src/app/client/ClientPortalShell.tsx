@@ -1,5 +1,6 @@
 import { ClientSidebar } from "./ClientSidebar";
 import { ClientPortalTopbar } from "./ClientPortalTopbar";
+import { ClientMaterialRequestToastStack } from "./ClientMaterialRequestToastStack";
 
 type ClientPortalShellProps = {
   children: React.ReactNode;
@@ -24,6 +25,7 @@ export function ClientPortalShell({
         />
         <main className="flex-1 client-dot-grid client-custom-scrollbar overflow-y-auto">
           <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto w-full">{children}</div>
+          <ClientMaterialRequestToastStack />
         </main>
       </div>
     </div>

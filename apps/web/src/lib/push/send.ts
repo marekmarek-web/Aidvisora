@@ -167,7 +167,12 @@ export async function sendPushToUser(eventInput: PushEventPayload): Promise<Push
 export async function sendPushForPortalNotification(params: {
   tenantId: string;
   contactId: string;
-  type: "new_message" | "request_status_change" | "new_document" | "important_date";
+  type:
+    | "new_message"
+    | "request_status_change"
+    | "new_document"
+    | "important_date"
+    | "advisor_material_request";
   title: string;
   body?: string | null;
   relatedEntityId?: string | null;
@@ -188,7 +193,9 @@ export async function sendPushForPortalNotification(params: {
         ? "REQUEST_STATUS_CHANGE"
         : params.type === "new_document"
           ? "NEW_DOCUMENT"
-          : "CLIENT_REQUEST";
+          : params.type === "advisor_material_request"
+            ? "NEW_DOCUMENT"
+            : "CLIENT_REQUEST";
 
   for (const recipient of recipients) {
     await sendPushToUser({

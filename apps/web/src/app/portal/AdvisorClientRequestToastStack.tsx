@@ -30,7 +30,7 @@ type Accent = "blue" | "emerald" | "violet" | "amber" | "rose" | "slate";
 
 type ToastRow = {
   id: string;
-  opportunityId: string;
+  navigateHref: string;
   clientName: string;
   categoryLabel: string;
   preview: string;
@@ -77,27 +77,58 @@ function clipPreview(text: string): string {
 }
 
 function notificationToToastRow(n: AdvisorInAppNotificationRow): ToastRow | null {
-  if (n.type !== "client_portal_request" || n.relatedEntityType !== "opportunity" || !n.relatedEntityId) {
-    return null;
-  }
-  const { caseType, caseTypeLabel, preview } = parseClientPortalNotificationBody(n.body);
-  const accent = accentForCaseType(caseType);
-  const Icon = iconForCaseType(caseType);
-  const categoryLabel = caseTypeLabel || caseTypeToLabel(caseType);
-  const previewText = clipPreview(preview || n.title);
   const timeLabel = formatToastTime(n.createdAt);
-  return {
-    id: `toast-${n.id}`,
-    opportunityId: n.relatedEntityId,
-    clientName: n.title,
-    categoryLabel,
-    preview: previewText,
-    timeLabel,
-    accent,
-    Icon,
-    isExiting: false,
-    progressMs: AUTO_DISMISS_MS,
-  };
+  if (n.type === "client_portal_request" && n.relatedEntityType === "opportunity" && n.relatedEntityId) {
+    const { caseType, caseTypeLabel, preview } = parseClientPortalNotificationBody(n.body);
+    const accent = accentForCaseType(caseType);
+    const Icon = iconForCaseType(caseType);
+    const categoryLabel = caseTypeLabel || caseTypeToLabel(caseType);
+    const previewText = clipPreview(preview || n.title);
+    return {
+      id: `toast-${n.id}`,
+      navigateHref: `/portal/pipeline/${n.relatedEntityId}`,
+      clientName: n.title,
+      categoryLabel,
+      preview: previewText,
+      timeLabel,
+      accent,
+      Icon,
+      isExiting: false,
+      progressMs: AUTO_DISMISS_MS,
+    };
+  }
+
+  if (n.type === "client_material_response" && n.relatedEntityType === "advisor_material_request" && n.relatedEntityId) {
+    let contactId = "";
+    try {
+      const b = JSON.parse(n.body || "{}") as { contactId?: string };
+      contactId = typeof b.contactId === "string" ? b.contactId : "";
+    } catch {
+      return null;
+    }
+    if (!contactId) return null;
+    let previewText = "";
+    try {
+      const b = JSON.parse(n.body || "{}") as { preview?: string };
+      previewText = clipPreview(b.preview || n.title || "");
+    } catch {
+      previewText = clipPreview(n.title || "");
+    }
+    return {
+      id: `toast-${n.id}`,
+      navigateHref: `/portal/contacts/${contactId}?tab=podklady&materialRequest=${encodeURIComponent(n.relatedEntityId)}`,
+      clientName: n.title,
+      categoryLabel: "Odpověď na požadavek",
+      preview: previewText,
+      timeLabel,
+      accent: "emerald",
+      Icon: FileText,
+      isExiting: false,
+      progressMs: AUTO_DISMISS_MS,
+    };
+  }
+
+  return null;
 }
 
 const ACCENT_BAR: Record<Accent, string> = {
@@ -177,8 +208,8 @@ export function AdvisorClientRequestToastStack() {
   );
 
   const openDetail = useCallback(
-    (opportunityId: string, toastId: string) => {
-      router.push(`/portal/pipeline/${opportunityId}`);
+    (href: string, toastId: string) => {
+      router.push(href);
       dismiss(toastId);
     },
     [router, dismiss]
@@ -195,7 +226,12 @@ export function AdvisorClientRequestToastStack() {
     for (const n of notifications) {
       if (seenNotificationIdsRef.current.has(n.id)) continue;
       seenNotificationIdsRef.current.add(n.id);
-      if (n.status !== "unread" || n.type !== "client_portal_request") continue;
+      if (
+        n.status !== "unread" ||
+        (n.type !== "client_portal_request" && n.type !== "client_material_response")
+      ) {
+        continue;
+      }
       const row = notificationToToastRow(n);
       if (!row) continue;
       setToastRows((prev) => [...prev.slice(-6), row]);
@@ -223,11 +259,11 @@ export function AdvisorClientRequestToastStack() {
           key={t.id}
           role="button"
           tabIndex={0}
-          onClick={() => openDetail(t.opportunityId, t.id)}
+          onClick={() => openDetail(t.navigateHref, t.id)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              openDetail(t.opportunityId, t.id);
+              openDetail(t.navigateHref, t.id);
             }
           }}
           className={`pointer-events-auto relative w-full cursor-pointer overflow-hidden rounded-[24px] border border-white bg-white/95 text-left shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] ring-1 ring-slate-900/5 backdrop-blur-2xl ${
@@ -262,7 +298,7 @@ export function AdvisorClientRequestToastStack() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openDetail(t.opportunityId, t.id);
+                    openDetail(t.navigateHref, t.id);
                   }}
                   className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#0B1021] px-4 py-2.5 font-[family-name:var(--font-jakarta)] text-xs font-bold text-white transition-all hover:bg-black hover:shadow-lg"
                 >

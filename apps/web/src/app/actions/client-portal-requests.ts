@@ -5,8 +5,15 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
 import { newPortalRequestAdvisorTemplate } from "@/lib/email/templates";
 import { db } from "db";
-import { opportunities, opportunityStages, auditLog, contacts, tenants } from "db";
-import { eq, and, asc } from "db";
+import {
+  opportunities,
+  opportunityStages,
+  auditLog,
+  contacts,
+  tenants,
+  advisorNotifications,
+} from "db";
+import { eq, and, asc, desc, inArray } from "db";
 import {
   stageToClientStatus,
   getClientStatusLabel,
@@ -16,6 +23,8 @@ import type { ClientRequestItem } from "@/app/lib/client-portal/request-types";
 import { logActivity } from "./activity";
 import { caseTypeToLabel } from "@/lib/client-portal/case-type-labels";
 import { getTargetAdvisorUserIdForContact } from "@/app/actions/client-dashboard";
+import { getPortalRequestDisplayFields } from "@/lib/client-portal/portal-request-display";
+import { parseClientPortalNotificationBody } from "@/lib/advisor-in-app/parse-client-portal-notification-body";
 
 async function notifyAdvisorNewPortalRequest(params: {
   tenantId: string;
@@ -96,6 +105,154 @@ async function notifyAdvisorNewPortalRequest(params: {
       /* best-effort */
     }
   }
+}
+
+const CLIENT_PORTAL_NOTIFICATION_TYPE = "client_portal_request";
+
+export type AdvisorClientPortalInboxItem = {
+  notificationId: string;
+  notificationStatus: string;
+  notificationCreatedAt: Date;
+  opportunityId: string | null;
+  contactId: string | null;
+  clientName: string;
+  caseType: string;
+  caseTypeLabel: string;
+  subject: string;
+  preview: string;
+  bodyText: string | null;
+  statusKey: ClientStatusKey;
+  statusLabel: string;
+  opportunityMissing: boolean;
+};
+
+/**
+ * Inbox klientských požadavků pro přihlášeného poradce (in-app notifikace + opportunity).
+ */
+export async function getAdvisorClientPortalRequestsInbox(): Promise<AdvisorClientPortalInboxItem[]> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "opportunities:read")) return [];
+
+  const notifRows = await db
+    .select({
+      id: advisorNotifications.id,
+      title: advisorNotifications.title,
+      status: advisorNotifications.status,
+      createdAt: advisorNotifications.createdAt,
+      body: advisorNotifications.body,
+      relatedEntityType: advisorNotifications.relatedEntityType,
+      relatedEntityId: advisorNotifications.relatedEntityId,
+    })
+    .from(advisorNotifications)
+    .where(
+      and(
+        eq(advisorNotifications.tenantId, auth.tenantId),
+        eq(advisorNotifications.targetUserId, auth.userId),
+        eq(advisorNotifications.type, CLIENT_PORTAL_NOTIFICATION_TYPE)
+      )
+    )
+    .orderBy(desc(advisorNotifications.createdAt))
+    .limit(100);
+
+  const oppIds = notifRows
+    .map((n) => (n.relatedEntityType === "opportunity" ? n.relatedEntityId : null))
+    .filter((id): id is string => Boolean(id));
+
+  const oppMap = new Map<
+    string,
+    {
+      id: string;
+      title: string;
+      caseType: string | null;
+      contactId: string | null;
+      customFields: unknown;
+      closedAt: Date | null;
+      updatedAt: Date | null;
+      sortOrder: number | null;
+      firstName: string | null;
+      lastName: string | null;
+    }
+  >();
+
+  if (oppIds.length > 0) {
+    const oppRows = await db
+      .select({
+        id: opportunities.id,
+        title: opportunities.title,
+        caseType: opportunities.caseType,
+        contactId: opportunities.contactId,
+        customFields: opportunities.customFields,
+        closedAt: opportunities.closedAt,
+        updatedAt: opportunities.updatedAt,
+        sortOrder: opportunityStages.sortOrder,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+      })
+      .from(opportunities)
+      .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+      .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
+      .where(and(eq(opportunities.tenantId, auth.tenantId), inArray(opportunities.id, oppIds)));
+
+    for (const r of oppRows) {
+      oppMap.set(r.id, r);
+    }
+  }
+
+  return notifRows.map((n) => {
+    const oppId = n.relatedEntityType === "opportunity" ? n.relatedEntityId : null;
+    const opp = oppId ? oppMap.get(oppId) : undefined;
+    const meta = parseClientPortalNotificationBody(n.body);
+
+    if (!opp) {
+      const preview = meta.preview || "";
+      const nameFromNotif = n.title?.trim() || "";
+      return {
+        notificationId: n.id,
+        notificationStatus: n.status,
+        notificationCreatedAt: n.createdAt,
+        opportunityId: oppId,
+        contactId: null,
+        clientName: nameFromNotif || "Klient",
+        caseType: meta.caseType,
+        caseTypeLabel: meta.caseTypeLabel || caseTypeToLabel(meta.caseType),
+        subject: meta.caseTypeLabel || "Požadavek z portálu",
+        preview: preview.slice(0, 280) || "—",
+        bodyText: preview || null,
+        statusKey: "accepted" as ClientStatusKey,
+        statusLabel: getClientStatusLabel("accepted"),
+        opportunityMissing: true,
+      };
+    }
+
+    const custom = (opp.customFields as Record<string, unknown> | null) ?? {};
+    const isPortal =
+      custom.client_portal_request === true || String(custom.client_portal_request) === "true";
+    const clientName = [opp.firstName, opp.lastName].filter(Boolean).join(" ").trim() || "Klient";
+    const { subject, body, preview } = getPortalRequestDisplayFields(
+      isPortal ? custom : {},
+      opp.title,
+      opp.caseType
+    );
+
+    const statusKey = stageToClientStatus(opp.sortOrder ?? 0, opp.closedAt ?? null);
+
+    return {
+      notificationId: n.id,
+      notificationStatus: n.status,
+      notificationCreatedAt: n.createdAt,
+      opportunityId: opp.id,
+      contactId: opp.contactId,
+      clientName,
+      caseType: opp.caseType ?? meta.caseType,
+      caseTypeLabel: caseTypeToLabel(opp.caseType ?? meta.caseType),
+      subject,
+      preview,
+      bodyText: body,
+      statusKey,
+      statusLabel: getClientStatusLabel(statusKey),
+      opportunityMissing: false,
+    };
+  });
 }
 
 /**

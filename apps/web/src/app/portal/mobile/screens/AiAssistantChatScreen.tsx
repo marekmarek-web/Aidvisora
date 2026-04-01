@@ -365,8 +365,25 @@ export function AiAssistantChatScreen() {
     setMessages((prev) => [...prev, userMsg]);
 
     try {
+      const lastClientRef = messages
+        .flatMap((m) => m.referencedEntities ?? [])
+        .filter((e) => e.type === "client")
+        .pop();
+      const clientId = lastClientRef?.id?.trim() ?? "";
+      if (!clientId) {
+        setError(
+          "Soubor lze nahrát do trezoru klienta jen v kontextu klienta. Otevřete detail klienta a nahrajte dokument v záložce Dokumenty, nebo v chatu použijte odkaz na klienta z odpovědi asistenta."
+        );
+        setFiles([]);
+        setIsTyping(false);
+        return;
+      }
+
       const formData = new FormData();
       files.forEach((f) => formData.append("file", f));
+      formData.set("contactId", clientId);
+      formData.set("uploadSource", "ai_drawer");
+      formData.set("visibleToClient", "false");
       const uploadRes = await fetch("/api/documents/upload", { method: "POST", body: formData });
       if (!uploadRes.ok) throw new Error("Upload selhal");
       const uploadData = await uploadRes.json();

@@ -56,15 +56,6 @@ const DynamicClientTimeline = dynamic(
   },
 );
 
-const DynamicChatThread = dynamic(
-  () => import("@/app/components/ChatThread").then((m) => m.ChatThread),
-  {
-    loading: () => (
-      <div className="min-h-[160px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
-    ),
-  },
-);
-
 const DynamicDocumentsSection = dynamic(
   () => import("@/app/dashboard/contacts/[id]/DocumentsSection").then((m) => m.DocumentsSection),
   {
@@ -85,11 +76,11 @@ const DynamicBriefingTabContent = dynamic(
   },
 );
 
-const DynamicContactActivityTimeline = dynamic(
-  () => import("@/app/dashboard/contacts/[id]/ContactActivityTimeline").then((m) => m.ContactActivityTimeline),
+const DynamicMaterialRequestsTab = dynamic(
+  () => import("./MaterialRequestsTab").then((m) => m.MaterialRequestsTab),
   {
     loading: () => (
-      <div className="min-h-[120px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+      <div className="min-h-[200px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
     ),
   },
 );
@@ -191,21 +182,17 @@ function ContactTabBody({
           </div>
         </div>
       );
-    case "aktivita":
+    case "podklady":
       return (
-        <div className="space-y-6 md:space-y-8">
-          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-            <div className="p-6">
-              <DynamicContactActivityTimeline contactId={contactId} />
-            </div>
+        <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
+            <h2 className="text-lg font-black text-[color:var(--wp-text)]">Požadavky na podklady</h2>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">
+              Vyžádejte si od klienta dokumenty a sledujte odpovědi v klientském portálu.
+            </p>
           </div>
-          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-              <h2 className="text-lg font-black text-[color:var(--wp-text)]">Zprávy</h2>
-            </div>
-            <div className="p-6">
-              <DynamicChatThread contactId={contactId} currentUserType="advisor" />
-            </div>
+          <div className="p-6">
+            <DynamicMaterialRequestsTab contactId={contactId} />
           </div>
         </div>
       );

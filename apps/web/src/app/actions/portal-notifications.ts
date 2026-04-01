@@ -89,7 +89,12 @@ export async function markPortalNotificationRead(
 export async function createPortalNotification(params: {
   tenantId: string;
   contactId: string;
-  type: "new_message" | "request_status_change" | "new_document" | "important_date";
+  type:
+    | "new_message"
+    | "request_status_change"
+    | "new_document"
+    | "important_date"
+    | "advisor_material_request";
   title: string;
   body?: string | null;
   relatedEntityType?: string | null;

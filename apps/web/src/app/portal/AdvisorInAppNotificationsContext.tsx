@@ -12,7 +12,7 @@ import {
 } from "react";
 
 const POLL_MS = 45_000;
-const CLIENT_PORTAL_TYPE = "client_portal_request";
+const ADVISOR_TOAST_TYPES = "client_portal_request,client_material_response";
 
 export type AdvisorInAppNotificationRow = {
   id: string;
@@ -45,7 +45,7 @@ const AdvisorInAppNotificationsContext = createContext<AdvisorInAppNotifications
 
 async function fetchNotifications(): Promise<AdvisorInAppNotificationRow[]> {
   const res = await fetch(
-    `/api/notifications?limit=50&type=${encodeURIComponent(CLIENT_PORTAL_TYPE)}`,
+    `/api/notifications?limit=50&types=${encodeURIComponent(ADVISOR_TOAST_TYPES)}`,
     { credentials: "same-origin", cache: "no-store" }
   );
   if (!res.ok) return [];

@@ -10,6 +10,7 @@ import { getPortalNotificationsForClient } from "@/app/actions/portal-notificati
 import { getClientDashboardMetrics } from "@/app/actions/client-dashboard";
 import { getClientFinancialSummaryForContact } from "@/app/actions/client-financial-summary";
 import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
+import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import { ClientDashboardLayout } from "./ClientDashboardLayout";
 import { ClientWelcomeView } from "./ClientWelcomeView";
 
@@ -39,6 +40,7 @@ export default async function ClientZonePage() {
     notifications,
     financialSummaryRaw,
     advisor,
+    advisorMaterialRequests,
   ] = await Promise.all([
     getContractsByContact(auth.contactId),
     getDocumentsForClient(auth.contactId),
@@ -48,6 +50,7 @@ export default async function ClientZonePage() {
     getPortalNotificationsForClient(),
     getClientFinancialSummaryForContact(auth.contactId),
     getAssignedAdvisorForClient(auth.contactId).catch(() => null),
+    listClientMaterialRequests().catch(() => []),
   ]);
 
   const isFirstRun = contractsList.length === 0 && documentsList.length === 0;
@@ -103,6 +106,9 @@ export default async function ClientZonePage() {
           : null
       }
       financialSummary={financialSummary}
+      advisorMaterialRequests={advisorMaterialRequests.filter(
+        (r) => r.status !== "done" && r.status !== "closed"
+      )}
     />
   );
 }

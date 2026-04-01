@@ -44,6 +44,7 @@ export * from "./communication-drafts";
 export * from "./execution-actions";
 export * from "./reminders";
 export * from "./advisor-notifications";
+export * from "./advisor-material-requests";
 export * from "./escalation-events";
 export * from "./analytics-snapshots";
 export * from "./tenant-settings";

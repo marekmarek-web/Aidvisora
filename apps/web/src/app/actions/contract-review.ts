@@ -10,9 +10,11 @@ import {
 import { mergeFieldEditsIntoExtractedPayload } from "@/lib/ai-review/mappers";
 import { applyContractReview } from "@/lib/ai/apply-contract-review";
 import { mapContractReviewToBridgePayload } from "@/lib/ai/contracts-analyses-bridge";
+import { logActivity } from "./activity";
 import { db } from "db";
-import { contacts } from "db";
+import { contacts, documents } from "db";
 import { eq, and } from "db";
+import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 
 export type ContractReviewActionResult =
   | { ok: true; payload?: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
@@ -259,4 +261,87 @@ export async function applyContractReviewDrafts(
     applyResultPayload: bridgedPayload,
   });
   return { ok: true, payload: bridgedPayload };
+}
+
+/**
+ * Vytvoří záznam v tabulce `documents` se stejným souborem jako AI Review (bez kopírování v úložišti),
+ * aby byl soubor v jednotné dokumentové vrstvě u klienta. Volitelně viditelný v klientském portálu.
+ */
+export async function linkContractReviewFileToContactDocuments(
+  reviewId: string,
+  options?: { visibleToClient?: boolean }
+): Promise<ContractReviewActionResult & { documentId?: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:write")) {
+    return { ok: false, error: "Nemáte oprávnění." };
+  }
+  const row = await getContractReviewById(reviewId, auth.tenantId);
+  if (!row) {
+    return { ok: false, error: "Položka nenalezena." };
+  }
+  if (!row.matchedClientId) {
+    return { ok: false, error: "Nejdřív přiřaďte klienta k této položce." };
+  }
+  const contactId = row.matchedClientId;
+  const visible = options?.visibleToClient ?? false;
+
+  const [dup] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.tenantId, auth.tenantId),
+        eq(documents.contactId, contactId),
+        eq(documents.storagePath, row.storagePath)
+      )
+    )
+    .limit(1);
+  if (dup) {
+    return { ok: true, documentId: dup.id };
+  }
+
+  const [inserted] = await db
+    .insert(documents)
+    .values({
+      tenantId: auth.tenantId,
+      contactId,
+      name: row.fileName,
+      storagePath: row.storagePath,
+      mimeType: row.mimeType ?? "application/pdf",
+      sizeBytes: row.sizeBytes ?? null,
+      visibleToClient: visible,
+      uploadSource: "api",
+      uploadedBy: auth.userId,
+      sourceChannel: "api",
+      tags: ["ai-smlouva", `review:${reviewId}`],
+    })
+    .returning({ id: documents.id });
+
+  const newId = inserted?.id;
+  if (newId) {
+    try {
+      await logActivity("document", newId, "upload", {
+        contactId,
+        source: "contract_ai_review",
+        reviewId,
+      });
+    } catch {
+      /* best-effort */
+    }
+    if (visible) {
+      try {
+        await notifyClientAdvisorSharedDocument({
+          tenantId: auth.tenantId,
+          contactId,
+          documentId: newId,
+          documentName: row.fileName,
+          reason: "upload",
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+  }
+
+  return { ok: true, documentId: newId };
 }

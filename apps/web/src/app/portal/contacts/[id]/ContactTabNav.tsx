@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CONTACT_TAB_IDS,
   CONTACT_TAB_LABELS,
+  normalizeContactTab,
   type ContactTabId,
 } from "./contact-detail-tabs";
 
@@ -36,10 +37,11 @@ function HashToQuerySync({ baseQueryNoTab }: { baseQueryNoTab: string }) {
     if (searchParams.get("tab")) return;
     if (!isContactDetailPathForHashSync(pathname)) return;
     const raw = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-    const tabPart = raw.split("&")[0] as ContactTabId;
-    if (!tabPart || !CONTACT_TAB_IDS.includes(tabPart)) return;
+    const tabPart = raw.split("&")[0] ?? "";
+    const normalized = normalizeContactTab(tabPart);
+    if (!tabPart || normalized === "prehled") return;
     const p = new URLSearchParams(baseQueryNoTab);
-    p.set("tab", tabPart);
+    p.set("tab", normalized);
     const nextUrl = `${pathname}?${p.toString()}`;
     queueMicrotask(() => {
       if (cancelled) return;
