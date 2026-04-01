@@ -22,3 +22,8 @@ CREATE POLICY "opportunities_select_tenant_members" ON public.opportunities
   );
 
 -- Poznámka: zápis do opportunities z aplikace probíhá přes serverové DB připojení (mimo RLS JWT).
+
+-- Ověření po nasazení (SQL Editor):
+-- SELECT schemaname, tablename FROM pg_publication_tables
+--   WHERE pubname = 'supabase_realtime' AND tablename = 'opportunities';
+-- SELECT polname, cmd FROM pg_policies WHERE tablename = 'opportunities';

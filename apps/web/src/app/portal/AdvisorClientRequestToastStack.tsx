@@ -283,13 +283,13 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
 
   return (
     <div
-      className="pointer-events-none fixed bottom-24 right-4 z-[301] flex w-[calc(100%-2rem)] max-w-[400px] flex-col gap-3 md:bottom-6 md:right-6"
+      className="pointer-events-none fixed left-4 right-4 z-[301] flex w-[calc(100%-2rem)] max-w-[400px] flex-col gap-3 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 md:left-auto md:right-6 md:w-full"
       aria-live="polite"
     >
+      <div className="flex w-full flex-col gap-3">
       {items.map((t) => (
-        <div
+        <article
           key={t.id}
-          role="button"
           tabIndex={0}
           onClick={() => openDetail(t.opportunityId, t.id)}
           onKeyDown={(e) => {
@@ -298,7 +298,8 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
               openDetail(t.opportunityId, t.id);
             }
           }}
-          className={`pointer-events-auto relative w-full cursor-pointer overflow-hidden rounded-[24px] border border-white bg-white/95 text-left shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] ring-1 ring-slate-900/5 backdrop-blur-2xl ${
+          aria-label={`Nový požadavek od ${t.clientName}, ${t.categoryLabel}. Otevřít detail v pipeline.`}
+          className={`pointer-events-auto relative w-full cursor-pointer overflow-hidden rounded-[24px] border border-white bg-white/95 text-left shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] ring-1 ring-slate-900/5 backdrop-blur-2xl outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
             t.isExiting ? "aidv-client-request-toast--out" : "aidv-client-request-toast--in"
           }`}
         >
@@ -306,7 +307,7 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
 
           <div className="flex items-start gap-4 p-5">
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm ${ACCENT_ICON[t.accent]}`}
+              className={`pointer-events-none flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm ${ACCENT_ICON[t.accent]}`}
             >
               <t.Icon size={20} strokeWidth={2.5} />
             </div>
@@ -317,7 +318,7 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
                   {t.clientName}
                 </p>
                 <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  <Clock size={10} /> {t.timeLabel}
+                  <Clock size={10} aria-hidden /> {t.timeLabel}
                 </span>
               </div>
               <p className={`mb-1.5 font-[family-name:var(--font-jakarta)] text-xs font-bold ${ACCENT_SUB[t.accent]}`}>
@@ -326,16 +327,9 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
               <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-slate-500">{t.preview}</p>
 
               <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDetail(t.opportunityId, t.id);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#0B1021] px-4 py-2.5 font-[family-name:var(--font-jakarta)] text-xs font-bold text-white transition-all hover:bg-black hover:shadow-lg"
-                >
-                  Zobrazit <ArrowRight size={14} />
-                </button>
+                <span className="inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-[10px] bg-[#0B1021] px-4 py-2.5 font-[family-name:var(--font-jakarta)] text-xs font-bold text-white pointer-events-none">
+                  Zobrazit <ArrowRight size={14} aria-hidden />
+                </span>
               </div>
             </div>
 
@@ -352,17 +346,17 @@ export function AdvisorClientRequestToastStack({ tenantId }: { tenantId: string 
             </button>
           </div>
 
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
+          <div className="pointer-events-none absolute bottom-0 left-0 h-1 w-full bg-slate-100">
             <div
-              className={`h-full ${ACCENT_PROGRESS[t.accent]}`}
+              className={`aidv-client-request-toast__progress-inner h-full ${ACCENT_PROGRESS[t.accent]}`}
               style={{
-                transformOrigin: "left center",
                 animation: `aidvToastProgress ${t.progressMs}ms linear forwards`,
               }}
             />
           </div>
-        </div>
+        </article>
       ))}
+      </div>
     </div>
   );
 }

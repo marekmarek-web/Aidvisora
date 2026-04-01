@@ -54,4 +54,8 @@
   overflow: hidden;
 }
 
-/* duration se nastaví inline u komponenty (ms do auto-dismiss) */
+.aidv-client-request-toast__progress-inner {
+  transform-origin: left center;
+}
+
+/* duration animace progressu se nastaví inline u komponenty (ms do auto-dismiss) */
