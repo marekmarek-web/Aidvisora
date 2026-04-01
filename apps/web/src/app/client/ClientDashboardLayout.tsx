@@ -24,7 +24,8 @@ import { isClientPortalAiDisabled } from "@/lib/client-portal/feature-flags";
 type QuickStats = {
   assetsUnderManagement: number;
   monthlyInvestments: number;
-  riskCoveragePercent: number;
+  monthlyInsurancePremiums: number;
+  activeContractCount: number;
 };
 
 /** Serializable slice from `getClientFinancialSummaryForContact` for the client dashboard. */
@@ -264,20 +265,15 @@ export function ClientDashboardLayout({
           <div className="flex items-center gap-2 mb-2 text-amber-500">
             <Shield size={16} />
             <span className="text-[10px] font-black uppercase tracking-widest">
-              Krytí rizik
+              Měsíční pojistné
             </span>
           </div>
-          <div className="flex items-end gap-3">
-            <div className="text-3xl font-display font-black text-slate-900">
-              {quickStats.riskCoveragePercent}%
-            </div>
-            <div className="w-full h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
-              <div
-                className="h-full bg-amber-400"
-                style={{ width: `${quickStats.riskCoveragePercent}%` }}
-              />
-            </div>
+          <div className="text-3xl font-display font-black text-slate-900">
+            {formatMoney(quickStats.monthlyInsurancePremiums)}
           </div>
+          <p className="text-xs text-slate-500 mt-2 font-medium">
+            Aktivních položek v přehledu: {quickStats.activeContractCount}
+          </p>
         </div>
       </div>
 

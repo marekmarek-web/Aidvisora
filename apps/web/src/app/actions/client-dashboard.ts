@@ -3,13 +3,16 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { db } from "db";
 import { clientInvitations, contracts, memberships, roles, userProfiles } from "db";
-import { and, desc, eq, isNotNull } from "db";
-import { getClientFinancialSummaryForContact } from "./client-financial-summary";
+import { and, desc, eq, inArray, isNotNull, isNull } from "db";
+import { aggregatePortfolioMetrics } from "@/lib/client-portfolio/read-model";
 
 type DashboardMetricSummary = {
+  /** Roční ekvivalent investic (INV/DIP/DPS) z publikovaného portfolia */
   assetsUnderManagement: number;
   monthlyInvestments: number;
-  riskCoveragePercent: number;
+  /** Součet měsíčních pojistných z publikovaného portfolia */
+  monthlyInsurancePremiums: number;
+  activeContractCount: number;
 };
 
 export type ClientAdvisorInfo = {
@@ -18,12 +21,6 @@ export type ClientAdvisorInfo = {
   email: string | null;
   initials: string;
 };
-
-function toNumber(value: string | null | undefined): number {
-  if (!value) return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
 
 function toInitials(name: string): string {
   const trimmed = name.trim();
@@ -45,34 +42,43 @@ export async function getClientDashboardMetrics(
       segment: contracts.segment,
       premiumAmount: contracts.premiumAmount,
       premiumAnnual: contracts.premiumAnnual,
+      portfolioAttributes: contracts.portfolioAttributes,
     })
     .from(contracts)
-    .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)));
+    .where(
+      and(
+        eq(contracts.tenantId, auth.tenantId),
+        eq(contracts.contactId, contactId),
+        eq(contracts.visibleToClient, true),
+        inArray(contracts.portfolioStatus, ["active", "ended"]),
+        isNull(contracts.archivedAt)
+      )
+    );
+
+  const agg = aggregatePortfolioMetrics(
+    contractRows.map((r) => ({
+      segment: r.segment,
+      premiumAmount: r.premiumAmount != null ? String(r.premiumAmount) : null,
+      premiumAnnual: r.premiumAnnual != null ? String(r.premiumAnnual) : null,
+      portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
+    }))
+  );
 
   const investmentSegments = new Set(["INV", "DIP", "DPS"]);
   let assetsUnderManagement = 0;
-  let monthlyInvestments = 0;
-
   for (const contract of contractRows) {
-    const monthly = toNumber(contract.premiumAmount);
-    const annual = toNumber(contract.premiumAnnual);
+    if (!investmentSegments.has(contract.segment)) continue;
+    const monthly = Number(contract.premiumAmount ?? 0);
+    const annual = Number(contract.premiumAnnual ?? 0);
     const normalizedAnnual = annual > 0 ? annual : monthly * 12;
-
-    if (investmentSegments.has(contract.segment)) {
-      assetsUnderManagement += normalizedAnnual;
-      monthlyInvestments += monthly;
-    }
+    if (Number.isFinite(normalizedAnnual)) assetsUnderManagement += normalizedAnnual;
   }
-
-  const summary = await getClientFinancialSummaryForContact(contactId);
-  const riskCoveragePercent = summary.reserveOk
-    ? 100
-    : Math.max(10, Math.min(95, Math.round((summary.assets / Math.max(summary.liabilities, 1)) * 40)));
 
   return {
     assetsUnderManagement: Math.round(assetsUnderManagement),
-    monthlyInvestments: Math.round(monthlyInvestments),
-    riskCoveragePercent,
+    monthlyInvestments: agg.monthlyInvestments,
+    monthlyInsurancePremiums: agg.monthlyInsurancePremiums,
+    activeContractCount: agg.activeContractCount,
   };
 }
 

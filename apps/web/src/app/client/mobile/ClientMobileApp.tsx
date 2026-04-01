@@ -1,7 +1,7 @@
 import { and, contacts, db, eq } from "db";
 import { getClientDashboardMetrics, type ClientAdvisorInfo } from "@/app/actions/client-dashboard";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
-import { getContractsByContact } from "@/app/actions/contracts";
+import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { getPortalNotificationsForClient, getPortalNotificationsUnreadCount } from "@/app/actions/portal-notifications";
 import { getClientHouseholdForContact } from "@/app/actions/households";
@@ -40,10 +40,11 @@ export async function ClientMobileApp({
       getClientDashboardMetrics(contactId).catch(() => ({
         assetsUnderManagement: 0,
         monthlyInvestments: 0,
-        riskCoveragePercent: 0,
+        monthlyInsurancePremiums: 0,
+        activeContractCount: 0,
       })),
       getClientRequests().catch(() => []),
-      getContractsByContact(contactId).catch(() => []),
+      getClientPortfolioForContact(contactId).catch(() => []),
       getDocumentsForClient(contactId).catch(() => []),
       getPortalNotificationsForClient().catch(() => []),
       getClientHouseholdForContact(contactId).catch(() => null),

@@ -4,7 +4,7 @@ import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contracts, partners, products } from "db";
-import { eq, and, asc, or, isNull } from "db";
+import { eq, and, asc, or, isNull, inArray } from "db";
 import { contractSegments } from "db";
 import { logActivity } from "./activity";
 import {
@@ -29,6 +29,15 @@ export type ContractRow = {
   startDate: string | null;
   anniversaryDate: string | null;
   note: string | null;
+  visibleToClient: boolean;
+  portfolioStatus: string;
+  sourceKind: string;
+  sourceDocumentId: string | null;
+  sourceContractReviewId: string | null;
+  advisorConfirmedAt: Date | null;
+  confirmedByUserId: string | null;
+  portfolioAttributes: Record<string, unknown>;
+  extractionConfidence: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -56,6 +65,15 @@ export async function getContractsByContact(contactId: string): Promise<Contract
       startDate: contracts.startDate,
       anniversaryDate: contracts.anniversaryDate,
       note: contracts.note,
+      visibleToClient: contracts.visibleToClient,
+      portfolioStatus: contracts.portfolioStatus,
+      sourceKind: contracts.sourceKind,
+      sourceDocumentId: contracts.sourceDocumentId,
+      sourceContractReviewId: contracts.sourceContractReviewId,
+      advisorConfirmedAt: contracts.advisorConfirmedAt,
+      confirmedByUserId: contracts.confirmedByUserId,
+      portfolioAttributes: contracts.portfolioAttributes,
+      extractionConfidence: contracts.extractionConfidence,
       createdAt: contracts.createdAt,
       updatedAt: contracts.updatedAt,
     })
@@ -65,6 +83,76 @@ export async function getContractsByContact(contactId: string): Promise<Contract
   return rows.map((r) => ({
     ...r,
     type: r.type ?? r.segment,
+    portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
+    extractionConfidence:
+      r.extractionConfidence != null ? String(r.extractionConfidence) : null,
+  }));
+}
+
+/**
+ * Read model for client portal: only contracts published to the client and in a displayable state.
+ * Does not expose extraction confidence to the UI layer — strip if serializing to client components.
+ */
+export async function getClientPortfolioForContact(contactId: string): Promise<ContractRow[]> {
+  const auth = await requireAuthInAction();
+  const isClient = auth.roleName === "Client";
+  if (isClient) {
+    if (auth.contactId !== contactId) throw new Error("Forbidden");
+  } else if (!hasPermission(auth.roleName, "contacts:read")) {
+    throw new Error("Forbidden");
+  }
+
+  const rows = await db
+    .select({
+      id: contracts.id,
+      contactId: contracts.contactId,
+      segment: contracts.segment,
+      type: contracts.type,
+      partnerId: contracts.partnerId,
+      productId: contracts.productId,
+      partnerName: contracts.partnerName,
+      productName: contracts.productName,
+      premiumAmount: contracts.premiumAmount,
+      premiumAnnual: contracts.premiumAnnual,
+      contractNumber: contracts.contractNumber,
+      startDate: contracts.startDate,
+      anniversaryDate: contracts.anniversaryDate,
+      note: contracts.note,
+      visibleToClient: contracts.visibleToClient,
+      portfolioStatus: contracts.portfolioStatus,
+      sourceKind: contracts.sourceKind,
+      sourceDocumentId: contracts.sourceDocumentId,
+      sourceContractReviewId: contracts.sourceContractReviewId,
+      advisorConfirmedAt: contracts.advisorConfirmedAt,
+      confirmedByUserId: contracts.confirmedByUserId,
+      portfolioAttributes: contracts.portfolioAttributes,
+      extractionConfidence: contracts.extractionConfidence,
+      createdAt: contracts.createdAt,
+      updatedAt: contracts.updatedAt,
+    })
+    .from(contracts)
+    .where(
+      and(
+        eq(contracts.tenantId, auth.tenantId),
+        eq(contracts.contactId, contactId),
+        eq(contracts.visibleToClient, true),
+        inArray(contracts.portfolioStatus, ["active", "ended"]),
+        isNull(contracts.archivedAt)
+      )
+    )
+    .orderBy(asc(contracts.startDate));
+
+  return rows.map((r) => ({
+    ...r,
+    type: r.type ?? r.segment,
+    portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
+    extractionConfidence:
+      isClient || r.extractionConfidence == null
+        ? null
+        : String(r.extractionConfidence),
+    advisorConfirmedAt: isClient ? null : r.advisorConfirmedAt,
+    confirmedByUserId: isClient ? null : r.confirmedByUserId,
+    sourceContractReviewId: isClient ? null : r.sourceContractReviewId,
   }));
 }
 
@@ -214,6 +302,12 @@ export async function createContract(
         startDate: normalized.startDate || null,
         anniversaryDate: normalized.anniversaryDate || null,
         note: normalized.note?.trim() || null,
+        visibleToClient: true,
+        portfolioStatus: "active",
+        sourceKind: "manual",
+        advisorConfirmedAt: new Date(),
+        confirmedByUserId: auth.userId,
+        portfolioAttributes: {},
       })
       .returning({ id: contracts.id });
     const newId = row?.id ?? null;
@@ -301,6 +395,9 @@ export async function updateContract(
     startDate?: string;
     anniversaryDate?: string;
     note?: string;
+    /** Klientský portál – sekce Moje portfolio */
+    visibleToClient?: boolean;
+    portfolioStatus?: string;
   }
 ) {
   try {
@@ -348,6 +445,17 @@ export async function updateContract(
       if (pr) productName = pr.name;
     }
 
+    const portfolioPatch: Record<string, unknown> = {};
+    if (form.visibleToClient !== undefined) portfolioPatch.visibleToClient = form.visibleToClient;
+    if (form.portfolioStatus !== undefined) {
+      const ps = form.portfolioStatus.trim();
+      if (["draft", "pending_review", "active", "ended"].includes(ps)) {
+        portfolioPatch.portfolioStatus = ps;
+      }
+    }
+    const touchPortfolioMeta =
+      form.visibleToClient !== undefined || form.portfolioStatus !== undefined;
+
     await db
       .update(contracts)
       .set({
@@ -363,6 +471,10 @@ export async function updateContract(
         startDate: normalized.startDate || null,
         anniversaryDate: normalized.anniversaryDate || null,
         note: normalized.note?.trim() || null,
+        ...portfolioPatch,
+        ...(touchPortfolioMeta
+          ? { advisorConfirmedAt: new Date(), confirmedByUserId: auth.userId }
+          : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id)));

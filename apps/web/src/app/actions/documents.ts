@@ -3,7 +3,7 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { documents, contacts } from "db";
+import { documents, contacts, contracts } from "db";
 import { eq, and, desc } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logActivity } from "./activity";
@@ -292,6 +292,25 @@ export async function updateDocument(
       updatedAt: new Date(),
     })
     .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)));
+
+  /** Single source of truth: linking a document to a contract sets lineage on `contracts`. */
+  if (data.contractId !== undefined) {
+    await db
+      .update(contracts)
+      .set({ sourceDocumentId: null, updatedAt: new Date() })
+      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.sourceDocumentId, id)));
+    if (data.contractId) {
+      await db
+        .update(contracts)
+        .set({
+          sourceDocumentId: id,
+          sourceKind: "document",
+          updatedAt: new Date(),
+        })
+        .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, data.contractId)));
+    }
+  }
+
   try { await logActivity("document", id, "update", { fields: Object.keys(data) }); } catch {}
   if (
     data.visibleToClient === true &&

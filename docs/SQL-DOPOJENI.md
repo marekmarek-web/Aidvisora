@@ -26,6 +26,7 @@ Při **nové** migraci nebo významné úpravě `.sql` přidejte **jeden řádek
 | 2026-04-01 | Supabase Performance Advisor: RLS initplan (`SELECT` kolem `auth.*`), sloučené permissive politiky, duplicitní index `mindmap_maps`, FA politiky | [supabase-performance-advisor-2026-04-01.sql](../packages/db/migrations/supabase-performance-advisor-2026-04-01.sql) |
 | 2026-04-01 | Požadavky na podklady: tabulky `advisor_material_requests`, zprávy, vazba na dokumenty, RLS pro tenant a klienta | [advisor-material-requests-2026-04-01.sql](../packages/db/migrations/advisor-material-requests-2026-04-01.sql) |
 | 2026-04-01 | Realtime in-app notifikace: `advisor_notifications` v `supabase_realtime`, RLS SELECT `target_user_id = auth.uid()` | [advisor-notifications-realtime-rls.sql](../packages/db/migrations/advisor-notifications-realtime-rls.sql) |
+| 2026-04-01 | Moje portfolio: sloupce na `contracts` (viditelnost klienta, zdroj, `portfolio_attributes`, vazba na dokument / AI review) | [contracts-portfolio-2026-04-01.sql](../packages/db/migrations/contracts-portfolio-2026-04-01.sql) |
 
 ---
 

@@ -21,7 +21,8 @@ export type ClientMobileInitialData = {
   quickStats: {
     assetsUnderManagement: number;
     monthlyInvestments: number;
-    riskCoveragePercent: number;
+    monthlyInsurancePremiums: number;
+    activeContractCount: number;
   };
   requests: ClientRequestItem[];
   contracts: ContractRow[];

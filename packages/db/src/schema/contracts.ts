@@ -1,5 +1,14 @@
-import { pgTable, uuid, text, timestamp, date, boolean, numeric } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, uuid, text, timestamp, date, boolean, numeric, jsonb } from "drizzle-orm/pg-core";
 import { contacts } from "./contacts";
+
+/** Lifecycle for portfolio / client zone (advisor workflow + client visibility rules). */
+export const portfolioStatuses = ["draft", "pending_review", "active", "ended"] as const;
+export type PortfolioStatus = (typeof portfolioStatuses)[number];
+
+/** How the contract row was created (audit / traceability). */
+export const contractSourceKinds = ["manual", "document", "ai_review", "import"] as const;
+export type ContractSourceKind = (typeof contractSourceKinds)[number];
 
 /** Segment smlouvy – v souladu s katalogem a top-lists (catalog.json, top-lists-seed-v2.json). */
 export const contractSegments = [
@@ -72,6 +81,22 @@ export const contracts = pgTable("contracts", {
   anniversaryDate: date("anniversary_date", { mode: "string" }),
   note: text("note"),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
+  /** Client portal: show this contract in „Moje portfolio“ when true and status allows. */
+  visibleToClient: boolean("visible_to_client").notNull().default(true),
+  portfolioStatus: text("portfolio_status").notNull().default("active").$type<PortfolioStatus>(),
+  sourceKind: text("source_kind").notNull().default("manual").$type<ContractSourceKind>(),
+  /** Optional FK to documents.id (set in SQL migration; no TS ref to avoid circular imports). */
+  sourceDocumentId: uuid("source_document_id"),
+  sourceContractReviewId: uuid("source_contract_review_id"),
+  advisorConfirmedAt: timestamp("advisor_confirmed_at", { withTimezone: true }),
+  confirmedByUserId: text("confirmed_by_user_id"),
+  /** Normalized extras: loan principal, sum insured, fixation, insured persons, subcategory, etc. */
+  portfolioAttributes: jsonb("portfolio_attributes")
+    .notNull()
+    .default(sql`'{}'::jsonb`)
+    .$type<Record<string, unknown>>(),
+  /** Internal 0–1 confidence from extraction; not exposed to client UI. */
+  extractionConfidence: numeric("extraction_confidence", { precision: 5, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

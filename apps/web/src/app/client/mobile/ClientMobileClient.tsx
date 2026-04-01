@@ -19,7 +19,7 @@ import {
   createClientPortalRequest,
   getClientRequests,
 } from "@/app/actions/client-portal-requests";
-import { getContractsByContact, type ContractRow } from "@/app/actions/contracts";
+import type { ContractRow } from "@/app/actions/contracts";
 import {
   clientUploadDocument,
   getDocumentsForClient,
@@ -421,11 +421,9 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                     <p className="text-lg font-black mt-1">{quickStats.monthlyInvestments.toLocaleString("cs-CZ")} Kč</p>
                   </MobileCard>
                   <MobileCard className="p-3 col-span-2">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Krytí rizik</p>
-                    <p className="text-lg font-black mt-1">{quickStats.riskCoveragePercent}%</p>
-                    <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, Math.min(100, quickStats.riskCoveragePercent))}%` }} />
-                    </div>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-black">Měsíční pojistné</p>
+                    <p className="text-lg font-black mt-1">{quickStats.monthlyInsurancePremiums.toLocaleString("cs-CZ")} Kč</p>
+                    <p className="text-xs text-slate-500 mt-1">Položek v přehledu: {quickStats.activeContractCount}</p>
                   </MobileCard>
                 </div>
               </MobileSection>

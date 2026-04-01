@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+import { fetchContactDocumentsBundle } from "@/app/dashboard/contacts/contact-documents-bundle";
 import {
-  getContractsByContact,
   getContractSegments,
   updateContract,
   deleteContract,
 } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
+import {
+  getPotentialDuplicateContractPairs,
+  type DuplicateContractPair,
+} from "@/app/actions/contract-dedup";
 import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
 import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 import { segmentLabel } from "@/app/lib/segment-labels";
@@ -28,10 +34,44 @@ import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
 import { getSegmentUiGroup } from "@/lib/contracts/contract-segment-wizard-config";
 
 export function ContractsSection({ contactId }: { contactId: string }) {
-  const [list, setList] = useState<ContractRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [segments, setSegments] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const bundleQK = queryKeys.contacts.documentsBundle(contactId);
+
+  const {
+    data: bundleData,
+    isPending: loading,
+    isError: bundleIsError,
+    error: bundleErr,
+    refetch: refetchBundle,
+  } = useQuery({
+    queryKey: bundleQK,
+    queryFn: () => fetchContactDocumentsBundle(contactId),
+    staleTime: 45_000,
+  });
+
+  const { data: segments = [] } = useQuery({
+    queryKey: queryKeys.contacts.contractSegments(),
+    queryFn: getContractSegments,
+    staleTime: 300_000,
+  });
+
+  const { data: dupPairs = [] } = useQuery({
+    queryKey: queryKeys.contacts.contractDupPairs(contactId),
+    queryFn: () => getPotentialDuplicateContractPairs(contactId),
+    staleTime: 45_000,
+  });
+
+  const list = bundleData?.contracts ?? [];
+  const loadError = bundleIsError
+    ? bundleErr instanceof Error
+      ? bundleErr.message
+      : "Nepodařilo se načíst smlouvy."
+    : null;
+
+  const invalidateContractsData = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: bundleQK });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.contractDupPairs(contactId) });
+  }, [queryClient, bundleQK, contactId]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -39,25 +79,8 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [form, setForm] = useState<ContractFormState>(() => initialContractFormState());
   const [pickerValue, setPickerValue] = useState<ProductPickerValue>({ partnerId: "", productId: "" });
-
-  function load() {
-    setLoading(true);
-    setLoadError(null);
-    Promise.all([
-      getContractsByContact(contactId),
-      getContractSegments().then(setSegments),
-    ])
-      .then(([contracts]) => {
-        setList(contracts);
-      })
-      .catch((err) => {
-        setList([]);
-        setLoadError(err instanceof Error ? err.message : "Nepodařilo se načíst smlouvy.");
-      })
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => load(), [contactId]);
+  const [visibleToClientEdit, setVisibleToClientEdit] = useState(true);
+  const [portfolioStatusEdit, setPortfolioStatusEdit] = useState("active");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -97,13 +120,15 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       startDate: form.startDate || undefined,
       anniversaryDate: form.anniversaryDate || undefined,
       note: form.note || undefined,
+      visibleToClient: visibleToClientEdit,
+      portfolioStatus: portfolioStatusEdit,
     };
     try {
       await updateContract(editingId, payload);
       setForm(initialContractFormState());
       setPickerValue({ partnerId: "", productId: "" });
       setEditingId(null);
-      load();
+      invalidateContractsData();
     } catch (err) {
       console.error("Chyba při ukládání smlouvy:", err);
       const message =
@@ -118,7 +143,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
     setDeletePending(true);
     try {
       await deleteContract(id);
-      load();
+      invalidateContractsData();
       if (editingId === id) setEditingId(null);
       setDeleteConfirmId(null);
     } finally {
@@ -128,6 +153,8 @@ export function ContractsSection({ contactId }: { contactId: string }) {
 
   function startEdit(c: ContractRow) {
     setEditingId(c.id);
+    setVisibleToClientEdit(c.visibleToClient !== false);
+    setPortfolioStatusEdit(c.portfolioStatus ?? "active");
     setForm({
       segment: c.segment,
       partnerId: c.partnerId ?? "",
@@ -155,7 +182,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
     return (
       <div className="rounded-[var(--wp-radius-lg)] border border-red-200 bg-red-50 p-6 shadow-sm">
         <p className="text-red-600 text-sm mb-3">{loadError}</p>
-        <button type="button" onClick={() => load()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
+        <button type="button" onClick={() => void refetchBundle()} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 min-h-[44px]">
           Zkusit znovu
         </button>
       </div>
@@ -175,6 +202,20 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       <p className="text-xs text-[color:var(--wp-text-muted)] mb-4">
         {EUCS_ZP_DISCLAIMER}
       </p>
+      {dupPairs.length > 0 ? (
+        <div className="mb-4 rounded-[var(--wp-radius)] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold mb-2">Možné duplicity (zkontrolujte ručně)</p>
+          <ul className="space-y-2 list-disc list-inside">
+            {dupPairs.map((p, idx) => (
+              <li key={idx}>
+                {p.reason === "same_contract_number" ? "Stejné číslo smlouvy" : "Stejný partner, produkt a segment"}:{" "}
+                <span className="font-mono text-xs">{p.contractA.contractNumber || p.contractA.id.slice(0, 8)}</span> vs{" "}
+                <span className="font-mono text-xs">{p.contractB.contractNumber || p.contractB.id.slice(0, 8)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <ul className="space-y-3 mb-4">
         {list.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm min-h-[44px]">
@@ -190,6 +231,10 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                 ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
                 : ""}
               {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
+              <span className="block text-[11px] text-[color:var(--wp-text-muted)] mt-1">
+                {c.visibleToClient === false ? "Skryto v klientské zóně" : "V klientské zóně"}
+                {c.portfolioStatus && c.portfolioStatus !== "active" ? ` · ${c.portfolioStatus}` : ""}
+              </span>
             </span>
             <div className="flex gap-2 shrink-0">
               <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
@@ -205,8 +250,8 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       <NewContractWizard
         open={adding}
         contactId={contactId}
-        onClose={() => { setAdding(false); load(); }}
-        onSuccess={() => load()}
+        onClose={() => { setAdding(false); invalidateContractsData(); }}
+        onSuccess={() => invalidateContractsData()}
       />
       {editingId ? (
         <form onSubmit={handleSubmitEdit} className="space-y-2 max-w-md">
@@ -262,6 +307,30 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               input: "w-full rounded border border-monday-border px-2 py-1.5 text-sm min-h-[44px]",
             }}
           />
+          <div className="flex flex-col gap-2 rounded border border-[color:var(--wp-border)] p-3 bg-[color:var(--wp-surface-muted)]">
+            <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={visibleToClientEdit}
+                onChange={(e) => setVisibleToClientEdit(e.target.checked)}
+                className="h-5 w-5 rounded border-monday-border"
+              />
+              <span className="text-sm text-[color:var(--wp-text)]">Zobrazit v klientské zóně (Moje portfolio)</span>
+            </label>
+            <div>
+              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Stav v portfoliu</label>
+              <select
+                value={portfolioStatusEdit}
+                onChange={(e) => setPortfolioStatusEdit(e.target.value)}
+                className="w-full rounded border border-monday-border px-2 py-2 text-sm min-h-[44px]"
+              >
+                <option value="active">Aktivní</option>
+                <option value="ended">Ukončené</option>
+                <option value="pending_review">Čeká na kontrolu</option>
+                <option value="draft">Koncept</option>
+              </select>
+            </div>
+          </div>
           <div>
             <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Nahrát smlouvu (PDF)</label>
             <DocumentUploadZone
@@ -270,7 +339,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               initialContractId={editingId}
               submitButtonLabel="Nahrát smlouvu"
               chooseButtonLabel="Vybrat smlouvu (PDF / foto)"
-              onUploaded={() => load()}
+              onUploaded={() => invalidateContractsData()}
               className="p-0 border-0 bg-transparent"
             />
           </div>

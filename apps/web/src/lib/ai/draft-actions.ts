@@ -26,6 +26,11 @@ export function resolveSegmentFromType(primaryType: string): string {
     investment_service_agreement: "INV",
     investment_subscription_document: "INV",
     investment_modelation: "INV",
+    motor_insurance_contract: "AUTO_PR",
+    vehicle_insurance_contract: "AUTO_HAV",
+    travel_insurance_contract: "CEST",
+    travel_insurance: "CEST",
+    business_insurance_contract: "FIRMA_POJ",
   };
   return map[primaryType] ?? "ZP";
 }

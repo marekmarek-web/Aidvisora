@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { db } from "db";
 import { contacts } from "db";
 import { eq, and } from "db";
-import { getContractsByContact } from "@/app/actions/contracts";
+import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { getPaymentInstructionsForContact } from "@/app/actions/payment-pdf";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
@@ -42,7 +42,7 @@ export default async function ClientZonePage() {
     advisor,
     advisorMaterialRequests,
   ] = await Promise.all([
-    getContractsByContact(auth.contactId),
+    getClientPortfolioForContact(auth.contactId),
     getDocumentsForClient(auth.contactId),
     getPaymentInstructionsForContact(auth.contactId),
     getClientRequests(),

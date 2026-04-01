@@ -15,6 +15,27 @@ export type ApplyContractReviewResult =
   | { ok: true; payload: ApplyResultPayload }
   | { ok: false; error: string };
 
+function buildPortfolioAttributesFromExtracted(extracted: unknown): Record<string, unknown> {
+  if (!extracted || typeof extracted !== "object") return {};
+  const p = extracted as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  const loan = p.loanAmount ?? p.loanPrincipal ?? p.principalAmount ?? p.creditAmount;
+  if (loan != null && loan !== "") out.loanPrincipal = typeof loan === "string" ? loan : String(loan);
+  const sum = p.sumInsured ?? p.totalCoverage ?? p.insuredAmount;
+  if (sum != null && sum !== "") out.sumInsured = typeof sum === "string" ? sum : String(sum);
+  if (p.insuredPersons != null) out.insuredPersons = p.insuredPersons;
+  if (p.vehicleRegistration != null) out.vehicleRegistration = String(p.vehicleRegistration);
+  if (p.propertyAddress != null) out.propertyAddress = String(p.propertyAddress);
+  return out;
+}
+
+function normalizeExtractionConfidence(c: number | null | undefined): string | null {
+  if (c == null || !Number.isFinite(c)) return null;
+  const v = c > 1 ? c / 100 : c;
+  const clamped = Math.min(1, Math.max(0, v));
+  return String(clamped);
+}
+
 /** Idempotent: find existing contact by email or personalId. */
 async function findExistingContactId(
   tenantId: string,
@@ -71,6 +92,8 @@ export async function applyContractReview(
   input: ApplyContractReviewInput
 ): Promise<ApplyContractReviewResult> {
   const { reviewId, tenantId, userId, row } = input;
+  const attrsFromReview = buildPortfolioAttributesFromExtracted(row.extractedPayload);
+  const extractionConfidence = normalizeExtractionConfidence(row.confidence ?? undefined);
 
   if (row.reviewStatus === "applied" && row.applyResultPayload) {
     return { ok: true, payload: row.applyResultPayload };
@@ -158,6 +181,27 @@ export async function applyContractReview(
             tx as unknown as typeof db
           );
           if (existingContractId) {
+            const [existingRow] = await tx
+              .select({ portfolioAttributes: contracts.portfolioAttributes })
+              .from(contracts)
+              .where(eq(contracts.id, existingContractId))
+              .limit(1);
+            const prevAttrs =
+              (existingRow?.portfolioAttributes as Record<string, unknown> | undefined) ?? {};
+            await tx
+              .update(contracts)
+              .set({
+                sourceContractReviewId: reviewId,
+                sourceKind: "ai_review",
+                advisorConfirmedAt: new Date(),
+                confirmedByUserId: userId,
+                visibleToClient: true,
+                portfolioStatus: "active",
+                portfolioAttributes: { ...prevAttrs, ...attrsFromReview },
+                extractionConfidence,
+                updatedAt: new Date(),
+              })
+              .where(eq(contracts.id, existingContractId));
             resultPayload.createdContractId = existingContractId;
             continue;
           }
@@ -181,6 +225,14 @@ export async function applyContractReview(
               premiumAmount: premiumAmountRaw,
               premiumAnnual: premiumAnnualRaw,
               note: noteParts.length ? noteParts.join(" · ") : null,
+              visibleToClient: true,
+              portfolioStatus: "active",
+              sourceKind: "ai_review",
+              sourceContractReviewId: reviewId,
+              advisorConfirmedAt: new Date(),
+              confirmedByUserId: userId,
+              portfolioAttributes: attrsFromReview,
+              extractionConfidence,
             })
             .returning({ id: contracts.id });
           if (inserted?.id) resultPayload.createdContractId = inserted.id;
