@@ -15,12 +15,16 @@ import {
 } from "./assistant-session";
 import { buildSuggestedActionsFromUrgent, computePriorityItems } from "./dashboard-priority";
 import type { ActionPayload } from "./action-catalog";
-import { extractAssistantIntent } from "./assistant-intent-extract";
+import { extractAssistantIntent, extractCanonicalIntent } from "./assistant-intent-extract";
 import { intentWantsCrmWrites, intentWantsDashboard } from "./assistant-intent";
 import { executeMortgageDealAndFollowUpTask } from "./assistant-crm-writes";
 import { searchContactsForAssistant } from "./assistant-contact-search";
 import type { RoleName } from "@/shared/rolePermissions";
 import type { AssistantIntent } from "./assistant-intent";
+import type { CanonicalIntent, ExecutionPlan, VerifiedAssistantResult } from "./assistant-domain-model";
+import { resolveEntities, patchIntentWithResolutions } from "./assistant-entity-resolution";
+import { buildExecutionPlan, confirmAllSteps, allStepsReady, getPlanSummary, getStepsAwaitingConfirmation } from "./assistant-execution-plan";
+import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 
 export type AssistantResponse = {
   message: string;
@@ -368,4 +372,152 @@ export async function routeAssistantMessage(
   };
 }
 
+const CONFIRM_PATTERNS = /^(ano|potvrď|proveď|ok|spusť|potvrzuji|souhlasím|confirmed?)\s*$/i;
+const CANCEL_PATTERNS = /^(ne|zruš|stornuj|cancel|skip)\s*$/i;
 
+function isConfirmation(message: string): boolean {
+  return CONFIRM_PATTERNS.test(message.trim());
+}
+
+function isCancellation(message: string): boolean {
+  return CANCEL_PATTERNS.test(message.trim());
+}
+
+/**
+ * V2 canonical pipeline: intent → entity resolution → execution plan → confirm → execute → verified result.
+ * Falls back to legacy router for read-only / general_chat intents.
+ */
+export async function routeAssistantMessageCanonical(
+  message: string,
+  session: AssistantSession,
+  activeContext?: ActiveContext,
+  options?: { roleName?: RoleName },
+): Promise<AssistantResponse> {
+  incrementMessageCount(session);
+  const roleName = options?.roleName ?? "Advisor";
+  const tenantId = session.tenantId;
+
+  if (session.lastExecutionPlan && session.lastExecutionPlan.status === "awaiting_confirmation") {
+    if (isConfirmation(message)) {
+      const confirmed = confirmAllSteps(session.lastExecutionPlan);
+      const executed = await executePlan(confirmed, {
+        tenantId,
+        userId: session.userId,
+        sessionId: session.sessionId,
+        roleName,
+      });
+      session.lastExecutionPlan = executed;
+      const verified = buildVerifiedResult("Akce provedeny.", executed);
+      return verifiedToResponse(verified, session.sessionId);
+    }
+    if (isCancellation(message)) {
+      session.lastExecutionPlan = undefined;
+      return {
+        message: "Plán zrušen. Jak vám mohu pomoci?",
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [],
+        confidence: 1,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
+  }
+
+  const skipClientFromUi = Boolean(session.lockedClientId);
+  updateSessionContext(session, activeContext, { skipClientIdFromUi: skipClientFromUi });
+
+  if (!session.lockedClientId && session.activeClientId) {
+    lockAssistantClient(session, session.activeClientId);
+  }
+
+  const canonicalIntent = await extractCanonicalIntent(message);
+
+  if (canonicalIntent.switchClient) {
+    clearAssistantClientLock(session);
+  }
+
+  const READ_ONLY_INTENTS = new Set([
+    "general_chat", "dashboard_summary", "search_contacts",
+    "summarize_client", "prepare_meeting_brief", "review_extraction", "switch_client",
+  ]);
+
+  if (READ_ONLY_INTENTS.has(canonicalIntent.intentType)) {
+    return routeAssistantMessage(message, session, activeContext, options);
+  }
+
+  const resolution = await resolveEntities(tenantId, canonicalIntent, session);
+
+  if (resolution.client?.ambiguous) {
+    const altLines = resolution.client.alternatives
+      .map((a, i) => `${i + 1}. ${a.label}`)
+      .join("\n");
+    return {
+      message: `Nalezeno více klientů. Upřesněte prosím:\n\n${resolution.client.displayLabel} (vybraný)\n${altLines}`,
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: resolution.warnings,
+      confidence: 0.5,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  if (!resolution.client && canonicalIntent.targetClient) {
+    return {
+      message: `Klient „${canonicalIntent.targetClient.ref}" nebyl nalezen. Zkontrolujte jméno nebo otevřete kartu klienta.`,
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: resolution.warnings,
+      confidence: 0.4,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  const patchedIntent = patchIntentWithResolutions(canonicalIntent, resolution);
+  const plan = buildExecutionPlan(patchedIntent, resolution);
+
+  if (plan.steps.length === 0) {
+    return routeAssistantMessage(message, session, activeContext, options);
+  }
+
+  const awaiting = getStepsAwaitingConfirmation(plan);
+  if (awaiting.length > 0) {
+    session.lastExecutionPlan = plan;
+    const summary = getPlanSummary(plan);
+    const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";
+    return {
+      message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}\n\nPotvrďte provedení odpovědí „ano" nebo zrušte odpovědí „ne".`,
+      referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
+      suggestedActions: [],
+      warnings: resolution.warnings,
+      confidence: 0.85,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  const confirmed = confirmAllSteps(plan);
+  const executed = await executePlan(confirmed, {
+    tenantId,
+    userId: session.userId,
+    sessionId: session.sessionId,
+    roleName,
+  });
+  session.lastExecutionPlan = executed;
+  const verified = buildVerifiedResult("Akce provedeny.", executed);
+  return verifiedToResponse(verified, session.sessionId);
+}
+
+function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string): AssistantResponse {
+  return {
+    message: verified.message + (verified.suggestedNextSteps.length > 0 ? `\n\n${verified.suggestedNextSteps.join("\n")}` : ""),
+    referencedEntities: verified.referencedEntities,
+    suggestedActions: [],
+    warnings: verified.warnings,
+    confidence: verified.confidence,
+    sourcesSummary: [],
+    sessionId,
+  };
+}

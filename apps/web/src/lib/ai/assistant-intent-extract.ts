@@ -1,16 +1,22 @@
 import { createResponseStructured } from "@/lib/openai";
 import {
   ASSISTANT_INTENT_JSON_SCHEMA,
+  CANONICAL_INTENT_JSON_SCHEMA,
   coerceAssistantIntent,
+  coerceCanonicalIntentRaw,
+  toCanonicalIntent,
+  legacyIntentToCanonical,
   heuristicIntentFlags,
   type AssistantIntent,
+  type CanonicalIntentRaw,
 } from "./assistant-intent";
+import type { CanonicalIntent } from "./assistant-domain-model";
 
 const INTENT_SYSTEM = `Jsi extraktor strukturovaného záměru pro interního asistenta poradce v CRM Aidvisora.
 Vrať JSON přesně podle schématu.
 
 Pravidla:
-- switchClient nastav na true jen pokud uživatel explicitně chce pracovat s jiným klientem než dosud (např. „přepni klienta“, „jiný klient“).
+- switchClient nastav na true jen pokud uživatel explicitně chce pracovat s jiným klientem než dosud (např. „přepni klienta", „jiný klient").
 - noEmail nastav na true pokud uživatel řekne že email neřeší / neposílat email / bez emailu.
 - actions: přidej create_opportunity pokud má vzniknout obchod (případ, pipeline, hypotéka) a create_followup_task pokud má vzniknout úkol nebo follow-up s termínem.
 - clientRef: celé jméno nebo část jména klienta ze zprávy, pokud je uvedeno.
@@ -20,6 +26,47 @@ Pravidla:
 - rateGuess: úroková sazba jako desetinné číslo (např. 4.99).
 - purpose: stručně účel (koupě, rekonstrukce) pokud je v textu.
 - dueDateText: pokud uživatel zmiňuje relativní termín (příští úterý), zkopíruj krátký fragment textu.`;
+
+const CANONICAL_INTENT_SYSTEM = `Jsi extraktor strukturovaného záměru (V2) pro AI asistenta poradce v CRM Aidvisora.
+Vrať JSON přesně podle schématu. Záměr uživatele rozpoznej co nejpřesněji.
+
+Typy záměrů:
+- create_opportunity: uživatel chce založit nový obchod/případ (hypotéka, investice, pojištění…)
+- update_opportunity: aktualizovat existující obchod
+- create_task: vytvořit úkol
+- create_followup: vytvořit follow-up úkol s termínem
+- schedule_meeting: naplánovat schůzku
+- create_note / append_note: poznámka ke klientovi
+- attach_document: připojit dokument
+- classify_document: klasifikovat dokument
+- request_client_documents: vyžádat podklady od klienta
+- create_client_request: požadavek klienta
+- create_material_request: materiálový požadavek
+- summarize_client: shrnutí klienta
+- prepare_meeting_brief: příprava na schůzku
+- prepare_email: připravit email
+- draft_portal_message: zpráva klientovi přes portál
+- update_portfolio / publish_portfolio_item: portfolio operace
+- review_extraction: kontrola extrakce dokumentu
+- create_service_case: servisní požadavek
+- create_reminder: připomínka
+- search_contacts: hledání kontaktů
+- dashboard_summary: shrnutí dashboardu
+- general_chat: obecný dotaz
+- multi_action: více akcí najednou
+- switch_client: přepnutí kontextu na jiného klienta
+
+productDomain: hypo, uver, investice, dip, dps, zivotni_pojisteni, majetek, odpovednost, auto, cestovni, firma_pojisteni, servis, jine
+
+requestedActions: pole všech záměrů, které uživatel zmínil (mohou být i vícero).
+
+clientRef: jméno/reference klienta; opportunityRef: reference obchodu; documentRef: reference dokumentu.
+
+Čísla: amount (Kč), ltv (0-100), rateGuess (sazba), premium (pojistné).
+contractNumber: číslo smlouvy, pokud zmíněno.
+meetingDateText / dueDateText: textový fragment termínu.
+taskTitle: název úkolu; noteContent: obsah poznámky.
+confidence: 0.0-1.0 jak jistý jsi záměrem.`;
 
 function fallbackIntentFromHeuristics(
   message: string,
@@ -58,6 +105,7 @@ function fallbackIntentFromHeuristics(
   };
 }
 
+/** Legacy extraction — kept for backward compatibility. */
 export async function extractAssistantIntent(message: string): Promise<AssistantIntent> {
   const flags = heuristicIntentFlags(message);
   try {
@@ -77,3 +125,24 @@ export async function extractAssistantIntent(message: string): Promise<Assistant
   }
 }
 
+/** V2 canonical intent extraction with structured output. */
+export async function extractCanonicalIntent(message: string): Promise<CanonicalIntent> {
+  const flags = heuristicIntentFlags(message);
+  try {
+    const { parsed } = await createResponseStructured<Record<string, unknown>>(
+      `${CANONICAL_INTENT_SYSTEM}\n\nZpráva uživatele:\n${message}`,
+      CANONICAL_INTENT_JSON_SCHEMA,
+      { schemaName: "canonical_intent", store: false },
+    );
+    const raw = coerceCanonicalIntentRaw(parsed);
+    const canonical = toCanonicalIntent({
+      ...raw,
+      switchClient: raw.switchClient || flags.switchClient,
+      noEmail: raw.noEmail || flags.noEmail,
+    });
+    return canonical;
+  } catch {
+    const legacy = fallbackIntentFromHeuristics(message, flags);
+    return legacyIntentToCanonical(legacy);
+  }
+}

@@ -1,9 +1,16 @@
-﻿/**
- * Lightweight in-memory assistant session state (Plan 5B.3).
- * TTL: 30 minutes. No DB persistence for v1.
+/**
+ * Lightweight in-memory assistant session state.
+ * TTL: 30 minutes. DB persistence via assistant_conversations when available.
  */
 
 import type { SuggestedAction } from "./dashboard-types";
+import type {
+  AssistantChannel,
+  AssistantMode,
+  ContextLockState,
+  ExecutionPlan,
+} from "./assistant-domain-model";
+import { defaultContextLock } from "./assistant-domain-model";
 
 export type AssistantSession = {
   sessionId: string;
@@ -15,6 +22,12 @@ export type AssistantSession = {
   /** Once set, URL activeContext.clientId is ignored until switchClient clears the lock. */
   lockedClientId?: string;
   lockedDealId?: string;
+  lockedOpportunityId?: string;
+  lockedDocumentId?: string;
+  activeChannel?: AssistantChannel;
+  assistantMode: AssistantMode;
+  contextLock: ContextLockState;
+  lastExecutionPlan?: ExecutionPlan;
   lastSuggestedActions: SuggestedAction[];
   lastWarnings: string[];
   messageCount: number;
@@ -57,6 +70,8 @@ export function getOrCreateSession(
     sessionId: newId,
     tenantId,
     userId,
+    assistantMode: "quick_assistant",
+    contextLock: defaultContextLock(),
     lastSuggestedActions: [],
     lastWarnings: [],
     messageCount: 0,
@@ -92,11 +107,36 @@ export function updateSessionContext(
 export function lockAssistantClient(session: AssistantSession, contactId: string): void {
   session.lockedClientId = contactId;
   session.activeClientId = contactId;
+  session.contextLock.lockedClientId = contactId;
+}
+
+export function lockAssistantOpportunity(session: AssistantSession, opportunityId: string): void {
+  session.lockedOpportunityId = opportunityId;
+  session.contextLock.lockedOpportunityId = opportunityId;
+}
+
+export function lockAssistantDocument(session: AssistantSession, documentId: string): void {
+  session.lockedDocumentId = documentId;
+  session.contextLock.lockedDocumentId = documentId;
+}
+
+export function setAssistantMode(session: AssistantSession, mode: AssistantMode): void {
+  session.assistantMode = mode;
+  session.contextLock.assistantMode = mode;
+}
+
+export function setAssistantChannel(session: AssistantSession, channel: AssistantChannel): void {
+  session.activeChannel = channel;
+  session.contextLock.activeChannel = channel;
 }
 
 export function clearAssistantClientLock(session: AssistantSession): void {
   session.lockedClientId = undefined;
   session.lockedDealId = undefined;
+  session.lockedOpportunityId = undefined;
+  session.lockedDocumentId = undefined;
+  session.contextLock = defaultContextLock();
+  session.contextLock.assistantMode = session.assistantMode;
 }
 
 export function incrementMessageCount(session: AssistantSession): void {

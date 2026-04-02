@@ -50,3 +50,4 @@ export * from "./analytics-snapshots";
 export * from "./tenant-settings";
 export * from "./dead-letter-items";
 export * from "./portal-feedback";
+export * from "./assistant-conversations";
