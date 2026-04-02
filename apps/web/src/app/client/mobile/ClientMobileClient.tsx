@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
+  Paperclip,
   Plus,
   Send,
   Settings,
@@ -127,6 +128,29 @@ function notificationIcon(type: string) {
   if (type === "request_status_change") return CheckCircle2;
   if (type === "important_date") return Calendar;
   return Bell;
+}
+
+function formatMessageDate(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Dnes";
+  if (date.toDateString() === yesterday.toDateString()) return "Včera";
+  return date.toLocaleDateString("cs-CZ", { day: "numeric", month: "long" });
+}
+
+function groupMessagesByDate(msgs: MessageRow[]): Array<{ date: string; msgs: MessageRow[] }> {
+  const groups: Array<{ date: string; msgs: MessageRow[] }> = [];
+  let current: { date: string; msgs: MessageRow[] } | null = null;
+  for (const msg of msgs) {
+    const d = formatMessageDate(new Date(msg.createdAt));
+    if (!current || current.date !== d) {
+      current = { date: d, msgs: [] };
+      groups.push(current);
+    }
+    current.msgs.push(msg);
+  }
+  return groups;
 }
 
 /* ------------------------------------------------------------------ */
@@ -601,6 +625,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   const [composeFiles, setComposeFiles] = useState<File[]>([]);
   const [messageSearch, setMessageSearch] = useState("");
   const messageBottomRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
 
   const [documentsSearch, setDocumentsSearch] = useState("");
   const [requestsFilter, setRequestsFilter] = useState<"all" | "mine" | "advisor">("all");
@@ -619,6 +644,11 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   const onPortfolioRoute = pathname.startsWith("/client/portfolio") || pathname.startsWith("/client/contracts");
   const onNotificationsRoute = pathname.startsWith("/client/notifications");
   const onProfileRoute = pathname.startsWith("/client/profile");
+  const isMessagesActive = (tab === "messages" || pathname.startsWith("/client/messages")) && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute;
+  // Key to reset MobileScreen scroll position when the active section changes
+  const screenKey = `${tab}-${String(onPortfolioRoute)}-${String(onNotificationsRoute)}-${String(onProfileRoute)}`;
+
+  const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
 
   useEffect(() => {
     setTab(toTab(pathname));
@@ -657,7 +687,9 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   }, [pathname, initialData.contactId]);
 
   useEffect(() => {
-    messageBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   async function refreshBadges() {
@@ -872,7 +904,102 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         }
       />
 
-      <MobileScreen>
+      {/* ── CHAT LAYOUT (messages tab): inner scroll + fixed compose at bottom ── */}
+      {isMessagesActive ? (
+        <main className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+          {/* Advisor strip */}
+          {initialData.advisor ? (
+            <div className="shrink-0 px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white grid place-items-center text-xs font-black shrink-0">
+                {initialData.advisor.initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">{initialData.advisor.fullName}</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Váš poradce</p>
+              </div>
+            </div>
+          ) : null}
+          {/* Messages scroll area */}
+          <div ref={messagesScrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-y-none px-4 py-3">
+            {busy ? <LoadingSkeleton rows={3} /> : null}
+            {!busy && messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-slate-500 font-medium text-sm">Zatím žádné zprávy.</p>
+                <p className="text-xs text-slate-400 mt-1">Napište poradci níže.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {groupedMessages.map(({ date, msgs: dayMsgs }) => (
+                  <div key={date}>
+                    <div className="flex justify-center py-3">
+                      <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider rounded-full">
+                        {date}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {dayMsgs.map((message) => (
+                        <ChatMessageBubble
+                          key={message.id}
+                          own={message.senderType === "client"}
+                          body={message.body}
+                          timestamp={new Date(message.createdAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messageBottomRef} className="h-1" />
+              </div>
+            )}
+          </div>
+          {/* Compose area — always visible, never scrolls away */}
+          <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-2.5">
+            {composeFiles.length > 0 ? (
+              <p className="text-[11px] text-slate-500 mb-1.5 px-1">
+                {composeFiles.length} {composeFiles.length === 1 ? "soubor vybrán" : "soubory vybrány"}
+              </p>
+            ) : null}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 flex items-end gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/60 pl-3 pr-2 py-2 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
+                <textarea
+                  rows={1}
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendMessage();
+                    }
+                  }}
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 resize-none max-h-24 min-h-[20px] leading-relaxed"
+                  placeholder="Napište zprávu svému poradci"
+                />
+                <label className="shrink-0 h-7 w-7 grid place-items-center text-slate-400 hover:text-slate-600 cursor-pointer mb-0.5">
+                  <Paperclip size={15} />
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => setComposeFiles(Array.from(e.target.files ?? []))}
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => void sendMessage()}
+                disabled={!composeBody.trim() && composeFiles.length === 0}
+                className="shrink-0 w-10 h-10 rounded-full bg-indigo-600 text-white grid place-items-center shadow-md disabled:opacity-40 active:scale-95 transition-transform"
+                aria-label="Odeslat zprávu"
+              >
+                <Send size={16} className="ml-0.5" />
+              </button>
+            </div>
+          </div>
+        </main>
+      ) : (
+      /* ── ALL OTHER TABS: scrollable MobileScreen — key resets scroll on section change ── */
+      <MobileScreen key={screenKey}>
         {error ? (
           <ErrorState title={error} homeHref={false} onRetry={() => router.refresh()} />
         ) : null}
@@ -890,52 +1017,6 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
             onNewRequest={() => setRequestModalOpen(true)}
             router={router}
           />
-        ) : null}
-
-        {(tab === "messages" || pathname.startsWith("/client/messages")) && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute ? (
-          <>
-            <SearchBar value={messageSearch} onChange={setMessageSearch} placeholder="Hledat ve zprávách..." />
-            {filteredMessages.length === 0 ? (
-              <EmptyState title="Žádné zprávy" description="Zatím zde není žádná konverzace." />
-            ) : (
-              filteredMessages.map((message) => {
-                const isClient = message.senderType === "client";
-                return (
-                  <ChatMessageBubble
-                    key={message.id}
-                    own={isClient}
-                    body={message.body}
-                    timestamp={new Date(message.createdAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
-                  />
-                );
-              })
-            )}
-            <div ref={messageBottomRef} />
-            <MobileCard className="p-3">
-              <textarea
-                rows={3}
-                value={composeBody}
-                onChange={(e) => setComposeBody(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                placeholder="Napište zprávu…"
-              />
-              <label className="mt-2 inline-flex min-h-[36px] items-center rounded-lg border border-slate-200 px-3 text-xs font-bold cursor-pointer">
-                Přidat přílohu
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => setComposeFiles(Array.from(e.target.files ?? []))}
-                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                />
-              </label>
-              {composeFiles.length > 0 ? <p className="mt-1 text-[11px] text-slate-500">{composeFiles.length} příloh</p> : null}
-              <button type="button" onClick={sendMessage} className="mt-3 w-full min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold inline-flex items-center justify-center gap-2">
-                <Send size={16} />
-                Odeslat zprávu
-              </button>
-            </MobileCard>
-          </>
         ) : null}
 
         {(tab === "documents" || pathname.startsWith("/client/documents")) && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute ? (
@@ -1196,6 +1277,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
           </MobileSection>
         ) : null}
       </MobileScreen>
+      )} {/* end isMessagesActive conditional */}
 
       <BottomSheet open={requestModalOpen} onClose={() => setRequestModalOpen(false)} title="Nový požadavek">
         <div className="space-y-3">
@@ -1244,13 +1326,12 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         </div>
       </BottomSheet>
 
-      {/* FAB: visible only on tabs where it has clear meaning (home, messages, requests, documents) */}
-      {!onPortfolioRoute && !onNotificationsRoute && !onProfileRoute && tab !== "menu" ? (
+      {/* FAB: visible on home/requests/documents; hidden on messages (compose is inline), portfolio, notifications, profile */}
+      {!isMessagesActive && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute && tab !== "menu" ? (
         <button
           type="button"
           onClick={() => {
             if (tab === "requests") setRequestModalOpen(true);
-            else if (tab === "messages") setComposeBody((prev) => prev || "Dobrý den, ");
             else setRequestModalOpen(true);
           }}
           className="fixed z-40 right-4 bottom-[calc(90px+var(--safe-area-bottom))] min-h-[52px] min-w-[52px] rounded-full bg-indigo-600 text-white shadow-lg"
