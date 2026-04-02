@@ -45,7 +45,7 @@ function fallbackIntentFromHeuristics(
   }
 
   return {
-    actions: wantsMortgageFlow ? ["create_opportunity", "create_followup_task", "general_chat"] : ["general_chat"],
+    actions: wantsMortgageFlow ? ["create_opportunity", "create_followup_task"] : ["general_chat"],
     switchClient: flags.switchClient,
     clientRef: nameMatch ? `${nameMatch[1]} ${nameMatch[2]}` : null,
     amount,
