@@ -285,6 +285,15 @@ describe("Automation recommendations", () => {
   });
 });
 
+describe("Portal channel policy (fáze 6/9)", () => {
+  it("distinguishes client_portal_request vs advisor_material_requests in policy text", async () => {
+    const { ASSISTANT_PORTAL_CHANNEL_POLICY_TEXT } = await import("../assistant-portal-channel-policy");
+    expect(ASSISTANT_PORTAL_CHANNEL_POLICY_TEXT).toMatch(/client_portal_request|klientský požadavek/i);
+    expect(ASSISTANT_PORTAL_CHANNEL_POLICY_TEXT).toMatch(/materiálov|advisor_material/i);
+    expect(ASSISTANT_PORTAL_CHANNEL_POLICY_TEXT).toMatch(/notify_client_portal|notifikac/i);
+  });
+});
+
 describe("Notification engine dedup", () => {
   it("deduplicates notifications from urgentItems and followUp", async () => {
     const { generateNotificationItems } = await import("../notification-engine");
