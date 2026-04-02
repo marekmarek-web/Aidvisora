@@ -4,12 +4,19 @@
 
 import { db, contacts, eq, and, or, isNull, sql, desc } from "db";
 import { maskPersonalId } from "./assistant-context-builder";
+import {
+  escapeIlikeLiteral,
+  normalizeNameSearchQuery,
+  splitNameSearchTokens,
+} from "./assistant-contact-search-normalize";
 
 export type AssistantContactMatch = {
   id: string;
   displayName: string;
   hint: string;
 };
+
+export { escapeIlikeLiteral, normalizeNameSearchQuery, splitNameSearchTokens };
 
 function emailDomainHint(email: string | null | undefined): string | null {
   if (!email?.trim()) return null;
@@ -45,18 +52,55 @@ function buildHint(row: {
 
 const DEFAULT_LIMIT = 12;
 
+export type AssistantContactSearchMatchMode = "all" | "name_only";
+
+function tokenPattern(token: string): string {
+  return `%${escapeIlikeLiteral(token)}%`;
+}
+
+function sqlTokenMatch(token: string, mode: AssistantContactSearchMatchMode) {
+  const pattern = tokenPattern(token);
+  const nameOr = or(
+    sql`concat(${contacts.firstName}, ' ', ${contacts.lastName}) ILIKE ${pattern} ESCAPE '\\'`,
+    sql`${contacts.firstName} ILIKE ${pattern} ESCAPE '\\'`,
+    sql`${contacts.lastName} ILIKE ${pattern} ESCAPE '\\'`,
+  );
+  if (mode === "name_only") {
+    return nameOr;
+  }
+  return or(
+    nameOr,
+    sql`COALESCE(${contacts.email}, '') ILIKE ${pattern} ESCAPE '\\'`,
+    sql`COALESCE(${contacts.phone}, '') ILIKE ${pattern} ESCAPE '\\'`,
+  );
+}
+
 /**
- * ILIKE search on name parts, full name, email, phone — scoped to tenant, non-archived only.
+ * ILIKE search — scoped to tenant, non-archived only.
+ * Uses normalized query + per-token AND (names; optional email/phone per token when match=all).
  */
 export async function searchContactsForAssistant(
   tenantId: string,
   rawQuery: string,
   limit = DEFAULT_LIMIT,
+  opts?: { match?: AssistantContactSearchMatchMode },
 ): Promise<AssistantContactMatch[]> {
   const trimmed = rawQuery.trim();
   if (!trimmed) return [];
 
-  const pattern = `%${trimmed}%`;
+  const mode: AssistantContactSearchMatchMode = opts?.match ?? "all";
+  const normalized = normalizeNameSearchQuery(trimmed);
+  const searchBasis = normalized || trimmed;
+
+  let tokens = splitNameSearchTokens(searchBasis);
+  if (tokens.length === 0 && searchBasis.length > 0) {
+    tokens = [searchBasis];
+  }
+  if (tokens.length === 0) return [];
+
+  const tokenConds = tokens.map((t) => sqlTokenMatch(t, mode));
+  const matchClause =
+    tokenConds.length === 1 ? tokenConds[0]! : and(...tokenConds);
 
   const rows = await db
     .select({
@@ -70,19 +114,7 @@ export async function searchContactsForAssistant(
       updatedAt: contacts.updatedAt,
     })
     .from(contacts)
-    .where(
-      and(
-        eq(contacts.tenantId, tenantId),
-        isNull(contacts.archivedAt),
-        or(
-          sql`concat(${contacts.firstName}, ' ', ${contacts.lastName}) ILIKE ${pattern}`,
-          sql`${contacts.firstName} ILIKE ${pattern}`,
-          sql`${contacts.lastName} ILIKE ${pattern}`,
-          sql`COALESCE(${contacts.email}, '') ILIKE ${pattern}`,
-          sql`COALESCE(${contacts.phone}, '') ILIKE ${pattern}`,
-        ),
-      ),
-    )
+    .where(and(eq(contacts.tenantId, tenantId), isNull(contacts.archivedAt), matchClause))
     .orderBy(desc(contacts.updatedAt))
     .limit(Math.min(Math.max(limit, 1), 25));
 

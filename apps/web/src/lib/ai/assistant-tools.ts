@@ -171,7 +171,9 @@ async function handleSearchContacts(
     return { data: { error: "query required", matches: [] }, sourceReferences: [], warnings: [] };
   }
   const { searchContactsForAssistant } = await import("./assistant-contact-search");
-  const matches = await searchContactsForAssistant(ctx.tenantId, query.trim(), 12);
+  const matches = await searchContactsForAssistant(ctx.tenantId, query.trim(), 12, {
+    match: "all",
+  });
   return {
     data: {
       count: matches.length,

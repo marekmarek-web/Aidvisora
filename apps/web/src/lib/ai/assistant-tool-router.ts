@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Assistant tool router â€” intent-first CRM writes, optional tools, no default dashboard.
  */
 
@@ -140,12 +140,12 @@ async function resolveContactForAssistantWrites(
 ): Promise<{ contactId: string } | { error: string }> {
   const ref = intent.clientRef?.trim();
   if (ref) {
-    const matches = await searchContactsForAssistant(tenantId, ref, 12);
+    const matches = await searchContactsForAssistant(tenantId, ref, 12, { match: "name_only" });
     if (matches.length === 0) {
-      return { error: `NenaĹˇel jsem kontakt pro â€ž${ref}â€ś. UpĹ™esnÄ›te jmĂ©no nebo otevĹ™ete kartu klienta.` };
+      return { error: `Nenašel jsem kontakt pro „${ref}“. Upřesněte jméno nebo otevřete kartu klienta.` };
     }
     if (matches.length > 1) {
-      return { error: `VĂ­ce shod pro â€ž${ref}â€ś â€” vyberte jednoznaÄŤnÄ› klienta (e-mail/mÄ›sto) nebo pouĹľijte kontakt z URL.` };
+      return { error: `Více shod pro „${ref}“ — vyberte jednoznačně klienta (e-mail/město) nebo použijte kontakt z URL.` };
     }
     lockAssistantClient(session, matches[0].id);
     return { contactId: matches[0].id };
@@ -157,7 +157,7 @@ async function resolveContactForAssistantWrites(
     lockAssistantClient(session, session.activeClientId);
     return { contactId: session.activeClientId };
   }
-  return { error: "ChybĂ­ klient â€” otevĹ™ete kartu kontaktu v portĂˇlu nebo uveÄŹte celĂ© jmĂ©no klienta ve zprĂˇvÄ›." };
+  return { error: "Chybí klient — otevřete kartu kontaktu v portálu nebo uveďte celé jméno klienta ve zprávě." };
 }
 
 
