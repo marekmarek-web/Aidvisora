@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Search,
   Check,
@@ -44,6 +46,7 @@ import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
 import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
 import { PublicBookingSetupBlock } from "@/app/portal/setup/PublicBookingSetupBlock";
+import { queryKeys } from "@/lib/query-keys";
 
 const TABS = [
   { id: "osobni", label: "Osobní údaje", keywords: ["osobní", "údaje", "fakturace", "heslo", "zabezpečení", "2fa", "rychlé", "demo"] },
@@ -161,6 +164,7 @@ const inputClass = "w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border b
 const iconInputClass = "w-full pl-11 pr-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold outline-none focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-[color:var(--wp-text)] min-h-[44px]";
 
 export function SetupView({ initial }: { initial: SetupInitial }) {
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -538,11 +542,15 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     setDriveDisconnecting(true);
     try {
       const res = await fetch("/api/drive/disconnect", { method: "POST" });
-      if (res.ok) { await fetchDriveStatus(); toast.showToast("Google Drive byl odpojen.", "success"); }
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.driveStatus() });
+        await fetchDriveStatus();
+        toast.showToast("Google Drive byl odpojen.", "success");
+      }
       else { const d = (await res.json().catch(() => ({}))) as { error?: string }; toast.showToast(d.error ?? "Odpojení se nepovedlo.", "error"); }
     } catch { toast.showToast("Odpojení se nepovedlo.", "error"); }
     finally { setDriveDisconnecting(false); }
-  }, [confirm, fetchDriveStatus, toast]);
+  }, [confirm, fetchDriveStatus, queryClient, toast]);
 
   // --- Gmail handlers
   const fetchGmailStatus = useCallback(async () => {
@@ -571,11 +579,15 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     setGmailDisconnecting(true);
     try {
       const res = await fetch("/api/gmail/disconnect", { method: "POST" });
-      if (res.ok) { await fetchGmailStatus(); toast.showToast("Gmail byl odpojen.", "success"); }
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.gmailStatus() });
+        await fetchGmailStatus();
+        toast.showToast("Gmail byl odpojen.", "success");
+      }
       else { const d = (await res.json().catch(() => ({}))) as { error?: string }; toast.showToast(d.error ?? "Odpojení se nepovedlo.", "error"); }
     } catch { toast.showToast("Odpojení se nepovedlo.", "error"); }
     finally { setGmailDisconnecting(false); }
-  }, [confirm, fetchGmailStatus, toast]);
+  }, [confirm, fetchGmailStatus, queryClient, toast]);
 
   const fetchAiHealth = useCallback(async () => {
     try {
@@ -1071,9 +1083,15 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
                   <div className="relative group flex-shrink-0 mx-auto md:mx-0">
                     <label className="block cursor-pointer">
-                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-xl border-4 border-white overflow-hidden">
+                      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-xl border-4 border-white overflow-hidden">
                         {advisorAvatarUrl ? (
-                          <img src={advisorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                          <Image
+                            src={advisorAvatarUrl}
+                            alt=""
+                            fill
+                            sizes="(max-width: 640px) 7rem, 8rem"
+                            className="object-cover"
+                          />
                         ) : (
                           initials
                         )}

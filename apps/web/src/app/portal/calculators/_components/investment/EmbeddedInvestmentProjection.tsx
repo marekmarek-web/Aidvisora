@@ -1,12 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { computeProjection } from "@/lib/calculators/investment/investment.engine";
 import { getGrowthChartData } from "@/lib/calculators/investment/investment.charts";
 import { getProjectionFromFaStrategy } from "@/lib/calculators/investment/faStrategyAdapter";
 import type { ProjectionInputs } from "@/lib/calculators/investment/investment.engine";
 import type { FaStrategySlice } from "@/lib/calculators/investment/faStrategyAdapter";
-import { InvestmentGrowthChart } from "./InvestmentGrowthChart";
+
+const InvestmentGrowthChart = dynamic(
+  () => import("./InvestmentGrowthChart").then((m) => m.InvestmentGrowthChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[300px] animate-pulse rounded-xl bg-[color:var(--wp-surface-muted)]" aria-hidden />
+    ),
+  },
+);
 
 export interface EmbeddedInvestmentProjectionProps {
   /** Direct inputs (standalone or CRM). */

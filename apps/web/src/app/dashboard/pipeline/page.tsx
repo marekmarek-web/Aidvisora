@@ -1,6 +1,6 @@
 import { getPipeline } from "@/app/actions/pipeline";
 import { getContactsList } from "@/app/actions/contacts";
-import { PipelineBoard } from "./PipelineBoard";
+import { PipelineBoardDynamic } from "./PipelineBoardDynamic";
 
 export default async function PipelinePage() {
   const [stages, contactsList] = await Promise.all([getPipeline(), getContactsList()]);
@@ -14,7 +14,7 @@ export default async function PipelinePage() {
       <p className="text-[color:var(--wp-text-muted)]">
         Případy (hypo / invest / pojist) – přesuňte do jiné fáze obchodu.
       </p>
-      <PipelineBoard stages={stages} contacts={contacts} />
+      <PipelineBoardDynamic stages={stages} contacts={contacts} />
     </div>
   );
 }

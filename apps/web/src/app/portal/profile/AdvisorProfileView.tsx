@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -383,9 +384,15 @@ export function AdvisorProfileView({
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 z-10 text-center md:text-left">
             <div className="relative group">
               <label className="block cursor-pointer">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-[color:var(--wp-surface-card)] bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-black text-white shadow-xl shadow-indigo-500/25 transition-transform group-hover:scale-105 sm:h-24 sm:w-24 sm:rounded-[28px] sm:text-3xl">
+                <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-[color:var(--wp-surface-card)] bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-black text-white shadow-xl shadow-indigo-500/25 transition-transform group-hover:scale-105 sm:h-24 sm:w-24 sm:rounded-[28px] sm:text-3xl">
                   {advisorAvatarUrl ? (
-                    <img src={advisorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                    <Image
+                      src={advisorAvatarUrl}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 5rem, 6rem"
+                      className="object-cover"
+                    />
                   ) : (
                     initials
                   )}

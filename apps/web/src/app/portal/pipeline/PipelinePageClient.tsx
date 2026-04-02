@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getPipeline } from "@/app/actions/pipeline";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import { queryKeys } from "@/lib/query-keys";
-import { PipelineBoard } from "@/app/dashboard/pipeline/PipelineBoard";
+import { PipelineBoardDynamic } from "@/app/dashboard/pipeline/PipelineBoardDynamic";
 
 type ContactOption = { id: string; firstName: string; lastName: string };
 
@@ -24,5 +24,5 @@ export function PipelinePageClient({
     staleTime: 30_000,
   });
 
-  return <PipelineBoard stages={stages} contacts={contacts} totalPotential={totalPotential} />;
+  return <PipelineBoardDynamic stages={stages} contacts={contacts} totalPotential={totalPotential} />;
 }

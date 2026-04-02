@@ -12,6 +12,7 @@ import { MindmapListClient } from "./MindmapListClient";
 const MindmapView = dynamic(
   () => import("./MindmapView").then((m) => m.MindmapView),
   {
+    ssr: false,
     loading: () => (
       <div className="flex flex-1 min-h-[50vh] items-center justify-center text-[color:var(--wp-text-secondary)] text-sm">Načítání mapy…</div>
     ),

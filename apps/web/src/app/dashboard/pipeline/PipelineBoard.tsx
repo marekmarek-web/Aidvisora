@@ -175,33 +175,83 @@ function Modal({
 /** Izolovaná karta obchodu – méně práce pro překreslení rodiče při změnách mimo tuto kartu. */
 const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
   opp,
+  stageId,
   themeAccent,
   isDragging,
   isMenuOpen,
   onDragStart,
   onDragEnd,
-  onShellClick,
-  onEdit,
-  onMenuToggle,
-  onMenuBackdrop,
+  onNavigateDetail,
+  onRequestEdit,
+  onToggleMenu,
+  onCloseMenu,
   onMenuEdit,
-  onMenuContactNav,
   onMenuDelete,
 }: {
   opp: OpportunityCard;
+  stageId: string;
   themeAccent: string;
   isDragging: boolean;
   isMenuOpen: boolean;
-  onDragStart: (e: DragEvent) => void;
+  onDragStart: (e: DragEvent, opportunityId: string, stageId: string) => void;
   onDragEnd: () => void;
-  onShellClick: () => void;
-  onEdit: (e: MouseEvent) => void;
-  onMenuToggle: (e: MouseEvent) => void;
-  onMenuBackdrop: (e: MouseEvent) => void;
-  onMenuEdit: (e: MouseEvent) => void;
-  onMenuContactNav: (e: MouseEvent) => void;
-  onMenuDelete: (e: MouseEvent) => void;
+  onNavigateDetail: (opportunityId: string) => void;
+  onRequestEdit: (opportunity: OpportunityCard) => void;
+  onToggleMenu: (opportunityId: string) => void;
+  onCloseMenu: () => void;
+  onMenuEdit: (opportunity: OpportunityCard) => void;
+  onMenuDelete: (opportunityId: string) => void;
 }) {
+  const handleDragStart = useCallback(
+    (e: DragEvent) => onDragStart(e, opp.id, stageId),
+    [onDragStart, opp.id, stageId],
+  );
+  const handleShellClick = useCallback(() => {
+    if (!isMenuOpen) onNavigateDetail(opp.id);
+  }, [isMenuOpen, onNavigateDetail, opp.id]);
+  const handleEdit = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onRequestEdit(opp);
+    },
+    [onRequestEdit, opp],
+  );
+  const handleMenuToggle = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onToggleMenu(opp.id);
+    },
+    [onToggleMenu, opp.id],
+  );
+  const handleMenuBackdrop = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onCloseMenu();
+    },
+    [onCloseMenu],
+  );
+  const handleMenuEdit = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onMenuEdit(opp);
+    },
+    [onMenuEdit, opp],
+  );
+  const handleMenuContactNav = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onCloseMenu();
+    },
+    [onCloseMenu],
+  );
+  const handleMenuDelete = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onMenuDelete(opp.id);
+    },
+    [onMenuDelete, opp.id],
+  );
+
   const product = getProductDesign(opp.caseType);
   const urgency = getUrgencyProps(opp.expectedCloseDate);
   const dateShort = formatDateShort(opp.expectedCloseDate);
@@ -210,9 +260,9 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
   return (
     <div
       draggable
-      onDragStart={onDragStart}
+      onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
-      onClick={onShellClick}
+      onClick={handleShellClick}
       className={`group relative flex shrink-0 cursor-grab flex-col rounded-[20px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:shadow-lg active:cursor-grabbing dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.45)] ${themeAccent} border-b-[3px] ${isDragging ? "scale-95 opacity-40" : ""}`}
     >
       <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] opacity-0 transition-opacity group-hover:opacity-100">
@@ -277,7 +327,7 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
             )}
             <button
               type="button"
-              onClick={onEdit}
+              onClick={handleEdit}
               className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
               title="Upravit"
             >
@@ -285,7 +335,7 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
             </button>
             <button
               type="button"
-              onClick={onMenuToggle}
+              onClick={handleMenuToggle}
               className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
               title="Možnosti"
             >
@@ -297,11 +347,11 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
 
       {isMenuOpen && (
         <>
-          <div className="fixed inset-0 z-10" onClick={onMenuBackdrop} aria-hidden />
+          <div className="fixed inset-0 z-10" onClick={handleMenuBackdrop} aria-hidden />
           <div className="absolute bottom-14 right-2 z-20 min-w-[140px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-1 shadow-lg">
             <button
               type="button"
-              onClick={onMenuEdit}
+              onClick={handleMenuEdit}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
             >
               <Edit2 size={14} /> Upravit
@@ -309,7 +359,7 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
             {opp.contactId && (
               <Link
                 href={`/portal/contacts/${opp.contactId}`}
-                onClick={onMenuContactNav}
+                onClick={handleMenuContactNav}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)]"
               >
                 <Phone size={14} /> Otevřít kontakt
@@ -317,7 +367,7 @@ const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
             )}
             <button
               type="button"
-              onClick={onMenuDelete}
+              onClick={handleMenuDelete}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400"
             >
               <Trash2 size={14} /> Smazat
@@ -687,6 +737,35 @@ export function PipelineBoard({
     setDropTargetStageId(null);
   }, []);
 
+  const navigateToPipelineDetail = useCallback(
+    (opportunityId: string) => {
+      router.push(`/portal/pipeline/${opportunityId}`);
+    },
+    [router],
+  );
+
+  const requestEditOpp = useCallback((opportunity: OpportunityCard) => {
+    setEditOpp(opportunity);
+  }, []);
+
+  const toggleOppMenu = useCallback((opportunityId: string) => {
+    setOpenMenuOppId((prev) => (prev === opportunityId ? null : opportunityId));
+  }, []);
+
+  const closeOppMenu = useCallback(() => {
+    setOpenMenuOppId(null);
+  }, []);
+
+  const menuEditOpp = useCallback((opportunity: OpportunityCard) => {
+    setOpenMenuOppId(null);
+    setEditOpp(opportunity);
+  }, []);
+
+  const menuRequestDelete = useCallback((opportunityId: string) => {
+    setOpenMenuOppId(null);
+    setDeleteConfirmId(opportunityId);
+  }, []);
+
   const handleColumnDragOver = useCallback((e: DragEvent, stageId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -883,40 +962,18 @@ export function PipelineBoard({
                             <PipelineOpportunityCard
                               key={opp.id}
                               opp={opp}
+                              stageId={stage.id}
                               themeAccent={theme.accent}
                               isDragging={isDragging}
                               isMenuOpen={isMenuOpen}
-                              onDragStart={(e) => handleCardDragStart(e, opp.id, stage.id)}
+                              onDragStart={handleCardDragStart}
                               onDragEnd={handleCardDragEnd}
-                              onShellClick={() => {
-                                if (!isMenuOpen) router.push(`/portal/pipeline/${opp.id}`);
-                              }}
-                              onEdit={(e) => {
-                                e.stopPropagation();
-                                setEditOpp(opp);
-                              }}
-                              onMenuToggle={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuOppId(isMenuOpen ? null : opp.id);
-                              }}
-                              onMenuBackdrop={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuOppId(null);
-                              }}
-                              onMenuEdit={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuOppId(null);
-                                setEditOpp(opp);
-                              }}
-                              onMenuContactNav={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuOppId(null);
-                              }}
-                              onMenuDelete={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuOppId(null);
-                                setDeleteConfirmId(opp.id);
-                              }}
+                              onNavigateDetail={navigateToPipelineDetail}
+                              onRequestEdit={requestEditOpp}
+                              onToggleMenu={toggleOppMenu}
+                              onCloseMenu={closeOppMenu}
+                              onMenuEdit={menuEditOpp}
+                              onMenuDelete={menuRequestDelete}
                             />
                           );
                         })

@@ -41,4 +41,10 @@ export const queryKeys = {
     all: ["households"] as const,
     listWithMembers: () => [...queryKeys.households.all, "listWithMembers"] as const,
   },
+  /** Stav OAuth propojení pro Gmail / Drive (sdílené s IntegrationConnectionGate a případnou invalidací). */
+  integrations: {
+    all: ["integrations"] as const,
+    gmailStatus: () => [...queryKeys.integrations.all, "gmail-status"] as const,
+    driveStatus: () => [...queryKeys.integrations.all, "drive-status"] as const,
+  },
 } as const;

@@ -1,11 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMindmapByMapId } from "@/app/actions/mindmap";
 import type { MindmapState } from "@/app/actions/mindmap";
-import { MindmapView } from "../MindmapView";
+
+const MindmapView = dynamic(
+  () => import("../MindmapView").then((m) => m.MindmapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-1 min-h-[50vh] items-center justify-center text-[color:var(--wp-text-secondary)] text-sm">
+        Načítání mapy…
+      </div>
+    ),
+  },
+);
 
 export default function MindmapStandalonePage() {
   const params = useParams();

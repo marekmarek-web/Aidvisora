@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { CalculatorPageShell } from "../core/CalculatorPageShell";
 import { CalculatorPageHeader } from "../core/CalculatorPageHeader";
@@ -7,9 +8,26 @@ import { CalculatorMobileResultDock } from "../core/CalculatorMobileResultDock";
 import { InvestmentStrategySwitcher } from "./InvestmentStrategySwitcher";
 import { InvestmentInputPanel } from "./InvestmentInputPanel";
 import { InvestmentResultsPanel } from "./InvestmentResultsPanel";
-import { InvestmentGrowthChart } from "./InvestmentGrowthChart";
-import { InvestmentAllocationChart } from "./InvestmentAllocationChart";
-import { InvestmentBacktestChart } from "./InvestmentBacktestChart";
+
+const chartLoading = () => (
+  <div
+    className="min-h-[220px] animate-pulse rounded-xl bg-[color:var(--wp-surface-muted)] md:min-h-[240px]"
+    aria-hidden
+  />
+);
+
+const InvestmentGrowthChart = dynamic(
+  () => import("./InvestmentGrowthChart").then((m) => m.InvestmentGrowthChart),
+  { ssr: false, loading: chartLoading },
+);
+const InvestmentAllocationChart = dynamic(
+  () => import("./InvestmentAllocationChart").then((m) => m.InvestmentAllocationChart),
+  { ssr: false, loading: chartLoading },
+);
+const InvestmentBacktestChart = dynamic(
+  () => import("./InvestmentBacktestChart").then((m) => m.InvestmentBacktestChart),
+  { ssr: false, loading: () => <div className="min-h-[320px] animate-pulse rounded-xl bg-[color:var(--wp-surface-muted)]" aria-hidden /> },
+);
 import {
   INVESTMENT_PROFILES,
   HISTORICAL_DATA,

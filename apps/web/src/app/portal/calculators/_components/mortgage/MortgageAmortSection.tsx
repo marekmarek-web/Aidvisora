@@ -1,21 +1,26 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState, useCallback } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
+import type { ChartData, ChartOptions } from "chart.js";
 import { formatCurrency } from "@/lib/calculators/mortgage/formatters";
 import { calculatorSliderGradient } from "@/lib/calculators/calculator-slider-gradient";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
+const MortgageAmortLineChart = dynamic(
+  () =>
+    import("./MortgageAmortLineChart").then((m) => ({
+      default: m.MortgageAmortLineChart,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="relative h-[260px] animate-pulse rounded-xl bg-[color:var(--wp-surface-muted)]"
+        aria-hidden
+      />
+    ),
+  },
+);
 
 export interface MortgageAmortSectionProps {
   borrowingAmount: number;
@@ -89,7 +94,7 @@ export function MortgageAmortSection({
       debtData.push(Math.max(0, table[y * 12 - 1]?.balance ?? 0));
       intData.push(cumInt);
     }
-    const datasets: any[] = [
+    const datasets: ChartData<"line">["datasets"] = [
       {
         label: "Zbývající dluh",
         data: debtData,
@@ -136,7 +141,7 @@ export function MortgageAmortSection({
     return { labels, datasets };
   }, [table, termYears, showEarly, earlyYear]);
 
-  const chartOptions = useMemo(
+  const chartOptions = useMemo<ChartOptions<"line">>(
     () => ({
       responsive: true,
       maintainAspectRatio: false,
@@ -255,10 +260,7 @@ export function MortgageAmortSection({
         </>
       )}
 
-      {/* Chart */}
-      <div className="relative h-[260px]">
-        <Line data={chartData} options={chartOptions} />
-      </div>
+      <MortgageAmortLineChart data={chartData} options={chartOptions} />
 
     </div>
   );

@@ -100,6 +100,8 @@ Změřte na produkčním buildu nebo preview; zapisujte LCP, INP, CLS (Google po
 
 **Integrace (Google):** API routy jsou `force-dynamic`; UI by nemělo blokovat render na čekání na status integrace – ověřit v `portal/tools` a nastavení.
 
+**Stav implementace (2026-04-01):** konkrétní změny v sekci [Výkon – fáze 7 (navazující)](#výkon--fáze-7-navazující) níže.
+
 ---
 
 ## Fáze 8 – Obrázky, PWA, assety
@@ -212,6 +214,20 @@ Změřte na produkčním buildu nebo preview; zapisujte LCP, INP, CLS (Google po
 **Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ (Fáze 0) doplňte po měření; u `/client` a úvodní strany ověřte LCP po přechodu log na `next/image`. Z `apps/web`: `pnpm --filter web analyze` (webpack) – viz Fáze 0.
 
 **P1 (middleware):** po přechodu Next 16 z `middleware.ts` na konvenci `proxy` znovu změřit latenci a ověřit redirecty (viz Fáze 4); do doby migrace jen sledovat varování z buildu.
+
+### Výkon – fáze 7 (navazující)
+
+| Oblast | Změna |
+|--------|--------|
+| Kalkulačky – grafy | [`InvestmentCalculatorPage`](../apps/web/src/app/portal/calculators/_components/investment/InvestmentCalculatorPage.tsx), [`EmbeddedInvestmentProjection`](../apps/web/src/app/portal/calculators/_components/investment/EmbeddedInvestmentProjection.tsx): `next/dynamic` + `ssr: false` pro Chart.js / ApexCharts komponenty (oddělený chunk od hlavního bundlu kalkulačky). [`MortgageAmortLineChart`](../apps/web/src/app/portal/calculators/_components/mortgage/MortgageAmortLineChart.tsx): Chart.js line chart vytažen z [`MortgageAmortSection`](../apps/web/src/app/portal/calculators/_components/mortgage/MortgageAmortSection.tsx) a načítán dynamicky. |
+| Mindmap | [`portal/mindmap/[mapId]/page.tsx`](../apps/web/src/app/portal/mindmap/[mapId]/page.tsx): [`MindmapView`](../apps/web/src/app/portal/mindmap/MindmapView.tsx) přes `dynamic(..., { ssr: false })` (stejný vzor jako výběr mapy). [`portal/mindmap/page.tsx`](../apps/web/src/app/portal/mindmap/page.tsx): `ssr: false` u dynamického `MindmapView`. |
+| Pipeline / board | [`PipelineBoardDynamic`](../apps/web/src/app/dashboard/pipeline/PipelineBoardDynamic.tsx): oddělený chunk pro [`PipelineBoard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx) (`ssr: false`, skeleton); použití v [`dashboard/pipeline/page`](../apps/web/src/app/dashboard/pipeline/page.tsx), [`PipelinePageClient`](../apps/web/src/app/portal/pipeline/PipelinePageClient.tsx), [`ContactOpportunityBoard`](../apps/web/src/app/portal/contacts/[id]/ContactOpportunityBoard.tsx). [`PipelineOpportunityCard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx): stabilní callbacky z rodiče (`useCallback`) + vnitřní `useCallback` pro handlery (návaznost na `React.memo`). |
+| Google nástroje + nastavení | [`IntegrationConnectionGate`](../apps/web/src/app/portal/tools/_components/IntegrationConnectionGate.tsx): TanStack Query (`queryKeys.integrations.gmailStatus` / `driveStatus`), skeleton rozložení workspace při načtení stavu místo jediného malého bloku. [`SetupView`](../apps/web/src/app/portal/setup/SetupView.tsx): po odpojení Gmail/Drive `invalidateQueries` na stejné klíče. |
+| Obrázky (avatary) | [`next.config.js`](../apps/web/next.config.js): `images.remotePatterns` pro Supabase Storage, Google usercontent, Vercel Blob. `next/image` u avatara v [`SetupView`](../apps/web/src/app/portal/setup/SetupView.tsx), [`AdvisorProfileView`](../apps/web/src/app/portal/profile/AdvisorProfileView.tsx), [`portal/contacts/[id]/page.tsx`](../apps/web/src/app/portal/contacts/[id]/page.tsx). |
+
+**Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ (Fáze 0) doplňte po měření na `/portal/calculators/investment`, `/portal/tools/gmail` a `/portal/pipeline`. `pnpm --filter web build` může selhat na nezávislých chybách (např. Server Actions); pro bundle analýzu použijte `pnpm --filter web analyze` (webpack, viz Fáze 0).
+
+**P1:** indexy DB a middleware/proxy – stejně jako u předchozích fází ([`PERFORMANCE-EXPLAIN-HINTS.md`](PERFORMANCE-EXPLAIN-HINTS.md), Fáze 4).
 
 ---
 

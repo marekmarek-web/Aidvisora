@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plus, CheckCircle2, LayoutList, Briefcase } from "lucide-react";
 import { getPipelineByContact } from "@/app/actions/pipeline";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
-import { PipelineBoard } from "@/app/dashboard/pipeline/PipelineBoard";
+import { PipelineBoardDynamic } from "@/app/dashboard/pipeline/PipelineBoardDynamic";
 import { PipelineBoardSkeleton } from "@/app/dashboard/pipeline/PipelineBoardSkeleton";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 
@@ -143,7 +143,7 @@ export function ContactOpportunityBoard({
         )}
 
         {!loading && !loadError && !noStages && (!isEmpty || openCreateStageId) && (
-          <PipelineBoard
+          <PipelineBoardDynamic
             stages={stages}
             contacts={contactsForCreate}
             contactContext={{ contactId }}

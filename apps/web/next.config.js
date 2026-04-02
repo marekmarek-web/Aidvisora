@@ -17,6 +17,13 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, "..", ".."),
   reactStrictMode: true,
   transpilePackages: ["db"],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/**" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
+    ],
+  },
   experimental: {
     ...(nextMajor < 15
       ? {
