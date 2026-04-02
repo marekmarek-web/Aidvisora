@@ -82,19 +82,6 @@ export function InvestmentCalculatorPage({
     [profile.name, profile.rate, initial, monthly, years, projection, startYear, backtestResult]
   );
 
-  const getHeroKpis = useCallback(
-    () => [
-      {
-        label: "Předpokládaná hodnota",
-        value: `${formatCurrency(Math.round(projection.totalBalance))} Kč`,
-      },
-      { label: "Váš vklad", value: `${formatCurrency(Math.round(projection.totalInvested))} Kč` },
-      { label: "Zhodnocení", value: `+${projection.totalGainPercent.toFixed(1)} %` },
-      { label: "Horizont", value: `${years} let` },
-    ],
-    [projection.totalBalance, projection.totalInvested, projection.totalGainPercent, years]
-  );
-
   const isClientAudience = audience === "client";
 
   return (
@@ -113,10 +100,7 @@ export function InvestmentCalculatorPage({
               <CalculatorPdfExportButton
                 documentTitle="Investiční kalkulačka – přehled výpočtu"
                 filePrefix="investice"
-                eyebrow="Kalkulačka investic · 2026"
-                subtitle="Projekce hodnoty investice v čase při pravidelném investování a zvolené strategii."
                 getSections={getPdfSections}
-                getHeroKpis={getHeroKpis}
               />
             }
           />

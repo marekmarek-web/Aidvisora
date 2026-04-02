@@ -103,6 +103,16 @@ function formatUploadSuccessMessage(detail: {
   return lines.join("\n");
 }
 
+type AssistantChatMessage = Extract<ChatMessage, { role: "assistant" }>;
+
+function isAssistantWithContext(
+  m: ChatMessage,
+): m is AssistantChatMessage & {
+  contextState: NonNullable<AssistantChatMessage["contextState"]>;
+} {
+  return m.role === "assistant" && m.contextState != null;
+}
+
 function executionLabel(
   state: NonNullable<Exclude<ChatMessage, { role: "user" }>["executionState"]>,
 ): { tone: string; text: string } {
@@ -149,9 +159,7 @@ export function AiAssistantDrawer() {
   const [importContactsMapping, setImportContactsMapping] = useState<ColumnMapping>(DEFAULT_CONTACT_IMPORT_MAPPING);
   const [importContactsResult, setImportContactsResult] = useState<{ imported: number; skipped: number; errors: { row: number; message: string }[] } | null>(null);
   const [importContactsLoading, setImportContactsLoading] = useState(false);
-  const latestAssistantContext = [...messages]
-    .reverse()
-    .find((m) => m.role === "assistant" && m.contextState)?.contextState;
+  const latestAssistantContext = [...messages].reverse().find(isAssistantWithContext)?.contextState;
 
   useEffect(() => {
     if (!open) return;
