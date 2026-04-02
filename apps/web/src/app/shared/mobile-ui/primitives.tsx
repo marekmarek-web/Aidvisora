@@ -21,7 +21,7 @@ export function MobileAppShell({
   return (
     <div
       className={cx(
-        "flex min-h-screen flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
+        "flex min-h-[100dvh] flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
         deviceClass === "phone" && "pb-[calc(104px+var(--safe-area-bottom))]",
         deviceClass === "tablet" && "pb-[calc(80px+var(--safe-area-bottom))]",
         deviceClass === "desktop" && "pb-0",
@@ -50,7 +50,7 @@ export function MobileHeader({
   return (
     <header
       className={cx(
-        "sticky top-0 z-40 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
+        "sticky top-0 z-40 shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
         "pt-[calc(var(--safe-area-top)+0.25rem)] pb-2",
         deviceClass === "phone" && "px-4",
         deviceClass === "tablet" && "px-6",
@@ -226,7 +226,16 @@ export function MobileBottomNav({
 }
 
 export function MobileScreen({ children, className }: { children: ReactNode } & ClassName) {
-  return <main className={cx("relative min-h-[calc(100dvh-10rem)] px-4 pt-4 pb-6 space-y-4", className)}>{children}</main>;
+  return (
+    <main
+      className={cx(
+        "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pt-4 pb-4 space-y-4",
+        className
+      )}
+    >
+      {children}
+    </main>
+  );
 }
 
 export function MobileSection({ title, action, children, className }: { title?: string; action?: ReactNode; children: ReactNode } & ClassName) {

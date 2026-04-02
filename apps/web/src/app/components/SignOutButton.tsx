@@ -1,17 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { revokeStoredPushToken } from "@/lib/push/usePushNotifications";
+import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 
 export function SignOutButton() {
   const router = useRouter();
   async function signOut() {
-    const supabase = createClient();
-    await revokeStoredPushToken();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    await signOutAndRedirectClient(router);
   }
   return (
     <button

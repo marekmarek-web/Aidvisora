@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   User,
   Bell,
@@ -43,6 +44,7 @@ import {
   MobileSection,
   StatusBadge,
 } from "@/app/shared/mobile-ui/primitives";
+import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 
 type NotificationPrefs = Record<string, boolean>;
 
@@ -195,6 +197,8 @@ function PushNotificationsRow() {
 /* ------------------------------------------------------------------ */
 
 export function SettingsProfileScreen({ advisorName }: { advisorName: string }) {
+  const router = useRouter();
+  const [logoutSigningOut, setLogoutSigningOut] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [ico, setIco] = useState("");
@@ -709,12 +713,17 @@ export function SettingsProfileScreen({ advisorName }: { advisorName: string }) 
       >
         <div className="space-y-3">
           <p className="text-sm text-[color:var(--wp-text-secondary)]">Opravdu se chcete odhlásit z aplikace Aidvisora?</p>
-          <a
-            href="/"
-            className="w-full min-h-[48px] rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center justify-center gap-2"
+          <button
+            type="button"
+            disabled={logoutSigningOut}
+            onClick={() => {
+              setLogoutSigningOut(true);
+              void signOutAndRedirectClient(router).finally(() => setLogoutSigningOut(false));
+            }}
+            className="w-full min-h-[48px] rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <LogOut size={16} /> Odhlásit se
-          </a>
+            <LogOut size={16} /> {logoutSigningOut ? "Odhlašuji…" : "Odhlásit se"}
+          </button>
           <button
             type="button"
             onClick={() => setLogoutOpen(false)}

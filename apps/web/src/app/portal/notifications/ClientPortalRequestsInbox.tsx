@@ -246,7 +246,7 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
   const unreadCount = items.filter((i) => i.notificationStatus === "unread").length;
 
   return (
-    <div className="flex min-h-[min(100vh-8rem,900px)] flex-col gap-4 md:gap-6">
+    <div className="flex w-full min-h-0 flex-col gap-4 max-lg:min-h-0 lg:min-h-[min(100vh-8rem,900px)] md:gap-6">
       <header className="shrink-0 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-start gap-3">
@@ -287,9 +287,9 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:gap-6">
+      <div className="flex w-full min-h-0 flex-col gap-4 max-lg:flex-none lg:flex-1 lg:flex-row lg:gap-6">
         {/* Seznam */}
-        <div className="flex w-full min-h-0 flex-col lg:w-[400px] lg:shrink-0">
+        <div className="flex w-full flex-col max-lg:flex-none max-lg:min-h-0 lg:min-h-0 lg:w-[400px] lg:shrink-0">
           <div className="mb-3 flex rounded-2xl bg-[color:var(--wp-surface-muted)] p-1.5 dark:bg-white/5">
             <button
               type="button"
@@ -315,7 +315,7 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
             </button>
           </div>
 
-          <div className="min-h-[280px] flex-1 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-16rem)]">
+          <div className="max-lg:flex-none max-lg:min-h-0 space-y-2 overflow-y-auto overscroll-y-contain pr-1 lg:min-h-[280px] lg:flex-1 lg:max-h-[calc(100vh-16rem)]">
             {filtered.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] p-8 text-center text-sm text-[color:var(--wp-text-secondary)]">
                 {items.length === 0
@@ -393,7 +393,7 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
         </div>
 
         {/* Detail */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm lg:rounded-3xl">
+        <div className="flex w-full flex-col max-lg:flex-none max-lg:overflow-visible lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm lg:rounded-3xl">
           {!selected ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-[color:var(--wp-text-secondary)]">
               <MessageCircle className="h-12 w-12 opacity-30" strokeWidth={1} aria-hidden />
@@ -458,7 +458,7 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 sm:px-8 max-lg:min-h-0 max-lg:flex-none">
                 {selected.opportunityMissing ? (
                   <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
                     Související obchod už v databázi není. Zobrazené údaje pocházejí z upozornění.

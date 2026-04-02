@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   Home,
   LayoutGrid,
@@ -23,12 +24,14 @@ import {
   UserPlus,
   Zap,
   ScanLine,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { isPortalMultiPageScanEnabled } from "@/lib/portal/portal-scan-enabled";
+import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -168,11 +171,23 @@ export function MobileSideDrawer({
   /** Advisor role from server membership (client-safe, no db import). */
   roleName: RoleName;
 }) {
+  const router = useRouter();
+  const [drawerLogoutConfirm, setDrawerLogoutConfirm] = useState(false);
+  const [drawerLogoutBusy, setDrawerLogoutBusy] = useState(false);
+
   const sections = useMemo(
     () => buildSections(showTeamOverview, roleName),
     [showTeamOverview, roleName]
   );
   const showDrawerScanShortcut = hasPermission(roleName, "documents:read") && isPortalMultiPageScanEnabled();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setDrawerLogoutConfirm(false);
+    setDrawerLogoutBusy(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -309,18 +324,71 @@ export function MobileSideDrawer({
           ))}
         </nav>
 
-        <div className="p-3 border-t border-[color:var(--wp-surface-card-border)] pb-[max(0.75rem,var(--safe-area-bottom))]">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onOpenAi();
-            }}
-            className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-black flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
-          >
-            <AiAssistantBrandIcon size={20} />
-            Zeptejte se AI
-          </button>
+        <div className="p-3 border-t border-[color:var(--wp-surface-card-border)] pb-[max(0.75rem,var(--safe-area-bottom))] space-y-2">
+          {drawerLogoutConfirm ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-center text-[color:var(--wp-text-secondary)] px-1">
+                Opravdu se chcete odhlásit?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={drawerLogoutBusy}
+                  onClick={() => setDrawerLogoutConfirm(false)}
+                  className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.99] transition-transform disabled:opacity-50"
+                >
+                  Zrušit
+                </button>
+                <button
+                  type="button"
+                  disabled={drawerLogoutBusy}
+                  onClick={() => {
+                    setDrawerLogoutBusy(true);
+                    void signOutAndRedirectClient(router).finally(() => setDrawerLogoutBusy(false));
+                  }}
+                  className="min-h-[44px] rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform disabled:opacity-60"
+                >
+                  <LogOut size={16} aria-hidden />
+                  {drawerLogoutBusy ? "…" : "Odhlásit"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAi();
+                }}
+                className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-black flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
+              >
+                <AiAssistantBrandIcon size={20} />
+                Zeptejte se AI
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onNavigate("/portal/setup");
+                  }}
+                  className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text)] flex items-center justify-center gap-2 bg-[color:var(--wp-surface-muted)]/50 active:scale-[0.99] transition-transform"
+                >
+                  <Settings size={16} className="text-indigo-600 shrink-0" aria-hidden />
+                  Nastavení
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawerLogoutConfirm(true)}
+                  className="min-h-[44px] rounded-xl border border-rose-200 text-sm font-bold text-rose-700 flex items-center justify-center gap-2 bg-rose-50/80 active:scale-[0.99] transition-transform"
+                >
+                  <LogOut size={16} aria-hidden />
+                  Odhlásit se
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </aside>
       <button
