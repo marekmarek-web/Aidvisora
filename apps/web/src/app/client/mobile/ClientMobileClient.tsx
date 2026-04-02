@@ -792,15 +792,15 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
     });
   }
 
-  async function saveProfile() {
-    startTransition(async () => {
-      setError(null);
-      try {
-        await clientUpdateProfile(profileDraft);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Profil se nepodařilo uložit.");
-      }
-    });
+  async function saveProfile(): Promise<boolean> {
+    setError(null);
+    try {
+      await clientUpdateProfile(profileDraft);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Profil se nepodařilo uložit.");
+      return false;
+    }
   }
 
   async function addHouseholdMember() {
@@ -1257,7 +1257,14 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                     <input value={profileDraft.zip} onChange={(e) => setProfileDraft((prev) => ({ ...prev, zip: e.target.value }))} className="w-full min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" placeholder="PSČ" />
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={async () => { await saveProfile(); setProfileEditOpen(false); }} className="flex-1 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-black">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const ok = await saveProfile();
+                        if (ok) setProfileEditOpen(false);
+                      }}
+                      className="flex-1 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-black"
+                    >
                       Uložit
                     </button>
                     <button type="button" onClick={() => setProfileEditOpen(false)} className="min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-600">
