@@ -25,6 +25,8 @@ import "@/styles/advisor-client-request-toast.css";
 const AUTO_DISMISS_MS = 6000;
 const EXIT_MS = 400;
 const PREVIEW_MAX = 140;
+/** Nepřečtené notifikace starší než (sessionStart − buffer) při prvním syncu označíme jako „seen“ bez toastu. Novější zůstanou pro toast i v první HTTP odpovědi. */
+const SESSION_CLOCK_SKEW_BUFFER_MS = 10_000;
 
 type Accent = "blue" | "emerald" | "violet" | "amber" | "rose" | "slate";
 
@@ -180,6 +182,7 @@ export function AdvisorClientRequestToastStack() {
   const exitTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   const initialSyncDoneRef = useRef(false);
+  const portalSessionStartedAtRef = useRef(Date.now());
 
   const removeAfterExit = useCallback((id: string) => {
     if (exitTimersRef.current[id]) clearTimeout(exitTimersRef.current[id]);
@@ -223,10 +226,26 @@ export function AdvisorClientRequestToastStack() {
 
   useEffect(() => {
     if (loading) return;
+
     if (!initialSyncDoneRef.current) {
       initialSyncDoneRef.current = true;
-      seenNotificationIdsRef.current = new Set(notifications.map((n) => n.id));
-      return;
+      const t0 = portalSessionStartedAtRef.current;
+      const seen = new Set<string>();
+      for (const n of notifications) {
+        if (n.status !== "unread") {
+          seen.add(n.id);
+          continue;
+        }
+        const created = new Date(n.createdAt).getTime();
+        if (Number.isNaN(created)) {
+          seen.add(n.id);
+          continue;
+        }
+        if (created < t0 - SESSION_CLOCK_SKEW_BUFFER_MS) {
+          seen.add(n.id);
+        }
+      }
+      seenNotificationIdsRef.current = seen;
     }
 
     for (const n of notifications) {
