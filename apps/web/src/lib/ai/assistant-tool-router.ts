@@ -31,6 +31,7 @@ import { resolveEntities, patchIntentWithResolutions } from "./assistant-entity-
 import { buildExecutionPlan, confirmAllSteps, allStepsReady, getPlanSummary, getStepsAwaitingConfirmation } from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import { getPlaybookGuidanceLines } from "./playbooks";
+import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
 export type AssistantResponse = {
   message: string;
@@ -194,6 +195,10 @@ export async function routeAssistantMessage(
   }
 
   const intent = await extractAssistantIntent(message);
+  logAssistantTelemetry(AssistantTelemetryAction.LEGACY_INTENT_EXTRACTED, {
+    actionTags: Array.isArray(intent.actions) ? intent.actions.slice(0, 12) : [],
+    switchClient: intent.switchClient,
+  });
   const roleName = options?.roleName ?? "Advisor";
 
   if (intent.switchClient) {
@@ -243,6 +248,7 @@ export async function routeAssistantMessage(
     });
 
     if (!write.ok) {
+      logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "legacy", ok: false });
       return {
         message: `Zápis do CRM se nepodařil: ${write.error}`,
         referencedEntities: [],
@@ -255,6 +261,7 @@ export async function routeAssistantMessage(
     }
 
     session.lockedDealId = write.dealId;
+    logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "legacy", ok: true });
 
     const lines = [
       "Záznam do CRM proběhl (ověřené identifikátory z databáze).",
@@ -419,6 +426,9 @@ export async function routeAssistantMessageCanonical(
 
   if (session.lastExecutionPlan && session.lastExecutionPlan.status === "awaiting_confirmation") {
     if (isConfirmation(message)) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_EXECUTED, {
+        planId: session.lastExecutionPlan.planId,
+      });
       const confirmed = confirmAllSteps(session.lastExecutionPlan);
       const executed = await executePlan(confirmed, {
         tenantId,
@@ -431,6 +441,9 @@ export async function routeAssistantMessageCanonical(
       return verifiedToResponse(verified, session.sessionId);
     }
     if (isCancellation(message)) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_CANCELLED, {
+        planId: session.lastExecutionPlan.planId,
+      });
       session.lastExecutionPlan = undefined;
       return {
         message: "Plán zrušen. Jak vám mohu pomoci?",
@@ -452,6 +465,11 @@ export async function routeAssistantMessageCanonical(
   }
 
   const canonicalIntent = await extractCanonicalIntent(message);
+  logAssistantTelemetry(AssistantTelemetryAction.CANONICAL_INTENT_EXTRACTED, {
+    intentType: canonicalIntent.intentType,
+    switchClient: canonicalIntent.switchClient,
+    requiresConfirmation: canonicalIntent.requiresConfirmation,
+  });
 
   if (canonicalIntent.switchClient) {
     clearAssistantClientLock(session);
@@ -470,6 +488,11 @@ export async function routeAssistantMessageCanonical(
   }
 
   const resolution = await resolveEntities(tenantId, canonicalIntent, session);
+  logAssistantTelemetry(AssistantTelemetryAction.ENTITY_RESOLUTION, {
+    ambiguousClient: Boolean(resolution.client?.ambiguous),
+    clientResolved: Boolean(resolution.client?.entityId),
+    warningCount: resolution.warnings.length,
+  });
 
   if (shouldUseMortgageVerifiedBundle(canonicalIntent)) {
     if (resolution.client?.ambiguous) {
@@ -510,6 +533,7 @@ export async function routeAssistantMessageCanonical(
       intent: legacyIntent,
     });
     if (!write.ok) {
+      logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "canonical", ok: false });
       return {
         message: `Zápis do CRM se nepodařil: ${write.error}`,
         referencedEntities: [],
@@ -521,6 +545,7 @@ export async function routeAssistantMessageCanonical(
       };
     }
     session.lockedDealId = write.dealId;
+    logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "canonical", ok: true });
     const lines = [
       "Záznam do CRM proběhl (ověřené identifikátory z databáze).",
       `dealId: ${write.dealId}`,
@@ -571,8 +596,15 @@ export async function routeAssistantMessageCanonical(
 
   const patchedIntent = patchIntentWithResolutions(canonicalIntent, resolution);
   const plan = buildExecutionPlan(patchedIntent, resolution, session);
+  logAssistantTelemetry(AssistantTelemetryAction.EXECUTION_PLAN_BUILT, {
+    planId: plan.planId,
+    stepCount: plan.steps.length,
+    planStatus: plan.status,
+    intentType: plan.intentType,
+  });
 
   if (plan.steps.length === 0) {
+    logAssistantTelemetry(AssistantTelemetryAction.CANONICAL_FALLBACK_LEGACY_CHAT, { reason: "empty_plan" });
     return routeAssistantMessage(message, session, activeContext, {
       roleName: options?.roleName,
       skipIncrement: true,
@@ -581,6 +613,10 @@ export async function routeAssistantMessageCanonical(
 
   const awaiting = getStepsAwaitingConfirmation(plan);
   if (awaiting.length > 0) {
+    logAssistantTelemetry(AssistantTelemetryAction.AWAITING_CONFIRMATION, {
+      planId: plan.planId,
+      pendingSteps: awaiting.length,
+    });
     session.lastExecutionPlan = plan;
     const summary = getPlanSummary(plan);
     const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";

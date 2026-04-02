@@ -13,6 +13,7 @@ import type {
   VerifiedAssistantResult,
 } from "./assistant-domain-model";
 import { logAudit } from "../audit";
+import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
 export type ExecutionContext = {
   tenantId: string;
@@ -202,6 +203,12 @@ export async function executePlan(
   const confirmedSteps = plan.steps.filter((s) => s.status === "confirmed");
   if (confirmedSteps.length === 0) return plan;
 
+  logAssistantTelemetry(AssistantTelemetryAction.WRITE_PLAN_START, {
+    planId: plan.planId,
+    confirmedStepCount: confirmedSteps.length,
+    actions: confirmedSteps.map((s) => s.action).slice(0, 16),
+  });
+
   const waves = resolveDependencies(confirmedSteps);
   const updatedSteps = [...plan.steps];
   let anyFailed = false;
@@ -224,11 +231,20 @@ export async function executePlan(
     );
   }
 
-  return {
+  const nextPlan: ExecutionPlan = {
     ...plan,
     steps: updatedSteps,
     status: anyFailed ? "partial_failure" : "completed",
   };
+
+  logAssistantTelemetry(AssistantTelemetryAction.WRITE_PLAN_DONE, {
+    planId: nextPlan.planId,
+    finalStatus: nextPlan.status,
+    succeeded: updatedSteps.filter((s) => s.status === "succeeded").length,
+    failed: updatedSteps.filter((s) => s.status === "failed").length,
+  });
+
+  return nextPlan;
 }
 
 export function buildVerifiedResult(
