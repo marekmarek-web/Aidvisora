@@ -13,6 +13,12 @@ import {
   Copy,
   Check,
   X,
+  CheckCircle2,
+  XCircle,
+  SkipForward,
+  RefreshCw,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -36,6 +42,13 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 type MessageRole = "user" | "assistant";
 
+interface StepOutcomeSummary {
+  label: string;
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  entityId?: string | null;
+  error?: string | null;
+}
+
 interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -51,6 +64,9 @@ interface ChatMessage {
     pendingSteps?: number;
   } | null;
   contextState?: { channel: string | null; lockedClientId: string | null } | null;
+  stepOutcomes?: StepOutcomeSummary[];
+  suggestedNextSteps?: string[];
+  hasPartialFailure?: boolean;
 }
 
 interface SuggestedAction {
@@ -102,9 +118,11 @@ const QUICK_STARTERS = [
 function MessageBubble({
   msg,
   onSuggestedAction,
+  onNextStep,
 }: {
   msg: ChatMessage;
   onSuggestedAction?: (action: SuggestedAction) => void;
+  onNextStep?: (text: string) => void;
 }) {
   const isUser = msg.role === "user";
 
@@ -189,10 +207,67 @@ function MessageBubble({
 
         {/* Warnings */}
         {(msg.warnings ?? []).length > 0 ? (
-          <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+          <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
             {msg.warnings!.map((w, i) => (
-              <p key={i} className="text-xs text-amber-700 font-semibold">{w}</p>
+              <div key={i} className="flex items-start gap-1.5">
+                <AlertCircle size={12} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 font-semibold">{w}</p>
+              </div>
             ))}
+          </div>
+        ) : null}
+
+        {/* Step outcomes */}
+        {(msg.stepOutcomes ?? []).length > 0 ? (() => {
+          const outcomes = msg.stepOutcomes!;
+          const failedCount = outcomes.filter(o => o.status === "failed").length;
+          const succeededCount = outcomes.filter(o => o.status === "succeeded").length;
+          const hasFailure = msg.hasPartialFailure || failedCount > 0;
+          return (
+            <div className={cx(
+              "px-3 py-2 rounded-xl border space-y-1",
+              hasFailure ? "bg-rose-50 border-rose-200" : "bg-emerald-50 border-emerald-200"
+            )}>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1">
+                {failedCount > 0 ? `${failedCount} z ${outcomes.length} kroků selhalo` : `${succeededCount} / ${outcomes.length} kroků`}
+              </p>
+              {outcomes.map((o, i) => {
+                const icon =
+                  o.status === "succeeded" ? <CheckCircle2 size={12} className="text-emerald-600 shrink-0 mt-0.5" /> :
+                  o.status === "failed"    ? <XCircle size={12} className="text-rose-600 shrink-0 mt-0.5" /> :
+                  o.status === "skipped"   ? <SkipForward size={12} className="text-slate-400 shrink-0 mt-0.5" /> :
+                                             <RefreshCw size={12} className="text-indigo-400 shrink-0 mt-0.5" />;
+                return (
+                  <div key={i} className="flex items-start gap-1.5">
+                    {icon}
+                    <div className="min-w-0">
+                      <span className={cx("text-xs", o.status === "failed" ? "text-rose-700 font-semibold" : "text-[color:var(--wp-text-secondary)]")}>{o.label}</span>
+                      {o.error && <p className="text-rose-500 text-[10px] mt-0.5">{o.error}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })() : null}
+
+        {/* Suggested next steps */}
+        {(msg.suggestedNextSteps ?? []).length > 0 && onNextStep ? (
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Doporučené kroky</p>
+            <div className="flex flex-wrap gap-1.5">
+              {msg.suggestedNextSteps!.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onNextStep(s)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg min-h-[32px] text-left active:bg-indigo-100"
+                >
+                  <Sparkles size={10} className="shrink-0 text-indigo-400" />
+                  {s.length > 50 ? `${s.slice(0, 48)}…` : s}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -505,6 +580,9 @@ export function AiAssistantChatScreen() {
                   warnings: complete.warnings ?? [],
                   executionState: complete.executionState ?? null,
                   contextState: complete.contextState ?? null,
+                  stepOutcomes: complete.stepOutcomes ?? undefined,
+                  suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                  hasPartialFailure: complete.hasPartialFailure ?? undefined,
                 }
               : m
           )
@@ -616,6 +694,9 @@ export function AiAssistantChatScreen() {
                 warnings: complete.warnings ?? [],
                 executionState: complete.executionState ?? null,
                 contextState: complete.contextState ?? null,
+                stepOutcomes: complete.stepOutcomes ?? undefined,
+                suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                hasPartialFailure: complete.hasPartialFailure ?? undefined,
               }
             : m
         )
@@ -716,7 +797,12 @@ export function AiAssistantChatScreen() {
         ) : null}
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} onSuggestedAction={handleSuggestedAction} />
+          <MessageBubble
+            key={msg.id}
+            msg={msg}
+            onSuggestedAction={handleSuggestedAction}
+            onNextStep={(text) => void sendMessage(text)}
+          />
         ))}
 
         {isTyping ? <TypingIndicator /> : null}

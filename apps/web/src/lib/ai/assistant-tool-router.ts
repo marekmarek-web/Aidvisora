@@ -34,6 +34,13 @@ import { verifyWriteContextSafety } from "./assistant-context-safety";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
+export type StepOutcomeSummary = {
+  label: string;
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  entityId?: string | null;
+  error?: string | null;
+};
+
 export type AssistantResponse = {
   message: string;
   referencedEntities: { type: string; id: string; label?: string }[];
@@ -52,6 +59,9 @@ export type AssistantResponse = {
     channel: string | null;
     lockedClientId: string | null;
   } | null;
+  stepOutcomes?: StepOutcomeSummary[];
+  suggestedNextSteps?: string[];
+  hasPartialFailure?: boolean;
 };
 
 type ToolCall = {
@@ -676,22 +686,8 @@ export async function routeAssistantMessageCanonical(
 }
 
 function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string): AssistantResponse {
-  const stepSummaryLines: string[] = [];
-  for (const o of verified.stepOutcomes) {
-    const icon = o.status === "succeeded" ? "✅" : o.status === "failed" ? "❌" : o.status === "skipped" ? "⏭" : "🔄";
-    stepSummaryLines.push(`${icon} ${o.label}${o.error ? ` — ${o.error}` : ""}`);
-  }
-
-  const body = stepSummaryLines.length > 0
-    ? `${verified.message}\n\n${stepSummaryLines.join("\n")}`
-    : verified.message;
-
-  const nextSteps = verified.suggestedNextSteps.length > 0
-    ? `\n\n${verified.suggestedNextSteps.join("\n")}`
-    : "";
-
   return {
-    message: `${body}${nextSteps}`,
+    message: verified.message,
     referencedEntities: verified.referencedEntities,
     suggestedActions: [],
     warnings: verified.warnings,
@@ -704,5 +700,13 @@ function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string
       totalSteps: verified.plan.steps.length,
       pendingSteps: verified.plan.steps.filter(s => s.status === "requires_confirmation").length,
     } : null,
+    stepOutcomes: verified.stepOutcomes.map(o => ({
+      label: o.label,
+      status: o.status,
+      entityId: o.entityId,
+      error: o.error,
+    })),
+    suggestedNextSteps: verified.suggestedNextSteps.length > 0 ? verified.suggestedNextSteps : undefined,
+    hasPartialFailure: verified.hasPartialFailure || undefined,
   };
 }

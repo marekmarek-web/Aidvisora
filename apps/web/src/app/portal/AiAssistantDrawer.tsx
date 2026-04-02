@@ -14,6 +14,12 @@ import {
   MessageCircle,
   Zap,
   UserPlus,
+  CheckCircle2,
+  XCircle,
+  SkipForward,
+  RefreshCw,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
 import { useAiAssistantDrawer } from "./AiAssistantDrawerContext";
@@ -43,6 +49,13 @@ const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
 type ClientCandidate = { clientId: string; displayName?: string };
 
+type StepOutcomeSummary = {
+  label: string;
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  entityId?: string | null;
+  error?: string | null;
+};
+
 type ChatMessage =
   | { role: "user"; content: string }
   | {
@@ -60,6 +73,9 @@ type ChatMessage =
         pendingSteps?: number;
       } | null;
       contextState?: { channel: string | null; lockedClientId: string | null } | null;
+      stepOutcomes?: StepOutcomeSummary[];
+      suggestedNextSteps?: string[];
+      hasPartialFailure?: boolean;
     };
 
 type UploadPhase = "idle" | "uploading" | "processing";
@@ -129,6 +145,60 @@ function executionLabel(
     return { tone: "emerald", text: "Provedeno" };
   }
   return { tone: "slate", text: "Návrh akcí" };
+}
+
+function StepOutcomeCard({ outcomes, hasPartialFailure }: { outcomes: StepOutcomeSummary[]; hasPartialFailure?: boolean }) {
+  if (outcomes.length === 0) return null;
+  const failedCount = outcomes.filter(o => o.status === "failed").length;
+  const succeededCount = outcomes.filter(o => o.status === "succeeded").length;
+  const borderColor = hasPartialFailure || failedCount > 0 ? "border-rose-200 bg-rose-50/60" : "border-emerald-200 bg-emerald-50/60";
+  return (
+    <div className={`mt-2 rounded-xl border ${borderColor} px-3 py-2 space-y-1`}>
+      <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1.5">
+        {failedCount > 0
+          ? `${failedCount} z ${outcomes.length} kroků selhalo`
+          : `${succeededCount} / ${outcomes.length} kroků`}
+      </p>
+      {outcomes.map((o, i) => {
+        const icon =
+          o.status === "succeeded" ? <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" /> :
+          o.status === "failed"    ? <XCircle size={13} className="text-rose-600 shrink-0 mt-0.5" /> :
+          o.status === "skipped"   ? <SkipForward size={13} className="text-slate-400 shrink-0 mt-0.5" /> :
+                                     <RefreshCw size={13} className="text-indigo-400 shrink-0 mt-0.5" />;
+        return (
+          <div key={i} className="flex items-start gap-1.5 text-xs">
+            {icon}
+            <div className="min-w-0">
+              <span className={o.status === "failed" ? "text-rose-700 font-semibold" : "text-[color:var(--wp-text-secondary)]"}>{o.label}</span>
+              {o.error && <p className="text-rose-500 text-[10px] mt-0.5">{o.error}</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SuggestedNextStepsChips({ steps, onSend }: { steps: string[]; onSend: (msg: string) => void }) {
+  if (steps.length === 0) return null;
+  return (
+    <div className="mt-2 space-y-1">
+      <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Doporučené kroky</p>
+      <div className="flex flex-wrap gap-1.5">
+        {steps.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onSend(s)}
+            className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-800 font-semibold hover:bg-indigo-100 transition-colors text-left"
+          >
+            <Sparkles size={10} className="shrink-0 text-indigo-400" />
+            {s.length > 50 ? s.slice(0, 48) + "…" : s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function AiAssistantDrawer() {
@@ -253,6 +323,9 @@ export function AiAssistantDrawer() {
               warnings: complete.warnings ?? [],
               executionState: complete.executionState ?? null,
               contextState: complete.contextState ?? null,
+              stepOutcomes: complete.stepOutcomes ?? undefined,
+              suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+              hasPartialFailure: complete.hasPartialFailure ?? undefined,
             };
           }
           return next;
@@ -874,15 +947,24 @@ export function AiAssistantDrawer() {
                       })()}
                     </div>
                   )}
+                  {m.role === "assistant" && (m.stepOutcomes?.length ?? 0) > 0 && (
+                    <StepOutcomeCard outcomes={m.stepOutcomes!} hasPartialFailure={m.hasPartialFailure} />
+                  )}
                   {m.role === "assistant" && m.contextState?.lockedClientId && (
-                    <div className="mt-2 text-[11px] font-semibold text-[color:var(--wp-text-tertiary)]">
-                      Aktivní lock klienta: {m.contextState.lockedClientId.slice(0, 8)}…
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1">
+                      <span>Klient</span>
+                      <ChevronRight size={9} />
+                      <span className="font-mono">{m.contextState.lockedClientId.slice(0, 8)}…</span>
                     </div>
                   )}
                   {m.role === "assistant" && m.warnings && m.warnings.length > 0 && (
-                    <div className="flex items-center gap-2 mt-2 text-amber-700 text-xs font-medium">
-                      <AlertCircle size={14} />
-                      {m.warnings.join(" ")}
+                    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 space-y-1">
+                      {m.warnings.map((w, wi) => (
+                        <div key={wi} className="flex items-start gap-1.5 text-xs text-amber-700 font-medium">
+                          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                          <span>{w}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {m.role === "assistant" && (m.suggestedActions?.length ?? 0) > 0 && (
@@ -898,6 +980,9 @@ export function AiAssistantDrawer() {
                         </button>
                       ))}
                     </div>
+                  )}
+                  {m.role === "assistant" && (m.suggestedNextSteps?.length ?? 0) > 0 && (
+                    <SuggestedNextStepsChips steps={m.suggestedNextSteps!} onSend={(msg) => { setInput(""); void sendChatMessage(msg); }} />
                   )}
                   {m.role === "assistant" && m.reviewId && (
                     <div className="flex flex-wrap gap-2 mt-3">
