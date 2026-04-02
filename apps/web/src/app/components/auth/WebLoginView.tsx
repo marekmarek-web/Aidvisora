@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
 import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
@@ -133,9 +134,12 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
 
       <div className="absolute top-6 left-0 right-0 px-4 sm:px-8 flex justify-between items-center z-20 max-w-[1200px] mx-auto w-full">
         <Link href="/" className="flex items-center min-h-[44px] min-w-[44px]">
-          <img
+          <Image
             src="/logos/Aidvisora%20logo%20new.png"
             alt="Aidvisora"
+            width={200}
+            height={40}
+            priority
             className="h-9 w-auto max-w-[200px] object-contain object-left shrink-0 brightness-0 invert"
           />
         </Link>
@@ -194,9 +198,11 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
 
           <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-6 sm:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] shadow-indigo-900/20 relative overflow-hidden">
             <div className="flex flex-col items-center mb-8">
-              <img
+              <Image
                 src="/logos/Aidvisora%20logo%20new.png"
                 alt="Aidvisora"
+                width={200}
+                height={48}
                 className="h-12 w-auto max-w-[200px] mb-5 object-contain brightness-0 invert"
               />
               <h1 className="font-jakarta text-2xl md:text-3xl font-bold text-white tracking-tight mb-2 text-center">

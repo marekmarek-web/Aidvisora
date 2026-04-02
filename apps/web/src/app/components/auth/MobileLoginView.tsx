@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle, ArrowRight, ChevronLeft, Eye, EyeOff, Lock, Mail, ScanFace } from "lucide-react";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
@@ -141,11 +142,13 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
           )}
 
           <div className={`flex flex-col items-center animate-in fade-in duration-500 ${isInviteFlow ? "mb-6" : "mb-10"}`}>
-            <img
+            <Image
               src="/logos/Aidvisora%20logo%20new.png"
               alt="Aidvisora"
-              className={`max-w-[82%] object-contain ${isInviteFlow ? "w-[160px] mb-3" : "w-[220px] mb-5"}`}
-              style={{ filter: "brightness(0) invert(1)" }}
+              width={220}
+              height={48}
+              priority
+              className={`max-w-[82%] object-contain brightness-0 invert ${isInviteFlow ? "w-[160px] mb-3" : "w-[220px] mb-5"}`}
             />
             <h1 className={`font-display font-black text-white tracking-tight mb-1.5 text-center ${isInviteFlow ? "text-2xl" : "text-3xl"}`}>
               {isInviteFlow ? "Dokončení přístupu" : isClient ? "Klientská zóna" : isLogin ? "Vítejte zpět" : "Založit účet"}

@@ -200,6 +200,19 @@ Změřte na produkčním buildu nebo preview; zapisujte LCP, INP, CLS (Google po
 
 **Backlog P2:** rozšířit [`next/image`](../apps/web/src/app/layout.tsx) na marketingové stránky, pokud vznikne čas (viz Fáze 8).
 
+### Výkon – fáze 6 (navazující)
+
+| Oblast | Změna |
+|--------|--------|
+| Klientská zóna – `router.refresh` | [`ClientNotificationsList`](../apps/web/src/app/client/notifications/ClientNotificationsList.tsx): po „Označit přečteno“ lokální aktualizace `readAt` místo celého `router.refresh()`. [`ClientRequestForm`](../apps/web/src/app/client/requests/new/ClientRequestForm.tsx): po úspěchu jen `router.push("/client/requests")` (nová stránka si data načte; redundantní `refresh` po `push` odstraněn). **Ponecháno:** [`ClientDocumentUpload`](../apps/web/src/app/client/ClientDocumentUpload.tsx) (RSC seznam dokumentů), [`ProfileClientView`](../apps/web/src/app/client/profile/ProfileClientView.tsx) + rodina, [`ClientMaterialRequestRespondForm`](../apps/web/src/app/client/pozadavky-poradce/[id]/ClientMaterialRequestRespondForm.tsx), [`ClientMobileClient`](../apps/web/src/app/client/mobile/ClientMobileClient.tsx) retry – kvůli serverovým props / obnovení chybového stavu. |
+| Marketing / přihlášení – loga | [`LandingHeader`](../apps/web/src/app/components/LandingHeader.tsx), [`LandingFooter`](../apps/web/src/app/components/LandingFooter.tsx), [`WebLoginView`](../apps/web/src/app/components/auth/WebLoginView.tsx), [`MobileLoginView`](../apps/web/src/app/components/auth/MobileLoginView.tsx): statické logo `/logos/...` přes `next/image` (lokální soubory, bez `remotePatterns`). |
+| Nastavení – nadcházející z Google | [`GoogleCalendarUpcomingEvents`](../apps/web/src/app/portal/setup/GoogleCalendarUpcomingEvents.tsx): `useQuery` pro kontakty a otevřené příležitosti (`queryKeys.calendar.contactsPick`, `queryKeys.pipeline.openListWithContact`), stejně jako kalendář v portálu. |
+| Pipeline board | [`PipelineBoard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx): [`PipelineOpportunityCard`](../apps/web/src/app/dashboard/pipeline/PipelineBoard.tsx) obalena [`React.memo`](https://react.dev/reference/react/memo); plný přínos až při stabilnějších callbackech z rodiče (volitelný další krok). |
+
+**Lighthouse / analyze:** tabulku v sekci „Šablona Lighthouse“ (Fáze 0) doplňte po měření; u `/client` a úvodní strany ověřte LCP po přechodu log na `next/image`. Z `apps/web`: `pnpm --filter web analyze` (webpack) – viz Fáze 0.
+
+**P1 (middleware):** po přechodu Next 16 z `middleware.ts` na konvenci `proxy` znovu změřit latenci a ověřit redirecty (viz Fáze 4); do doby migrace jen sledovat varování z buildu.
+
 ---
 
 ## Závěr

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface LandingFooterProps {
   activeTheme: "original" | "darkElegance";
@@ -22,12 +23,12 @@ export function LandingFooter({ activeTheme: _activeTheme }: LandingFooterProps)
           className="flex min-h-[44px] min-w-[44px] items-center gap-2 text-white/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent rounded-lg"
           aria-label="Aidvisora – úvod"
         >
-          <img
+          <Image
             src="/logos/Aidvisora%20logo%20new.png"
-            alt=""
-            className="h-8 w-auto max-w-[140px] object-contain brightness-0 invert"
+            alt="Aidvisora"
             width={140}
             height={32}
+            className="h-8 w-auto max-w-[140px] object-contain brightness-0 invert"
           />
         </Link>
         <nav className="flex flex-wrap items-center justify-center gap-2 sm:gap-4" aria-label="Patička">

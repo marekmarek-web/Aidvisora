@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { Loader2, AlertCircle, Calendar, MapPin, Plus, Pencil, Trash2, User, Briefcase } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { BaseModal } from "@/app/components/BaseModal";
@@ -88,8 +90,16 @@ export function GoogleCalendarUpcomingEvents() {
     contactId: "",
     opportunityId: "",
   });
-  const [contactsList, setContactsList] = useState<ContactRow[]>([]);
-  const [opportunitiesList, setOpportunitiesList] = useState<{ id: string; title: string; contactId: string | null }[]>([]);
+  const { data: contactsList = [] } = useQuery({
+    queryKey: queryKeys.calendar.contactsPick(),
+    queryFn: getContactsList,
+    staleTime: 120_000,
+  });
+  const { data: opportunitiesList = [] } = useQuery({
+    queryKey: queryKeys.pipeline.openListWithContact,
+    queryFn: getOpenOpportunitiesList,
+    staleTime: 120_000,
+  });
   const [filterContactId, setFilterContactId] = useState<string>("");
   const [editOpen, setEditOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -130,11 +140,6 @@ export function GoogleCalendarUpcomingEvents() {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
-
-  useEffect(() => {
-    getContactsList().then(setContactsList).catch(() => setContactsList([]));
-    getOpenOpportunitiesList().then(setOpportunitiesList).catch(() => setOpportunitiesList([]));
-  }, []);
 
   if (loading) {
     return (

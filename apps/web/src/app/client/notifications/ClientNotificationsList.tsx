@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { markPortalNotificationRead } from "@/app/actions/portal-notifications";
 import type { PortalNotificationRow } from "@/app/actions/portal-notifications";
 
@@ -9,14 +9,20 @@ export function ClientNotificationsList({
 }: {
   initialNotifications: PortalNotificationRow[];
 }) {
-  const router = useRouter();
+  const [items, setItems] = useState<PortalNotificationRow[]>(initialNotifications);
+
+  useEffect(() => {
+    setItems(initialNotifications);
+  }, [initialNotifications]);
 
   async function handleMarkRead(id: string) {
     await markPortalNotificationRead(id);
-    router.refresh();
+    setItems((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, readAt: new Date() } : n))
+    );
   }
 
-  if (initialNotifications.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="rounded-xl border border-monday-border bg-monday-surface p-6 text-center">
         <p className="text-monday-text-muted text-sm">
@@ -28,7 +34,7 @@ export function ClientNotificationsList({
 
   return (
     <ul className="space-y-2">
-      {initialNotifications.map((n) => (
+      {items.map((n) => (
         <li
           key={n.id}
           className={`rounded-xl border border-monday-border bg-monday-surface p-4 ${

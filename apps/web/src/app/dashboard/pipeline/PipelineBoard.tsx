@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useEffect, type DragEvent, type MouseEvent } from "react";
+import { useState, useTransition, useCallback, useEffect, memo, type DragEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
@@ -173,7 +173,7 @@ function Modal({
 }
 
 /** Izolovaná karta obchodu – méně práce pro překreslení rodiče při změnách mimo tuto kartu. */
-function PipelineOpportunityCard({
+const PipelineOpportunityCard = memo(function PipelineOpportunityCard({
   opp,
   themeAccent,
   isDragging,
@@ -327,7 +327,7 @@ function PipelineOpportunityCard({
       )}
     </div>
   );
-}
+});
 
 function CreateForm({
   stageId,

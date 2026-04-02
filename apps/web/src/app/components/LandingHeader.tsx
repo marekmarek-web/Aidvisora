@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
 
 type ThemeId = "original" | "darkElegance";
@@ -43,12 +44,13 @@ export function LandingHeader({ activeTheme }: LandingHeaderProps) {
           className="flex min-h-[44px] min-w-[44px] items-center focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent rounded-lg"
           aria-label="Aidvisora – úvod"
         >
-          <img
+          <Image
             src="/logos/Aidvisora%20logo%20new.png"
             alt="Aidvisora"
-            className="h-10 w-auto max-w-[200px] object-contain brightness-0 invert sm:h-12 sm:max-w-[240px]"
             width={240}
             height={48}
+            priority
+            className="h-10 w-auto max-w-[200px] object-contain brightness-0 invert sm:h-12 sm:max-w-[240px]"
           />
         </Link>
 
