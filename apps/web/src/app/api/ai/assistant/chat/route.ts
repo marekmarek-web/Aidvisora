@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     });
     if (!rate.ok) {
       return NextResponse.json(
-        { error: "Příliš mnoho požadavků. Zkuste to znovu později." },
+        { error: "PĹ™Ă­liĹˇ mnoho poĹľadavkĹŻ. Zkuste to znovu pozdÄ›ji." },
         { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
       );
     }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message) {
-      return NextResponse.json({ error: "Chybí zpráva." }, { status: 400 });
+      return NextResponse.json({ error: "ChybĂ­ zprĂˇva." }, { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -81,11 +81,7 @@ export async function POST(request: Request) {
     const tenantId = membership.tenantId;
     const session = getOrCreateSession(sessionId, tenantId, userId);
 
-    const response: AssistantResponse = await routeAssistantMessage(
-      message,
-      session,
-      activeContext,
-    );
+    const response: AssistantResponse = await routeAssistantMessage(message, session, activeContext, { roleName: membership.roleName });
 
     if (useStream) {
       return new Response(assistantResponseToSseStream(response), {
@@ -104,3 +100,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

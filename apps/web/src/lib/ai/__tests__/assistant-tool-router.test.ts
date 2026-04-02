@@ -33,6 +33,25 @@ vi.mock("@/lib/openai", () => ({
 vi.mock("@/lib/client-ai-context", () => ({
   getClientAiContext: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("../assistant-intent-extract", () => ({
+  extractAssistantIntent: vi.fn().mockResolvedValue({
+    actions: ["general_chat"],
+    switchClient: false,
+    clientRef: null,
+    amount: null,
+    ltv: null,
+    purpose: null,
+    bank: null,
+    rateGuess: null,
+    noEmail: false,
+    dueDateText: null,
+  }),
+}));
+vi.mock("../assistant-crm-writes", () => ({
+  executeMortgageDealAndFollowUpTask: vi.fn(),
+}));
+
+
 
 const { parseModelToolCalls, formatToolResultForModel, routeAssistantMessage } = await import(
   "../assistant-tool-router"

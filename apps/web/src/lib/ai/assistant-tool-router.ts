@@ -1,14 +1,26 @@
-/**
- * Assistant tool router (Plan 5B.2).
- * Orchestrates context building, model calls, and tool dispatch.
+﻿/**
+ * Assistant tool router â€” intent-first CRM writes, optional tools, no default dashboard.
  */
 
 import { createResponseSafe } from "@/lib/openai";
-import { ASSISTANT_TOOLS, getToolByName, getToolDescriptions, type ToolResult, type ToolHandlerContext } from "./assistant-tools";
+import { getToolByName, getToolDescriptions, type ToolResult, type ToolHandlerContext } from "./assistant-tools";
 import { buildDashboardContext, buildClientDetailContext, buildReviewDetailContext, buildPaymentDetailContext } from "./assistant-context-builder";
-import { type AssistantSession, type ActiveContext, updateSessionContext, incrementMessageCount } from "./assistant-session";
+import {
+  type AssistantSession,
+  type ActiveContext,
+  updateSessionContext,
+  incrementMessageCount,
+  lockAssistantClient,
+  clearAssistantClientLock,
+} from "./assistant-session";
 import { buildSuggestedActionsFromUrgent, computePriorityItems } from "./dashboard-priority";
 import type { ActionPayload } from "./action-catalog";
+import { extractAssistantIntent } from "./assistant-intent-extract";
+import { intentWantsCrmWrites, intentWantsDashboard } from "./assistant-intent";
+import { executeMortgageDealAndFollowUpTask } from "./assistant-crm-writes";
+import { searchContactsForAssistant } from "./assistant-contact-search";
+import type { RoleName } from "@/shared/rolePermissions";
+import type { AssistantIntent } from "./assistant-intent";
 
 export type AssistantResponse = {
   message: string;
@@ -25,17 +37,57 @@ type ToolCall = {
   params: Record<string, unknown>;
 };
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Robust [TOOL:name {...}] parser â€” supports nested JSON objects. */
 export function parseModelToolCalls(text: string): ToolCall[] {
   const calls: ToolCall[] = [];
-  const pattern = /\[TOOL:(\w+)\s*(\{[^}]*\})?\]/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    const name = match[1];
+  const prefix = "[TOOL:";
+  let i = 0;
+  while (i < text.length) {
+    const start = text.indexOf(prefix, i);
+    if (start === -1) break;
+    const afterPrefix = start + prefix.length;
+    const spaceIdx = text.indexOf(" ", afterPrefix);
+    const closeBracket = text.indexOf("]", afterPrefix);
+    let nameEnd = spaceIdx;
+    if (spaceIdx === -1 || (closeBracket !== -1 && closeBracket < spaceIdx)) {
+      nameEnd = closeBracket;
+    }
+    const name = text.slice(afterPrefix, nameEnd).trim();
+    if (!name || !/^\w+$/.test(name)) {
+      i = start + 1;
+      continue;
+    }
+    const jsonStart = text.indexOf("{", nameEnd);
+    if (jsonStart === -1 || (closeBracket !== -1 && closeBracket < jsonStart)) {
+      calls.push({ name, params: {} });
+      i = closeBracket !== -1 ? closeBracket + 1 : start + prefix.length + name.length;
+      continue;
+    }
+    let depth = 0;
+    let j = jsonStart;
+    for (; j < text.length; j++) {
+      const ch = text[j];
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          j++;
+          break;
+        }
+      }
+    }
     let params: Record<string, unknown> = {};
-    if (match[2]) {
-      try { params = JSON.parse(match[2]); } catch { /* ignore */ }
+    try {
+      params = JSON.parse(text.slice(jsonStart, j)) as Record<string, unknown>;
+    } catch {
+      params = {};
     }
     calls.push({ name, params });
+    i = j;
   }
   return calls;
 }
@@ -53,18 +105,19 @@ function buildToolInstructions(): string {
     const paramStr = paramKeys.length > 0 ? ` params: {${paramKeys.join(", ")}}` : "";
     return `- ${t.name}: ${t.description}${paramStr}`;
   });
-  return `Dostupné nástroje:\n${lines.join("\n")}\n\nPro použití nástroje vlož: [TOOL:nazev {param: "hodnota"}]`;
+  return `DostupnĂ© nĂˇstroje:\n${lines.join("\n")}\n\nPro pouĹľitĂ­ nĂˇstroje vloĹľ: [TOOL:nazev {\"param\": \"hodnota\"}]`;
 }
 
-async function buildContextForMessage(
+async function buildAssistantChatContext(
   tenantId: string,
   activeContext?: ActiveContext,
+  opts?: { includeDashboard?: boolean },
 ): Promise<string> {
   const sections: string[] = [];
-
-  const dashboard = await buildDashboardContext(tenantId);
-  sections.push(dashboard.summaryText);
-
+  if (opts?.includeDashboard) {
+    const dashboard = await buildDashboardContext(tenantId);
+    sections.push(dashboard.summaryText);
+  }
   if (activeContext?.clientId) {
     const client = await buildClientDetailContext(tenantId, activeContext.clientId);
     sections.push(`\nKontext klienta:\n${client.summaryText}`);
@@ -77,23 +130,64 @@ async function buildContextForMessage(
     const payment = await buildPaymentDetailContext(tenantId, activeContext.paymentContactId);
     sections.push(`\nKontext plateb:\n${payment.summaryText}`);
   }
-
-  return sections.join("\n");
+  return sections.length > 0 ? sections.join("\n") : "(Ĺ˝ĂˇdnĂ˝ dodateÄŤnĂ˝ kontext â€” dashboard se nepĹ™iklĂˇdĂˇ, pokud o nÄ›j uĹľivatel nepoĹľĂˇdĂˇ.)";
 }
+
+async function resolveContactForAssistantWrites(
+  session: AssistantSession,
+  intent: AssistantIntent,
+  tenantId: string,
+): Promise<{ contactId: string } | { error: string }> {
+  const ref = intent.clientRef?.trim();
+  if (ref) {
+    const matches = await searchContactsForAssistant(tenantId, ref, 12);
+    if (matches.length === 0) {
+      return { error: `NenaĹˇel jsem kontakt pro â€ž${ref}â€ś. UpĹ™esnÄ›te jmĂ©no nebo otevĹ™ete kartu klienta.` };
+    }
+    if (matches.length > 1) {
+      return { error: `VĂ­ce shod pro â€ž${ref}â€ś â€” vyberte jednoznaÄŤnÄ› klienta (e-mail/mÄ›sto) nebo pouĹľijte kontakt z URL.` };
+    }
+    lockAssistantClient(session, matches[0].id);
+    return { contactId: matches[0].id };
+  }
+  if (session.lockedClientId) {
+    return { contactId: session.lockedClientId };
+  }
+  if (session.activeClientId) {
+    lockAssistantClient(session, session.activeClientId);
+    return { contactId: session.activeClientId };
+  }
+  return { error: "ChybĂ­ klient â€” otevĹ™ete kartu kontaktu v portĂˇlu nebo uveÄŹte celĂ© jmĂ©no klienta ve zprĂˇvÄ›." };
+}
+
 
 export async function routeAssistantMessage(
   message: string,
   session: AssistantSession,
   activeContext?: ActiveContext,
+  options?: { roleName?: RoleName },
 ): Promise<AssistantResponse> {
-  updateSessionContext(session, activeContext);
   incrementMessageCount(session);
+
+  const intent = await extractAssistantIntent(message);
+  const roleName = options?.roleName ?? "Advisor";
+
+  if (intent.switchClient) {
+    clearAssistantClientLock(session);
+  }
+
+  const skipClientFromUi = Boolean(session.lockedClientId) && !intent.switchClient;
+  updateSessionContext(session, activeContext, { skipClientIdFromUi: skipClientFromUi });
+
+  if (!session.lockedClientId && session.activeClientId) {
+    lockAssistantClient(session, session.activeClientId);
+  }
 
   const tenantId = session.tenantId;
   const handlerCtx: ToolHandlerContext = {
     tenantId,
     userId: session.userId,
-    roleName: "Advisor",
+    roleName,
   };
 
   const effectiveContext: ActiveContext = {
@@ -102,22 +196,97 @@ export async function routeAssistantMessage(
     paymentContactId: session.activePaymentContactId,
   };
 
-  const context = await buildContextForMessage(tenantId, effectiveContext);
+  if (intentWantsCrmWrites(intent)) {
+    const resolved = await resolveContactForAssistantWrites(session, intent, tenantId);
+    if ("error" in resolved) {
+      return {
+        message: resolved.error,
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [],
+        confidence: 0.5,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
+
+    const write = await executeMortgageDealAndFollowUpTask({
+      tenantId,
+      userId: session.userId,
+      roleName,
+      contactId: resolved.contactId,
+      intent,
+    });
+
+    if (!write.ok) {
+      return {
+        message: `ZĂˇpis do CRM se nepodaĹ™il: ${write.error}`,
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [],
+        confidence: 0.35,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
+
+    session.lockedDealId = write.dealId;
+
+    const lines = [
+      "ZĂˇznam do CRM probÄ›hl (ovÄ›Ĺ™enĂ© identifikĂˇtory z databĂˇze).",
+      `dealId: ${write.dealId}`,
+      `taskId: ${write.taskId}`,
+      `TermĂ­n Ăşkolu (datum, 10:00 Europe/Prague): ${write.dueDate}`,
+    ];
+    if (intent.noEmail) {
+      lines.push("E-mail nebyl generovĂˇn (dle zadĂˇnĂ­).");
+    }
+
+    return {
+      message: lines.join("\n"),
+      referencedEntities: [
+        { type: "opportunity", id: write.dealId },
+        { type: "task", id: write.taskId },
+      ],
+      suggestedActions: [],
+      warnings: [],
+      confidence: 1,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  const context = await buildAssistantChatContext(tenantId, effectiveContext, {
+    includeDashboard: intentWantsDashboard(intent),
+  });
   const toolInstructions = buildToolInstructions();
 
   const activeContactLine =
     effectiveContext.clientId != null && effectiveContext.clientId !== ""
-      ? `Aktivní kontakt v CRM (contactId pro nástroje getClientSummary, createEmailDraft, getPaymentSetupDetail, createTaskDraft): ${effectiveContext.clientId}. Nepiš uživateli, aby ručně zadával UUID — použij toto ID v [TOOL:...].`
-      : "Aktivní kontakt z URL není k dispozici — pokud potřebuješ ID kontaktu, zavolej nejdřív [TOOL:searchContacts {\"query\": \"...\"}]. Při více shodách vyber s pomocí hintů nebo nech uživatele vybrat podle e-mailu/města; nikdy nežádej o technické UUID.";
+      ? `AktivnĂ­ kontakt v CRM (contactId pro nĂˇstroje getClientSummary, createEmailDraft, getPaymentSetupDetail, createTaskDraft): ${effectiveContext.clientId}. NepiĹˇ uĹľivateli, aby ruÄŤnÄ› zadĂˇval UUID â€” pouĹľij toto ID v [TOOL:...].`
+      : "AktivnĂ­ kontakt z URL nenĂ­ k dispozici â€” pokud potĹ™ebujeĹˇ ID kontaktu, zavolej nejdĹ™Ă­v [TOOL:searchContacts {\"query\": \"...\"}]. PĹ™i vĂ­ce shodĂˇch vyber s pomocĂ­ hintĹŻ nebo nech uĹľivatele vybrat podle e-mailu/mÄ›sta; nikdy neĹľĂˇdej o technickĂ© UUID.";
+
+  const noEmailLine = intent.noEmail
+    ? "UĹľivatel zakĂˇzal Ĺ™eĹˇit e-mail â€” negeneruj obsah e-mailu a nepouĹľĂ­vej nĂˇstroj createEmailDraft."
+    : "";
+
+  const hardRules = [
+    "Nikdy netvrÄŹ, Ĺľe je nÄ›co â€žzavedenoâ€ś nebo uloĹľeno v CRM, pokud nemĂˇĹˇ potvrzenĂ˝ vĂ˝sledek zĂˇpisu (dealId/taskId) z tohoto bÄ›hu.",
+    "Dashboard souhrn nenĂ­ nĂˇhrada za zĂˇpis do CRM.",
+    noEmailLine,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const system = [
-    "Jsi asistent poradce v CRM. Odpovídej stručně a v češtině.",
-    "Můžeš navrhovat konkrétní kroky a používat nástroje.",
+    "Jsi asistent poradce v CRM. OdpovĂ­dej struÄŤnÄ› a v ÄŤeĹˇtinÄ›.",
+    "MĹŻĹľeĹˇ navrhovat konkrĂ©tnĂ­ kroky a pouĹľĂ­vat nĂˇstroje.",
+    hardRules,
     activeContactLine,
     toolInstructions,
   ].join("\n\n");
 
-  const fullPrompt = `${system}\n\nKontext:\n${context}\n\nUživatel: ${message}\n\nAsistent:`;
+  const fullPrompt = `${system}\n\nKontext:\n${context}\n\nUĹľivatel: ${message}\n\nAsistent:`;
 
   const allWarnings: string[] = [];
   const allSources: string[] = [];
@@ -136,6 +305,14 @@ export async function routeAssistantMessage(
       const tool = getToolByName(tc.name);
       if (!tool) continue;
 
+      if (tc.name === "createEmailDraft" && intent.noEmail) {
+        responseMessage = responseMessage.replace(
+          new RegExp(`\\[TOOL:${escapeRegExp(tc.name)}[^\\]]*\\]`),
+          "[RESULT:createEmailDraft] {\"skipped\":true,\"reason\":\"uĹľivatel zakĂˇzal e-mail\"}",
+        );
+        continue;
+      }
+
       try {
         const toolResult = await tool.handler(tc.params, handlerCtx);
         allWarnings.push(...toolResult.warnings);
@@ -143,13 +320,13 @@ export async function routeAssistantMessage(
 
         const formatted = formatToolResultForModel(tc.name, toolResult);
         responseMessage = responseMessage.replace(
-          `[TOOL:${tc.name}${tc.params && Object.keys(tc.params).length > 0 ? ` ${JSON.stringify(tc.params)}` : ""}]`,
+          new RegExp(`\\[TOOL:${escapeRegExp(tc.name)}[^\\]]*\\]`),
           formatted,
         );
       } catch {
         responseMessage = responseMessage.replace(
-          new RegExp(`\\[TOOL:${tc.name}[^\\]]*\\]`),
-          `[Nástroj ${tc.name} selhal]`,
+          new RegExp(`\\[TOOL:${escapeRegExp(tc.name)}[^\\]]*\\]`),
+          `[NĂˇstroj ${tc.name} selhal]`,
         );
       }
     }
@@ -167,13 +344,13 @@ export async function routeAssistantMessage(
     const fallbackActions = buildSuggestedActionsFromUrgent(urgentItems);
 
     session.lastSuggestedActions = fallbackActions;
-    session.lastWarnings = ["Služba AI dočasně nedostupná."];
+    session.lastWarnings = ["SluĹľba AI doÄŤasnÄ› nedostupnĂˇ."];
 
     return {
-      message: "Odpověď není k dispozici. Zkuste to později nebo vyberte akci níže.",
+      message: "OdpovÄ›ÄŹ nenĂ­ k dispozici. Zkuste to pozdÄ›ji nebo vyberte akci nĂ­Ĺľe.",
       referencedEntities: [],
       suggestedActions: [],
-      warnings: ["Služba AI dočasně nedostupná."],
+      warnings: ["SluĹľba AI doÄŤasnÄ› nedostupnĂˇ."],
       confidence: 0,
       sourcesSummary: [],
       sessionId: session.sessionId,
@@ -190,3 +367,5 @@ export async function routeAssistantMessage(
     sessionId: session.sessionId,
   };
 }
+
+

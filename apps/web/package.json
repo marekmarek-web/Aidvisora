@@ -55,6 +55,8 @@
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "db": "workspace:*",
     "drizzle-orm": "^0.36.0",
     "exifr": "^7.1.3",

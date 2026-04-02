@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Lightweight in-memory assistant session state (Plan 5B.3).
  * TTL: 30 minutes. No DB persistence for v1.
  */
@@ -12,6 +12,9 @@ export type AssistantSession = {
   activeClientId?: string;
   activeReviewId?: string;
   activePaymentContactId?: string;
+  /** Once set, URL activeContext.clientId is ignored until switchClient clears the lock. */
+  lockedClientId?: string;
+  lockedDealId?: string;
   lastSuggestedActions: SuggestedAction[];
   lastWarnings: string[];
   messageCount: number;
@@ -72,9 +75,10 @@ export type ActiveContext = {
 export function updateSessionContext(
   session: AssistantSession,
   activeContext?: ActiveContext,
+  options?: { skipClientIdFromUi?: boolean },
 ): void {
   if (!activeContext) return;
-  if ("clientId" in activeContext) {
+  if ("clientId" in activeContext && !options?.skipClientIdFromUi) {
     session.activeClientId = activeContext.clientId ?? undefined;
   }
   if ("reviewId" in activeContext) {
@@ -83,6 +87,16 @@ export function updateSessionContext(
   if ("paymentContactId" in activeContext) {
     session.activePaymentContactId = activeContext.paymentContactId ?? undefined;
   }
+}
+
+export function lockAssistantClient(session: AssistantSession, contactId: string): void {
+  session.lockedClientId = contactId;
+  session.activeClientId = contactId;
+}
+
+export function clearAssistantClientLock(session: AssistantSession): void {
+  session.lockedClientId = undefined;
+  session.lockedDealId = undefined;
 }
 
 export function incrementMessageCount(session: AssistantSession): void {
