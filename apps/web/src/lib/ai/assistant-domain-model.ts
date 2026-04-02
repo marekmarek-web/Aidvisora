@@ -204,6 +204,17 @@ export type ExecutionPlan = {
   createdAt: Date;
 };
 
+export type StepOutcome = {
+  stepId: string;
+  action: WriteActionType;
+  label: string;
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  entityId: string | null;
+  entityType: string | null;
+  error: string | null;
+  warnings: string[];
+};
+
 export type VerifiedAssistantResult = {
   message: string;
   plan: ExecutionPlan | null;
@@ -211,6 +222,9 @@ export type VerifiedAssistantResult = {
   suggestedNextSteps: string[];
   warnings: string[];
   confidence: number;
+  stepOutcomes: StepOutcome[];
+  hasPartialFailure: boolean;
+  allSucceeded: boolean;
 };
 
 export type ContextLockState = {

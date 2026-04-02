@@ -14,6 +14,7 @@ import type {
 } from "./assistant-domain-model";
 import { logAudit } from "../audit";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
+import { computeStepFingerprint, checkRecentFingerprint, recordFingerprint } from "./assistant-action-fingerprint";
 
 export type ExecutionContext = {
   tenantId: string;
@@ -116,6 +117,10 @@ async function executeStep(
   const idempotencyKey = `${ctx.sessionId}:${step.stepId}`;
   const existing = await checkIdempotency(ctx.tenantId, step.action, `${ctx.sessionId}:${step.stepId}`);
   if (existing) {
+    logAssistantTelemetry(AssistantTelemetryAction.IDEMPOTENT_HIT, {
+      stepId: step.stepId,
+      action: step.action,
+    });
     return {
       ok: true,
       entityId: existing.entityId,
@@ -125,11 +130,30 @@ async function executeStep(
     };
   }
 
+  const fingerprint = computeStepFingerprint(step);
+  const fpCheck = checkRecentFingerprint(ctx.sessionId, fingerprint);
+  if (fpCheck.isDuplicate) {
+    logAssistantTelemetry(AssistantTelemetryAction.DUPLICATE_DETECTED, {
+      stepId: step.stepId,
+      action: step.action,
+      fingerprint,
+      existingActionId: fpCheck.existingActionId,
+    });
+    return {
+      ok: true,
+      entityId: fpCheck.existingActionId,
+      entityType: step.action,
+      warnings: ["Duplicitní akce detekována — přeskočeno."],
+      error: null,
+    };
+  }
+
   try {
     const result = await adapter(step.params, ctx);
     await recordExecution(step, ctx, result, idempotencyKey);
 
     if (result.ok) {
+      recordFingerprint(ctx.sessionId, fingerprint, result.entityId ?? idempotencyKey);
       await logAudit({
         userId: ctx.userId,
         tenantId: ctx.tenantId,
@@ -254,9 +278,29 @@ export function buildVerifiedResult(
   const entities: VerifiedAssistantResult["referencedEntities"] = [];
   const warnings: string[] = [];
   const suggestions: string[] = [];
+  const stepOutcomes: VerifiedAssistantResult["stepOutcomes"] = [];
 
   if (plan) {
     for (const step of plan.steps) {
+      const isIdempotent = step.result?.warnings?.some(w => w.includes("idempotentní") || w.includes("Duplicitní")) ?? false;
+      const outcome: VerifiedAssistantResult["stepOutcomes"][number] = {
+        stepId: step.stepId,
+        action: step.action,
+        label: step.label,
+        status: step.status === "skipped"
+          ? "skipped"
+          : isIdempotent
+            ? "idempotent_hit"
+            : step.result?.ok
+              ? "succeeded"
+              : "failed",
+        entityId: step.result?.entityId ?? null,
+        entityType: step.result?.entityType ?? null,
+        error: step.result?.error ?? null,
+        warnings: step.result?.warnings ?? [],
+      };
+      stepOutcomes.push(outcome);
+
       if (step.result?.ok && step.result.entityId) {
         entities.push({
           type: step.result.entityType ?? step.action,
@@ -273,6 +317,7 @@ export function buildVerifiedResult(
     }
 
     const succeeded = plan.steps.filter((s) => s.status === "succeeded").length;
+    const failed = plan.steps.filter((s) => s.status === "failed").length;
     const total = plan.steps.length;
     if (succeeded > 0 && succeeded < total) {
       suggestions.push("Zkontrolujte selhané kroky a zkuste je znovu.");
@@ -280,14 +325,25 @@ export function buildVerifiedResult(
     if (succeeded === total && total > 0) {
       suggestions.push("Všechny akce byly úspěšně provedeny.");
     }
+    if (failed > 0) {
+      suggestions.push(`${failed} z ${total} kroků selhalo.`);
+    }
   }
 
+  const allSucceeded = plan ? plan.steps.every(s => s.status === "succeeded") : true;
+  const hasPartialFailure = plan?.status === "partial_failure";
+
   return {
-    message,
+    message: hasPartialFailure
+      ? `⚠ Některé akce selhaly.\n\n${message}`
+      : message,
     plan,
     referencedEntities: entities,
     suggestedNextSteps: suggestions,
     warnings,
-    confidence: plan?.status === "completed" ? 0.95 : 0.7,
+    confidence: plan?.status === "completed" ? 0.95 : hasPartialFailure ? 0.5 : 0.7,
+    stepOutcomes,
+    hasPartialFailure,
+    allSucceeded,
   };
 }

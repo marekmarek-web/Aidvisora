@@ -30,6 +30,7 @@ import type { CanonicalIntent, ExecutionPlan, VerifiedAssistantResult } from "./
 import { resolveEntities, patchIntentWithResolutions } from "./assistant-entity-resolution";
 import { buildExecutionPlan, confirmAllSteps, allStepsReady, getPlanSummary, getStepsAwaitingConfirmation } from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
+import { verifyWriteContextSafety } from "./assistant-context-safety";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
@@ -611,6 +612,35 @@ export async function routeAssistantMessageCanonical(
     });
   }
 
+  const ctxSafety = verifyWriteContextSafety(session, resolution, plan);
+  if (!ctxSafety.safe) {
+    logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+      planId: plan.planId,
+      reason: ctxSafety.blockedReason,
+    });
+    return {
+      message: ctxSafety.warnings.join("\n"),
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: ctxSafety.warnings,
+      confidence: 0.3,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+  if (ctxSafety.requiresConfirmation && plan.status !== "awaiting_confirmation") {
+    logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_CROSS_ENTITY, {
+      planId: plan.planId,
+      warningCount: ctxSafety.warnings.length,
+    });
+    for (const s of plan.steps) {
+      if (s.status !== "requires_confirmation") {
+        (s as { status: string }).status = "requires_confirmation";
+      }
+    }
+    (plan as { status: string }).status = "awaiting_confirmation";
+  }
+
   const awaiting = getStepsAwaitingConfirmation(plan);
   if (awaiting.length > 0) {
     logAssistantTelemetry(AssistantTelemetryAction.AWAITING_CONFIRMATION, {
@@ -646,13 +676,33 @@ export async function routeAssistantMessageCanonical(
 }
 
 function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string): AssistantResponse {
+  const stepSummaryLines: string[] = [];
+  for (const o of verified.stepOutcomes) {
+    const icon = o.status === "succeeded" ? "✅" : o.status === "failed" ? "❌" : o.status === "skipped" ? "⏭" : "🔄";
+    stepSummaryLines.push(`${icon} ${o.label}${o.error ? ` — ${o.error}` : ""}`);
+  }
+
+  const body = stepSummaryLines.length > 0
+    ? `${verified.message}\n\n${stepSummaryLines.join("\n")}`
+    : verified.message;
+
+  const nextSteps = verified.suggestedNextSteps.length > 0
+    ? `\n\n${verified.suggestedNextSteps.join("\n")}`
+    : "";
+
   return {
-    message: verified.message + (verified.suggestedNextSteps.length > 0 ? `\n\n${verified.suggestedNextSteps.join("\n")}` : ""),
+    message: `${body}${nextSteps}`,
     referencedEntities: verified.referencedEntities,
     suggestedActions: [],
     warnings: verified.warnings,
     confidence: verified.confidence,
     sourcesSummary: [],
     sessionId,
+    executionState: verified.plan ? {
+      status: verified.plan.status,
+      planId: verified.plan.planId,
+      totalSteps: verified.plan.steps.length,
+      pendingSteps: verified.plan.steps.filter(s => s.status === "requires_confirmation").length,
+    } : null,
   };
 }
