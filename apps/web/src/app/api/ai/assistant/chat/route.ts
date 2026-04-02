@@ -8,12 +8,26 @@ import {
   routeAssistantMessageCanonical,
   type AssistantResponse,
 } from "@/lib/ai/assistant-tool-router";
+import {
+  appendConversationMessage,
+  loadConversationHydration,
+  upsertConversationFromSession,
+} from "@/lib/ai/assistant-conversation-repository";
+import { ASSISTANT_CHANNELS, type AssistantChannel, type AssistantMode } from "@/lib/ai/assistant-domain-model";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 const USER_ID_HEADER = "x-user-id";
 
 const SSE_CHUNK = 48;
+
+function normalizeChannel(raw: unknown, hasClientContext: boolean): AssistantChannel {
+  if (typeof raw === "string" && ASSISTANT_CHANNELS.includes(raw as AssistantChannel)) {
+    return raw as AssistantChannel;
+  }
+  return hasClientContext ? "contact_detail" : "web_drawer";
+}
 
 function assistantResponseToSseStream(response: AssistantResponse): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -81,9 +95,26 @@ export async function POST(request: Request) {
 
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : undefined;
     const activeContext = body.activeContext ?? {};
+    const channel = normalizeChannel(body.channel, Boolean(activeContext?.clientId));
 
     const tenantId = membership.tenantId;
     const session = getOrCreateSession(sessionId, tenantId, userId);
+    const hydrated = await loadConversationHydration(session.sessionId, tenantId, userId);
+    if (hydrated) {
+      if (hydrated.lockedContactId) {
+        session.lockedClientId = hydrated.lockedContactId;
+      }
+      if (hydrated.channel) {
+        session.activeChannel = hydrated.channel;
+        session.contextLock.activeChannel = hydrated.channel;
+      }
+      if (hydrated.assistantMode) {
+        session.assistantMode = hydrated.assistantMode as AssistantMode;
+        session.contextLock.assistantMode = session.assistantMode;
+      }
+    }
+    session.activeChannel = channel;
+    session.contextLock.activeChannel = channel;
 
     const orchestration =
       body.orchestration === "canonical" || body.useCanonicalOrchestration === true
@@ -96,8 +127,60 @@ export async function POST(request: Request) {
           })
         : await routeAssistantMessage(message, session, activeContext, { roleName: membership.roleName });
 
+    const conflictWarnings = [...(response.warnings ?? [])];
+    if (
+      typeof activeContext?.clientId === "string" &&
+      session.lockedClientId &&
+      activeContext.clientId !== session.lockedClientId
+    ) {
+      conflictWarnings.push(
+        "Asistent je stále zamčený na původního klienta. Pro bezpečné přepnutí použijte příkaz „přepni klienta\".",
+      );
+    }
+    const persistedResponse: AssistantResponse = {
+      ...response,
+      warnings: [...new Set(conflictWarnings)],
+    };
+
+    await upsertConversationFromSession(session, {
+      channel,
+      metadata: {
+        orchestration,
+        messageCount: session.messageCount,
+      },
+    });
+    await appendConversationMessage({
+      conversationId: session.sessionId,
+      role: "user",
+      content: message,
+      meta: { channel, activeContext },
+    });
+    await appendConversationMessage({
+      conversationId: session.sessionId,
+      role: "assistant",
+      content: persistedResponse.message ?? "",
+      executionPlanSnapshot: session.lastExecutionPlan ?? null,
+      referencedEntities: persistedResponse.referencedEntities ?? [],
+      meta: {
+        warnings: persistedResponse.warnings ?? [],
+        confidence: persistedResponse.confidence,
+      },
+    });
+    await logAudit({
+      tenantId,
+      userId,
+      action: "assistant.conversation_message",
+      entityType: "assistant_conversation",
+      entityId: session.sessionId,
+      meta: {
+        channel,
+        orchestration,
+        messageCount: session.messageCount,
+      },
+    }).catch(() => {});
+
     if (useStream) {
-      return new Response(assistantResponseToSseStream(response), {
+      return new Response(assistantResponseToSseStream(persistedResponse), {
         status: 200,
         headers: {
           "Content-Type": "text/event-stream; charset=utf-8",
@@ -107,7 +190,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(response);
+    return NextResponse.json(persistedResponse);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Odeslání zprávy selhalo.";
     return NextResponse.json({ error: message }, { status: 500 });

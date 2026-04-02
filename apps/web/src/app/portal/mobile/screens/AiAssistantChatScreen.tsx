@@ -351,6 +351,7 @@ export function AiAssistantChatScreen() {
               buildAssistantChatRequestBody(trimmed, {
                 sessionId: assistantSessionId,
                 routeContactId,
+                channel: "mobile",
               }),
             ),
           },
@@ -459,6 +460,7 @@ export function AiAssistantChatScreen() {
             buildAssistantChatRequestBody(`Analyzuj nahraný soubor: ${docName}`, {
               sessionId: assistantSessionId,
               routeContactId,
+              channel: "mobile",
             }),
           ),
         },

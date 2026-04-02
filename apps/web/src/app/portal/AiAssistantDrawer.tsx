@@ -170,6 +170,7 @@ export function AiAssistantDrawer() {
             buildAssistantChatRequestBody(msg, {
               sessionId: assistantSessionId,
               routeContactId,
+              channel: "web_drawer",
             }),
           ),
         },

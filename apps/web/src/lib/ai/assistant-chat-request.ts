@@ -15,6 +15,8 @@ export function parsePortalContactIdFromPathname(pathname: string | null): strin
 export type AssistantChatRequestBody = {
   message: string;
   sessionId?: string;
+  orchestration?: "legacy" | "canonical";
+  channel?: "web_drawer" | "mobile" | "contact_detail" | "dashboard" | "client_portal_bridge";
   /** Když je klient z URL známý, UUID; jinak `null` vymaže aktivní klienta ve session na serveru. */
   activeContext?: {
     clientId?: string | null;
@@ -25,9 +27,18 @@ export type AssistantChatRequestBody = {
 
 export function buildAssistantChatRequestBody(
   message: string,
-  opts: { sessionId?: string; routeContactId: string | null },
+  opts: {
+    sessionId?: string;
+    routeContactId: string | null;
+    orchestration?: "legacy" | "canonical";
+    channel?: "web_drawer" | "mobile" | "contact_detail" | "dashboard" | "client_portal_bridge";
+  },
 ): AssistantChatRequestBody {
-  const body: AssistantChatRequestBody = { message };
+  const body: AssistantChatRequestBody = {
+    message,
+    orchestration: opts.orchestration ?? "canonical",
+    channel: opts.routeContactId ? "contact_detail" : (opts.channel ?? "web_drawer"),
+  };
   if (opts.sessionId?.trim()) body.sessionId = opts.sessionId.trim();
   const cid = opts.routeContactId?.trim();
   body.activeContext = { clientId: cid || null };

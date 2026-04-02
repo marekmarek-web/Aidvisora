@@ -11,6 +11,7 @@ import type {
   ExecutionPlan,
 } from "./assistant-domain-model";
 import { defaultContextLock } from "./assistant-domain-model";
+import { randomUUID } from "crypto";
 
 export type AssistantSession = {
   sessionId: string;
@@ -39,7 +40,11 @@ const SESSION_TTL_MS = 30 * 60 * 1000;
 const sessions = new Map<string, AssistantSession>();
 
 function generateSessionId(): string {
-  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return randomUUID();
+}
+
+function isUuid(val: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 }
 
 function purgeExpired(): void {
@@ -65,7 +70,7 @@ export function getOrCreateSession(
     }
   }
 
-  const newId = sessionId ?? generateSessionId();
+  const newId = sessionId && isUuid(sessionId) ? sessionId : generateSessionId();
   const session: AssistantSession = {
     sessionId: newId,
     tenantId,
@@ -91,10 +96,28 @@ export function updateSessionContext(
   session: AssistantSession,
   activeContext?: ActiveContext,
   options?: { skipClientIdFromUi?: boolean },
-): void {
-  if (!activeContext) return;
-  if ("clientId" in activeContext && !options?.skipClientIdFromUi) {
-    session.activeClientId = activeContext.clientId ?? undefined;
+): string[] {
+  const warnings: string[] = [];
+  if (!activeContext) return warnings;
+
+  if ("clientId" in activeContext) {
+    const incomingClientId = activeContext.clientId ?? undefined;
+    if (
+      incomingClientId &&
+      session.lockedClientId &&
+      incomingClientId !== session.lockedClientId &&
+      options?.skipClientIdFromUi
+    ) {
+      warnings.push(
+        "URL je na jiném klientovi, ale asistent zůstává zamčený na původního klienta. Pro změnu kontextu napište „přepni klienta\".",
+      );
+    }
+    if (!options?.skipClientIdFromUi) {
+      if (session.activeClientId && incomingClientId && incomingClientId !== session.activeClientId) {
+        warnings.push("Detekuji změnu klienta podle URL kontextu. Zkontrolujte, zda má asistent pokračovat u nového klienta.");
+      }
+      session.activeClientId = incomingClientId;
+    }
   }
   if ("reviewId" in activeContext) {
     session.activeReviewId = activeContext.reviewId ?? undefined;
@@ -102,6 +125,7 @@ export function updateSessionContext(
   if ("paymentContactId" in activeContext) {
     session.activePaymentContactId = activeContext.paymentContactId ?? undefined;
   }
+  return warnings;
 }
 
 export function lockAssistantClient(session: AssistantSession, contactId: string): void {

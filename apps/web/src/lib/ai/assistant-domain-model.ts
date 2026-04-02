@@ -35,6 +35,7 @@ export const ASSISTANT_CHANNELS = [
   "mobile",
   "contact_detail",
   "dashboard",
+  "client_portal_bridge",
   "pipeline_detail",
   "document_detail",
 ] as const;

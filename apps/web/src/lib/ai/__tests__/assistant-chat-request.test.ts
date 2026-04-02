@@ -26,6 +26,8 @@ describe("buildAssistantChatRequestBody", () => {
     expect(b).toEqual({
       message: "ahoj",
       sessionId: "sess_1",
+      orchestration: "canonical",
+      channel: "web_drawer",
       activeContext: { clientId: null },
     });
   });
@@ -33,6 +35,7 @@ describe("buildAssistantChatRequestBody", () => {
   it("includes client id when on contact route", () => {
     const b = buildAssistantChatRequestBody("x", { routeContactId: SAMPLE_UUID });
     expect(b.activeContext).toEqual({ clientId: SAMPLE_UUID });
+    expect(b.channel).toBe("contact_detail");
   });
 });
 
