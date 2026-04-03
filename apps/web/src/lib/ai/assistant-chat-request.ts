@@ -27,6 +27,11 @@ export type AssistantChatRequestBody = {
   sessionId?: string;
   orchestration?: "legacy" | "canonical";
   channel?: "web_drawer" | "mobile" | "contact_detail" | "dashboard" | "client_portal_bridge";
+  /** 6F: explicitní potvrzení plánu bez psaní „ano" do zprávy */
+  confirmExecution?: boolean;
+  cancelExecution?: boolean;
+  /** 6C: ID kroků (`ExecutionStep.stepId`) k provedení; vynechání = všechny (kompatibilní s „ano") */
+  selectedStepIds?: string[];
   activeContext?: {
     clientId?: string | null;
     opportunityId?: string | null;
@@ -58,4 +63,43 @@ export function buildAssistantChatRequestBody(
     opportunityId: oid || null,
   };
   return body;
+}
+
+/** 6F / 6C — potvrzení výběru kroků bez uživatelské zprávy. */
+export function buildAssistantConfirmExecutionBody(opts: {
+  sessionId?: string;
+  routeContactId: string | null;
+  routeOpportunityId?: string | null;
+  channel?: AssistantChatRequestBody["channel"];
+  /** Když vynecháno → server provede všechny čekající kroky (kompatibilní se starým „ano"). */
+  selectedStepIds?: string[];
+}): AssistantChatRequestBody {
+  const base = buildAssistantChatRequestBody("", {
+    sessionId: opts.sessionId,
+    routeContactId: opts.routeContactId,
+    routeOpportunityId: opts.routeOpportunityId,
+    channel: opts.channel,
+  });
+  const out: AssistantChatRequestBody = {
+    ...base,
+    message: "",
+    confirmExecution: true,
+  };
+  if (opts.selectedStepIds !== undefined) out.selectedStepIds = opts.selectedStepIds;
+  return out;
+}
+
+export function buildAssistantCancelPlanBody(opts: {
+  sessionId?: string;
+  routeContactId: string | null;
+  routeOpportunityId?: string | null;
+  channel?: AssistantChatRequestBody["channel"];
+}): AssistantChatRequestBody {
+  const base = buildAssistantChatRequestBody("", {
+    sessionId: opts.sessionId,
+    routeContactId: opts.routeContactId,
+    routeOpportunityId: opts.routeOpportunityId,
+    channel: opts.channel,
+  });
+  return { ...base, message: "", cancelExecution: true };
 }
