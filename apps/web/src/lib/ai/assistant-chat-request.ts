@@ -27,10 +27,10 @@ export type AssistantChatRequestBody = {
   sessionId?: string;
   orchestration?: "legacy" | "canonical";
   channel?: "web_drawer" | "mobile" | "contact_detail" | "dashboard" | "client_portal_bridge";
-  /** 6F: explicitní potvrzení plánu bez psaní „ano" do zprávy */
+  /** 6F: confirm plan execution without typing yes in the message. */
   confirmExecution?: boolean;
   cancelExecution?: boolean;
-  /** 6C: ID kroků (`ExecutionStep.stepId`) k provedení; vynechání = všechny (kompatibilní s „ano") */
+  /** 6C: ExecutionStep.stepId values to run; omit to run all pending steps. */
   selectedStepIds?: string[];
   activeContext?: {
     clientId?: string | null;
@@ -65,13 +65,12 @@ export function buildAssistantChatRequestBody(
   return body;
 }
 
-/** 6F / 6C — potvrzení výběru kroků bez uživatelské zprávy. */
+/** 6F / 6C: build request body to confirm selected steps without a user message. */
 export function buildAssistantConfirmExecutionBody(opts: {
   sessionId?: string;
   routeContactId: string | null;
   routeOpportunityId?: string | null;
   channel?: AssistantChatRequestBody["channel"];
-  /** Když vynecháno → server provede všechny čekající kroky (kompatibilní se starým „ano"). */
   selectedStepIds?: string[];
 }): AssistantChatRequestBody {
   const base = buildAssistantChatRequestBody("", {
