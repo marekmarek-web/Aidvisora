@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import { materialRequestStatusLabel } from "@/lib/advisor-material-requests/display";
 
 export default async function ClientAdvisorMaterialRequestsPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const rows = await listClientMaterialRequests();
 

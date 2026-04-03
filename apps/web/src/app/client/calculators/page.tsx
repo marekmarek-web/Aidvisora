@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Home, TrendingUp } from "lucide-react";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 
 export default async function ClientCalculatorsPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   return (
     <div className="space-y-8 client-fade-in">

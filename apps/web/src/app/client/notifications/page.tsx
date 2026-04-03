@@ -1,10 +1,10 @@
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getPortalNotificationsForClient } from "@/app/actions/portal-notifications";
 import { ClientNotificationsList } from "./ClientNotificationsList";
 
 export default async function ClientNotificationsPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const notifications = await getPortalNotificationsForClient();
 

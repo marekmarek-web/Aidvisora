@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getClientMaterialRequestDetail } from "@/app/actions/advisor-material-requests";
 import { materialRequestStatusLabel } from "@/lib/advisor-material-requests/display";
 import { ClientMaterialRequestRespondForm } from "./ClientMaterialRequestRespondForm";
@@ -10,8 +10,8 @@ export default async function ClientAdvisorMaterialRequestDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const { id } = await params;
   const detail = await getClientMaterialRequestDetail(id);

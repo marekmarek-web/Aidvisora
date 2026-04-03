@@ -7,7 +7,7 @@ import {
   ClipboardList,
   Clock,
 } from "lucide-react";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import {
@@ -19,8 +19,8 @@ import { ClientRequestCancelButton } from "./ClientRequestCancelButton";
 import { RequestsPageClientActions } from "./requests-client-actions";
 
 export default async function ClientRequestsPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const [requestsList, materialRequestsList] = await Promise.all([
     getClientRequests(),

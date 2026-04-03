@@ -9,7 +9,7 @@ import {
   Users,
   Building2,
 } from "lucide-react";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import { getClientVisiblePortfolioDocumentNames } from "@/app/actions/documents";
 import {
@@ -56,8 +56,8 @@ function statusLabel(portfolioStatus: string, anniversaryDate: string | null, st
 }
 
 export default async function ClientPortfolioPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const contracts = await getClientPortfolioForContact(auth.contactId);
   const sourceDocIds = [

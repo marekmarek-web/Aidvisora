@@ -1,22 +1,11 @@
-import { requireAuth } from "@/lib/auth/require-auth";
-import { redirect } from "next/navigation";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { db, contacts, and, eq } from "db";
 import { getClientHouseholdForContact } from "@/app/actions/households";
 import { ProfileClientView } from "./ProfileClientView";
 
-function isRedirectError(e: unknown): boolean {
-  return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
-}
-
 export default async function ClientProfilePage() {
-  let auth;
-  try {
-    auth = await requireAuth();
-  } catch (e) {
-    if (isRedirectError(e)) throw e;
-    redirect("/prihlaseni?error=auth_error");
-  }
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   let profile: {
     firstName: string | null;

@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { DocumentPreviewToggle } from "./DocumentPreviewToggle";
 import { ClientDocumentUpload } from "../ClientDocumentUpload";
 import { Download, File } from "lucide-react";
 
 export default async function ClientDocumentsPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const documentsList = await getDocumentsForClient(auth.contactId);
 

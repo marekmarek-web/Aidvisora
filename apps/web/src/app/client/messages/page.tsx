@@ -1,10 +1,10 @@
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
 import { ClientChatWrapper } from "../ClientChatWrapper";
 
 export default async function ClientMessagesPage() {
-  const auth = await requireAuth();
-  if (auth.roleName !== "Client" || !auth.contactId) return null;
+  const auth = await requireClientZoneAuth();
+  if (!auth.contactId) return null;
 
   const advisor = await getAssignedAdvisorForClient(auth.contactId).catch(() => null);
 

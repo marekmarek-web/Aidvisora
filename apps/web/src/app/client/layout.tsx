@@ -77,6 +77,7 @@ export default async function ClientZoneLayout({
   return (
     <ClientPortalShell
       unreadNotificationsCount={unreadNotificationsCount + unreadMessagesCount}
+      unreadMessagesCount={unreadMessagesCount}
       fullName={fullName}
       advisor={advisor}
     >

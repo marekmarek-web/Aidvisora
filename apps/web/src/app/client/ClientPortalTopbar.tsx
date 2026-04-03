@@ -9,6 +9,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/client": "Můj přehled",
   "/client/portfolio": "Moje portfolio",
   "/client/contracts": "Moje portfolio",
+  "/client/investments": "Moje portfolio",
   "/client/payments": "Platby a příkazy",
   "/client/calculators": "Kalkulačky",
   "/client/requests": "Moje požadavky",
@@ -16,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/client/documents": "Trezor dokumentů",
   "/client/profile": "Můj profil",
   "/client/notifications": "Oznámení",
+  "/client/pozadavky-poradce": "Od poradce",
 };
 
 type ClientPortalTopbarProps = {

@@ -29,6 +29,7 @@ type NavItem = {
   icon: LucideIcon;
   match?: string[];
   showBadge?: boolean;
+  showMessagesBadge?: boolean;
 };
 
 const VIEWS: NavItem[] = [
@@ -48,7 +49,7 @@ const VIEWS: NavItem[] = [
     icon: ClipboardList,
     match: ["/client/pozadavky-poradce"],
   },
-  { href: "/client/messages", label: "Zprávy poradci", icon: MessageSquare },
+  { href: "/client/messages", label: "Zprávy poradci", icon: MessageSquare, showMessagesBadge: true },
   { href: "/client/documents", label: "Trezor dokumentů", icon: FolderOpen },
   {
     href: "/client/notifications",
@@ -61,9 +62,11 @@ const VIEWS: NavItem[] = [
 
 export function ClientSidebar({
   unreadNotificationsCount = 0,
+  unreadMessagesCount = 0,
   advisor,
 }: {
   unreadNotificationsCount?: number;
+  unreadMessagesCount?: number;
   advisor?: { fullName: string; email?: string | null; initials: string } | null;
 }) {
   const pathname = usePathname();
@@ -88,7 +91,12 @@ export function ClientSidebar({
       v.href === "/client"
         ? pathname === "/client"
         : pathname === v.href || pathname.startsWith(v.href + "/") || isMatchAlias;
-    const showBadge = v.showBadge && unreadNotificationsCount > 0;
+    const badgeCount = v.showBadge
+      ? unreadNotificationsCount
+      : v.showMessagesBadge
+        ? unreadMessagesCount
+        : 0;
+    const showBadge = badgeCount > 0;
     const Icon = v.icon;
 
     return (
@@ -114,7 +122,7 @@ export function ClientSidebar({
               isActive ? "bg-white/20 text-white" : "bg-rose-100 text-rose-700"
             }`}
           >
-            {unreadNotificationsCount > 99 ? "99+" : unreadNotificationsCount}
+            {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         )}
       </Link>

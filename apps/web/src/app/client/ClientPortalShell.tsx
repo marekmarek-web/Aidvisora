@@ -5,6 +5,7 @@ import { ClientMaterialRequestToastStack } from "./ClientMaterialRequestToastSta
 type ClientPortalShellProps = {
   children: React.ReactNode;
   unreadNotificationsCount: number;
+  unreadMessagesCount: number;
   fullName: string;
   advisor: { fullName: string; email?: string | null; initials: string } | null;
 };
@@ -12,12 +13,17 @@ type ClientPortalShellProps = {
 export function ClientPortalShell({
   children,
   unreadNotificationsCount,
+  unreadMessagesCount,
   fullName,
   advisor,
 }: ClientPortalShellProps) {
   return (
     <div className="client-portal-root flex min-h-screen bg-slate-50 text-slate-800">
-      <ClientSidebar unreadNotificationsCount={unreadNotificationsCount} advisor={advisor} />
+      <ClientSidebar
+        unreadNotificationsCount={unreadNotificationsCount}
+        unreadMessagesCount={unreadMessagesCount}
+        advisor={advisor}
+      />
       <div className="flex flex-col flex-1 min-w-0 ml-12 md:ml-[280px]">
         <ClientPortalTopbar
           unreadNotificationsCount={unreadNotificationsCount}
