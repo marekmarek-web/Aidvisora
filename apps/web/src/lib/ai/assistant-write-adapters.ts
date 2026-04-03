@@ -28,7 +28,7 @@ import {
 import { createDraft } from "@/app/actions/communication-drafts";
 import { approveContractForClientPortal, updateContract } from "@/app/actions/contracts";
 import { sendMessage } from "@/app/actions/messages";
-import { createAdvisorClientRequest } from "@/lib/assistant/create-advisor-client-request";
+import { createAdvisorClientRequest } from "../assistant/create-advisor-client-request";
 
 async function assertCtx(ctx: ExecutionContext): Promise<{
   tenantId: string;

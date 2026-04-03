@@ -23,6 +23,7 @@ import { clientPortalInviteTemplate } from "@/lib/email/templates";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";
+import { CLIENT_INVITE_USER_FACING_ERROR_MESSAGES } from "@/lib/auth/client-invite-user-facing-errors";
 import { buildClientInviteLoginSearch, buildClientInvitePasswordSetupSearch } from "@/lib/auth/client-invite-url";
 
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
@@ -34,7 +35,79 @@ const INVITE_EXPIRY_DAYS = 7;
 
 export type SendClientZoneInvitationResult =
   | { ok: true; inviteLink: string; loginEmail: string; temporaryPassword: string; emailSent: boolean; emailError?: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; devHint?: string };
+
+function isSupabaseAuthErrorShape(
+  err: unknown,
+): err is Error & { message: string; code?: string; status?: number } {
+  return typeof err === "object" && err !== null && "__isAuthError" in err && "message" in err;
+}
+
+function mapSupabaseAuthFailureToUserMessage(err: { message: string; code?: string }): string | null {
+  const code = (err.code ?? "").toLowerCase();
+  const msg = err.message.toLowerCase();
+
+  if (
+    code === "email_exists" ||
+    code === "user_already_registered" ||
+    msg.includes("already been registered") ||
+    msg.includes("already exists") ||
+    msg.includes("user already registered")
+  ) {
+    return "Účet s tímto e-mailem už v systému existuje. Zkontrolujte, zda klient nepoužívá stejný e-mail jako poradce, nebo zkuste jiný postup pro existujícího klienta.";
+  }
+  if (msg.includes("invalid api key") || (msg.includes("jwt") && msg.includes("invalid"))) {
+    return "Chyba přístupu k účtům (Supabase). Zkontrolujte SUPABASE_SERVICE_ROLE_KEY a NEXT_PUBLIC_SUPABASE_URL.";
+  }
+  if (code === "over_request_rate_limit" || msg.includes("rate limit")) {
+    return "Příliš mnoho požadavků. Zkuste to za chvíli znovu.";
+  }
+  return null;
+}
+
+function resolveSendClientZoneInvitationCatchError(err: unknown): { userMessage: string; devHint?: string } {
+  const generic = "Nepodařilo se odeslat pozvánku. Zkuste to znovu.";
+  const isDev = process.env.NODE_ENV === "development";
+
+  const devHintFrom = (e: unknown): string | undefined => {
+    if (!isDev) return undefined;
+    if (e instanceof Error) return `${e.name}: ${e.message}`.slice(0, 500);
+    if (typeof e === "object" && e !== null && "message" in e) {
+      return String((e as { message: unknown }).message).slice(0, 500);
+    }
+    return String(e).slice(0, 500);
+  };
+
+  if (isSupabaseAuthErrorShape(err)) {
+    const mapped = mapSupabaseAuthFailureToUserMessage(err);
+    if (mapped) return { userMessage: mapped, devHint: devHintFrom(err) };
+    return {
+      userMessage: isDev ? `Autentizace: ${err.message}` : generic,
+      devHint: devHintFrom(err),
+    };
+  }
+
+  if (err instanceof Error) {
+    if (CLIENT_INVITE_USER_FACING_ERROR_MESSAGES.has(err.message)) {
+      return { userMessage: err.message };
+    }
+    if (err.message === "Supabase account provisioning returned no user.") {
+      return {
+        userMessage: isDev ? err.message : "Nepodařilo se připravit účet klienta. Zkuste to znovu.",
+        devHint: devHintFrom(err),
+      };
+    }
+    const low = err.message.toLowerCase();
+    if (low.includes("econnrefused") || low.includes("etimedout") || low.includes("database_url")) {
+      return {
+        userMessage: "Nepodařilo se připojit k databázi. Zkontrolujte DATABASE_URL a dostupnost serveru.",
+        devHint: devHintFrom(err),
+      };
+    }
+  }
+
+  return { userMessage: generic, devHint: devHintFrom(err) };
+}
 
 const CLIENT_INVITATION_OPTIONAL_COLUMNS = [
   "auth_user_id",
@@ -430,8 +503,20 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
       emailError: sendResult.ok ? undefined : sendResult.error,
     };
   } catch (err) {
-    console.error("[sendClientZoneInvitation] unexpected error:", err);
-    return { ok: false, error: "Nepodařilo se odeslat pozvánku. Zkuste to znovu." };
+    const logPayload = isSupabaseAuthErrorShape(err)
+      ? {
+          name: err.name,
+          message: err.message,
+          stack: err.stack,
+          code: err.code,
+          status: err.status,
+        }
+      : err instanceof Error
+        ? { name: err.name, message: err.message, stack: err.stack }
+        : err;
+    console.error("[sendClientZoneInvitation] unexpected error:", logPayload);
+    const { userMessage, devHint } = resolveSendClientZoneInvitationCatchError(err);
+    return { ok: false, error: userMessage, ...(devHint ? { devHint } : {}) };
   }
 }
 

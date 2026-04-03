@@ -5,6 +5,7 @@ export type AssistantPlaybookId =
   | "investice_dip_dps"
   | "zivotni_riziko"
   | "majetek_odpovednost_auto"
+  | "firma_pojisteni"
   | "servis_vyroci"
   | "schuzka_ukol_zapis";
 
