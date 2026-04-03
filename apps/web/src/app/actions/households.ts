@@ -3,7 +3,7 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db, households, householdMembers, contacts, eq, and, asc, sql, inArray } from "db";
-import { createPortalNotification } from "./portal-notifications";
+import { notifyAdvisorClientHouseholdUpdate } from "@/lib/client-portal/notify-advisor-client-self-service";
 import { logActivity } from "./activity";
 
 export type HouseholdRow = { id: string; name: string; memberCount: number };
@@ -332,14 +332,11 @@ export async function addHouseholdMemberFromClient(params: {
     via: "client_portal",
   }).catch(() => {});
 
-  await createPortalNotification({
+  await notifyAdvisorClientHouseholdUpdate({
     tenantId: auth.tenantId,
-    contactId: auth.contactId,
-    type: "important_date",
-    title: "Klient upravil domácnost",
-    body: `${fullName} byl přidán do domácnosti.`,
-    relatedEntityType: "contact",
-    relatedEntityId: newContact.id,
+    clientContactId: auth.contactId,
+    newMemberContactId: newContact.id,
+    preview: `${fullName} byl přidán do domácnosti.`,
   }).catch(() => {});
 
   return { success: true as const, contactId: newContact.id };

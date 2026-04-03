@@ -81,6 +81,20 @@ function clipPreview(text: string): string {
   return `${text.slice(0, PREVIEW_MAX).trim()}…`;
 }
 
+function parseSelfServiceNotificationBody(
+  body: string | null
+): { contactId: string; preview: string } | null {
+  try {
+    const b = JSON.parse(body || "{}") as { contactId?: string; preview?: string };
+    const contactId = typeof b.contactId === "string" ? b.contactId : "";
+    if (!contactId) return null;
+    const preview = typeof b.preview === "string" ? b.preview : "";
+    return { contactId, preview };
+  } catch {
+    return null;
+  }
+}
+
 function notificationToToastRow(n: AdvisorInAppNotificationRow): ToastRow | null {
   const timeLabel = formatToastTime(n.createdAt);
   if (n.type === "client_portal_request" && n.relatedEntityType === "opportunity" && n.relatedEntityId) {
@@ -130,6 +144,44 @@ function notificationToToastRow(n: AdvisorInAppNotificationRow): ToastRow | null
       timeLabel,
       accent: "emerald",
       Icon: FileText,
+      isExiting: false,
+      progressMs: AUTO_DISMISS_MS,
+    };
+  }
+
+  if (n.type === "client_trezor_upload" && n.relatedEntityType === "document" && n.relatedEntityId) {
+    const parsed = parseSelfServiceNotificationBody(n.body);
+    if (!parsed) return null;
+    const previewText = clipPreview(parsed.preview || n.title || "");
+    return {
+      id: `toast-${n.id}`,
+      notificationId: n.id,
+      navigateHref: `/portal/contacts/${parsed.contactId}?tab=dokumenty`,
+      clientName: n.title,
+      categoryLabel: "Nahrání do trezoru",
+      preview: previewText,
+      timeLabel,
+      accent: "violet",
+      Icon: FileText,
+      isExiting: false,
+      progressMs: AUTO_DISMISS_MS,
+    };
+  }
+
+  if (n.type === "client_household_update" && n.relatedEntityType === "contact" && n.relatedEntityId) {
+    const parsed = parseSelfServiceNotificationBody(n.body);
+    if (!parsed) return null;
+    const previewText = clipPreview(parsed.preview || n.title || "");
+    return {
+      id: `toast-${n.id}`,
+      notificationId: n.id,
+      navigateHref: `/portal/contacts/${parsed.contactId}?tab=prehled`,
+      clientName: n.title,
+      categoryLabel: "Úprava domácnosti",
+      preview: previewText,
+      timeLabel,
+      accent: "amber",
+      Icon: Users,
       isExiting: false,
       progressMs: AUTO_DISMISS_MS,
     };

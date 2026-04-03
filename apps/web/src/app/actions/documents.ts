@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { logActivity } from "./activity";
 import { logAudit } from "@/lib/audit";
 import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
-import { createPortalNotification } from "./portal-notifications";
+import { notifyAdvisorClientTrezorUpload } from "@/lib/client-portal/notify-advisor-client-self-service";
 
 export type DocumentRow = {
   id: string;
@@ -440,14 +440,11 @@ export async function clientUploadDocument(formData: FormData) {
       uploadSource,
     }).catch(() => {});
 
-    await createPortalNotification({
+    await notifyAdvisorClientTrezorUpload({
       tenantId: auth.tenantId,
       contactId: auth.contactId,
-      type: "new_document",
-      title: "Klient nahrál nový dokument",
-      body: name ? `Nový dokument: ${name}` : "Klient přidal nový dokument do trezoru.",
-      relatedEntityType: "document",
-      relatedEntityId: documentId,
+      documentId,
+      documentLabel: name || file.name,
     }).catch(() => {});
   }
 

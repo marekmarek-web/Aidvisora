@@ -15,7 +15,8 @@ import { createClient } from "@/lib/supabase/client";
 
 /** Záloha, když Realtime neběží nebo není nasazená migrace. */
 const POLL_MS = 45_000;
-const ADVISOR_TOAST_TYPES = "client_portal_request,client_material_response";
+const ADVISOR_TOAST_TYPES =
+  "client_portal_request,client_material_response,client_trezor_upload,client_household_update";
 
 export type AdvisorInAppNotificationRow = {
   id: string;
