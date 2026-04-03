@@ -13,6 +13,8 @@ import {
   X,
   Trash2,
   RefreshCw,
+  Shield,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { createTask } from "@/app/actions/tasks";
@@ -346,59 +348,131 @@ export function AIReviewExtractionShell({
         </div>
       )}
 
-      {/* Applied state */}
+      {/* 4F: Apply result summary – co se propsalo, kam, co zůstalo jako návrh */}
       {doc.isApplied && doc.applyResultPayload && (
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-4">
-          <div className="max-w-5xl mx-auto">
-            <h4 className="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-1.5">
-              <Check size={14} className="text-emerald-600" />
-              Aplikováno do CRM
+        <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-4 md:px-6">
+          <div className="max-w-6xl mx-auto space-y-3">
+            <h4 className="text-sm font-black text-emerald-900 flex items-center gap-1.5">
+              <Check size={15} className="text-emerald-600 shrink-0" />
+              Zapsáno do CRM
             </h4>
-            <div className="flex flex-wrap gap-2 text-xs text-emerald-800 mb-2">
-              {doc.applyResultPayload.createdClientId && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">Klient vytvořen</span>
-              )}
-              {doc.applyResultPayload.linkedClientId && !doc.applyResultPayload.createdClientId && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">Klient přirazen</span>
-              )}
-              {doc.applyResultPayload.createdContractId && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">Smlouva vytvořena</span>
-              )}
-              {doc.applyResultPayload.createdTaskId && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">Úkol vytvořen</span>
-              )}
-              {doc.applyResultPayload.createdPaymentSetupId && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">Platební instrukce uloženy</span>
-              )}
-            </div>
-            {/* Direct CRM navigation links */}
-            <div className="flex flex-wrap gap-2">
+
+            {/* What was actually written */}
+            <div className="flex flex-wrap gap-2 text-xs">
               {doc.applyResultPayload.createdClientId && (
                 <Link
                   href={`/portal/contacts/${doc.applyResultPayload.createdClientId}`}
-                  className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold hover:bg-emerald-200 transition-colors"
                 >
-                  <UserPlus size={11} /> Otevřít klienta
+                  <UserPlus size={11} /> Nový klient vytvořen →
                 </Link>
               )}
               {doc.applyResultPayload.linkedClientId && !doc.applyResultPayload.createdClientId && (
                 <Link
                   href={`/portal/contacts/${doc.applyResultPayload.linkedClientId}`}
-                  className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold hover:bg-emerald-200 transition-colors"
                 >
-                  <UserPlus size={11} /> Zobrazit klienta
+                  <UserPlus size={11} /> Klient přirazen →
                 </Link>
               )}
-              {doc.applyResultPayload.bridgeSuggestions?.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {doc.applyResultPayload.createdContractId && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                  <Shield size={11} /> Smlouva vytvořena
+                </span>
+              )}
+              {doc.applyResultPayload.createdPaymentSetupId && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                  <CreditCard size={11} /> Platební instrukce uloženy
+                </span>
+              )}
+              {doc.applyResultPayload.createdPaymentId && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                  <CreditCard size={11} /> Platba evidována
+                </span>
+              )}
+              {doc.applyResultPayload.createdTaskId && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                  <Check size={11} /> Úkol vytvořen
+                </span>
+              )}
+              {doc.applyResultPayload.createdNoteId && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                  <FileText size={11} /> Poznámka uložena
+                </span>
+              )}
             </div>
+
+            {/* Payment setup detail when present */}
+            {doc.applyResultPayload.paymentSetup && (
+              <div className="rounded-xl border border-emerald-200 bg-white/60 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-2">
+                  Detail platební instrukce
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+                  {doc.applyResultPayload.paymentSetup.provider && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Poskytovatel</span>
+                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.provider}</p>
+                    </div>
+                  )}
+                  {doc.applyResultPayload.paymentSetup.regularAmount && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Částka</span>
+                      <p className="font-semibold text-[color:var(--wp-text)]">
+                        {doc.applyResultPayload.paymentSetup.regularAmount} {doc.applyResultPayload.paymentSetup.currency}
+                      </p>
+                    </div>
+                  )}
+                  {doc.applyResultPayload.paymentSetup.iban && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">IBAN</span>
+                      <p className="font-semibold text-[color:var(--wp-text)] truncate">{doc.applyResultPayload.paymentSetup.iban}</p>
+                    </div>
+                  )}
+                  {!doc.applyResultPayload.paymentSetup.iban && doc.applyResultPayload.paymentSetup.recipientAccount && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Č. účtu</span>
+                      <p className="font-semibold text-[color:var(--wp-text)]">
+                        {doc.applyResultPayload.paymentSetup.recipientAccount}
+                        {doc.applyResultPayload.paymentSetup.bankCode ? `/${doc.applyResultPayload.paymentSetup.bankCode}` : ""}
+                      </p>
+                    </div>
+                  )}
+                  {doc.applyResultPayload.paymentSetup.variableSymbol && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">VS</span>
+                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.variableSymbol}</p>
+                    </div>
+                  )}
+                  {doc.applyResultPayload.paymentSetup.frequency && (
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Frekvence</span>
+                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.frequency}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Bridge suggestions – what remains as advisories */}
+            {(doc.applyResultPayload.bridgeSuggestions?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1.5">
+                  Doporučené navazující kroky
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {doc.applyResultPayload.bridgeSuggestions!.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

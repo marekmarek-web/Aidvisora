@@ -128,7 +128,9 @@ function recTypeBadge(type: AIRecommendation["type"]) {
 
 const SECTIONS = [
   { id: "summary", label: "Shrnutí" },
+  { id: "advisor", label: "Přehled AI" },
   { id: "data", label: "Pole k ověření" },
+  { id: "diagnostics", label: "Diagnostika" },
   { id: "recommendations", label: "Kontroly a akce" },
 ] as const;
 
@@ -416,6 +418,161 @@ function PaymentSyncPreviewCard({ preview }: { preview: PaymentSyncPreview }) {
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+/* ─── CRM Mapping Proposal Card (Phase 4E) ──────────────────────── */
+
+const PAYMENT_PAYLOAD_LABELS: Record<string, string> = {
+  obligationName: "Závazek",
+  provider: "Poskytovatel",
+  productName: "Produkt",
+  contractReference: "Č. smlouvy",
+  recipientAccount: "Č. účtu",
+  iban: "IBAN",
+  bankCode: "Kód banky",
+  variableSymbol: "Variabilní symbol",
+  specificSymbol: "Specifický symbol",
+  constantSymbol: "Konstantní symbol",
+  regularAmount: "Pravidelná částka",
+  oneOffAmount: "Jednorázová částka",
+  currency: "Měna",
+  frequency: "Frekvence",
+  firstDueDate: "Datum první platby",
+  beneficiaryName: "Příjemce",
+  clientNote: "Poznámka",
+};
+
+function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
+  const [open, setOpen] = useState(false);
+  const actions = doc.draftActions ?? [];
+  if (actions.length === 0 || doc.isApplied) return null;
+
+  const paymentAction = actions.find(
+    (a) =>
+      a.type === "create_payment_setup" ||
+      a.type === "create_payment_setup_for_portal"
+  );
+  const contractAction = actions.find(
+    (a) =>
+      a.type === "create_contract" ||
+      a.type === "create_or_update_contract"
+  );
+  const clientAction = actions.find(
+    (a) =>
+      a.type === "create_client" ||
+      a.type === "create_new_client" ||
+      a.type === "create_or_link_client"
+  );
+
+  const hasAnyDetail = paymentAction?.payload || contractAction?.payload || clientAction?.payload;
+  if (!hasAnyDetail) return null;
+
+  const readiness = doc.publishReadiness;
+  const readinessBadge =
+    readiness === "ready_for_publish"
+      ? { cls: "bg-emerald-100 text-emerald-700", label: "Připraveno" }
+      : readiness === "blocked"
+        ? { cls: "bg-rose-100 text-rose-700", label: "Blokováno" }
+        : readiness === "review_required"
+          ? { cls: "bg-amber-100 text-amber-700", label: "Vyžaduje kontrolu" }
+          : { cls: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]", label: "Zpracovává se" };
+
+  return (
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-5 md:px-6 py-4 flex items-center justify-between text-left"
+      >
+        <span className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] flex items-center gap-2">
+          <ListChecks size={14} className="text-indigo-500" /> Návrh zápisu do CRM
+          <span className={`ml-2 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${readinessBadge.cls}`}>
+            {readinessBadge.label}
+          </span>
+        </span>
+        {open ? (
+          <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" />
+        ) : (
+          <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
+        )}
+      </button>
+
+      {open && (
+        <div className="px-5 md:px-6 pb-5 pt-0 border-t border-[color:var(--wp-surface-card-border)] space-y-4">
+          <p className="mt-3 text-xs text-[color:var(--wp-text-tertiary)] leading-relaxed">
+            Tato data se zapíší do CRM po kliknutí na <strong>Zapsat do CRM</strong>. Zkontrolujte je před odesláním.
+          </p>
+
+          {clientAction && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
+                <User size={11} /> Klient
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {Object.entries(clientAction.payload ?? {})
+                  .filter(([, v]) => v && String(v).trim())
+                  .slice(0, 8)
+                  .map(([k, v]) => (
+                    <div key={k} className="flex flex-col">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                        {k}
+                      </span>
+                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
+                        {String(v)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {contractAction && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
+                <Shield size={11} /> Smlouva / Produkt
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {Object.entries(contractAction.payload ?? {})
+                  .filter(([, v]) => v && String(v).trim())
+                  .slice(0, 8)
+                  .map(([k, v]) => (
+                    <div key={k} className="flex flex-col">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                        {k}
+                      </span>
+                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
+                        {String(v)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {paymentAction && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
+                <CreditCard size={11} /> Platební instrukce
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {Object.entries(paymentAction.payload ?? {})
+                  .filter(([, v]) => v && String(v).trim())
+                  .map(([k, v]) => (
+                    <div key={k} className="flex flex-col">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                        {PAYMENT_PAYLOAD_LABELS[k] ?? k}
+                      </span>
+                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
+                        {String(v)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -850,6 +1007,14 @@ function ExtractedFieldRow({
         </div>
       </div>
 
+      {/* 4H: AI original value hint when advisor edited the field */}
+      {hasBeenEdited && field.originalAiValue && field.originalAiValue !== editedValue && (
+        <div className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-[color:var(--wp-text-tertiary)]">
+          <RotateCcw size={10} className="shrink-0 text-blue-400" />
+          <span>AI navrhlo: <span className="font-semibold">{field.originalAiValue}</span></span>
+        </div>
+      )}
+
       {field.message && (
         <div
           className={`mt-2 ml-1 text-xs font-bold flex items-start gap-1.5 ${
@@ -1082,6 +1247,13 @@ export function ExtractionLeftPanel({
 
           <ExecutiveSummaryCard doc={doc} />
 
+          {/* 4C: AdvisorOverviewCard – structured AI review summary with payment sync preview */}
+          {doc.advisorReview ? (
+            <div data-section="advisor">
+              <AdvisorOverviewCard doc={doc} />
+            </div>
+          ) : null}
+
           <ReviewAttentionBanner
             warningCount={doc.diagnostics.warningCount}
             errorCount={doc.diagnostics.errorCount}
@@ -1120,6 +1292,8 @@ export function ExtractionLeftPanel({
           </div>
 
           <div data-section="recommendations" className="space-y-6">
+            {/* 4E: CRM mapping proposal – payload detail before apply */}
+            <CrmMappingProposalCard doc={doc} />
             <WorkActionsCard doc={doc} />
             <AIRecommendationsCard
               recommendations={doc.recommendations}

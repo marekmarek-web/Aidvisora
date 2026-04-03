@@ -1406,5 +1406,15 @@ export function mapApiToExtractionDocument(
       };
     })(),
     reviewUiMeta: usedSyntheticGroups ? { usedSyntheticGroups: true } : undefined,
+    publishReadiness: (() => {
+      if (reviewStatus === "applied") return "published" as const;
+      const gate = detail.applyGate as { readiness?: string; blockedReasons?: string[] } | undefined;
+      if (gate?.readiness === "blocked_for_apply" || (gate?.blockedReasons?.length ?? 0) > 0) return "blocked" as const;
+      if (reviewStatus === "approved") return "ready_for_publish" as const;
+      if (reviewStatus === "rejected") return "blocked" as const;
+      const processingStatusStr = (detail.processingStatus as string) ?? "";
+      if (processingStatusStr === "review_required") return "review_required" as const;
+      return "partially_reviewed" as const;
+    })(),
   };
 }

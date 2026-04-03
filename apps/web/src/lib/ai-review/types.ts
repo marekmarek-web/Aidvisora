@@ -144,8 +144,29 @@ export type ApplyResultPayload = {
   createdClientId?: string;
   linkedClientId?: string;
   createdContractId?: string;
-  createdTaskId?: string;
+  createdPaymentId?: string;
   createdPaymentSetupId?: string;
+  createdTaskId?: string;
+  createdNoteId?: string;
+  createdEmailDraftId?: string;
+  /** Structured payment setup fields written to client_payment_setups. */
+  paymentSetup?: {
+    obligationName: string;
+    paymentType: string;
+    provider: string;
+    contractReference: string;
+    recipientAccount: string;
+    iban: string;
+    bankCode: string;
+    variableSymbol: string;
+    specificSymbol: string;
+    regularAmount: string;
+    oneOffAmount: string;
+    currency: string;
+    frequency: string;
+    firstDueDate: string;
+    clientNote: string;
+  };
   bridgeSuggestions?: Array<{
     id: string;
     label: string;
@@ -181,6 +202,11 @@ export type ExtractionDocument = {
   createNewClientConfirmed?: string;
   isApplied: boolean;
   applyResultPayload?: ApplyResultPayload;
+  /**
+   * Phase 4D: publish readiness signal derived from gate + review status.
+   * Used by UI to show a pre-apply summary card.
+   */
+  publishReadiness?: "ready_for_publish" | "partially_reviewed" | "review_required" | "blocked" | "published" | "publish_failed";
   extractionTrace?: {
     failedStep?: string;
     warnings?: string[];
