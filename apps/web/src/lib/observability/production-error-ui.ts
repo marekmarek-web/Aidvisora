@@ -32,6 +32,8 @@ export type AppErrorCaptureContext = {
   route?: string;
   digest?: string;
   componentStack?: string | null;
+  /** Další Sentry tagy (např. `{ app_zone: "client" }` pro filtr v dashboardu). */
+  tags?: Record<string, string>;
 };
 
 /**
@@ -42,6 +44,11 @@ export function captureAppError(error: unknown, context: AppErrorCaptureContext)
     const err = error instanceof Error ? error : new Error(String(error));
     Sentry.withScope((scope) => {
       scope.setTag("error_boundary", context.boundary);
+      if (context.tags) {
+        for (const [k, v] of Object.entries(context.tags)) {
+          scope.setTag(k, v);
+        }
+      }
       if (context.route) scope.setTag("route", context.route);
       if (context.componentStack) {
         scope.setContext("react", { componentStack: context.componentStack });

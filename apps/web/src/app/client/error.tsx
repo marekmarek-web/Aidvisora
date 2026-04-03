@@ -18,6 +18,7 @@ export default function ClientError({
       boundary: "client-zone",
       route: pathname,
       digest: error.digest,
+      tags: { app_zone: "client" },
     });
   }, [error, pathname]);
 

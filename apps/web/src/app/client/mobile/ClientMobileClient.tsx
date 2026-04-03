@@ -28,6 +28,8 @@ import {
   User,
 } from "lucide-react";
 import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
+import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
+import * as Sentry from "@sentry/nextjs";
 import {
   createClientPortalRequest,
   getClientRequests,
@@ -443,25 +445,6 @@ function toTab(pathname: string): TabId {
   return pathname.startsWith("/client") ? "home" : "menu";
 }
 
-/**
- * Cesty, které PATŘÍ do mobilní SPA – ostatní se musí otevřít přes full-page navigation,
- * protože Next.js App Router layout se při client-side přechodu znovu nespouští.
- * Kalkulačky, platby, detaily požadavků a ostatní sub-pages potřebují čerstvý render layoutu.
- */
-function isMobileSpaPath(pathname: string): boolean {
-  const p = pathname.split("?")[0] || "/client";
-  if (p === "/client") return true;
-  if (
-    p === "/client/messages" ||
-    p === "/client/documents" ||
-    p === "/client/profile" ||
-    p === "/client/notifications" ||
-    p === "/client/requests"
-  ) return true;
-  if (p.startsWith("/client/portfolio") || p.startsWith("/client/contracts")) return true;
-  return false;
-}
-
 /* ------------------------------------------------------------------ */
 /*  Portfolio screen — seskupené podle read-modelu jako web             */
 /* ------------------------------------------------------------------ */
@@ -697,7 +680,13 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   // Next.js App Router layout se při client-side navigaci nespouští znovu, takže server-side
   // rozhodnutí "SPA vs. children" zůstane z předchozího requestu.
   useEffect(() => {
-    if (!isMobileSpaPath(pathname)) {
+    if (!isClientMobileSpaPath(pathname)) {
+      Sentry.addBreadcrumb({
+        category: "navigation",
+        message: "client_mobile_spa_full_reload",
+        level: "info",
+        data: { pathname },
+      });
       const search = searchParams.toString();
       window.location.replace(pathname + (search ? `?${search}` : ""));
     }

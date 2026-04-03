@@ -7,41 +7,11 @@ import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-fl
 import { db, contacts, and, eq } from "db";
 import { ClientPortalShell } from "./ClientPortalShell";
 import { ClientMobileApp } from "./mobile/ClientMobileApp";
+import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
 import "./client-portal.css";
 
 function isRedirectError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
-}
-
-/** Bez query, bez koncového lomítka (kromě kořene). */
-function normalizeClientPathname(pathname: string): string {
-  const raw = pathname.split("?")[0] || "";
-  if (!raw || raw === "/") return "/client";
-  let path = raw.startsWith("/") ? raw : `/${raw}`;
-  if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
-  return path;
-}
-
-/**
- * Mobilní `ClientMobileApp` pokrývá jen hlavní záložky. Jakákoli jiná cesta pod `/client`
- * musí použít App Router (`children`) — detaily požadavků poradce, přílohy, kalkulačky, platby, …
- */
-function isClientMobileSpaPath(pathname: string): boolean {
-  const path = normalizeClientPathname(pathname);
-  if (path === "/client") return true;
-  if (
-    path === "/client/messages" ||
-    path === "/client/documents" ||
-    path === "/client/profile" ||
-    path === "/client/notifications" ||
-    path === "/client/requests"
-  ) {
-    return true;
-  }
-  if (path.startsWith("/client/portfolio") || path.startsWith("/client/contracts")) {
-    return true;
-  }
-  return false;
 }
 
 export default async function ClientZoneLayout({
