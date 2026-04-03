@@ -28,6 +28,7 @@ import {
 import { createDraft } from "@/app/actions/communication-drafts";
 import { approveContractForClientPortal, updateContract } from "@/app/actions/contracts";
 import { sendMessage } from "@/app/actions/messages";
+import { createAdvisorClientRequest } from "@/lib/assistant/create-advisor-client-request";
 
 async function assertCtx(ctx: ExecutionContext): Promise<{
   tenantId: string;
@@ -107,7 +108,12 @@ export function registerAssistantWriteAdapters(): void {
         expectedCloseDate: strParam(params, "expectedCloseDate"),
       });
       if (!id) return errResult("Obchod se nepodařilo vytvořit.");
-      return okResult(id, "opportunity");
+      const warnings: string[] = [];
+      const ltv = typeof params.ltv === "number" ? params.ltv : null;
+      if (ltv !== null && ltv > 90 && domain === "hypo") {
+        warnings.push(`LTV ${ltv} % přesahuje 90 % — ověřte bonitu a regulatorní limity.`);
+      }
+      return okResult(id, "opportunity", warnings);
     } catch (e) {
       return errResult(e instanceof Error ? e.message : "Chyba při vytváření obchodu.");
     }
@@ -162,15 +168,42 @@ export function registerAssistantWriteAdapters(): void {
       const opportunityId = strParam(params, "opportunityId");
       if (!opportunityId) return errResult("Chybí opportunityId.");
       const patch: Parameters<typeof updateOpportunityAction>[1] = {};
+      const warnings: string[] = [];
+
       if (strParam(params, "title")) patch.title = strParam(params, "title");
-      if (strParam(params, "caseType")) patch.caseType = strParam(params, "caseType");
-      if (productDomainFromParams(params)) patch.caseType = caseTypeForProductDomain(productDomainFromParams(params) as never);
+
+      const rawCaseType = strParam(params, "caseType");
+      const newDomain = productDomainFromParams(params);
+
+      if (rawCaseType && newDomain) {
+        // productDomain wins; warn about the conflict so it's auditable.
+        warnings.push(
+          `Parametry obsahují caseType („${rawCaseType}") i productDomain („${newDomain}"). `
+          + "Použit productDomain — caseType byl ignorován.",
+        );
+      }
+
+      if (newDomain) {
+        patch.caseType = caseTypeForProductDomain(newDomain as never);
+      } else if (rawCaseType) {
+        patch.caseType = rawCaseType;
+      }
+
+      // Detect product domain change: if we're updating to a different product type,
+      // surface a warning so the advisor is aware of the reclassification.
+      if (newDomain && params.previousProductDomain && newDomain !== params.previousProductDomain) {
+        warnings.push(
+          `Reklasifikace obchodu: ${String(params.previousProductDomain)} → ${newDomain}. `
+          + "Ověřte, zda je změna záměrná.",
+        );
+      }
+
       if (params.customFields && typeof params.customFields === "object") {
         patch.customFields = params.customFields as Record<string, unknown>;
       }
       if (strParam(params, "stageId")) patch.stageId = strParam(params, "stageId");
       await updateOpportunityAction(opportunityId, patch);
-      return okResult(opportunityId, "opportunity");
+      return okResult(opportunityId, "opportunity", warnings);
     } catch (e) {
       return errResult(e instanceof Error ? e.message : "Chyba při úpravě obchodu.");
     }
@@ -408,31 +441,24 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createClientRequest", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
-      const stageId = await firstPipelineStageId(ctx.tenantId);
-      if (!stageId) return errResult("Chybí pipeline.");
       const domain = productDomainFromParams(params);
       const caseType = domain ? caseTypeForProductDomain(domain as never) : strParam(params, "caseType") ?? "jiné";
       const subject = strParam(params, "subject") ?? strParam(params, "taskTitle") ?? "Požadavek klienta";
       const description = strParam(params, "description") ?? strParam(params, "noteContent");
-      const id = await createOpportunityAction({
-        title: subject,
-        caseType,
+      const res = await createAdvisorClientRequest({
+        tenantId: ctx.tenantId,
+        userId: auth.userId,
         contactId,
-        stageId,
+        caseType,
+        subject,
+        description: description ?? null,
+        advisorCreated: true,
       });
-      if (!id) return errResult("Požadavek se nepodařil vytvořit.");
-      await updateOpportunityAction(id, {
-        customFields: {
-          client_portal_request: true,
-          client_request_subject: subject,
-          client_description: description ?? null,
-          advisor_created_request: true,
-        },
-      });
-      return okResult(id, "opportunity", ["Vytvořen záznam typu klientský požadavek (obchod v pipeline)."]);
+      if (!res.ok) return errResult(res.error);
+      return okResult(res.id, "opportunity", ["Vytvořen záznam typu klientský požadavek (obchod v pipeline)."]);
     } catch (e) {
       return errResult(e instanceof Error ? e.message : "Chyba při vytvoření požadavku.");
     }

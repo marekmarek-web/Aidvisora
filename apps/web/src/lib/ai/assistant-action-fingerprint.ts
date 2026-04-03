@@ -8,7 +8,8 @@ import type { ExecutionStep, WriteActionType } from "./assistant-domain-model";
 
 const FINGERPRINT_KEYS_BY_ACTION: Record<WriteActionType, string[]> = {
   createOpportunity: ["contactId", "productDomain", "caseType", "taskTitle"],
-  updateOpportunity: ["opportunityId", "title"],
+  updateOpportunity: ["opportunityId", "title", "productDomain"],
+  createServiceCase: ["contactId", "productDomain", "subject", "noteContent"],
   createTask: ["contactId", "taskTitle", "resolvedDate"],
   updateTask: ["taskId", "taskTitle"],
   createFollowUp: ["contactId", "taskTitle", "resolvedDate"],
