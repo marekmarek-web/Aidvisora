@@ -336,6 +336,68 @@ export const goldenScenarios: GoldenScenario[] = [
     tags: ["investment", "dps", "service", "3c"],
   },
 
+  // ─── PHASE 3G: PLAYBOOK SPLIT + MATERIAL REQUEST ────────────
+
+  {
+    id: "dip-opportunity",
+    domain: "investment",
+    name: "DIP — investiční produkt (odlišný od DPS)",
+    description: "Poradce zakládá DIP obchod; playbook dip_dps se musí lišit od obecné investice.",
+    turns: [
+      { role: "user", content: "Založ DIP pro Jana Nováka — chce daňový odpočet." },
+    ],
+    expectedIntent: {
+      intentType: "create_opportunity",
+      productDomain: "dip",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createOpportunity"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["investment", "dip", "3g"],
+  },
+  {
+    id: "dps-service-case-revize",
+    domain: "investment",
+    name: "DPS — servisní případ pro revizi strategie",
+    description: "DPS servisní případ; playbook dip_dps se aplikuje i pro create_service_case.",
+    turns: [
+      { role: "user", content: "Založ servisní případ pro DPS u Lukáše Černého — revize investiční strategie." },
+    ],
+    expectedIntent: {
+      intentType: "create_service_case",
+      productDomain: "dps",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createServiceCase"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["investment", "dps", "service", "3g"],
+  },
+  {
+    id: "material-request-kataster",
+    domain: "client_portal",
+    name: "Vyžádání výpisu z katastru — material request playbook",
+    description: "create_material_request s konkrétním dokumentem; playbook material_request se musí aktivovat.",
+    turns: [
+      { role: "user", content: "Vyžádej od Petra Dvořáka výpis z katastru a potvrzení příjmu pro hypotéku." },
+    ],
+    expectedIntent: {
+      intentType: "create_material_request",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createMaterialRequest"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["material-request", "portal", "3g"],
+  },
+
   // ─── PHASE 3F: CLIENT REQUESTS ──────────────────────────────
 
   {

@@ -1,13 +1,20 @@
-import type { ProductDomain, CanonicalIntent } from "../assistant-domain-model";
+import type { ProductDomain, CanonicalIntent, CanonicalIntentType } from "../assistant-domain-model";
 
+/**
+ * 3G: Canonical playbook IDs.
+ * `investice_dip_dps` was split into `investice` + `dip_dps` for per-domain guidance.
+ * `material_request` covers create_material_request / create_client_request follow-up workflow.
+ */
 export type AssistantPlaybookId =
   | "hypo_uver"
-  | "investice_dip_dps"
+  | "investice"
+  | "dip_dps"
   | "zivotni_riziko"
   | "majetek_odpovednost_auto"
   | "firma_pojisteni"
   | "servis_vyroci"
-  | "schuzka_ukol_zapis";
+  | "schuzka_ukol_zapis"
+  | "material_request";
 
 export type AssistantPlaybook = {
   id: AssistantPlaybookId;
@@ -19,4 +26,10 @@ export type AssistantPlaybook = {
   priorityMissingHints: string[];
   /** Krátké návrhy dalších kroků (copy pro UI / odpověď) */
   nextStepSuggestions: string[];
+  /**
+   * 3G: Volitelný seznam intentů, pro které se tento playbook surfacuje přednostně.
+   * Pokud je vyplněno, enricher surfacuje hints i pro tuto sadu intentů navíc
+   * ke globálnímu PLAYBOOK_HINT_INTENTS setu.
+   */
+  supportedIntents?: CanonicalIntentType[];
 };

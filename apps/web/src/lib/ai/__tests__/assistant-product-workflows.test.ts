@@ -13,7 +13,7 @@ import {
 import type { EntityResolutionResult } from "../assistant-entity-resolution";
 import { buildExecutionPlan, computeWriteActionMissingFields } from "../assistant-execution-plan";
 import { legacyIntentToCanonical } from "../assistant-intent";
-import { enrichCanonicalIntentWithPlaybooks, pickPlaybookForIntent } from "../playbooks";
+import { enrichCanonicalIntentWithPlaybooks, getAllMatchingPlaybookIds, pickPlaybookForIntent } from "../playbooks";
 
 const CONTACT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -400,5 +400,192 @@ describe("playbook bridge — hints in userConstraints (3C)", () => {
     );
     const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
     expect(hints).toHaveLength(0);
+  });
+});
+
+// ─── 3G: PLAYBOOK SPLIT A NOVÉ PLAYBOOKS ──────────────────────────────────
+
+describe("3G: investice vs DIP/DPS playbook split", () => {
+  it("investice domain picks investice playbook, not dip_dps", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_opportunity", productDomain: "investice" }),
+      "ETF portfolio pro klienta",
+    );
+    expect(pb?.id).toBe("investice");
+  });
+
+  it("dip domain picks dip_dps playbook", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_opportunity", productDomain: "dip" }),
+      "založ DIP pro klienta",
+    );
+    expect(pb?.id).toBe("dip_dps");
+  });
+
+  it("dps domain picks dip_dps playbook", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_opportunity", productDomain: "dps" }),
+      "spoření na důchod",
+    );
+    expect(pb?.id).toBe("dip_dps");
+  });
+
+  it("dip_dps hints include daňový odpočet and příspěvek", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_opportunity", productDomain: "dip" }),
+      "založ DIP pro klienta Jana Nováka",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+    expect(hints.some((h) => h.includes("příspěvek") || h.includes("daňov") || h.includes("investiční strategie"))).toBe(true);
+  });
+
+  it("investice hints include horizont and rizikový profil", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_opportunity", productDomain: "investice" }),
+      "pravidelné investování do ETF",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.some((h) => h.includes("horizont") || h.includes("rizikov"))).toBe(true);
+    expect(hints.some((h) => h.includes("cílová"))).toBe(true);
+  });
+
+  it("investice and dip_dps are now distinct playbooks", () => {
+    const ids1 = getAllMatchingPlaybookIds(
+      intent({ intentType: "create_opportunity", productDomain: "investice" }),
+      "ETF portfolio",
+    );
+    const ids2 = getAllMatchingPlaybookIds(
+      intent({ intentType: "create_opportunity", productDomain: "dip" }),
+      "založ DIP",
+    );
+    expect(ids1).not.toEqual(ids2);
+    expect(ids1).toContain("investice");
+    expect(ids1).not.toContain("dip_dps");
+    expect(ids2).toContain("dip_dps");
+    expect(ids2).not.toContain("investice");
+  });
+});
+
+describe("3G: material_request playbook", () => {
+  it("picks material_request playbook for create_material_request intent", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_material_request" }),
+      "vyžádej podklady od klienta",
+    );
+    expect(pb?.id).toBe("material_request");
+  });
+
+  it("picks material_request playbook for 'výpis z katastru' message", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_material_request" }),
+      "potřebuji výpis z katastru a potvrzení příjmu",
+    );
+    expect(pb?.id).toBe("material_request");
+  });
+
+  it("material_request hints are surfaced for create_material_request intent", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_material_request" }),
+      "vyžádej výpis z katastru od Petra Nováka",
+    );
+    expect(enriched.userConstraints).toContain("playbook:material_request");
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+    expect(hints.some((h) => h.includes("typ") || h.includes("termín") || h.includes("účel"))).toBe(true);
+  });
+
+  it("material_request hints are surfaced for create_client_request intent", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_client_request" }),
+      "klient chce podat požadavek na přehodnocení pojistky",
+    );
+    expect(enriched.userConstraints).toContain("playbook:material_request");
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+  });
+});
+
+describe("3G: enrichment intent coverage expansion", () => {
+  it("create_task intent gets hints from schuzka_ukol_zapis playbook", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_task" }),
+      "vytvoř úkol pro Jana Nováka",
+    );
+    expect(enriched.userConstraints).toContain("playbook:schuzka_ukol_zapis");
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+    expect(hints.some((h) => h.includes("datum") || h.includes("agenda") || h.includes("účel"))).toBe(true);
+  });
+
+  it("schedule_meeting intent gets hints from schuzka_ukol_zapis playbook", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "schedule_meeting" }),
+      "naplánuj schůzku na příští týden",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+  });
+
+  it("create_reminder intent gets hints from schuzka_ukol_zapis playbook", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_reminder" }),
+      "nastav mi připomínku pro výročí smlouvy",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+  });
+
+  it("hint alreadyCovered respects extracted facts — no duplicate hint", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({
+        intentType: "create_opportunity",
+        productDomain: "hypo",
+        extractedFacts: [
+          { key: "částka", value: 4000000, source: "user_text" },
+          { key: "ltv", value: 80, source: "user_text" },
+        ],
+      }),
+      "hypo 4M LTV 80",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    // "částka jistiny" → key "částka" is covered, "LTV" key "ltv" is covered
+    expect(hints.every((h) => !h.toLowerCase().includes("částka jistiny"))).toBe(true);
+    expect(hints.every((h) => !h.toLowerCase().includes("ltv"))).toBe(true);
+  });
+
+  it("hint alreadyCovered handles parenthetical qualifiers in hint phrase", () => {
+    // "účel (koupě, rekonstrukce, refinancování)" → key "účel"
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({
+        intentType: "create_opportunity",
+        productDomain: "hypo",
+        extractedFacts: [{ key: "účel", value: "koupě bytu", source: "user_text" }],
+      }),
+      "hypo na koupi bytu",
+    );
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.every((h) => !h.includes("účel"))).toBe(true);
+  });
+});
+
+describe("3G: servis_vyroci matches create_service_case intent directly", () => {
+  it("servis_vyroci matches create_service_case intentType regardless of message", () => {
+    const pb = pickPlaybookForIntent(
+      intent({ intentType: "create_service_case" }),
+      "nějaká zpráva bez klíčového slova",
+    );
+    expect(pb?.id).toBe("servis_vyroci");
+  });
+
+  it("servis_vyroci hints are surfaced for create_service_case", () => {
+    const enriched = enrichCanonicalIntentWithPlaybooks(
+      intent({ intentType: "create_service_case" }),
+      "servisní případ pro klienta",
+    );
+    expect(enriched.userConstraints).toContain("playbook:servis_vyroci");
+    const hints = enriched.userConstraints.filter((c) => c.startsWith("hint:"));
+    expect(hints.length).toBeGreaterThan(0);
+    expect(hints.some((h) => h.includes("smlouva") || h.includes("mění") || h.includes("deadline"))).toBe(true);
   });
 });

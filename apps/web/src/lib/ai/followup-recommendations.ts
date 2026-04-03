@@ -1,6 +1,36 @@
 /**
  * Follow-up recommendation engine (Plan 5C.3).
  * Rule-based suggestions with dedup and dismiss/snooze support.
+ *
+ * ─── 3G NBA Architecture Boundary ───────────────────────────────────────────
+ *
+ * There are three distinct guidance / NBA surfaces in the assistant layer.
+ * Keep them clearly separated:
+ *
+ * 1. **Assistant playbooks** (`lib/ai/playbooks/`)
+ *    - Config-driven, heuristic, intent+domain-scoped.
+ *    - Source of guidance for the *assistant confirmation flow* (awaiting_confirmation).
+ *    - Surfaced via `getPlaybookGuidanceLines` and `enrichCanonicalIntentWithPlaybooks`.
+ *    - Does NOT depend on DB or client state at runtime.
+ *
+ * 2. **Rule-based follow-up engine** (this file)
+ *    - Threshold-based suggestions from structured `FollowUpDataSources` (pending reviews,
+ *      blocked payments, clients without contact, etc.).
+ *    - Designed for a *proactive advisory feed* (dashboard / notification center).
+ *    - Currently NOT wired to production UI — the engine is fully unit-tested but its
+ *      callers are not yet integrated into the dashboard render path.
+ *    - `augmentSuggestionsWithPlaybookContext` is a helper for future integration with
+ *      the playbook layer; it should NOT be called from the assistant confirmation flow.
+ *
+ * 3. **LLM NBA** (`lib/ai/ai-service.ts` → `generateNextBestAction`)
+ *    - Full-context, per-client LLM generation.
+ *    - Completely independent of playbooks and this engine.
+ *    - Surfaced as a separate AI generation in the client detail view.
+ *
+ * When integrating in a future phase: use `augmentSuggestionsWithPlaybookContext` only
+ * in the advisory feed render path (not in the assistant message flow) to avoid creating
+ * two competing guidance sources for the same user action.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import type { CanonicalIntent } from "./assistant-domain-model";

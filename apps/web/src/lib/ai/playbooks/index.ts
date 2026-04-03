@@ -4,4 +4,5 @@ export {
   pickPlaybookForIntent,
   enrichCanonicalIntentWithPlaybooks,
   getPlaybookGuidanceLines,
+  getAllMatchingPlaybookIds,
 } from "./enrich";
