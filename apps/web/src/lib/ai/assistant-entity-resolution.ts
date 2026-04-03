@@ -259,6 +259,11 @@ export async function resolveEntities(
     } else {
       result.warnings.push(`Obchod „${oppRef}" nebyl nalezen.`);
     }
+  } else if (session.lockedOpportunityId) {
+    const resolved = await resolveOpportunityRef(tenantId, session.lockedOpportunityId, result.client?.entityId ?? null);
+    if (resolved) {
+      result.opportunity = resolved;
+    }
   }
 
   const docRef = intent.targetDocument?.ref;

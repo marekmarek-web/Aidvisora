@@ -487,7 +487,15 @@ export async function routeAssistantMessageCanonical(
     }
   }
 
-  const skipClientFromUi = Boolean(session.lockedClientId);
+  const incomingClientId = activeContext?.clientId ?? undefined;
+  const lockedDiffers = Boolean(
+    session.lockedClientId && incomingClientId && session.lockedClientId !== incomingClientId,
+  );
+  if (lockedDiffers) {
+    clearAssistantClientLock(session);
+    session.lastExecutionPlan = undefined;
+  }
+  const skipClientFromUi = Boolean(session.lockedClientId) && !lockedDiffers;
   updateSessionContext(session, activeContext, { skipClientIdFromUi: skipClientFromUi });
 
   if (!session.lockedClientId && session.activeClientId) {

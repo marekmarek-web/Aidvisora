@@ -22,6 +22,7 @@ import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
 import {
   buildAssistantChatRequestBody,
   parsePortalContactIdFromPathname,
+  parsePortalOpportunityIdFromPathname,
 } from "@/lib/ai/assistant-chat-request";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
@@ -354,6 +355,7 @@ export function AiAssistantChatScreen() {
   const pathname = usePathname();
   const router = useRouter();
   const routeContactId = parsePortalContactIdFromPathname(pathname) ?? null;
+  const routeOpportunityId = parsePortalOpportunityIdFromPathname(pathname) ?? null;
   const [assistantSessionId, setAssistantSessionId] = useState<string | undefined>(undefined);
   const assistantSessionIdRef = useRef<string | undefined>(undefined);
   assistantSessionIdRef.current = assistantSessionId;
@@ -383,6 +385,18 @@ export function AiAssistantChatScreen() {
       /* ignore */
     }
   }, []);
+
+  const prevRouteContactIdRef = useRef<string | null>(routeContactId);
+  useEffect(() => {
+    const prev = prevRouteContactIdRef.current;
+    prevRouteContactIdRef.current = routeContactId;
+    if (prev == null || routeContactId == null) return;
+    if (prev !== routeContactId) {
+      setMessages([]);
+      setAssistantSessionId(undefined);
+      try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
+    }
+  }, [routeContactId]);
 
   useEffect(() => {
     persistSession(messages);
@@ -507,6 +521,7 @@ export function AiAssistantChatScreen() {
               buildAssistantChatRequestBody(trimmed, {
                 sessionId: assistantSessionIdRef.current,
                 routeContactId,
+                routeOpportunityId,
                 channel: "mobile",
               }),
             ),
@@ -621,6 +636,7 @@ export function AiAssistantChatScreen() {
             buildAssistantChatRequestBody(`Analyzuj nahraný soubor: ${docName}`, {
               sessionId: assistantSessionIdRef.current,
               routeContactId,
+              routeOpportunityId,
               channel: "mobile",
             }),
           ),

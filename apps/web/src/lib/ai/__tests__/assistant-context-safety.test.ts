@@ -9,6 +9,7 @@ vi.mock("@/lib/audit", () => ({ logAuditAction: vi.fn() }));
 import { verifyWriteContextSafety, verifyTenantConsistency, hasActiveLock } from "../assistant-context-safety";
 import {
   getOrCreateSession,
+  updateSessionContext,
   lockAssistantClient,
   lockAssistantOpportunity,
   lockAssistantDocument,
@@ -210,5 +211,35 @@ describe("hasActiveLock", () => {
     lockAssistantReview(session, REV_A);
     expect(hasActiveLock(session, "review", REV_A)).toBe(true);
     expect(hasActiveLock(session, "review", REV_B)).toBe(false);
+  });
+});
+
+describe("opportunity context propagation", () => {
+  it("allows plan that writes to locked opportunity", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    lockAssistantClient(session, CLIENT_A);
+    lockAssistantOpportunity(session, OPP_A);
+    const plan = makePlan(CLIENT_A);
+    plan.opportunityId = OPP_A;
+    plan.steps = [{
+      stepId: "s1",
+      action: "updateOpportunity",
+      params: { opportunityId: OPP_A, contactId: CLIENT_A },
+      label: "Update",
+      requiresConfirmation: true,
+      isReadOnly: false,
+      dependsOn: [],
+      status: "requires_confirmation",
+      result: null,
+    }];
+    const verdict = verifyWriteContextSafety(session, makeResolution(CLIENT_A), plan);
+    expect(verdict.safe).toBe(true);
+  });
+
+  it("lockedOpportunityId is set when activeContext includes opportunityId", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    updateSessionContext(session, { opportunityId: OPP_A });
+    expect(session.lockedOpportunityId).toBe(OPP_A);
+    expect(session.contextLock.lockedOpportunityId).toBe(OPP_A);
   });
 });

@@ -36,6 +36,7 @@ import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
 import {
   buildAssistantChatRequestBody,
   parsePortalContactIdFromPathname,
+  parsePortalOpportunityIdFromPathname,
 } from "@/lib/ai/assistant-chat-request";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
@@ -143,6 +144,7 @@ export function AiAssistantDrawer() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const routeContactId = parsePortalContactIdFromPathname(pathname) ?? null;
+  const routeOpportunityId = parsePortalOpportunityIdFromPathname(pathname) ?? null;
   const [assistantSessionId, setAssistantSessionId] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -205,6 +207,18 @@ export function AiAssistantDrawer() {
     }
   }, []);
 
+  const prevRouteContactIdRef = useRef<string | null>(routeContactId);
+  useEffect(() => {
+    const prev = prevRouteContactIdRef.current;
+    prevRouteContactIdRef.current = routeContactId;
+    if (prev == null || routeContactId == null) return;
+    if (prev !== routeContactId) {
+      setMessages([]);
+      setAssistantSessionId(undefined);
+      try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
+    }
+  }, [routeContactId]);
+
   const sendChatMessage = useCallback(
     async (rawMsg: string) => {
       const msg = rawMsg.trim();
@@ -226,6 +240,7 @@ export function AiAssistantDrawer() {
               buildAssistantChatRequestBody(msg, {
                 sessionId: assistantSessionIdRef.current,
                 routeContactId,
+                routeOpportunityId,
                 channel: "web_drawer",
               }),
             ),

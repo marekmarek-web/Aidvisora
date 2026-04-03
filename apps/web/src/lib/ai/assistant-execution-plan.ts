@@ -134,6 +134,9 @@ function buildStepParams(
   if (reviewActions.has(action) && !params.reviewId && session?.activeReviewId) {
     params.reviewId = session.activeReviewId;
   }
+  if (!params.opportunityId && session?.lockedOpportunityId) {
+    params.opportunityId = session.lockedOpportunityId;
+  }
   if (!params.documentId && session?.lockedDocumentId) {
     params.documentId = session.lockedDocumentId;
   }
@@ -171,6 +174,7 @@ const MULTI_ACTION_OPPORTUNITY_CHILD_ACTIONS = new Set<WriteActionType>([
   "createMeetingNote",
   "createInternalNote",
   "createMaterialRequest",
+  "attachDocumentToOpportunity",
 ]);
 
 /**

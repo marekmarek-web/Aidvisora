@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import { getOrCreateSession, lockAssistantClient } from "@/lib/ai/assistant-session";
+import { getOrCreateSession, lockAssistantClient, clearAssistantClientLock } from "@/lib/ai/assistant-session";
 import {
   runWithAssistantRunStore,
   getAssistantRunStore,
@@ -139,8 +139,17 @@ export async function POST(request: Request) {
           }
 
           const hydrated = await loadConversationHydration(session.sessionId, tenantId, userId);
+          const incomingClientId = typeof activeContext?.clientId === "string" ? activeContext.clientId : undefined;
           if (hydrated) {
-            if (hydrated.lockedContactId) {
+            const hydratedClientMismatch =
+              hydrated.lockedContactId &&
+              incomingClientId &&
+              hydrated.lockedContactId !== incomingClientId;
+
+            if (hydratedClientMismatch) {
+              clearAssistantClientLock(session);
+              session.lastExecutionPlan = undefined;
+            } else if (hydrated.lockedContactId) {
               lockAssistantClient(session, hydrated.lockedContactId);
             }
             if (hydrated.channel) {
@@ -154,7 +163,7 @@ export async function POST(request: Request) {
           }
 
           const resumablePlan = await loadResumableExecutionPlanSnapshot(session.sessionId);
-          if (resumablePlan) {
+          if (resumablePlan && !session.lastExecutionPlan) {
             session.lastExecutionPlan = resumablePlan;
           }
           session.activeChannel = channel;

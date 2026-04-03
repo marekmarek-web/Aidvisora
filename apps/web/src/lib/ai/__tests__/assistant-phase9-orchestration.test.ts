@@ -36,7 +36,8 @@ import {
   getStepsAwaitingConfirmation,
 } from "../assistant-execution-plan";
 import { buildVerifiedResult, mergeWriteStepParamsFromCompletedDependencies } from "../assistant-execution-engine";
-import { getOrCreateSession, updateSessionContext, lockAssistantClient } from "../assistant-session";
+import { getOrCreateSession, updateSessionContext, lockAssistantClient, lockAssistantOpportunity } from "../assistant-session";
+import { opportunityTitleFromSlots, caseTypeForProductDomain, PRODUCT_DOMAIN_TO_CASE_TYPE } from "../assistant-case-type-map";
 
 const CONTACT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const DOC_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -360,4 +361,93 @@ describe("Canonical — žádný předčasný zápis bez potvrzení (plán)", ()
     const afterConfirm = confirmAllSteps(plan);
     expect(afterConfirm.steps.every((s) => s.status === "confirmed")).toBe(true);
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Regression: multi_action chaining includes attachDocumentToOpportunity
+
+describe("multi_action: createOpportunity + attachDocumentToOpportunity chaining", () => {
+  it("attachDocumentToOpportunity depends on createOpportunity and receives opportunityId from predecessor", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "multi_action",
+        requestedActions: ["create_opportunity", "attach_document_to_opportunity"],
+        targetDocument: { ref: DOC_ID, resolved: true },
+        extractedFacts: [{ key: "purpose", value: "nová hypotéka", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    const createStep = plan.steps.find(s => s.action === "createOpportunity");
+    const attachStep = plan.steps.find(s => s.action === "attachDocumentToOpportunity");
+    expect(createStep).toBeTruthy();
+    expect(attachStep).toBeTruthy();
+    expect(attachStep!.dependsOn).toContain(createStep!.stepId);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Regression: session.lockedOpportunityId propagates into step params
+
+describe("lockedOpportunityId fallback into step params", () => {
+  it("step params include opportunityId from session lock when resolution has none", () => {
+    const session = getOrCreateSession(undefined, "t-1", "u-1");
+    lockAssistantOpportunity(session, OPP_ID);
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_task",
+        requestedActions: ["create_task"],
+        extractedFacts: [{ key: "taskTitle", value: "Ověřit bonitu", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+      session,
+    );
+    expect(plan.steps[0]?.params.opportunityId).toBe(OPP_ID);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Regression: Czech diacritics in assistant-generated titles
+
+describe("Czech diacritics in CRM write titles", () => {
+  it("opportunityTitleFromSlots preserves diacritics for hypo domain", () => {
+    const title = opportunityTitleFromSlots({ productDomain: "hypo", purpose: "koupě bytu" });
+    expect(title).toContain("hypo");
+    expect(title).toContain("koupě bytu");
+    expect(title).not.toMatch(/Ă|â€"/);
+  });
+
+  it("opportunityTitleFromSlots preserves diacritics for životní pojištění", () => {
+    const title = opportunityTitleFromSlots({
+      productDomain: "zivotni_pojisteni",
+      purpose: "Životní pojištění rodiny",
+    });
+    expect(title).toContain("životní pojištění");
+    expect(title).toContain("Životní pojištění rodiny");
+    expect(title).not.toMatch(/Ă|â€"/);
+  });
+
+  it("caseTypeForProductDomain maps correctly without mojibake", () => {
+    for (const [domain, label] of Object.entries(PRODUCT_DOMAIN_TO_CASE_TYPE)) {
+      const ct = caseTypeForProductDomain(domain);
+      expect(ct).toBe(label);
+      expect(ct).not.toMatch(/Ă|â€"|ÄŚ|Ĺ|ÄŤ/);
+    }
+  });
+
+  const DIACRITICS_SAMPLES = [
+    "Hypotéka",
+    "Schůzka",
+    "Životní pojištění",
+    "Účel",
+    "čekáme potvrzení",
+    "Termín follow-up",
+  ];
+  for (const sample of DIACRITICS_SAMPLES) {
+    it(`"${sample}" round-trips through JSON without mojibake`, () => {
+      const json = JSON.stringify({ title: sample });
+      const parsed = JSON.parse(json) as { title: string };
+      expect(parsed.title).toBe(sample);
+      expect(parsed.title).not.toMatch(/Ă|â€"|ÄŚ|Ĺ|ÄŤ/);
+    });
+  }
 });

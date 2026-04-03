@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CRM write operations for the advisor AI assistant (tenant-scoped, permission-checked).
  */
 
@@ -84,7 +84,7 @@ function buildDealTitle(params: {
   bank: string;
   ltv: number;
 }): string {
-  return `HypotĂ©ka ${formatAmountCs(params.amount)} â€“ ${params.contactDisplayName} â€“ ${params.bank} â€“ LTV ${params.ltv}%`;
+  return `Hypotéka ${formatAmountCs(params.amount)} — ${params.contactDisplayName} — ${params.bank} — LTV ${params.ltv}%`;
 }
 
 export async function executeMortgageDealAndFollowUpTask(
@@ -96,23 +96,23 @@ export async function executeMortgageDealAndFollowUpTask(
   if (!hasPermission(roleName, "opportunities:write")) {
     return {
       ok: false,
-      error: "ChybĂ­ oprĂˇvnÄ›nĂ­ k zĂˇpisu do pipeline (opportunities:write).",
+      error: "Chybí oprávnění k zápisu do pipeline (opportunities:write).",
       idempotencyKey: "",
     };
   }
   if (!hasPermission(roleName, "contacts:write") && !hasPermission(roleName, "tasks:*")) {
     return {
       ok: false,
-      error: "ChybĂ­ oprĂˇvnÄ›nĂ­ k vytvĂˇĹ™enĂ­ ĂşkolĹŻ.",
+      error: "Chybí oprávnění k vytváření úkolů.",
       idempotencyKey: "",
     };
   }
 
   const amount = intent.amount ?? 4_000_000;
   const ltv = intent.ltv ?? 90;
-  const bank = (intent.bank ?? "ÄŚS").trim() || "ÄŚS";
+  const bank = (intent.bank ?? "ČS").trim() || "ČS";
   const rate = intent.rateGuess ?? 4.99;
-  const purpose = (intent.purpose ?? "").trim() || "koupÄ› bytu + rekonstrukce";
+  const purpose = (intent.purpose ?? "").trim() || "koupě bytu + rekonstrukce";
 
   const [contactRow] = await db
     .select({
@@ -166,7 +166,7 @@ export async function executeMortgageDealAndFollowUpTask(
   if (!stageId) {
     return {
       ok: false,
-      error: "V tenantovi nejsou ĹľĂˇdnĂ© stupnÄ› pipeline â€” nelze zaloĹľit obchod.",
+      error: "V tenantovi nejsou žádné stupně pipeline — nelze založit obchod.",
       idempotencyKey,
     };
   }
@@ -177,7 +177,7 @@ export async function executeMortgageDealAndFollowUpTask(
     ltv,
     bank,
     rate,
-    note: "ÄŤekĂˇme potvrzenĂ­",
+    note: "čekáme potvrzení",
     purpose,
     aiAssistant: {
       idempotencyKey,
@@ -204,15 +204,15 @@ export async function executeMortgageDealAndFollowUpTask(
 
     dealId = oppRow?.id ?? "";
     if (!dealId) {
-      return { ok: false, error: "ZĂˇpis obchodu se nepodaĹ™il.", idempotencyKey };
+      return { ok: false, error: "Zápis obchodu se nepodařil.", idempotencyKey };
     }
 
-    const taskTitle = `Follow-up ${bank} nabĂ­dka (ÄŤekĂˇme potvrzenĂ­, ${String(rate).replace(".", ",")}%)`;
+    const taskTitle = `Follow-up ${bank} nabídka (čekáme potvrzení, ${String(rate).replace(".", ",")}%)`;
     const taskDescription = [
-      "[Priorita: vysokĂˇ]",
-      `ĂšÄŤel: ${purpose}.`,
+      "[Priorita: vysoká]",
+      `Účel: ${purpose}.`,
       `Odkaz na obchod: ${dealId}.`,
-      `TermĂ­n follow-up: ${dueDate} 10:00 (Europe/Prague).`,
+      `Termín follow-up: ${dueDate} 10:00 (Europe/Prague).`,
     ].join(" ");
 
     const [taskRow] = await db
@@ -231,7 +231,7 @@ export async function executeMortgageDealAndFollowUpTask(
 
     taskId = taskRow?.id ?? "";
     if (!taskId) {
-      return { ok: false, error: "Obchod byl zaloĹľen, ale Ăşkol se nepodaĹ™ilo vytvoĹ™it.", idempotencyKey };
+      return { ok: false, error: "Obchod byl založen, ale úkol se nepodařilo vytvořit.", idempotencyKey };
     }
 
     const mergedCustom = {
@@ -275,7 +275,7 @@ export async function executeMortgageDealAndFollowUpTask(
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg || "ZĂˇpis do CRM selhal.", idempotencyKey };
+    return { ok: false, error: msg || "Zápis do CRM selhal.", idempotencyKey };
   }
 }
 

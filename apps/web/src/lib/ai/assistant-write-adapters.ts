@@ -388,9 +388,23 @@ export function registerAssistantWriteAdapters(): void {
       const documentId = strParam(params, "documentId");
       const opportunityId = strParam(params, "opportunityId");
       if (!documentId || !opportunityId) return errResult("Chybí documentId nebo opportunityId.");
+      const contactId = strParam(params, "contactId");
+      const updatePayload: Record<string, unknown> = { opportunityId, updatedAt: new Date() };
+      if (contactId) {
+        updatePayload.contactId = contactId;
+      } else {
+        const oppRows = await db
+          .select({ contactId: opportunities.contactId })
+          .from(opportunities)
+          .where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, ctx.tenantId)))
+          .limit(1);
+        if (oppRows[0]?.contactId) {
+          updatePayload.contactId = oppRows[0].contactId;
+        }
+      }
       const rows = await db
         .update(documents)
-        .set({ opportunityId, updatedAt: new Date() })
+        .set(updatePayload)
         .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
         .returning({ id: documents.id });
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");

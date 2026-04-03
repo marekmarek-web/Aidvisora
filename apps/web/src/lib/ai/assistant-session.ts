@@ -88,6 +88,7 @@ export function getOrCreateSession(
 
 export type ActiveContext = {
   clientId?: string | null;
+  opportunityId?: string | null;
   reviewId?: string | null;
   paymentContactId?: string | null;
 };
@@ -105,18 +106,26 @@ export function updateSessionContext(
     if (
       incomingClientId &&
       session.lockedClientId &&
-      incomingClientId !== session.lockedClientId &&
-      options?.skipClientIdFromUi
+      incomingClientId !== session.lockedClientId
     ) {
-      warnings.push(
-        "URL je na jiném klientovi, ale asistent zůstává zamčený na původního klienta. Pro změnu kontextu napište „přepni klienta\".",
-      );
-    }
-    if (!options?.skipClientIdFromUi) {
-      if (session.activeClientId && incomingClientId && incomingClientId !== session.activeClientId) {
-        warnings.push("Detekuji změnu klienta podle URL kontextu. Zkontrolujte, zda má asistent pokračovat u nového klienta.");
+      if (options?.skipClientIdFromUi) {
+        warnings.push(
+          "URL je na jiném klientovi, ale asistent zůstává zamčený na původního klienta. Pro změnu kontextu napište „přepni klienta\".",
+        );
+      } else {
+        clearAssistantClientLock(session);
+        session.lastExecutionPlan = undefined;
+        session.activeClientId = incomingClientId;
+        warnings.push("Detekuji změnu klienta podle URL kontextu — předchozí kontext vymazán.");
       }
+    } else if (!options?.skipClientIdFromUi) {
       session.activeClientId = incomingClientId;
+    }
+  }
+  if ("opportunityId" in activeContext) {
+    const oid = activeContext.opportunityId ?? undefined;
+    if (oid) {
+      lockAssistantOpportunity(session, oid);
     }
   }
   if ("reviewId" in activeContext) {
