@@ -41,6 +41,8 @@ export type MaterialRequestDetail = MaterialRequestListItem & {
   internalNote: string | null;
   readByClientAt: Date | null;
   contactId: string;
+  /** 5F: optional link to related client-initiated request (opportunity). */
+  opportunityId: string | null;
   messages: Array<{
     id: string;
     authorRole: string;

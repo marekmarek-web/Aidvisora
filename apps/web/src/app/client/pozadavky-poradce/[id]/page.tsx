@@ -51,6 +51,21 @@ export default async function ClientAdvisorMaterialRequestDetailPage({
         {detail.description ? (
           <p className="mt-4 text-slate-700 whitespace-pre-wrap">{detail.description}</p>
         ) : null}
+
+        {/* 5F: cross-link to related client request (opportunity) when linked */}
+        {detail.opportunityId ? (
+          <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-sm text-indigo-800 font-medium">
+              Tento požadavek je navázán na váš případ.
+            </p>
+            <Link
+              href="/client/requests"
+              className="text-sm font-bold text-indigo-700 hover:text-indigo-900 whitespace-nowrap"
+            >
+              Moje požadavky →
+            </Link>
+          </div>
+        ) : null}
       </header>
 
       <section aria-label="Historie">

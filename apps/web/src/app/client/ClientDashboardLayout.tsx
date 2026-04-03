@@ -13,6 +13,7 @@ import {
   Shield,
   TrendingUp,
   Wallet,
+  ArrowRight,
 } from "lucide-react";
 import type { ClientRequestItem } from "@/app/lib/client-portal/request-types";
 import type { MaterialRequestListItem } from "@/lib/advisor-material-requests/display";
@@ -53,13 +54,43 @@ type ClientDashboardLayoutProps = {
   contractsCount: number;
   paymentInstructionsCount: number;
   documentsCount: number;
-  latestNotification: { title: string; body: string | null } | null;
+  latestNotification: {
+    title: string;
+    body: string | null;
+    /** 5F: notification type for smart deep-link CTA in dashboard card */
+    type?: string;
+    relatedEntityId?: string;
+  } | null;
   financialSummary: ClientPortalFinancialSummary | null;
   advisorMaterialRequests: MaterialRequestListItem[];
 };
 
 function formatMoney(value: number): string {
   return `${value.toLocaleString("cs-CZ")} Kč`;
+}
+
+/** 5F: resolve deep-link href from notification type for smart dashboard CTA */
+function getNotificationCtaHref(n: { type?: string; relatedEntityId?: string } | null): string | null {
+  if (!n?.type) return null;
+  if (n.type === "new_message") return "/client/messages";
+  if (n.type === "new_document") return "/client/documents";
+  if (n.type === "advisor_material_request") {
+    return n.relatedEntityId
+      ? `/client/pozadavky-poradce/${n.relatedEntityId}`
+      : "/client/pozadavky-poradce";
+  }
+  if (n.type === "request_status_change") return "/client/requests";
+  if (n.type === "important_date") return "/client/portfolio";
+  return null;
+}
+
+function getNotificationCtaLabel(type?: string): string {
+  if (type === "new_message") return "Otevřít zprávy";
+  if (type === "new_document") return "Zobrazit dokumenty";
+  if (type === "advisor_material_request") return "Otevřít požadavek";
+  if (type === "request_status_change") return "Moje požadavky";
+  if (type === "important_date") return "Moje portfolio";
+  return "Otevřít požadavky";
 }
 
 export function ClientDashboardLayout({
@@ -238,35 +269,45 @@ export function ClientDashboardLayout({
         </div>
       )}
 
+      {/* 5E: Quick stats link to portfolio detail */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
-          <div className="flex items-center gap-2 mb-2 text-indigo-600">
-            <PieChart size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              Spravovaný majetek
-            </span>
+        <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+          <div className="flex items-center justify-between gap-2 mb-2 text-indigo-600">
+            <div className="flex items-center gap-2">
+              <PieChart size={16} />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Spravovaný majetek
+              </span>
+            </div>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
             {formatMoney(quickStats.assetsUnderManagement)}
           </div>
-        </div>
-        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all">
-          <div className="flex items-center gap-2 mb-2 text-emerald-600">
-            <TrendingUp size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              Měsíční investice
-            </span>
+        </Link>
+        <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all">
+          <div className="flex items-center justify-between gap-2 mb-2 text-emerald-600">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Měsíční investice
+              </span>
+            </div>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
             {formatMoney(quickStats.monthlyInvestments)}
           </div>
-        </div>
-        <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
-          <div className="flex items-center gap-2 mb-2 text-amber-500">
-            <Shield size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              Měsíční pojistné
-            </span>
+        </Link>
+        <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
+          <div className="flex items-center justify-between gap-2 mb-2 text-amber-500">
+            <div className="flex items-center gap-2">
+              <Shield size={16} />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Měsíční pojistné
+              </span>
+            </div>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
             {formatMoney(quickStats.monthlyInsurancePremiums)}
@@ -274,7 +315,7 @@ export function ClientDashboardLayout({
           <p className="text-xs text-slate-500 mt-2 font-medium">
             Aktivních položek v přehledu: {quickStats.activeContractCount}
           </p>
-        </div>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -300,12 +341,23 @@ export function ClientDashboardLayout({
               </p>
             )}
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/client/requests"
-                className="min-h-[44px] inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide shadow-lg shadow-indigo-500/30"
-              >
-                Otevřít požadavky
-              </Link>
+              {/* 5E/5F: smart CTA based on latest notification type */}
+              {(() => {
+                const notifHref = getNotificationCtaHref(latestNotification);
+                const primaryHref = notifHref ?? (highlightedRequest ? "/client/requests" : "/client/requests");
+                const primaryLabel = latestNotification
+                  ? getNotificationCtaLabel(latestNotification.type)
+                  : "Otevřít požadavky";
+                return (
+                  <Link
+                    href={primaryHref}
+                    className="min-h-[44px] inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-sm font-bold tracking-wide shadow-lg shadow-indigo-500/30"
+                  >
+                    {primaryLabel}
+                    <ArrowRight size={14} />
+                  </Link>
+                );
+              })()}
               <Link
                 href="/client/messages"
                 className="min-h-[44px] inline-flex items-center px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-xl text-sm font-bold tracking-wide backdrop-blur-sm border border-white/10"

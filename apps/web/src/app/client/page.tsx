@@ -65,6 +65,8 @@ export default async function ClientZonePage() {
                 latestNotification.type,
                 latestNotification.body
               ),
+              type: latestNotification.type,
+              relatedEntityId: latestNotification.relatedEntityId ?? undefined,
             }
           : null
       }

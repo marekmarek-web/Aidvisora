@@ -206,6 +206,7 @@ async function buildMaterialRequestDetail(
     internalNote: req.internalNote,
     readByClientAt: req.readByClientAt,
     contactId: req.contactId,
+    opportunityId: req.opportunityId ?? null,
     messages: msgs,
     attachments,
   };

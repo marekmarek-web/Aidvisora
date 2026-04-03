@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getPortalNotificationsUnreadCount } from "@/app/actions/portal-notifications";
 import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
+import { getUnreadAdvisorMessagesForClientCount } from "@/app/actions/messages";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { db, contacts, and, eq } from "db";
 import { ClientPortalShell } from "./ClientPortalShell";
@@ -41,11 +42,14 @@ export default async function ClientZoneLayout({
   }
 
   let unreadNotificationsCount = 0;
+  let unreadMessagesCount = 0;
   let contact: { firstName: string | null; lastName: string | null } | null = null;
   let advisor: Awaited<ReturnType<typeof getAssignedAdvisorForClient>> = null;
   try {
-    [unreadNotificationsCount, contact, advisor] = await Promise.all([
+    [unreadNotificationsCount, unreadMessagesCount, contact, advisor] = await Promise.all([
       getPortalNotificationsUnreadCount(),
+      // 5F: include unread messages in bell total
+      auth.contactId ? getUnreadAdvisorMessagesForClientCount().catch(() => 0) : Promise.resolve(0),
       auth.contactId
         ? db
             .select({
@@ -61,6 +65,7 @@ export default async function ClientZoneLayout({
     ]);
   } catch {
     unreadNotificationsCount = 0;
+    unreadMessagesCount = 0;
     contact = null;
     advisor = null;
   }
@@ -71,7 +76,7 @@ export default async function ClientZoneLayout({
 
   return (
     <ClientPortalShell
-      unreadNotificationsCount={unreadNotificationsCount}
+      unreadNotificationsCount={unreadNotificationsCount + unreadMessagesCount}
       fullName={fullName}
       advisor={advisor}
     >
