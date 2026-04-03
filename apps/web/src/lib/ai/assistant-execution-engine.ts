@@ -17,6 +17,7 @@ import type {
 import { logAudit } from "../audit";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 import { computeStepFingerprint, checkRecentFingerprint, recordFingerprint } from "./assistant-action-fingerprint";
+import { sanitizeStepErrorForDisplay, mapErrorForAdvisor } from "./assistant-error-mapping";
 
 export type ExecutionContext = {
   tenantId: string;
@@ -300,12 +301,7 @@ async function executeStep(
     return result;
   } catch (err) {
     const rawError = err instanceof Error ? err.message : "Unknown execution error";
-    console.error(`[execution-engine] Step ${step.stepId} (${step.action}) failed:`, rawError);
-    const userError = isRelationMissingError(err)
-      ? "Interní databázový problém — kontaktujte správce systému."
-      : rawError.length > 120
-        ? "Akce se nepodařila provést. Zkuste to prosím znovu."
-        : rawError;
+    const userError = mapErrorForAdvisor(rawError, step.action, `step ${step.stepId}`);
     const failResult: ExecutionStepResult = {
       ok: false,
       outcome: "failed",
@@ -459,6 +455,7 @@ export function buildVerifiedResult(
       const isIdempotent = resultOutcome === "idempotent_hit" || resultOutcome === "duplicate_hit";
       const isSkipped = step.status === "skipped" || resultOutcome === "skipped";
       const isRequiresInput = resultOutcome === "requires_input";
+      const safeError = sanitizeStepErrorForDisplay(step.result?.error, step.action);
       const outcome: VerifiedAssistantResult["stepOutcomes"][number] = {
         stepId: step.stepId,
         action: step.action,
@@ -474,7 +471,7 @@ export function buildVerifiedResult(
                 : "failed",
         entityId: step.result?.entityId ?? null,
         entityType: step.result?.entityType ?? null,
-        error: step.result?.error ?? null,
+        error: safeError,
         warnings: step.result?.warnings ?? [],
         retryable: step.result?.retryable,
       };
@@ -490,11 +487,11 @@ export function buildVerifiedResult(
       if (step.result?.warnings) {
         warnings.push(...step.result.warnings);
       }
-      if (step.status === "failed" && step.result?.error) {
-        warnings.push(`Krok „${step.label}" selhal: ${step.result.error}`);
+      if (step.status === "failed" && safeError) {
+        warnings.push(`Krok „${step.label}" selhal: ${safeError}`);
       }
-      if (isRequiresInput && step.result?.error) {
-        warnings.push(`Krok „${step.label}" vyžaduje doplnění: ${step.result.error}`);
+      if (isRequiresInput && safeError) {
+        warnings.push(`Krok „${step.label}" vyžaduje doplnění: ${safeError}`);
       }
       if (isSkipped) {
         const userDeselected =

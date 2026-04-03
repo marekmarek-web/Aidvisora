@@ -8,6 +8,7 @@ import { hasPermission, type RoleName } from "@/shared/rolePermissions";
 import { logAudit } from "@/lib/audit";
 import type { AssistantIntent } from "./assistant-intent";
 import { computeNextTuesdayDatePrague } from "./assistant-intent";
+import { mapErrorForAdvisor } from "./assistant-error-mapping";
 
 export type AssistantCrmWriteInput = {
   tenantId: string;
@@ -274,8 +275,8 @@ export async function executeMortgageDealAndFollowUpTask(
       payloadHash,
     };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg || "Zápis do CRM selhal.", idempotencyKey };
+    const raw = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: mapErrorForAdvisor(raw, null, "crm-writes"), idempotencyKey };
   }
 }
 

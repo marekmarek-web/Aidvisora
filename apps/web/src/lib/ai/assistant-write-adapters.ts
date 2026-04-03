@@ -10,6 +10,7 @@ import type { ExecutionStepResult } from "./assistant-domain-model";
 import type { ExecutionContext } from "./assistant-execution-engine";
 import { registerWriteAdapter } from "./assistant-execution-engine";
 import { caseTypeForProductDomain, opportunityTitleFromSlots } from "./assistant-case-type-map";
+import { mapErrorForAdvisor } from "./assistant-error-mapping";
 import { createOpportunity as createOpportunityAction, updateOpportunity as updateOpportunityAction } from "@/app/actions/pipeline";
 import { createTask as createTaskAction, updateTask as updateTaskAction } from "@/app/actions/tasks";
 import { createEvent as createEventAction } from "@/app/actions/events";
@@ -67,6 +68,10 @@ async function firstPipelineStageId(tenantId: string): Promise<string | null> {
   return rows[0]?.id ?? null;
 }
 
+function safeErr(e: unknown, action: string): ExecutionStepResult {
+  return errResult(mapErrorForAdvisor(e instanceof Error ? e.message : "", action, action));
+}
+
 function strParam(params: Record<string, unknown>, key: string): string | undefined {
   const v = params[key];
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
@@ -119,7 +124,7 @@ export function registerAssistantWriteAdapters(): void {
       }
       return okResult(id, "opportunity", warnings);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vytváření obchodu.");
+      return safeErr(e, "createOpportunity");
     }
   });
 
@@ -162,7 +167,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(id, "opportunity", ["Vytvořen servisní případ (obchod v pipeline se servisním označením)."]);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vytváření servisního případu.");
+      return safeErr(e, "createServiceCase");
     }
   });
 
@@ -209,7 +214,7 @@ export function registerAssistantWriteAdapters(): void {
       await updateOpportunityAction(opportunityId, patch);
       return okResult(opportunityId, "opportunity", warnings);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při úpravě obchodu.");
+      return safeErr(e, "updateOpportunity");
     }
   });
 
@@ -233,7 +238,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Úkol se nepodařilo vytvořit.");
       return okResult(id, "task");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vytváření úkolu.");
+      return safeErr(e, "createTask");
     }
   });
 
@@ -251,7 +256,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(taskId, "task");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při úpravě úkolu.");
+      return safeErr(e, "updateTask");
     }
   });
 
@@ -274,7 +279,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Follow-up úkol se nepodařilo vytvořit.");
       return okResult(id, "task");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při follow-up.");
+      return safeErr(e, "createFollowUp");
     }
   });
 
@@ -301,7 +306,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Událost se nepodařila vytvořit.");
       return okResult(id, "event");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při plánování události.");
+      return safeErr(e, "scheduleCalendarEvent");
     }
   });
 
@@ -323,7 +328,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Zápis se nepodařil vytvořit.");
       return okResult(id, "meeting_note");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při zápisu ze schůzky.");
+      return safeErr(e, "createMeetingNote");
     }
   });
 
@@ -345,7 +350,7 @@ export function registerAssistantWriteAdapters(): void {
       await updateMeetingNoteAction(noteId, { content: { ...content, obsah: `${prev}\n\n${add}`.trim() } });
       return okResult(noteId, "meeting_note");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při doplnění zápisu.");
+      return safeErr(e, "appendMeetingNote");
     }
   });
 
@@ -364,7 +369,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Interní poznámka se nepodařila.");
       return okResult(id, "meeting_note");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba interní poznámky.");
+      return safeErr(e, "createInternalNote");
     }
   });
 
@@ -382,7 +387,7 @@ export function registerAssistantWriteAdapters(): void {
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vazbě dokumentu.");
+      return safeErr(e, "attachDocumentToClient");
     }
   });
 
@@ -414,7 +419,7 @@ export function registerAssistantWriteAdapters(): void {
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vazbě dokumentu k obchodu.");
+      return safeErr(e, "attachDocumentToOpportunity");
     }
   });
 
@@ -432,7 +437,7 @@ export function registerAssistantWriteAdapters(): void {
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba klasifikace dokumentu.");
+      return safeErr(e, "classifyDocument");
     }
   });
 
@@ -453,7 +458,7 @@ export function registerAssistantWriteAdapters(): void {
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document", ["Stav nastaven na kontrolu — dokončete review v UI dokumentů."]);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při označení dokumentu.");
+      return safeErr(e, "triggerDocumentReview");
     }
   });
 
@@ -478,7 +483,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!res.ok) return errResult(res.error);
       return okResult(res.id, "opportunity", ["Vytvořen záznam typu klientský požadavek (obchod v pipeline)."]);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při vytvoření požadavku.");
+      return safeErr(e, "createClientRequest");
     }
   });
 
@@ -510,7 +515,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(opportunityId, "opportunity");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba při úpravě požadavku.");
+      return safeErr(e, "updateClientRequest");
     }
   });
 
@@ -531,7 +536,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!res.ok) return errResult(res.error);
       return okResult(res.id, "advisor_material_request");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba materiálového požadavku.");
+      return safeErr(e, "createMaterialRequest");
     }
   });
 
@@ -543,7 +548,7 @@ export function registerAssistantWriteAdapters(): void {
       await approveContractForClientPortal(contractId);
       return okResult(contractId, "contract");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba publikace do portfolia.");
+      return safeErr(e, "publishPortfolioItem");
     }
   });
 
@@ -559,7 +564,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(contractId, "contract");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba úpravy portfolia.");
+      return safeErr(e, "updatePortfolioItem");
     }
   });
 
@@ -581,7 +586,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Připomínka (úkol) se nepodařila.");
       return okResult(id, "task", ["Připomínka uložena jako úkol s termínem."]);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba připomínky.");
+      return safeErr(e, "createReminder");
     }
   });
 
@@ -599,7 +604,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(String(row.id), "communication_draft");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba konceptu e-mailu.");
+      return safeErr(e, "draftEmail");
     }
   });
 
@@ -617,7 +622,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(String(row.id), "communication_draft");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba konceptu zprávy.");
+      return safeErr(e, "draftClientPortalMessage");
     }
   });
 
@@ -632,11 +637,11 @@ export function registerAssistantWriteAdapters(): void {
       if (!id) return errResult("Zprávu se nepodařilo odeslat — databáze nevrátila ID.", true);
       return okResult(id, "message");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Neznámá chyba";
+      const msg = e instanceof Error ? e.message : "";
       if (msg === "Forbidden") return errResult("Nedostatečná oprávnění pro odeslání zprávy.", false);
       if (msg === "Prázdná zpráva") return requiresInputResult("Text zprávy je prázdný. Doplňte obsah.");
-      if (msg.includes("Nesoulad")) return errResult(`Bezpečnostní chyba: ${msg}`, false);
-      return errResult(`Odeslání portálové zprávy selhalo: ${msg}`, true);
+      if (msg.includes("Nesoulad")) return errResult("Bezpečnostní nesoulad — ověřte přihlášení.", false);
+      return errResult(mapErrorForAdvisor(msg, "sendPortalMessage", "sendPortalMessage"), true);
     }
   });
 
@@ -649,7 +654,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!res.ok) return errResult(res.error);
       return okResult(reviewId, "contract_review");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba schválení kontroly.");
+      return safeErr(e, "approveAiContractReview");
     }
   });
 
@@ -662,7 +667,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!res.ok) return errResult(res.error);
       return okResult(reviewId, "contract_review", ["Schválená kontrola zapsána do CRM."]);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba aplikace kontroly.");
+      return safeErr(e, "applyAiContractReviewToCrm");
     }
   });
 
@@ -677,7 +682,7 @@ export function registerAssistantWriteAdapters(): void {
       const docId = res.documentId ?? reviewId;
       return okResult(docId, "document", visible ? ["Dokument je u klienta viditelný v portálu."] : []);
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba propojení souboru z kontroly.");
+      return safeErr(e, "linkAiContractReviewToDocuments");
     }
   });
 
@@ -690,7 +695,7 @@ export function registerAssistantWriteAdapters(): void {
       await updateDocumentVisibleToClient(documentId, !hide);
       return okResult(documentId, "document");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba viditelnosti dokumentu.");
+      return safeErr(e, "setDocumentVisibleToClient");
     }
   });
 
@@ -707,7 +712,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!res.ok) return errResult(res.error);
       return okResult(documentId, "document");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba vazby k materiálovému požadavku.");
+      return safeErr(e, "linkDocumentToMaterialRequest");
     }
   });
 
@@ -745,7 +750,7 @@ export function registerAssistantWriteAdapters(): void {
       });
       return okResult(contactId, "portal_notification");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba vytvoření notifikace.");
+      return safeErr(e, "createClientPortalNotification");
     }
   });
 }

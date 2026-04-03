@@ -41,6 +41,7 @@ import {
 } from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import { verifyWriteContextSafety, verifyTenantConsistency } from "./assistant-context-safety";
+import { mapErrorForAdvisor } from "./assistant-error-mapping";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
@@ -291,7 +292,7 @@ export async function routeAssistantMessage(
     if (!write.ok) {
       logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "legacy", ok: false });
       return {
-        message: `Zápis do CRM se nepodařil: ${write.error}`,
+        message: `Zápis do CRM se nepodařil: ${mapErrorForAdvisor(write.error ?? "", null, "legacy-crm-write")}`,
         referencedEntities: [],
         suggestedActions: [],
         warnings: [],
@@ -707,7 +708,7 @@ export async function routeAssistantMessageCanonical(
     if (!write.ok) {
       logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "canonical", ok: false });
       return {
-        message: `Zápis do CRM se nepodařil: ${write.error}`,
+        message: `Zápis do CRM se nepodařil: ${mapErrorForAdvisor(write.error ?? "", null, "canonical-crm-write")}`,
         referencedEntities: [],
         suggestedActions: [],
         warnings: [],
