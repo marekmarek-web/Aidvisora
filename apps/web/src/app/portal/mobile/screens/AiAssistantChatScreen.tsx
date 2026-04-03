@@ -22,6 +22,8 @@ import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
 import {
   buildAssistantChatRequestBody,
+  buildAssistantConfirmExecutionBody,
+  buildAssistantCancelPlanBody,
   parsePortalContactIdFromPathname,
   parsePortalOpportunityIdFromPathname,
 } from "@/lib/ai/assistant-chat-request";
@@ -143,10 +145,14 @@ function MessageBubble({
   msg,
   onSuggestedAction,
   onNextStep,
+  stepSelectionByPlanId,
+  onToggleStepForPlan,
 }: {
   msg: ChatMessage;
   onSuggestedAction?: (action: SuggestedAction) => void;
   onNextStep?: (text: string) => void;
+  stepSelectionByPlanId?: Record<string, Record<string, boolean>>;
+  onToggleStepForPlan?: (planId: string, stepId: string) => void;
 }) {
   const isUser = msg.role === "user";
 
@@ -226,6 +232,17 @@ function MessageBubble({
                     stepPreviews={msg.executionState.stepPreviews!}
                     clientLabel={msg.executionState.clientLabel}
                     isDraft={msg.executionState.status === "draft"}
+                    selectable={msg.executionState.status === "awaiting_confirmation"}
+                    stepSelection={
+                      msg.executionState.planId
+                        ? stepSelectionByPlanId?.[msg.executionState.planId]
+                        : undefined
+                    }
+                    onToggleStep={
+                      msg.executionState.planId && onToggleStepForPlan
+                        ? (stepId) => onToggleStepForPlan(msg.executionState!.planId!, stepId)
+                        : undefined
+                    }
                   />
                 )}
             </>
@@ -401,6 +418,11 @@ export function AiAssistantChatScreen() {
   const [conversationPickerLoading, setConversationPickerLoading] = useState(false);
   const [historyHydrationLoading, setHistoryHydrationLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  /** 6C: výběr kroků pro potvrzení podle planId (parita s AiAssistantDrawer). */
+  const [stepSelectionByPlanId, setStepSelectionByPlanId] = useState<
+    Record<string, Record<string, boolean>>
+  >({});
+  const chatSubmitLockRef = useRef(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -484,6 +506,41 @@ export function AiAssistantChatScreen() {
     );
   }, [messages]);
 
+  const awaitingPlanId = useMemo(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role !== "assistant" || last.executionState?.status !== "awaiting_confirmation") {
+      return undefined;
+    }
+    return last.executionState.planId;
+  }, [messages]);
+
+  const confirmSelectionInvalid = useMemo(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role !== "assistant" || last.executionState?.status !== "awaiting_confirmation") {
+      return false;
+    }
+    const previews = last.executionState.stepPreviews ?? [];
+    const pid = last.executionState.planId;
+    if (!pid || !previews.length || !previews.every((p) => p.stepId)) return false;
+    const n = Object.values(stepSelectionByPlanId[pid] ?? {}).filter(Boolean).length;
+    return n === 0;
+  }, [messages, stepSelectionByPlanId]);
+
+  useEffect(() => {
+    if (!awaitingPlanId) return;
+    const last = messages[messages.length - 1];
+    if (last?.role !== "assistant" || last.executionState?.planId !== awaitingPlanId) return;
+    const previews = last.executionState?.stepPreviews ?? [];
+    setStepSelectionByPlanId((prev) => {
+      if (prev[awaitingPlanId]) return prev;
+      const init: Record<string, boolean> = {};
+      for (const p of previews) {
+        if (p.stepId) init[p.stepId] = true;
+      }
+      return { ...prev, [awaitingPlanId]: init };
+    });
+  }, [messages, awaitingPlanId]);
+
   const runDraftEmailForClient = useCallback(async (clientId: string) => {
     const cid = clientId.trim();
     if (!cid) return;
@@ -554,7 +611,8 @@ export function AiAssistantChatScreen() {
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || isTyping) return;
+    if (!trimmed || isTyping || chatSubmitLockRef.current) return;
+    chatSubmitLockRef.current = true;
 
     const userMsg: ChatMessage = {
       id: nextId(),
@@ -640,12 +698,181 @@ export function AiAssistantChatScreen() {
         setMessages((prev) => [...prev, errMsg]);
       } finally {
         setIsTyping(false);
+        chatSubmitLockRef.current = false;
       }
     });
   }
 
+  /** 6F / 6C — potvrdit plán bez psaní „ano"; provede jen zaškrtnuté kroky. */
+  const submitPlanConfirmation = useCallback(async () => {
+    if (isTyping || chatSubmitLockRef.current) return;
+    const last = messages[messages.length - 1];
+    const pid = last?.role === "assistant" ? last.executionState?.planId : undefined;
+    const previews = last?.role === "assistant" ? (last.executionState?.stepPreviews ?? []) : [];
+    if (last?.role !== "assistant" || last.executionState?.status !== "awaiting_confirmation" || !pid) {
+      return;
+    }
+
+    const canSelect = previews.length > 0 && previews.every((p) => p.stepId);
+    const picked = canSelect
+      ? Object.entries(stepSelectionByPlanId[pid] ?? {})
+          .filter(([, on]) => on)
+          .map(([id]) => id)
+      : undefined;
+    if (canSelect && (!picked || picked.length === 0)) return;
+
+    chatSubmitLockRef.current = true;
+    const streamAssistantId = nextId();
+    setMessages((prev) => [
+      ...prev,
+      { id: streamAssistantId, role: "assistant", text: "", timestamp: new Date() },
+    ]);
+    setIsTyping(true);
+    setError(null);
+    try {
+      const complete = await postAssistantChatStreaming(
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(
+            buildAssistantConfirmExecutionBody({
+              sessionId: assistantSessionIdRef.current,
+              routeContactId,
+              routeOpportunityId,
+              channel: "mobile",
+              selectedStepIds: canSelect ? picked : undefined,
+            }),
+          ),
+        },
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamAssistantId ? { ...m, text: m.text + chunk } : m)),
+          );
+        },
+      );
+      if (complete.sessionId) {
+        setAssistantSessionId(complete.sessionId);
+        try {
+          sessionStorage.setItem(AI_ASSISTANT_API_SESSION_KEY, complete.sessionId);
+        } catch {
+          /* ignore */
+        }
+      }
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamAssistantId
+            ? {
+                ...m,
+                text: complete.message ?? "Odpověď není k dispozici.",
+                suggestedActions: mapActionPayloadsToSuggestedActions(complete.suggestedActions ?? []),
+                referencedEntities: complete.referencedEntities ?? [],
+                warnings: complete.warnings ?? [],
+                executionState: complete.executionState ?? null,
+                contextState: complete.contextState ?? null,
+                stepOutcomes: complete.stepOutcomes ?? undefined,
+                suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                hasPartialFailure: complete.hasPartialFailure ?? undefined,
+              }
+            : m,
+        ),
+      );
+      setStepSelectionByPlanId((prev) => {
+        const { [pid]: _removed, ...rest } = prev;
+        return rest;
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nepodařilo se potvrdit plán.");
+      setMessages((prev) => prev.filter((m) => m.id !== streamAssistantId));
+    } finally {
+      setIsTyping(false);
+      chatSubmitLockRef.current = false;
+    }
+  }, [
+    isTyping,
+    messages,
+    routeContactId,
+    routeOpportunityId,
+    stepSelectionByPlanId,
+  ]);
+
+  const submitCancelPlan = useCallback(async () => {
+    if (isTyping || chatSubmitLockRef.current) return;
+    const last = messages[messages.length - 1];
+    const pid = last?.role === "assistant" ? last.executionState?.planId : undefined;
+    if (last?.role !== "assistant" || last.executionState?.status !== "awaiting_confirmation") return;
+
+    chatSubmitLockRef.current = true;
+    const streamAssistantId = nextId();
+    setMessages((prev) => [
+      ...prev,
+      { id: streamAssistantId, role: "assistant", text: "", timestamp: new Date() },
+    ]);
+    setIsTyping(true);
+    setError(null);
+    try {
+      const complete = await postAssistantChatStreaming(
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(
+            buildAssistantCancelPlanBody({
+              sessionId: assistantSessionIdRef.current,
+              routeContactId,
+              routeOpportunityId,
+              channel: "mobile",
+            }),
+          ),
+        },
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamAssistantId ? { ...m, text: m.text + chunk } : m)),
+          );
+        },
+      );
+      if (complete.sessionId) {
+        setAssistantSessionId(complete.sessionId);
+        try {
+          sessionStorage.setItem(AI_ASSISTANT_API_SESSION_KEY, complete.sessionId);
+        } catch {
+          /* ignore */
+        }
+      }
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamAssistantId
+            ? {
+                ...m,
+                text: complete.message ?? "Odpověď není k dispozici.",
+                suggestedActions: mapActionPayloadsToSuggestedActions(complete.suggestedActions ?? []),
+                referencedEntities: complete.referencedEntities ?? [],
+                warnings: complete.warnings ?? [],
+                executionState: complete.executionState ?? null,
+                contextState: complete.contextState ?? null,
+                stepOutcomes: complete.stepOutcomes ?? undefined,
+                suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                hasPartialFailure: complete.hasPartialFailure ?? undefined,
+              }
+            : m,
+        ),
+      );
+      if (pid) {
+        setStepSelectionByPlanId((prev) => {
+          const { [pid]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nepodařilo se zrušit plán.");
+      setMessages((prev) => prev.filter((m) => m.id !== streamAssistantId));
+    } finally {
+      setIsTyping(false);
+      chatSubmitLockRef.current = false;
+    }
+  }, [isTyping, messages, routeContactId, routeOpportunityId]);
+
   async function handleFileUpload() {
-    if (files.length === 0) return;
+    if (files.length === 0 || chatSubmitLockRef.current) return;
+    chatSubmitLockRef.current = true;
     setIsTyping(true);
     setError(null);
     let pendingStreamAssistantId: string | undefined;
@@ -665,14 +892,15 @@ export function AiAssistantChatScreen() {
         .pop();
       const clientId =
         (routeContactId?.trim() || lastClientRef?.id?.trim()) ?? "";
-      if (!clientId) {
-        setError(
-          "Soubor lze nahrát do trezoru klienta jen v kontextu klienta. Otevřete detail klienta a nahrajte dokument v záložce Dokumenty, nebo v chatu použijte odkaz na klienta z odpovědi asistenta."
-        );
-        setFiles([]);
-        setIsTyping(false);
-        return;
-      }
+        if (!clientId) {
+          setError(
+            "Soubor lze nahrát do trezoru klienta jen v kontextu klienta. Otevřete detail klienta a nahrajte dokument v záložce Dokumenty, nebo v chatu použijte odkaz na klienta z odpovědi asistenta."
+          );
+          setFiles([]);
+          setIsTyping(false);
+          chatSubmitLockRef.current = false;
+          return;
+        }
 
       const formData = new FormData();
       files.forEach((f) => formData.append("file", f));
@@ -751,6 +979,7 @@ export function AiAssistantChatScreen() {
     } finally {
       setFiles([]);
       setIsTyping(false);
+      chatSubmitLockRef.current = false;
     }
   }
 
@@ -780,6 +1009,7 @@ export function AiAssistantChatScreen() {
 
   const startNewAssistantConversation = useCallback(() => {
     setMessages([]);
+    setStepSelectionByPlanId({});
     setAssistantSessionId(undefined);
     setError(null);
     setDraftEmail(null);
@@ -862,6 +1092,13 @@ export function AiAssistantChatScreen() {
             msg={msg}
             onSuggestedAction={handleSuggestedAction}
             onNextStep={(text) => void sendMessage(text)}
+            stepSelectionByPlanId={stepSelectionByPlanId}
+            onToggleStepForPlan={(planId, stepId) => {
+              setStepSelectionByPlanId((prev) => {
+                const cur = prev[planId] ?? {};
+                return { ...prev, [planId]: { ...cur, [stepId]: !cur[stepId] } };
+              });
+            }}
           />
         ))}
 
@@ -981,14 +1218,15 @@ export function AiAssistantChatScreen() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => void sendMessage("ano")}
-                className="flex-1 min-h-[44px] rounded-2xl bg-emerald-600 text-white text-sm font-bold shadow-sm active:bg-emerald-700"
+                onClick={() => void submitPlanConfirmation()}
+                disabled={isTyping || confirmSelectionInvalid}
+                className="flex-1 min-h-[44px] rounded-2xl bg-emerald-600 text-white text-sm font-bold shadow-sm active:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Potvrdit a provést
               </button>
               <button
                 type="button"
-                onClick={() => void sendMessage("ne")}
+                onClick={() => void submitCancelPlan()}
                 className="min-h-[44px] px-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
                 aria-label="Zrušit plán"
               >
@@ -1037,7 +1275,11 @@ export function AiAssistantChatScreen() {
             }}
             onFocus={() => requestAnimationFrame(scrollToBottom)}
             onKeyDown={handleKeyDown}
-            placeholder="Napište zprávu…"
+            placeholder={
+              awaitingConfirmationFromLatestTurn
+                ? "Plán potvrďte tlačítkem výše, ne textem zde…"
+                : "Napište zprávu…"
+            }
             disabled={isTyping}
             className="flex-1 resize-none min-h-[44px] max-h-[120px] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3.5 py-3 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:border-indigo-400 focus:bg-[color:var(--wp-surface-card)] transition-colors disabled:opacity-50"
           />
