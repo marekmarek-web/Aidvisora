@@ -152,7 +152,7 @@ async function requireAuthUncached(): Promise<AuthContext> {
 export const requireAuth = cache(requireAuthUncached);
 
 /**
- * Canonical client auth guard for all `/client/**` pages and the mobile SPA.
+ * Canonical client auth guard for all routes under /client (server pages and the mobile SPA).
  *
  * Contract:
  * - Returns AuthContext only when `roleName === "Client"` AND `contactId` is set.
