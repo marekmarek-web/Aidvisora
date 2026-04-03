@@ -7,7 +7,7 @@ import {
   computeDraftPremiumsFromEnvelope,
   pickFirstAmount,
 } from "./contract-draft-premiums";
-import { buildCanonicalPaymentPayload } from "./payment-field-contract";
+import { buildCanonicalPaymentPayload, buildCanonicalPaymentPayloadFromRaw } from "./payment-field-contract";
 
 /** Maps document primary type to CRM contract segment code. */
 export function resolveSegmentFromType(primaryType: string): string {
@@ -266,6 +266,20 @@ export function buildPaymentSetupDraft(
       clientNote: cp.clientNote || "",
     } satisfies Record<string, unknown>,
   };
+}
+
+/**
+ * Phase 3B/3F — rebuild payment draft action from stored/corrected extracted payload JSON.
+ * Returns null when there is no extractable payment slice.
+ */
+export function tryBuildPaymentSetupDraftFromRawPayload(
+  payload: Record<string, unknown>
+): DraftActionBase | null {
+  const canonical = buildCanonicalPaymentPayloadFromRaw(payload);
+  if (!canonical) return null;
+  const hasAnyPayment = canonical.amount || canonical.iban || canonical.accountNumber;
+  if (!hasAnyPayment) return null;
+  return buildPaymentSetupDraft(null, canonical);
 }
 
 function buildNotificationDraft(envelope: DocumentReviewEnvelope): DraftActionBase {

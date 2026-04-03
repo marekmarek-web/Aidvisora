@@ -3,26 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { db, contacts, clientPaymentSetups, eq, and, desc } from "db";
+import { resolvePaymentSetupClientVisibility } from "@/lib/ai/payment-publish-bridge";
 
 /**
- * Phase 3E — Payment publish bridge visibility model:
- *
- * status: "draft"            → pre-approval or incomplete; advisor-only, NOT client-visible
- * status: "active"           → approved by advisor; advisor-ready; Phase 5 will expose to client portal
- * status: "review_required"  → needs additional advisor verification
- * status: "archived"         → soft-deleted; hidden from all views
- *
- * Integration point for Phase 5:
- * - Client portal reads payment instructions from contracts → payment_accounts (legacy path)
- * - Future Phase 5 bridge: client_payment_setups WHERE status = 'active' AND visibleToClient = true
- * - Until Phase 5, this endpoint serves the advisor workspace only
+ * Phase 3E — Payment publish bridge: see `resolvePaymentSetupClientVisibility` in payment-publish-bridge.ts.
  */
-function resolveClientVisibility(status: string): "advisor_ready" | "client_visible" | "draft_only" | "hidden" {
-  if (status === "active") return "advisor_ready";
-  if (status === "review_required") return "draft_only";
-  if (status === "draft") return "draft_only";
-  return "hidden";
-}
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +79,7 @@ export async function GET(
   const items = rows.map((r) => ({
     ...r,
     /** Phase 3E: explicit client visibility tier. Phase 5 will use this to decide portal exposure. */
-    clientVisibility: resolveClientVisibility(r.status),
+    clientVisibility: resolvePaymentSetupClientVisibility(r.status),
   }));
 
   return NextResponse.json({ items });

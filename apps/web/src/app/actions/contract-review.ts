@@ -11,8 +11,11 @@ import type { ContractReviewRow } from "@/lib/ai/review-queue-repository";
 import { mergeFieldEditsIntoExtractedPayload } from "@/lib/ai-review/mappers";
 import { applyContractReview } from "@/lib/ai/apply-contract-review";
 import { mapContractReviewToBridgePayload } from "@/lib/ai/contracts-analyses-bridge";
-import { buildPaymentSetupDraft } from "@/lib/ai/draft-actions";
-import { buildCanonicalPaymentPayloadFromRaw } from "@/lib/ai/payment-field-contract";
+import { tryBuildPaymentSetupDraftFromRawPayload } from "@/lib/ai/draft-actions";
+import {
+  breadcrumbContractReviewPaymentGate,
+  captureContractReviewApplyFailure,
+} from "@/lib/observability/contract-review-sentry";
 import { logActivity } from "./activity";
 import { db } from "db";
 import { contacts, documents } from "db";
@@ -189,13 +192,8 @@ function regeneratePaymentDraftActions(row: ContractReviewRow): ContractReviewRo
   const payload = row.extractedPayload as Record<string, unknown> | null;
   if (!payload) return row;
 
-  const canonical = buildCanonicalPaymentPayloadFromRaw(payload);
-  if (!canonical) return row;
-
-  const hasAnyPayment = canonical.amount || canonical.iban || canonical.accountNumber;
-  if (!hasAnyPayment) return row;
-
-  const freshDraft = buildPaymentSetupDraft(null, canonical);
+  const freshDraft = tryBuildPaymentSetupDraftFromRawPayload(payload);
+  if (!freshDraft) return row;
   const existingActions = Array.isArray(row.draftActions)
     ? (row.draftActions as Array<{ type: string; label: string; payload: Record<string, unknown> }>)
     : [];
@@ -260,6 +258,11 @@ export async function applyContractReviewDrafts(
     const overrides = options?.overrideGateReasons ?? [];
     const remaining = pendingApply.filter((r) => !overrides.includes(r));
     if (remaining.length > 0) {
+      breadcrumbContractReviewPaymentGate({
+        reviewId: id,
+        blockedReasons: remaining,
+        hadOverride: false,
+      });
       return {
         ok: false,
         error: `Aplikace zablokována: ${remaining.join(", ")}`,
@@ -290,6 +293,11 @@ export async function applyContractReviewDrafts(
   });
 
   if (!result.ok) {
+    captureContractReviewApplyFailure({
+      reviewId: id,
+      tenantId: auth.tenantId,
+      error: result.error,
+    });
     return { ok: false, error: result.error };
   }
 
