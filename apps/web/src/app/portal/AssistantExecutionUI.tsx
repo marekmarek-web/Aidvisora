@@ -77,7 +77,7 @@ interface ContextLockBadgeProps {
 
 export function ContextLockBadge({ lockedClientId, lockedClientLabel, className }: ContextLockBadgeProps) {
   if (!lockedClientId) return null;
-  const label = lockedClientLabel?.trim() || `${lockedClientId.slice(0, 8)}…`;
+  const label = lockedClientLabel?.trim() || "Neznámý klient";
   return (
     <div
       className={cx(

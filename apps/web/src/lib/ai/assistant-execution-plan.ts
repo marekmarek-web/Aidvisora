@@ -409,7 +409,7 @@ const PRODUCT_DOMAIN_LABELS: Record<string, string> = {
  */
 export function productDomainChipLabel(domain: string | null | undefined): string | undefined {
   if (domain == null || domain === "" || domain === "jine") return undefined;
-  return PRODUCT_DOMAIN_LABELS[domain] ?? domain;
+  return PRODUCT_DOMAIN_LABELS[domain] ?? undefined;
 }
 
 function buildStepLabel(action: WriteActionType, _params: Record<string, unknown>): string {
@@ -445,6 +445,96 @@ function buildStepLabel(action: WriteActionType, _params: Record<string, unknown
   };
 
   return labels[action] ?? action;
+}
+
+const STEP_DESCRIPTIONS: Partial<Record<WriteActionType, string>> = {
+  createOpportunity: "Vytvoří nový obchod v CRM",
+  updateOpportunity: "Aktualizuje existující obchod",
+  createServiceCase: "Založí servisní případ pro smlouvu klienta",
+  createTask: "Vytvoří úkol a přiřadí ke klientovi",
+  createFollowUp: "Naplánuje následný kontakt s klientem",
+  scheduleCalendarEvent: "Vytvoří událost v kalendáři",
+  createMeetingNote: "Zapíše poznámku ze schůzky",
+  appendMeetingNote: "Doplní existující poznámku",
+  createInternalNote: "Uloží interní poznámku ke klientovi",
+  attachDocumentToClient: "Přiřadí dokument ke kartě klienta",
+  attachDocumentToOpportunity: "Přiřadí dokument k obchodu",
+  classifyDocument: "Nastaví typ dokumentu pro správné zařazení",
+  triggerDocumentReview: "Spustí automatickou kontrolu dokumentu",
+  createClientRequest: "Zaeviduje požadavek klienta v systému",
+  updateClientRequest: "Aktualizuje stav požadavku klienta",
+  createMaterialRequest: "Odešle klientovi žádost o podklady",
+  publishPortfolioItem: "Zpřístupní položku v portfoliu klienta",
+  updatePortfolioItem: "Aktualizuje data v portfoliu klienta",
+  createReminder: "Nastaví připomínku pro poradce",
+  draftEmail: "Připraví návrh e-mailu k odeslání",
+  draftClientPortalMessage: "Připraví zprávu do klientského portálu",
+  sendPortalMessage: "Odešle zprávu do klientského portálu",
+  approveAiContractReview: "Schválí výsledek AI kontroly smlouvy",
+  applyAiContractReviewToCrm: "Zapíše schválená data z AI kontroly do CRM",
+  linkAiContractReviewToDocuments: "Propojí soubor z AI kontroly s dokumenty klienta",
+  setDocumentVisibleToClient: "Zpřístupní dokument klientovi v portálu",
+  linkDocumentToMaterialRequest: "Propojí nahraný dokument s požadavkem na podklady",
+  createClientPortalNotification: "Odešle upozornění klientovi do portálu",
+};
+
+export function buildStepDescription(action: WriteActionType, params: Record<string, unknown>): string | undefined {
+  const base = STEP_DESCRIPTIONS[action];
+  if (!base) return undefined;
+
+  const domain = productDomainChipLabel(params.productDomain as string | undefined);
+  if (domain) return `${base} (${domain})`;
+
+  const date = typeof params.resolvedDate === "string" ? params.resolvedDate.split("T")[0] : null;
+  if (date && (action === "scheduleCalendarEvent" || action === "createFollowUp")) {
+    return `${base} — ${date}`;
+  }
+
+  return base;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  contactId: "klient",
+  opportunityId: "obchod",
+  documentId: "dokument",
+  reviewId: "review",
+  taskId: "úkol",
+  meetingNoteId: "poznámka",
+  materialRequestId: "materiálový požadavek",
+  contractId: "smlouva",
+  subject: "předmět",
+  description: "popis",
+  noteContent: "obsah poznámky",
+  taskTitle: "název úkolu",
+  title: "název",
+  startAt: "datum a čas",
+  resolvedDate: "datum",
+  documentType: "typ dokumentu",
+  classification: "klasifikace",
+  portalNotificationTitle: "nadpis upozornění",
+  portalNotificationBody: "text upozornění",
+  portalMessageBody: "text zprávy",
+  amount: "částka",
+  purpose: "účel",
+  investmentGoal: "investiční cíl",
+  insuranceType: "typ pojištění",
+  visibleToClient: "viditelnost pro klienta",
+};
+
+function humanizeFieldRef(fieldRef: string): string {
+  const parts = fieldRef.split("|");
+  const labels = parts.map((p) => FIELD_LABELS[p] ?? p).filter(Boolean);
+  if (labels.length <= 1) return labels[0] ?? fieldRef;
+  return labels.slice(0, -1).join(", ") + " nebo " + labels[labels.length - 1];
+}
+
+export function buildValidationWarnings(
+  action: WriteActionType,
+  params: Record<string, unknown>,
+): string[] {
+  const missing = computeWriteActionMissingFields(action, params);
+  if (missing.length === 0) return [];
+  return missing.map((f) => `Chybí: ${humanizeFieldRef(f)}`);
 }
 
 export function getStepsAwaitingConfirmation(plan: ExecutionPlan): ExecutionStep[] {

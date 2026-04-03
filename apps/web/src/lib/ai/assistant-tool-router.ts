@@ -36,6 +36,8 @@ import {
   getStepsAwaitingConfirmation,
   applyConfirmationSelection,
   productDomainChipLabel,
+  buildStepDescription,
+  buildValidationWarnings,
 } from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import { verifyWriteContextSafety, verifyTenantConsistency } from "./assistant-context-safety";
@@ -847,9 +849,11 @@ export async function routeAssistantMessageCanonical(
     const stepPreviews: StepPreviewItem[] = plan.steps.map((s) => ({
       stepId: s.stepId,
       label: s.label,
-      action: s.action,
+      action: s.label,
       contextHint: stepPreviewContextHint(s),
-      domainGroup: (s.params.productDomain as string | undefined) ?? null,
+      description: buildStepDescription(s.action, s.params),
+      domainGroup: productDomainChipLabel(s.params.productDomain as string | undefined) ?? null,
+      validationWarnings: buildValidationWarnings(s.action, s.params),
     }));
     return {
       message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}\n\nVyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).`,
@@ -905,7 +909,6 @@ function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string
     stepOutcomes: verified.stepOutcomes.map(o => ({
       label: o.label,
       status: o.status,
-      entityId: o.entityId,
       error: o.error,
       retryable: o.retryable,
     })),
