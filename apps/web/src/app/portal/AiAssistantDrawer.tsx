@@ -14,6 +14,7 @@ import {
   Pencil,
   Users,
   ListTodo,
+  Bell,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
 import { useAiAssistantDrawer } from "./AiAssistantDrawerContext";
@@ -330,6 +331,38 @@ export function AiAssistantDrawer() {
     }
   };
 
+  /** Nedodělky a věci neodeslané klientovi — stejná data jako dashboard, jiný prompt v API. */
+  const handleRemindMe = async () => {
+    if (chatLoading || chatSubmitLockRef.current) return;
+    chatSubmitLockRef.current = true;
+    const userLine = "Připomeň mi, co jsem ještě neudělal nebo neposlal.";
+    setMessages((prev) => [...prev, { role: "user", content: userLine }]);
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/ai/dashboard-summary?mode=reminders");
+      const data = await res.json();
+      if (!res.ok) {
+        toast.showToast("Načtení připomenutí selhalo.", "error");
+        setMessages((prev) => prev.slice(0, -1));
+        return;
+      }
+      const summary =
+        data.assistantSummaryText ??
+        "Nemám žádné konkrétní připomenutí — zkuste úkoly nebo review ručně.";
+      const actions = data.suggestedActions ?? [];
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: summary, suggestedActions: actions, warnings: [] },
+      ]);
+    } catch {
+      toast.showToast("Načtení selhalo.", "error");
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setChatLoading(false);
+      chatSubmitLockRef.current = false;
+    }
+  };
+
   const handleDraftEmail = async (clientId: string) => {
     try {
       const res = await fetch("/api/ai/assistant/draft-email", {
@@ -629,6 +662,15 @@ export function AiAssistantDrawer() {
           >
             <Zap size={15} className="text-indigo-500" />
             Co je dnes urgentní?
+          </button>
+          <button
+            type="button"
+            onClick={handleRemindMe}
+            disabled={chatLoading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-xs font-bold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            <Bell size={15} className="text-indigo-500" />
+            Připomeň mi
           </button>
           <button
             type="button"
