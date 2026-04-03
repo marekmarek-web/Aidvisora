@@ -303,11 +303,11 @@ export async function routeAssistantMessage(
     logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "legacy", ok: true });
 
     const lines = [
-      "Záznam do CRM proběhl (ověřené identifikátory z databáze).",
-      `dealId: ${write.dealId}`,
-      `taskId: ${write.taskId}`,
-      `Termín úkolu (datum, 10:00 Europe/Prague): ${write.dueDate}`,
-    ];
+      "Záznam do CRM proběhl.",
+      "✓ Obchod vytvořen",
+      "✓ Úkol vytvořen",
+      write.dueDate ? `Termín: ${write.dueDate}` : "",
+    ].filter(Boolean);
     if (intent.noEmail) {
       lines.push("E-mail nebyl generován (dle zadání).");
     }
@@ -464,6 +464,18 @@ export async function handleAssistantAwaitingConfirmation(
   const plan = session.lastExecutionPlan;
   if (!plan || plan.status !== "awaiting_confirmation") return null;
 
+  if (session._confirmationInProgress) {
+    return {
+      message: "Potvrzení se právě provádí. Vyčkejte prosím.",
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: [],
+      confidence: 1,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
   if (body.cancel) {
     logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_CANCELLED, {
       planId: plan.planId,
@@ -478,6 +490,32 @@ export async function handleAssistantAwaitingConfirmation(
       sourcesSummary: [],
       sessionId: session.sessionId,
     };
+  }
+
+  if (
+    plan.contactId &&
+    session.lockedClientId &&
+    plan.contactId !== session.lockedClientId
+  ) {
+    logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+      planId: plan.planId,
+      reason: "plan_client_mismatch",
+    });
+    session.lastExecutionPlan = undefined;
+    return {
+      message:
+        "Plán akcí se vztahoval k jinému klientovi než aktuální kontext. Z bezpečnostních důvodů byl zrušen. Zadejte požadavek znovu.",
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: ["Nesoulad klienta mezi plánem a aktuálním kontextem."],
+      confidence: 0.3,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  if (!session.lockedClientId && plan.contactId) {
+    lockAssistantClient(session, plan.contactId);
   }
 
   let prepared: ExecutionPlan;
@@ -519,18 +557,23 @@ export async function handleAssistantAwaitingConfirmation(
     };
   }
 
-  logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_EXECUTED, {
-    planId: prepared.planId,
-  });
-  const executed = await executePlan(prepared, {
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    sessionId: session.sessionId,
-    roleName: ctx.roleName,
-  });
-  session.lastExecutionPlan = executed;
-  const verified = buildVerifiedResult("Akce provedeny.", executed);
-  return verifiedToResponse(verified, session.sessionId);
+  session._confirmationInProgress = true;
+  try {
+    logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_EXECUTED, {
+      planId: prepared.planId,
+    });
+    const executed = await executePlan(prepared, {
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      sessionId: session.sessionId,
+      roleName: ctx.roleName,
+    });
+    session.lastExecutionPlan = executed;
+    const verified = buildVerifiedResult("Akce provedeny.", executed);
+    return verifiedToResponse(verified, session.sessionId);
+  } finally {
+    session._confirmationInProgress = false;
+  }
 }
 
 /**
@@ -577,11 +620,19 @@ export async function routeAssistantMessageCanonical(
   const skipClientFromUi = Boolean(session.lockedClientId) && !lockedDiffers;
   updateSessionContext(session, activeContext, { skipClientIdFromUi: skipClientFromUi });
 
-  if (!session.lockedClientId && session.activeClientId) {
+  const canonicalIntent = await extractCanonicalIntent(message);
+
+  const hasPendingDisambiguation = Boolean(session.pendingClientDisambiguation);
+  const intentHasExplicitClient = Boolean(canonicalIntent.targetClient?.ref);
+
+  if (
+    !session.lockedClientId &&
+    session.activeClientId &&
+    !hasPendingDisambiguation &&
+    !intentHasExplicitClient
+  ) {
     lockAssistantClient(session, session.activeClientId);
   }
-
-  const canonicalIntent = await extractCanonicalIntent(message);
   logAssistantTelemetry(AssistantTelemetryAction.CANONICAL_INTENT_EXTRACTED, {
     intentType: canonicalIntent.intentType,
     switchClient: canonicalIntent.switchClient,
@@ -613,6 +664,7 @@ export async function routeAssistantMessageCanonical(
 
   if (shouldUseMortgageVerifiedBundle(canonicalIntent)) {
     if (resolution.client?.ambiguous) {
+      session.pendingClientDisambiguation = true;
       const altLines = resolution.client.alternatives.map((a, i) => `${i + 1}. ${a.label}`).join("\n");
       return {
         message: `Nalezeno více klientů. Upřesněte prosím:\n\n${resolution.client.displayLabel}\n${altLines}`,
@@ -639,6 +691,7 @@ export async function routeAssistantMessageCanonical(
       };
     }
     lockAssistantClient(session, contactId);
+    session.pendingClientDisambiguation = false;
     const legacyIntent = canonicalIntentToMortgageAssistantIntent(canonicalIntent, {
       resolvedContactId: contactId,
     });
@@ -664,11 +717,11 @@ export async function routeAssistantMessageCanonical(
     session.lockedDealId = write.dealId;
     logAssistantTelemetry(AssistantTelemetryAction.MORTGAGE_BUNDLE_WRITE, { path: "canonical", ok: true });
     const lines = [
-      "Záznam do CRM proběhl (ověřené identifikátory z databáze).",
-      `dealId: ${write.dealId}`,
-      `taskId: ${write.taskId}`,
-      `Termín úkolu (datum, 10:00 Europe/Prague): ${write.dueDate}`,
-    ];
+      "Záznam do CRM proběhl.",
+      "✓ Obchod vytvořen",
+      "✓ Úkol vytvořen",
+      write.dueDate ? `Termín: ${write.dueDate}` : "",
+    ].filter(Boolean);
     if (legacyIntent.noEmail) lines.push("E-mail nebyl generován (dle zadání).");
     return {
       message: lines.join("\n"),
@@ -685,6 +738,7 @@ export async function routeAssistantMessageCanonical(
   }
 
   if (resolution.client?.ambiguous) {
+    session.pendingClientDisambiguation = true;
     const altLines = resolution.client.alternatives
       .map((a, i) => `${i + 1}. ${a.label}`)
       .join("\n");
@@ -709,6 +763,11 @@ export async function routeAssistantMessageCanonical(
       sourcesSummary: [],
       sessionId: session.sessionId,
     };
+  }
+
+  if (resolution.client && !resolution.client.ambiguous) {
+    lockAssistantClient(session, resolution.client.entityId);
+    session.pendingClientDisambiguation = false;
   }
 
   const patchedIntent = patchIntentWithResolutions(canonicalIntent, resolution);

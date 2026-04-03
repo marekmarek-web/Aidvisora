@@ -518,7 +518,7 @@ export function getPlanSummary(plan: ExecutionPlan): string {
   const lines = plan.steps.map((s, i) => {
     const chip = productDomainChipLabel(s.params.productDomain as string | undefined);
     const domainSuffix = chip ? ` · ${chip}` : "";
-    return `${i + 1}. ${s.label}${domainSuffix} [${s.status}]`;
+    return `${i + 1}. ${s.label}${domainSuffix}`;
   });
   return lines.join("\n");
 }

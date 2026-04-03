@@ -24,6 +24,7 @@ import {
 import { ASSISTANT_CHANNELS, type AssistantChannel, type AssistantMode } from "@/lib/ai/assistant-domain-model";
 import { logAudit } from "@/lib/audit";
 import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
+import { sanitizeAssistantMessageForAdvisor } from "@/lib/ai/assistant-message-sanitizer";
 
 export const dynamic = "force-dynamic";
 
@@ -277,6 +278,7 @@ export async function POST(request: Request) {
                 };
           const persistedResponse: AssistantResponse = {
             ...response,
+            message: sanitizeAssistantMessageForAdvisor(response.message ?? ""),
             warnings: [...new Set(conflictWarnings)],
             executionState,
             contextState: {
@@ -370,8 +372,14 @@ export async function POST(request: Request) {
     });
     const rawMessage = err instanceof Error ? err.message : "";
     const errorCode = classifyAssistantError(rawMessage);
-    const message = rawMessage || "Interní chyba asistenta.";
-    return NextResponse.json({ error: message, errorCode }, { status: 500 });
+    console.error("[assistant-chat] Unhandled error:", rawMessage);
+    const safeMessage =
+      errorCode === "rate_limit"
+        ? "Příliš mnoho požadavků. Zkuste to znovu později."
+        : errorCode === "timeout"
+          ? "Požadavek trval příliš dlouho. Zkuste to znovu."
+          : "Interní chyba asistenta. Zkuste to prosím znovu.";
+    return NextResponse.json({ error: safeMessage, errorCode }, { status: 500 });
   }
 }
 

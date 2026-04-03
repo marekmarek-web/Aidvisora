@@ -46,33 +46,53 @@ export function registerWriteAdapter(action: WriteActionType, adapter: WriteAdap
   writeAdapters.set(action, adapter);
 }
 
+let executionActionsTableAvailable = true;
+
+function isRelationMissingError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.message.includes("relation") && err.message.includes("does not exist");
+}
+
 async function checkIdempotency(
   tenantId: string,
   actionType: string,
   sourceId: string,
 ): Promise<{ entityId: string; resultPayload: unknown } | null> {
-  const rows = await db
-    .select({
-      id: executionActions.id,
-      resultPayload: executionActions.resultPayload,
-      status: executionActions.status,
-    })
-    .from(executionActions)
-    .where(
-      and(
-        eq(executionActions.tenantId, tenantId),
-        eq(executionActions.actionType, actionType),
-        eq(executionActions.sourceId, sourceId),
-        eq(executionActions.status, "completed"),
-      ),
-    )
-    .limit(1);
+  if (!executionActionsTableAvailable) return null;
+  try {
+    const rows = await db
+      .select({
+        id: executionActions.id,
+        resultPayload: executionActions.resultPayload,
+        status: executionActions.status,
+      })
+      .from(executionActions)
+      .where(
+        and(
+          eq(executionActions.tenantId, tenantId),
+          eq(executionActions.actionType, actionType),
+          eq(executionActions.sourceId, sourceId),
+          eq(executionActions.status, "completed"),
+        ),
+      )
+      .limit(1);
 
-  if (rows[0]) {
-    const payload = rows[0].resultPayload as Record<string, unknown> | null;
-    return { entityId: (payload?.entityId as string) ?? rows[0].id, resultPayload: payload };
+    if (rows[0]) {
+      const payload = rows[0].resultPayload as Record<string, unknown> | null;
+      return { entityId: (payload?.entityId as string) ?? rows[0].id, resultPayload: payload };
+    }
+    return null;
+  } catch (err) {
+    if (isRelationMissingError(err)) {
+      console.error(
+        "[execution-engine] execution_actions table missing — idempotency check skipped. " +
+        "Run: packages/db/migrations/add_execution_actions.sql",
+      );
+      executionActionsTableAvailable = false;
+      return null;
+    }
+    throw err;
   }
-  return null;
 }
 
 export type AssistantLedgerInsertRow = {
@@ -186,8 +206,21 @@ async function recordExecution(
   idempotencyKey: string,
   ledger: { plan: PlanLedgerContext; fingerprint: string },
 ): Promise<void> {
-  const now = new Date();
-  await db.insert(executionActions).values(buildAssistantLedgerInsertRow(step, ctx, result, idempotencyKey, ledger, now));
+  if (!executionActionsTableAvailable) return;
+  try {
+    const now = new Date();
+    await db.insert(executionActions).values(buildAssistantLedgerInsertRow(step, ctx, result, idempotencyKey, ledger, now));
+  } catch (err) {
+    if (isRelationMissingError(err)) {
+      console.error(
+        "[execution-engine] execution_actions table missing — ledger write skipped. " +
+        "Run: packages/db/migrations/add_execution_actions.sql",
+      );
+      executionActionsTableAvailable = false;
+      return;
+    }
+    throw err;
+  }
 }
 
 async function executeStep(
@@ -266,14 +299,20 @@ async function executeStep(
 
     return result;
   } catch (err) {
-    const error = err instanceof Error ? err.message : "Unknown execution error";
+    const rawError = err instanceof Error ? err.message : "Unknown execution error";
+    console.error(`[execution-engine] Step ${step.stepId} (${step.action}) failed:`, rawError);
+    const userError = isRelationMissingError(err)
+      ? "Interní databázový problém — kontaktujte správce systému."
+      : rawError.length > 120
+        ? "Akce se nepodařila provést. Zkuste to prosím znovu."
+        : rawError;
     const failResult: ExecutionStepResult = {
       ok: false,
       outcome: "failed",
       entityId: null,
       entityType: null,
       warnings: [],
-      error,
+      error: userError,
     };
     await recordExecution(step, ctx, failResult, idempotencyKey, ledgerSnapshot).catch(() => {});
     return failResult;

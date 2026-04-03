@@ -33,6 +33,14 @@ export type AssistantSession = {
   lastWarnings: string[];
   messageCount: number;
   createdAt: Date;
+  /**
+   * Set to true when client resolution was ambiguous (multiple matches).
+   * Next message should be treated as a disambiguation attempt — auto-lock
+   * from URL context is suppressed and resolveClientRef searches again.
+   */
+  pendingClientDisambiguation?: boolean;
+  /** Server-side guard against concurrent confirm/execute requests. */
+  _confirmationInProgress?: boolean;
 };
 
 const SESSION_TTL_MS = 30 * 60 * 1000;

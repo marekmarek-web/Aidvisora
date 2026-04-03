@@ -38,7 +38,7 @@ async function resolveClientRef(
   ref: string,
   session: AssistantSession,
 ): Promise<ResolvedEntity | null> {
-  if (session.lockedClientId) {
+  if (session.lockedClientId && !session.pendingClientDisambiguation) {
     const rows = await db
       .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
       .from(contacts)
@@ -227,7 +227,10 @@ export async function resolveEntities(
     } else {
       result.warnings.push(`Klient „${clientRef}" nebyl nalezen.`);
     }
-  } else if (session.lockedClientId || session.activeClientId) {
+  } else if (
+    (session.lockedClientId || session.activeClientId) &&
+    !session.pendingClientDisambiguation
+  ) {
     const cid = session.lockedClientId ?? session.activeClientId!;
     const rows = await db
       .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
