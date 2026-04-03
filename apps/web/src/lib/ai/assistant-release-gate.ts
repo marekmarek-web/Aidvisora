@@ -3,6 +3,9 @@
  *
  * `PHASE_3_THRESHOLDS` is the current default for {@link evaluateReleaseGate}.
  * `PHASE_2_THRESHOLDS` is kept as a historical baseline only.
+ *
+ * **F2 Wave B (corrective plan):** named P0 scenarios live in
+ * `__tests__/assistant-f2-wave-b-release-gate.test.ts`; run `pnpm test:f2-wave-b-release-gate`.
  */
 
 import type { AssistantEvalRunSummary, AssistantEvalDomain } from "./assistant-eval-types";

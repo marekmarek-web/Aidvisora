@@ -45,6 +45,8 @@ Stručný seznam míst, kde má smysl **začít číst kód** při typických ú
 - `apps/web/src/lib/client-portal/__tests__/phase-6f-phase5-6-release-gate.test.ts` — 7 mandatory release scenarios.
 - Run: `pnpm --filter web test:client-portal-phase5-6-regression`
 - Run (observability only): `pnpm --filter web test:phase6h-observability`
+- **F2 Wave B (assistant P0 gate):** `apps/web/src/lib/ai/__tests__/assistant-f2-wave-b-release-gate.test.ts` — únik do UI, drift klienta, partial failure, chybějící `execution_actions`, fingerprint duplicit.
+- Run: `pnpm --filter web test:f2-wave-b-release-gate` (viz [release-checklist-f2-wave-b.md](./release-checklist-f2-wave-b.md))
 
 ## Dokumentace pro lidi
 

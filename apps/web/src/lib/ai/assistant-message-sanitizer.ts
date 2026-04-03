@@ -113,11 +113,17 @@ export function sanitizeAssistantMessageForAdvisor(raw: string): string {
 export function sanitizeWarningForAdvisor(raw: string): string {
   if (!raw) return raw;
   let text = raw;
-  text = text.replace(INLINE_UUID_RE, "").replace(ORPHAN_HEX_PREFIX_RE, "");
+  // Entity refs before UUID strip — otherwise `[client:uuid]` becomes `[client:]` and no longer matches.
   text = text.replace(ENTITY_REF_RE, "");
+  text = text.replace(INLINE_UUID_RE, "").replace(ORPHAN_HEX_PREFIX_RE, "");
   text = text.replace(CONTEXT_MARKER_RE, "");
   text = text.replace(STATUS_BRACKET_RE, "");
   text = text.replace(RAW_ID_LINE_RE, "");
+  // Inline `sessionId: <uuid>` after UUID strip leaves `sessionId:` — remove dangling technical keys.
+  text = text.replace(
+    /\b(sessionId|planId|tenantId|contactId|opportunityId|entityId|reviewId)\s*:\s*\S*/gi,
+    "",
+  );
   text = text.replace(/\s{2,}/g, " ");
   return text.trim();
 }
