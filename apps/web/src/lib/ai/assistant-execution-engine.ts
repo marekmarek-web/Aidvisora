@@ -54,6 +54,11 @@ export function resetExecutionActionsTableAvailabilityForTests(): void {
   executionActionsTableAvailable = true;
 }
 
+/** Runtime health check: returns false if the execution_actions table was detected missing. */
+export function isExecutionLedgerAvailable(): boolean {
+  return executionActionsTableAvailable;
+}
+
 function isRelationMissingError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   return err.message.includes("relation") && err.message.includes("does not exist");
@@ -235,12 +240,12 @@ async function executeStep(
   planLedger: PlanLedgerContext,
 ): Promise<ExecutionStepResult> {
   if (step.status !== "confirmed") {
-    return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error: `Step not confirmed: ${step.status}` };
+    return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error: "Krok nebyl potvrzen — nelze provést." };
   }
 
   const adapter = writeAdapters.get(step.action);
   if (!adapter) {
-    return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error: `No adapter for ${step.action}` };
+    return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error: "Tato akce není momentálně dostupná." };
   }
 
   const idempotencyKey = `${ctx.sessionId}:${step.stepId}`;
@@ -433,6 +438,13 @@ export async function executePlan(
     steps: updatedSteps,
     status: anyFailed ? "partial_failure" : "completed",
   };
+
+  if (!executionActionsTableAvailable) {
+    logAssistantTelemetry(AssistantTelemetryAction.WRITE_PLAN_DONE, {
+      planId: nextPlan.planId,
+      ledgerDegraded: true,
+    });
+  }
 
   logAssistantTelemetry(AssistantTelemetryAction.WRITE_PLAN_DONE, {
     planId: nextPlan.planId,

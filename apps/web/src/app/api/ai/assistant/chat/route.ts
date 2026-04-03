@@ -24,7 +24,7 @@ import {
 import { ASSISTANT_CHANNELS, type AssistantChannel, type AssistantMode } from "@/lib/ai/assistant-domain-model";
 import { logAudit } from "@/lib/audit";
 import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
-import { sanitizeAssistantMessageForAdvisor } from "@/lib/ai/assistant-message-sanitizer";
+import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "@/lib/ai/assistant-message-sanitizer";
 
 export const dynamic = "force-dynamic";
 
@@ -279,7 +279,7 @@ export async function POST(request: Request) {
           const persistedResponse: AssistantResponse = {
             ...response,
             message: sanitizeAssistantMessageForAdvisor(response.message ?? ""),
-            warnings: [...new Set(conflictWarnings)],
+            warnings: [...new Set(conflictWarnings)].map(sanitizeWarningForAdvisor).filter(Boolean),
             executionState,
             contextState: {
               channel: session.activeChannel ?? null,

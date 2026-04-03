@@ -56,13 +56,33 @@ function stripToolResultBlocks(text: string): string {
 const TOOL_CALL_RE = /\[TOOL:\w+[^\]]*\]/g;
 const TOOL_ERROR_RE = /\[Nástroj \w+ selhal\]/g;
 const ENTITY_REF_RE = /\[(review|task|client|payment|contact|opportunity):[a-f0-9-]+\]/gi;
+const CONTEXT_MARKER_RE = /\[CONTEXT:[^\]]*\]/gi;
 const STATUS_BRACKET_RE =
   /\[(requires_confirmation|confirmed|executing|skipped|succeeded|failed|completed|awaiting_confirmation|draft)\]/gi;
 const RAW_ID_LINE_RE =
-  /^(dealId|taskId|contactId|opportunityId|entityId|reviewId|sourceId)\s*:\s*\S+\s*$/gm;
+  /^(dealId|taskId|contactId|opportunityId|entityId|reviewId|sourceId|planId|sessionId|tenantId)\s*:\s*\S+\s*$/gm;
 const INTERNAL_DIAGNOSTIC_RE =
   /^(Volám|Hledám|Načítám|Spouštím|Kontroluji)\s[^\n]*\.{3}\s*$/gm;
 const MULTI_BLANK_RE = /\n{3,}/g;
+
+const INLINE_UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+
+const ORPHAN_HEX_PREFIX_RE = /\b[0-9a-f]{8}…\b/gi;
+
+/**
+ * Strips standalone JSON blocks that the model may emit outside of [RESULT:] wrappers.
+ * Matches `{` at line start (optional whitespace), balanced braces spanning 2+ lines.
+ */
+function stripOrphanJsonBlocks(text: string): string {
+  return text.replace(/^[ \t]*\{[\s\S]*?\n[ \t]*\}[ \t]*$/gm, (match) => {
+    try {
+      JSON.parse(match.trim());
+      return "";
+    } catch {
+      return match;
+    }
+  });
+}
 
 export function sanitizeAssistantMessageForAdvisor(raw: string): string {
   if (!raw) return raw;
@@ -74,10 +94,30 @@ export function sanitizeAssistantMessageForAdvisor(raw: string): string {
   text = text.replace(TOOL_CALL_RE, "");
   text = text.replace(TOOL_ERROR_RE, "");
   text = text.replace(ENTITY_REF_RE, "");
+  text = text.replace(CONTEXT_MARKER_RE, "");
   text = text.replace(STATUS_BRACKET_RE, "");
   text = text.replace(RAW_ID_LINE_RE, "");
   text = text.replace(INTERNAL_DIAGNOSTIC_RE, "");
+  text = stripOrphanJsonBlocks(text);
+  text = text.replace(INLINE_UUID_RE, "");
+  text = text.replace(ORPHAN_HEX_PREFIX_RE, "");
   text = text.replace(MULTI_BLANK_RE, "\n\n");
 
+  return text.trim();
+}
+
+/**
+ * Sanitizes a single warning string — lighter than full message sanitizer
+ * but strips UUIDs, bracket markers, and technical identifiers.
+ */
+export function sanitizeWarningForAdvisor(raw: string): string {
+  if (!raw) return raw;
+  let text = raw;
+  text = text.replace(INLINE_UUID_RE, "").replace(ORPHAN_HEX_PREFIX_RE, "");
+  text = text.replace(ENTITY_REF_RE, "");
+  text = text.replace(CONTEXT_MARKER_RE, "");
+  text = text.replace(STATUS_BRACKET_RE, "");
+  text = text.replace(RAW_ID_LINE_RE, "");
+  text = text.replace(/\s{2,}/g, " ");
   return text.trim();
 }

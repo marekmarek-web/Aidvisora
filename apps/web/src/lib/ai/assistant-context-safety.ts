@@ -62,9 +62,9 @@ export function verifyWriteContextSafety(
 
   if (resolvedContactId && lockedContactId && resolvedContactId !== lockedContactId) {
     needsConfirmation = true;
+    const resolvedLabel = resolution.client?.displayLabel || "nový klient";
     warnings.push(
-      `Detekován jiný klient (${resolution.client?.displayLabel ?? resolvedContactId.slice(0, 8)}) `
-      + `než je zamčený kontext (${lockedContactId.slice(0, 8)}…). Akce vyžadují explicitní potvrzení.`,
+      `Detekován jiný klient (${resolvedLabel}) než je zamčený kontext. Akce vyžadují explicitní potvrzení.`,
     );
   }
 
