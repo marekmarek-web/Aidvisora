@@ -60,6 +60,9 @@ describe("assistant-history-mapper", () => {
       const prev = a.executionState?.stepPreviews?.[0];
       expect(prev?.action).toBe("Úkol");
       expect(prev?.action).not.toBe("createTask");
+      // Parita s live routerem: chybějící contactId → needs_input + varování
+      expect(prev?.preflightStatus).toBe("needs_input");
+      expect((prev?.validationWarnings?.length ?? 0)).toBeGreaterThan(0);
     }
   });
 });

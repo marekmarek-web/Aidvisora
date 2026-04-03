@@ -8,6 +8,7 @@ import {
   productDomainChipLabel,
   buildStepDescription,
   buildValidationWarnings,
+  computeWriteActionMissingFields,
 } from "./assistant-execution-plan";
 
 export type AssistantConversationRow = {
@@ -59,15 +60,19 @@ export type AdvisorAssistantHistoryMessageDto =
   | AdvisorAssistantHistoryAssistantMessage;
 
 function stepPreviewsFromPlan(plan: ExecutionPlan): StepPreviewItem[] {
-  return plan.steps.map((s) => ({
-    stepId: s.stepId,
-    label: s.label,
-    action: s.label,
-    contextHint: productDomainChipLabel(s.params.productDomain as string | undefined),
-    description: buildStepDescription(s.action, s.params),
-    domainGroup: productDomainChipLabel(s.params.productDomain as string | undefined) ?? null,
-    validationWarnings: buildValidationWarnings(s.action, s.params),
-  }));
+  return plan.steps.map((s) => {
+    const missing = computeWriteActionMissingFields(s.action, s.params);
+    return {
+      stepId: s.stepId,
+      label: s.label,
+      action: s.label,
+      contextHint: productDomainChipLabel(s.params.productDomain as string | undefined),
+      description: buildStepDescription(s.action, s.params),
+      domainGroup: productDomainChipLabel(s.params.productDomain as string | undefined) ?? null,
+      validationWarnings: buildValidationWarnings(s.action, s.params),
+      preflightStatus: missing.length > 0 ? ("needs_input" as const) : ("ready" as const),
+    };
+  });
 }
 
 function executionStateFromPlan(plan: ExecutionPlan | null): AdvisorAssistantHistoryAssistantMessage["executionState"] {

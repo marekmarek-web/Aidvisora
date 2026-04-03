@@ -181,6 +181,11 @@ export function ConfirmationPreviewPanel({
                   className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-700 focus:ring-2 focus:ring-amber-400 focus:ring-offset-0 shrink-0"
                   aria-label={`Zařadit krok: ${step.label}`}
                   disabled={step.preflightStatus === "needs_input"}
+                  title={
+                    step.preflightStatus === "needs_input"
+                      ? "Krok nelze zařadit — chybí povinné údaje. Doplňte je v novém zadání."
+                      : undefined
+                  }
                 />
               ) : (
                 <span className={cx(

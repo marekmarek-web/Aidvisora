@@ -296,7 +296,7 @@ export function canonicalMeetingTitle(params: {
 // ─── Portal message template ──────────────────────────────────────────────────
 
 const PORTAL_MESSAGE_BY_DOMAIN: Partial<Record<string, string>> = {
-  hypo: "Dobrý den, pro zpracování hypotéky potřebuji od Vás potřebné podklady. Jakmile je obdržím, připravím pro Vás další kroky.",
+  hypo: "Dobrý den, pro zpracování hypotéky potřebuji od Vás podklady. Jakmile je obdržím, připravím pro Vás další kroky.",
   uver: "Dobrý den, pro přípravu úvěru potřebuji doplňující informace. Prosím o zaslání podkladů.",
   investice: "Dobrý den, připravuji pro Vás investiční řešení. Potřebuji ověřit několik informací — prosím o odpověď.",
   dip: "Dobrý den, pro nastavení DIP potřebuji vaše doplňující informace. Jsem k dispozici pro dotazy.",
