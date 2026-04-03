@@ -10,6 +10,7 @@ import {
   isPaymentSyncReady,
   type CanonicalPaymentPayload,
 } from "./payment-field-contract";
+import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
 
@@ -100,6 +101,11 @@ export async function applyContractReview(
   }
 
   if (row.reviewStatus !== "approved") {
+    capturePublishGuardFailure({
+      tenantId,
+      reviewId,
+      reason: `applyContractReview: reviewStatus="${row.reviewStatus}" is not approved`,
+    });
     return { ok: false, error: "Publish guard: review musí být schválena před aplikací do CRM." };
   }
 

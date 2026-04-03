@@ -12,6 +12,10 @@ import {
 } from "db";
 import { eq, and, desc, asc, inArray } from "db";
 import { createPortalNotification } from "./portal-notifications";
+import {
+  captureAttachmentLinkFailure,
+  captureRequestReplyFailure,
+} from "@/lib/observability/portal-sentry";
 import { emitNotification } from "@/lib/execution/notification-center";
 import { getTargetAdvisorUserIdForContact } from "./client-dashboard";
 import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
@@ -486,6 +490,12 @@ export async function respondClientMaterialRequest(
     .limit(1);
   if (!req) return { ok: false, error: "Požadavek nenalezen." };
   if (req.status === "closed" || req.status === "done") {
+    captureRequestReplyFailure({
+      tenantId: auth.tenantId,
+      contactId: auth.contactId,
+      requestId,
+      reason: `respondClientMaterialRequest: request status="${req.status}" is terminal`,
+    });
     return { ok: false, error: "Požadavek je uzavřen a nelze na něj odpovídat." };
   }
 
@@ -514,6 +524,12 @@ export async function respondClientMaterialRequest(
         });
       }
     } catch (e) {
+      captureAttachmentLinkFailure({
+        tenantId: auth.tenantId,
+        requestId,
+        reason: e instanceof Error ? e.message : "Nahrání souboru selhalo.",
+        error: e,
+      });
       return { ok: false, error: e instanceof Error ? e.message : "Nahrání souboru selhalo." };
     }
   }

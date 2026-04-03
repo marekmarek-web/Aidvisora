@@ -16,6 +16,7 @@ import {
   breadcrumbContractReviewPaymentGate,
   captureContractReviewApplyFailure,
 } from "@/lib/observability/contract-review-sentry";
+import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
 import { logActivity } from "./activity";
 import { db } from "db";
 import { contacts, documents } from "db";
@@ -350,6 +351,12 @@ export async function linkContractReviewFileToContactDocuments(
   const contactId = row.matchedClientId;
   const visible = options?.visibleToClient ?? false;
   if (visible && row.reviewStatus !== "approved" && row.reviewStatus !== "applied") {
+    capturePublishGuardFailure({
+      tenantId: auth.tenantId,
+      reviewId,
+      contactId,
+      reason: `linkContractReviewFileToContactDocuments: visibleToClient=true but reviewStatus="${row.reviewStatus}"`,
+    });
     return { ok: false, error: "Publish guard: dokument nelze zveřejnit bez schválené review." };
   }
 

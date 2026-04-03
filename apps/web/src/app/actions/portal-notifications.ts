@@ -5,6 +5,7 @@ import { db } from "db";
 import { portalNotifications } from "db";
 import { eq, and, desc, isNull, sql } from "db";
 import { sendPushForPortalNotification } from "@/lib/push/send";
+import { captureNotificationDeliveryFailure } from "@/lib/observability/portal-sentry";
 
 export type PortalNotificationRow = {
   id: string;
@@ -138,12 +139,22 @@ export async function createPortalNotification(params: {
     relatedEntityId: params.relatedEntityId ?? null,
   });
 
-  await sendPushForPortalNotification({
-    tenantId: params.tenantId,
-    contactId: params.contactId,
-    type: params.type,
-    title: params.title,
-    body: params.body,
-    relatedEntityId: params.relatedEntityId,
-  });
+  try {
+    await sendPushForPortalNotification({
+      tenantId: params.tenantId,
+      contactId: params.contactId,
+      type: params.type,
+      title: params.title,
+      body: params.body,
+      relatedEntityId: params.relatedEntityId,
+    });
+  } catch (e) {
+    captureNotificationDeliveryFailure({
+      tenantId: params.tenantId,
+      contactId: params.contactId,
+      type: params.type,
+      relatedEntityId: params.relatedEntityId,
+      error: e,
+    });
+  }
 }
