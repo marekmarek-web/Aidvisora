@@ -7,6 +7,7 @@ import {
   computeDraftPremiumsFromEnvelope,
   pickFirstAmount,
 } from "./contract-draft-premiums";
+import { buildCanonicalPaymentPayload } from "./payment-field-contract";
 
 /** Maps document primary type to CRM contract segment code. */
 export function resolveSegmentFromType(primaryType: string): string {
@@ -229,34 +230,40 @@ function toLegacyProjection(envelope: DocumentReviewEnvelope): ExtractedContract
   };
 }
 
-function buildPaymentSetupDraft(envelope: DocumentReviewEnvelope): DraftActionBase {
-  const fv = (key: string) => String(fieldValue(envelope, key) ?? "");
+/**
+ * Build the payment setup draft from the canonical payment contract.
+ * Accepts either a live envelope or an already-built canonical payload
+ * (used by Phase 3B when regenerating drafts from corrected payloads).
+ */
+export function buildPaymentSetupDraft(
+  envelopeOrPayload: DocumentReviewEnvelope | null,
+  canonicalOverride?: Record<string, string>,
+): DraftActionBase {
+  const cp = canonicalOverride ?? (envelopeOrPayload ? buildCanonicalPaymentPayload(envelopeOrPayload) : {});
+  const fv = (key: string) => String(fieldValue(envelopeOrPayload!, key) ?? "");
   return {
     type: "create_payment_setup",
     label: "Vytvořit platební údaje do portálu",
     payload: {
-      obligationName: fv("productName") || fv("platform") || "Platba",
-      paymentType: fv("paymentType") || "regular",
-      provider: fv("provider") || fv("platform") || fv("insurer") || "",
-      productName: fv("productName"),
-      beneficiaryName: fv("beneficiaryName"),
-      payerName: fv("fullName") || fv("clientFullName"),
-      contractReference: fv("contractReference") || fv("contractNumber") || "",
-      recipientAccount: fv("bankAccount") || "",
-      iban: fv("iban") || "",
-      bankCode: fv("bankCode") || "",
-      variableSymbol: fv("variableSymbol") || "",
-      specificSymbol: fv("specificSymbol") || "",
-      constantSymbol: fv("constantSymbol") || "",
-      regularAmount: fv("regularAmount") || "",
-      oneOffAmount: fv("oneOffAmount") || "",
-      currency: fv("currency") || "CZK",
-      frequency: fv("paymentFrequency") || "",
-      firstDueDate: fv("firstPaymentDate") || "",
-      clientNote: fv("paymentPurpose") || "",
-      separateInstructionsCZK: fv("separateInstructionsCZK") || "",
-      separateInstructionsEUR: fv("separateInstructionsEUR") || "",
-      separateInstructionsUSD: fv("separateInstructionsUSD") || "",
+      obligationName: cp.productName || cp.provider || "Platba",
+      paymentType: cp.paymentFrequency ? "regular" : "other",
+      provider: cp.provider || "",
+      productName: cp.productName || "",
+      beneficiaryName: cp.beneficiaryName || "",
+      payerName: envelopeOrPayload ? (fv("fullName") || fv("clientFullName")) : "",
+      contractReference: cp.contractReference || "",
+      recipientAccount: cp.accountNumber || "",
+      iban: cp.iban || "",
+      bankCode: cp.bankCode || "",
+      variableSymbol: cp.variableSymbol || "",
+      specificSymbol: cp.specificSymbol || "",
+      constantSymbol: cp.constantSymbol || "",
+      regularAmount: cp.amount || "",
+      oneOffAmount: "",
+      currency: cp.currency || "CZK",
+      frequency: cp.paymentFrequency || "",
+      firstDueDate: cp.firstPaymentDate || "",
+      clientNote: cp.clientNote || "",
     } satisfies Record<string, unknown>,
   };
 }

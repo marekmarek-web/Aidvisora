@@ -7,9 +7,12 @@ import {
   updateContractReview,
   saveContractCorrection,
 } from "@/lib/ai/review-queue-repository";
+import type { ContractReviewRow } from "@/lib/ai/review-queue-repository";
 import { mergeFieldEditsIntoExtractedPayload } from "@/lib/ai-review/mappers";
 import { applyContractReview } from "@/lib/ai/apply-contract-review";
 import { mapContractReviewToBridgePayload } from "@/lib/ai/contracts-analyses-bridge";
+import { buildPaymentSetupDraft } from "@/lib/ai/draft-actions";
+import { buildCanonicalPaymentPayloadFromRaw } from "@/lib/ai/payment-field-contract";
 import { logActivity } from "./activity";
 import { db } from "db";
 import { contacts, documents } from "db";
@@ -178,6 +181,45 @@ export async function approveAndApplyContractReview(
   });
 }
 
+/**
+ * Phase 3B: Regenerate payment-related draftActions from the current
+ * (possibly corrected) extractedPayload so that apply always uses fresh data.
+ */
+function regeneratePaymentDraftActions(row: ContractReviewRow): ContractReviewRow {
+  const payload = row.extractedPayload as Record<string, unknown> | null;
+  if (!payload) return row;
+
+  const canonical = buildCanonicalPaymentPayloadFromRaw(payload);
+  if (!canonical) return row;
+
+  const hasAnyPayment = canonical.amount || canonical.iban || canonical.accountNumber;
+  if (!hasAnyPayment) return row;
+
+  const freshDraft = buildPaymentSetupDraft(null, canonical);
+  const existingActions = Array.isArray(row.draftActions)
+    ? (row.draftActions as Array<{ type: string; label: string; payload: Record<string, unknown> }>)
+    : [];
+
+  const hadPaymentAction = existingActions.some(
+    (a) =>
+      a.type === "create_payment_setup" ||
+      a.type === "create_payment" ||
+      a.type === "create_payment_setup_for_portal"
+  );
+  const otherActions = existingActions.filter(
+    (a) =>
+      a.type !== "create_payment_setup" &&
+      a.type !== "create_payment" &&
+      a.type !== "create_payment_setup_for_portal"
+  );
+
+  const updatedActions = hadPaymentAction
+    ? [...otherActions, freshDraft]
+    : existingActions;
+
+  return { ...row, draftActions: updatedActions };
+}
+
 export async function applyContractReviewDrafts(
   id: string,
   options?: {
@@ -189,25 +231,27 @@ export async function applyContractReviewDrafts(
   if (!hasPermission(auth.roleName, "documents:write")) {
     return { ok: false, error: "Nemáte oprávnění." };
   }
-  const row = await getContractReviewById(id, auth.tenantId);
-  if (!row) {
+  const rawRow = await getContractReviewById(id, auth.tenantId);
+  if (!rawRow) {
     return { ok: false, error: "Položka nenalezena." };
   }
-  if (row.reviewStatus === "applied") {
-    return { ok: true, payload: row.applyResultPayload ?? undefined };
+  if (rawRow.reviewStatus === "applied") {
+    return { ok: true, payload: rawRow.applyResultPayload ?? undefined };
   }
-  if (!canApply(row.processingStatus, row.reviewStatus ?? null)) {
+  if (!canApply(rawRow.processingStatus, rawRow.reviewStatus ?? null)) {
     return {
       ok: false,
       error:
-        row.reviewStatus !== "approved"
+        rawRow.reviewStatus !== "approved"
           ? "Nejprve schvalte položku."
           : "Položku nelze aplikovat v aktuálním stavu.",
     };
   }
-  if (row.processingStatus === "failed") {
+  if (rawRow.processingStatus === "failed") {
     return { ok: false, error: "U neúspěšné položky nelze aplikovat akce." };
   }
+
+  const row = regeneratePaymentDraftActions(rawRow);
 
   const { evaluateApplyReadiness, applyReasonsPendingOverride } = await import("@/lib/ai/quality-gates");
   const gate = evaluateApplyReadiness(row);
