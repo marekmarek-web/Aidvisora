@@ -1,6 +1,9 @@
 /**
  * Phase 5H — client portal bridge regression (requests, notifications, documents, web/mobile parity).
  * Run: pnpm test:client-portal-phase5-regression
+ *
+ * Phase 6F — full Phase 5/6 release gate (mandatory scenarios checklist): also run
+ * pnpm test:client-portal-phase5-6-regression (includes this file + phase-6f-phase5-6-release-gate.test.ts).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
