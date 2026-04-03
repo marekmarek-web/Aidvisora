@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleHelp, FileText, Home, Shield, TrendingUp, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import {
   useAdvisorInAppNotifications,
   type AdvisorInAppNotificationRow,
 } from "@/app/portal/AdvisorInAppNotificationsContext";
-import { parseClientPortalNotificationBody } from "@/lib/advisor-in-app/parse-client-portal-notification-body";
-import { caseTypeToLabel } from "@/lib/client-portal/case-type-labels";
+import {
+  getAdvisorNotificationDropdownMeta,
+  type AdvisorNotificationDropdownAccent,
+} from "@/lib/advisor-in-app/advisor-notification-dropdown-meta";
 
 function formatListTime(iso: string): string {
   const d = new Date(iso);
@@ -21,29 +22,7 @@ function formatListTime(iso: string): string {
   return d.toLocaleString("cs-CZ", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-type Accent = "blue" | "emerald" | "violet" | "amber" | "rose" | "slate";
-
-function accentForCaseType(caseType: string): Accent {
-  const n = caseType?.toLowerCase().trim() ?? "";
-  if (n.includes("hypot") || n === "úvěr") return "blue";
-  if (n.includes("pojist")) return "emerald";
-  if (n.includes("invest")) return "violet";
-  if (n.includes("servis")) return "amber";
-  if (n.includes("změna") || n.includes("situace")) return "rose";
-  return "slate";
-}
-
-function iconForCaseType(caseType: string): LucideIcon {
-  const n = caseType?.toLowerCase().trim() ?? "";
-  if (n.includes("hypot") || n === "úvěr") return Home;
-  if (n.includes("pojist")) return Shield;
-  if (n.includes("invest")) return TrendingUp;
-  if (n.includes("servis")) return FileText;
-  if (n.includes("změna") || n.includes("situace")) return Users;
-  return CircleHelp;
-}
-
-const ACCENT_ICON: Record<Accent, string> = {
+const ACCENT_ICON: Record<AdvisorNotificationDropdownAccent, string> = {
   blue: "bg-blue-50 text-blue-600 border-blue-100/50",
   emerald: "bg-emerald-50 text-emerald-600 border-emerald-100/50",
   violet: "bg-violet-50 text-violet-600 border-violet-100/50",
@@ -52,7 +31,7 @@ const ACCENT_ICON: Record<Accent, string> = {
   slate: "bg-slate-50 text-slate-600 border-slate-100/50",
 };
 
-const ACCENT_SUB: Record<Accent, string> = {
+const ACCENT_SUB: Record<AdvisorNotificationDropdownAccent, string> = {
   blue: "text-blue-600",
   emerald: "text-emerald-600",
   violet: "text-violet-600",
@@ -60,14 +39,6 @@ const ACCENT_SUB: Record<Accent, string> = {
   rose: "text-rose-600",
   slate: "text-slate-600",
 };
-
-function rowMeta(n: AdvisorInAppNotificationRow) {
-  const { caseType, caseTypeLabel, preview } = parseClientPortalNotificationBody(n.body);
-  const accent = accentForCaseType(caseType);
-  const Icon = iconForCaseType(caseType);
-  const categoryLabel = caseTypeLabel || caseTypeToLabel(caseType);
-  return { accent, Icon, categoryLabel, preview: preview || n.title };
-}
 
 export function NotificationBell() {
   const router = useRouter();
@@ -178,7 +149,7 @@ export function NotificationBell() {
               ) : (
                 <ul className="divide-y divide-[color:var(--wp-border)]">
                   {items.map((n) => {
-                    const { accent, Icon, categoryLabel, preview } = rowMeta(n);
+                    const { accent, Icon, categoryLabel, preview } = getAdvisorNotificationDropdownMeta(n);
                     const unread = n.status === "unread";
                     return (
                       <li key={n.id}>
