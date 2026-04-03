@@ -9,7 +9,7 @@
     "dev:turbo": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\" && next dev --webpack",
     "dev:demo": "cross-env NEXT_PUBLIC_SKIP_AUTH=true next dev --webpack",
-    "build": "next build --webpack",
+    "build": "next build",
     "analyze": "cross-env ANALYZE=true next build --webpack",
     "start": "next start",
     "lint": "eslint . --quiet",

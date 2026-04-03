@@ -65,3 +65,12 @@ export async function postAssistantChatStreaming(
   const res = await fetch("/api/ai/assistant/chat?stream=1", init);
   return consumeAssistantChatSse(res, onDelta);
 }
+
+export type { AssistantChatRequestBody } from "./assistant-chat-request";
+export {
+  buildAssistantChatRequestBody,
+  buildAssistantConfirmExecutionBody,
+  buildAssistantCancelPlanBody,
+  parsePortalContactIdFromPathname,
+  parsePortalOpportunityIdFromPathname,
+} from "./assistant-chat-request";

@@ -19,14 +19,14 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
-import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
 import {
+  postAssistantChatStreaming,
   buildAssistantChatRequestBody,
   buildAssistantConfirmExecutionBody,
   buildAssistantCancelPlanBody,
   parsePortalContactIdFromPathname,
   parsePortalOpportunityIdFromPathname,
-} from "@/lib/ai/assistant-chat-request";
+} from "@/lib/ai/assistant-chat-client";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
   ExecutionBadge,

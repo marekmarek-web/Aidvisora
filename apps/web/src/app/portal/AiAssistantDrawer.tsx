@@ -29,14 +29,14 @@ import { DEFAULT_CONTACT_IMPORT_MAPPING, type ColumnMapping } from "@/lib/contac
 import { ImportColumnMappingBlock } from "@/app/dashboard/contacts/ImportColumnMappingBlock";
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import { isLikelyPdfUpload } from "@/lib/security/file-signature";
-import { postAssistantChatStreaming } from "@/lib/ai/assistant-chat-client";
 import {
+  postAssistantChatStreaming,
   buildAssistantChatRequestBody,
   buildAssistantConfirmExecutionBody,
   buildAssistantCancelPlanBody,
   parsePortalContactIdFromPathname,
   parsePortalOpportunityIdFromPathname,
-} from "@/lib/ai/assistant-chat-request";
+} from "@/lib/ai/assistant-chat-client";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
   ExecutionBadge,
