@@ -1,5 +1,5 @@
 import { db } from "db";
-import { contacts, contracts, tasks, auditLog, clientPaymentSetups, type ClientPaymentSetupPaymentType } from "db";
+import { contacts, contracts, tasks, auditLog, clientPaymentSetups, contractSegments, type ClientPaymentSetupPaymentType } from "db";
 import { eq, and, isNotNull } from "db";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
@@ -10,6 +10,13 @@ import {
   isPaymentSyncReady,
   type CanonicalPaymentPayload,
 } from "./payment-field-contract";
+
+const VALID_SEGMENTS = new Set<string>(contractSegments);
+
+function validateSegment(raw: string | null | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  return VALID_SEGMENTS.has(trimmed) ? trimmed : "ZP";
+}
 
 export type ApplyContractReviewInput = {
   reviewId: string;
@@ -165,7 +172,7 @@ export async function applyContractReview(
         ) {
           const contractNumber = (action.payload.contractNumber as string)?.trim() || null;
           const institutionName = (action.payload.institutionName as string)?.trim() || null;
-          const segment = (action.payload.segment as string)?.trim() || "ZP";
+          const segment = validateSegment(action.payload.segment as string);
           const existingContractId = await findExistingContractId(
             tenantId,
             effectiveContactId,
@@ -175,17 +182,23 @@ export async function applyContractReview(
           );
           if (existingContractId) {
             const [existingRow] = await tx
-              .select({ portfolioAttributes: contracts.portfolioAttributes })
+              .select({
+                portfolioAttributes: contracts.portfolioAttributes,
+                sourceKind: contracts.sourceKind,
+              })
               .from(contracts)
               .where(eq(contracts.id, existingContractId))
               .limit(1);
             const prevAttrs =
               (existingRow?.portfolioAttributes as Record<string, unknown> | undefined) ?? {};
+            const preserveManualLineage = existingRow?.sourceKind === "manual";
             await tx
               .update(contracts)
               .set({
                 sourceContractReviewId: reviewId,
-                sourceKind: "ai_review",
+                ...(preserveManualLineage ? {} : { sourceKind: "ai_review" as const }),
+                segment,
+                type: segment,
                 advisorConfirmedAt: new Date(),
                 confirmedByUserId: userId,
                 visibleToClient: true,

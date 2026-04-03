@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { ADVISOR_NOTIFICATION_TYPES } from "@/lib/advisor-in-app/advisor-notification-types";
 import {
   ArrowRight,
   CircleHelp,
@@ -305,7 +306,7 @@ export function AdvisorClientRequestToastStack() {
       seenNotificationIdsRef.current.add(n.id);
       if (
         n.status !== "unread" ||
-        (n.type !== "client_portal_request" && n.type !== "client_material_response")
+        !(ADVISOR_NOTIFICATION_TYPES as readonly string[]).includes(n.type)
       ) {
         continue;
       }

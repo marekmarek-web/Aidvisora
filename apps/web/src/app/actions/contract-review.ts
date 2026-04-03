@@ -316,7 +316,10 @@ export async function applyContractReviewDrafts(
   // 5D: Auto-link the reviewed document into the client's document vault (visible)
   if (row.matchedClientId) {
     try {
-      await linkContractReviewFileToContactDocuments(id, { visibleToClient: true });
+      await linkContractReviewFileToContactDocuments(id, {
+        visibleToClient: true,
+        contractId: result.payload.createdContractId ?? undefined,
+      });
     } catch {
       /* best-effort — review already applied, doc linking is secondary */
     }
@@ -331,7 +334,7 @@ export async function applyContractReviewDrafts(
  */
 export async function linkContractReviewFileToContactDocuments(
   reviewId: string,
-  options?: { visibleToClient?: boolean }
+  options?: { visibleToClient?: boolean; contractId?: string }
 ): Promise<ContractReviewActionResult & { documentId?: string }> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) {
@@ -359,18 +362,20 @@ export async function linkContractReviewFileToContactDocuments(
     )
     .limit(1);
   if (dup) {
-    // 5D: If caller requests visibility but existing doc is hidden, upgrade it
-    if (visible) {
-      const [curr] = await db
-        .select({ vis: documents.visibleToClient })
-        .from(documents)
-        .where(eq(documents.id, dup.id))
-        .limit(1);
-      if (curr && !curr.vis) {
-        await db
-          .update(documents)
-          .set({ visibleToClient: true })
-          .where(eq(documents.id, dup.id));
+    const [curr] = await db
+      .select({ vis: documents.visibleToClient, contractId: documents.contractId })
+      .from(documents)
+      .where(eq(documents.id, dup.id))
+      .limit(1);
+    const updates: Record<string, unknown> = {};
+    if (visible && curr && !curr.vis) updates.visibleToClient = true;
+    if (options?.contractId && !curr?.contractId) updates.contractId = options.contractId;
+    if (Object.keys(updates).length > 0) {
+      await db
+        .update(documents)
+        .set(updates)
+        .where(eq(documents.id, dup.id));
+      if (updates.visibleToClient) {
         try {
           await notifyClientAdvisorSharedDocument({
             tenantId: auth.tenantId,
@@ -392,6 +397,7 @@ export async function linkContractReviewFileToContactDocuments(
     .values({
       tenantId: auth.tenantId,
       contactId,
+      contractId: options?.contractId ?? null,
       name: row.fileName,
       storagePath: row.storagePath,
       mimeType: row.mimeType ?? "application/pdf",

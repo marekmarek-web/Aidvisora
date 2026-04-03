@@ -12,11 +12,10 @@ import {
 } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { ADVISOR_NOTIFICATION_TYPES_CSV } from "@/lib/advisor-in-app/advisor-notification-types";
 
-/** Záloha, když Realtime neběží nebo není nasazená migrace. */
 const POLL_MS = 45_000;
-const ADVISOR_TOAST_TYPES =
-  "client_portal_request,client_material_response,client_trezor_upload,client_household_update";
+const ADVISOR_TOAST_TYPES = ADVISOR_NOTIFICATION_TYPES_CSV;
 
 export type AdvisorInAppNotificationRow = {
   id: string;

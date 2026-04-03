@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { tasks, advisorNotifications } from "db";
 import { and, eq, inArray, isNull, sql } from "db";
+import { ADVISOR_NOTIFICATION_TYPES } from "@/lib/advisor-in-app/advisor-notification-types";
 
 export type PortalShellBadgeCounts = {
   openTasks: number;
@@ -49,7 +50,7 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
           eq(advisorNotifications.tenantId, auth.tenantId),
           eq(advisorNotifications.targetUserId, auth.userId),
           eq(advisorNotifications.status, "unread"),
-          inArray(advisorNotifications.type, ["client_portal_request", "client_material_response"])
+          inArray(advisorNotifications.type, [...ADVISOR_NOTIFICATION_TYPES])
         )
       ),
   ]);

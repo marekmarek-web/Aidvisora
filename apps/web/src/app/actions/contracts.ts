@@ -7,6 +7,7 @@ import { contracts, partners, products, documents, contacts } from "db";
 import { eq, and, asc, or, isNull, inArray } from "db";
 import { contractSegments } from "db";
 import { logActivity } from "./activity";
+import { createPortalNotification } from "./portal-notifications";
 import {
   normalizeContractFormForSave,
   validateContractFormForSubmit,
@@ -639,7 +640,12 @@ export async function approveContractForClientPortal(contractId: string) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
   const [row] = await db
-    .select({ sourceDocumentId: contracts.sourceDocumentId })
+    .select({
+      sourceDocumentId: contracts.sourceDocumentId,
+      contactId: contracts.contactId,
+      productName: contracts.productName,
+      partnerName: contracts.partnerName,
+    })
     .from(contracts)
     .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, contractId)))
     .limit(1);
@@ -661,6 +667,21 @@ export async function approveContractForClientPortal(contractId: string) {
         updatedAt: new Date(),
       })
       .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, row.sourceDocumentId)));
+  }
+  if (row?.contactId) {
+    try {
+      const label = [row.productName, row.partnerName].filter(Boolean).join(" – ") || "Nová smlouva";
+      await createPortalNotification({
+        tenantId: auth.tenantId,
+        contactId: row.contactId,
+        type: "important_date",
+        title: `Smlouva přidána do portfolia: ${label}`,
+        relatedEntityType: "contract",
+        relatedEntityId: contractId,
+      });
+    } catch {
+      /* best-effort */
+    }
   }
   try {
     await logActivity("contract", contractId, "publish_portfolio", {});
