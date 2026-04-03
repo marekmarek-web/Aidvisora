@@ -34,7 +34,9 @@ export default async function ClientZoneLayout({
   });
   const pathname = headerList.get("x-pathname") ?? "";
   const useFullClientShellOnMobile =
-    pathname.startsWith("/client/calculators") || pathname.startsWith("/client/calculators/");
+    pathname.startsWith("/client/calculators") ||
+    pathname.startsWith("/client/payments") ||
+    pathname.startsWith("/client/pozadavky-poradce");
 
   if (mobileUiEnabled && auth.contactId && !useFullClientShellOnMobile) {
     return <ClientMobileApp />;

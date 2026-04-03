@@ -21,10 +21,13 @@ export function MobileAppShell({
   return (
     <div
       className={cx(
-        "flex min-h-[100dvh] flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
-        deviceClass === "phone" && "pb-[calc(104px+var(--safe-area-bottom))]",
-        deviceClass === "tablet" && "pb-[calc(80px+var(--safe-area-bottom))]",
-        deviceClass === "desktop" && "pb-0",
+        "flex flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
+        /* Phone/tablet: fill visual viewport so document/body never scrolls or rubber-bands behind the shell. */
+        deviceClass === "phone" &&
+          "fixed inset-0 z-[1] min-h-0 overflow-hidden pb-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--safe-area-bottom))]",
+        deviceClass === "tablet" &&
+          "fixed inset-0 z-[1] min-h-0 overflow-hidden pb-[calc(var(--aidv-mobile-tabbar-inner-h-tablet)+var(--safe-area-bottom))]",
+        deviceClass === "desktop" && "min-h-[100dvh] pb-0",
         className
       )}
     >
@@ -50,8 +53,8 @@ export function MobileHeader({
   return (
     <header
       className={cx(
-        "sticky top-0 z-40 shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
-        "pt-[calc(var(--safe-area-top)+0.25rem)] pb-2",
+        "z-40 shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
+        "pt-[calc(var(--safe-area-top)+0.125rem)] pb-2",
         deviceClass === "phone" && "px-4",
         deviceClass === "tablet" && "px-6",
         className
@@ -229,7 +232,7 @@ export function MobileScreen({ children, className }: { children: ReactNode } & 
   return (
     <main
       className={cx(
-        "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pt-4 pb-4 space-y-4",
+        "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-none px-4 pt-3 pb-4 space-y-4",
         className
       )}
     >
@@ -407,7 +410,7 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(90px+var(--safe-area-bottom))] right-[max(1rem,env(safe-area-inset-right,0px))]"
+      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--aidv-mobile-fab-above-tabbar)+var(--safe-area-bottom))] right-[max(1rem,env(safe-area-inset-right,0px))]"
       aria-label={label}
       title={label}
     >
@@ -492,7 +495,7 @@ export function BottomSheet({
 }) {
   const labelId = `bs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const scrollPad = reserveMobileBottomNav
-    ? "pb-[max(1.25rem,calc(104px+var(--safe-area-bottom)+1.25rem))]"
+    ? "pb-[max(1.25rem,calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--safe-area-bottom)+1.25rem))]"
     : "pb-[max(1rem,calc(var(--safe-area-bottom)+0.5rem))]";
   return (
     <OverlayContainer open={open} onClose={onClose} labelId={labelId}>
@@ -523,13 +526,19 @@ export function FullscreenSheet({
   onClose,
   title,
   children,
+  /** Rezerva nad fixní spodní navigací portálu (~104px + safe area). */
+  reserveMobileBottomNav = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  reserveMobileBottomNav?: boolean;
 }) {
   const labelId = `fs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
+  const scrollPad = reserveMobileBottomNav
+    ? "pb-[max(1.25rem,calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--safe-area-bottom)+1.25rem))]"
+    : "pb-[max(1rem,calc(var(--safe-area-bottom)+0.75rem))]";
   return (
     <OverlayContainer open={open} onClose={onClose} fullScreen labelId={labelId}>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -546,7 +555,7 @@ export function FullscreenSheet({
             <X size={16} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,calc(var(--safe-area-bottom)+0.75rem))]">
+        <div className={cx("min-h-0 flex-1 overflow-y-auto overscroll-contain p-4", scrollPad)}>
           {children}
         </div>
       </div>

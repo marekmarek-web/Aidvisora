@@ -2,6 +2,11 @@ import UIKit
 import Capacitor
 import SendIntentPlugin
 
+/*
+ Konzolové zprávy typu RTIInputSystemClient / WebKit.Networking jsou obvykle frameworkové (klávesnice, síťový proces WKWebView).
+ UIScene lifecycle warning: Apple směřuje k povinné adopci scén; plná migrace (SceneDelegate + Info.plist) je samostatný nativní úkol.
+*/
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 

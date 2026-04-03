@@ -32,6 +32,15 @@
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-left: env(safe-area-inset-left, 0px);
     --safe-area-right: env(safe-area-inset-right, 0px);
+
+    /*
+      Mobilní spodní tab bar: výška obsahu (ikony + popisky), bez zdvojení safe-area.
+      Shell přidá var(--safe-area-bottom) jednou v padding-bottom; samotný <nav> má vlastní pb pro home indikátor.
+    */
+    --aidv-mobile-tabbar-inner-h-phone: 4.5rem;
+    --aidv-mobile-tabbar-inner-h-tablet: 4rem;
+    --aidv-mobile-fab-above-tabbar: 0.75rem;
+    --aidv-mobile-secondary-fab-from-bottom: 10.5rem;
   }
 }
 
@@ -52,6 +61,20 @@
   html.dark,
   html.dark body {
     background-color: var(--wp-app-canvas-bg);
+  }
+
+  /* Mobilní portál: žádný scroll/bounce na documentu — jediný scroll je v MobileScreen. */
+  html.aidv-mobile-portal-viewport-lock {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  html.aidv-mobile-portal-viewport-lock body {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 }
 

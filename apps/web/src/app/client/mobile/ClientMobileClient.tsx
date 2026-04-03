@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -88,6 +88,7 @@ import { ClientRequestCancelButton } from "@/app/client/requests/ClientRequestCa
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import type { MaterialRequestListItem } from "@/lib/advisor-material-requests/display";
 import { isClientPortalAiDisabled } from "@/lib/client-portal/feature-flags";
+import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 import type { ClientMobileInitialData } from "./client-mobile-initial-data";
 
 function fmtMoney(v: number): string {
@@ -599,6 +600,17 @@ function PortfolioScreen({ contracts }: { contracts: ClientMobileInitialData["co
 }
 
 export function ClientMobileClient({ initialData }: { initialData: ClientMobileInitialData }) {
+  const deviceClass = useDeviceClass();
+
+  useLayoutEffect(() => {
+    if (deviceClass === "desktop") {
+      document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
+      return;
+    }
+    document.documentElement.classList.add("aidv-mobile-portal-viewport-lock");
+    return () => document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
+  }, [deviceClass]);
+
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -887,8 +899,9 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
 
   return (
     <>
-    <MobileAppShell>
+    <MobileAppShell deviceClass={deviceClass}>
       <MobileHeader
+        deviceClass={deviceClass}
         title={headerTitle}
         subtitle={headerSubtitle}
         right={
@@ -1397,7 +1410,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
             if (tab === "requests") setRequestModalOpen(true);
             else setRequestModalOpen(true);
           }}
-          className="fixed z-40 right-4 bottom-[calc(90px+var(--safe-area-bottom))] min-h-[52px] min-w-[52px] rounded-full bg-indigo-600 text-white shadow-lg"
+          className="fixed z-40 right-4 bottom-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--aidv-mobile-fab-above-tabbar)+var(--safe-area-bottom))] min-h-[52px] min-w-[52px] rounded-full bg-indigo-600 text-white shadow-lg"
           aria-label="Nový požadavek"
           title="Nový požadavek"
         >
@@ -1405,10 +1418,10 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         </button>
       ) : null}
 
-      <MobileBottomNav items={navItems} activeId={tab} onSelect={(id) => navigate(id as TabId)} />
+      <MobileBottomNav deviceClass={deviceClass} items={navItems} activeId={tab} onSelect={(id) => navigate(id as TabId)} />
 
       {!isClientPortalAiDisabled() ? (
-        <AiSupportButton anchorClassName="bottom-[calc(168px+var(--safe-area-bottom,0px))] right-4 max-[380px]:right-3" />
+        <AiSupportButton anchorClassName="bottom-[calc(var(--aidv-mobile-secondary-fab-from-bottom)+var(--safe-area-bottom,0px))] right-4 max-[380px]:right-3" />
       ) : null}
     </MobileAppShell>
     <ClientMaterialRequestToastStack />

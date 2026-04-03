@@ -26,7 +26,11 @@ const config: CapacitorConfig = {
     allowNavigation: deriveAllowedHosts(serverUrl),
   },
   ios: {
-    contentInset: "always",
+    /**
+     * automatic: méně časté zdvojení safe-area oproti CSS env(safe-area-inset-*), které už používá webový shell.
+     * RTIInputSystemClient / WebKit logy v Xcode jsou většinou systémový šum u textarea ve WKWebView, ne stack trace aplikace.
+     */
+    contentInset: "automatic",
     allowsLinkPreview: false,
     scrollEnabled: true,
   },
