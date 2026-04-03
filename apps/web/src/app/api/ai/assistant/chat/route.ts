@@ -12,6 +12,7 @@ import { AssistantTelemetryAction, logAssistantTelemetry } from "@/lib/ai/assist
 import {
   routeAssistantMessage,
   routeAssistantMessageCanonical,
+  handleAssistantAwaitingConfirmation,
   type AssistantResponse,
 } from "@/lib/ai/assistant-tool-router";
 import {
@@ -25,6 +26,17 @@ import { logAudit } from "@/lib/audit";
 import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
 
 export const dynamic = "force-dynamic";
+
+function classifyAssistantError(message: string): string {
+  if (!message) return "unknown";
+  const lower = message.toLowerCase();
+  if (lower.includes("nesoulad") || lower.includes("forbidden")) return "auth_error";
+  if (lower.includes("rate limit") || lower.includes("too many")) return "rate_limit";
+  if (lower.includes("timeout") || lower.includes("timed out")) return "timeout";
+  if (lower.includes("plán") || lower.includes("plan")) return "plan_error";
+  if (lower.includes("session")) return "session_error";
+  return "internal_error";
+}
 
 const USER_ID_HEADER = "x-user-id";
 
@@ -117,9 +129,28 @@ export async function POST(request: Request) {
 
           const body = await request.json().catch(() => ({}));
           const message = typeof body.message === "string" ? body.message.trim() : "";
-          if (!message) {
+          const confirmExecution = body.confirmExecution === true;
+          const cancelExecution = body.cancelExecution === true;
+          const selectedStepIdsRaw = body.selectedStepIds;
+          const selectedStepIds = Array.isArray(selectedStepIdsRaw)
+            ? selectedStepIdsRaw.filter((x: unknown): x is string => typeof x === "string" && x.length > 0)
+            : undefined;
+
+          const orchestration =
+            body.orchestration === "canonical" || body.useCanonicalOrchestration === true
+              ? "canonical"
+              : "legacy";
+
+          if (!message && !confirmExecution && !cancelExecution) {
             return NextResponse.json(
               { error: "Chybí zpráva." },
+              { status: 400, headers: correlationHeaders(traceId, assistantRunId) },
+            );
+          }
+
+          if ((confirmExecution || cancelExecution) && orchestration !== "canonical") {
+            return NextResponse.json(
+              { error: "Potvrzení plánu je dostupné jen v kanonickém režimu asistenta." },
               { status: 400, headers: correlationHeaders(traceId, assistantRunId) },
             );
           }
@@ -174,10 +205,6 @@ export async function POST(request: Request) {
             resumedPlan: Boolean(resumablePlan),
           });
 
-          const orchestration =
-            body.orchestration === "canonical" || body.useCanonicalOrchestration === true
-              ? "canonical"
-              : "legacy";
           if (runStore) {
             runStore.orchestration = orchestration;
           }
@@ -188,12 +215,32 @@ export async function POST(request: Request) {
             logAssistantTelemetry(AssistantTelemetryAction.ROUTE_LEGACY);
           }
 
-          const response: AssistantResponse =
-            orchestration === "canonical"
-              ? await routeAssistantMessageCanonical(message, session, activeContext, {
-                  roleName: membership.roleName,
-                })
-              : await routeAssistantMessage(message, session, activeContext, { roleName: membership.roleName });
+          let response: AssistantResponse;
+
+          if (orchestration === "canonical" && (confirmExecution || cancelExecution)) {
+            const confirmOut = await handleAssistantAwaitingConfirmation(
+              session,
+              {
+                cancel: cancelExecution,
+                selectedStepIds: confirmExecution ? selectedStepIds : undefined,
+              },
+              { tenantId, userId, roleName: membership.roleName },
+            );
+            if (!confirmOut) {
+              return NextResponse.json(
+                { error: "Není aktivní plán čekající na potvrzení." },
+                { status: 400, headers: correlationHeaders(traceId, assistantRunId) },
+              );
+            }
+            response = confirmOut;
+          } else {
+            response =
+              orchestration === "canonical"
+                ? await routeAssistantMessageCanonical(message, session, activeContext, {
+                    roleName: membership.roleName,
+                  })
+                : await routeAssistantMessage(message, session, activeContext, { roleName: membership.roleName });
+          }
 
           const conflictWarnings = [...(response.warnings ?? [])];
           if (
@@ -321,8 +368,10 @@ export async function POST(request: Request) {
       channel: runStore?.channel ?? undefined,
       orchestration: runStore?.orchestration ?? undefined,
     });
-    const message = err instanceof Error ? err.message : "Odeslání zprávy selhalo.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const rawMessage = err instanceof Error ? err.message : "";
+    const errorCode = classifyAssistantError(rawMessage);
+    const message = rawMessage || "Interní chyba asistenta.";
+    return NextResponse.json({ error: message, errorCode }, { status: 500 });
   }
 }
 

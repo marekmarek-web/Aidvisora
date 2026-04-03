@@ -49,8 +49,12 @@ function okResult(entityId: string, entityType: string, warnings: string[] = [])
   return { ok: true, outcome: "executed", entityId, entityType, warnings, error: null };
 }
 
-function errResult(error: string): ExecutionStepResult {
-  return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error };
+function errResult(error: string, retryable = false): ExecutionStepResult {
+  return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error, retryable };
+}
+
+function requiresInputResult(error: string): ExecutionStepResult {
+  return { ok: false, outcome: "requires_input", entityId: null, entityType: null, warnings: [], error, retryable: true };
 }
 
 async function firstPipelineStageId(tenantId: string): Promise<string | null> {
@@ -619,15 +623,20 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("sendPortalMessage", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
       const contactId = strParam(params, "contactId");
       const body = strParam(params, "portalMessageBody") ?? strParam(params, "noteContent");
-      if (!contactId || !body) return errResult("Chybí contactId nebo text zprávy.");
+      if (!contactId) return requiresInputResult("Chybí ID klienta (contactId). Vyberte klienta nebo zadejte kontext.");
+      if (!body) return requiresInputResult("Chybí text portálové zprávy. Doplňte obsah zprávy.");
+      await assertCtx(ctx);
       const id = await sendMessage(contactId, body);
-      if (!id) return errResult("Zprávu se nepodařilo odeslat.");
+      if (!id) return errResult("Zprávu se nepodařilo odeslat — databáze nevrátila ID.", true);
       return okResult(id, "message");
     } catch (e) {
-      return errResult(e instanceof Error ? e.message : "Chyba odeslání zprávy.");
+      const msg = e instanceof Error ? e.message : "Neznámá chyba";
+      if (msg === "Forbidden") return errResult("Nedostatečná oprávnění pro odeslání zprávy.", false);
+      if (msg === "Prázdná zpráva") return requiresInputResult("Text zprávy je prázdný. Doplňte obsah.");
+      if (msg.includes("Nesoulad")) return errResult(`Bezpečnostní chyba: ${msg}`, false);
+      return errResult(`Odeslání portálové zprávy selhalo: ${msg}`, true);
     }
   });
 

@@ -10,7 +10,7 @@ export type ExecutionStatus =
   | "completed"
   | "partial_failure";
 
-export type StepOutcomeStatus = "succeeded" | "failed" | "skipped" | "idempotent_hit";
+export type StepOutcomeStatus = "succeeded" | "failed" | "skipped" | "idempotent_hit" | "requires_input";
 
 export type ExecutionStatusInfo = {
   text: string;
@@ -56,12 +56,45 @@ export type StepOutcomeSummary = {
   status: StepOutcomeStatus;
   entityId?: string | null;
   error?: string | null;
+  retryable?: boolean;
 };
 
+/**
+ * Kanonický náhled kroku před potvrzením (6B) — UI i historie používají stejnou strukturu.
+ * `stepId` odpovídá `ExecutionStep.stepId` pro výběr podmnožiny kroků (6C).
+ */
 export type StepPreviewItem = {
+  stepId: string;
   label: string;
   action: string;
+  /** Krátká kategorie / doména (např. produkt) — neslouží jako duplicitní suffix k labelu. */
   contextHint?: string;
+  /** Volitelný podnázev / upřesnění pro řádek v UI. */
+  description?: string;
+  domainGroup?: string | null;
+  validationWarnings?: string[];
+};
+
+/** Rozšířený model akce dle plánu (6B) — odvozeno od `StepPreviewItem` + runtime stav jen na klientovi. */
+export type AssistantPreviewActionStatus =
+  | "draft"
+  | "selected"
+  | "deselected"
+  | "ready"
+  | "executing"
+  | "done"
+  | "failed"
+  | "skipped";
+
+export type AssistantPreviewAction = StepPreviewItem & {
+  targetEntityType?: string | null;
+  targetEntityId?: string | null;
+  requiresConfirmation?: boolean;
+  isSelectedByDefault?: boolean;
+  isSelected?: boolean;
+  status?: AssistantPreviewActionStatus;
+  canEdit?: boolean;
+  payloadDraft?: Record<string, unknown> | null;
 };
 
 /** Returns a short, readable label for a step outcome status. */
@@ -71,21 +104,27 @@ export function getStepOutcomeStatusLabel(status: StepOutcomeStatus): string {
     case "failed": return "Selhalo";
     case "skipped": return "Přeskočeno";
     case "idempotent_hit": return "Již existuje";
+    case "requires_input": return "Vyžaduje doplnění";
   }
 }
 
-/** Returns whether a given outcome collection has any failure. */
+/** Returns whether a given outcome collection has any failure or incomplete step. */
 export function hasAnyFailure(
   outcomes: StepOutcomeSummary[],
   hasPartialFailure?: boolean,
 ): boolean {
-  return (hasPartialFailure ?? false) || outcomes.some(o => o.status === "failed");
+  return (hasPartialFailure ?? false) || outcomes.some(o => o.status === "failed" || o.status === "requires_input");
 }
 
 /** Returns the summary line for a step outcome card header. */
 export function buildOutcomeSummaryLine(outcomes: StepOutcomeSummary[]): string {
   const failedCount = outcomes.filter(o => o.status === "failed").length;
+  const reqInputCount = outcomes.filter(o => o.status === "requires_input").length;
   const succeededCount = outcomes.filter(o => o.status === "succeeded").length;
+  if (failedCount > 0 && reqInputCount > 0) {
+    return `${failedCount} selhalo, ${reqInputCount} vyžaduje doplnění z ${outcomes.length} kroků`;
+  }
   if (failedCount > 0) return `${failedCount} z ${outcomes.length} kroků selhalo`;
+  if (reqInputCount > 0) return `${reqInputCount} z ${outcomes.length} kroků vyžaduje doplnění`;
   return `${succeededCount} / ${outcomes.length} kroků dokončeno`;
 }

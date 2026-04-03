@@ -177,6 +177,8 @@ export function coerceCanonicalIntentRaw(raw: unknown): CanonicalIntentRaw {
 
 /** Convert canonical raw extraction to full CanonicalIntent with entity refs. */
 export function toCanonicalIntent(raw: CanonicalIntentRaw): CanonicalIntent {
+  const rawActions = (raw.requestedActions as CanonicalIntentType[]) ?? ["general_chat"];
+  const dedupedActions = deduplicateActions(rawActions);
   return {
     intentType: raw.intentType as CanonicalIntentType,
     subIntent: raw.subIntent,
@@ -184,7 +186,7 @@ export function toCanonicalIntent(raw: CanonicalIntentRaw): CanonicalIntent {
     targetClient: raw.clientRef ? { ref: raw.clientRef, resolved: false } : null,
     targetOpportunity: raw.opportunityRef ? { ref: raw.opportunityRef, resolved: false } : null,
     targetDocument: raw.documentRef ? { ref: raw.documentRef, resolved: false } : null,
-    requestedActions: (raw.requestedActions as CanonicalIntentType[]) ?? ["general_chat"],
+    requestedActions: dedupedActions,
     extractedFacts: buildExtractedFacts(raw),
     missingFields: [],
     temporalExpressions: buildTemporalExpressions(raw),
@@ -194,6 +196,15 @@ export function toCanonicalIntent(raw: CanonicalIntentRaw): CanonicalIntent {
     noEmail: raw.noEmail,
     userConstraints: [],
   };
+}
+
+function deduplicateActions(actions: CanonicalIntentType[]): CanonicalIntentType[] {
+  const seen = new Set<string>();
+  return actions.filter((a) => {
+    if (seen.has(a)) return false;
+    seen.add(a);
+    return true;
+  });
 }
 
 function buildExtractedFacts(raw: CanonicalIntentRaw) {

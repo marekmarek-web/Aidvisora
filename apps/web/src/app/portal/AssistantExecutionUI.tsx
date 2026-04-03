@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ListChecks,
   User,
+  CircleDashed,
 } from "lucide-react";
 import {
   getExecutionStatusInfo,
@@ -96,6 +97,10 @@ interface ConfirmationPreviewPanelProps {
   advisoryHints?: string[];
   /** If status is "draft", show different heading. */
   isDraft?: boolean;
+  /** 6C: zaškrtávací výběr kroků (jen pokud mají všechny `stepId`). */
+  selectable?: boolean;
+  stepSelection?: Record<string, boolean>;
+  onToggleStep?: (stepId: string) => void;
 }
 
 export function ConfirmationPreviewPanel({
@@ -103,8 +108,13 @@ export function ConfirmationPreviewPanel({
   clientLabel,
   advisoryHints = [],
   isDraft = false,
+  selectable = false,
+  stepSelection = {},
+  onToggleStep,
 }: ConfirmationPreviewPanelProps) {
   if (stepPreviews.length === 0) return null;
+
+  const selectionEnabled = Boolean(selectable) && stepPreviews.every((s) => Boolean(s.stepId));
 
   return (
     <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/60 overflow-hidden">
@@ -140,21 +150,49 @@ export function ConfirmationPreviewPanel({
 
       {/* Step list */}
       <div className="px-3 py-2 space-y-1.5">
-        {stepPreviews.map((step, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <span className="mt-0.5 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[9px] font-black flex items-center justify-center shrink-0">
-              {i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <span className="text-xs font-semibold text-amber-900">{step.label}</span>
-              {step.contextHint && (
-                <span className="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-100 rounded px-1 py-0.5">
-                  {step.contextHint}
+        {stepPreviews.map((step, i) => {
+          const sid = step.stepId;
+          const rowKey = sid || `row-${i}`;
+          const checked = sid ? (stepSelection[sid] ?? true) : true;
+          return (
+            <div key={rowKey} className="flex items-start gap-2">
+              {selectionEnabled && sid ? (
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggleStep?.(sid)}
+                  className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-700 focus:ring-amber-500 shrink-0"
+                  aria-label={`Zařadit krok: ${step.label}`}
+                />
+              ) : (
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[9px] font-black flex items-center justify-center shrink-0">
+                  {i + 1}
                 </span>
               )}
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-semibold text-amber-900">{step.label}</span>
+                {step.contextHint ? (
+                  <span className="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-100 rounded px-1 py-0.5">
+                    {step.contextHint}
+                  </span>
+                ) : null}
+                {step.description ? (
+                  <p className="text-[10px] text-amber-700/90 mt-0.5 font-medium">{step.description}</p>
+                ) : null}
+                {(step.validationWarnings?.length ?? 0) > 0 ? (
+                  <ul className="mt-1 space-y-0.5">
+                    {step.validationWarnings!.map((w, wi) => (
+                      <li key={wi} className="text-[10px] text-amber-800 flex gap-1">
+                        <AlertCircle size={10} className="shrink-0 mt-0.5" />
+                        <span>{w}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -186,17 +224,20 @@ export function StepOutcomeCard({ outcomes, hasPartialFailure }: StepOutcomeCard
       <div className="px-3 py-2 space-y-1.5">
         {outcomes.map((o, i) => {
           const icon =
-            o.status === "succeeded" ? <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" /> :
-            o.status === "failed"    ? <XCircle size={13} className="text-rose-600 shrink-0 mt-0.5" /> :
-            o.status === "skipped"   ? <SkipForward size={13} className="text-slate-400 shrink-0 mt-0.5" /> :
-                                       <RefreshCw size={13} className="text-indigo-400 shrink-0 mt-0.5" />;
+            o.status === "succeeded"      ? <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" /> :
+            o.status === "failed"         ? <XCircle size={13} className="text-rose-600 shrink-0 mt-0.5" /> :
+            o.status === "requires_input" ? <CircleDashed size={13} className="text-amber-500 shrink-0 mt-0.5" /> :
+            o.status === "skipped"        ? <SkipForward size={13} className="text-slate-400 shrink-0 mt-0.5" /> :
+                                            <RefreshCw size={13} className="text-indigo-400 shrink-0 mt-0.5" />;
           return (
             <div key={i} className="flex items-start gap-1.5">
               {icon}
               <div className="min-w-0 flex-1">
                 <span className={cx(
                   "text-xs",
-                  o.status === "failed" ? "text-rose-700 font-semibold" : "text-[color:var(--wp-text-secondary)]",
+                  o.status === "failed" ? "text-rose-700 font-semibold" :
+                  o.status === "requires_input" ? "text-amber-700 font-semibold" :
+                  "text-[color:var(--wp-text-secondary)]",
                 )}>
                   {o.label}
                 </span>
@@ -205,7 +246,12 @@ export function StepOutcomeCard({ outcomes, hasPartialFailure }: StepOutcomeCard
                     ({getStepOutcomeStatusLabel(o.status)})
                   </span>
                 )}
-                {o.error && <p className="text-rose-500 text-[10px] mt-0.5">{o.error}</p>}
+                {o.error && (
+                  <p className={cx(
+                    "text-[10px] mt-0.5",
+                    o.status === "requires_input" ? "text-amber-600" : "text-rose-500",
+                  )}>{o.error}</p>
+                )}
               </div>
             </div>
           );

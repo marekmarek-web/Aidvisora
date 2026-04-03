@@ -316,10 +316,17 @@ export function buildExecutionPlan(
     };
   }
 
-  const actionsToProcess =
+  const rawActions =
     intent.intentType === "multi_action"
       ? intent.requestedActions.filter((a) => !READ_ONLY_INTENTS.has(a))
       : [intent.intentType].filter((a) => !READ_ONLY_INTENTS.has(a));
+
+  const seenActions = new Set<string>();
+  const actionsToProcess = rawActions.filter((a) => {
+    if (seenActions.has(a)) return false;
+    seenActions.add(a);
+    return true;
+  });
 
   for (const actionIntent of actionsToProcess) {
     const writeAction = INTENT_TO_WRITE_ACTION[actionIntent];
@@ -337,7 +344,7 @@ export function buildExecutionPlan(
       requiresConfirmation: policy === "always" || missing.length === 0,
       isReadOnly: false,
       dependsOn: [],
-      status: missing.length > 0 ? "requires_confirmation" : "requires_confirmation",
+      status: "requires_confirmation",
       result: null,
     };
 
@@ -380,6 +387,22 @@ export function buildExecutionPlan(
   };
 }
 
+const PRODUCT_DOMAIN_LABELS: Record<string, string> = {
+  hypo: "Hypotéka",
+  uver: "Úvěr",
+  investice: "Investice",
+  dip: "DIP",
+  dps: "DPS",
+  zivotni_pojisteni: "Životní pojištění",
+  majetek: "Majetek",
+  odpovednost: "Odpovědnost",
+  auto: "Auto",
+  cestovni: "Cestovní pojištění",
+  firma_pojisteni: "Firemní pojištění",
+  servis: "Servis",
+  jine: "Jiné",
+};
+
 function buildStepLabel(action: WriteActionType, params: Record<string, unknown>): string {
   const labels: Record<string, string> = {
     createOpportunity: "Vytvořit obchod",
@@ -412,9 +435,11 @@ function buildStepLabel(action: WriteActionType, params: Record<string, unknown>
     createClientPortalNotification: "Poslat upozornění do klientského portálu",
   };
 
-  let label = labels[action] ?? action;
-  if (params.productDomain) label += ` (${params.productDomain})`;
-  return label;
+  const label = labels[action] ?? action;
+  const domain = typeof params.productDomain === "string" ? params.productDomain : null;
+  if (!domain) return label;
+  const domainLabel = PRODUCT_DOMAIN_LABELS[domain] ?? domain;
+  return `${label} (${domainLabel})`;
 }
 
 export function getStepsAwaitingConfirmation(plan: ExecutionPlan): ExecutionStep[] {
@@ -429,6 +454,34 @@ export function confirmAllSteps(plan: ExecutionPlan): ExecutionPlan {
       s.status === "requires_confirmation" ? { ...s, status: "confirmed" as const } : s,
     ),
   };
+}
+
+const SKIPPED_BY_USER: ExecutionStep["result"] = {
+  ok: false,
+  outcome: "skipped",
+  entityId: null,
+  entityType: null,
+  warnings: [],
+  error: "Krok nebyl vybrán k provedení.",
+};
+
+/**
+ * Označí vybrané kroky jako `confirmed`, ostatní čekající jako `skipped` (6C).
+ * `selectedStepIds` obsahuje pouze ID kroků ve stavu `requires_confirmation`.
+ */
+export function applyConfirmationSelection(plan: ExecutionPlan, selectedStepIds: string[]): ExecutionPlan {
+  const awaitingIds = new Set(
+    plan.steps.filter((s) => s.status === "requires_confirmation").map((s) => s.stepId),
+  );
+  const selected = new Set(selectedStepIds.filter((id) => awaitingIds.has(id)));
+
+  const steps = plan.steps.map((s) => {
+    if (s.status !== "requires_confirmation") return s;
+    if (selected.has(s.stepId)) return { ...s, status: "confirmed" as const };
+    return { ...s, status: "skipped" as const, result: SKIPPED_BY_USER };
+  });
+
+  return { ...plan, status: "executing", steps };
 }
 
 export function confirmStep(plan: ExecutionPlan, stepId: string): ExecutionPlan {

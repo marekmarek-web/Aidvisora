@@ -419,21 +419,25 @@ export function buildVerifiedResult(
       const resultOutcome = step.result?.outcome;
       const isIdempotent = resultOutcome === "idempotent_hit" || resultOutcome === "duplicate_hit";
       const isSkipped = step.status === "skipped" || resultOutcome === "skipped";
+      const isRequiresInput = resultOutcome === "requires_input";
       const outcome: VerifiedAssistantResult["stepOutcomes"][number] = {
         stepId: step.stepId,
         action: step.action,
         label: step.label,
         status: isSkipped
           ? "skipped"
-          : isIdempotent
-            ? "idempotent_hit"
-            : step.result?.ok
-              ? "succeeded"
-              : "failed",
+          : isRequiresInput
+            ? "requires_input"
+            : isIdempotent
+              ? "idempotent_hit"
+              : step.result?.ok
+                ? "succeeded"
+                : "failed",
         entityId: step.result?.entityId ?? null,
         entityType: step.result?.entityType ?? null,
         error: step.result?.error ?? null,
         warnings: step.result?.warnings ?? [],
+        retryable: step.result?.retryable,
       };
       stepOutcomes.push(outcome);
 
@@ -450,23 +454,36 @@ export function buildVerifiedResult(
       if (step.status === "failed" && step.result?.error) {
         warnings.push(`Krok „${step.label}" selhal: ${step.result.error}`);
       }
+      if (isRequiresInput && step.result?.error) {
+        warnings.push(`Krok „${step.label}" vyžaduje doplnění: ${step.result.error}`);
+      }
       if (isSkipped) {
-        warnings.push(`Krok „${step.label}" přeskočen — závislý krok selhal.`);
+        const userDeselected =
+          step.result?.error === "Krok nebyl vybrán k provedení." ||
+          step.result?.error === "Nepožadováno uživatelem.";
+        if (!userDeselected) {
+          warnings.push(`Krok „${step.label}" přeskočen — závislý krok selhal.`);
+        }
       }
     }
 
     const succeeded = plan.steps.filter((s) => s.status === "succeeded").length;
     const failed = plan.steps.filter((s) => s.status === "failed").length;
     const skipped = plan.steps.filter((s) => s.status === "skipped").length;
+    const requiresInput = stepOutcomes.filter((o) => o.status === "requires_input").length;
     const total = plan.steps.length;
-    if (succeeded > 0 && succeeded < total) {
-      suggestions.push("Zkontrolujte selhané kroky a zkuste je znovu.");
-    }
     if (succeeded === total && total > 0) {
       suggestions.push("Všechny akce byly úspěšně provedeny.");
     }
     if (failed > 0) {
+      const retryable = stepOutcomes.filter((o) => o.status === "failed" && o.retryable);
       suggestions.push(`${failed} z ${total} kroků selhalo.`);
+      if (retryable.length > 0) {
+        suggestions.push("Selhané kroky lze po opravě znovu spustit.");
+      }
+    }
+    if (requiresInput > 0) {
+      suggestions.push(`${requiresInput} z ${total} kroků vyžaduje doplnění informací.`);
     }
     if (skipped > 0) {
       suggestions.push(`${skipped} z ${total} kroků přeskočeno kvůli selhání závislosti.`);
@@ -476,10 +493,10 @@ export function buildVerifiedResult(
   const allSucceeded = plan ? plan.steps.every(s => s.status === "succeeded") : true;
   const hasPartialFailure = plan?.status === "partial_failure";
 
+  const summaryMessage = buildExecutionSummaryMessage(message, plan, stepOutcomes);
+
   return {
-    message: hasPartialFailure
-      ? `⚠ Některé akce selhaly.\n\n${message}`
-      : message,
+    message: summaryMessage,
     plan,
     referencedEntities: entities,
     suggestedNextSteps: suggestions,
@@ -489,4 +506,45 @@ export function buildVerifiedResult(
     hasPartialFailure,
     allSucceeded,
   };
+}
+
+function buildExecutionSummaryMessage(
+  baseMessage: string,
+  plan: ExecutionPlan | null,
+  outcomes: VerifiedAssistantResult["stepOutcomes"],
+): string {
+  if (!plan || outcomes.length === 0) return baseMessage;
+
+  const succeeded = outcomes.filter((o) => o.status === "succeeded").length;
+  const failed = outcomes.filter((o) => o.status === "failed").length;
+  const skipped = outcomes.filter((o) => o.status === "skipped").length;
+  const requiresInput = outcomes.filter((o) => o.status === "requires_input").length;
+  const userSkipped = outcomes.filter(
+    (o) => o.status === "skipped" && o.error === "Krok nebyl vybrán k provedení.",
+  ).length;
+  const depSkipped = skipped - userSkipped;
+  const total = outcomes.length;
+
+  if (succeeded === total) return baseMessage;
+
+  const lines: string[] = [];
+  if (failed > 0 || requiresInput > 0) {
+    lines.push("⚠ Některé akce nebyly dokončeny:");
+  }
+  if (succeeded > 0) lines.push(`✓ ${succeeded} z ${total} provedeno`);
+  if (failed > 0) lines.push(`✗ ${failed} z ${total} selhalo`);
+  if (requiresInput > 0) lines.push(`⏳ ${requiresInput} z ${total} vyžaduje doplnění`);
+  if (depSkipped > 0) lines.push(`↷ ${depSkipped} přeskočeno (závislost na selhaném kroku)`);
+  if (userSkipped > 0) lines.push(`○ ${userSkipped} nebylo vybráno`);
+
+  for (const o of outcomes) {
+    if (o.status === "failed" && o.error) {
+      lines.push(`\n**${o.label}**: ${o.error}`);
+    }
+    if (o.status === "requires_input" && o.error) {
+      lines.push(`\n**${o.label}**: ${o.error}`);
+    }
+  }
+
+  return lines.join("\n");
 }

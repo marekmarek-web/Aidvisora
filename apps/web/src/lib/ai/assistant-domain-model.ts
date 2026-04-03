@@ -188,7 +188,7 @@ export type ExecutionStep = {
   result: ExecutionStepResult | null;
 };
 
-export type StepResultOutcome = "executed" | "idempotent_hit" | "duplicate_hit" | "failed" | "skipped";
+export type StepResultOutcome = "executed" | "idempotent_hit" | "duplicate_hit" | "failed" | "skipped" | "requires_input";
 
 export type ExecutionStepResult = {
   ok: boolean;
@@ -197,6 +197,7 @@ export type ExecutionStepResult = {
   entityType: string | null;
   warnings: string[];
   error: string | null;
+  retryable?: boolean;
 };
 
 export type ExecutionPlan = {
@@ -216,11 +217,12 @@ export type StepOutcome = {
   stepId: string;
   action: WriteActionType;
   label: string;
-  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit" | "requires_input";
   entityId: string | null;
   entityType: string | null;
   error: string | null;
   warnings: string[];
+  retryable?: boolean;
 };
 
 export type VerifiedAssistantResult = {

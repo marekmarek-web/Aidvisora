@@ -162,7 +162,7 @@ export const requireAuth = cache(requireAuthUncached);
  * - Client without linked contact → redirect to `/prihlaseni?error=auth_error`.
  *
  * Usage:
- * - Every server-rendered `/client/**/page.tsx` MUST call `requireClientZoneAuth()`.
+ * - Every server-rendered `/client/.../page.tsx` MUST call `requireClientZoneAuth()`.
  * - The `/client/layout.tsx` ALSO calls it as a top-level gate.
  * - `loadClientPortalSessionBundle()` calls it internally (dashboard + mobile SPA).
  * - Server actions serving client reads use `requireAuthInAction()` + manual

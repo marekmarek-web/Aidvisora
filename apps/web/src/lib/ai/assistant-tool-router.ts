@@ -26,28 +26,47 @@ import { executeMortgageDealAndFollowUpTask } from "./assistant-crm-writes";
 import { searchContactsForAssistant } from "./assistant-contact-search";
 import type { RoleName } from "@/shared/rolePermissions";
 import type { AssistantIntent } from "./assistant-intent";
-import type { CanonicalIntent, ExecutionPlan, VerifiedAssistantResult } from "./assistant-domain-model";
+import type { CanonicalIntent, ExecutionPlan, ExecutionStep, VerifiedAssistantResult } from "./assistant-domain-model";
 import { resolveEntities, patchIntentWithResolutions } from "./assistant-entity-resolution";
-import { buildExecutionPlan, confirmAllSteps, allStepsReady, getPlanSummary, getStepsAwaitingConfirmation } from "./assistant-execution-plan";
+import {
+  buildExecutionPlan,
+  confirmAllSteps,
+  allStepsReady,
+  getPlanSummary,
+  getStepsAwaitingConfirmation,
+  applyConfirmationSelection,
+} from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import { verifyWriteContextSafety, verifyTenantConsistency } from "./assistant-context-safety";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 
+import type { StepPreviewItem } from "./assistant-execution-ui";
+
+export type { StepPreviewItem } from "./assistant-execution-ui";
+
 export type StepOutcomeSummary = {
   label: string;
-  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
+  status: "succeeded" | "failed" | "skipped" | "idempotent_hit" | "requires_input";
   entityId?: string | null;
   error?: string | null;
+  retryable?: boolean;
 };
 
-/** One entry in the pre-confirmation step preview. */
-export type StepPreviewItem = {
-  label: string;
-  action: string;
-  /** Human-readable hint about entity or product domain, if available. */
-  contextHint?: string;
+const DOMAIN_HINT_LABELS: Record<string, string> = {
+  hypo: "Hypotéka", uver: "Úvěr", investice: "Investice", dip: "DIP", dps: "DPS",
+  zivotni_pojisteni: "Životní pojištění", majetek: "Majetek", odpovednost: "Odpovědnost",
+  auto: "Auto", cestovni: "Cestovní pojištění", firma_pojisteni: "Firemní pojištění",
+  servis: "Servis", jine: "Jiné",
 };
+
+function stepPreviewContextHint(step: ExecutionStep): string | undefined {
+  const d = step.params.productDomain as string | undefined;
+  if (!d) return undefined;
+  const humanLabel = DOMAIN_HINT_LABELS[d] ?? d;
+  if (step.label.includes(`(${humanLabel})`)) return undefined;
+  return humanLabel;
+}
 
 export type AssistantResponse = {
   message: string;
@@ -440,6 +459,90 @@ function isCancellation(message: string): boolean {
   return CANCEL_PATTERNS.test(message.trim());
 }
 
+export type AssistantConfirmationPayload = {
+  cancel: boolean;
+  /** Když undefined (a ne cancel): potvrdí všechny čekající kroky — kompatibilní s textem „ano". */
+  selectedStepIds?: string[];
+};
+
+/** 6F: explicitní potvrzení / zrušení bez nutnosti psát „ano" do inputu. Volá se z API těla i z textových aliasů. */
+export async function handleAssistantAwaitingConfirmation(
+  session: AssistantSession,
+  body: AssistantConfirmationPayload,
+  ctx: { tenantId: string; userId: string; roleName: RoleName },
+): Promise<AssistantResponse | null> {
+  const plan = session.lastExecutionPlan;
+  if (!plan || plan.status !== "awaiting_confirmation") return null;
+
+  if (body.cancel) {
+    logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_CANCELLED, {
+      planId: plan.planId,
+    });
+    session.lastExecutionPlan = undefined;
+    return {
+      message: "Plán zrušen. Jak vám mohu pomoci?",
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: [],
+      confidence: 1,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  let prepared: ExecutionPlan;
+  if (body.selectedStepIds === undefined) {
+    prepared = confirmAllSteps(plan);
+  } else {
+    const awaiting = getStepsAwaitingConfirmation(plan).map((s) => s.stepId);
+    const picked = body.selectedStepIds.filter((id) => awaiting.includes(id));
+    if (picked.length === 0) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_CANCELLED, {
+        planId: plan.planId,
+      });
+      session.lastExecutionPlan = undefined;
+      return {
+        message:
+          "Nebyly vybrány žádné akce k provedení. Plán byl zrušen. Můžete zadat nový požadavek nebo upravit zadání.",
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [],
+        confidence: 1,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
+    prepared = applyConfirmationSelection(plan, picked);
+  }
+
+  const confirmedCount = prepared.steps.filter((s) => s.status === "confirmed").length;
+  if (confirmedCount === 0) {
+    session.lastExecutionPlan = undefined;
+    return {
+      message: "Nebyly vybrány žádné akce k provedení. Plán byl zrušen.",
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: [],
+      confidence: 1,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_EXECUTED, {
+    planId: prepared.planId,
+  });
+  const executed = await executePlan(prepared, {
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    sessionId: session.sessionId,
+    roleName: ctx.roleName,
+  });
+  session.lastExecutionPlan = executed;
+  const verified = buildVerifiedResult("Akce provedeny.", executed);
+  return verifiedToResponse(verified, session.sessionId);
+}
+
 /**
  * V2 canonical pipeline: intent → entity resolution → execution plan → confirm → execute → verified result.
  * Falls back to legacy router for read-only / general_chat intents.
@@ -456,34 +559,20 @@ export async function routeAssistantMessageCanonical(
 
   if (session.lastExecutionPlan && session.lastExecutionPlan.status === "awaiting_confirmation") {
     if (isConfirmation(message)) {
-      logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_EXECUTED, {
-        planId: session.lastExecutionPlan.planId,
-      });
-      const confirmed = confirmAllSteps(session.lastExecutionPlan);
-      const executed = await executePlan(confirmed, {
-        tenantId,
-        userId: session.userId,
-        sessionId: session.sessionId,
-        roleName,
-      });
-      session.lastExecutionPlan = executed;
-      const verified = buildVerifiedResult("Akce provedeny.", executed);
-      return verifiedToResponse(verified, session.sessionId);
+      const out = await handleAssistantAwaitingConfirmation(
+        session,
+        { cancel: false },
+        { tenantId, userId: session.userId, roleName },
+      );
+      if (out) return out;
     }
     if (isCancellation(message)) {
-      logAssistantTelemetry(AssistantTelemetryAction.CONFIRMATION_CANCELLED, {
-        planId: session.lastExecutionPlan.planId,
-      });
-      session.lastExecutionPlan = undefined;
-      return {
-        message: "Plán zrušen. Jak vám mohu pomoci?",
-        referencedEntities: [],
-        suggestedActions: [],
-        warnings: [],
-        confidence: 1,
-        sourcesSummary: [],
-        sessionId: session.sessionId,
-      };
+      const out = await handleAssistantAwaitingConfirmation(
+        session,
+        { cancel: true },
+        { tenantId, userId: session.userId, roleName },
+      );
+      if (out) return out;
     }
   }
 
@@ -706,13 +795,15 @@ export async function routeAssistantMessageCanonical(
     const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";
     const playbookLines = getPlaybookGuidanceLines(patchedIntent, message);
     const playbookBlock = playbookLines.length > 0 ? `\n\n${playbookLines.join("\n")}` : "";
-    const stepPreviews: StepPreviewItem[] = plan.steps.map(s => ({
+    const stepPreviews: StepPreviewItem[] = plan.steps.map((s) => ({
+      stepId: s.stepId,
       label: s.label,
       action: s.action,
-      contextHint: (s.params.productDomain as string | undefined) ?? undefined,
+      contextHint: stepPreviewContextHint(s),
+      domainGroup: (s.params.productDomain as string | undefined) ?? null,
     }));
     return {
-      message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}\n\nPotvrďte provedení odpovědí „ano" nebo zrušte odpovědí „ne".`,
+      message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}\n\nVyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).`,
       referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
       suggestedActions: [],
       warnings: resolution.warnings,
@@ -767,6 +858,7 @@ function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string
       status: o.status,
       entityId: o.entityId,
       error: o.error,
+      retryable: o.retryable,
     })),
     suggestedNextSteps: verified.suggestedNextSteps.length > 0 ? verified.suggestedNextSteps : undefined,
     hasPartialFailure: verified.hasPartialFailure || undefined,
