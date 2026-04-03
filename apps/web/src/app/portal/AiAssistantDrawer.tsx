@@ -14,12 +14,7 @@ import {
   MessageCircle,
   Zap,
   UserPlus,
-  CheckCircle2,
-  XCircle,
-  SkipForward,
-  RefreshCw,
-  ChevronRight,
-  Sparkles,
+  Pencil,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
 import { useAiAssistantDrawer } from "./AiAssistantDrawerContext";
@@ -43,18 +38,20 @@ import {
   parsePortalContactIdFromPathname,
 } from "@/lib/ai/assistant-chat-request";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
+import {
+  ExecutionBadge,
+  ContextLockBadge,
+  ConfirmationPreviewPanel,
+  StepOutcomeCard,
+  SuggestedNextStepsChips,
+  WarningsBlock,
+} from "./AssistantExecutionUI";
+import type { StepOutcomeSummary, StepPreviewItem } from "@/lib/ai/assistant-execution-ui";
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
 type ClientCandidate = { clientId: string; displayName?: string };
-
-type StepOutcomeSummary = {
-  label: string;
-  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
-  entityId?: string | null;
-  error?: string | null;
-};
 
 type ChatMessage =
   | { role: "user"; content: string }
@@ -71,14 +68,22 @@ type ChatMessage =
         planId?: string;
         totalSteps?: number;
         pendingSteps?: number;
+        stepPreviews?: StepPreviewItem[];
+        clientLabel?: string;
       } | null;
-      contextState?: { channel: string | null; lockedClientId: string | null } | null;
+      contextState?: {
+        channel: string | null;
+        lockedClientId: string | null;
+        lockedClientLabel?: string | null;
+      } | null;
       stepOutcomes?: StepOutcomeSummary[];
       suggestedNextSteps?: string[];
       hasPartialFailure?: boolean;
     };
 
 type UploadPhase = "idle" | "uploading" | "processing";
+
+// executionLabel, StepOutcomeCard, SuggestedNextStepsChips moved to AssistantExecutionUI.tsx
 
 function getHref(action: SuggestedAction): string | null {
   if (action.type === "open_review" && action.payload.reviewId) {
@@ -129,77 +134,6 @@ function getLatestAssistantContextFromMessages(messages: ChatMessage[]) {
   return undefined;
 }
 
-function executionLabel(
-  state: NonNullable<Exclude<ChatMessage, { role: "user" }>["executionState"]>,
-): { tone: string; text: string } {
-  if (state.status === "awaiting_confirmation") {
-    return { tone: "amber", text: "Čeká na potvrzení" };
-  }
-  if (state.status === "executing") {
-    return { tone: "indigo", text: "Právě provádím kroky" };
-  }
-  if (state.status === "partial_failure") {
-    return { tone: "rose", text: "Částečně selhalo" };
-  }
-  if (state.status === "completed") {
-    return { tone: "emerald", text: "Provedeno" };
-  }
-  return { tone: "slate", text: "Návrh akcí" };
-}
-
-function StepOutcomeCard({ outcomes, hasPartialFailure }: { outcomes: StepOutcomeSummary[]; hasPartialFailure?: boolean }) {
-  if (outcomes.length === 0) return null;
-  const failedCount = outcomes.filter(o => o.status === "failed").length;
-  const succeededCount = outcomes.filter(o => o.status === "succeeded").length;
-  const borderColor = hasPartialFailure || failedCount > 0 ? "border-rose-200 bg-rose-50/60" : "border-emerald-200 bg-emerald-50/60";
-  return (
-    <div className={`mt-2 rounded-xl border ${borderColor} px-3 py-2 space-y-1`}>
-      <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1.5">
-        {failedCount > 0
-          ? `${failedCount} z ${outcomes.length} kroků selhalo`
-          : `${succeededCount} / ${outcomes.length} kroků`}
-      </p>
-      {outcomes.map((o, i) => {
-        const icon =
-          o.status === "succeeded" ? <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" /> :
-          o.status === "failed"    ? <XCircle size={13} className="text-rose-600 shrink-0 mt-0.5" /> :
-          o.status === "skipped"   ? <SkipForward size={13} className="text-slate-400 shrink-0 mt-0.5" /> :
-                                     <RefreshCw size={13} className="text-indigo-400 shrink-0 mt-0.5" />;
-        return (
-          <div key={i} className="flex items-start gap-1.5 text-xs">
-            {icon}
-            <div className="min-w-0">
-              <span className={o.status === "failed" ? "text-rose-700 font-semibold" : "text-[color:var(--wp-text-secondary)]"}>{o.label}</span>
-              {o.error && <p className="text-rose-500 text-[10px] mt-0.5">{o.error}</p>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function SuggestedNextStepsChips({ steps, onSend }: { steps: string[]; onSend: (msg: string) => void }) {
-  if (steps.length === 0) return null;
-  return (
-    <div className="mt-2 space-y-1">
-      <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Doporučené kroky</p>
-      <div className="flex flex-wrap gap-1.5">
-        {steps.map((s, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onSend(s)}
-            className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-800 font-semibold hover:bg-indigo-100 transition-colors text-left"
-          >
-            <Sparkles size={10} className="shrink-0 text-indigo-400" />
-            {s.length > 50 ? s.slice(0, 48) + "…" : s}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function AiAssistantDrawer() {
   const { open, setOpen } = useAiAssistantDrawer();
@@ -230,6 +164,12 @@ export function AiAssistantDrawer() {
   const [importContactsResult, setImportContactsResult] = useState<{ imported: number; skipped: number; errors: { row: number; message: string }[] } | null>(null);
   const [importContactsLoading, setImportContactsLoading] = useState(false);
   const latestAssistantContext = getLatestAssistantContextFromMessages(messages);
+  /** Spouští "Upravit zadání": vyplní input textem z poslední uživatelské zprávy a přesune fokus. */
+  const handleEditIntent = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+    if (lastUserMsg) setInput(lastUserMsg.content);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [messages]);
 
   const assistantSessionIdRef = useRef<string | undefined>(undefined);
   assistantSessionIdRef.current = assistantSessionId;
@@ -898,11 +838,10 @@ export function AiAssistantDrawer() {
           <div className="flex-1 overflow-y-auto px-4 space-y-3">
             {latestAssistantContext?.lockedClientId && (
               <div className="sticky top-0 z-10 py-2">
-                <div className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700">
-                  <span>Kontext lock aktivní</span>
-                  <span>•</span>
-                  <span>klient {latestAssistantContext.lockedClientId.slice(0, 8)}…</span>
-                </div>
+                <ContextLockBadge
+                  lockedClientId={latestAssistantContext.lockedClientId}
+                  lockedClientLabel={latestAssistantContext.lockedClientLabel}
+                />
               </div>
             )}
             {messages.length === 0 && uploadPhase === "idle" && (
@@ -924,48 +863,37 @@ export function AiAssistantDrawer() {
                 >
                   <p className={`whitespace-pre-wrap ${m.role === "user" ? "text-white" : "text-[color:var(--wp-text-secondary)]"}`}>{m.content}</p>
                   {m.role === "assistant" && m.executionState && (
-                    <div className="mt-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2">
-                      {(() => {
-                        const lbl = executionLabel(m.executionState);
-                        const toneClass =
-                          lbl.tone === "amber"
-                            ? "text-amber-700"
-                            : lbl.tone === "emerald"
-                              ? "text-emerald-700"
-                              : lbl.tone === "rose"
-                                ? "text-rose-700"
-                                : "text-indigo-700";
-                        return (
-                          <div className={`text-xs font-bold ${toneClass}`}>
-                            {lbl.text}
-                            {m.executionState.totalSteps ? ` • ${m.executionState.totalSteps} kroků` : ""}
-                            {(m.executionState.pendingSteps ?? 0) > 0
-                              ? ` • čeká: ${m.executionState.pendingSteps}`
-                              : ""}
-                          </div>
-                        );
-                      })()}
-                    </div>
+                    <>
+                      <ExecutionBadge
+                        status={m.executionState.status}
+                        totalSteps={m.executionState.totalSteps}
+                        pendingSteps={m.executionState.pendingSteps}
+                      />
+                      {/* Structured preview for awaiting_confirmation / draft */}
+                      {(m.executionState.status === "awaiting_confirmation" || m.executionState.status === "draft") &&
+                        (m.executionState.stepPreviews?.length ?? 0) > 0 && (
+                          <ConfirmationPreviewPanel
+                            stepPreviews={m.executionState.stepPreviews!}
+                            clientLabel={m.executionState.clientLabel}
+                            isDraft={m.executionState.status === "draft"}
+                          />
+                        )}
+                    </>
                   )}
                   {m.role === "assistant" && (m.stepOutcomes?.length ?? 0) > 0 && (
                     <StepOutcomeCard outcomes={m.stepOutcomes!} hasPartialFailure={m.hasPartialFailure} />
                   )}
                   {m.role === "assistant" && m.contextState?.lockedClientId && (
-                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1">
-                      <span>Klient</span>
-                      <ChevronRight size={9} />
-                      <span className="font-mono">{m.contextState.lockedClientId.slice(0, 8)}…</span>
+                    <div className="mt-1.5">
+                      <ContextLockBadge
+                        lockedClientId={m.contextState.lockedClientId}
+                        lockedClientLabel={m.contextState.lockedClientLabel}
+                        className="text-[10px]"
+                      />
                     </div>
                   )}
-                  {m.role === "assistant" && m.warnings && m.warnings.length > 0 && (
-                    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 space-y-1">
-                      {m.warnings.map((w, wi) => (
-                        <div key={wi} className="flex items-start gap-1.5 text-xs text-amber-700 font-medium">
-                          <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                          <span>{w}</span>
-                        </div>
-                      ))}
-                    </div>
+                  {m.role === "assistant" && (m.warnings?.length ?? 0) > 0 && (
+                    <WarningsBlock warnings={m.warnings!} />
                   )}
                   {m.role === "assistant" && (m.suggestedActions?.length ?? 0) > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
@@ -1034,20 +962,31 @@ export function AiAssistantDrawer() {
           {/* Input area - reference */}
           <div className="shrink-0 p-4 pt-2 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/80">
             {awaitingConfirmationFromLatestTurn && !chatLoading ? (
-              <div className="flex gap-2 mb-2">
+              <div className="mb-2 space-y-1.5">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void sendChatMessage("ano")}
+                    className="flex-1 min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors"
+                  >
+                    Potvrdit a provést
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void sendChatMessage("ne")}
+                    className="min-h-[44px] px-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] transition-colors"
+                    aria-label="Zrušit plán"
+                  >
+                    Zrušit
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => void sendChatMessage("ano")}
-                  className="flex-1 min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors"
+                  onClick={handleEditIntent}
+                  className="w-full flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-xs font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
                 >
-                  Ano — provést
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void sendChatMessage("ne")}
-                  className="flex-1 min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] transition-colors"
-                >
-                  Ne — zrušit
+                  <Pencil size={12} />
+                  Upravit zadání
                 </button>
               </div>
             ) : null}

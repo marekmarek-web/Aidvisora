@@ -41,6 +41,14 @@ export type StepOutcomeSummary = {
   error?: string | null;
 };
 
+/** One entry in the pre-confirmation step preview. */
+export type StepPreviewItem = {
+  label: string;
+  action: string;
+  /** Human-readable hint about entity or product domain, if available. */
+  contextHint?: string;
+};
+
 export type AssistantResponse = {
   message: string;
   referencedEntities: { type: string; id: string; label?: string }[];
@@ -54,10 +62,16 @@ export type AssistantResponse = {
     planId?: string;
     totalSteps?: number;
     pendingSteps?: number;
+    /** Structured step list for pre-confirmation preview. Only present when status === "awaiting_confirmation" or "draft". */
+    stepPreviews?: StepPreviewItem[];
+    /** Display name of the client for UX context, if resolved. */
+    clientLabel?: string;
   } | null;
   contextState?: {
     channel: string | null;
     lockedClientId: string | null;
+    /** Display name of the locked client, if available. */
+    lockedClientLabel?: string | null;
   } | null;
   stepOutcomes?: StepOutcomeSummary[];
   suggestedNextSteps?: string[];
@@ -679,6 +693,11 @@ export async function routeAssistantMessageCanonical(
     const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";
     const playbookLines = getPlaybookGuidanceLines(patchedIntent, message);
     const playbookBlock = playbookLines.length > 0 ? `\n\n${playbookLines.join("\n")}` : "";
+    const stepPreviews: StepPreviewItem[] = plan.steps.map(s => ({
+      label: s.label,
+      action: s.action,
+      contextHint: (s.params.productDomain as string | undefined) ?? undefined,
+    }));
     return {
       message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}\n\nPotvrďte provedení odpovědí „ano" nebo zrušte odpovědí „ne".`,
       referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
@@ -687,6 +706,19 @@ export async function routeAssistantMessageCanonical(
       confidence: 0.85,
       sourcesSummary: [],
       sessionId: session.sessionId,
+      executionState: {
+        status: "awaiting_confirmation",
+        planId: plan.planId,
+        totalSteps: plan.steps.length,
+        pendingSteps: awaiting.length,
+        stepPreviews,
+        clientLabel: resolution.client?.displayLabel,
+      },
+      contextState: {
+        channel: session.context.channel ?? null,
+        lockedClientId: session.lockedClientId ?? null,
+        lockedClientLabel: resolution.client?.displayLabel ?? null,
+      },
     };
   }
 
@@ -725,5 +757,6 @@ function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string
     })),
     suggestedNextSteps: verified.suggestedNextSteps.length > 0 ? verified.suggestedNextSteps : undefined,
     hasPartialFailure: verified.hasPartialFailure || undefined,
+    contextState: null,
   };
 }

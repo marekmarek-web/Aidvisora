@@ -13,12 +13,7 @@ import {
   Copy,
   Check,
   X,
-  CheckCircle2,
-  XCircle,
-  SkipForward,
-  RefreshCw,
-  AlertCircle,
-  Sparkles,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +24,15 @@ import {
   parsePortalContactIdFromPathname,
 } from "@/lib/ai/assistant-chat-request";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
+import {
+  ExecutionBadge,
+  ContextLockBadge,
+  ConfirmationPreviewPanel,
+  StepOutcomeCard,
+  SuggestedNextStepsChips,
+  WarningsBlock,
+} from "@/app/portal/AssistantExecutionUI";
+import type { StepOutcomeSummary, StepPreviewItem } from "@/lib/ai/assistant-execution-ui";
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
@@ -41,13 +45,6 @@ function cx(...classes: Array<string | false | null | undefined>) {
 /* ------------------------------------------------------------------ */
 
 type MessageRole = "user" | "assistant";
-
-interface StepOutcomeSummary {
-  label: string;
-  status: "succeeded" | "failed" | "skipped" | "idempotent_hit";
-  entityId?: string | null;
-  error?: string | null;
-}
 
 interface ChatMessage {
   id: string;
@@ -62,8 +59,14 @@ interface ChatMessage {
     planId?: string;
     totalSteps?: number;
     pendingSteps?: number;
+    stepPreviews?: StepPreviewItem[];
+    clientLabel?: string;
   } | null;
-  contextState?: { channel: string | null; lockedClientId: string | null } | null;
+  contextState?: {
+    channel: string | null;
+    lockedClientId: string | null;
+    lockedClientLabel?: string | null;
+  } | null;
   stepOutcomes?: StepOutcomeSummary[];
   suggestedNextSteps?: string[];
   hasPartialFailure?: boolean;
@@ -81,23 +84,7 @@ interface ReferencedEntity {
   label?: string;
 }
 
-function executionBadge(
-  state: NonNullable<ChatMessage["executionState"]>,
-): { text: string; className: string } {
-  if (state.status === "awaiting_confirmation") {
-    return { text: "Čeká na potvrzení", className: "text-amber-700 bg-amber-50 border-amber-200" };
-  }
-  if (state.status === "executing") {
-    return { text: "Probíhá provedení", className: "text-indigo-700 bg-indigo-50 border-indigo-200" };
-  }
-  if (state.status === "partial_failure") {
-    return { text: "Částečně selhalo", className: "text-rose-700 bg-rose-50 border-rose-200" };
-  }
-  if (state.status === "completed") {
-    return { text: "Provedeno", className: "text-emerald-700 bg-emerald-50 border-emerald-200" };
-  }
-  return { text: "Návrh akcí", className: "text-slate-700 bg-slate-50 border-slate-200" };
-}
+// executionBadge moved to AssistantExecutionUI.tsx (ExecutionBadge component)
 
 /* ------------------------------------------------------------------ */
 /*  Starters (quick prompts shown before first message)               */
@@ -189,16 +176,31 @@ function MessageBubble({
             {msg.text}
           </p>
           {!isUser && msg.executionState ? (
-            <div className={cx("mt-2 inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-[11px] font-bold", executionBadge(msg.executionState).className)}>
-              <span>{executionBadge(msg.executionState).text}</span>
-              {msg.executionState.totalSteps ? <span>• {msg.executionState.totalSteps} kroků</span> : null}
-              {(msg.executionState.pendingSteps ?? 0) > 0 ? <span>• čeká {msg.executionState.pendingSteps}</span> : null}
-            </div>
+            <>
+              <ExecutionBadge
+                status={msg.executionState.status}
+                totalSteps={msg.executionState.totalSteps}
+                pendingSteps={msg.executionState.pendingSteps}
+                inline
+              />
+              {(msg.executionState.status === "awaiting_confirmation" || msg.executionState.status === "draft") &&
+                (msg.executionState.stepPreviews?.length ?? 0) > 0 && (
+                  <ConfirmationPreviewPanel
+                    stepPreviews={msg.executionState.stepPreviews!}
+                    clientLabel={msg.executionState.clientLabel}
+                    isDraft={msg.executionState.status === "draft"}
+                  />
+                )}
+            </>
           ) : null}
           {!isUser && msg.contextState?.lockedClientId ? (
-            <p className="mt-1 text-[10px] text-[color:var(--wp-text-tertiary)] font-semibold">
-              Zamčený klient: {msg.contextState.lockedClientId.slice(0, 8)}…
-            </p>
+            <div className="mt-1">
+              <ContextLockBadge
+                lockedClientId={msg.contextState.lockedClientId}
+                lockedClientLabel={msg.contextState.lockedClientLabel}
+                className="text-[10px]"
+              />
+            </div>
           ) : null}
           <p className={cx("text-[10px] mt-1", isUser ? "text-indigo-200" : "text-[color:var(--wp-text-tertiary)]")}>
             {msg.timestamp.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
@@ -207,68 +209,17 @@ function MessageBubble({
 
         {/* Warnings */}
         {(msg.warnings ?? []).length > 0 ? (
-          <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-            {msg.warnings!.map((w, i) => (
-              <div key={i} className="flex items-start gap-1.5">
-                <AlertCircle size={12} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700 font-semibold">{w}</p>
-              </div>
-            ))}
-          </div>
+          <WarningsBlock warnings={msg.warnings!} />
         ) : null}
 
         {/* Step outcomes */}
-        {(msg.stepOutcomes ?? []).length > 0 ? (() => {
-          const outcomes = msg.stepOutcomes!;
-          const failedCount = outcomes.filter(o => o.status === "failed").length;
-          const succeededCount = outcomes.filter(o => o.status === "succeeded").length;
-          const hasFailure = msg.hasPartialFailure || failedCount > 0;
-          return (
-            <div className={cx(
-              "px-3 py-2 rounded-xl border space-y-1",
-              hasFailure ? "bg-rose-50 border-rose-200" : "bg-emerald-50 border-emerald-200"
-            )}>
-              <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1">
-                {failedCount > 0 ? `${failedCount} z ${outcomes.length} kroků selhalo` : `${succeededCount} / ${outcomes.length} kroků`}
-              </p>
-              {outcomes.map((o, i) => {
-                const icon =
-                  o.status === "succeeded" ? <CheckCircle2 size={12} className="text-emerald-600 shrink-0 mt-0.5" /> :
-                  o.status === "failed"    ? <XCircle size={12} className="text-rose-600 shrink-0 mt-0.5" /> :
-                  o.status === "skipped"   ? <SkipForward size={12} className="text-slate-400 shrink-0 mt-0.5" /> :
-                                             <RefreshCw size={12} className="text-indigo-400 shrink-0 mt-0.5" />;
-                return (
-                  <div key={i} className="flex items-start gap-1.5">
-                    {icon}
-                    <div className="min-w-0">
-                      <span className={cx("text-xs", o.status === "failed" ? "text-rose-700 font-semibold" : "text-[color:var(--wp-text-secondary)]")}>{o.label}</span>
-                      {o.error && <p className="text-rose-500 text-[10px] mt-0.5">{o.error}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })() : null}
+        {(msg.stepOutcomes ?? []).length > 0 ? (
+          <StepOutcomeCard outcomes={msg.stepOutcomes!} hasPartialFailure={msg.hasPartialFailure} />
+        ) : null}
 
         {/* Suggested next steps */}
         {(msg.suggestedNextSteps ?? []).length > 0 && onNextStep ? (
-          <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Doporučené kroky</p>
-            <div className="flex flex-wrap gap-1.5">
-              {msg.suggestedNextSteps!.map((s, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => onNextStep(s)}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg min-h-[32px] text-left active:bg-indigo-100"
-                >
-                  <Sparkles size={10} className="shrink-0 text-indigo-400" />
-                  {s.length > 50 ? `${s.slice(0, 48)}…` : s}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SuggestedNextStepsChips steps={msg.suggestedNextSteps!} onSend={onNextStep} />
         ) : null}
 
         {/* Referenced entities */}
@@ -495,6 +446,13 @@ export function AiAssistantChatScreen() {
     },
     [router, runDraftEmailForClient],
   );
+
+  /** "Upravit zadání": předvyplní input textem poslední uživatelské zprávy a přesune fokus. */
+  const handleEditIntent = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+    if (lastUserMsg) setInput(lastUserMsg.text);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [messages]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -746,9 +704,13 @@ export function AiAssistantChatScreen() {
   }
 
   const isEmpty = messages.length === 0;
-  const latestContextState = [...messages]
-    .reverse()
-    .find((m) => m.contextState?.lockedClientId)?.contextState;
+  const latestContextState = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m?.contextState?.lockedClientId) return m.contextState;
+    }
+    return undefined;
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -788,11 +750,10 @@ export function AiAssistantChatScreen() {
 
         {latestContextState?.lockedClientId ? (
           <div className="sticky top-0 z-10">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700">
-              <span>Kontext lock</span>
-              <span>•</span>
-              <span>{latestContextState.lockedClientId.slice(0, 8)}…</span>
-            </div>
+            <ContextLockBadge
+              lockedClientId={latestContextState.lockedClientId}
+              lockedClientLabel={latestContextState.lockedClientLabel}
+            />
           </div>
         ) : null}
 
@@ -873,20 +834,31 @@ export function AiAssistantChatScreen() {
         )}
 
         {awaitingConfirmationFromLatestTurn && !isTyping ? (
-          <div className="flex gap-2 mb-2">
+          <div className="mb-2 space-y-1.5">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void sendMessage("ano")}
+                className="flex-1 min-h-[44px] rounded-2xl bg-emerald-600 text-white text-sm font-bold shadow-sm active:bg-emerald-700"
+              >
+                Potvrdit a provést
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendMessage("ne")}
+                className="min-h-[44px] px-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
+                aria-label="Zrušit plán"
+              >
+                Zrušit
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => void sendMessage("ano")}
-              className="flex-1 min-h-[44px] rounded-2xl bg-emerald-600 text-white text-sm font-bold shadow-sm active:bg-emerald-700"
+              onClick={handleEditIntent}
+              className="w-full flex items-center justify-center gap-1.5 min-h-[36px] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-xs font-bold text-[color:var(--wp-text-secondary)] active:bg-[color:var(--wp-surface-muted)]"
             >
-              Ano — provést
-            </button>
-            <button
-              type="button"
-              onClick={() => void sendMessage("ne")}
-              className="flex-1 min-h-[44px] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
-            >
-              Ne — zrušit
+              <Pencil size={12} />
+              Upravit zadání
             </button>
           </div>
         ) : null}
