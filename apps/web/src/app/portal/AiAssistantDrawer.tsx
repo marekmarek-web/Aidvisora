@@ -923,7 +923,7 @@ export function AiAssistantDrawer() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-white p-1.5 shadow-sm dark:bg-white">
-                <AiAssistantBrandIcon size={24} className="max-h-full max-w-full" />
+                <AiAssistantBrandIcon size={24} variant="colorOnWhite" className="max-h-full max-w-full" />
               </div>
               <h2 className="text-lg font-black text-[color:var(--wp-text)] tracking-tight">AI Asistent</h2>
             </div>
@@ -1212,8 +1212,13 @@ export function AiAssistantDrawer() {
             {messages.map((m, i) => (
               <div
                 key={m.role === "user" || m.role === "assistant" ? (m.stableKey ?? `live-${i}`) : `row-${i}`}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-2.5 items-start ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
+                {m.role === "assistant" ? (
+                  <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mt-0.5 shadow-sm p-1">
+                    <AiAssistantBrandIcon size={20} className="max-w-full max-h-full" />
+                  </div>
+                ) : null}
                 <div
                   className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm ${
                     m.role === "user"
@@ -1321,9 +1326,12 @@ export function AiAssistantDrawer() {
               </div>
             ))}
             {chatLoading && (
-              <div className="flex justify-start">
+              <div className="flex justify-start gap-2.5 items-start">
+                <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mt-0.5 shadow-sm p-1">
+                  <AiAssistantBrandIcon size={20} className="max-w-full max-h-full" />
+                </div>
                 <div className="rounded-2xl px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] shadow-sm flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin text-indigo-500" />
+                  <Loader2 size={16} className="animate-spin text-indigo-500 shrink-0" aria-hidden />
                   <span className="text-sm text-[color:var(--wp-text-secondary)] font-medium">Přemýšlím…</span>
                 </div>
               </div>
