@@ -152,8 +152,24 @@ async function requireAuthUncached(): Promise<AuthContext> {
 export const requireAuth = cache(requireAuthUncached);
 
 /**
- * Klientský portál (/client): nikdy nesměřovat na /register/complete (vytvoření poradenského workspace).
- * Bez membership → přihlášení s vysvětlením místo auto-provision.
+ * Canonical client auth guard for all `/client/**` pages and the mobile SPA.
+ *
+ * Contract:
+ * - Returns AuthContext only when `roleName === "Client"` AND `contactId` is set.
+ * - Non-Client users → redirect to `/portal`.
+ * - Unauthenticated users → redirect to `/prihlaseni`.
+ * - Pending password-change invitations → redirect to password setup.
+ * - Client without linked contact → redirect to `/prihlaseni?error=auth_error`.
+ *
+ * Usage:
+ * - Every server-rendered `/client/**/page.tsx` MUST call `requireClientZoneAuth()`.
+ * - The `/client/layout.tsx` ALSO calls it as a top-level gate.
+ * - `loadClientPortalSessionBundle()` calls it internally (dashboard + mobile SPA).
+ * - Server actions serving client reads use `requireAuthInAction()` + manual
+ *   `auth.roleName !== "Client"` guard to early-return or throw.
+ *
+ * Do NOT use `requireAuth()` in client pages — it would redirect no-membership
+ * users to `/register/complete` (advisor workspace creation).
  */
 async function requireClientZoneAuthUncached(): Promise<AuthContext> {
   if (isDemoMode()) {

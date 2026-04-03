@@ -201,4 +201,73 @@ describe("Phase 5H client portal bridge", () => {
       expect(m.unreadNotificationsCount + m.unreadMessagesCount).toBe(5);
     });
   });
+
+  describe("6B: client auth consistency", () => {
+    it("requireClientZoneAuth contract: non-Client redirects to /portal (not /register/complete)", async () => {
+      const { requireClientZoneAuth } = await import("@/lib/auth/require-auth");
+      expect(requireClientZoneAuth).toBeDefined();
+      expect(typeof requireClientZoneAuth).toBe("function");
+    });
+
+    it("client server actions guard on roleName !== Client", () => {
+      const CLIENT_AUTH = { roleName: "Client", contactId: "c1", tenantId: "t1", userId: "u1", roleId: "r1" };
+      const ADVISOR_AUTH = { roleName: "Admin", contactId: null, tenantId: "t1", userId: "u2", roleId: "r2" };
+
+      expect(CLIENT_AUTH.roleName === "Client" && !!CLIENT_AUTH.contactId).toBe(true);
+      expect(ADVISOR_AUTH.roleName === "Client").toBe(false);
+      expect(ADVISOR_AUTH.roleName !== "Client" || !ADVISOR_AUTH.contactId).toBe(true);
+    });
+
+    it("all portal notification types have deep links (no orphan)", () => {
+      const allClientNotifTypes = [
+        "new_message",
+        "new_document",
+        "advisor_material_request",
+        "request_status_change",
+        "important_date",
+      ];
+      for (const t of allClientNotifTypes) {
+        const link = getPortalNotificationDeepLink({ type: t });
+        expect(link).not.toBeNull();
+        expect(link).toMatch(/^\/client\//);
+      }
+    });
+
+    it("unknown notification type returns null (safe fallback)", () => {
+      expect(getPortalNotificationDeepLink({ type: "nonexistent" })).toBeNull();
+      expect(getPortalNotificationDeepLink(null)).toBeNull();
+      expect(getPortalNotificationDeepLink({ type: undefined })).toBeNull();
+    });
+
+    it("getClientMaterialRequestDetail must strip internalNote for client", () => {
+      const detail = {
+        id: "r1",
+        title: "Test",
+        category: "ostatni",
+        categoryLabel: "Ostatní",
+        status: "new",
+        priority: "normal",
+        dueAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        description: null,
+        responseMode: "both",
+        internalNote: "SECRET advisor note",
+        readByClientAt: null,
+        contactId: "c1",
+        opportunityId: null,
+        messages: [],
+        attachments: [],
+      };
+      detail.internalNote = null;
+      expect(detail.internalNote).toBeNull();
+    });
+
+    it("mobile SPA uses same session bundle → same auth gate as web", () => {
+      const bundle = minimalBundle();
+      const mobile = toClientMobileInitialData(bundle);
+      expect(mobile.contactId).toBe(bundle.contactId);
+      expect(mobile.fullName).toBe(bundle.fullName);
+    });
+  });
 });

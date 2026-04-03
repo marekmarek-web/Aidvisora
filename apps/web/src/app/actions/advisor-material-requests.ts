@@ -448,7 +448,11 @@ export async function getClientMaterialRequestDetail(requestId: string): Promise
       .where(eq(advisorMaterialRequests.id, requestId));
   }
 
-  return buildMaterialRequestDetail(auth.tenantId, requestId);
+  const detail = await buildMaterialRequestDetail(auth.tenantId, requestId);
+  if (detail) {
+    detail.internalNote = null;
+  }
+  return detail;
 }
 
 export async function respondClientMaterialRequest(
