@@ -14,6 +14,23 @@ import type {
 import type { EntityResolutionResult } from "./assistant-entity-resolution";
 import type { AssistantSession } from "./assistant-session";
 
+/**
+ * Canonical intent → write action mapping.
+ *
+ * Request type semantics (3F):
+ *   create_client_request  → createClientRequest
+ *     Portal-style request stored as opportunity with customFields.client_portal_request=true.
+ *     Used when a client submits a request (either via portal or advisor on their behalf).
+ *     Side effects: activity log, audit, advisor in-app + e-mail notification.
+ *
+ *   create_service_case    → createServiceCase
+ *     Advisor-internal service case for an existing contract/product (e.g. anniversary review,
+ *     strategy change). No portal notification side effect; different customFields key: service_case.
+ *
+ *   create_material_request → createMaterialRequest
+ *     Separate DB model (advisor_material_requests). Used to collect documents/data from client.
+ *     Multi-action chaining with createOpportunity is supported.
+ */
 const INTENT_TO_WRITE_ACTION: Partial<Record<CanonicalIntentType, WriteActionType>> = {
   create_opportunity: "createOpportunity",
   update_opportunity: "updateOpportunity",
@@ -206,8 +223,8 @@ const REQUIRED_FIELDS: Record<string, FieldRequirement[]> = {
   setDocumentVisibleToClient: ["documentId"],
   linkDocumentToMaterialRequest: ["materialRequestId", "documentId"],
   createClientPortalNotification: ["contactId", "portalNotificationTitle"],
-  createClientRequest: ["contactId"],
-  createMaterialRequest: ["contactId"],
+  createClientRequest: ["contactId", ["subject", "description", "noteContent", "taskTitle"]],
+  createMaterialRequest: ["contactId", ["taskTitle", "title", "description", "noteContent"]],
   draftEmail: ["contactId"],
   draftClientPortalMessage: ["contactId"],
   publishPortfolioItem: ["contractId"],

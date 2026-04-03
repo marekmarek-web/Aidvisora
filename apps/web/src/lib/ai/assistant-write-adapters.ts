@@ -470,11 +470,19 @@ export function registerAssistantWriteAdapters(): void {
       const opportunityId = strParam(params, "opportunityId");
       if (!opportunityId) return errResult("Chybí opportunityId (klientský požadavek = obchod).");
       const [existing] = await db
-        .select({ customFields: opportunities.customFields })
+        .select({ customFields: opportunities.customFields, caseType: opportunities.caseType })
         .from(opportunities)
         .where(and(eq(opportunities.tenantId, ctx.tenantId), eq(opportunities.id, opportunityId)))
         .limit(1);
-      const prev = (existing?.customFields as Record<string, unknown> | null) ?? {};
+      if (!existing) return errResult("Obchod nebyl nalezen.");
+      const prev = (existing.customFields as Record<string, unknown> | null) ?? {};
+      const isPortalRequest =
+        prev.client_portal_request === true || prev.client_portal_request === "true";
+      if (!isPortalRequest) {
+        return errResult(
+          "Tato operace je povolena pouze pro klientské požadavky (client_portal_request). Cílový záznam není klientský požadavek — je to obchod nebo servisní případ.",
+        );
+      }
       const merged: Record<string, unknown> = { ...prev };
       if (strParam(params, "subject")) merged.client_request_subject = strParam(params, "subject");
       if (strParam(params, "description")) merged.client_description = strParam(params, "description");

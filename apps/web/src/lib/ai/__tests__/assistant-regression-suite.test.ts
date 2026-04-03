@@ -54,6 +54,7 @@ function intentFromFixture(f: ReplayFixture): CanonicalIntent {
         createInternalNote: "create_internal_note",
         triggerDocumentReview: "request_document_review",
         createReminder: "create_reminder",
+        sendPortalMessage: "send_portal_message",
       };
       return (reverseMap[a] ?? f.expectedIntent.intentType ?? "general_chat") as any;
     }),

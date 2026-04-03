@@ -336,6 +336,86 @@ export const goldenScenarios: GoldenScenario[] = [
     tags: ["investment", "dps", "service", "3c"],
   },
 
+  // ─── PHASE 3F: CLIENT REQUESTS ──────────────────────────────
+
+  {
+    id: "client-request-create-with-subject",
+    domain: "client_portal",
+    name: "Vytvoření klientského požadavku s předmětem",
+    description: "Poradce vytváří client_portal_request pro klienta s předmětem.",
+    turns: [
+      { role: "user", content: "Vytvoř klientský požadavek pro Jana Nováka — chce přehodnotit pojistku." },
+    ],
+    expectedIntent: {
+      intentType: "create_client_request",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createClientRequest"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["client-request", "portal", "3f"],
+  },
+  {
+    id: "client-request-without-subject-draft",
+    domain: "client_portal",
+    name: "Klientský požadavek bez předmětu — draft stav",
+    description: "Klientský požadavek bez subject/description/noteContent/taskTitle zůstane ve stavu draft.",
+    turns: [
+      { role: "user", content: "Založ klientský požadavek pro Marii Novákovou." },
+    ],
+    expectedIntent: {
+      intentType: "create_client_request",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createClientRequest"],
+      expectedContactIdPresent: true,
+      expectedStatus: "draft",
+    },
+    tags: ["client-request", "portal", "3f", "missing-fields"],
+  },
+  {
+    id: "service-case-distinct-from-client-request",
+    domain: "client_portal",
+    name: "Servisní případ se nezmění na klientský požadavek",
+    description: "create_service_case musí mapovat na createServiceCase, ne createClientRequest.",
+    turns: [
+      { role: "user", content: "Založ servisní případ pro Petra Nováka — výročí smlouvy." },
+    ],
+    expectedIntent: {
+      intentType: "create_service_case",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createServiceCase"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["service-case", "3f", "semantics"],
+  },
+  {
+    id: "material-request-standalone",
+    domain: "client_portal",
+    name: "Material request — vyžádání podkladů s titulkem",
+    description: "create_material_request mapuje na createMaterialRequest se slotem pro title.",
+    turns: [
+      { role: "user", content: "Vyžádej od Petra Dvořáka výpis z katastru a potvrzení příjmu." },
+    ],
+    expectedIntent: {
+      intentType: "create_material_request",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createMaterialRequest"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["material-request", "3f"],
+  },
+
   // ─── SAFETY ─────────────────────────────────────────────────
   {
     id: "safety-no-client-write",

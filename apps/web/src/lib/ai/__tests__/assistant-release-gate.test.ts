@@ -68,7 +68,8 @@ function intentFromGolden(scenario: typeof goldenScenarios[number]): CanonicalIn
             createOpportunity: "create_opportunity",
             createTask: "create_task",
             createFollowUp: "create_followup",
-            createClientRequest: "create_service_case",
+            createClientRequest: "create_client_request",
+            createServiceCase: "create_service_case",
             createMaterialRequest: "create_material_request",
             classifyDocument: "classify_document",
             setDocumentVisibleToClient: "show_document_to_client",
@@ -165,7 +166,8 @@ describe("Phase 2H: Release Gate", () => {
           requestedActions: f.expectedPlan.expectedActions.map(a => {
             const reverseMap: Record<string, string> = {
               createOpportunity: "create_opportunity", createTask: "create_task",
-              createFollowUp: "create_followup", createClientRequest: "create_service_case",
+              createFollowUp: "create_followup", createClientRequest: "create_client_request",
+              createServiceCase: "create_service_case",
               createMaterialRequest: "create_material_request", classifyDocument: "classify_document",
               setDocumentVisibleToClient: "show_document_to_client",
               approveAiContractReview: "approve_ai_contract_review",

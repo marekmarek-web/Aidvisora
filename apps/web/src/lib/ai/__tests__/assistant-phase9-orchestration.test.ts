@@ -287,6 +287,61 @@ describe("Context safety — URL vs lock", () => {
   });
 });
 
+// ─── 3F: CLIENT REQUEST PLAN GUARD ────────────────────────────────────────
+
+describe("3F: update_client_request má jen opportunityId — plan guard", () => {
+  it("updateClientRequest s jen opportunityId je awaiting_confirmation (required field splněn)", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "update_client_request",
+        requestedActions: ["update_client_request"],
+        extractedFacts: [{ key: "opportunityId", value: OPP_ID, source: "user_text" }],
+      }),
+      resolutionWithClient({
+        opportunity: {
+          entityType: "opportunity",
+          entityId: OPP_ID,
+          displayLabel: "Klientský požadavek #1",
+          confidence: 1,
+          ambiguous: false,
+          alternatives: [],
+        },
+      }),
+    );
+    expect(plan.steps[0]?.action).toBe("updateClientRequest");
+    expect(plan.status).toBe("awaiting_confirmation");
+  });
+});
+
+describe("3F: create_client_request vs create_service_case jsou distinktní akce", () => {
+  it("create_client_request vede na createClientRequest", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_client_request",
+        requestedActions: ["create_client_request"],
+        extractedFacts: [{ key: "subject", value: "Chci přehodnotit smlouvu", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.steps[0]?.action).toBe("createClientRequest");
+  });
+
+  it("create_service_case vede na createServiceCase (ne createClientRequest)", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_service_case",
+        requestedActions: ["create_service_case"],
+        extractedFacts: [{ key: "noteContent", value: "výročí", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.steps[0]?.action).toBe("createServiceCase");
+    expect(plan.steps[0]?.action).not.toBe("createClientRequest");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+
 describe("Canonical — žádný předčasný zápis bez potvrzení (plán)", () => {
   it("create_reminder má plný plán ve stavu awaiting_confirmation — bez potvrzení se neprovede", () => {
     const plan = buildExecutionPlan(

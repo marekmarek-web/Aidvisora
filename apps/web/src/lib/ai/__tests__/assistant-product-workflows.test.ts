@@ -249,6 +249,111 @@ describe("legacyIntentToCanonical — hypo bias fix (3C)", () => {
   });
 });
 
+// ─── 3F: CLIENT REQUEST SEMANTICS ─────────────────────────────────────────
+
+describe("3F: create_client_request semantics", () => {
+  it("maps create_client_request to createClientRequest", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_client_request",
+        requestedActions: ["create_client_request"],
+        extractedFacts: [{ key: "noteContent", value: "přehodnotit pojistku", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.steps[0]?.action).toBe("createClientRequest");
+  });
+
+  it("create_client_request with subject is awaiting_confirmation", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_client_request",
+        requestedActions: ["create_client_request"],
+        extractedFacts: [{ key: "subject", value: "Přehodnotit pojistku", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.status).toBe("awaiting_confirmation");
+    expect(plan.steps[0]?.params.contactId).toBe(CONTACT_ID);
+  });
+
+  it("create_client_request without subject/description/noteContent/taskTitle is draft", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_client_request",
+        requestedActions: ["create_client_request"],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.status).toBe("draft");
+    const step = plan.steps[0];
+    expect(step?.action).toBe("createClientRequest");
+    const missing = computeWriteActionMissingFields(step!.action, step!.params);
+    expect(
+      missing.some((m) => m.includes("subject") || m.includes("description") || m.includes("noteContent") || m.includes("taskTitle")),
+    ).toBe(true);
+  });
+
+  it("create_service_case does NOT map to createClientRequest", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_service_case",
+        requestedActions: ["create_service_case"],
+        extractedFacts: [{ key: "noteContent", value: "výročí smlouvy", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.steps[0]?.action).toBe("createServiceCase");
+    expect(plan.steps[0]?.action).not.toBe("createClientRequest");
+  });
+
+  it("create_material_request maps to createMaterialRequest (not createClientRequest)", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_material_request",
+        requestedActions: ["create_material_request"],
+        extractedFacts: [{ key: "taskTitle", value: "výpis z katastru", source: "user_text" }],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.steps[0]?.action).toBe("createMaterialRequest");
+  });
+
+  it("create_material_request without title is draft", () => {
+    const plan = buildExecutionPlan(
+      intent({
+        intentType: "create_material_request",
+        requestedActions: ["create_material_request"],
+      }),
+      resolutionWithClient(),
+    );
+    expect(plan.status).toBe("draft");
+    const step = plan.steps[0];
+    const missing = computeWriteActionMissingFields(step!.action, step!.params);
+    expect(
+      missing.some((m) => m.includes("taskTitle") || m.includes("title") || m.includes("description")),
+    ).toBe(true);
+  });
+
+  it("computeWriteActionMissingFields: createClientRequest requires contactId + subject slot", () => {
+    const m1 = computeWriteActionMissingFields("createClientRequest", {});
+    expect(m1).toContain("contactId");
+    expect(m1.some((m) => m.includes("subject"))).toBe(true);
+
+    const m2 = computeWriteActionMissingFields("createClientRequest", {
+      contactId: CONTACT_ID,
+      subject: "Přehodnotit pojistku",
+    });
+    expect(m2).toHaveLength(0);
+
+    const m3 = computeWriteActionMissingFields("createClientRequest", {
+      contactId: CONTACT_ID,
+      noteContent: "nějaká poznámka",
+    });
+    expect(m3).toHaveLength(0);
+  });
+});
+
 // ─── PLAYBOOK BRIDGE ──────────────────────────────────────────────────────
 
 describe("playbook bridge — hints in userConstraints (3C)", () => {
