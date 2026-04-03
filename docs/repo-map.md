@@ -38,4 +38,24 @@ Tyto cesty zvyšují šířku stromu pro nástroje; při úpravách aplikace je 
 - Testy webu: `pnpm --filter web test`.
 - DB: `pnpm db:migrate` atd. (viz root `package.json`).
 
+## Phase 6 – klíčové lokality
+
+Přidáno Phase 6 (release hardening, observability, agent docs):
+
+| Oblast | Soubor / složka |
+|--------|-----------------|
+| Client portal auth + flow | `apps/web/src/lib/auth/require-auth.ts`, `src/app/client/layout.tsx` |
+| Klientský portál (session, routing) | `apps/web/src/lib/client-portal/` |
+| Notifikace a push | `apps/web/src/app/actions/portal-notifications.ts`, `src/lib/push/` |
+| Požadavky poradce | `apps/web/src/app/actions/advisor-material-requests.ts`, `src/app/client/pozadavky-poradce/` |
+| AI Review → CRM publish | `apps/web/src/lib/ai/apply-contract-review.ts`, `src/app/actions/contract-review.ts` |
+| Observability (Sentry) | `apps/web/src/lib/observability/` |
+| Regression gate | `apps/web/src/lib/client-portal/__tests__/phase-6f-phase5-6-release-gate.test.ts` |
+| Lint debt policy | `apps/web/eslint.config.mjs`, `docs/lint-debt.md` |
+
+## Flow dokumenty (Phase 6I)
+
+- [client-portal-flow.md](./client-portal-flow.md) — auth, session, notifikace, požadavky, dokumenty
+- [ai-review-publish-flow.md](./ai-review-publish-flow.md) — nahrání PDF → approve → apply → CRM → viditelnost
+
 Viz také [source-of-truth.md](./source-of-truth.md) a [agent-entrypoints.md](./agent-entrypoints.md).

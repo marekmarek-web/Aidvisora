@@ -34,11 +34,25 @@ Stručný seznam míst, kde má smysl **začít číst kód** při typických ú
 
 - `packages/db` — schéma, migrace (`migrations/` nebo ekvivalent dle struktury balíčku).
 
+### Observability (Phase 6H)
+
+- `apps/web/src/lib/observability/portal-sentry.ts` — notification, request reply, attachment, publish guard, auth guard failures.
+- `apps/web/src/lib/observability/contract-review-sentry.ts` — AI review apply + payment gate.
+- `apps/web/src/lib/observability/assistant-sentry.ts` — AI assistant API errors.
+
+### Regression testy
+
+- `apps/web/src/lib/client-portal/__tests__/phase-6f-phase5-6-release-gate.test.ts` — 7 mandatory release scenarios.
+- Run: `pnpm --filter web test:client-portal-phase5-6-regression`
+- Run (observability only): `pnpm --filter web test:phase6h-observability`
+
 ## Dokumentace pro lidi
 
 - [repo-map.md](./repo-map.md)
 - [source-of-truth.md](./source-of-truth.md)
 - [SOURCES-OF-TRUTH.md](./SOURCES-OF-TRUTH.md)
+- [client-portal-flow.md](./client-portal-flow.md) — Phase 5/6 client portal end-to-end
+- [ai-review-publish-flow.md](./ai-review-publish-flow.md) — AI review → CRM publish guard
 
 ## Lokální kořen projektu
 

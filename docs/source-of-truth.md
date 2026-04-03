@@ -18,6 +18,22 @@ Tento soubor je **krátký rozcestník**. Detailní mapování tabulek a polí j
 - **Jedna pravda pro data:** zapisovat přes existující server actions / služby, ne duplikovat paralelní modely (viz kritický fix plán).
 - **Lint:** `pnpm --filter web lint` musí projít v CI; varování (unused, `any`, část React hooks) řeší `lint:report` a postupný debt cleanup.
 
+## Phase 6 additions (release hardening)
+
+| Oblast | Kanonické místo |
+|--------|-----------------|
+| Client auth contract | `apps/web/src/lib/auth/require-auth.ts` — JSDoc `requireClientZoneAuth` |
+| Portal notification routing | `apps/web/src/lib/client-portal/portal-notification-routing.ts` |
+| Publish guard (AI review) | `apps/web/src/lib/ai/apply-contract-review.ts` + `actions/contract-review.ts` |
+| internalNote privacy | `getClientMaterialRequestDetail` — `detail.internalNote = null` |
+| Observability | `apps/web/src/lib/observability/portal-sentry.ts` |
+| Lint gate | 0 errors v `pnpm --filter web lint`; debt viz `docs/lint-debt.md` |
+
+## Flow dokumenty
+
+- [client-portal-flow.md](./client-portal-flow.md) — klientský portál end-to-end
+- [ai-review-publish-flow.md](./ai-review-publish-flow.md) — AI review → CRM publish
+
 ## Související dokumenty
 
 - [repo-map.md](./repo-map.md) — strom repozitáře.
