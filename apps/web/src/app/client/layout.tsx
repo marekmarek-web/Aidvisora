@@ -13,6 +13,37 @@ function isRedirectError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
 }
 
+/** Bez query, bez koncového lomítka (kromě kořene). */
+function normalizeClientPathname(pathname: string): string {
+  const raw = pathname.split("?")[0] || "";
+  if (!raw || raw === "/") return "/client";
+  let path = raw.startsWith("/") ? raw : `/${raw}`;
+  if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+  return path;
+}
+
+/**
+ * Mobilní `ClientMobileApp` pokrývá jen hlavní záložky. Jakákoli jiná cesta pod `/client`
+ * musí použít App Router (`children`) — detaily požadavků poradce, přílohy, kalkulačky, platby, …
+ */
+function isClientMobileSpaPath(pathname: string): boolean {
+  const path = normalizeClientPathname(pathname);
+  if (path === "/client") return true;
+  if (
+    path === "/client/messages" ||
+    path === "/client/documents" ||
+    path === "/client/profile" ||
+    path === "/client/notifications" ||
+    path === "/client/requests"
+  ) {
+    return true;
+  }
+  if (path.startsWith("/client/portfolio") || path.startsWith("/client/contracts")) {
+    return true;
+  }
+  return false;
+}
+
 export default async function ClientZoneLayout({
   children,
 }: {
@@ -33,12 +64,9 @@ export default async function ClientZoneLayout({
     cookieStore,
   });
   const pathname = headerList.get("x-pathname") ?? "";
-  const useFullClientShellOnMobile =
-    pathname.startsWith("/client/calculators") ||
-    pathname.startsWith("/client/payments") ||
-    pathname.startsWith("/client/pozadavky-poradce");
+  const useMobileSpa = pathname === "" || isClientMobileSpaPath(pathname);
 
-  if (mobileUiEnabled && auth.contactId && !useFullClientShellOnMobile) {
+  if (mobileUiEnabled && auth.contactId && useMobileSpa) {
     return <ClientMobileApp />;
   }
 

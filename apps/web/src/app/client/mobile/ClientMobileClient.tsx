@@ -660,7 +660,8 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   const onPortfolioRoute = pathname.startsWith("/client/portfolio") || pathname.startsWith("/client/contracts");
   const onNotificationsRoute = pathname.startsWith("/client/notifications");
   const onProfileRoute = pathname.startsWith("/client/profile");
-  const isMessagesActive = (tab === "messages" || pathname.startsWith("/client/messages")) && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute;
+  const isMessagesActive =
+    pathname.startsWith("/client/messages") && !onPortfolioRoute && !onNotificationsRoute && !onProfileRoute;
   // Key to reset MobileScreen scroll position when the active section changes
   const screenKey = `${tab}-${String(onPortfolioRoute)}-${String(onNotificationsRoute)}-${String(onProfileRoute)}`;
 
@@ -718,7 +719,6 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   }
 
   function navigate(next: TabId) {
-    setTab(next);
     if (next === "home") router.push("/client");
     else if (next === "messages") router.push("/client/messages");
     else if (next === "documents") router.push("/client/documents");
