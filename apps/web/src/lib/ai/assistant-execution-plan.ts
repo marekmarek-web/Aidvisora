@@ -371,8 +371,12 @@ export function buildExecutionPlan(
 
   applyMultiActionOpportunityChaining(steps, intent);
 
-  // Use structural fields only for plan status — advisory domain hints don't block execution.
-  const missingAny = steps.some((s) => computeWriteActionMissingFields(s.action, s.params).length > 0);
+  // Structural fields only — advisory domain hints don't block execution.
+  // Plan is "awaiting_confirmation" if at least one step is ready (no missing fields).
+  // Only "draft" when EVERY step has missing critical fields.
+  const readyCount = steps.filter(
+    (s) => computeWriteActionMissingFields(s.action, s.params).length === 0,
+  ).length;
 
   return {
     planId,
@@ -382,7 +386,11 @@ export function buildExecutionPlan(
     opportunityId: resolution.opportunity?.entityId ?? null,
     tenantId: session?.tenantId ?? null,
     steps,
-    status: missingAny ? "draft" : "awaiting_confirmation",
+    status: steps.length === 0
+      ? "completed"
+      : readyCount > 0
+        ? "awaiting_confirmation"
+        : "draft",
     createdAt: new Date(),
   };
 }
@@ -541,14 +549,33 @@ export function getStepsAwaitingConfirmation(plan: ExecutionPlan): ExecutionStep
   return plan.steps.filter((s) => s.status === "requires_confirmation");
 }
 
-export function confirmAllSteps(plan: ExecutionPlan): ExecutionPlan {
+/**
+ * Preflight: confirm a step only if all required fields are present.
+ * Steps with missing critical params get `requires_input` instead of `confirmed`.
+ */
+function preflightCheckStep(step: ExecutionStep): ExecutionStep {
+  if (step.status !== "requires_confirmation") return step;
+  const missing = computeWriteActionMissingFields(step.action, step.params);
+  if (missing.length === 0) return { ...step, status: "confirmed" as const };
+  const humanMissing = missing.map((f) => humanizeFieldRef(f)).join(", ");
   return {
-    ...plan,
-    status: "executing",
-    steps: plan.steps.map((s) =>
-      s.status === "requires_confirmation" ? { ...s, status: "confirmed" as const } : s,
-    ),
+    ...step,
+    status: "skipped" as const,
+    result: {
+      ok: false,
+      outcome: "requires_input" as const,
+      entityId: null,
+      entityType: null,
+      warnings: [],
+      error: `Chybí povinné údaje: ${humanMissing}. Doplňte je a zkuste znovu.`,
+      retryable: true,
+    },
   };
+}
+
+export function confirmAllSteps(plan: ExecutionPlan): ExecutionPlan {
+  const steps = plan.steps.map(preflightCheckStep);
+  return { ...plan, status: "executing", steps };
 }
 
 const SKIPPED_BY_USER: ExecutionStep["result"] = {
@@ -562,7 +589,7 @@ const SKIPPED_BY_USER: ExecutionStep["result"] = {
 
 /**
  * Označí vybrané kroky jako `confirmed`, ostatní čekající jako `skipped` (6C).
- * `selectedStepIds` obsahuje pouze ID kroků ve stavu `requires_confirmation`.
+ * Vybrané kroky s chybějícími kritickými poli dostanou `requires_input` místo `confirmed`.
  */
 export function applyConfirmationSelection(plan: ExecutionPlan, selectedStepIds: string[]): ExecutionPlan {
   const awaitingIds = new Set(
@@ -572,7 +599,7 @@ export function applyConfirmationSelection(plan: ExecutionPlan, selectedStepIds:
 
   const steps = plan.steps.map((s) => {
     if (s.status !== "requires_confirmation") return s;
-    if (selected.has(s.stepId)) return { ...s, status: "confirmed" as const };
+    if (selected.has(s.stepId)) return preflightCheckStep(s);
     return { ...s, status: "skipped" as const, result: SKIPPED_BY_USER };
   });
 
@@ -584,7 +611,7 @@ export function confirmStep(plan: ExecutionPlan, stepId: string): ExecutionPlan 
     ...plan,
     steps: plan.steps.map((s) =>
       s.stepId === stepId && s.status === "requires_confirmation"
-        ? { ...s, status: "confirmed" as const }
+        ? preflightCheckStep(s)
         : s,
     ),
   };

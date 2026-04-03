@@ -20,7 +20,7 @@ vi.mock("db", () => ({
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn(), logAuditAction: vi.fn() }));
 
 import { emptyCanonicalIntent, type CanonicalIntent, type ExecutionPlan, type WriteActionType } from "../assistant-domain-model";
-import { buildExecutionPlan, confirmAllSteps, getStepsAwaitingConfirmation } from "../assistant-execution-plan";
+import { buildExecutionPlan, confirmAllSteps, applyConfirmationSelection, getStepsAwaitingConfirmation } from "../assistant-execution-plan";
 import { buildVerifiedResult } from "../assistant-execution-engine";
 import { verifyWriteContextSafety } from "../assistant-context-safety";
 import { computeStepFingerprint, checkRecentFingerprint, recordFingerprint } from "../assistant-action-fingerprint";
@@ -302,6 +302,103 @@ describe("Red flag: missing_required_fields", () => {
       expect(plan.steps.length).toBeGreaterThanOrEqual(f.expectedPlan.minSteps);
     });
   }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 8A PREFLIGHT: mixed-readiness plan + confirmation preflight
+// ─────────────────────────────────────────────────────────────
+describe("Preflight validation (8A)", () => {
+  it("multi-step plan with one ready and one incomplete step → awaiting_confirmation", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    lockAssistantClient(session, "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    const intent: CanonicalIntent = {
+      ...emptyCanonicalIntent(),
+      intentType: "multi_action",
+      requestedActions: ["create_opportunity", "schedule_meeting"],
+      extractedFacts: [],
+      temporalExpressions: [],
+      productDomain: "hypo",
+    };
+    const resolution = {
+      client: { entityType: "contact" as const, entityId: "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa", displayLabel: "Novák", confidence: 1, ambiguous: false, alternatives: [] },
+      opportunity: null, document: null, contract: null, warnings: [],
+    };
+    const plan = buildExecutionPlan(intent, resolution, session);
+    const oppStep = plan.steps.find(s => s.action === "createOpportunity");
+    const calStep = plan.steps.find(s => s.action === "scheduleCalendarEvent");
+    expect(oppStep).toBeDefined();
+    expect(calStep).toBeDefined();
+    expect(plan.status).toBe("awaiting_confirmation");
+  });
+
+  it("confirmAllSteps: ready step confirmed, incomplete step gets requires_input", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    lockAssistantClient(session, "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    const intent: CanonicalIntent = {
+      ...emptyCanonicalIntent(),
+      intentType: "multi_action",
+      requestedActions: ["create_opportunity", "schedule_meeting"],
+      extractedFacts: [],
+      temporalExpressions: [],
+      productDomain: "hypo",
+    };
+    const resolution = {
+      client: { entityType: "contact" as const, entityId: "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa", displayLabel: "Novák", confidence: 1, ambiguous: false, alternatives: [] },
+      opportunity: null, document: null, contract: null, warnings: [],
+    };
+    const plan = buildExecutionPlan(intent, resolution, session);
+    const confirmed = confirmAllSteps(plan);
+    const oppStep = confirmed.steps.find(s => s.action === "createOpportunity");
+    const calStep = confirmed.steps.find(s => s.action === "scheduleCalendarEvent");
+    expect(oppStep?.status).toBe("confirmed");
+    expect(calStep?.status).toBe("skipped");
+    expect(calStep?.result?.outcome).toBe("requires_input");
+    expect(calStep?.result?.error).toMatch(/datum/i);
+    expect(calStep?.result?.retryable).toBe(true);
+  });
+
+  it("applyConfirmationSelection: selecting incomplete step yields requires_input", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    lockAssistantClient(session, "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    const intent: CanonicalIntent = {
+      ...emptyCanonicalIntent(),
+      intentType: "multi_action",
+      requestedActions: ["create_opportunity", "schedule_meeting"],
+      extractedFacts: [],
+      temporalExpressions: [],
+      productDomain: "hypo",
+    };
+    const resolution = {
+      client: { entityType: "contact" as const, entityId: "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa", displayLabel: "Novák", confidence: 1, ambiguous: false, alternatives: [] },
+      opportunity: null, document: null, contract: null, warnings: [],
+    };
+    const plan = buildExecutionPlan(intent, resolution, session);
+    const allIds = plan.steps.map(s => s.stepId);
+    const confirmed = applyConfirmationSelection(plan, allIds);
+    const oppStep = confirmed.steps.find(s => s.action === "createOpportunity");
+    const calStep = confirmed.steps.find(s => s.action === "scheduleCalendarEvent");
+    expect(oppStep?.status).toBe("confirmed");
+    expect(calStep?.status).toBe("skipped");
+    expect(calStep?.result?.outcome).toBe("requires_input");
+  });
+
+  it("single-step plan with all fields missing stays draft", () => {
+    const session = getOrCreateSession(undefined, TENANT, USER);
+    lockAssistantClient(session, "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    const intent: CanonicalIntent = {
+      ...emptyCanonicalIntent(),
+      intentType: "schedule_meeting",
+      requestedActions: ["schedule_meeting"],
+      extractedFacts: [],
+      temporalExpressions: [],
+    };
+    const resolution = {
+      client: { entityType: "contact" as const, entityId: "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa", displayLabel: "Novák", confidence: 1, ambiguous: false, alternatives: [] },
+      opportunity: null, document: null, contract: null, warnings: [],
+    };
+    const plan = buildExecutionPlan(intent, resolution, session);
+    expect(plan.status).toBe("draft");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────
