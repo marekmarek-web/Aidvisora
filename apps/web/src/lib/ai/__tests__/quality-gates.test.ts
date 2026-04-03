@@ -186,6 +186,46 @@ describe("evaluateApplyReadiness", () => {
     );
     expect(result.readiness).toBe("ready_for_apply");
   });
+
+  it("uses canonical extractedFields for payment gate when debug blob is absent", () => {
+    const result = evaluateApplyReadiness(
+      baseRow({
+        detectedDocumentType: "payment_instructions",
+        extractionTrace: {
+          classificationConfidence: 0.9,
+          extractionRoute: "payment_instructions",
+          normalizedPipelineClassification: "payment_instructions",
+        },
+        extractedPayload: {
+          extractedFields: {
+            totalMonthlyPremium: { value: "2 500,00" },
+            iban: { value: "CZ6508000000192000145399" },
+            paymentFrequency: { value: "měsíčně" },
+            variableSymbol: { value: "999888" },
+            insurer: { value: "Kooperativa" },
+            productName: { value: "Životní" },
+          },
+        },
+      }),
+    );
+    expect(result.readiness).toBe("ready_for_apply");
+    expect(result.blockedReasons).toEqual([]);
+  });
+
+  it("adds payment warnings for contract route when envelope has partial payment fields", () => {
+    const result = evaluateApplyReadiness(
+      baseRow({
+        extractedPayload: {
+          extractedFields: {
+            totalMonthlyPremium: { value: "1000" },
+            iban: { value: "CZ6508000000192000145399" },
+          },
+        },
+      }),
+    );
+    expect(result.warnings.some((w) => w.startsWith("PAYMENT_"))).toBe(true);
+    expect(result.readiness).toBe("review_required");
+  });
 });
 
 describe("evaluatePaymentApplyReadiness", () => {
