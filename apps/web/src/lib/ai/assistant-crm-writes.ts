@@ -1,5 +1,8 @@
 /**
  * CRM write operations for the advisor AI assistant (tenant-scoped, permission-checked).
+ *
+ * P4: Legacy hypotéční bundle — obchodní titulky a `aiSubtitle` jdou přes `assistant-canonical-names`
+ * (`canonicalDealTitle`, `canonicalDealDetailLine`), ne přes volné zkratky typu „hypo:“.
  */
 
 import { createHash } from "crypto";

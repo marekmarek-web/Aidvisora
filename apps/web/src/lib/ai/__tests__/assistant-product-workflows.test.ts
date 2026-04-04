@@ -166,6 +166,15 @@ describe("domain-aware advisory missing fields (3C)", () => {
 
 // ─── PRODUCT DOMAIN RESOLUTION ────────────────────────────────────────────
 
+describe("P3: findProductDomainInMessage — advisor slang (dipko, dpsko, životko)", () => {
+  it("maps dipko / dpsko / životko strings to product domains", async () => {
+    const { findProductDomainInMessage } = await import("../assistant-domain-model");
+    expect(findProductDomainInMessage("Klient chce dipko u NN")).toBe("dip");
+    expect(findProductDomainInMessage("Penzijko a dpsko doladit")).toBe("dps");
+    expect(findProductDomainInMessage("životko sjednat")).toBe("zivotni_pojisteni");
+  });
+});
+
 describe("resolveProductDomain — 3C aliases", () => {
   it("resolves výročí to servis", () => {
     expect(resolveProductDomain("výročí")).toBe("servis");

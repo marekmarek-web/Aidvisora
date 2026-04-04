@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import { getOrCreateSession, lockAssistantClient, clearAssistantClientLock } from "@/lib/ai/assistant-session";
+import {
+  getOrCreateSession,
+  lockAssistantClient,
+  clearAssistantClientLock,
+  appendToConversationDigest,
+} from "@/lib/ai/assistant-session";
 import {
   runWithAssistantRunStore,
   getAssistantRunStore,
@@ -262,6 +267,9 @@ export async function POST(request: Request) {
                 ? await routeAssistantMessageCanonical(message, session, activeContext, {
                     roleName: membership.roleName,
                     bootstrapPostUploadReviewPlan: bootstrapPostUpload,
+                    intentPromptAugment: session.conversationDigest?.trim()
+                      ? `[Předchozí zkrácené dotazy ve vlákně]\n${session.conversationDigest}`
+                      : undefined,
                   })
                 : await routeAssistantMessage(message, session, activeContext, { roleName: membership.roleName });
           }
@@ -342,6 +350,9 @@ export async function POST(request: Request) {
               assistantRunId,
             },
           });
+          if (orchestration === "canonical") {
+            appendToConversationDigest(session, message);
+          }
           await logAudit({
             tenantId,
             userId,

@@ -96,7 +96,14 @@ coverageItemKey: technický klíč položky pokrytí, pokud ho uživatel zná; j
 coverageStatus: cílový stav pokrytí (done / hotovo, none, not_relevant / neřeší, in_progress, opportunity, waiting_signature).
 meetingDateText / dueDateText: textový fragment termínu.
 taskTitle: název úkolu; noteContent: obsah poznámky.
-confidence: 0.0-1.0 jak jistý jsi záměrem.`;
+confidence: 0.0-1.0 jak jistý jsi záměrem.
+
+Složené požadavky: pokud uživatel chce více věcí najednou (např. schůzka + smlouva), vyplň multi_action nebo několik položek v requestedActions v rozumném pořadí (závislosti řeší plánovač).
+Negace / zrušení: „zruš“, „nechci“, „nevytvářej“, „stop“ — bez jasného cíle zápisu použij general_chat nebo příslušný negovaný záměr bez write akcí, které by šly proti záměru.
+Kontextové odkazy („ten klient“, „ten obchod“, „to co jsme řešili“): vyčti z horního bloku historie v uživatelské zprávě (pokud je přítomen) a doplň targetClient / opportunityRef podle obsahu.`;
+
+const CANONICAL_INTENT_PROMPT_VARIANT_B = `
+Režim promptu B (experimentální): upřednostni rozdělení složených vět do více requestedActions; u negace vrať bezpečně general_chat pokud není explicitní cíl zápisu; kontextové zájmena vyřeš z bloku historie nad oddělovačem ---.`;
 
 function fallbackIntentFromHeuristics(
   message: string,
@@ -157,12 +164,27 @@ export async function extractAssistantIntent(message: string): Promise<Assistant
   }
 }
 
+export type ExtractCanonicalIntentOptions = {
+  /** Prepended to the user message for the model only (DB / confirmation heuristics use raw message). */
+  historyPrefix?: string;
+};
+
 /** V2 canonical intent extraction with structured output. */
-export async function extractCanonicalIntent(message: string): Promise<CanonicalIntent> {
-  const flags = heuristicIntentFlags(message);
+export async function extractCanonicalIntent(
+  message: string,
+  options?: ExtractCanonicalIntentOptions,
+): Promise<CanonicalIntent> {
+  const rawUserMessage = message;
+  const composed =
+    options?.historyPrefix && options.historyPrefix.trim().length > 0
+      ? `${options.historyPrefix.trim()}\n\n---\n${message}`
+      : message;
+  const flags = heuristicIntentFlags(rawUserMessage);
+  const variantB = process.env.ASSISTANT_CANONICAL_INTENT_PROMPT_VARIANT === "b";
+  const systemBlock = `${CANONICAL_INTENT_SYSTEM}${variantB ? CANONICAL_INTENT_PROMPT_VARIANT_B : ""}`;
   try {
     const { parsed } = await createResponseStructured<Record<string, unknown>>(
-      `${CANONICAL_INTENT_SYSTEM}\n\nZpráva uživatele:\n${message}`,
+      `${systemBlock}\n\nZpráva uživatele:\n${composed}`,
       CANONICAL_INTENT_JSON_SCHEMA,
       { schemaName: "canonical_intent", store: false },
     );
@@ -172,9 +194,9 @@ export async function extractCanonicalIntent(message: string): Promise<Canonical
       switchClient: raw.switchClient || flags.switchClient,
       noEmail: raw.noEmail || flags.noEmail,
     });
-    return enrichCanonicalIntentWithPlaybooks(canonical, message);
+    return enrichCanonicalIntentWithPlaybooks(canonical, rawUserMessage);
   } catch {
-    const legacy = fallbackIntentFromHeuristics(message, flags);
-    return enrichCanonicalIntentWithPlaybooks(legacyIntentToCanonical(legacy), message);
+    const legacy = fallbackIntentFromHeuristics(rawUserMessage, flags);
+    return enrichCanonicalIntentWithPlaybooks(legacyIntentToCanonical(legacy), rawUserMessage);
   }
 }

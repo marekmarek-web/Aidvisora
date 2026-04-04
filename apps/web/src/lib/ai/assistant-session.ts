@@ -41,9 +41,28 @@ export type AssistantSession = {
   pendingClientDisambiguation?: boolean;
   /** Server-side guard against concurrent confirm/execute requests. */
   _confirmationInProgress?: boolean;
+  /**
+   * P5: rolling, truncated user snippets for intent extraction continuity (same session / thread).
+   * Updated after each successful chat turn; never sent back to the client as-is.
+   */
+  conversationDigest?: string;
 };
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
+const MAX_CONVERSATION_DIGEST_LEN = 560;
+
+/** Append a short user snippet for the next canonical intent call (P5). */
+export function appendToConversationDigest(session: AssistantSession, userMessage: string): void {
+  const t = userMessage.trim().replace(/\s+/g, " ").slice(0, 220);
+  if (!t) return;
+  const prev = (session.conversationDigest ?? "").trim();
+  const sep = prev ? " · " : "";
+  let next = (prev + sep + t).trim();
+  if (next.length > MAX_CONVERSATION_DIGEST_LEN) {
+    next = next.slice(-MAX_CONVERSATION_DIGEST_LEN);
+  }
+  session.conversationDigest = next;
+}
 
 const sessions = new Map<string, AssistantSession>();
 

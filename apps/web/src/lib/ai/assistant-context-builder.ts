@@ -33,6 +33,7 @@ export type StructuredFact = {
   category: string;
 };
 
+/** P6: limit prompt size; client/review builders stay lazy/best-effort and avoid raw blob text. */
 const MAX_CONTEXT_CHARS = 5500;
 
 function trimLine(s: string, maxLen: number): string {

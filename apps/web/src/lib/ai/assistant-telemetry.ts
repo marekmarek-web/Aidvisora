@@ -4,6 +4,7 @@
 
 import { logAuditAction } from "@/lib/audit";
 import { getAssistantRunStore } from "./assistant-run-context";
+import { bumpAssistantMetric } from "./assistant-metrics";
 
 /** Stable action names for filtering / dashboards. */
 export const AssistantTelemetryAction = {
@@ -41,6 +42,7 @@ export function logAssistantTelemetry(
   meta?: Record<string, unknown>,
 ): void {
   const ctx = getAssistantRunStore();
+  bumpAssistantMetric(action);
   if (!ctx) return;
 
   logAuditAction({

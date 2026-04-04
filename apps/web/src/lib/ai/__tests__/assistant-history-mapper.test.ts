@@ -66,6 +66,32 @@ describe("assistant-history-mapper", () => {
     }
   });
 
+  it("P3: sanitizes assistant row where content is only legacy [RESULT:] line", () => {
+    const conversation = {
+      id: "conv-1",
+      channel: "web_drawer",
+      lockedContactId: null,
+      updatedAt: new Date(),
+    };
+    const rows = [
+      {
+        id: "m-old",
+        role: "assistant" as const,
+        content: '[RESULT:getClientSummary] {"ok":true,"contactId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}',
+        createdAt: new Date(),
+        meta: null,
+        executionPlanSnapshot: null,
+      },
+    ];
+    const out = mapAssistantHistoryRowsToClientPayload(rows, conversation);
+    const a = out[0];
+    expect(a?.kind).toBe("assistant");
+    if (a?.kind === "assistant") {
+      expect(a.content).not.toContain("[RESULT:");
+      expect(a.content).not.toContain("aaaaaaaa-aaaa");
+    }
+  });
+
   it("sanitizes persisted assistant content and warnings (no internal tokens in UI)", () => {
     const conversation = {
       id: "conv-1",

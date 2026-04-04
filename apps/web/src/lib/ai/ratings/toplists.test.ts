@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import topListsSeed from "../../../../../../packages/db/src/data/top-lists-seed-v2.json";
 import {
   getTopPartnersForSegment,
   resolveSegmentFromText,
@@ -34,6 +35,14 @@ describe("toplists seed lookup", () => {
     expect(out).toBeTruthy();
     expect(out).toContain("Životní pojištění");
     expect(out).toMatch(/Allianz|Kooperativa|UNIQA/i);
+  });
+
+  it("P3: rating reply includes disclaimer text from seed note", () => {
+    const note = (topListsSeed as { note?: string }).note ?? "";
+    expect(note).toContain("Top seznamy");
+    const out = tryRatingLookupReply("Jaké životní pojištění má nejvyšší rating?");
+    expect(out).toBeTruthy();
+    expect(out!.replace(/\s+/g, " ")).toContain("Top seznamy (pojišťovny");
   });
 
   it("tryRatingLookupReply is null without rating intent or segment", () => {

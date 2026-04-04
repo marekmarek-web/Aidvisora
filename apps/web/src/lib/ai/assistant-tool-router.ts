@@ -16,6 +16,7 @@ import {
 import { buildSuggestedActionsFromUrgent, computePriorityItems } from "./dashboard-priority";
 import type { ActionPayload } from "./action-catalog";
 import { extractAssistantIntent, extractCanonicalIntent } from "./assistant-intent-extract";
+import { formatProactiveHintsBlock, loadProactiveHintsForContact } from "./assistant-proactive-hints";
 import {
   intentWantsCrmWrites,
   intentWantsDashboard,
@@ -693,7 +694,12 @@ export async function routeAssistantMessageCanonical(
   message: string,
   session: AssistantSession,
   activeContext?: ActiveContext,
-  options?: { roleName?: RoleName; bootstrapPostUploadReviewPlan?: boolean },
+  options?: {
+    roleName?: RoleName;
+    bootstrapPostUploadReviewPlan?: boolean;
+    /** P5: prepended to the model prompt only (short rolling digest from prior turns). */
+    intentPromptAugment?: string;
+  },
 ): Promise<AssistantResponse> {
   incrementMessageCount(session);
   const roleName = options?.roleName ?? "Advisor";
@@ -753,7 +759,9 @@ export async function routeAssistantMessageCanonical(
     };
   }
 
-  const canonicalIntent = await extractCanonicalIntent(message);
+  const canonicalIntent = await extractCanonicalIntent(message, {
+    historyPrefix: options?.intentPromptAugment,
+  });
 
   const hasPendingDisambiguation = Boolean(session.pendingClientDisambiguation);
   const intentHasExplicitClient = Boolean(canonicalIntent.targetClient?.ref);
@@ -977,6 +985,11 @@ export async function routeAssistantMessageCanonical(
     const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";
     const playbookLines = getPlaybookGuidanceLines(patchedIntent, message);
     const playbookBlock = playbookLines.length > 0 ? `\n\n${playbookLines.join("\n")}` : "";
+    const proactiveHints =
+      resolution.client?.entityId && !resolution.client.ambiguous
+        ? await loadProactiveHintsForContact(tenantId, resolution.client.entityId)
+        : [];
+    const proactiveBlock = formatProactiveHintsBlock(proactiveHints);
     const stepPreviews: StepPreviewItem[] = plan.steps.map((s) => {
       const pf = computeWriteStepPreflight(s.action, s.params);
       const baseVw = buildValidationWarnings(s.action, s.params);
@@ -997,7 +1010,7 @@ export async function routeAssistantMessageCanonical(
       };
     });
     return {
-      message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}\n\nVyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).`,
+      message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}${proactiveBlock}\n\nVyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).`,
       referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
       suggestedActions: [],
       warnings: resolution.warnings,

@@ -89,6 +89,50 @@ describe("H7 entity resolution / disambiguation", () => {
     expect(res.client?.ambiguous).toBe(false);
   });
 
+  it("P3: lock=A + explicit email ref=B resolves B via search", async () => {
+    const session = getOrCreateSession("h7-email", "tenant-h7", "user-h7");
+    lockAssistantClient(session, LOCK_ID);
+    session.pendingClientDisambiguation = false;
+
+    const emailId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    h7EntityHoisted.searchMock.mockResolvedValue([
+      { id: emailId, displayName: "Boris Borisov" },
+    ]);
+
+    const intent = {
+      ...emptyCanonicalIntent(),
+      targetClient: { ref: "boris@example.com", resolved: false },
+    };
+
+    const res = await resolveEntities("tenant-h7", intent, session);
+
+    expect(h7EntityHoisted.searchMock).toHaveBeenCalled();
+    expect(res.client?.entityId).toBe(emailId);
+    expect(res.client?.ambiguous).toBe(false);
+  });
+
+  it("P3: lock=A + ref Novák with multiple matches stays ambiguous", async () => {
+    const session = getOrCreateSession("h7-novak", "tenant-h7", "user-h7");
+    lockAssistantClient(session, LOCK_ID);
+    session.pendingClientDisambiguation = false;
+
+    h7EntityHoisted.searchMock.mockResolvedValue([
+      { id: "n1", displayName: "Jan Novák" },
+      { id: "n2", displayName: "Petr Novák" },
+    ]);
+
+    const intent = {
+      ...emptyCanonicalIntent(),
+      targetClient: { ref: "Novák", resolved: false },
+    };
+
+    const res = await resolveEntities("tenant-h7", intent, session);
+
+    expect(h7EntityHoisted.searchMock).toHaveBeenCalled();
+    expect(res.client?.ambiguous).toBe(true);
+    expect(res.client?.alternatives.length).toBeGreaterThan(0);
+  });
+
   it("when no targetClient ref, uses locked client from DB without search", async () => {
     const session = getOrCreateSession("h7-fallback-lock", "tenant-h7", "user-h7");
     lockAssistantClient(session, LOCK_ID);
