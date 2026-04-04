@@ -5,10 +5,10 @@ import type { ExecutionPlan } from "./assistant-domain-model";
 import { normalizeExecutionPlanFromDb } from "./assistant-plan-snapshot";
 import type { StepPreviewItem } from "./assistant-execution-ui";
 import {
-  productDomainChipLabel,
   buildStepDescription,
   buildValidationWarnings,
   computeWriteStepPreflight,
+  productDomainChipLabel,
 } from "./assistant-execution-plan";
 import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "./assistant-message-sanitizer";
 
