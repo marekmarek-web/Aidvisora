@@ -228,7 +228,7 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
                         </span>
                       ) : (
                         <span className="text-xs px-2 py-0.5 rounded-md bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]">
-                          Lead
+                          Úvodní kontakt
                         </span>
                       )}
                       {ref.valueCzk != null && ref.valueCzk > 0 && (

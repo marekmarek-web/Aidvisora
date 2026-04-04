@@ -1,7 +1,8 @@
 "use server";
 
 import { cache } from "react";
-import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { requireAuthInAction, type AuthContext } from "@/lib/auth/require-auth";
+import { getHouseholdIdForContactWithAuth, getHouseholdsListWithAuth } from "@/app/actions/households";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contacts } from "db";
@@ -175,9 +176,8 @@ const contactDetailExtendedSelect = {
   gdprConsentAt: contacts.gdprConsentAt,
 } as const;
 
-async function loadContact(id: string): Promise<ContactRow | null> {
+async function loadContactWithAuth(auth: AuthContext, id: string): Promise<ContactRow | null> {
   try {
-    const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
     let row: Record<string, unknown> | undefined;
@@ -251,8 +251,75 @@ async function loadContact(id: string): Promise<ContactRow | null> {
   }
 }
 
+async function loadContact(id: string): Promise<ContactRow | null> {
+  const auth = await requireAuthInAction();
+  return loadContactWithAuth(auth, id);
+}
+
 /** Dedup v rámci jednoho requestu; vrací výhradně JSON-kompatibilní ContactRow pro RSC. */
 export const getContact = cache(loadContact);
+
+export type ContactNamePickerRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+};
+
+/** Úzký výběr pro dropdown „Doporučen od“ / picker kontaktů (edit stránka, zápisky). */
+export async function getContactNamePickerRows(): Promise<ContactNamePickerRow[]> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+  return db
+    .select({
+      id: contacts.id,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      email: contacts.email,
+      phone: contacts.phone,
+    })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+    .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+}
+
+export type ContactEditPageBundle = {
+  contact: ContactRow | null;
+  householdId: string | null;
+  referralPicker: { id: string; label: string }[];
+  householdOptions: { id: string; name: string }[];
+};
+
+/** Jeden round-trip pro portal edit kontaktu (kontakt + domácnost + pickery). */
+export async function getContactEditPageData(contactId: string): Promise<ContactEditPageBundle> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+  const [contact, householdId, pickerRows, householdRows] = await Promise.all([
+    loadContactWithAuth(auth, contactId),
+    getHouseholdIdForContactWithAuth(auth, contactId),
+    db
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+      .orderBy(asc(contacts.lastName), asc(contacts.firstName)),
+    getHouseholdsListWithAuth(auth),
+  ]);
+  return {
+    contact,
+    householdId,
+    referralPicker: pickerRows
+      .filter((r) => r.id !== contactId)
+      .map((r) => ({ id: r.id, label: `${r.firstName} ${r.lastName}` })),
+    householdOptions: householdRows.map((h) => ({ id: h.id, name: h.name })),
+  };
+}
 
 /** Stejný tvar jako u detailu kontaktu — platné UUID v1–v5 z DB. */
 const CONTACT_UUID_RE =
@@ -541,6 +608,48 @@ export async function restoreContact(id: string): Promise<void> {
   } catch (e) {
     console.error("[restoreContact]", e);
     throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo obnovit.");
+  }
+}
+
+/** Trvalé smazání řádků kontaktu (CASCADE / SET NULL v DB). Vyžaduje `contacts:delete`. */
+export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:delete")) throw new Error("Forbidden");
+  const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
+  if (unique.length === 0) return;
+
+  const rows = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique)));
+  if (rows.length !== unique.length) {
+    throw new Error("Některé kontakty neexistují nebo k nim nemáte přístup.");
+  }
+
+  const admin = createAdminClient();
+  const prefix = `${auth.tenantId}/avatars/`;
+  for (const row of rows) {
+    try {
+      const folder = `${prefix}${row.id}`;
+      const { data: files } = await admin.storage.from("documents").list(folder);
+      if (files?.length) {
+        const paths = files.map((f) => `${folder}/${f.name}`);
+        await admin.storage.from("documents").remove(paths);
+      }
+    } catch (e) {
+      console.warn("[permanentlyDeleteContacts] avatar storage cleanup", row.id, e);
+    }
+  }
+
+  try {
+    await db.delete(contacts).where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique)));
+  } catch (e) {
+    console.error("[permanentlyDeleteContacts]", e);
+    const code = typeof e === "object" && e !== null && "code" in e ? String((e as { code?: string }).code) : "";
+    if (code === "23503") {
+      throw new Error("Kontakt nelze smazat kvůli vazbám v databázi. Zkuste nejdřív odstranit související záznamy.");
+    }
+    throw new Error(e instanceof Error ? e.message : "Kontakty se nepodařilo smazat.");
   }
 }
 

@@ -4,12 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getContact, getContactsList, updateContact, uploadContactAvatar, archiveContact, getContactDependencyCounts } from "@/app/actions/contacts";
-import { getHouseholdForContact, getHouseholdsList, setContactHousehold } from "@/app/actions/households";
+import { getContactEditPageData, updateContact, uploadContactAvatar, archiveContact, getContactDependencyCounts } from "@/app/actions/contacts";
+import { setContactHousehold } from "@/app/actions/households";
 import { ArrowLeft, Flag, User, Home, RefreshCw } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
-import { AddressAutocomplete, type AddressComponents } from "@/app/components/aidvisora/AddressAutocomplete";
+import dynamic from "next/dynamic";
+import type { AddressComponents } from "@/app/components/aidvisora/AddressAutocomplete";
+
+const AddressAutocomplete = dynamic(
+  () => import("@/app/components/aidvisora/AddressAutocomplete").then((m) => m.AddressAutocomplete),
+  { ssr: false, loading: () => <div className="h-11 rounded-xl bg-[color:var(--wp-surface-muted)] animate-pulse" aria-hidden /> }
+);
 
 export default function EditContactPage() {
   const router = useRouter();
@@ -17,6 +23,7 @@ export default function EditContactPage() {
   const params = useParams();
   const id = params.id as string;
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
   const [submitErr, setSubmitErr] = useState("");
   const [form, setForm] = useState({
@@ -49,13 +56,19 @@ export default function EditContactPage() {
   const [deleting, setDeleting] = useState(false);
   const [depCounts, setDepCounts] = useState<{ contracts: number; opportunities: number; documents: number; tasks: number; analyses: number } | null>(null);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [addressSectionOpen, setAddressSectionOpen] = useState(false);
 
   useEffect(() => {
-    getContact(id)
-      .then((c) => {
+    setPageLoading(true);
+    setLoadErr("");
+    getContactEditPageData(id)
+      .then((bundle) => {
+        const c = bundle.contact;
         if (!c) setLoadErr("Kontakt nenalezen.");
         else {
           setAvatarUrl(c.avatarUrl ?? null);
+          setContactOptions(bundle.referralPicker);
+          setHouseholdOptions(bundle.householdOptions);
           setForm((prev) => ({
             ...prev,
             firstName: c.firstName,
@@ -76,35 +89,34 @@ export default function EditContactPage() {
             serviceCycleMonths: c.serviceCycleMonths ?? "",
             lastServiceDate: c.lastServiceDate ?? "",
             nextServiceDue: c.nextServiceDue ?? "",
+            householdId: bundle.householdId ?? "",
           }));
         }
       })
-      .catch(() => setLoadErr("Chyba načtení."));
+      .catch(() => setLoadErr("Chyba načtení."))
+      .finally(() => setPageLoading(false));
   }, [id]);
 
   useEffect(() => {
-    getHouseholdForContact(id).then((h) => {
-      if (h) setForm((prev) => ({ ...prev, householdId: h.id }));
-    }).catch(() => {});
-  }, [id]);
-
-  useEffect(() => {
-    getContactsList()
-      .then((list) =>
-        setContactOptions(
-          list
-            .filter((c) => c.id !== id)
-            .map((c) => ({ id: c.id, label: `${c.firstName} ${c.lastName}` }))
-        )
-      )
-      .catch(() => {});
-  }, [id]);
-
-  useEffect(() => {
-    getHouseholdsList()
-      .then((list) => setHouseholdOptions(list.map((h) => ({ id: h.id, name: h.name }))))
-      .catch(() => {});
-  }, []);
+    if (pageLoading || loadErr) return;
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) setAddressSectionOpen(true);
+    };
+    if (typeof window === "undefined") return;
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(run, { timeout: 2000 });
+    } else {
+      timeoutId = window.setTimeout(run, 800);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleId);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+    };
+  }, [pageLoading, loadErr]);
 
   async function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -185,6 +197,19 @@ export default function EditContactPage() {
       setDeleting(false);
       setShowArchiveDialog(false);
     }
+  }
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-0 flex flex-col p-6 sm:p-8">
+        <div className="max-w-2xl mx-auto w-full space-y-6 animate-pulse">
+          <div className="h-10 bg-[color:var(--wp-surface-muted)] rounded-xl w-2/3" />
+          <div className="h-48 bg-[color:var(--wp-surface-muted)] rounded-[24px]" />
+          <div className="h-56 bg-[color:var(--wp-surface-muted)] rounded-[24px]" />
+          <div className="h-64 bg-[color:var(--wp-surface-muted)] rounded-[24px]" />
+        </div>
+      </div>
+    );
   }
 
   if (loadErr) {
@@ -325,25 +350,29 @@ export default function EditContactPage() {
                 <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Telefon</label>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className={inputCls} />
               </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Vyhledat adresu</label>
-                <AddressAutocomplete
-                  value={addressSearch}
-                  onChange={setAddressSearch}
-                  onSelectAddress={(c: AddressComponents) => {
-                    const streetPart = [c.street, c.houseNumber].filter(Boolean).join(" ");
-                    setForm((prev) => ({
-                      ...prev,
-                      street: streetPart || prev.street,
-                      city: c.city ?? prev.city,
-                      zip: c.postalCode ?? prev.zip,
-                    }));
-                    setAddressSearch("");
-                  }}
-                  placeholder="Začněte psát adresu…"
-                  className={inputCls}
-                />
-              </div>
+              {addressSectionOpen ? (
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Vyhledat adresu</label>
+                  <AddressAutocomplete
+                    value={addressSearch}
+                    onChange={setAddressSearch}
+                    onSelectAddress={(c: AddressComponents) => {
+                      const streetPart = [c.street, c.houseNumber].filter(Boolean).join(" ");
+                      setForm((prev) => ({
+                        ...prev,
+                        street: streetPart || prev.street,
+                        city: c.city ?? prev.city,
+                        zip: c.postalCode ?? prev.zip,
+                      }));
+                      setAddressSearch("");
+                    }}
+                    placeholder="Začněte psát adresu…"
+                    className={inputCls}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-[color:var(--wp-text-tertiary)]">Načítám nástroj pro adresy…</p>
+              )}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Ulice</label>
                 <input value={form.street} onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))} className={inputCls} />
@@ -376,8 +405,8 @@ export default function EditContactPage() {
                   onChange={(id) => setForm((f) => ({ ...f, lifecycleStage: id }))}
                   options={[
                     { id: "", label: "—" },
-                    { id: "lead", label: "Lead" },
-                    { id: "prospect", label: "Prospect" },
+                    { id: "lead", label: "Úvodní kontakt" },
+                    { id: "prospect", label: "Zájemce" },
                     { id: "client", label: "Klient" },
                     { id: "former_client", label: "Bývalý klient" },
                   ]}

@@ -121,8 +121,8 @@ export default function NewContactPage() {
             onChange={setLifecycleStage}
             options={[
               { id: "", label: "—" },
-              { id: "lead", label: "Lead" },
-              { id: "prospect", label: "Prospect" },
+              { id: "lead", label: "Úvodní kontakt" },
+              { id: "prospect", label: "Zájemce" },
               { id: "client", label: "Klient" },
               { id: "former_client", label: "Bývalý klient" },
             ]}

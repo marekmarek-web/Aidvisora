@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
-import { getContactsList, type ContactRow } from "@/app/actions/contacts";
+import { getContactNamePickerRows, type ContactNamePickerRow } from "@/app/actions/contacts";
 import { NotesVisionBoard } from "@/app/portal/notes/NotesVisionBoard";
 import { ErrorState, LoadingSkeleton } from "@/app/shared/mobile-ui/primitives";
 
 export function NotesMobileScreen() {
   const [notes, setNotes] = useState<Awaited<ReturnType<typeof getMeetingNotesForBoard>>>([]);
-  const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [contacts, setContacts] = useState<ContactNamePickerRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -16,7 +16,7 @@ export function NotesMobileScreen() {
     startTransition(async () => {
       setError(null);
       try {
-        const [n, c] = await Promise.all([getMeetingNotesForBoard(), getContactsList()]);
+        const [n, c] = await Promise.all([getMeetingNotesForBoard(), getContactNamePickerRows()]);
         setNotes(n);
         setContacts(c);
       } catch (e) {

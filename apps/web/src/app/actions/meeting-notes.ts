@@ -262,6 +262,8 @@ export async function summarizeMeetingNotes(): Promise<string> {
     hypo: "Hypotéka",
     investice: "Investice",
     pojisteni: "Pojištění",
+    dps: "Penzijní spoření",
+    uvery: "Úvěry",
     komplex: "Komplexní plán",
   };
 

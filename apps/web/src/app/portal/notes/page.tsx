@@ -1,5 +1,5 @@
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
-import { getContactsList } from "@/app/actions/contacts";
+import { getContactNamePickerRows } from "@/app/actions/contacts";
 import { NotesVisionBoard } from "./NotesVisionBoard";
 
 export default async function NotesPage({
@@ -9,11 +9,11 @@ export default async function NotesPage({
 }) {
   const sp = await searchParams;
   let notes: Awaited<ReturnType<typeof getMeetingNotesForBoard>> = [];
-  let contactsList: Awaited<ReturnType<typeof getContactsList>> = [];
+  let contactsList: Awaited<ReturnType<typeof getContactNamePickerRows>> = [];
   try {
     [notes, contactsList] = await Promise.all([
       getMeetingNotesForBoard(),
-      getContactsList(),
+      getContactNamePickerRows(),
     ]);
   } catch {
     notes = [];

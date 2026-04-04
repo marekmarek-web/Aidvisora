@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { requireAuthInAction, type AuthContext } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db, households, householdMembers, contacts, eq, and, asc, sql, inArray } from "db";
 import { notifyAdvisorClientHouseholdUpdate } from "@/lib/client-portal/notify-advisor-client-self-service";
@@ -31,6 +31,12 @@ export type HouseholdDetail = {
 export async function getHouseholdsList(): Promise<HouseholdRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "households:read")) throw new Error("Forbidden");
+  return getHouseholdsListWithAuth(auth);
+}
+
+/** Stejné jako getHouseholdsList, ale bez druhého auth (pro bundlované server actions). */
+export async function getHouseholdsListWithAuth(auth: AuthContext): Promise<HouseholdRow[]> {
+  if (!hasPermission(auth.roleName, "households:read")) return [];
   return db
     .select({
       id: households.id,
@@ -42,6 +48,19 @@ export async function getHouseholdsList(): Promise<HouseholdRow[]> {
     .where(eq(households.tenantId, auth.tenantId))
     .groupBy(households.id, households.name)
     .orderBy(asc(households.name));
+}
+
+/** ID domácnosti kontaktu; jeden dotaz bez načítání všech členů. */
+export async function getHouseholdIdForContactWithAuth(auth: AuthContext, contactId: string): Promise<string | null> {
+  const isClientPortal = auth.roleName === "Client" && auth.contactId === contactId;
+  if (!isClientPortal && !hasPermission(auth.roleName, "households:read")) return null;
+  const [member] = await db
+    .select({ householdId: householdMembers.householdId })
+    .from(householdMembers)
+    .innerJoin(households, eq(householdMembers.householdId, households.id))
+    .where(and(eq(householdMembers.contactId, contactId), eq(households.tenantId, auth.tenantId)))
+    .limit(1);
+  return member?.householdId ?? null;
 }
 
 export async function getHouseholdsWithMembers(): Promise<HouseholdRowWithMembers[]> {
@@ -113,21 +132,18 @@ export async function getHouseholdForContact(contactId: string): Promise<Househo
       householdId: householdMembers.householdId,
       role: householdMembers.role,
       name: households.name,
+      memberCount: sql<number>`(select count(*)::int from household_members hm2 where hm2.household_id = ${householdMembers.householdId})`,
     })
     .from(householdMembers)
     .innerJoin(households, eq(householdMembers.householdId, households.id))
     .where(and(eq(householdMembers.contactId, contactId), eq(households.tenantId, auth.tenantId)))
     .limit(1);
   if (!member) return null;
-  const count = await db
-    .select({ id: householdMembers.id })
-    .from(householdMembers)
-    .where(eq(householdMembers.householdId, member.householdId));
   return {
     id: member.householdId,
     name: member.name,
     role: member.role,
-    memberCount: count.length,
+    memberCount: member.memberCount ?? 0,
   };
 }
 

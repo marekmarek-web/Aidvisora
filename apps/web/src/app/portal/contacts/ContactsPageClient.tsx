@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { Download, Upload, Phone, Mail, CheckSquare, ArrowRight, MessageSquare, Tags, UserCog, UserPlus } from "lucide-react";
+import { Download, Upload, Phone, Mail, CheckSquare, ArrowRight, MessageSquare, Tags, UserCog, UserPlus, Trash2 } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { NewClientWizard } from "@/app/components/aidvisora/NewClientWizard";
 import { useToast } from "@/app/components/Toast";
@@ -18,13 +18,20 @@ import {
   ListPageNoResults,
 } from "@/app/components/list-page";
 import { SkeletonLine, SkeletonTableRow } from "@/app/components/Skeleton";
-import { exportContactsCsv, getContactsList, updateContactsLifecycle, addTagToContacts, type ContactRow } from "@/app/actions/contacts";
+import {
+  exportContactsCsv,
+  getContactsList,
+  updateContactsLifecycle,
+  addTagToContacts,
+  permanentlyDeleteContacts,
+  type ContactRow,
+} from "@/app/actions/contacts";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 
 const LIFECYCLE_TABS: { value: string; label: string }[] = [
   { value: "", label: "Všichni" },
-  { value: "lead", label: "Lead" },
-  { value: "prospect", label: "Prospect" },
+  { value: "lead", label: "Úvodní kontakt" },
+  { value: "prospect", label: "Zájemce" },
   { value: "client", label: "Klient" },
   { value: "former_client", label: "Bývalý klient" },
 ];
@@ -66,9 +73,9 @@ function lifecycleBadge(stage: string | null | undefined): { label: string; clas
     case "client":
       return { label: "Klient", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
     case "lead":
-      return { label: "Lead", className: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" };
+      return { label: "Úvodní kontakt", className: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" };
     case "prospect":
-      return { label: "Prospect", className: "bg-blue-50 text-blue-700 border-blue-200" };
+      return { label: "Zájemce", className: "bg-blue-50 text-blue-700 border-blue-200" };
     case "former_client":
       return { label: "Bývalý klient", className: "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] border-[color:var(--wp-surface-card-border)]" };
     default:
@@ -76,7 +83,13 @@ function lifecycleBadge(stage: string | null | undefined): { label: string; clas
   }
 }
 
-export function ContactsPageClient({ initialList }: { initialList: ContactRow[] }) {
+export function ContactsPageClient({
+  initialList,
+  canPermanentlyDelete = false,
+}: {
+  initialList: ContactRow[];
+  canPermanentlyDelete?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -98,6 +111,8 @@ export function ContactsPageClient({ initialList }: { initialList: ContactRow[] 
   const [tableLoading, setTableLoading] = useState(false);
   const tableLoadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(CONTACTS_VISIBLE_CHUNK);
+  const [permanentDeleteOpen, setPermanentDeleteOpen] = useState(false);
+  const [permanentDeleteBusy, setPermanentDeleteBusy] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -197,6 +212,22 @@ export function ContactsPageClient({ initialList }: { initialList: ContactRow[] 
     }
   }
 
+  async function handlePermanentDeleteConfirm() {
+    if (selectedIds.size === 0) return;
+    setPermanentDeleteBusy(true);
+    try {
+      await permanentlyDeleteContacts(Array.from(selectedIds));
+      toast.showToast("Kontakty trvale odstraněny");
+      setSelectedIds(new Set());
+      setPermanentDeleteOpen(false);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
+    } catch (e) {
+      toast.showToast(e instanceof Error ? e.message : "Smazání se nezdařilo", "error");
+    } finally {
+      setPermanentDeleteBusy(false);
+    }
+  }
+
   async function handleExportCsv() {
     setExporting(true);
     try {
@@ -229,7 +260,7 @@ export function ContactsPageClient({ initialList }: { initialList: ContactRow[] 
           title="Kontakty"
           count={filteredList.length}
           totalCount={list.length}
-          subtitle="Centrální adresář klientů a leadů."
+          subtitle="Centrální adresář — záložky podle fáze životního cyklu v záznamu kontaktu, dále štítky a vyhledávání."
           actions={
             <>
               <a
@@ -346,6 +377,17 @@ export function ContactsPageClient({ initialList }: { initialList: ContactRow[] 
                     >
                       Hromadný e-mail
                     </a>
+                  )}
+                  {canPermanentlyDelete && (
+                    <button
+                      type="button"
+                      onClick={() => setPermanentDeleteOpen(true)}
+                      disabled={bulkPending}
+                      className="px-3 py-1.5 rounded-[var(--wp-radius-xs)] border border-red-200 text-red-700 text-xs font-bold bg-red-50 hover:bg-red-100 transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Trash2 size={14} aria-hidden />
+                      Trvale smazat
+                    </button>
                   )}
                   <button
                     type="button"
@@ -681,6 +723,39 @@ export function ContactsPageClient({ initialList }: { initialList: ContactRow[] 
           </>
         )}
       </ListPageShell>
+
+      {permanentDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="permanent-delete-title">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-[color:var(--wp-surface-card-border)]">
+            <h3 id="permanent-delete-title" className="text-lg font-black text-[color:var(--wp-text)]">
+              Trvale smazat kontakty?
+            </h3>
+            <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
+              Chystáte se nenávratně odstranit <strong>{selectedIds.size}</strong> kontakt
+              {selectedIds.size === 1 ? "" : "ů"} včetně navázaných záznamů, které databáze propojuje s kontaktem (např. smlouvy, dokumenty, zprávy podle nastavení mazání).
+              Tuto akci nelze vrátit zpět.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteOpen(false)}
+                disabled={permanentDeleteBusy}
+                className="rounded-xl px-4 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
+              >
+                Zrušit
+              </button>
+              <button
+                type="button"
+                onClick={handlePermanentDeleteConfirm}
+                disabled={permanentDeleteBusy}
+                className="rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 min-h-[44px]"
+              >
+                {permanentDeleteBusy ? "Mažu…" : "Ano, trvale smazat"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NewClientWizard
         open={wizardOpen}

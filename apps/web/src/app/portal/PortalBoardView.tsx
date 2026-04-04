@@ -25,6 +25,7 @@ import {
   updateBoardItem,
 } from "@/app/actions/board";
 import { getContactsList } from "@/app/actions/contacts";
+import { listTeamMembersWithNames } from "@/app/actions/team-overview";
 import { BaseModal } from "@/app/components/BaseModal";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { PRODUCT_COLUMNS } from "@/app/board/seed-data";
@@ -164,6 +165,19 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
   const [addGroupColor, setAddGroupColor] = useState(GROUP_COLORS[0]);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [personFilterOptions, setPersonFilterOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    listTeamMembersWithNames("full")
+      .then((rows) =>
+        setPersonFilterOptions(
+          rows.map((r) => ({
+            id: r.userId,
+            name: r.displayName?.trim() || r.email?.trim() || r.userId.slice(0, 8),
+          }))
+        )
+      )
+      .catch(() => setPersonFilterOptions([]));
+  }, []);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const update = () => setIsMobile(mq.matches);
@@ -184,14 +198,33 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
       itemIds: g.itemIds.filter((id) => {
         const item = board.items[id];
         if (!item) return false;
-        if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const byName =
+            item.name.toLowerCase().includes(q) ||
+            (item.contactName && item.contactName.toLowerCase().includes(q));
+          if (!byName) return false;
+        }
         if (filterStatus) {
           const hasStatus = PRODUCT_COLUMNS.some((col) => item.cells[col] === filterStatus);
           if (!hasStatus) return false;
         }
+        if (assignedTo && item.assignee !== assignedTo) return false;
         return true;
       }),
     }));
+
+    const statusCol = visibleColumns.find((c) => c.type === "status");
+    if (groupBy === "status" && statusCol) {
+      itemIdsByGroup = itemIdsByGroup.map((g) => ({
+        ...g,
+        itemIds: [...g.itemIds].sort((a, b) => {
+          const sa = String(board.items[a]?.cells[statusCol.id] ?? "");
+          const sb = String(board.items[b]?.cells[statusCol.id] ?? "");
+          return sa.localeCompare(sb, "cs");
+        }),
+      }));
+    }
 
     if (sortColumnId && sortDir) {
       itemIdsByGroup = itemIdsByGroup.map((g) => ({
@@ -200,8 +233,8 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
           const itemA = board.items[a];
           const itemB = board.items[b];
           if (!itemA || !itemB) return 0;
-          let valA: string | number = sortColumnId === "item" ? itemA.name : itemA.cells[sortColumnId];
-          let valB: string | number = sortColumnId === "item" ? itemB.name : itemB.cells[sortColumnId];
+          const valA: string | number = sortColumnId === "item" ? itemA.name : itemA.cells[sortColumnId];
+          const valB: string | number = sortColumnId === "item" ? itemB.name : itemB.cells[sortColumnId];
           if (typeof valA === "number" && typeof valB === "number") {
             return sortDir === "asc" ? valA - valB : valB - valA;
           }
@@ -213,7 +246,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     }
 
     return itemIdsByGroup;
-  }, [board.groups, board.items, searchQuery, filterStatus, sortColumnId, sortDir]);
+  }, [board.groups, board.items, searchQuery, filterStatus, sortColumnId, sortDir, assignedTo, groupBy, visibleColumns]);
 
   const kpiOpenCases = useMemo(() => openCasesCount(board.items), [board.items]);
   const kpiPotentialDeals = useMemo(() => {
@@ -591,10 +624,25 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     setBoard((b) => {
       const fromGroup = b.groups.find((g) => g.itemIds.includes(itemId));
       if (!fromGroup) return b;
-      if (fromGroup.id === targetGroupId && fromGroup.itemIds.indexOf(itemId) === targetIndex) return b;
-      const newItemIds = fromGroup.itemIds.filter((id) => id !== itemId);
       const targetGroup = b.groups.find((g) => g.id === targetGroupId);
       if (!targetGroup) return b;
+
+      if (fromGroup.id === targetGroupId) {
+        const ids = [...fromGroup.itemIds];
+        const oldIdx = ids.indexOf(itemId);
+        if (oldIdx < 0) return b;
+        if (oldIdx === targetIndex) return b;
+        ids.splice(oldIdx, 1);
+        let insertAt = targetIndex;
+        if (oldIdx < targetIndex) insertAt = targetIndex - 1;
+        ids.splice(insertAt, 0, itemId);
+        return {
+          ...b,
+          groups: b.groups.map((g) => (g.id === fromGroup.id ? { ...g, itemIds: ids } : g)),
+        };
+      }
+
+      const newItemIds = fromGroup.itemIds.filter((id) => id !== itemId);
       const targetIds = [...targetGroup.itemIds];
       targetIds.splice(targetIndex, 0, itemId);
       return {
@@ -673,6 +721,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
               setGroupBy(v);
               triggerTableLoading();
             }}
+            personFilterOptions={personFilterOptions}
           />
           )}
           {!isMobile && <KPIBar openCasesCount={kpiOpenCases} potentialDeals={kpiPotentialDeals} />}

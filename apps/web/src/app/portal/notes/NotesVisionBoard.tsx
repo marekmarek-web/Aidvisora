@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useRef, useCallback, useEffect } from "react";
+import React, { Suspense, useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Pin,
@@ -18,6 +18,9 @@ import {
   CheckCircle2,
   Check,
   X,
+  ChevronDown,
+  PiggyBank,
+  Landmark,
 } from "lucide-react";
 import {
   getMeetingNotesForBoard,
@@ -27,8 +30,7 @@ import {
   summarizeMeetingNotes,
 } from "@/app/actions/meeting-notes";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
-import type { ContactRow } from "@/app/actions/contacts";
-import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import type { ContactNamePickerRow } from "@/app/actions/contacts";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
@@ -39,6 +41,8 @@ const DOMAINS = [
   { value: "hypo", label: "Hypotéka" },
   { value: "investice", label: "Investice" },
   { value: "pojisteni", label: "Pojištění" },
+  { value: "dps", label: "Penzijní spoření" },
+  { value: "uvery", label: "Úvěry" },
   { value: "komplex", label: "Komplexní plán" },
 ];
 
@@ -63,6 +67,18 @@ function getProductDesign(type: string) {
         icon: <Shield size={14} />,
         color: "text-rose-600 bg-rose-100 border-rose-200",
         glow: "shadow-rose-500/30",
+      };
+    case "dps":
+      return {
+        icon: <PiggyBank size={14} />,
+        color: "text-amber-700 bg-amber-100 border-amber-200",
+        glow: "shadow-amber-500/30",
+      };
+    case "uvery":
+      return {
+        icon: <Landmark size={14} />,
+        color: "text-slate-700 bg-slate-100 border-slate-200",
+        glow: "shadow-slate-500/25",
       };
     default:
       return {
@@ -128,7 +144,7 @@ function NotesVisionBoardInner({
   initialNoteId,
 }: {
   initialNotes: MeetingNoteForBoard[];
-  contacts: ContactRow[];
+  contacts: ContactNamePickerRow[];
   initialSearchQuery: string;
   initialNoteId: string | null;
 }) {
@@ -192,6 +208,8 @@ function NotesVisionBoardInner({
   const [saving, setSaving] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -378,13 +396,28 @@ function NotesVisionBoardInner({
 
   const isFormValid = formData.title.trim() !== "";
 
-  const contactOptions = [
-    { value: "", label: "Obecný zápisek" },
-    ...contacts.map((c) => ({
-      value: c.id,
-      label: [c.firstName, c.lastName].filter(Boolean).join(" ") || "—",
-    })),
-  ];
+  useEffect(() => {
+    if (isModalOpen) {
+      setContactPickerOpen(false);
+      setContactSearch("");
+    }
+  }, [isModalOpen]);
+
+  const filteredContactsForPicker = useMemo(() => {
+    const q = contactSearch.trim().toLowerCase();
+    return contacts.filter((c) => {
+      const blob = `${c.firstName} ${c.lastName} ${c.email ?? ""} ${c.phone ?? ""}`.toLowerCase();
+      return !q || blob.includes(q);
+    });
+  }, [contacts, contactSearch]);
+
+  const selectedContactLabel = useMemo(() => {
+    if (!formData.client) return "Obecný zápisek";
+    const c = contacts.find((x) => x.id === formData.client);
+    if (!c) return "Vyberte klienta";
+    const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
+    return name || c.email || "Klient";
+  }, [formData.client, contacts]);
 
   return (
     <div className="portal-notes-board-light flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[color:var(--wp-main-scroll-bg)] font-sans">
@@ -430,7 +463,7 @@ function NotesVisionBoardInner({
             className="flex min-h-[44px] items-center gap-2 rounded-xl border border-fuchsia-500/20 bg-gradient-to-b from-fuchsia-500/10 to-indigo-500/5 px-2 py-2 text-xs font-bold text-[color:var(--wp-text)] shadow-sm transition-all hover:border-fuchsia-500/35 hover:from-fuchsia-500/14 disabled:opacity-50 md:px-3 md:text-sm"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white">
-              <AiAssistantBrandIcon size={18} className="max-h-full max-w-full" />
+              <AiAssistantBrandIcon size={18} variant="colorOnWhite" className="max-h-full max-w-full" />
             </span>
             <span className="font-black tracking-wide">{aiLoading ? "Zpracovávám…" : "Sumarizace"}</span>
           </button>
@@ -695,16 +728,67 @@ function NotesVisionBoardInner({
                     className="w-full px-4 py-3 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                   />
                 </div>
-                <div>
+                <div className="relative z-10">
                   <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Kontakt / Klient (nepovinné)</label>
-                  <CustomDropdown
-                    value={formData.client}
-                    onChange={(id) => setFormData({ ...formData, client: id })}
-                    options={contactOptions.map((c) => ({ id: c.value, label: c.label }))}
-                    placeholder="Vybrat klienta"
-                    icon={User}
-                    lightIsland
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setContactPickerOpen((o) => !o)}
+                    className="w-full px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between min-h-[44px] border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] hover:border-[color:var(--wp-header-input-focus-border)] focus:bg-[color:var(--wp-surface-card)] focus:ring-2 focus:ring-[color:var(--wp-header-input-focus-ring)] focus:border-[color:var(--wp-header-input-focus-border)] text-left"
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <User size={18} className="shrink-0 text-[color:var(--wp-icon-default)]" />
+                      <span className="truncate text-[color:var(--wp-text)]">{selectedContactLabel}</span>
+                    </span>
+                    <ChevronDown size={18} className="shrink-0 text-[color:var(--wp-text-tertiary)]" />
+                  </button>
+                  {contactPickerOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[80]" onClick={() => setContactPickerOpen(false)} aria-hidden />
+                      <div className="absolute left-0 right-0 top-full mt-1 z-[90] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-lg p-2 max-h-[min(70vh,320px)] flex flex-col">
+                        <input
+                          type="search"
+                          value={contactSearch}
+                          onChange={(e) => setContactSearch(e.target.value)}
+                          placeholder="Hledat jméno, e-mail, telefon…"
+                          className="w-full px-3 py-2.5 mb-2 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm outline-none focus:ring-2 focus:ring-indigo-100"
+                          autoFocus
+                        />
+                        <ul className="overflow-y-auto custom-dropdown-scroll flex-1 min-h-0 space-y-0.5">
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, client: "" });
+                                setContactPickerOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-[color:var(--wp-surface-muted)]"
+                            >
+                              Obecný zápisek
+                            </button>
+                          </li>
+                          {filteredContactsForPicker.map((c) => {
+                            const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
+                            const sub = [c.email, c.phone].filter(Boolean).join(" · ");
+                            return (
+                              <li key={c.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData({ ...formData, client: c.id });
+                                    setContactPickerOpen(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-[color:var(--wp-surface-muted)]"
+                                >
+                                  <span className="font-medium text-[color:var(--wp-text)] block truncate">{name || c.email || c.id}</span>
+                                  {sub ? <span className="text-xs text-[color:var(--wp-text-tertiary)] truncate block">{sub}</span> : null}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -727,7 +811,7 @@ function NotesVisionBoardInner({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Doména (Typ)</label>
+                  <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Oblast zápisu</label>
                   <div className="grid grid-cols-2 gap-2">
                     {DOMAINS.map((d) => (
                       <button
@@ -822,7 +906,7 @@ function NotesBoardSuspenseFallback() {
 
 export function NotesVisionBoard(props: {
   initialNotes: MeetingNoteForBoard[];
-  contacts: ContactRow[];
+  contacts: ContactNamePickerRow[];
   initialSearchQuery: string;
   initialNoteId: string | null;
 }) {
