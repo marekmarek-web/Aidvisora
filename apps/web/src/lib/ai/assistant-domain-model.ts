@@ -211,6 +211,11 @@ export type ExecutionPlan = {
   steps: ExecutionStep[];
   status: "draft" | "awaiting_confirmation" | "executing" | "completed" | "partial_failure";
   createdAt: Date;
+  /**
+   * True when execution_actions ledger was unavailable (e.g. missing migration).
+   * Writes still run; idempotency/audit in DB is skipped — surface a user-facing warning.
+   */
+  ledgerDegraded?: boolean;
 };
 
 export type StepOutcome = {
@@ -301,7 +306,95 @@ export const CASE_TYPE_TO_PRODUCT_DOMAIN: Record<string, ProductDomain> = {
   výročí: "servis",
   vyroci: "servis",
   jiné: "jine",
+  /** Poradenský slang → productDomain (P1) */
+  životko: "zivotni_pojisteni",
+  životka: "zivotni_pojisteni",
+  penzijko: "dps",
+  penžijko: "dps",
+  dpsko: "dps",
+  dipko: "dip",
+  hypoška: "hypo",
+  hypošku: "hypo",
+  spotřebák: "uver",
+  spotrebak: "uver",
+  povko: "auto",
+  havko: "auto",
 };
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Najde productDomain podle výskytu klíče ze slovníku v libovolném textu (nejdelší shoda má přednost). */
+export function findProductDomainInMessage(text: string): ProductDomain | null {
+  const lower = text.toLowerCase();
+  const keys = Object.keys(CASE_TYPE_TO_PRODUCT_DOMAIN).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (key.length <= 2) continue;
+    if (/\s/.test(key) || key.length >= 5) {
+      if (lower.includes(key)) return CASE_TYPE_TO_PRODUCT_DOMAIN[key]!;
+    } else if (new RegExp(`\\b${escapeRegExp(key)}\\b`, "iu").test(text)) {
+      return CASE_TYPE_TO_PRODUCT_DOMAIN[key]!;
+    }
+  }
+  return null;
+}
+
+/**
+ * Výchozí kód segmentu smlouvy pro productDomain (kromě `auto`, kde je potřeba textová nápověda).
+ * Shodné s `contractSegments` v packages/db.
+ */
+export const PRODUCT_DOMAIN_DEFAULT_SEGMENT: Partial<Record<ProductDomain, string>> = {
+  hypo: "HYPO",
+  uver: "UVER",
+  zivotni_pojisteni: "ZP",
+  dip: "DIP",
+  dps: "DPS",
+  majetek: "MAJ",
+  odpovednost: "ODP",
+  cestovni: "CEST",
+  investice: "INV",
+  firma_pojisteni: "FIRMA_POJ",
+};
+
+/** Slang s jednoznačným segmentem (auto PR vs HAV řeší textové heuristiky). */
+const SLANG_TO_CONTRACT_SEGMENT: Record<string, string> = {
+  životko: "ZP",
+  životka: "ZP",
+  penzijko: "DPS",
+  penžijko: "DPS",
+  dpsko: "DPS",
+  dipko: "DIP",
+  hypoška: "HYPO",
+  hypošku: "HYPO",
+  spotřebák: "UVER",
+  spotrebak: "UVER",
+  povko: "AUTO_PR",
+  havko: "AUTO_HAV",
+};
+
+/**
+ * Odvodí kód segmentu smlouvy z uživatelského textu (slang, doména, klíčová slova u auta).
+ */
+export function resolveContractSegmentFromUserText(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const [slang, seg] of Object.entries(SLANG_TO_CONTRACT_SEGMENT)) {
+    if (lower.includes(slang)) return seg;
+  }
+  if (/\bhavarijní|havarijni|\bhav\b|kasko/i.test(text)) return "AUTO_HAV";
+  if (/\bpovinné\s*ručení|povinne\s*ruceni|\bpov\b|povko|čtvrtá\s+silnice/i.test(text)) return "AUTO_PR";
+
+  const domain = resolveProductDomain(text) ?? findProductDomainInMessage(text);
+  if (domain === "auto") {
+    if (/\bhav|kasko|havarijní|havarijni/i.test(lower)) return "AUTO_HAV";
+    if (/\bpov|ručení|ruceni|povinné|povinne/i.test(lower)) return "AUTO_PR";
+    return "AUTO_PR";
+  }
+  if (domain && PRODUCT_DOMAIN_DEFAULT_SEGMENT[domain]) {
+    return PRODUCT_DOMAIN_DEFAULT_SEGMENT[domain]!;
+  }
+  return null;
+}
 
 export function resolveProductDomain(text: string | null | undefined): ProductDomain | null {
   if (!text) return null;

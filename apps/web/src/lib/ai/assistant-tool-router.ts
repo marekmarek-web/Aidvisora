@@ -39,12 +39,14 @@ import {
   buildStepDescription,
   buildValidationWarnings,
   computeWriteActionMissingFields,
+  computeWriteStepPreflight,
 } from "./assistant-execution-plan";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import { verifyWriteContextSafety, verifyTenantConsistency } from "./assistant-context-safety";
 import { mapErrorForAdvisor } from "./assistant-error-mapping";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
+import { tryRatingLookupReply } from "./ratings/toplists";
 
 import type { StepPreviewItem } from "./assistant-execution-ui";
 
@@ -623,6 +625,20 @@ export async function routeAssistantMessageCanonical(
   }
   const skipClientFromUi = Boolean(session.lockedClientId) && !lockedDiffers;
   updateSessionContext(session, activeContext, { skipClientIdFromUi: skipClientFromUi });
+
+  const ratingReply = tryRatingLookupReply(message);
+  if (ratingReply) {
+    logAssistantTelemetry(AssistantTelemetryAction.ROUTE_CANONICAL, { path: "rating_seed_lookup" });
+    return {
+      message: ratingReply,
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: [],
+      confidence: 0.95,
+      sourcesSummary: ["Top seznamy (seed v2)"],
+      sessionId: session.sessionId,
+    };
+  }
 
   const canonicalIntent = await extractCanonicalIntent(message);
 

@@ -69,6 +69,9 @@ Typy záměrů:
 - multi_action: více akcí najednou
 - switch_client: přepnutí kontextu na jiného klienta
 
+Poradenský slang → productDomain (mapuj stejně jako interní slovník): životko/životka → zivotni_pojisteni; penzijko/dpsko → dps; dipko → dip; hypoška → hypo; spotřebák → uver; povko → auto (povinné ručení); havko → auto (havarijní).
+Dotazy na rating/žebříček/top pojišťovny (read-only, bez zápisu): nastav intentType general_chat, ale productDomain vyplň podle segmentu (např. životní pojištění → zivotni_pojisteni), aby šlo odpovědět z interních top listů.
+
 productDomain: hypo, uver, investice, dip, dps, zivotni_pojisteni, majetek, odpovednost, auto, cestovni, firma_pojisteni, servis, jine
 
 requestedActions: pole všech záměrů, které uživatel zmínil (mohou být i vícero).
