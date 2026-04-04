@@ -139,15 +139,11 @@ export function verifyWriteContextSafety(
 
   // Phase 2+3: guard apply step if the review's publish hints say not publishable
   for (const step of plan.steps) {
-    if (step.action === "applyAiContractReviewToCrm" && !step.isReadOnly) {
-      const stepResult = step.result as Record<string, unknown> | null | undefined;
-      if (stepResult?.status === "needs_input") {
-        // Already marked as needs_input by buildPostUploadReviewPlan — require confirmation
-        needsConfirmation = true;
-        const msg = typeof stepResult.message === "string" ? stepResult.message : null;
-        if (msg && !warnings.includes(msg)) {
-          warnings.push(msg);
-        }
+    if (step.action === "applyAiContractReviewToCrm" && !step.isReadOnly && step.status === "needs_input") {
+      needsConfirmation = true;
+      const msg = step.result?.error?.trim() ? step.result.error : null;
+      if (msg && !warnings.includes(msg)) {
+        warnings.push(msg);
       }
     }
   }

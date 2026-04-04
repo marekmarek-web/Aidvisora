@@ -966,7 +966,15 @@ export function buildPostUploadReviewPlan(
       dependsOn: [sApprove],
       status: applyStatus,
       result: applyBlockedReason
-        ? { status: "needs_input", message: applyBlockedReason }
+        ? {
+            ok: false,
+            outcome: "requires_input",
+            entityId: null,
+            entityType: null,
+            warnings: [],
+            error: applyBlockedReason,
+            retryable: true,
+          }
         : null,
     },
     {

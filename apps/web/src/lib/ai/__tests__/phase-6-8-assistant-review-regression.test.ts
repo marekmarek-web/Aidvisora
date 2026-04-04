@@ -171,10 +171,9 @@ describe("S03 — post-upload plan: publishHints.contractPublishable=false → a
     const s = makeSession();
     const plan = buildPostUploadReviewPlan(s, REVIEW_ID, opts);
     const applyStep = plan.steps.find((st) => st.action === "applyAiContractReviewToCrm");
-    const result = applyStep?.result as Record<string, unknown> | null;
-    expect(result?.status).toBe("needs_input");
-    expect(typeof result?.message).toBe("string");
-    expect(String(result?.message)).toContain("modelation_only");
+    expect(applyStep?.result?.outcome).toBe("requires_input");
+    expect(typeof applyStep?.result?.error).toBe("string");
+    expect(String(applyStep?.result?.error)).toContain("modelation_only");
   });
 });
 

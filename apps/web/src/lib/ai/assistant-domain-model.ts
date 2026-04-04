@@ -137,6 +137,7 @@ export function emptyCanonicalIntent(): CanonicalIntent {
 export const EXECUTION_STEP_STATUSES = [
   "planned",
   "requires_confirmation",
+  "needs_input",
   "confirmed",
   "executing",
   "succeeded",
