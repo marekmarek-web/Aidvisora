@@ -109,6 +109,15 @@ export async function createAdvisorClientRequest(
     descTrim,
   }).catch(() => {});
 
+  notifyClientPortalAboutAdvisorRequest({
+    tenantId,
+    contactId,
+    opportunityId: newId,
+    caseType: caseType.trim() || "jiné",
+    subjectTrim,
+    descTrim,
+  }).catch(() => {});
+
   return { ok: true, id: newId };
 }
 
@@ -199,4 +208,30 @@ async function notifyAdvisorOnNewRequest(params: {
       /* best-effort */
     }
   }
+}
+
+async function notifyClientPortalAboutAdvisorRequest(params: {
+  tenantId: string;
+  contactId: string;
+  opportunityId: string;
+  caseType: string;
+  subjectTrim: string;
+  descTrim: string;
+}): Promise<void> {
+  const { tenantId, contactId, opportunityId, caseType, subjectTrim, descTrim } = params;
+  const title =
+    subjectTrim.trim() || `Nový požadavek od poradce — ${caseTypeToLabel(caseType)}`;
+  const body =
+    descTrim.length > 0 ? (descTrim.length > 500 ? `${descTrim.slice(0, 497)}…` : descTrim) : null;
+  const { createPortalNotification } = await import("@/app/actions/portal-notifications");
+  await createPortalNotification({
+    tenantId,
+    contactId,
+    type: "request_status_change",
+    title,
+    body,
+    relatedEntityType: "opportunity",
+    relatedEntityId: opportunityId,
+    dedupWindowMinutes: 0,
+  });
 }

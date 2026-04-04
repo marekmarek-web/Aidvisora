@@ -379,6 +379,17 @@ export async function getRecentConversations(limit = 5): Promise<RecentConversat
   }));
 }
 
+/** Smaže všechny zprávy v konverzaci s kontaktem (včetně příloh — cascade). Pouze poradce s contacts:write. */
+export async function deleteConversationForContact(contactId: string): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (auth.roleName === "Client") throw new Error("Forbidden");
+  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+
+  await db
+    .delete(messages)
+    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)));
+}
+
 export async function markMessagesRead(contactId: string): Promise<void> {
   const auth = await requireAuthInAction();
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Paperclip, User, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Paperclip, User, Plus, Search, Trash2, X } from "lucide-react";
 import {
   getConversationsList,
   getMessages,
@@ -11,6 +11,7 @@ import {
   sendMessage,
   sendMessageWithAttachments,
   markMessagesRead,
+  deleteConversationForContact,
   type MessageRow,
   type ConversationListItem,
   type MessageAttachmentRow,
@@ -85,6 +86,31 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleDeleteConversation() {
+    if (!selectedContactId) return;
+    if (
+      !window.confirm(
+        "Smazat celou konverzaci s tímto klientem? Všechny zprávy a přílohy budou trvale odstraněny. Tuto akci nelze vrátit zpět.",
+      )
+    ) {
+      return;
+    }
+    const id = selectedContactId;
+    startTransition(async () => {
+      try {
+        await deleteConversationForContact(id);
+        setSelectedContactId(null);
+        setMsgs([]);
+        setMsgAttachments({});
+        router.replace("/portal/messages", { scroll: false });
+        await loadConversations();
+        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+      } catch {
+        setSendError("Konverzaci se nepodařilo smazat.");
+      }
+    });
+  }
 
   const loadConversations = useCallback(async () => {
     try {
@@ -365,6 +391,16 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                 <User size={18} />
                 Otevřít profil
               </Link>
+              <button
+                type="button"
+                onClick={handleDeleteConversation}
+                disabled={isPending}
+                className="shrink-0 flex items-center justify-center rounded-xl p-2.5 text-rose-600 hover:bg-rose-50 min-h-[44px] min-w-[44px] disabled:opacity-50"
+                aria-label="Smazat konverzaci"
+                title="Smazat konverzaci"
+              >
+                <Trash2 size={20} />
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">

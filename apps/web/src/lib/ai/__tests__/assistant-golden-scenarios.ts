@@ -419,6 +419,31 @@ export const goldenScenarios: GoldenScenario[] = [
     },
     tags: ["portal", "client-request", "3f"],
   },
+  {
+    id: "client-request-mortgage-followup-tasks",
+    domain: "client_portal",
+    name: "Hypotéka — shrnutí s úkoly pro klienta (ne portálová zpráva)",
+    description:
+      "Souhrn nabídky + požadavek na podklady a schůzku má jít jako klientský požadavek, ne send_portal_message.",
+    turns: [
+      {
+        role: "user",
+        content:
+          "Shrň pro Nováka: klient chtěl hypotéku, nabídka Raiffeisenbank 4,5 % na 30 let — požádej ho o podklady k hypotéce a naplánuj schůzku na příští týden v úterý.",
+      },
+    ],
+    expectedIntent: {
+      intentType: "create_client_request",
+      productDomain: "hypo",
+    },
+    expectedPlan: {
+      minSteps: 1,
+      maxSteps: 2,
+      expectedActions: ["createClientRequest"],
+      expectedContactIdPresent: true,
+    },
+    tags: ["portal", "client-request", "hypo", "3f"],
+  },
 
   // ─── PHASE 3I: WRITE WORKFLOW COVERAGE ────────────────────────
 

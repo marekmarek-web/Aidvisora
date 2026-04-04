@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Paperclip, Plus, Search, Send, User, X, MessageSquare } from "lucide-react";
+import { ArrowLeft, Paperclip, Plus, Search, Send, Trash2, User, X, MessageSquare } from "lucide-react";
 import {
   getConversationsList,
   getMessages,
@@ -10,6 +10,7 @@ import {
   sendMessage,
   sendMessageWithAttachments,
   markMessagesRead,
+  deleteConversationForContact,
   type MessageRow,
   type ConversationListItem,
   type MessageAttachmentRow,
@@ -285,6 +286,32 @@ export function MessagesMobileScreen() {
     router.replace("/portal/messages", { scroll: false });
   }
 
+  function handleDeleteConversation() {
+    if (!selectedContactId) return;
+    if (
+      !window.confirm(
+        "Smazat celou konverzaci s tímto klientem? Všechny zprávy a přílohy budou trvale odstraněny. Tuto akci nelze vrátit zpět.",
+      )
+    ) {
+      return;
+    }
+    const id = selectedContactId;
+    startTransition(async () => {
+      try {
+        await deleteConversationForContact(id);
+        setMsgs([]);
+        setMsgAttachments({});
+        setBody("");
+        setFiles([]);
+        goBackToList();
+        await loadConversations(false);
+        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+      } catch {
+        setSendError("Konverzaci se nepodařilo smazat.");
+      }
+    });
+  }
+
   const openNewMessage = useCallback(async () => {
     setNewMsgOpen(true);
     setContactSearch("");
@@ -445,6 +472,16 @@ export function MessagesMobileScreen() {
         >
           <User size={16} />
           Profil
+        </button>
+        <button
+          type="button"
+          onClick={handleDeleteConversation}
+          disabled={isPending}
+          className="shrink-0 flex items-center justify-center rounded-xl p-2 text-rose-600 active:bg-rose-50 min-h-[44px] min-w-[44px] disabled:opacity-50"
+          aria-label="Smazat konverzaci"
+          title="Smazat konverzaci"
+        >
+          <Trash2 size={20} />
         </button>
       </div>
 
