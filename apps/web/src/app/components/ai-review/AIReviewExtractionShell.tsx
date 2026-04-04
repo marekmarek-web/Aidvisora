@@ -72,6 +72,12 @@ const APPLY_GATE_REASON_LABELS: Record<string, string> = {
   PAYMENT_MISSING_INSTITUTION: "Chybí příjemce nebo produkt platby.",
   PAYMENT_NEEDS_HUMAN_REVIEW: "Platební údaje potřebují ruční kontrolu.",
   PAYMENT_LOW_CONFIDENCE: "Platební údaje mají nízkou jistotu.",
+  PUBLISH_HINTS_NOT_PUBLISHABLE: "Dokument není označen jako publikovatelný — není možné aplikovat jako finální smlouvu.",
+  PUBLISH_HINTS_SENSITIVE_ATTACHMENT_ONLY: "Dokument obsahuje pouze citlivou přílohu (zdravotní dotazník, AML) — apply jako smlouva je blokován.",
+  PUBLISH_HINTS_NEEDS_SPLIT: "Dokument obsahuje více logických sekcí a vyžaduje rozdělení před apply.",
+  PUBLISH_HINTS_NEEDS_MANUAL_VALIDATION: "Dokument vyžaduje ruční ověření před apply.",
+  PACKET_BUNDLE_WITH_SENSITIVE_ATTACHMENT: "Upload obsahuje bundle s citlivou přílohou — potvrďte správnou sekci před apply.",
+  PAYMENT_INSTRUCTION_MISCLASSIFIED_AS_CONTRACT: "Platební instrukce byly rozpoznány jako smlouva — ověřte typ dokumentu.",
 };
 
 function humanizeApplyGateReason(code: string): string {

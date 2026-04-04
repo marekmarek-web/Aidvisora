@@ -37,6 +37,7 @@ import {
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
 import type { PrimaryDocumentType } from "@/lib/ai/document-review-types";
+import { CanonicalFieldsPanel } from "./CanonicalFieldsPanel";
 import { formatAiClassifierForAdvisor } from "@/lib/ai-review/czech-labels";
 import type {
   ExtractionDocument,
@@ -1253,6 +1254,13 @@ export function ExtractionLeftPanel({
               <AdvisorOverviewCard doc={doc} />
             </div>
           ) : null}
+
+          {/* Phase 2+3: Canonical fields panel — persons, risks, health, investment, payment, bundle, publish hints */}
+          {doc.canonicalFields && (
+            <div data-section="canonical">
+              <CanonicalFieldsPanel canonicalFields={doc.canonicalFields} />
+            </div>
+          )}
 
           <ReviewAttentionBanner
             warningCount={doc.diagnostics.warningCount}

@@ -1230,7 +1230,7 @@ function appendSyntheticEnvelopeGroups(
   }
 
   if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.debug("[ai-review-ui] synthetic_envelope_groups", {
       groupCount: out.length - base.length,
       totalGroups: out.length,
@@ -1415,6 +1415,80 @@ export function mapApiToExtractionDocument(
       const processingStatusStr = (detail.processingStatus as string) ?? "";
       if (processingStatusStr === "review_required") return "review_required" as const;
       return "partially_reviewed" as const;
+    })(),
+    // Phase 2+3: pass through canonical fields from extractedPayload (never raw dump)
+    canonicalFields: (() => {
+      const pm = extracted.packetMeta as Record<string, unknown> | null | undefined;
+      const ph = extracted.publishHints as Record<string, unknown> | null | undefined;
+      const pts = extracted.participants as Array<Record<string, unknown>> | null | undefined;
+      const ir = extracted.insuredRisks as Array<Record<string, unknown>> | null | undefined;
+      const hq = extracted.healthQuestionnaires as Array<Record<string, unknown>> | null | undefined;
+      const inv = extracted.investmentData as Record<string, unknown> | null | undefined;
+      const pay = extracted.paymentData as Record<string, unknown> | null | undefined;
+
+      if (!pm && !ph && !pts && !ir && !hq && !inv && !pay) return undefined;
+
+      return {
+        packetMeta: pm ? {
+          isBundle: pm.isBundle === true,
+          bundleConfidence: typeof pm.bundleConfidence === "number" ? pm.bundleConfidence : undefined,
+          primarySubdocumentType: typeof pm.primarySubdocumentType === "string" ? pm.primarySubdocumentType : undefined,
+          subdocumentCandidates: Array.isArray(pm.subdocumentCandidates)
+            ? (pm.subdocumentCandidates as Array<Record<string, unknown>>).map((c) => ({
+                type: String(c.type ?? ""),
+                label: String(c.label ?? ""),
+                confidence: typeof c.confidence === "number" ? c.confidence : undefined,
+              }))
+            : undefined,
+          hasSensitiveAttachment: pm.hasSensitiveAttachment === true,
+          packetWarnings: Array.isArray(pm.packetWarnings) ? (pm.packetWarnings as string[]) : undefined,
+        } : null,
+        publishHints: ph ? {
+          contractPublishable: ph.contractPublishable !== false,
+          reviewOnly: ph.reviewOnly === true,
+          needsSplit: ph.needsSplit === true,
+          needsManualValidation: ph.needsManualValidation === true,
+          sensitiveAttachmentOnly: ph.sensitiveAttachmentOnly === true,
+          reasons: Array.isArray(ph.reasons) ? (ph.reasons as string[]) : undefined,
+        } : null,
+        participants: Array.isArray(pts) ? pts.map((p) => ({
+          fullName: typeof p.fullName === "string" ? p.fullName : undefined,
+          birthDate: typeof p.birthDate === "string" ? p.birthDate : undefined,
+          role: typeof p.role === "string" ? p.role : undefined,
+          address: typeof p.address === "string" ? p.address : undefined,
+          occupation: typeof p.occupation === "string" ? p.occupation : undefined,
+        })) : null,
+        insuredRisks: Array.isArray(ir) ? ir.map((r) => ({
+          linkedParticipant: typeof r.linkedParticipant === "string" ? r.linkedParticipant : undefined,
+          riskType: typeof r.riskType === "string" ? r.riskType : undefined,
+          riskLabel: typeof r.riskLabel === "string" ? r.riskLabel : undefined,
+          insuredAmount: r.insuredAmount as string | number | undefined,
+          premium: r.premium as string | number | undefined,
+          termEnd: typeof r.termEnd === "string" ? r.termEnd : undefined,
+        })) : null,
+        healthQuestionnaires: Array.isArray(hq) ? hq.map((q) => ({
+          linkedParticipant: typeof q.linkedParticipant === "string" ? q.linkedParticipant : undefined,
+          questionnairePresent: q.questionnairePresent === true,
+          sectionSummary: typeof q.sectionSummary === "string" ? q.sectionSummary : undefined,
+        })) : null,
+        investmentData: inv ? {
+          strategy: typeof inv.strategy === "string" ? inv.strategy : undefined,
+          isModeledData: inv.isModeledData === true,
+          funds: Array.isArray(inv.funds)
+            ? (inv.funds as Array<Record<string, unknown>>).map((f) => ({
+                name: String(f.name ?? ""),
+                allocation: f.allocation as string | number | undefined,
+              }))
+            : undefined,
+        } : null,
+        paymentData: pay ? {
+          variableSymbol: typeof pay.variableSymbol === "string" ? pay.variableSymbol : undefined,
+          paymentFrequency: typeof pay.paymentFrequency === "string" ? pay.paymentFrequency : undefined,
+          accountNumber: typeof pay.accountNumber === "string" ? pay.accountNumber : undefined,
+          bankAccount: typeof pay.bankAccount === "string" ? pay.bankAccount : undefined,
+          paymentMethod: typeof pay.paymentMethod === "string" ? pay.paymentMethod : undefined,
+        } : null,
+      };
     })(),
   };
 }

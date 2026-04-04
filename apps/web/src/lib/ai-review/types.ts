@@ -233,6 +233,67 @@ export type ExtractionDocument = {
   reviewUiMeta?: {
     usedSyntheticGroups?: boolean;
   };
+  /**
+   * Phase 2+3 canonical fields from Agent A normalizer.
+   * Passed through from extractedPayload — never raw JSON in UI.
+   */
+  canonicalFields?: {
+    /** Packet segmentation metadata */
+    packetMeta?: {
+      isBundle: boolean;
+      bundleConfidence?: number;
+      primarySubdocumentType?: string;
+      subdocumentCandidates?: Array<{ type: string; label: string; confidence?: number }>;
+      hasSensitiveAttachment?: boolean;
+      packetWarnings?: string[];
+    } | null;
+    /** Publishing guidance */
+    publishHints?: {
+      contractPublishable: boolean;
+      reviewOnly?: boolean;
+      needsSplit?: boolean;
+      needsManualValidation?: boolean;
+      sensitiveAttachmentOnly?: boolean;
+      reasons?: string[];
+    } | null;
+    /** Structured persons list */
+    participants?: Array<{
+      fullName?: string;
+      birthDate?: string;
+      role?: string;
+      address?: string;
+      occupation?: string;
+    }> | null;
+    /** Structured insured risks per participant */
+    insuredRisks?: Array<{
+      linkedParticipant?: string;
+      riskType?: string;
+      riskLabel?: string;
+      insuredAmount?: string | number;
+      premium?: string | number;
+      termEnd?: string;
+    }> | null;
+    /** Health questionnaire sections */
+    healthQuestionnaires?: Array<{
+      linkedParticipant?: string;
+      questionnairePresent?: boolean;
+      sectionSummary?: string;
+    }> | null;
+    /** Investment data */
+    investmentData?: {
+      strategy?: string;
+      isModeledData?: boolean;
+      funds?: Array<{ name: string; allocation?: string | number }>;
+    } | null;
+    /** Payment data */
+    paymentData?: {
+      variableSymbol?: string;
+      paymentFrequency?: string;
+      accountNumber?: string;
+      bankAccount?: string;
+      paymentMethod?: string;
+    } | null;
+  };
   /** From GET review `pipelineInsights` — routing, preprocess, payment preview. */
   pipelineInsights?: {
     normalizedPipelineClassification?: string;

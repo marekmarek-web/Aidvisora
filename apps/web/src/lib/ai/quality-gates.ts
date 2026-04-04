@@ -185,6 +185,29 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
     blocked.push("PAYMENT_INSTRUCTION_MISCLASSIFIED_AS_CONTRACT");
   }
 
+  // Phase 2+3: publishHints hard gate
+  const publishHints = payload?.publishHints as Record<string, unknown> | null | undefined;
+  if (publishHints) {
+    if (publishHints.contractPublishable === false) {
+      blocked.push("PUBLISH_HINTS_NOT_PUBLISHABLE");
+    }
+    if (publishHints.sensitiveAttachmentOnly === true) {
+      blocked.push("PUBLISH_HINTS_SENSITIVE_ATTACHMENT_ONLY");
+    }
+    if (publishHints.needsSplit === true) {
+      applyBarrier.push("PUBLISH_HINTS_NEEDS_SPLIT");
+    }
+    if (publishHints.needsManualValidation === true) {
+      applyBarrier.push("PUBLISH_HINTS_NEEDS_MANUAL_VALIDATION");
+    }
+  }
+
+  // Phase 2+3: packet bundle with sensitive attachment → manual validation required
+  const packetMeta = payload?.packetMeta as Record<string, unknown> | null | undefined;
+  if (packetMeta?.isBundle === true && packetMeta?.hasSensitiveAttachment === true) {
+    applyBarrier.push("PACKET_BUNDLE_WITH_SENSITIVE_ATTACHMENT");
+  }
+
   const payPayload = extractPaymentFromRow(row);
   if (payPayload) {
     if (extractionRoute === "payment_instructions") {
