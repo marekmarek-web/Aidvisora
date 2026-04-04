@@ -29,6 +29,10 @@ import {
 import { getAiReviewPromptId } from "@/lib/ai/prompt-model-registry";
 import { segmentDocumentPacket } from "@/lib/ai/document-packet-segmentation";
 import { applyCanonicalNormalizationToEnvelope } from "@/lib/ai/life-insurance-canonical-normalizer";
+import {
+  orchestrateSubdocumentExtraction,
+  describeSubdocumentExtractionRoute,
+} from "@/lib/ai/subdocument-extraction-orchestrator";
 
 export type RunContractReviewProcessingParams = {
   id: string;
@@ -189,6 +193,17 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     processingStage: "extracting",
   }).catch(() => {});
 
+  // ── Pre-extraction: Packet segmentation (Phase 2) ─────────────────────────
+  // Run segmentation BEFORE the main pipeline so the extraction trace can
+  // include bundle hints. The packetMeta is also used post-extraction in the
+  // canonical normaliser and orchestrator.
+  const earlyPacketSegmentation = segmentDocumentPacket(
+    adobePreprocessResult?.markdownContent ?? "",
+    adobePreprocessResult?.pageCountEstimate ?? null,
+    path.basename(storagePath),
+  );
+  const earlyPacketMeta = earlyPacketSegmentation.packetMeta;
+
   const pipelineResult = await runContractUnderstandingPipeline(preprocessedUrl, mimeType, {
     ruleBasedTextHint: adobePreprocessResult?.markdownContent ?? null,
     preprocessMeta,
@@ -247,18 +262,42 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
 
   const data = pipelineResult.extractedPayload;
 
-  // ── Phase 2: Packet segmentation ──────────────────────────────────────────
-  // Detect whether the uploaded PDF is a multi-document bundle.
-  const packetSegmentation = segmentDocumentPacket(
-    adobePreprocessResult?.markdownContent ?? "",
-    adobePreprocessResult?.pageCountEstimate ?? null,
-    path.basename(storagePath)
-  );
-  const packetMeta = packetSegmentation.packetMeta;
+  // ── Phase 2: Packet meta (computed pre-extraction, wired here) ────────────
+  const packetMeta = earlyPacketMeta;
 
   // ── Phase 3: Canonical normalisation ──────────────────────────────────────
   // Map flat extractedFields into structured participants[], insuredRisks[], etc.
   applyCanonicalNormalizationToEnvelope(data, packetMeta);
+
+  // ── Per-subdocument extraction orchestration ───────────────────────────────
+  // For bundle documents, run section-specific passes (health questionnaire LLM,
+  // AML heuristic, modelation lifecycle correction, payment section detection).
+  // Best-effort: errors are captured as warnings, never thrown.
+  let subdocOrchestrationRoute = describeSubdocumentExtractionRoute(packetMeta);
+  if (packetMeta.isBundle && markdownAvailable) {
+    try {
+      const orchResult = await orchestrateSubdocumentExtraction(
+        adobePreprocessResult?.markdownContent ?? "",
+        packetMeta,
+        data,
+      );
+      if (orchResult.orchestrationRan) {
+        subdocOrchestrationRoute = `${subdocOrchestrationRoute}|mutations:${orchResult.mutationCount}`;
+        if (orchResult.warnings.length > 0) {
+          console.warn(
+            "[contracts/process] subdoc_orchestration_warnings",
+            JSON.stringify({ reviewId: id, warnings: orchResult.warnings }),
+          );
+        }
+      }
+    } catch (orchErr) {
+      const orchMsg = orchErr instanceof Error ? orchErr.message : String(orchErr);
+      console.warn("[contracts/process] subdoc_orchestration_failed (best-effort)", {
+        reviewId: id,
+        error: orchMsg.slice(0, 200),
+      });
+    }
+  }
 
   // Propagate bundle detection into contentFlags / trace
   if (packetMeta.isBundle) {
@@ -443,6 +482,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
       hasSensitiveAttachment: packetMeta.hasSensitiveAttachment,
       candidateCount: packetMeta.subdocumentCandidates.length,
       packetWarnings: packetMeta.packetWarnings,
+      subdocExtractionRoute: subdocOrchestrationRoute,
     },
     ...(adobePreprocessResult?.preprocessed
       ? {
