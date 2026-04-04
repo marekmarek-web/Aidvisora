@@ -4,7 +4,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ErrorState } from "./primitives";
 import { captureAppError, getPortalFriendlyErrorMessage } from "@/lib/observability/production-error-ui";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; /** Např. „Finanční analýza“ pro konkrétní obrazovku. */ fallbackTitle?: string };
 
 type State = { hasError: boolean; error: (Error & { digest?: string }) | null };
 
@@ -19,7 +19,7 @@ export class MobileShellErrorBoundary extends Component<Props, State> {
     console.error("[MobileShellErrorBoundary]", error, info.componentStack);
     const route = typeof window !== "undefined" ? window.location.pathname : undefined;
     captureAppError(error, {
-      boundary: "mobile-shell",
+      boundary: this.props.fallbackTitle ? "mobile-shell-financial-analysis" : "mobile-shell",
       route,
       digest: (error as Error & { digest?: string }).digest,
       componentStack: info.componentStack,
@@ -32,7 +32,7 @@ export class MobileShellErrorBoundary extends Component<Props, State> {
       return (
         <div className="px-4 pt-4 pb-6 space-y-3">
           <ErrorState
-            title="Nepodařilo se načíst tuto obrazovku"
+            title={this.props.fallbackTitle ?? "Nepodařilo se načíst tuto obrazovku"}
             description={friendly}
             onRetry={() => this.setState({ hasError: false, error: null })}
           />
