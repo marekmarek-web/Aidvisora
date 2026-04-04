@@ -27,6 +27,8 @@ import {
   runAdvisorDocumentSummaryForAdvisorLlm,
 } from "@/lib/ai/ai-review-llm-postprocess";
 import { getAiReviewPromptId } from "@/lib/ai/prompt-model-registry";
+import { segmentDocumentPacket } from "@/lib/ai/document-packet-segmentation";
+import { applyCanonicalNormalizationToEnvelope } from "@/lib/ai/life-insurance-canonical-normalizer";
 
 export type RunContractReviewProcessingParams = {
   id: string;
@@ -244,6 +246,44 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
   }
 
   const data = pipelineResult.extractedPayload;
+
+  // ── Phase 2: Packet segmentation ──────────────────────────────────────────
+  // Detect whether the uploaded PDF is a multi-document bundle.
+  const packetSegmentation = segmentDocumentPacket(
+    adobePreprocessResult?.markdownContent ?? "",
+    adobePreprocessResult?.pageCountEstimate ?? null,
+    path.basename(storagePath)
+  );
+  const packetMeta = packetSegmentation.packetMeta;
+
+  // ── Phase 3: Canonical normalisation ──────────────────────────────────────
+  // Map flat extractedFields into structured participants[], insuredRisks[], etc.
+  applyCanonicalNormalizationToEnvelope(data, packetMeta);
+
+  // Propagate bundle detection into contentFlags / trace
+  if (packetMeta.isBundle) {
+    data.contentFlags = data.contentFlags ?? {
+      isFinalContract: false,
+      isProposalOnly: false,
+      containsPaymentInstructions: false,
+      containsClientData: false,
+      containsAdvisorData: false,
+      containsMultipleDocumentSections: false,
+    };
+    data.contentFlags.containsMultipleDocumentSections = true;
+    if (packetMeta.hasSensitiveAttachment) {
+      data.reviewWarnings = data.reviewWarnings ?? [];
+      const alreadyWarned = data.reviewWarnings.some((w) => w.code === "multi_section_bundle_detected");
+      if (!alreadyWarned) {
+        data.reviewWarnings.push({
+          code: "multi_section_bundle_detected",
+          message: `Upload obsahuje více logických dokumentů (bundle). Typy: ${packetMeta.subdocumentCandidates.map((c) => c.label).join(", ")}. Zkontrolujte před apply.`,
+          severity: "warning",
+        });
+      }
+    }
+  }
+
   const contractNumber = String(data.extractedFields.contractNumber?.value ?? "");
   const draftActions = applyAidvisorDraftCanonicalTypes(buildAllDraftActions(data), {
     blockPortalPayment: pipelineResult.processingStatus === "blocked",
@@ -395,6 +435,15 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     ...(llmClientMatchKind ? { llmClientMatchKind } : {}),
     totalPipelineDurationMs: Date.now() - processingStartedAtMs,
     ...(clientMatchLlm?.ok ? { llmClientMatchText: clientMatchLlm.text.slice(0, 4000) } : {}),
+    packetMeta: {
+      isBundle: packetMeta.isBundle,
+      bundleConfidence: packetMeta.bundleConfidence,
+      detectionMethods: packetMeta.detectionMethods,
+      primarySubdocumentType: packetMeta.primarySubdocumentType,
+      hasSensitiveAttachment: packetMeta.hasSensitiveAttachment,
+      candidateCount: packetMeta.subdocumentCandidates.length,
+      packetWarnings: packetMeta.packetWarnings,
+    },
     ...(adobePreprocessResult?.preprocessed
       ? {
           adobePreprocessed: true,

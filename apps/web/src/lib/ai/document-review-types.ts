@@ -1,4 +1,13 @@
 import { z } from "zod";
+import type {
+  PacketMeta,
+  ParticipantRecord,
+  InsuredRiskRecord,
+  HealthQuestionnaireRecord,
+  InvestmentDataRecord,
+  PaymentDataRecord,
+  PublishHints,
+} from "./document-packet-types";
 
 export const PRIMARY_DOCUMENT_TYPES = [
   "life_insurance_final_contract",
@@ -273,5 +282,37 @@ export const documentReviewEnvelopeSchema = z.object({
   debug: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type DocumentReviewEnvelope = z.infer<typeof documentReviewEnvelopeSchema>;
+export type DocumentReviewEnvelope = z.infer<typeof documentReviewEnvelopeSchema> & {
+  /**
+   * Phase 2 — Packet segmentation metadata.
+   * Present when the upload was identified as a multi-document bundle.
+   */
+  packetMeta?: PacketMeta | null;
+  /**
+   * Phase 3 — Structured participant list (canonical, per-person).
+   * Supplements the flat extractedFields and generic parties record.
+   */
+  participants?: ParticipantRecord[] | null;
+  /**
+   * Phase 3 — Structured insured risks per participant.
+   * Supplements the flat coverages/insuredRisks extractedFields.
+   */
+  insuredRisks?: InsuredRiskRecord[] | null;
+  /**
+   * Phase 3 — Health questionnaire sections detected in the packet.
+   */
+  healthQuestionnaires?: HealthQuestionnaireRecord[] | null;
+  /**
+   * Phase 3 — Structured investment data.
+   */
+  investmentData?: InvestmentDataRecord | null;
+  /**
+   * Phase 3 — Structured payment data.
+   */
+  paymentData?: PaymentDataRecord | null;
+  /**
+   * Phase 3 — Publishing guidance derived from type, lifecycle and packet content.
+   */
+  publishHints?: PublishHints | null;
+};
 

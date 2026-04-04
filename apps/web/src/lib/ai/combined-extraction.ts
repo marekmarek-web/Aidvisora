@@ -142,8 +142,13 @@ Pravidla:
   - Zprostředkovatel: intermediaryName, intermediaryCode, intermediaryCompany, advisorName, brokerName.
   - Investice: investmentStrategy, investmentFunds, fundAllocation, investmentAllocation, investmentScenario.
   - Oprávněné osoby: beneficiaries.
-- Pokud dokument obsahuje více pojištěných osob nebo více rizik, zachovej strukturu tak, aby šlo poznat ke komu a k jakému riziku údaj patří.
-- U modelací nebo návrhů stejně extrahuj maximum užitečných údajů, pokud jsou v dokumentu čitelné.
+- MULTI-PERSON: Pokud dokument obsahuje více osob (pojistník ≠ pojištěný, děti, spoludlužník), extrahuj každou osobu zvlášť do parties jako { role, fullName, birthDate, personalId?, address?, email?, phone?, occupation? }. Role: "policyholder", "insured", "legal_representative", "beneficiary", "child_insured", "co_applicant".
+- MULTI-RISK: Pro každé sjednané riziko/připojištění vyplň insuredPersons a coverages jako JSON string pole prvků [{ person, riskType, riskLabel, insuredAmount, termEnd?, premium? }].
+- INVESTICE: Extrahuj investmentStrategy (string), investmentFunds jako JSON string [{ name, allocation }], investmentPremium. U modelace napiš lifecycleStatus = "modelation" nebo "non_binding_projection".
+- PLATBY: bankAccount, variableSymbol, iban, bankCode, paymentFrequency extrahuj vždy, pokud jsou v dokumentu. Neodhaduj — pouze hodnoty z textu.
+- BUNDLE: Pokud dokument obsahuje více logických sekcí (smlouva + zdravotní dotazník / AML / platební instrukce), nastav contentFlags.containsMultipleDocumentSections = true a přidej reviewWarning s kódem "multi_section_bundle_detected".
+- ZDRAVOTNÍ SEKCE: Pokud je přítomný zdravotní dotazník nebo zdravotní prohlášení, nastav sectionSensitivity.health_section = "health_data".
+- U modelací nebo návrhů extrahuj maximum čitelných údajů.
 - Vrátíš pouze JSON dle schema. Žádný markdown, žádný komentář.
 - documentClassification.reasons piš stručně česky.
 - documentMeta.scannedVsDigital nastav na "digital", pokud text působí jako strojově čitelný PDF převod.
