@@ -142,6 +142,112 @@ ${trimmedText}
 <<<END_DOCUMENT_TEXT>>>`;
 }
 
+// ─── Investment / DIP / DPS section ──────────────────────────────────────────
+
+export const INVESTMENT_SECTION_EXTRACTION_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["investmentSectionPresent", "productType"],
+  properties: {
+    investmentSectionPresent: { type: "boolean" },
+    /**
+     * DIP | DPS | PP | investment_fund | investment_life_insurance | investment_service_agreement | unknown
+     */
+    productType: { type: "string" },
+    strategy: { type: "string" },
+    funds: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name"],
+        properties: {
+          name: { type: "string" },
+          allocation: { type: ["string", "number", "null"] },
+          isin: { type: "string" },
+        },
+      },
+    },
+    investmentAmount: { type: ["string", "number", "null"] },
+    investmentPremium: { type: ["string", "number", "null"] },
+    provider: { type: "string" },
+    contractNumber: { type: "string" },
+    productName: { type: "string" },
+    /** True when values come from an illustration/modelation (not binding). */
+    isModeledData: { type: "boolean" },
+    /** True when values are contractual/binding. */
+    isContractualData: { type: "boolean" },
+    notes: { type: "string" },
+  },
+};
+
+export type InvestmentSectionExtractionOutput = {
+  investmentSectionPresent: boolean;
+  productType: string;
+  strategy?: string;
+  funds?: Array<{ name: string; allocation?: string | number | null; isin?: string }>;
+  investmentAmount?: string | number | null;
+  investmentPremium?: string | number | null;
+  provider?: string;
+  contractNumber?: string;
+  productName?: string;
+  isModeledData?: boolean;
+  isContractualData?: boolean;
+  notes?: string;
+};
+
+/**
+ * Build a focused prompt for extracting investment/DIP/DPS data from a document.
+ * Only extracts investment-specific fields; ignores health, AML, and base contract data.
+ */
+export function buildInvestmentSectionExtractionPrompt(
+  documentText: string,
+  candidates: PacketSubdocumentCandidate[],
+): string {
+  const invCandidates = candidates.filter(
+    (c) => c.type === "investment_section",
+  );
+  const hintLines = invCandidates
+    .map((c) => `- ${c.label}${c.sectionHeadingHint ? `: "${c.sectionHeadingHint}"` : ""}`)
+    .join("\n");
+
+  const trimmedText = documentText.trim();
+  return `Jsi extrakční systém specializovaný na investiční produkty, DIP a DPS.
+
+Tvůj úkol: Identifikuj a extrahuj POUZE investiční data — strategie, fondy, alokace, investiční prémie, typ produktu.
+Ignoruj smlouvu pojištění osob, zdravotní dotazníky a AML formuláře.
+
+${hintLines ? `Detekované investiční sekce:\n${hintLines}\n` : ""}
+
+Rozlišuj přesně:
+- DIP (Dlouhodobý investiční produkt) — novinka od 2024, daňový odpočet
+- DPS (Doplňkové penzijní spoření) — státní příspěvek, penzijní společnost
+- PP (Penzijní připojištění) — starší produkt, transformované fondy
+- IŽP s investiční složkou — fondové životní pojištění
+- Čistá investiční smlouva / investiční program
+
+Extrahuj:
+- productType: typ produktu (DIP | DPS | PP | investment_fund | investment_life_insurance | investment_service_agreement | unknown)
+- strategy: název investiční strategie, pokud je uveden
+- funds: seznam fondů s alokací (%), pokud jsou uvedeny; může být prázdné
+- investmentAmount: celková investiční částka, pokud je uvedena
+- investmentPremium: investiční prémie nebo část pojistného jdoucí do investic
+- provider: název instituce / pojišťovny / penzijní společnosti
+- contractNumber: číslo smlouvy nebo DIP/DPS účtu, pokud je k dispozici
+- productName: název produktu
+- isModeledData: true pokud jsou hodnoty z modelace nebo ilustrace (nezávazné)
+- isContractualData: true pokud jsou hodnoty smluvní (závazné)
+- notes: stručná poznámka (max 1–2 věty), pokud je relevantní
+
+Pokud investiční sekce není přítomna, vrať investmentSectionPresent: false.
+Vrátíš pouze JSON dle schema. Žádný markdown, žádný komentář.
+
+TEXT DOKUMENTU:
+<<<DOCUMENT_TEXT>>>
+${trimmedText}
+<<<END_DOCUMENT_TEXT>>>`;
+}
+
 // ─── Contract section (for bundle type correction) ────────────────────────────
 
 /**

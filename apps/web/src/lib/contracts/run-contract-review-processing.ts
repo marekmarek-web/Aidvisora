@@ -7,7 +7,7 @@ import path from "node:path";
 import type { AuditRequestContext } from "@/lib/audit";
 import { logAudit } from "@/lib/audit";
 import { updateContractReview } from "@/lib/ai/review-queue-repository";
-import { runContractUnderstandingPipeline } from "@/lib/ai/contract-understanding-pipeline";
+import { runContractUnderstandingPipeline, type BundleHint } from "@/lib/ai/contract-understanding-pipeline";
 import { buildAllDraftActions, applyAidvisorDraftCanonicalTypes } from "@/lib/ai/draft-actions";
 import {
   findClientCandidates,
@@ -204,10 +204,28 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
   );
   const earlyPacketMeta = earlyPacketSegmentation.packetMeta;
 
+  // Build bundle hint from pre-extraction segmentation for extraction-time routing.
+  const bundleHint: BundleHint | null = earlyPacketMeta.isBundle
+    ? {
+        isBundle: true,
+        primarySubdocumentType: earlyPacketMeta.primarySubdocumentType,
+        candidateTypes: earlyPacketMeta.subdocumentCandidates.map((c) => c.type),
+        sectionHeadings: earlyPacketMeta.subdocumentCandidates
+          .filter((c) => c.sectionHeadingHint)
+          .map((c) => c.sectionHeadingHint!)
+          .slice(0, 4),
+        hasSensitiveAttachment: earlyPacketMeta.hasSensitiveAttachment,
+        hasInvestmentSection: earlyPacketMeta.subdocumentCandidates.some(
+          (c) => c.type === "investment_section",
+        ),
+      }
+    : null;
+
   const pipelineResult = await runContractUnderstandingPipeline(preprocessedUrl, mimeType, {
     ruleBasedTextHint: adobePreprocessResult?.markdownContent ?? null,
     preprocessMeta,
     sourceFileName: path.basename(storagePath),
+    bundleHint,
   });
   const pipelineDurationMs = Date.now() - pipelineStartedAt;
 

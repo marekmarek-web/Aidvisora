@@ -18,6 +18,7 @@ export const PACKET_SUBDOCUMENT_TYPES = [
   "health_questionnaire",
   "aml_fatca_form",
   "payment_instruction",
+  "investment_section",   // DIP / DPS / fond / investiční program / investiční část IŽP
   "service_document",
   "annex",
   "unpublishable_attachment",

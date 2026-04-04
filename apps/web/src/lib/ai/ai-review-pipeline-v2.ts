@@ -57,6 +57,7 @@ import {
   parseJsonObjectFromAiReviewRaw,
   tryCoerceReviewEnvelopeAfterValidationFailure,
 } from "./coerce-partial-review-envelope";
+import { maybeRewriteInsuranceProposalExtractionRaw } from "./legacy-insurance-proposal-envelope";
 import { deriveEnvelopeFlags } from "./derive-envelope-flags";
 import type {
   ContractPipelineOptions,
@@ -598,6 +599,7 @@ export async function runAiReviewV2Pipeline(
       const combined = await runCombinedClassifyAndExtract({
         documentText: hint,
         sourceFileName: options?.sourceFileName ?? null,
+        bundleHint: options?.bundleHint ?? null,
       });
       trace.extractionDurationMs = Date.now() - combinedStart;
 
@@ -1069,6 +1071,13 @@ export async function runAiReviewV2Pipeline(
     };
   }
   trace.extractionDurationMs = Date.now() - extStart;
+
+  rawExtraction = maybeRewriteInsuranceProposalExtractionRaw(rawExtraction, {
+    promptKey,
+    documentType,
+    classification,
+    normalizedPipeline: normPipeline,
+  });
 
   const valStart = Date.now();
   let validationOutcome = validateExtractionByType(rawExtraction, documentType);

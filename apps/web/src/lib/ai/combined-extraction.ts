@@ -115,13 +115,75 @@ export const combinedClassifyAndExtractJsonSchema: Record<string, unknown> = {
   },
 };
 
+export type CombinedExtractionBundleHint = {
+  isBundle: boolean;
+  primarySubdocumentType?: string | null;
+  candidateTypes?: string[];
+  sectionHeadings?: string[];
+  hasSensitiveAttachment?: boolean;
+  hasInvestmentSection?: boolean;
+};
+
+/**
+ * Build the bundle-aware preamble for the combined extraction prompt.
+ * Returns an empty string when there is no bundle hint.
+ */
+function buildBundleAwarePreamble(hint: CombinedExtractionBundleHint): string {
+  if (!hint.isBundle) return "";
+
+  const sectionTypeLabels: Record<string, string> = {
+    final_contract: "finální smlouva",
+    contract_proposal: "návrh smlouvy",
+    modelation: "modelace",
+    health_questionnaire: "zdravotní dotazník",
+    aml_fatca_form: "AML/FATCA formulář",
+    payment_instruction: "platební instrukce",
+    investment_section: "investiční sekce / DIP / DPS",
+    service_document: "servisní dokument",
+    annex: "příloha",
+  };
+
+  const candidateList =
+    (hint.candidateTypes ?? [])
+      .map((t) => sectionTypeLabels[t] ?? t)
+      .join(", ") || "více sekcí";
+
+  const headingLines =
+    (hint.sectionHeadings ?? []).length > 0
+      ? `Detekované nadpisy sekcí: ${hint.sectionHeadings!.slice(0, 4).join(" | ")}\n`
+      : "";
+
+  const sensitiveNote = hint.hasSensitiveAttachment
+    ? "POZOR: Dokument obsahuje citlivou přílohu (zdravotní dotazník nebo AML formulář) — tato data nepatří do smluvní extrakce.\n"
+    : "";
+
+  const investmentNote = hint.hasInvestmentSection
+    ? "POZOR: Dokument obsahuje investiční sekci (DIP/DPS/fond) — extrahuj investmentStrategy, investmentFunds a investmentPremium z smluvní/investiční části, ne z modelací.\n"
+    : "";
+
+  return `BUNDLE DOKUMENT — více logických sekcí:
+Detekované typy: ${candidateList}
+Primární sekce: ${hint.primarySubdocumentType ? (sectionTypeLabels[hint.primarySubdocumentType] ?? hint.primarySubdocumentType) : "neznámá"}
+${headingLines}${sensitiveNote}${investmentNote}
+Pravidla pro bundle:
+- Klasifikuj dokument podle PRIMÁRNÍ sekce (finální smlouva > návrh > modelace).
+- Extrahuj contract fields POUZE z finální smlouvy nebo návrhu, NE ze zdravotního dotazníku nebo AML.
+- lifecycleStatus urči podle primární sekce.
+- contentFlags.containsMultipleDocumentSections nastav na true.
+
+`;
+}
+
 export function buildCombinedClassifyAndExtractPrompt(
   documentText: string,
-  sourceFileName?: string | null
+  sourceFileName?: string | null,
+  bundleHint?: CombinedExtractionBundleHint | null,
 ): string {
   const trimmedText = documentText.trim();
   const fileName = sourceFileName?.trim() || "unknown";
+  const bundlePreamble = bundleHint?.isBundle ? buildBundleAwarePreamble(bundleHint) : "";
   return `Jsi extrakční systém pro finanční dokumenty.
+${bundlePreamble}
 
 Z textu dokumentu proveď v jednom kroku:
 1. klasifikaci typu dokumentu,
@@ -165,9 +227,10 @@ ${trimmedText}
 export async function runCombinedClassifyAndExtract(params: {
   documentText: string;
   sourceFileName?: string | null;
+  bundleHint?: CombinedExtractionBundleHint | null;
 }): Promise<{ raw: string; envelope: DocumentReviewEnvelope }> {
   const response = await createResponseStructured<unknown>(
-    buildCombinedClassifyAndExtractPrompt(params.documentText, params.sourceFileName),
+    buildCombinedClassifyAndExtractPrompt(params.documentText, params.sourceFileName, params.bundleHint),
     combinedClassifyAndExtractJsonSchema,
     {
       routing: { category: "ai_review" },

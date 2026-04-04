@@ -113,12 +113,37 @@ export type PipelineError = {
 
 export type PipelineResult = PipelineSuccess | PipelineError;
 
+/**
+ * Bundle context hint passed from packet segmentation into the extraction pipeline.
+ * Allows the combined extraction prompt to be aware of multi-section documents
+ * at extraction time, not just post-extraction.
+ */
+export type BundleHint = {
+  isBundle: boolean;
+  /** Primary publishable subdocument type detected. */
+  primarySubdocumentType: string | null;
+  /** All detected subdocument types (strings for forward compatibility). */
+  candidateTypes: string[];
+  /** Section headings detected in the document (first significant lines per section). */
+  sectionHeadings: string[];
+  /** True when at least one sensitive attachment (health/AML) was detected. */
+  hasSensitiveAttachment: boolean;
+  /** True when an investment/DIP/DPS section was detected. */
+  hasInvestmentSection: boolean;
+};
+
 export type ContractPipelineOptions = {
   /** Markdown/OCR text snippet for rule-based classification overrides (e.g. Adobe preprocess). */
   ruleBasedTextHint?: string | null;
   preprocessMeta?: PipelinePreprocessMeta | null;
   /** Original upload file name for Prompt Builder classifier (basename). */
   sourceFileName?: string | null;
+  /**
+   * Pre-computed bundle detection hint from packet segmentation.
+   * When provided, the combined extraction prompt is augmented with bundle context,
+   * improving extraction accuracy for multi-section documents.
+   */
+  bundleHint?: BundleHint | null;
 };
 
 export async function runContractUnderstandingPipeline(

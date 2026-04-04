@@ -156,6 +156,33 @@ const SECTION_SIGNALS: SectionSignal[] = [
     publishable: false,
   },
   {
+    type: "investment_section",
+    label: "Investiční sekce / DIP / DPS",
+    strongPatterns: [
+      /dlouhodobý\s+investiční\s+produkt/i,
+      /\bDIP\b/,
+      /doplňkové\s+penzijní\s+spoření/i,
+      /\bDPS\b/,
+      /penzijní\s+připojištění/i,
+      /\bPP\b.*penzijní/i,
+      /investiční\s+smlouva/i,
+      /investiční\s+program/i,
+      /fondové\s+pojištění/i,
+      /FUNDOO/i,
+      /investiční\s+část\s+pojistné/i,
+      /fond[yů]\s+.*alokac/i,
+    ],
+    weakPatterns: [
+      /investiční\s+strategie/i,
+      /alokace\s+fondů/i,
+      /investiční\s+prémie/i,
+      /\bfond[yů]?\b.*%/i,
+      /výkonnost\s+fondu/i,
+      /hodnota\s+podílových\s+jednotek/i,
+    ],
+    publishable: true, // investment contracts CAN be published as standalone documents
+  },
+  {
     type: "service_document",
     label: "Servisní / doprovodný dokument",
     strongPatterns: [
@@ -183,6 +210,10 @@ const EXPLICIT_INDEX_PATTERNS = [
   /\d\.\s+pojistná\s+smlouva/i,
   /\d\.\s+AML/i,
   /\d\.\s+FATCA/i,
+  /\d\.\s+investiční/i,
+  /\d\.\s+DIP/i,
+  /\d\.\s+DPS/i,
+  /\d\.\s+penzijní/i,
 ];
 
 // ─── Core segmentation logic ──────────────────────────────────────────────
@@ -229,6 +260,7 @@ function tryExtractPageRangeHint(text: string, signalType: PacketSubdocumentType
     final_contract: "smlouva",
     annex: "příloha",
     service_document: "žádost",
+    investment_section: "investiční",
     unpublishable_attachment: "",
     other: "",
   }[signalType] ?? "";

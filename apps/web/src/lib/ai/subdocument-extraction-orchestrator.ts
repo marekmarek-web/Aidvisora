@@ -32,6 +32,9 @@ import {
   buildHealthSectionExtractionPrompt,
   HEALTH_SECTION_EXTRACTION_SCHEMA,
   type HealthSectionExtractionOutput,
+  buildInvestmentSectionExtractionPrompt,
+  INVESTMENT_SECTION_EXTRACTION_SCHEMA,
+  type InvestmentSectionExtractionOutput,
 } from "./subdocument-section-prompts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,6 +44,7 @@ export type SubdocumentSectionOutcome =
   | { type: "aml_fatca_heuristic"; detected: boolean; pepFlag: boolean | null; confidence: number }
   | { type: "modelation_lifecycle_patch"; previousLifecycle: string | null | undefined; patched: boolean }
   | { type: "payment_section_detected"; confidence: number }
+  | { type: "investment_section"; result: InvestmentSectionExtractionOutput; confidence: number }
   | { type: "skipped"; reason: string };
 
 export type SubdocumentOrchestrationResult = {
@@ -335,6 +339,149 @@ function runPaymentSectionDetection(
   return { type: "payment_section_detected", confidence };
 }
 
+// ─── Investment / DIP / DPS section extraction pass ──────────────────────────
+
+/**
+ * Merge investment section extraction results into the envelope.
+ * Rules:
+ * - investmentData: if not populated or only partially populated, enrich from section result
+ * - paymentData: investmentPremium added if missing
+ * - publishHints: only strengthened, never weakened
+ * - DPS/PP/DIP: never published as life insurance contract
+ */
+async function runInvestmentSectionExtractionPass(
+  markdownText: string,
+  candidates: PacketSubdocumentCandidate[],
+  envelope: DocumentReviewEnvelope,
+  warnings: string[],
+): Promise<SubdocumentSectionOutcome> {
+  const invCandidates = candidatesByType(candidates, "investment_section", 0.35);
+  if (invCandidates.length === 0) {
+    return { type: "skipped", reason: "no_investment_section_candidates" };
+  }
+
+  const confidence = Math.max(...invCandidates.map((c) => c.confidence));
+
+  try {
+    const prompt = buildInvestmentSectionExtractionPrompt(markdownText, candidates);
+    const response = await createResponseStructured<InvestmentSectionExtractionOutput>(
+      prompt,
+      INVESTMENT_SECTION_EXTRACTION_SCHEMA,
+      {
+        routing: { category: "ai_review" },
+        schemaName: "investment_section_extraction",
+      },
+    );
+
+    const output = response.parsed as InvestmentSectionExtractionOutput | null;
+    if (!output || !output.investmentSectionPresent) {
+      return {
+        type: "investment_section",
+        result: { investmentSectionPresent: false, productType: "unknown" },
+        confidence,
+      };
+    }
+
+    // Merge investmentData — only enrich, never overwrite contractual with modeled
+    const existing = envelope.investmentData;
+    if (!existing) {
+      // No investmentData yet — populate fully
+      envelope.investmentData = {
+        strategy: output.strategy ?? null,
+        funds: (output.funds ?? []).map((f) => ({ name: f.name, allocation: f.allocation ?? null })),
+        investmentAmount: output.investmentAmount ?? null,
+        isModeledData: output.isModeledData ?? false,
+        isContractualData: output.isContractualData ?? false,
+        notes: buildInvestmentNotes(output),
+      };
+    } else {
+      // Enrich selectively — don't overwrite contractual data with modeled
+      const canOverwrite = !existing.isContractualData || output.isContractualData;
+      if (canOverwrite) {
+        if (!existing.strategy && output.strategy) {
+          envelope.investmentData = { ...existing, strategy: output.strategy };
+        }
+        if ((!existing.funds || existing.funds.length === 0) && (output.funds ?? []).length > 0) {
+          envelope.investmentData = {
+            ...(envelope.investmentData ?? existing),
+            funds: (output.funds ?? []).map((f) => ({ name: f.name, allocation: f.allocation ?? null })),
+          };
+        }
+        if (!existing.investmentAmount && output.investmentAmount) {
+          envelope.investmentData = {
+            ...(envelope.investmentData ?? existing),
+            investmentAmount: output.investmentAmount,
+          };
+        }
+        // Upgrade to contractual if the section result is contractual
+        if (output.isContractualData && !existing.isContractualData) {
+          envelope.investmentData = {
+            ...(envelope.investmentData ?? existing),
+            isContractualData: true,
+            isModeledData: false,
+          };
+        }
+      }
+    }
+
+    // Enrich paymentData with investmentPremium if missing
+    if (output.investmentPremium != null) {
+      const pay = envelope.paymentData ?? {};
+      if (!("investmentPremium" in pay)) {
+        envelope.paymentData = {
+          ...pay,
+          notes: pay.notes
+            ? `${pay.notes}; investiční prémie: ${output.investmentPremium}`
+            : `Investiční prémie: ${output.investmentPremium}`,
+        };
+      }
+    }
+
+    // PublishHints: DPS/PP are publishable; DIP is publishable; investment_service_agreement may not be
+    const NON_STANDALONE_TYPES = new Set(["investment_service_agreement"]);
+    const hasPublishable = hasPublishableSection(candidates);
+    if (NON_STANDALONE_TYPES.has(output.productType) && !hasPublishable) {
+      envelope.publishHints = strengthenPublishHints(envelope.publishHints, {
+        reviewOnly: true,
+        needsManualValidation: true,
+        reasons: ["investment_service_agreement_not_standalone"],
+      });
+    }
+
+    // Add section hint to reviewWarnings if investment type differs from primary classification
+    const primaryType = envelope.documentClassification?.primaryType;
+    const isDipOrDps = output.productType === "DIP" || output.productType === "DPS";
+    const isClassifiedAsLifeInsurance = primaryType?.startsWith("life_insurance") === true;
+    if (isDipOrDps && isClassifiedAsLifeInsurance) {
+      if (!Array.isArray(envelope.reviewWarnings)) envelope.reviewWarnings = [];
+      const alreadyWarned = envelope.reviewWarnings.some(
+        (w) => w.code === "investment_type_mismatch_dip_dps",
+      );
+      if (!alreadyWarned) {
+        envelope.reviewWarnings.push({
+          code: "investment_type_mismatch_dip_dps",
+          message: `Dokument byl klasifikován jako životní pojištění, ale investiční sekce indikuje ${output.productType}. Ověřte správný typ produktu.`,
+          severity: "warning",
+        });
+      }
+    }
+
+    return { type: "investment_section", result: output, confidence };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    warnings.push(`investment_section_extraction_failed: ${msg.slice(0, 100)}`);
+    return { type: "skipped", reason: `investment_extraction_error: ${msg.slice(0, 50)}` };
+  }
+}
+
+function buildInvestmentNotes(output: InvestmentSectionExtractionOutput): string | null {
+  const parts: string[] = [];
+  if (output.provider) parts.push(`Poskytovatel: ${output.provider}`);
+  if (output.productName) parts.push(`Produkt: ${output.productName}`);
+  if (output.notes) parts.push(output.notes);
+  return parts.length > 0 ? parts.join("; ") : null;
+}
+
 // ─── Merge mutation count helper ─────────────────────────────────────────────
 
 function countMutations(outcomes: SubdocumentSectionOutcome[]): number {
@@ -399,7 +546,16 @@ export async function orchestrateSubdocumentExtraction(
   );
   outcomes.push(healthOutcome);
 
-  // 5. Ensure envelope.packetMeta is up-to-date (may have been partially applied earlier)
+  // 5. Investment / DIP / DPS targeted extraction (async LLM call — only when detected)
+  const investmentOutcome = await runInvestmentSectionExtractionPass(
+    markdownText,
+    candidates,
+    envelope,
+    warnings,
+  );
+  outcomes.push(investmentOutcome);
+
+  // 6. Ensure envelope.packetMeta is up-to-date (may have been partially applied earlier)
   envelope.packetMeta = packetMeta;
 
   return {
