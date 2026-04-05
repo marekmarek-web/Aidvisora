@@ -411,6 +411,20 @@ export interface FundDetail {
   suitable: string;
   why: string;
   defaultRate?: number;
+  /** Správce / značka (z katalogu), zobrazení vedle managera */
+  provider?: string;
+  /**
+   * Interní modelový předpoklad v % p.a. (např. 8) — není oficiální výkonnost z factsheetu.
+   * Pro PDF/HTML odděleně od `defaultRate` (desetinné) kde je potřeba obojí.
+   */
+  planningRatePercent?: number | null;
+  /** Textový souhrn oficiální výkonnosti ze zdroje (factsheet), bez vymýšlení čísel */
+  officialPerformanceSummary?: string;
+  factsheetUrl?: string | null;
+  factsheetAsOf?: string | null;
+  verifiedAt?: string | null;
+  /** Hodnocení / štítek z dokumentovaného zdroje (číslo i text, např. „Bronze“) — jen pokud je v katalogu */
+  morningstarRatingLabel?: string | null;
   strategy?: string;
   benefits?: string[];
   parameters?: Record<string, string>;
