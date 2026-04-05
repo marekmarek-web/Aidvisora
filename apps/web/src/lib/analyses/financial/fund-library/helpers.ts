@@ -1,4 +1,6 @@
 import { BASE_FUNDS } from "./base-funds";
+export { BATCH_A_BASE_FUNDS, mapBatchASeedRowToBaseFund } from "./base-funds-batch-a";
+export { BATCH_A_SEED_ROWS } from "./base-funds-batch-a.seed";
 import { FUND_VARIANTS } from "./fund-variants";
 import {
   mapLegacyFundKey as mapLegacyFundKeyInner,
@@ -38,4 +40,12 @@ export function getVariantsForBaseFund(
     (v) =>
       v.baseFundKey === baseFundKey && (options?.includeInactive ? true : v.isActive),
   );
+}
+
+/**
+ * Cesta k logu z katalogu. Prázdný řetězec = žádný soubor (UI může zobrazit iniciály).
+ * Neprovádí kontrolu existence souboru — build zůstane validní i bez assetů.
+ */
+export function resolveFundLogoPath(fund: BaseFund): string {
+  return (fund.assets.logoPath ?? "").trim();
 }

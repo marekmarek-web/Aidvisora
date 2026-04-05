@@ -5,10 +5,28 @@
 
 import type { BaseFundKey } from "./legacy-fund-key-map";
 
-export type FundSourceType = "factsheet" | "morningstar" | "internal";
+/** Oficiální výkonnost z factsheetu (řetězce tak, jak je zdroj uvádí). */
+export interface OfficialFundPerformance {
+  ytd?: string | null;
+  oneYear?: string | null;
+  threeYearPA?: string | null;
+  fiveYearPA?: string | null;
+  tenYearPA?: string | null;
+  sinceInceptionPA?: string | null;
+  asOf?: string | null;
+}
+
+export type FundSourceKind =
+  | "factsheet"
+  | "morningstar"
+  | "internal"
+  | "landing_page"
+  | "kid"
+  | "report"
+  | "documents";
 
 export interface FundSource {
-  type: FundSourceType;
+  kind: FundSourceKind;
   label: string;
   url?: string;
 }
@@ -19,7 +37,7 @@ export interface FundAssetPack {
   galleryPaths?: string[];
 }
 
-/** Snímek výkonnosti — nemusí být pro všechny fondy vyplněný. */
+/** Numerický snímek (volitelný; Batch A používá spíše officialPerformance). */
 export interface FundPerformanceSnapshot {
   asOfDate: string;
   return1Y?: number | null;
@@ -33,14 +51,49 @@ export type FundVariantKey = "standard" | "dip" | "zal" | "zal_dip";
 
 export interface BaseFund {
   baseFundKey: BaseFundKey;
+  /** Oficiální název produktu / třídy podílů */
+  canonicalName?: string;
   displayName: string;
   provider: string;
+  manager?: string;
   category: string;
+  subcategory?: string;
+  currency?: string;
+  isin?: string | null;
+  ticker?: string | null;
+  riskSRI?: number | null;
+  goal?: string;
+  strategy?: string;
+  description?: string;
+  suitable?: string;
+  horizon?: string;
+  liquidity?: string;
+  risks?: string;
+  minInvestment?: string | null;
+  /**
+   * Interní modelový předpoklad (% p.a. jako číslo, např. 8 = 8 %).
+   * Není oficiální výkonnost — viz officialPerformance.
+   */
+  planningRate?: number | null;
+  officialPerformance?: OfficialFundPerformance | null;
+  benefits?: string[];
+  parameters?: Record<string, string>;
+  /** Řádky z factsheetu, např. "NVIDIA 5.04%" */
+  topHoldings?: string[];
+  countries?: string[];
+  sectors?: string[];
+  morningstarRating?: string | null;
+  awards?: string[];
+  factsheetUrl?: string | null;
+  factsheetAsOf?: string | null;
+  verifiedAt?: string | null;
   isActive: boolean;
   sources: FundSource[];
   assets: FundAssetPack;
-  /** Poznámka pro editory / budoucí factsheet napojení */
-  notes?: string;
+  /** Chybějící vizuály k doplnění do asset knihovny */
+  assetTodo?: string[];
+  /** Provozní / editorské poznámky */
+  notes?: string[];
   performance?: FundPerformanceSnapshot | null;
 }
 

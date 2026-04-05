@@ -74,7 +74,7 @@ Cíl: po přepojení jeden `displayName` z fondové knihovny (canonical: jednotn
 
 ## 7. Chybějící fondy oproti canonical v1 (15 base)
 
-V `FUND_DETAILS` **nejsou**: iShares Core S&P 500, Vanguard FTSE Emerging Markets, iShares Core Global Aggregate Bond, Investika realitní, Monetika, Efektika, NN (tři profily). Ty jsou zatím jen placeholdery ve `fund-library/base-funds.ts`.
+V `FUND_DETAILS` **stále nejsou** ETF nad rámec MSCI World jako samostatné product keys. Ve **fund-library** mají čtyři ETF (MSCI World, S&P 500, FTSE EM, Global Aggregate Bond) reálná data z Batch A seedu (`base-funds-batch-a.seed.ts`); viz [`docs/fund-library-batch-a-integration.md`](fund-library-batch-a-integration.md). Investika, Monetika, Efektika a NN trojice zůstávají placeholdery v `base-funds.ts`.
 
 ## 8. TODO — pozdější přepojení (mimo fázi 1)
 

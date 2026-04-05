@@ -1,63 +1,10 @@
 import type { BaseFund } from "./types";
+import { BATCH_A_BASE_FUNDS } from "./base-funds-batch-a";
 
 /**
- * Placeholder záznamy v1 — bez finálních factsheet dat.
- * Loga u fondů již v `FUND_LOGOS` odkazujeme na existující public cesty tam, kde je máme.
+ * Katalog base fondů: Batch A (reálná data) + placeholdery pro zbývající klíče v1.
  */
-export const BASE_FUNDS: readonly BaseFund[] = [
-  {
-    baseFundKey: "ishares_core_msci_world",
-    displayName: "iShares Core MSCI World",
-    provider: "BlackRock",
-    category: "Akciové ETF",
-    isActive: true,
-    sources: [
-      { type: "internal", label: "Factsheet / popis (doplnit)" },
-      { type: "morningstar", label: "Morningstar (doplnit)" },
-    ],
-    assets: { logoPath: "/logos/ishares.png" },
-    notes: "Legacy productKey: ishares; alias world_etf → zde.",
-    performance: null,
-  },
-  {
-    baseFundKey: "ishares_core_sp_500",
-    displayName: "iShares Core S&P 500",
-    provider: "BlackRock",
-    category: "Akciové ETF",
-    isActive: true,
-    sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "morningstar", label: "Morningstar (doplnit)" },
-    ],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "vanguard_ftse_emerging_markets",
-    displayName: "Vanguard FTSE Emerging Markets",
-    provider: "Vanguard",
-    category: "Akciové ETF",
-    isActive: true,
-    sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "morningstar", label: "Morningstar (doplnit)" },
-    ],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "ishares_core_global_aggregate_bond",
-    displayName: "iShares Core Global Aggregate Bond",
-    provider: "BlackRock",
-    category: "Dluhopisové ETF",
-    isActive: true,
-    sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "morningstar", label: "Morningstar (doplnit)" },
-    ],
-    assets: {},
-    performance: null,
-  },
+const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = [
   {
     baseFundKey: "fidelity_target_2040",
     displayName: "Fidelity Target 2040",
@@ -65,11 +12,11 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     category: "Smíšený (lifecycle)",
     isActive: true,
     sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "factsheet", label: "Výrobce (doplnit URL)" },
+      { kind: "internal", label: "Factsheet (doplnit)" },
+      { kind: "factsheet", label: "Výrobce (doplnit URL)" },
     ],
     assets: { logoPath: "/logos/fidelity.png" },
-    notes: "Legacy productKey: fidelity2040",
+    notes: ["Legacy productKey: fidelity2040"],
     performance: null,
   },
   {
@@ -78,7 +25,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "Investika",
     category: "Nemovitostní",
     isActive: true,
-    sources: [{ type: "internal", label: "Factsheet (doplnit)" }],
+    sources: [{ kind: "internal", label: "Factsheet (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -88,7 +35,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "—",
     category: "Dluhopisy / hotovost (placeholder)",
     isActive: true,
-    sources: [{ type: "internal", label: "Specifikace produktu (doplnit)" }],
+    sources: [{ kind: "internal", label: "Specifikace produktu (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -98,7 +45,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "—",
     category: "Smíšené (placeholder)",
     isActive: true,
-    sources: [{ type: "internal", label: "Specifikace produktu (doplnit)" }],
+    sources: [{ kind: "internal", label: "Specifikace produktu (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -109,11 +56,11 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     category: "Účastnický fond (DPS)",
     isActive: true,
     sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "factsheet", label: "Conseq (doplnit URL)" },
+      { kind: "internal", label: "Factsheet (doplnit)" },
+      { kind: "factsheet", label: "Conseq (doplnit URL)" },
     ],
     assets: { logoPath: "/logos/conseq.png" },
-    notes: "Legacy productKey: conseq. Varianty DIP/ZAL viz fund-variants.",
+    notes: ["Legacy productKey: conseq. Varianty DIP/ZAL viz fund-variants."],
     performance: null,
   },
   {
@@ -122,7 +69,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "NN",
     category: "Účastnický fond (DPS)",
     isActive: true,
-    sources: [{ type: "internal", label: "Factsheet NN (doplnit)" }],
+    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -132,7 +79,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "NN",
     category: "Účastnický fond (DPS)",
     isActive: true,
-    sources: [{ type: "internal", label: "Factsheet NN (doplnit)" }],
+    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -142,7 +89,7 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     provider: "NN",
     category: "Účastnický fond (DPS)",
     isActive: true,
-    sources: [{ type: "internal", label: "Factsheet NN (doplnit)" }],
+    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
     assets: {},
     performance: null,
   },
@@ -153,8 +100,8 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     category: "Nemovitostní",
     isActive: true,
     sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "factsheet", label: "EFEKTA / CREIF (doplnit URL)" },
+      { kind: "internal", label: "Factsheet (doplnit)" },
+      { kind: "factsheet", label: "EFEKTA / CREIF (doplnit URL)" },
     ],
     assets: {
       logoPath: "/logos/creif.png",
@@ -174,8 +121,8 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     category: "Nemovitostní",
     isActive: true,
     sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "factsheet", label: "ATRIS (doplnit URL)" },
+      { kind: "internal", label: "Factsheet (doplnit)" },
+      { kind: "factsheet", label: "ATRIS (doplnit URL)" },
     ],
     assets: {
       logoPath: "/logos/atris.png",
@@ -195,8 +142,8 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     category: "Privátní kapitál",
     isActive: true,
     sources: [
-      { type: "internal", label: "Factsheet (doplnit)" },
-      { type: "factsheet", label: "Penta (doplnit URL)" },
+      { kind: "internal", label: "Factsheet (doplnit)" },
+      { kind: "factsheet", label: "Penta (doplnit URL)" },
     ],
     assets: {
       logoPath: "/logos/Penta.png",
@@ -209,3 +156,5 @@ export const BASE_FUNDS: readonly BaseFund[] = [
     performance: null,
   },
 ];
+
+export const BASE_FUNDS: readonly BaseFund[] = [...BATCH_A_BASE_FUNDS, ...BASE_FUNDS_PLACEHOLDERS];
