@@ -4,6 +4,35 @@ import * as Sentry from "@sentry/nextjs";
  * User-visible Czech copy for production errors where Next.js omits details
  * or surfaces generic RSC failure messages.
  */
+/**
+ * Chyby ze server actions / fetch na klientu — srozumitelná čeština i když Next v produkci schová detail.
+ */
+export function getActionFriendlyErrorMessage(e: unknown, fallback: string): string {
+  const err = e instanceof Error ? e : null;
+  const msg = (err?.message ?? (typeof e === "string" ? e : "")).trim();
+  const digest =
+    err && typeof (err as Error & { digest?: string }).digest === "string"
+      ? String((err as Error & { digest?: string }).digest)
+      : "";
+
+  const isProd = process.env.NODE_ENV === "production";
+  const isGenericProd =
+    isProd &&
+    (/\bserver components\b/i.test(msg) ||
+      msg.includes("omitted in production") ||
+      msg.includes("digest property") ||
+      (!msg && digest.length > 0));
+
+  if (isGenericProd) {
+    return "Načtení nebo odeslání zpráv selhalo — často chybí tabulky messages v databázi. V Supabase spusťte packages/db/migrations/portal_messages_tables.sql z repozitáře, pak obnovte stránku.";
+  }
+  if (msg) return msg;
+  if (digest && isProd) {
+    return "Chyba serveru (digest). Zkontrolujte migrace databáze (messages, message_attachments) nebo logy nasazení.";
+  }
+  return fallback;
+}
+
 export function getPortalFriendlyErrorMessage(error: Error & { digest?: string }): string {
   const isProd = process.env.NODE_ENV === "production";
   const msg = (error.message ?? "").trim();

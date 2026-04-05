@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Paperclip, Plus, Search, Send, Trash2, User, X, MessageSquare } from "lucide-react";
 import {
   getConversationsList,
-  getMessages,
+  loadThreadMessages,
   getMessageAttachments,
   sendMessage,
   sendMessageWithAttachments,
@@ -22,6 +22,7 @@ import {
   EmptyState,
   ErrorState,
 } from "@/app/shared/mobile-ui/primitives";
+import { getActionFriendlyErrorMessage } from "@/lib/observability/production-error-ui";
 
 const POLL_INTERVAL = 10_000;
 
@@ -171,6 +172,7 @@ export function MessagesMobileScreen() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -185,10 +187,15 @@ export function MessagesMobileScreen() {
     if (isInitial) setLoadingConversations(true);
     setConversationsError(null);
     try {
-      const list = await getConversationsList(searchQuery.trim() || undefined);
-      setConversations(list);
+      const outcome = await getConversationsList(searchQuery.trim() || undefined);
+      if (outcome.ok) {
+        setConversations(outcome.list);
+      } else if (isInitial) {
+        setConversationsError(outcome.error);
+        setConversations([]);
+      }
     } catch (e) {
-      if (isInitial) setConversationsError(e instanceof Error ? e.message : "Nepodařilo se načíst konverzace.");
+      if (isInitial) setConversationsError(getActionFriendlyErrorMessage(e, "Nepodařilo se načíst konverzace."));
       setConversations([]);
     } finally {
       if (isInitial) setLoadingConversations(false);
@@ -212,8 +219,10 @@ export function MessagesMobileScreen() {
     if (!selectedContactId) {
       setMsgs([]);
       setContactName("");
+      setThreadLoadError(null);
       return;
     }
+    setThreadLoadError(null);
     setLoadingMessages(true);
     const conv = conversations.find((c) => c.contactId === selectedContactId);
     if (conv) {
@@ -227,15 +236,19 @@ export function MessagesMobileScreen() {
     }
 
     let cancelled = false;
-    getMessages(selectedContactId)
-      .then((data) => {
+    loadThreadMessages(selectedContactId)
+      .then((outcome) => {
         if (!cancelled) {
-          setMsgs(data);
+          if (outcome.ok) setMsgs(outcome.messages);
+          else setThreadLoadError(outcome.error);
           setLoadingMessages(false);
         }
       })
-      .catch(() => {
-        if (!cancelled) setLoadingMessages(false);
+      .catch((e) => {
+        if (!cancelled) {
+          setThreadLoadError(getActionFriendlyErrorMessage(e, "Konverzaci se nepodařilo načíst."));
+          setLoadingMessages(false);
+        }
       });
     markMessagesRead(selectedContactId)
       .then(() => window.dispatchEvent(new Event("portal-messages-badge-refresh")))
@@ -290,11 +303,12 @@ export function MessagesMobileScreen() {
           await sendMessage(selectedContactId, trimmed);
         }
         setBody("");
-        const data = await getMessages(selectedContactId);
-        setMsgs(data);
+        const reload = await loadThreadMessages(selectedContactId);
+        if (reload.ok) setMsgs(reload.messages);
+        else setSendError(reload.error);
         loadConversations(false);
       } catch (e) {
-        setSendError(e instanceof Error ? e.message : "Zprávu se nepodařilo odeslat.");
+        setSendError(getActionFriendlyErrorMessage(e, "Zprávu se nepodařilo odeslat."));
       }
     });
   }
@@ -329,8 +343,9 @@ export function MessagesMobileScreen() {
           delete next[messageId];
           return next;
         });
-        const data = await getMessages(cid);
-        setMsgs(data);
+        const reload = await loadThreadMessages(cid);
+        if (reload.ok) setMsgs(reload.messages);
+        else setSendError(reload.error);
         await loadConversations(false);
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch {
@@ -542,6 +557,11 @@ export function MessagesMobileScreen() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {threadLoadError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-100">
+            {threadLoadError}
+          </div>
+        ) : null}
         {loadingMessages ? (
           <LoadingSkeleton variant="list" rows={5} />
         ) : msgs.length === 0 ? (

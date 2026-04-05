@@ -26,22 +26,13 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
 
   const canReadContacts = hasPermission(auth.roleName, "contacts:read");
 
-  const [openTasksResult, unreadMessagesResult, notificationRows] = await Promise.all([
+  const [openTasksResult, notificationRows] = await Promise.all([
     canReadContacts
       ? db
           .select({ count: sql<number>`count(*)::int` })
           .from(tasks)
           .where(and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt)))
       : Promise.resolve([{ count: 0 }]),
-    canReadContacts
-      ? db.execute(sql`
-          SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
-          FROM messages m
-          WHERE m.tenant_id = ${auth.tenantId}
-            AND m.sender_type = 'client'
-            AND m.read_at IS NULL
-        `)
-      : Promise.resolve({ rows: [{ cnt: 0 }] }),
     db
       .select({ c: sql<number>`count(*)::int` })
       .from(advisorNotifications)
@@ -59,11 +50,22 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
 
   let unreadConversations = 0;
   if (canReadContacts) {
-    const execRows = Array.isArray(unreadMessagesResult)
-      ? unreadMessagesResult
-      : (unreadMessagesResult as { rows?: { cnt: number }[] }).rows ?? [];
-    const row = execRows[0] as { cnt?: number } | undefined;
-    unreadConversations = row?.cnt ?? 0;
+    try {
+      const unreadMessagesResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
+        FROM messages m
+        WHERE m.tenant_id = ${auth.tenantId}
+          AND m.sender_type = 'client'
+          AND m.read_at IS NULL
+      `);
+      const execRows = Array.isArray(unreadMessagesResult)
+        ? unreadMessagesResult
+        : (unreadMessagesResult as { rows?: { cnt: number }[] }).rows ?? [];
+      const row = execRows[0] as { cnt?: number } | undefined;
+      unreadConversations = row?.cnt ?? 0;
+    } catch {
+      unreadConversations = 0;
+    }
   }
 
   const notifications = Number(notificationRows[0]?.c ?? 0);

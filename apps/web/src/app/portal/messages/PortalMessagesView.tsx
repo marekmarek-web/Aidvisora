@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
   getConversationsList,
-  getMessages,
+  loadThreadMessages,
   getMessageAttachments,
   getChatContextPanelSnapshot,
   sendMessage,
@@ -37,15 +37,13 @@ import { ChatQuickTaskOverlay } from "./components/ChatQuickTaskOverlay";
 import { buildChatTaskDescriptionSeed, buildChatTaskSuggestedTitle } from "./components/chat-task-defaults";
 import { formatLastActiveLabel, presenceFromLastMessageAt } from "./components/chat-format";
 import { mergeConversationsWithSelection } from "./components/merge-conversations-with-selection";
+import { getActionFriendlyErrorMessage } from "@/lib/observability/production-error-ui";
 
 const POLL_INTERVAL = 10_000;
 
 function humanMessageError(e: unknown, fallback: string): string {
-  if (e instanceof Error) {
-    if (e.message === "Forbidden") return "K této konverzaci nemáte přístup.";
-    return e.message;
-  }
-  return fallback;
+  if (e instanceof Error && e.message === "Forbidden") return "K této konverzaci nemáte přístup.";
+  return getActionFriendlyErrorMessage(e, e instanceof Error ? e.message : fallback);
 }
 
 export function PortalMessagesView({ initialContactId }: { initialContactId: string | null }) {
@@ -132,9 +130,14 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const runListFetch = useCallback(async (mode: "initial" | "poll") => {
     const q = searchRef.current || undefined;
     try {
-      const list = await getConversationsList(q);
-      setConversations(list);
-      if (mode === "initial") setConversationsError(null);
+      const outcome = await getConversationsList(q);
+      if (outcome.ok) {
+        setConversations(outcome.list);
+        if (mode === "initial") setConversationsError(null);
+      } else if (mode === "initial") {
+        setConversationsError(outcome.error);
+        setConversations([]);
+      }
     } catch (e) {
       if (mode === "initial") {
         setConversationsError(humanMessageError(e, "Konverzace se nepodařilo načíst."));
@@ -168,14 +171,18 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     setMessagesLoading(true);
     setMessagesError(null);
     try {
-      const data = await getMessages(cid);
-      setMsgs(data);
-      try {
-        await markMessagesRead(cid);
-        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-        await runListFetch("poll");
-      } catch {
-        /* označení přečtení nesmí zablokovat zobrazení vlákna */
+      const outcome = await loadThreadMessages(cid);
+      if (outcome.ok) {
+        setMsgs(outcome.messages);
+        try {
+          await markMessagesRead(cid);
+          window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+          await runListFetch("poll");
+        } catch {
+          /* označení přečtení nesmí zablokovat zobrazení vlákna */
+        }
+      } else {
+        setMessagesError(outcome.error);
       }
     } catch (e) {
       setMessagesError(humanMessageError(e, "Konverzaci se nepodařilo načíst."));
@@ -336,8 +343,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           delete next[messageId];
           return next;
         });
-        const data = await getMessages(cid);
-        setMsgs(data);
+        const reload = await loadThreadMessages(cid);
+        if (reload.ok) setMsgs(reload.messages);
+        else throw new Error(reload.error);
         await runListFetch("poll");
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch (e) {
@@ -392,8 +400,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           await sendMessage(selectedContactId, trimmed);
         }
         setBody("");
-        const data = await getMessages(selectedContactId);
-        setMsgs(data);
+        const reload = await loadThreadMessages(selectedContactId);
+        if (reload.ok) setMsgs(reload.messages);
+        else setSendError(reload.error);
         await runListFetch("poll");
       } catch (e) {
         setSendError(humanMessageError(e, "Zprávu se nepodařilo odeslat."));

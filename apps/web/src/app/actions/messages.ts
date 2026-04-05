@@ -25,6 +25,40 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
 import { newMessageAdvisorTemplate } from "@/lib/email/templates";
 
+const PORTAL_MESSAGES_SCHEMA_HINT =
+  "V Supabase → SQL Editor spusťte skript packages/db/migrations/portal_messages_tables.sql z repozitáře (vytvoří messages a message_attachments), pak obnovte stránku.";
+
+function isNextRedirectError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
+}
+
+function formatClientVisibleDbError(e: unknown): string {
+  if (e instanceof Error && e.message === "Forbidden") {
+    return "K této konverzaci nemáte přístup.";
+  }
+  const raw = (e instanceof Error ? e.message : String(e)).trim();
+  const lower = raw.toLowerCase();
+
+  if (
+    (lower.includes("relation") || lower.includes("42p01")) &&
+    (lower.includes("messages") || lower.includes("message_attachments")) &&
+    (lower.includes("does not exist") || lower.includes("neexistuje"))
+  ) {
+    return `Chybí tabulky pro zprávy v databázi. ${PORTAL_MESSAGES_SCHEMA_HINT}`;
+  }
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    (/\bserver components\b/i.test(raw) ||
+      raw.includes("omitted in production") ||
+      raw.includes("digest property"))
+  ) {
+    return `Načtení zpráv na serveru selhalo. ${PORTAL_MESSAGES_SCHEMA_HINT}`;
+  }
+
+  return raw || "Nepodařilo se dokončit operaci se zprávami.";
+}
+
 export type MessageRow = {
   id: string;
   senderType: string;
@@ -56,22 +90,41 @@ export async function getMessages(contactId: string): Promise<MessageRow[]> {
   return rows;
 }
 
+export type ThreadMessagesLoadResult =
+  | { ok: true; messages: MessageRow[] }
+  | { ok: false; error: string };
+
+/** Stejné jako getMessages, ale nikdy nehází kvůli DB — vhodné pro volání z klienta (žádný HTTP 500 při chybějící tabulce). */
+export async function loadThreadMessages(contactId: string): Promise<ThreadMessagesLoadResult> {
+  try {
+    const rows = await getMessages(contactId);
+    return { ok: true, messages: rows };
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return { ok: false, error: formatClientVisibleDbError(e) };
+  }
+}
+
 /** Returns number of distinct contacts that have at least one unread message from client. For sidebar badge. */
 export async function getUnreadConversationsCount(): Promise<number> {
   const auth = await requireAuthInAction();
   if (auth.roleName === "Client") return 0;
   if (!hasPermission(auth.roleName, "contacts:read")) return 0;
 
-  const result = await db.execute(sql`
-    SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
-    FROM messages m
-    WHERE m.tenant_id = ${auth.tenantId}
-      AND m.sender_type = 'client'
-      AND m.read_at IS NULL
-  `);
-  const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
-  const row = rows[0] as { cnt: number } | undefined;
-  return row?.cnt ?? 0;
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
+      FROM messages m
+      WHERE m.tenant_id = ${auth.tenantId}
+        AND m.sender_type = 'client'
+        AND m.read_at IS NULL
+    `);
+    const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
+    const row = rows[0] as { cnt: number } | undefined;
+    return row?.cnt ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Client-only badge: unread advisor messages in own thread. */
@@ -79,17 +132,21 @@ export async function getUnreadAdvisorMessagesForClientCount(): Promise<number> 
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return 0;
 
-  const result = await db.execute(sql`
-    SELECT COUNT(*)::int AS cnt
-    FROM messages m
-    WHERE m.tenant_id = ${auth.tenantId}
-      AND m.contact_id = ${auth.contactId}
-      AND m.sender_type = 'advisor'
-      AND m.read_at IS NULL
-  `);
-  const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
-  const row = rows[0] as { cnt: number } | undefined;
-  return row?.cnt ?? 0;
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM messages m
+      WHERE m.tenant_id = ${auth.tenantId}
+        AND m.contact_id = ${auth.contactId}
+        AND m.sender_type = 'advisor'
+        AND m.read_at IS NULL
+    `);
+    const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
+    const row = rows[0] as { cnt: number } | undefined;
+    return row?.cnt ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export type ConversationListItem = {
@@ -101,57 +158,71 @@ export type ConversationListItem = {
   unread: boolean;
 };
 
-export async function getConversationsList(search?: string): Promise<ConversationListItem[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) return [];
+export type ConversationsListResult =
+  | { ok: true; list: ConversationListItem[] }
+  | { ok: false; error: string };
 
-  const searchCond = search?.trim()
-    ? sql`AND (c.first_name ILIKE ${"%" + search.trim() + "%"} OR c.last_name ILIKE ${"%" + search.trim() + "%"})`
-    : sql``;
+/**
+ * Seznam konverzací — při chybě DB vrací `{ ok: false, error }` místo výjimky,
+ * aby Next nevracel HTTP 500 a klient mohl zobrazit návod na migraci.
+ */
+export async function getConversationsList(search?: string): Promise<ConversationsListResult> {
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:read")) return { ok: true, list: [] };
 
-  const result = await db.execute(sql`
-    WITH last_per_contact AS (
-      SELECT DISTINCT ON (m.contact_id)
-        m.contact_id,
-        m.body AS last_message,
-        m.created_at AS last_message_at,
-        m.sender_type,
-        CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN 1 ELSE 0 END AS is_unread
-      FROM messages m
-      WHERE m.tenant_id = ${auth.tenantId}
-      ORDER BY m.contact_id, m.created_at DESC
-    ),
-    unread_counts AS (
-      SELECT contact_id, COUNT(*)::int AS unread_count
-      FROM messages
-      WHERE tenant_id = ${auth.tenantId}
-        AND sender_type = 'client'
-        AND read_at IS NULL
-      GROUP BY contact_id
-    )
-    SELECT
-      c.id AS contact_id,
-      c.first_name || ' ' || c.last_name AS contact_name,
-      lpc.last_message,
-      lpc.last_message_at,
-      COALESCE(uc.unread_count, 0) AS unread_count
-    FROM last_per_contact lpc
-    JOIN contacts c ON c.id = lpc.contact_id AND c.tenant_id = ${auth.tenantId}
-    LEFT JOIN unread_counts uc ON uc.contact_id = lpc.contact_id
-    WHERE 1=1 ${searchCond}
-    ORDER BY lpc.last_message_at DESC
-    LIMIT 200
-  `);
+    const searchCond = search?.trim()
+      ? sql`AND (c.first_name ILIKE ${"%" + search.trim() + "%"} OR c.last_name ILIKE ${"%" + search.trim() + "%"})`
+      : sql``;
 
-  const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
-  return (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; unread_count: number }[]).map((r) => ({
-    contactId: r.contact_id,
-    contactName: r.contact_name,
-    lastMessage: r.last_message,
-    lastMessageAt: new Date(r.last_message_at),
-    unreadCount: r.unread_count,
-    unread: r.unread_count > 0,
-  }));
+    const result = await db.execute(sql`
+      WITH last_per_contact AS (
+        SELECT DISTINCT ON (m.contact_id)
+          m.contact_id,
+          m.body AS last_message,
+          m.created_at AS last_message_at,
+          m.sender_type,
+          CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN 1 ELSE 0 END AS is_unread
+        FROM messages m
+        WHERE m.tenant_id = ${auth.tenantId}
+        ORDER BY m.contact_id, m.created_at DESC
+      ),
+      unread_counts AS (
+        SELECT contact_id, COUNT(*)::int AS unread_count
+        FROM messages
+        WHERE tenant_id = ${auth.tenantId}
+          AND sender_type = 'client'
+          AND read_at IS NULL
+        GROUP BY contact_id
+      )
+      SELECT
+        c.id AS contact_id,
+        c.first_name || ' ' || c.last_name AS contact_name,
+        lpc.last_message,
+        lpc.last_message_at,
+        COALESCE(uc.unread_count, 0) AS unread_count
+      FROM last_per_contact lpc
+      JOIN contacts c ON c.id = lpc.contact_id AND c.tenant_id = ${auth.tenantId}
+      LEFT JOIN unread_counts uc ON uc.contact_id = lpc.contact_id
+      WHERE 1=1 ${searchCond}
+      ORDER BY lpc.last_message_at DESC
+      LIMIT 200
+    `);
+
+    const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
+    const list = (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; unread_count: number }[]).map((r) => ({
+      contactId: r.contact_id,
+      contactName: r.contact_name,
+      lastMessage: r.last_message,
+      lastMessageAt: new Date(r.last_message_at),
+      unreadCount: r.unread_count,
+      unread: r.unread_count > 0,
+    }));
+    return { ok: true, list };
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return { ok: false, error: formatClientVisibleDbError(e) };
+  }
 }
 
 export async function sendMessage(contactId: string, body: string): Promise<string | null> {
@@ -371,30 +442,34 @@ export async function getRecentConversations(limit = 5): Promise<RecentConversat
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) return [];
 
-  const result = await db.execute(sql`
-    SELECT DISTINCT ON (m.contact_id)
-      m.contact_id,
-      c.first_name || ' ' || c.last_name AS contact_name,
-      m.body AS last_message,
-      m.created_at AS last_message_at,
-      m.sender_type,
-      CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN true ELSE false END AS unread
-    FROM messages m
-    JOIN contacts c ON c.id = m.contact_id
-    WHERE m.tenant_id = ${auth.tenantId}
-    ORDER BY m.contact_id, m.created_at DESC
-    LIMIT ${limit}
-  `);
+  try {
+    const result = await db.execute(sql`
+      SELECT DISTINCT ON (m.contact_id)
+        m.contact_id,
+        c.first_name || ' ' || c.last_name AS contact_name,
+        m.body AS last_message,
+        m.created_at AS last_message_at,
+        m.sender_type,
+        CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN true ELSE false END AS unread
+      FROM messages m
+      JOIN contacts c ON c.id = m.contact_id
+      WHERE m.tenant_id = ${auth.tenantId}
+      ORDER BY m.contact_id, m.created_at DESC
+      LIMIT ${limit}
+    `);
 
-  const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
-  return (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; sender_type: string; unread: boolean }[]).map((r) => ({
-    contactId: r.contact_id,
-    contactName: r.contact_name,
-    lastMessage: r.last_message,
-    lastMessageAt: new Date(r.last_message_at),
-    senderType: r.sender_type,
-    unread: r.unread,
-  }));
+    const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
+    return (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; sender_type: string; unread: boolean }[]).map((r) => ({
+      contactId: r.contact_id,
+      contactName: r.contact_name,
+      lastMessage: r.last_message,
+      lastMessageAt: new Date(r.last_message_at),
+      senderType: r.sender_type,
+      unread: r.unread,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /** Smaže jednu zprávu v tenantu (přílohy cascade). Pouze poradce s contacts:write. */
