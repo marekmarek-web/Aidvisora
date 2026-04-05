@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -319,57 +319,64 @@ export async function POST(request: Request) {
             },
           };
 
-          await upsertConversationFromSession(session, {
-            channel,
-            metadata: {
-              orchestration,
-              messageCount: session.messageCount,
-            },
-          });
-          await appendConversationMessage({
-            conversationId: session.sessionId,
-            role: "user",
-            content: message,
-            meta: {
-              channel,
-              activeContext,
-              traceId,
-              assistantRunId,
-            },
-          });
-          await appendConversationMessage({
-            conversationId: session.sessionId,
-            role: "assistant",
-            content: persistedResponse.message ?? "",
-            executionPlanSnapshot: session.lastExecutionPlan ?? null,
-            referencedEntities: persistedResponse.referencedEntities ?? [],
-            meta: {
-              warnings: persistedResponse.warnings ?? [],
-              confidence: persistedResponse.confidence,
-              traceId,
-              assistantRunId,
-            },
-          });
-          if (orchestration === "canonical") {
-            appendToConversationDigest(session, message);
-          }
-          await logAudit({
-            tenantId,
-            userId,
-            action: "assistant.conversation_message",
-            entityType: "assistant_conversation",
-            entityId: session.sessionId,
-            request,
-            meta: {
-              channel,
-              orchestration,
-              messageCount: session.messageCount,
-              traceId,
-              assistantRunId,
-            },
-          }).catch(() => {});
-
           const corr = correlationHeaders(traceId, assistantRunId);
+
+          // DB writes and audit happen after the response is sent — client gets the answer immediately.
+          after(async () => {
+            try {
+              await upsertConversationFromSession(session, {
+                channel,
+                metadata: {
+                  orchestration,
+                  messageCount: session.messageCount,
+                },
+              });
+              await appendConversationMessage({
+                conversationId: session.sessionId,
+                role: "user",
+                content: message,
+                meta: {
+                  channel,
+                  activeContext,
+                  traceId,
+                  assistantRunId,
+                },
+              });
+              await appendConversationMessage({
+                conversationId: session.sessionId,
+                role: "assistant",
+                content: persistedResponse.message ?? "",
+                executionPlanSnapshot: session.lastExecutionPlan ?? null,
+                referencedEntities: persistedResponse.referencedEntities ?? [],
+                meta: {
+                  warnings: persistedResponse.warnings ?? [],
+                  confidence: persistedResponse.confidence,
+                  traceId,
+                  assistantRunId,
+                },
+              });
+              if (orchestration === "canonical") {
+                appendToConversationDigest(session, message);
+              }
+              await logAudit({
+                tenantId,
+                userId,
+                action: "assistant.conversation_message",
+                entityType: "assistant_conversation",
+                entityId: session.sessionId,
+                request,
+                meta: {
+                  channel,
+                  orchestration,
+                  messageCount: session.messageCount,
+                  traceId,
+                  assistantRunId,
+                },
+              }).catch(() => {});
+            } catch {
+              // Persistence failure must not affect the client response.
+            }
+          });
 
           if (useStream) {
             return new Response(assistantResponseToSseStream(persistedResponse), {

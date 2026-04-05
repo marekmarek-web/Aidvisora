@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { db, tenantSettings, advisorPreferences, fundAddRequests, eq, and, desc } from "db";
 import { BASE_FUNDS } from "@/lib/analyses/financial/fund-library/base-funds";
 import { BASE_FUND_KEYS, type BaseFundKey } from "@/lib/analyses/financial/fund-library/legacy-fund-key-map";
@@ -59,6 +60,31 @@ function mergeAdvisorPrefs(
  * Snapshot pro FA + Nastavení. Chybějící řádek tenant allowlist = všechny fondy z katalogu.
  * Chybějící advisor řádek = default merge (všechna povolená, zapnuté).
  */
+async function fetchTenantAllowlist(tenantId: string) {
+  const [tenantRow] = await db
+    .select({ value: tenantSettings.value })
+    .from(tenantSettings)
+    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, TENANT_ALLOWLIST_KEY)))
+    .limit(1);
+  return (tenantRow?.value ?? null) as TenantFundAllowlistValue | null;
+}
+
+async function fetchAdvisorFundPrefs(tenantId: string, userId: string) {
+  const [prefRow] = await db
+    .select({ fundLibrary: advisorPreferences.fundLibrary })
+    .from(advisorPreferences)
+    .where(and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId)))
+    .limit(1);
+  return prefRow?.fundLibrary ?? null;
+}
+
+export function getFundLibraryCacheTag(tenantId: string) {
+  return `fund-library-${tenantId}`;
+}
+export function getFundLibraryAdvisorCacheTag(tenantId: string, userId: string) {
+  return `fund-library-advisor-${tenantId}-${userId}`;
+}
+
 export async function getFundLibrarySetupSnapshot(
   tenantId: string,
   userId: string,
@@ -66,15 +92,22 @@ export async function getFundLibrarySetupSnapshot(
 ): Promise<FundLibrarySetupSnapshot> {
   const canEditTenantAllowlist = isRoleAtLeast(roleName, "Director");
 
-  const [tenantRow] = await db
-    .select({ value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(
-      and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, TENANT_ALLOWLIST_KEY)),
-    )
-    .limit(1);
+  const cachedAllowlist = unstable_cache(
+    () => fetchTenantAllowlist(tenantId),
+    [`fund-allowlist-${tenantId}`],
+    { revalidate: 60, tags: [getFundLibraryCacheTag(tenantId)] }
+  );
+  const cachedAdvisorPrefs = unstable_cache(
+    () => fetchAdvisorFundPrefs(tenantId, userId),
+    [`fund-advisor-prefs-${tenantId}-${userId}`],
+    { revalidate: 60, tags: [getFundLibraryAdvisorCacheTag(tenantId, userId)] }
+  );
 
-  const rawAllow = (tenantRow?.value ?? null) as TenantFundAllowlistValue | null;
+  const [rawAllow, rawFundLibrary] = await Promise.all([
+    cachedAllowlist(),
+    cachedAdvisorPrefs(),
+  ]);
+
   const rawList = rawAllow?.allowedBaseFundKeys;
   /** undefined / missing row = všechny; explicitní pole (i prázdné) = jen vyjmenované */
   const allowKeys: string[] | null = rawList === undefined || rawList === null ? null : rawList.filter(isValidBaseFundKey);
@@ -83,13 +116,7 @@ export async function getFundLibrarySetupSnapshot(
   const effectiveAllowedKeys =
     allowKeys === null ? catalogKeys : catalogKeys.filter((k) => allowKeys.includes(k));
 
-  const [prefRow] = await db
-    .select({ fundLibrary: advisorPreferences.fundLibrary })
-    .from(advisorPreferences)
-    .where(and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId)))
-    .limit(1);
-
-  const advisorPrefs = mergeAdvisorPrefs(prefRow?.fundLibrary ?? undefined, effectiveAllowedKeys);
+  const advisorPrefs = mergeAdvisorPrefs(rawFundLibrary ?? undefined, effectiveAllowedKeys);
 
   const catalog = BASE_FUNDS.filter((f) => f.isActive)
     .slice()

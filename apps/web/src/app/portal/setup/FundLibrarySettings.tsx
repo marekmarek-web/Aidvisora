@@ -424,7 +424,6 @@ export function FundLibrarySettings({ snapshot }: Props) {
                         alt=""
                         width={40}
                         height={40}
-                        unoptimized
                         className="object-contain w-10 h-10"
                         onError={() =>
                           setBrokenLogoKeys((prev) => {

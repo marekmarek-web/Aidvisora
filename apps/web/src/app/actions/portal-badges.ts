@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_cache } from "next/cache";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
@@ -13,19 +14,15 @@ export type PortalShellBadgeCounts = {
   notifications: number;
 };
 
-/**
- * Jedno volání místo tří samostatných server actions — jedna auth kontrola, paralelní dotazy.
- * Pro badge v PortalShell (sidebar + header).
- */
-export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCounts> {
-  const auth = await requireAuthInAction();
+export function getBadgesCacheTag(userId: string) {
+  return `badges-${userId}`;
+}
 
-  if (auth.roleName === "Client") {
-    return { openTasks: 0, unreadConversations: 0, notifications: 0 };
-  }
-
-  const canReadContacts = hasPermission(auth.roleName, "contacts:read");
-
+async function fetchBadgeCounts(
+  tenantId: string,
+  userId: string,
+  canReadContacts: boolean
+): Promise<PortalShellBadgeCounts> {
   let openTasksResult: { count?: number }[] = [{ count: 0 }];
   let notificationRows: { c?: number }[] = [{ c: 0 }];
   try {
@@ -34,15 +31,15 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
         ? db
             .select({ count: sql<number>`count(*)::int` })
             .from(tasks)
-            .where(and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt)))
+            .where(and(eq(tasks.tenantId, tenantId), isNull(tasks.completedAt)))
         : Promise.resolve([{ count: 0 }]),
       db
         .select({ c: sql<number>`count(*)::int` })
         .from(advisorNotifications)
         .where(
           and(
-            eq(advisorNotifications.tenantId, auth.tenantId),
-            eq(advisorNotifications.targetUserId, auth.userId),
+            eq(advisorNotifications.tenantId, tenantId),
+            eq(advisorNotifications.targetUserId, userId),
             eq(advisorNotifications.status, "unread"),
             inArray(advisorNotifications.type, [...ADVISOR_NOTIFICATION_TYPES])
           )
@@ -60,7 +57,7 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
       const unreadMessagesResult = await db.execute(sql`
         SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
         FROM messages m
-        WHERE m.tenant_id = ${auth.tenantId}
+        WHERE m.tenant_id = ${tenantId}
           AND m.sender_type = 'client'
           AND m.read_at IS NULL
       `);
@@ -75,6 +72,28 @@ export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCount
   }
 
   const notifications = Number(notificationRows[0]?.c ?? 0);
-
   return { openTasks, unreadConversations, notifications };
+}
+
+/**
+ * Jedno volání místo tří samostatných server actions — jedna auth kontrola, paralelní dotazy.
+ * Výsledek je kešovaný 30s na serveru; invalidovat pomocí revalidateTag(getBadgesCacheTag(userId)).
+ * Pro badge v PortalShell (sidebar + header).
+ */
+export async function getPortalShellBadgeCounts(): Promise<PortalShellBadgeCounts> {
+  const auth = await requireAuthInAction();
+
+  if (auth.roleName === "Client") {
+    return { openTasks: 0, unreadConversations: 0, notifications: 0 };
+  }
+
+  const canReadContacts = hasPermission(auth.roleName, "contacts:read");
+
+  const cachedFetch = unstable_cache(
+    () => fetchBadgeCounts(auth.tenantId, auth.userId, canReadContacts),
+    [`badges-${auth.tenantId}-${auth.userId}`],
+    { revalidate: 30, tags: [getBadgesCacheTag(auth.userId)] }
+  );
+
+  return cachedFetch();
 }

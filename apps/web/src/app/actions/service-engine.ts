@@ -151,13 +151,20 @@ export async function getServiceRecommendationsForDashboard(
   }
 
   const contactIds = Array.from(contactIdSet).slice(0, 25);
-  const allRecs: ServiceRecommendationWithContact[] = [];
 
-  for (const cid of contactIds) {
-    const inputData = await getServiceInputData(auth.tenantId, cid);
-    const household = await getHouseholdForContact(cid);
-    const householdId = household?.id ?? null;
-    const recs = computeServiceRecommendations(cid, householdId, inputData);
+  const perContact = await Promise.all(
+    contactIds.map(async (cid) => {
+      const [inputData, household] = await Promise.all([
+        getServiceInputData(auth.tenantId, cid),
+        getHouseholdForContact(cid),
+      ]);
+      const householdId = household?.id ?? null;
+      return { cid, recs: computeServiceRecommendations(cid, householdId, inputData) };
+    })
+  );
+
+  const allRecs: ServiceRecommendationWithContact[] = [];
+  for (const { cid, recs } of perContact) {
     const names = contactNames[cid] ?? { firstName: "", lastName: "" };
     for (const r of recs) {
       if (r.urgency === "overdue" || r.urgency === "due_soon") {

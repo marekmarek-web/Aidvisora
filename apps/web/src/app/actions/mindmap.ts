@@ -431,33 +431,31 @@ export async function duplicateStandaloneMap(mapId: string): Promise<{ mapId: st
     oldToNewNodeId.set(n.id, newId);
   }
 
-  for (const n of state.nodes) {
-    const newId = oldToNewNodeId.get(n.id)!;
-    await db.insert(mindmapNodes).values({
-      id: newId,
-      mapId: inserted.id,
-      type: n.type,
-      title: n.title,
-      subtitle: n.subtitle,
-      x: n.x,
-      y: n.y,
-      entityType: n.entityType,
-      entityId: n.entityId,
-      metadata: n.metadata as Record<string, unknown> | null,
-    });
+  if (state.nodes.length > 0) {
+    await db.insert(mindmapNodes).values(
+      state.nodes.map((n) => ({
+        id: oldToNewNodeId.get(n.id)!,
+        mapId: inserted.id,
+        type: n.type,
+        title: n.title,
+        subtitle: n.subtitle,
+        x: n.x,
+        y: n.y,
+        entityType: n.entityType,
+        entityId: n.entityId,
+        metadata: n.metadata as Record<string, unknown> | null,
+      }))
+    );
   }
 
-  for (const e of state.edges) {
+  const edgeValues = state.edges.flatMap((e) => {
     const newSource = oldToNewNodeId.get(e.sourceId);
     const newTarget = oldToNewNodeId.get(e.targetId);
-    if (newSource && newTarget) {
-      await db.insert(mindmapEdges).values({
-        mapId: inserted.id,
-        sourceNodeId: newSource,
-        targetNodeId: newTarget,
-        dashed: e.dashed,
-      });
-    }
+    if (!newSource || !newTarget) return [];
+    return [{ mapId: inserted.id, sourceNodeId: newSource, targetNodeId: newTarget, dashed: e.dashed }];
+  });
+  if (edgeValues.length > 0) {
+    await db.insert(mindmapEdges).values(edgeValues);
   }
 
   return { mapId: inserted.id };

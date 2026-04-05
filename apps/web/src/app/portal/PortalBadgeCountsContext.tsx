@@ -13,6 +13,7 @@ import {
 import { getPortalShellBadgeCounts } from "@/app/actions/portal-badges";
 
 const REFRESH_MS = 60_000;
+const VIS_DEBOUNCE_MS = 500;
 
 export type PortalBadgeCountsValue = {
   openTasks: number | null;
@@ -48,10 +49,15 @@ export function PortalBadgeCountsProvider({ children }: { children: ReactNode })
   useEffect(() => {
     mounted.current = true;
     load();
+
+    let visDebounce: ReturnType<typeof setTimeout> | null = null;
     const onVis = () => {
-      if (document.visibilityState === "visible") load();
+      if (document.visibilityState !== "visible") return;
+      if (visDebounce) clearTimeout(visDebounce);
+      visDebounce = setTimeout(() => { load(); visDebounce = null; }, VIS_DEBOUNCE_MS);
     };
     document.addEventListener("visibilitychange", onVis);
+
     const t = window.setInterval(() => {
       if (document.visibilityState === "visible") load();
     }, REFRESH_MS);
@@ -61,6 +67,7 @@ export function PortalBadgeCountsProvider({ children }: { children: ReactNode })
     window.addEventListener("portal-notifications-badge-refresh", onAnyRefresh);
     return () => {
       mounted.current = false;
+      if (visDebounce) clearTimeout(visDebounce);
       document.removeEventListener("visibilitychange", onVis);
       window.clearInterval(t);
       window.removeEventListener("portal-messages-badge-refresh", onAnyRefresh);

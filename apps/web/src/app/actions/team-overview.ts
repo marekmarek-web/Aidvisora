@@ -533,9 +533,12 @@ export async function getTeamMemberMetrics(
     ])
   );
 
-  const result: TeamMemberMetrics[] = [];
-  for (const mem of ctx.visibleMembers) {
-    const stats = await collectUserStats(ctx.auth.tenantId, mem.userId, period);
+  const allStats = await Promise.all(
+    ctx.visibleMembers.map((mem) => collectUserStats(ctx.auth.tenantId, mem.userId, period))
+  );
+
+  const result: TeamMemberMetrics[] = ctx.visibleMembers.map((mem, i) => {
+    const stats = allStats[i]!;
     const metricBase: TeamMemberMetrics = {
       userId: mem.userId,
       roleName: mem.roleName,
@@ -568,8 +571,9 @@ export async function getTeamMemberMetrics(
     const memberAlerts = buildAlertsFromMetric(metricBase);
     const hasCritical = memberAlerts.some((a) => a.severity === "critical");
     metricBase.riskLevel = hasCritical ? "critical" : memberAlerts.length > 0 ? "warning" : "ok";
-    result.push(metricBase);
-  }
+    return metricBase;
+  });
+
   return result;
 }
 

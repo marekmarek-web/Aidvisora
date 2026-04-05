@@ -38,6 +38,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "5mb",
     },
+    optimizePackageImports: ["lucide-react", "date-fns"],
   },
   // Keep postgres external across Next 14+.
   ...(nextMajor >= 15
@@ -55,7 +56,13 @@ const nextConfig = {
       postgres: path.resolve(__dirname, "node_modules", "postgres"),
     };
     const appNodeModules = path.resolve(__dirname, "node_modules");
-    config.resolve.modules = [appNodeModules, "node_modules", ...(config.resolve.modules || [])];
+    const rootNodeModules = path.resolve(__dirname, "..", "..", "node_modules");
+    config.resolve.modules = [
+      appNodeModules,
+      rootNodeModules,
+      "node_modules",
+      ...(config.resolve.modules || []),
+    ];
     if (isServer) {
       config.externals = config.externals || [];
       const prev = Array.isArray(config.externals) ? config.externals : [config.externals];

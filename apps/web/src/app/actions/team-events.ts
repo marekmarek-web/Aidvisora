@@ -50,22 +50,24 @@ export async function createTeamEvent(
 
   const startAt = new Date(form.startAt);
   const endAt = form.endAt ? new Date(form.endAt) : null;
-  for (const userId of targetUserIds) {
-    await db.insert(events).values({
-      tenantId: auth.tenantId,
-      title: form.title.trim(),
-      eventType: form.eventType || "schuzka",
-      startAt,
-      endAt,
-      allDay: form.allDay ?? false,
-      location: form.location?.trim() || null,
-      notes: form.notes?.trim() || null,
-      meetingLink: form.meetingLink?.trim() || null,
-      reminderAt: form.reminderAt ? new Date(form.reminderAt) : null,
-      assignedTo: userId,
-      teamEventId: master.id,
-      updatedAt: new Date(),
-    });
+  if (targetUserIds.length > 0) {
+    await db.insert(events).values(
+      targetUserIds.map((userId) => ({
+        tenantId: auth.tenantId,
+        title: form.title.trim(),
+        eventType: form.eventType || "schuzka",
+        startAt,
+        endAt,
+        allDay: form.allDay ?? false,
+        location: form.location?.trim() || null,
+        notes: form.notes?.trim() || null,
+        meetingLink: form.meetingLink?.trim() || null,
+        reminderAt: form.reminderAt ? new Date(form.reminderAt) : null,
+        assignedTo: userId,
+        teamEventId: master.id,
+        updatedAt: new Date(),
+      }))
+    );
   }
   try {
     await logActivity("event", master.id, "create", { title: form.title, teamEvent: true });
@@ -98,17 +100,19 @@ export async function createTeamTask(
 
   if (!master?.id) return null;
 
-  for (const userId of targetUserIds) {
-    await db.insert(tasks).values({
-      tenantId: auth.tenantId,
-      title: form.title.trim(),
-      description: form.description?.trim() || null,
-      dueDate: form.dueDate || null,
-      assignedTo: userId,
-      createdBy: auth.userId,
-      teamTaskId: master.id,
-      updatedAt: new Date(),
-    });
+  if (targetUserIds.length > 0) {
+    await db.insert(tasks).values(
+      targetUserIds.map((userId) => ({
+        tenantId: auth.tenantId,
+        title: form.title.trim(),
+        description: form.description?.trim() || null,
+        dueDate: form.dueDate || null,
+        assignedTo: userId,
+        createdBy: auth.userId,
+        teamTaskId: master.id,
+        updatedAt: new Date(),
+      }))
+    );
   }
   try {
     await logActivity("task", master.id, "create", { title: form.title, teamTask: true });

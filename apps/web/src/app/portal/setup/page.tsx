@@ -11,21 +11,29 @@ import type { RoleName } from "@/shared/rolePermissions";
 export default async function SetupPage() {
   const auth = await requireAuth();
 
-  const [user, prefRows, tenantRows, billing, publicBooking, fundLibrarySnapshot] = await Promise.all([
+  const [user, prefRows, tenantRows, publicBooking, fundLibrarySnapshot] = await Promise.all([
     getCachedSupabaseUser(),
     db
       .select({ phone: advisorPreferences.phone })
       .from(advisorPreferences)
       .where(and(eq(advisorPreferences.tenantId, auth.tenantId), eq(advisorPreferences.userId, auth.userId)))
       .limit(1),
-    db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, auth.tenantId)).limit(1),
-    getWorkspaceBillingSnapshot({
-      tenantId: auth.tenantId,
-      roleName: auth.roleName,
-    }),
+    db
+      .select({ name: tenants.name, stripeCustomerId: tenants.stripeCustomerId })
+      .from(tenants)
+      .where(eq(tenants.id, auth.tenantId))
+      .limit(1),
     getPublicBookingSettings(),
     getFundLibrarySetupSnapshot(auth.tenantId, auth.userId, auth.roleName as RoleName),
   ]);
+
+  const [tenantRow] = tenantRows;
+  // Pass stripeCustomerId so billing can skip its own tenant round-trip.
+  const billing = await getWorkspaceBillingSnapshot({
+    tenantId: auth.tenantId,
+    roleName: auth.roleName,
+    stripeCustomerId: tenantRow?.stripeCustomerId ?? null,
+  });
 
   const canonicalBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
@@ -36,7 +44,6 @@ export default async function SetupPage() {
   const metaCorr = typeof meta.correspondence_address === "string" ? meta.correspondence_address.trim() : "";
 
   const [prefRow] = prefRows;
-  const [tenantRow] = tenantRows;
   const tenantName = tenantRow?.name ?? "—";
 
   /** Legacy: sídlo se dřív ukládalo do `company`; po migraci je v correspondence_address. */
