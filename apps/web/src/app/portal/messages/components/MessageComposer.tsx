@@ -1,8 +1,16 @@
 "use client";
 
-import { Paperclip, Send } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import Image from "next/image";
+import { FileText, Paperclip, Send } from "lucide-react";
 import clsx from "clsx";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const CHIPS = ["Požádat o dokumenty", "Potvrdit termín schůzky", "Navrhnout další krok"] as const;
 
@@ -37,6 +45,18 @@ export function MessageComposer({
   isPending: boolean;
   canSend: boolean;
 }) {
+  const imagePreviewUrls = useMemo(() => {
+    return files.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null));
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      imagePreviewUrls.forEach((u) => {
+        if (u) URL.revokeObjectURL(u);
+      });
+    };
+  }, [imagePreviewUrls]);
+
   function appendChip(text: string) {
     onBodyChange(body.trim() ? `${body.trim()}\n\n${text}` : text);
   }
@@ -65,22 +85,39 @@ export function MessageComposer({
 
         {files.length > 0 ? (
           <div className="mb-2 flex flex-wrap gap-2">
-            {files.map((f, i) => (
-              <span
-                key={`${f.name}-${i}`}
-                className="flex items-center gap-1 rounded-xl bg-[color:var(--wp-surface-muted)] px-2 py-1 text-xs text-[color:var(--wp-text-secondary)]"
-              >
-                {f.name}
-                <button
-                  type="button"
-                  onClick={() => onRemoveFile(i)}
-                  className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"
-                  aria-label="Odstranit přílohu"
+            {files.map((f, i) => {
+              const preview = imagePreviewUrls[i];
+              return (
+                <div
+                  key={`${f.name}-${i}-${f.size}`}
+                  className="flex max-w-[200px] flex-col gap-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-2 text-xs text-[color:var(--wp-text-secondary)]"
                 >
-                  ×
-                </button>
-              </span>
-            ))}
+                  {preview ? (
+                    <div className="relative h-20 w-full overflow-hidden rounded-lg">
+                      <Image src={preview} alt="" fill unoptimized className="object-cover" sizes="200px" />
+                    </div>
+                  ) : (
+                    <div className="flex h-14 items-center justify-center rounded-lg bg-[color:var(--wp-surface-card)]">
+                      <FileText className="h-6 w-6 text-[color:var(--wp-text-tertiary)]" />
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="min-w-0 truncate font-medium text-[color:var(--wp-text)]" title={f.name}>
+                      {f.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFile(i)}
+                      className="shrink-0 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)]"
+                      aria-label="Odstranit přílohu"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <span className="text-[color:var(--wp-text-tertiary)]">{formatFileSize(f.size)}</span>
+                </div>
+              );
+            })}
           </div>
         ) : null}
 

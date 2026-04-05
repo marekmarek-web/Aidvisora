@@ -21,6 +21,9 @@ export function ConversationList({
   onContactSearchChange,
   filteredContacts,
   onPickNewContact,
+  listLoading,
+  listError,
+  onRetryList,
 }: {
   conversations: ConversationRow[];
   selectedContactId: string | null;
@@ -34,6 +37,9 @@ export function ConversationList({
   onContactSearchChange: (q: string) => void;
   filteredContacts: ContactRow[];
   onPickNewContact: (contactId: string) => void;
+  listLoading: boolean;
+  listError: string | null;
+  onRetryList: () => void;
 }) {
   return (
     <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[28px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm">
@@ -106,8 +112,33 @@ export function ConversationList({
         </div>
       ) : null}
 
+      {listError ? (
+        <div className="shrink-0 border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+          <p className="font-medium">{listError}</p>
+          <button type="button" onClick={onRetryList} className="mt-2 text-sm font-semibold text-rose-700 underline dark:text-rose-300">
+            Zkusit znovu
+          </button>
+        </div>
+      ) : null}
+
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-        {conversations.length === 0 ? (
+        {listLoading && conversations.length === 0 ? (
+          <div className="space-y-2 p-2" aria-busy="true" aria-label="Načítání konverzací">
+            {[1, 2, 3, 4, 5].map((k) => (
+              <div key={k} className="animate-pulse rounded-2xl bg-[color:var(--wp-surface-muted)] px-3 py-4">
+                <div className="flex gap-3">
+                  <div className="h-11 w-11 shrink-0 rounded-2xl bg-[color:var(--wp-surface-card-border)]/40" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3 w-2/3 rounded bg-[color:var(--wp-surface-card-border)]/50" />
+                    <div className="h-3 w-full rounded bg-[color:var(--wp-surface-card-border)]/30" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {!listLoading && !listError && conversations.length === 0 ? (
           <p className="p-4 text-center text-sm text-[color:var(--wp-text-secondary)]">Zatím žádné konverzace.</p>
         ) : null}
         {conversations.map((c) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   getConversationsList,
@@ -25,17 +25,37 @@ import { ConversationContextPanel } from "./components/ConversationContextPanel"
 import { NewAdvisorActionsMenu } from "./components/NewAdvisorActionsMenu";
 import { ChatModal } from "./components/ChatModal";
 import { formatLastActiveLabel, presenceFromLastMessageAt } from "./components/chat-format";
+import { mergeConversationsWithSelection } from "./components/merge-conversations-with-selection";
 
 const POLL_INTERVAL = 10_000;
 
+function humanMessageError(e: unknown, fallback: string): string {
+  if (e instanceof Error) {
+    if (e.message === "Forbidden") return "K této konverzaci nemáte přístup.";
+    return e.message;
+  }
+  return fallback;
+}
+
 export function PortalMessagesView({ initialContactId }: { initialContactId: string | null }) {
   const router = useRouter();
+  const searchRef = useRef("");
+  const conversationsRef = useRef<ConversationListItem[]>([]);
+
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(initialContactId);
   const [contactName, setContactName] = useState("");
   const [contactDetail, setContactDetail] = useState<ContactRow | null>(null);
+
   const [msgs, setMsgs] = useState<MessageRow[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+
   const [msgAttachments, setMsgAttachments] = useState<Record<string, MessageAttachmentRow[]>>({});
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -55,71 +75,111 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [contextSheetOpen, setContextSheetOpen] = useState(false);
 
-  const loadConversations = useCallback(async () => {
+  searchRef.current = searchQuery.trim();
+  conversationsRef.current = conversations;
+
+  const runListFetch = useCallback(async (mode: "initial" | "poll") => {
+    const q = searchRef.current || undefined;
     try {
-      const list = await getConversationsList(searchQuery.trim() || undefined);
+      const list = await getConversationsList(q);
       setConversations(list);
-    } catch {
-      setConversations([]);
+      if (mode === "initial") setConversationsError(null);
+    } catch (e) {
+      if (mode === "initial") {
+        setConversationsError(humanMessageError(e, "Konverzace se nepodařilo načíst."));
+        setConversations([]);
+      }
+    } finally {
+      if (mode === "initial") setConversationsLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
-    loadConversations();
+    setConversationsLoading(true);
+    void runListFetch("initial");
+  }, [searchQuery, runListFetch]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      void loadConversations();
+      void runListFetch("poll");
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [loadConversations]);
+  }, [runListFetch]);
 
   useEffect(() => {
     if (initialContactId) setSelectedContactId(initialContactId);
   }, [initialContactId]);
 
+  const reloadActiveThread = useCallback(async () => {
+    if (!selectedContactId) return;
+    const cid = selectedContactId;
+    setMessagesLoading(true);
+    setMessagesError(null);
+    try {
+      const data = await getMessages(cid);
+      setMsgs(data);
+      try {
+        await markMessagesRead(cid);
+        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+        await runListFetch("poll");
+      } catch {
+        /* označení přečtení nesmí zablokovat zobrazení vlákna */
+      }
+    } catch (e) {
+      setMessagesError(humanMessageError(e, "Konverzaci se nepodařilo načíst."));
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [selectedContactId, runListFetch]);
+
   useEffect(() => {
     if (!selectedContactId) {
       setMsgs([]);
-      setContactName("");
+      setMsgAttachments({});
+      setMessagesError(null);
+      setMessagesLoading(false);
+      setAttachmentsLoading(false);
       setContactDetail(null);
+      setContactName("");
       return;
     }
+    void reloadActiveThread();
+  }, [selectedContactId, reloadActiveThread]);
 
-    const conv = conversations.find((c) => c.contactId === selectedContactId);
-    if (conv) {
-      setContactName(conv.contactName);
-    }
-
-    getContact(selectedContactId)
-      .then((c) => {
-        if (!c) return;
-        setContactDetail(c);
-        if (!conv) {
-          setContactName([c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Kontakt");
+  useEffect(() => {
+    if (!selectedContactId) return;
+    let cancelled = false;
+    const cid = selectedContactId;
+    getContact(cid)
+      .then((row) => {
+        if (cancelled || !row) return;
+        setContactDetail(row);
+        const inList = conversationsRef.current.some((c) => c.contactId === cid);
+        if (!inList) {
+          setContactName([row.firstName, row.lastName].filter(Boolean).join(" ") || row.email || "Kontakt");
         }
       })
       .catch(() => {});
-
-    let cancelled = false;
-    getMessages(selectedContactId).then((data) => {
-      if (!cancelled) setMsgs(data);
-    });
-    markMessagesRead(selectedContactId)
-      .then(() => {
-        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-      })
-      .catch(() => {});
-
     return () => {
       cancelled = true;
     };
-  }, [selectedContactId, conversations]);
+  }, [selectedContactId]);
+
+  useEffect(() => {
+    if (!selectedContactId) return;
+    const conv = conversations.find((c) => c.contactId === selectedContactId);
+    if (conv) setContactName(conv.contactName);
+  }, [conversations, selectedContactId]);
 
   useEffect(() => {
     if (msgs.length === 0) {
       setMsgAttachments({});
+      setAttachmentsLoading(false);
       return;
     }
+    let cancelled = false;
+    setAttachmentsLoading(true);
     const ids = msgs.map((m) => m.id);
     const load = async () => {
       const next: Record<string, MessageAttachmentRow[]> = {};
@@ -131,9 +191,15 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           next[id] = [];
         }
       }
-      setMsgAttachments((prev) => ({ ...prev, ...next }));
+      if (!cancelled) {
+        setMsgAttachments((prev) => ({ ...prev, ...next }));
+        setAttachmentsLoading(false);
+      }
     };
-    load();
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [msgs]);
 
   useEffect(() => {
@@ -155,10 +221,10 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         });
         const data = await getMessages(cid);
         setMsgs(data);
-        await loadConversations();
+        await runListFetch("poll");
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-      } catch {
-        setSendError("Zprávu se nepodařilo smazat.");
+      } catch (e) {
+        setSendError(humanMessageError(e, "Zprávu se nepodařilo smazat."));
       } finally {
         setDeletingMessageId(null);
       }
@@ -183,10 +249,10 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         setMsgAttachments({});
         setContactDetail(null);
         router.replace("/portal/messages", { scroll: false });
-        await loadConversations();
+        await runListFetch("poll");
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-      } catch {
-        setSendError("Konverzaci se nepodařilo smazat.");
+      } catch (e) {
+        setSendError(humanMessageError(e, "Konverzaci se nepodařilo smazat."));
       }
     });
   }
@@ -211,9 +277,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         setBody("");
         const data = await getMessages(selectedContactId);
         setMsgs(data);
-        loadConversations();
+        await runListFetch("poll");
       } catch (e) {
-        setSendError(e instanceof Error ? e.message : "Zprávu se nepodařilo odeslat.");
+        setSendError(humanMessageError(e, "Zprávu se nepodařilo odeslat."));
       }
     });
   }
@@ -249,6 +315,11 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
 
   const showList = !selectedContactId;
   const showChat = !!selectedContactId;
+
+  const conversationsForList = useMemo(
+    () => mergeConversationsWithSelection(conversations, selectedContactId, contactName),
+    [conversations, selectedContactId, contactName],
+  );
 
   const activeConv = selectedContactId ? conversations.find((c) => c.contactId === selectedContactId) : undefined;
   const lastActivitySource =
@@ -288,12 +359,11 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[#f4f6fb] p-3 md:min-h-[calc(100vh-8rem)] md:p-4 dark:bg-slate-950">
       <div className="mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 flex-col gap-4 xl:grid xl:min-h-0 xl:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(260px,300px)]">
-        {/* Seznam konverzací */}
         <div
           className={`min-h-0 min-w-0 xl:flex xl:flex-col ${showList ? "flex flex-1 flex-col" : "hidden xl:flex"} ${showList ? "max-xl:min-h-[50vh]" : ""}`}
         >
           <ConversationList
-            conversations={conversations}
+            conversations={conversationsForList}
             selectedContactId={selectedContactId}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -308,10 +378,15 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
               selectConversation(id);
               setNewMsgOpen(false);
             }}
+            listLoading={conversationsLoading}
+            listError={conversationsError}
+            onRetryList={() => {
+              setConversationsLoading(true);
+              void runListFetch("initial");
+            }}
           />
         </div>
 
-        {/* Hlavní sloupec */}
         <main
           className={`min-h-0 min-w-0 flex flex-col overflow-hidden rounded-[28px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm ${
             showChat ? "flex flex-1" : "hidden xl:flex"
@@ -342,6 +417,10 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
                   onDeleteOne={handleDeleteOneMessage}
                   deletingMessageId={deletingMessageId}
                   bottomRef={bottomRef}
+                  loading={messagesLoading}
+                  loadError={messagesError}
+                  onRetryLoad={() => void reloadActiveThread()}
+                  attachmentsLoading={attachmentsLoading}
                 />
                 <MessageComposer
                   body={body}
@@ -368,7 +447,6 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           )}
         </main>
 
-        {/* Pravý panel — desktop */}
         <div className="hidden min-h-0 min-w-0 xl:block">
           {selectedContactId ? (
             <ConversationContextPanel {...contextPanelProps} />
@@ -380,7 +458,6 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         </div>
       </div>
 
-      {/* Mobilní kontextový panel */}
       <ChatModal open={contextSheetOpen} title="Kontext konverzace" onClose={() => setContextSheetOpen(false)}>
         {selectedContactId ? <ConversationContextPanel {...contextPanelProps} asDiv /> : null}
       </ChatModal>
@@ -409,8 +486,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         }
       >
         <p>
-          Tady bude návrh odpovědi z AI podle vlákna a kontextu klienta. Ve fázi 2 napojíme model a historii zpráv; zatím můžete psát
-          ručně v poli níže.
+          Tady přibude návrh odpovědi z AI podle vlákna a kontextu klienta. Zatím můžete psát ručně v poli pro zprávu níže.
         </p>
         {lastClientSnippet ? (
           <div className="mt-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3 text-[color:var(--wp-text)]">
@@ -434,7 +510,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           </button>
         }
       >
-        <p>Ve druhé fázi otevřeme kalendář nebo napojení na váš plánovač. Prozatím si schůzku domluvte mimo chat nebo poznačte ji do úkolů.</p>
+        <p>Kalendář a plánování schůzek doplníme v další iteraci. Prozatím použijte svůj běžný postup.</p>
       </ChatModal>
 
       <ChatModal
@@ -451,7 +527,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           </button>
         }
       >
-        <p>Ve druhé fázi přidáme formulář úkolu vázaný na tohoto klienta. Prozatím použijte svůj stávající postup pro úkoly.</p>
+        <p>Formulář úkolu vázaný na klienta doplníme v další iteraci.</p>
       </ChatModal>
     </div>
   );
