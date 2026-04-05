@@ -70,7 +70,12 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const pollStableRef = useRef(0);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const conversationsSearchKey = searchQuery.trim();
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+  const conversationsSearchKey = debouncedSearch;
   const {
     data: conversations = [],
     isPending: conversationsLoading,
@@ -133,6 +138,11 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [aiDraftError, setAiDraftError] = useState<string | null>(null);
   const [aiDraftText, setAiDraftText] = useState("");
   const [crmSnapshotNonce, setCrmSnapshotNonce] = useState(0);
+
+  /** Brání opakovanému LLM volání, pokud se vlákno reálně nezměnilo. */
+  const aiSummaryThreadSigRef = useRef<string | null>(null);
+  const aiSummaryLastRunAtRef = useRef<number>(0);
+  const AI_SUMMARY_COOLDOWN_MS = 60_000;
 
   const pickerContactsEnabled =
     (meetingSheetOpen || taskSheetOpen) && Boolean(selectedContactId);
@@ -263,6 +273,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   }, [selectedContactId, messagesLoading, msgs.length, crmSnapshotNonce]);
 
   useEffect(() => {
+    // Reset thread signature — nový kontakt vždy spustí summary znovu.
+    aiSummaryThreadSigRef.current = null;
+    aiSummaryLastRunAtRef.current = 0;
     if (!selectedContactId) {
       setAiSummary(null);
       setAiSummaryError(null);
@@ -287,6 +300,14 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
       setAiSummaryLoading(false);
       return;
     }
+    // Přeskočit LLM call, pokud se vlákno ani CRM snapshot reálně nezměnily.
+    const lastMsgId = msgs[msgs.length - 1]?.id ?? "";
+    const sig = `${selectedContactId}:${lastMsgId}:${msgs.length}:${crmSnapshotNonce}`;
+    const now = Date.now();
+    if (sig === aiSummaryThreadSigRef.current && now - aiSummaryLastRunAtRef.current < AI_SUMMARY_COOLDOWN_MS) return;
+    aiSummaryThreadSigRef.current = sig;
+    aiSummaryLastRunAtRef.current = now;
+
     let cancelled = false;
     setAiSummaryLoading(true);
     setAiSummaryError(null);
@@ -305,7 +326,8 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     return () => {
       cancelled = true;
     };
-  }, [selectedContactId, msgs, messagesLoading, crmLoading, crmSnapshot]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContactId, msgs, messagesLoading, crmLoading, crmSnapshot, crmSnapshotNonce]);
 
   useEffect(() => {
     if (!selectedContactId) return;
@@ -430,6 +452,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     const trimmed = body.trim();
     if (!selectedContactId) return;
     if (!trimmed && files.length === 0) return;
+    const cid = selectedContactId;
 
     startTransition(async () => {
       setSendError(null);
@@ -438,21 +461,33 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           const formData = new FormData();
           formData.set("body", trimmed || "(příloha)");
           files.forEach((f) => formData.append("file", f));
-          const sent = await sendPortalMessageWithAttachments(selectedContactId, formData);
+          const sent = await sendPortalMessageWithAttachments(cid, formData);
           if (!sent.ok) {
             setSendError(sent.error);
             return;
           }
           setFiles([]);
         } else {
-          const sent = await sendPortalMessage(selectedContactId, trimmed);
+          const sent = await sendPortalMessage(cid, trimmed);
           if (!sent.ok) {
             setSendError(sent.error);
             return;
           }
+          // Optimisticky zobrazit zprávu před potvrzením reloadu.
+          setMsgs((prev) => [
+            ...prev,
+            {
+              id: `optimistic-${Date.now()}`,
+              senderType: "advisor",
+              senderId: "me",
+              body: trimmed,
+              readAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+            },
+          ]);
         }
         setBody("");
-        const reload = await loadThreadMessages(selectedContactId, { markRead: true });
+        const reload = await loadThreadMessages(cid, { markRead: true });
         if (reload.ok) setMsgs(reload.messages);
         else setSendError(reload.error);
         invalidateConversations();
