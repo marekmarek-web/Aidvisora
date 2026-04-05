@@ -11,9 +11,7 @@ import {
   Mail,
   Phone,
   Building,
-  CheckCircle,
   Key,
-  AlertCircle,
   ChevronRight,
   MapPin,
   Globe,
@@ -87,12 +85,6 @@ const TABS = [
   { id: "fakturace", label: "Fakturace" },
 ] as const;
 
-// Placeholder licence / integrace – později z API nebo DB
-const MOCK_LICENSES = [
-  { name: "Vázaný zástupce – Pojištění", status: "valid" as const, expiry: "12. 05. 2027" },
-  { name: "Vázaný zástupce – Úvěry", status: "valid" as const, expiry: "08. 11. 2026" },
-  { name: "Vázaný zástupce – Investice", status: "expiring" as const, expiry: "15. 04. 2026" },
-];
 type IntegrationKey = "google-drive" | "gmail";
 type IntegrationState = {
   connected: boolean;
@@ -716,57 +708,20 @@ export function AdvisorProfileView({
               </div>
             </div>
 
-            {/* Licence */}
             <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
               <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-                <h3 className="font-black text-[color:var(--wp-text)]">Licence a oprávnění</h3>
+                <h3 className="font-black text-[color:var(--wp-text)]">Následné vzdělávání</h3>
               </div>
-              <div className="p-4 space-y-3">
-                {MOCK_LICENSES.map((lic, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3"
-                  >
-                    <div
-                      className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
-                        ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}
-                      `}
-                    >
-                      {lic.status === "valid" ? (
-                        <CheckCircle size={12} strokeWidth={3} aria-hidden />
-                      ) : (
-                        <AlertCircle size={12} strokeWidth={3} aria-hidden />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
-                      <p
-                        className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}
-                      >
-                        Platnost do: {lic.expiry}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <a
-                  href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  Vyhledat v registru ČNB
-                </a>
-                <div className="mt-4 p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]">
-                  <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
-                    Následné vzdělávání (termín)
-                  </label>
-                  <input
-                    type="date"
-                    value={continuingEducationDueAt}
-                    onChange={(e) => setContinuingEducationDueAt(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
+              <div className="p-4">
+                <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
+                  Termín splnění
+                </label>
+                <input
+                  type="date"
+                  value={continuingEducationDueAt}
+                  onChange={(e) => setContinuingEducationDueAt(e.target.value)}
+                  className={inputClass}
+                />
               </div>
             </div>
 
@@ -833,88 +788,56 @@ export function AdvisorProfileView({
         )}
 
         {activeTab === "integrace" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
-                <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between flex-wrap gap-3">
-                  <h2 className="text-lg font-black text-[color:var(--wp-text)]">Připojené účty</h2>
-                  <Link
-                    href="/portal/setup"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors min-h-[44px]"
-                  >
-                    <Settings size={14} /> Spravovat integrace v Nastavení
-                  </Link>
-                </div>
-                <div className="p-4 space-y-3">
-                  {PROFILE_INTEGRATIONS.map((integration) => {
-                    const status = integrations[integration.id];
-                    const statusLabel = status.loading
-                      ? "Načítám stav…"
-                      : status.error
-                        ? status.error
-                        : status.connected
-                          ? status.email
-                            ? `Připojeno (${status.email})`
-                            : "Připojeno"
-                          : "Nepřipojeno";
-                    const statusClass = status.loading
-                      ? "text-[color:var(--wp-text-tertiary)]"
-                      : status.error
-                        ? "text-amber-600"
-                        : status.connected
-                          ? "text-emerald-600"
-                          : "text-[color:var(--wp-text-tertiary)]";
-
-                    return (
-                    <Link
-                      key={integration.id}
-                      href={integration.href}
-                      className="p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-muted)] flex items-center justify-center shrink-0">
-                          <GoogleIcon />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-[color:var(--wp-text)]">{integration.name}</h4>
-                          <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
-                        </div>
-                      </div>
-                      <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
-                    </Link>
-                    );
-                  })}
-                </div>
+          <div className="max-w-3xl">
+            <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
+              <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-black text-[color:var(--wp-text)]">Připojené účty</h2>
+                <Link
+                  href="/portal/setup"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors min-h-[44px]"
+                >
+                  <Settings size={14} /> Spravovat integrace v Nastavení
+                </Link>
               </div>
-            </div>
-            <div className="lg:col-span-1">
-              <div className="bg-[color:var(--wp-surface-card)] rounded-2xl sm:rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-                  <h3 className="font-black text-[color:var(--wp-text)]">Licence a oprávnění</h3>
-                </div>
-                <div className="p-4 space-y-3">
-                  {MOCK_LICENSES.map((lic, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3">
-                      <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
-                        {lic.status === "valid" ? <CheckCircle size={12} strokeWidth={3} aria-hidden /> : <AlertCircle size={12} strokeWidth={3} aria-hidden />}
+              <div className="p-4 space-y-3">
+                {PROFILE_INTEGRATIONS.map((integration) => {
+                  const status = integrations[integration.id];
+                  const statusLabel = status.loading
+                    ? "Načítám stav…"
+                    : status.error
+                      ? status.error
+                      : status.connected
+                        ? status.email
+                          ? `Připojeno (${status.email})`
+                          : "Připojeno"
+                        : "Nepřipojeno";
+                  const statusClass = status.loading
+                    ? "text-[color:var(--wp-text-tertiary)]"
+                    : status.error
+                      ? "text-amber-600"
+                      : status.connected
+                        ? "text-emerald-600"
+                        : "text-[color:var(--wp-text-tertiary)]";
+
+                  return (
+                  <Link
+                    key={integration.id}
+                    href={integration.href}
+                    className="p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] flex flex-wrap items-center justify-between gap-3 group hover:border-indigo-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-[color:var(--wp-surface-muted)] flex items-center justify-center shrink-0">
+                        <GoogleIcon />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}>
-                          Platnost do: {lic.expiry}
-                        </p>
+                        <h4 className="text-sm font-bold text-[color:var(--wp-text)]">{integration.name}</h4>
+                        <p className={`text-xs font-medium ${statusClass}`}>{statusLabel}</p>
                       </div>
                     </div>
-                  ))}
-                  <a
-                    href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
-                  >
-                    Vyhledat v registru ČNB
-                  </a>
-                </div>
+                    <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
+                  </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
