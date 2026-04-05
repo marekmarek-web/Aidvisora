@@ -55,10 +55,10 @@ import { FundLibrarySettings } from "@/app/portal/setup/FundLibrarySettings";
 
 const TABS = [
   { id: "osobni", label: "Osobní údaje", keywords: ["osobní", "údaje", "fakturace", "heslo", "zabezpečení", "2fa", "rychlé", "demo"] },
-  { id: "profil", label: "Profil poradce", keywords: ["profil", "poradce", "vizitka", "rezervace", "licence"] },
+  { id: "profil", label: "Profil poradce", keywords: ["profil", "poradce", "vizitka", "licence"] },
   { id: "tym", label: "Tým", keywords: ["tým", "člen", "pozvat"] },
   { id: "fakturace", label: "Fakturace a Tarif", keywords: ["fakturace", "tarif", "platba", "faktura"] },
-  { id: "notifikace", label: "Notifikace", keywords: ["notifikace", "email", "push"] },
+  { id: "notifikace", label: "Notifikace", keywords: ["notifikace", "email", "push", "rezervace", "rezervační", "odkaz", "veřejn"] },
   { id: "fondy", label: "Knihovna fondů", keywords: ["fond", "fondy", "knihovna", "knihovna fondů", "etf", "investice", "portfolio"] },
   { id: "integrace", label: "Integrace", keywords: ["integrace", "google", "api", "kalendář"] },
 ] as const;
@@ -1213,7 +1213,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               </div>
             </div>
             <div className="lg:col-span-4 space-y-6">
-              <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
                   <h3 className="font-black text-[color:var(--wp-text)]">Licence a Oprávnění ČNB</h3>
@@ -1670,6 +1669,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 ))}
               </div>
             </div>
+            <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
             <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
               <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-3">
                 <Bell size={20} className="text-amber-500" />
