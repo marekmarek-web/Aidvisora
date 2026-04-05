@@ -2,7 +2,11 @@ import type { BirthdayEmailBuildInput, BirthdayEmailTheme } from "./types";
 import { plainTextToParagraphHtml, truncatePreheader, escapeHtmlText } from "./html-utils";
 import { renderPremiumDarkEmail } from "./render-premium-dark";
 import { renderBirthdayGifEmail } from "./render-birthday-gif";
-import { resolveEmailHeaderLogoUrl, birthdayGifAbsoluteUrlIfExists } from "./public-urls";
+import {
+  getPublicSiteOrigin,
+  resolveEmailHeaderLogoUrl,
+  birthdayGifAbsoluteUrlIfExists,
+} from "./public-urls";
 
 export type BuildBirthdayEmailResult = {
   subject: string;
