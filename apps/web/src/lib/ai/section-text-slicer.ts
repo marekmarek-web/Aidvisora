@@ -24,7 +24,7 @@ import type { PacketSubdocumentCandidate } from "./document-packet-types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type SectionTextMethod = "heading" | "char_offset" | "page_range" | "full_text";
+export type SectionTextMethod = "exact_pages" | "heading" | "char_offset" | "page_range" | "full_text";
 
 export interface SectionTextWindow {
   /** Narrowed text for the section (may equal full text when narrowing fails). */
@@ -65,6 +65,48 @@ const MAJOR_BOUNDARY_PATTERNS: RegExp[] = [
   // Czech section labels known to start new subdocuments
   /^\s{0,4}(?:zdravotní\s+dotazník|AML\s+formulář|platební\s+instrukce|pojistná\s+smlouva|prohlášení\s+pojistníka)/im,
 ];
+
+// ─── Page text map utility ────────────────────────────────────────────────────
+
+/**
+ * Build a page-keyed text map from a markdown string that contains page-break markers.
+ * Page-break patterns recognized: "--- page N ---", form-feed (\f), "<!-- page N -->".
+ * If no markers exist (single-page or plain text), returns { 1: markdownContent }.
+ *
+ * This replicates the logic in documents/processing/orchestrator.ts and is the shared
+ * source of truth for page-level text isolation.
+ */
+export function buildPageTextMapFromMarkdown(
+  markdownContent: string | null | undefined,
+  pageCount?: number | null,
+): Record<number, string> {
+  if (!markdownContent) return {};
+  const pages = Math.max(pageCount ?? 1, 1);
+  if (pages <= 1 && !markdownContent.includes("\f") && !/---\s*page\s*\d+\s*---|<!--\s*page\s*\d+\s*-->/.test(markdownContent)) {
+    return { 1: markdownContent };
+  }
+  const pageBreakPattern = /(?:---\s*page\s*\d+\s*---|\f|<!--\s*page\s*\d+\s*-->)/gi;
+  const parts = markdownContent.split(pageBreakPattern).filter((p) => p.trim().length > 0);
+  const map: Record<number, string> = {};
+  for (let i = 0; i < parts.length; i++) {
+    map[i + 1] = parts[i].trim();
+  }
+  return Object.keys(map).length > 0 ? map : { 1: markdownContent };
+}
+
+/**
+ * Concatenate page text for a given set of page numbers from the map.
+ * Missing pages are silently skipped.
+ */
+export function concatPagesFromMap(
+  pageTextMap: Record<number, string>,
+  pageNumbers: number[],
+): string {
+  return pageNumbers
+    .filter((p) => p in pageTextMap)
+    .map((p) => pageTextMap[p])
+    .join("\n\n");
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,6 +225,42 @@ function sliceByPageRange(
   };
 }
 
+/**
+ * Attempt exact page-based slice using a pre-built pageTextMap.
+ * This is the highest-fidelity strategy: uses the actual physical page text
+ * rather than a heuristic substring.
+ *
+ * Requires:
+ * - candidate.pageNumbers is non-empty
+ * - pageTextMap has entries for those pages
+ * - The concatenated text meets the minimum length threshold
+ */
+function sliceByPageNumbers(
+  candidate: PacketSubdocumentCandidate,
+  pageTextMap: Record<number, string>,
+): SectionTextWindow | null {
+  const pages = candidate.pageNumbers;
+  if (!pages || pages.length === 0) return null;
+
+  const availablePages = pages.filter((p) => p in pageTextMap);
+  if (availablePages.length === 0) return null;
+
+  const text = concatPagesFromMap(pageTextMap, availablePages);
+  // Use a lower minimum for exact pages: we trust the page selection even for short sections.
+  if (text.trim().length < 20) return null;
+
+  const truncated = text.slice(0, MAX_SECTION_CHARS);
+  const totalMapLength = Object.values(pageTextMap).join("").length;
+
+  return {
+    text: truncated,
+    method: "exact_pages",
+    startOffset: -1, // offset not meaningful for page-level slicing
+    endOffset: -1,
+    narrowed: truncated.length < totalMapLength * 0.9,
+  };
+}
+
 // ─── Estimate total pages from text ──────────────────────────────────────────
 
 function estimatePageCountFromText(text: string): number {
@@ -202,15 +280,24 @@ function estimatePageCountFromText(text: string): number {
 /**
  * Returns the narrowed text window for a given candidate section.
  *
+ * Priority order (highest → lowest):
+ *   1. exact_pages  — physical page slices from pageTextMap (if pageNumbers + map available)
+ *   2. heading      — heading-based substring from full markdown
+ *   3. char_offset  — character offset from signal match location
+ *   4. page_range   — estimated char slice from pageRangeHint + total pages
+ *   5. full_text    — fallback: full markdown (no narrowing)
+ *
  * @param fullText    The complete markdown text of the document.
  * @param candidate   The detected subdocument candidate.
- * @param totalPages  Optional total page count (from preprocess meta). Used to
- *                    refine page-range-based slicing when available.
+ * @param totalPages  Optional total page count (from preprocess meta).
+ * @param pageTextMap Optional physical page-level text map (key = 1-indexed page number).
+ *                    When present and candidate.pageNumbers is set, enables exact_pages isolation.
  */
 export function sliceSectionText(
   fullText: string,
   candidate: PacketSubdocumentCandidate,
   totalPages?: number | null,
+  pageTextMap?: Record<number, string> | null,
 ): SectionTextWindow {
   const fallback: SectionTextWindow = {
     text: fullText.slice(0, MAX_SECTION_CHARS * 2),
@@ -221,6 +308,12 @@ export function sliceSectionText(
   };
 
   if (fullText.length < MIN_SECTION_CHARS) return fallback;
+
+  // Strategy 0 (highest priority): exact page-level isolation from pageTextMap
+  if (pageTextMap && Object.keys(pageTextMap).length > 1) {
+    const result = sliceByPageNumbers(candidate, pageTextMap);
+    if (result?.narrowed) return result;
+  }
 
   // Strategy 1: heading-based
   if (candidate.sectionHeadingHint) {
@@ -248,12 +341,19 @@ export function sliceSectionText(
  * Slices all candidates of a given type and returns the union of their windows.
  * When multiple candidates of the same type exist (e.g. multiple health sections),
  * their windows are merged into one contiguous range.
+ *
+ * @param fullText    The complete markdown text.
+ * @param candidates  All detected subdocument candidates.
+ * @param type        The candidate type to slice for.
+ * @param totalPages  Optional total page count.
+ * @param pageTextMap Optional physical page-level text map for exact_pages isolation.
  */
 export function sliceSectionTextForType(
   fullText: string,
   candidates: PacketSubdocumentCandidate[],
   type: PacketSubdocumentCandidate["type"],
   totalPages?: number | null,
+  pageTextMap?: Record<number, string> | null,
 ): SectionTextWindow {
   const matching = candidates.filter((c) => c.type === type);
   if (matching.length === 0) {
@@ -267,14 +367,38 @@ export function sliceSectionTextForType(
   }
 
   if (matching.length === 1) {
-    return sliceSectionText(fullText, matching[0], totalPages);
+    return sliceSectionText(fullText, matching[0], totalPages, pageTextMap);
   }
 
-  // Multiple candidates: collect all windows and merge
-  const windows = matching.map((c) => sliceSectionText(fullText, c, totalPages));
+  // Multiple candidates: try exact_pages first by merging all page numbers
+  if (pageTextMap && Object.keys(pageTextMap).length > 1) {
+    const allPages = [...new Set(matching.flatMap((c) => c.pageNumbers ?? []))].sort((a, b) => a - b);
+    if (allPages.length > 0) {
+      const syntheticCandidate: PacketSubdocumentCandidate = { ...matching[0], pageNumbers: allPages };
+      const result = sliceByPageNumbers(syntheticCandidate, pageTextMap);
+      if (result?.narrowed) return result;
+    }
+  }
+
+  // Collect all windows and merge
+  const windows = matching.map((c) => sliceSectionText(fullText, c, totalPages, pageTextMap));
   const narrowedWindows = windows.filter((w) => w.narrowed);
 
   if (narrowedWindows.length === 0) return windows[0];
+
+  // For exact_pages windows, concatenate texts directly (offsets are -1)
+  const exactWindows = narrowedWindows.filter((w) => w.method === "exact_pages");
+  if (exactWindows.length > 0) {
+    const combined = exactWindows.map((w) => w.text).join("\n\n").slice(0, MAX_SECTION_CHARS);
+    const totalMapLen = Object.values(pageTextMap ?? {}).join("").length;
+    return {
+      text: combined,
+      method: "exact_pages",
+      startOffset: -1,
+      endOffset: -1,
+      narrowed: combined.length < totalMapLen * 0.9,
+    };
+  }
 
   const minStart = Math.min(...narrowedWindows.map((w) => w.startOffset));
   const maxEnd = Math.min(
@@ -289,4 +413,20 @@ export function sliceSectionTextForType(
     endOffset: maxEnd,
     narrowed: maxEnd - minStart < fullText.length * 0.9,
   };
+}
+
+// ─── Source mode reporting ────────────────────────────────────────────────────
+
+/**
+ * Human-readable description of the isolation mode used.
+ * Used for E2E golden validation output.
+ */
+export function describeSourceMode(window: SectionTextWindow): string {
+  switch (window.method) {
+    case "exact_pages": return "exact page-level (pageTextMap)";
+    case "heading":     return "section/heading slice";
+    case "char_offset": return "char-offset slice";
+    case "page_range":  return "page-range estimate";
+    case "full_text":   return "full text fallback";
+  }
 }

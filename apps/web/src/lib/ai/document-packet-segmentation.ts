@@ -263,6 +263,60 @@ function findHeadingNearOffset(text: string, offset: number): string | null {
   return null;
 }
 
+/**
+ * Extract page numbers from the text window around a given offset.
+ * Looks for "strana N" / "strana N z M" / "page N" patterns within ±1500 chars
+ * of the signal match offset to infer which physical pages the section spans.
+ * Returns a sorted unique array of page numbers, or null if none found.
+ */
+function detectPageNumbersNearOffset(text: string, offset: number): number[] | null {
+  const window = text.slice(Math.max(0, offset - 1500), Math.min(text.length, offset + 3000));
+  const pageNums = new Set<number>();
+
+  // "strana N z M" or "strana N"
+  const stranaRe = /strana\s+(\d+)(?:\s+z\s+\d+)?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = stranaRe.exec(window)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (n > 0 && n <= 999) pageNums.add(n);
+  }
+
+  // "page N" (English, from Adobe markdown output)
+  const pageRe = /(?:^|\n)(?:page|pg\.?)\s+(\d+)/gi;
+  while ((m = pageRe.exec(window)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (n > 0 && n <= 999) pageNums.add(n);
+  }
+
+  // Page break markers like "--- page N ---" or "<!-- page N -->"
+  const markerRe = /(?:---\s*page\s*(\d+)\s*---|<!--\s*page\s*(\d+)\s*-->)/gi;
+  while ((m = markerRe.exec(window)) !== null) {
+    const n = parseInt(m[1] ?? m[2], 10);
+    if (n > 0 && n <= 999) pageNums.add(n);
+    // Also include the next page (section might start there)
+    if (n + 1 <= 999) pageNums.add(n + 1);
+  }
+
+  if (pageNums.size === 0) return null;
+  return Array.from(pageNums).sort((a, b) => a - b);
+}
+
+/**
+ * Given a page number detected in the text and an approximate total page count,
+ * build a conservative page range: the section likely spans 2-4 pages.
+ */
+function buildPageRange(detectedPages: number[], totalPages: number | null): number[] {
+  if (detectedPages.length === 0) return [];
+  const first = Math.min(...detectedPages);
+  const last = Math.max(...detectedPages);
+  // Extend by 1 page on each side for safety, capped at total
+  const start = Math.max(1, first);
+  const end = Math.min(totalPages ?? last + 3, last + 2);
+  const range: number[] = [];
+  for (let p = start; p <= end; p++) range.push(p);
+  return range;
+}
+
 function detectExplicitIndex(text: string): boolean {
   return EXPLICIT_INDEX_PATTERNS.some((p) => p.test(text));
 }
@@ -348,6 +402,9 @@ export function segmentDocumentPacket(
   const detectionMethods: PacketMeta["detectionMethods"] = [];
   const candidates: PacketSubdocumentCandidate[] = [];
 
+  // Pre-compute page count so it's available during signal scanning (step 2) and page range detection
+  const detectedPageCount = pageCount ?? estimatePageCount(text);
+
   // 1. Scan for explicit document index
   const hasExplicitIndex = detectExplicitIndex(text);
   if (hasExplicitIndex) {
@@ -364,6 +421,11 @@ export function segmentDocumentPacket(
       const firstMatchOffset = locateSignalFirstMatch(signal, text);
       const headingHint =
         firstMatchOffset !== null ? findHeadingNearOffset(text, firstMatchOffset) : null;
+      const detectedPages =
+        firstMatchOffset !== null ? detectPageNumbersNearOffset(text, firstMatchOffset) : null;
+      const pageNumbers = detectedPages
+        ? buildPageRange(detectedPages, detectedPageCount)
+        : null;
 
       const candidate: PacketSubdocumentCandidate = {
         type: signal.type,
@@ -376,6 +438,7 @@ export function segmentDocumentPacket(
         charOffsetHint: firstMatchOffset !== null
           ? { start: Math.max(0, firstMatchOffset - 200), end: firstMatchOffset }
           : null,
+        pageNumbers,
       };
       candidates.push(candidate);
     }
@@ -393,7 +456,6 @@ export function segmentDocumentPacket(
   }
 
   // 4. Page count heuristic: >12 pages AND multiple signals → likely bundle
-  const detectedPageCount = pageCount ?? estimatePageCount(text);
   const isLongDocument = (detectedPageCount ?? 0) > 12;
   const hasMultipleSignals = candidates.length >= 2;
   if (isLongDocument && hasMultipleSignals) {

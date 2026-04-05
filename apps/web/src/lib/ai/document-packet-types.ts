@@ -48,6 +48,13 @@ export interface PacketSubdocumentCandidate {
    * Used by section-text-slicer for narrowing the extraction input.
    */
   charOffsetHint?: { start: number; end: number } | null;
+  /**
+   * Physical page numbers (1-indexed) where this section is located.
+   * Populated during segmentation when page-break markers are present in the text
+   * (e.g. "strana N z M", page separator patterns, or explicit index).
+   * Used by section-text-slicer for exact_pages isolation from pageTextMap.
+   */
+  pageNumbers?: number[] | null;
 }
 
 // ─── Evidence fidelity levels ──────────────────────────────────────────────────────────

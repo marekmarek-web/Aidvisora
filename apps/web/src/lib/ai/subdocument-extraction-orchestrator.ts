@@ -23,7 +23,7 @@
 import { createResponseStructured, createAiReviewResponseFromPrompt } from "@/lib/openai";
 import { getAiReviewPromptId } from "./prompt-model-registry";
 import { buildAiReviewExtractionPromptVariables } from "./ai-review-prompt-variables";
-import { sliceSectionTextForType, type SectionTextWindow } from "./section-text-slicer";
+import { sliceSectionTextForType, describeSourceMode, buildPageTextMapFromMarkdown, type SectionTextWindow } from "./section-text-slicer";
 import {
   inferFidelityFromContext,
   pickByFidelity,
@@ -68,6 +68,12 @@ export type SubdocumentOrchestrationResult = {
   warnings: string[];
   /** Section-level fidelity summaries, keyed by candidate type. */
   fidelitySummaries?: Record<string, SectionFidelitySummary>;
+  /**
+   * Source mode traceability: describes which isolation method was used for each section pass.
+   * Keys are section type strings, values are human-readable descriptions.
+   * E.g. { health_questionnaire: "exact page-level (pageTextMap)", investment_section: "section/heading slice" }
+   */
+  sourceModeTrace?: Record<string, string>;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -123,18 +129,20 @@ async function runHealthSectionExtractionPass(
   envelope: DocumentReviewEnvelope,
   warnings: string[],
   totalPages?: number | null,
+  pageTextMap?: Record<number, string> | null,
 ): Promise<SubdocumentSectionOutcome> {
   const healthCandidates = candidatesByType(candidates, "health_questionnaire", 0.4);
   if (healthCandidates.length === 0) {
     return { type: "skipped", reason: "no_health_candidates_above_threshold" };
   }
 
-  // Narrow the text to the health section window
+  // Narrow the text to the health section window — exact_pages strategy when pageTextMap available
   const sectionWindow: SectionTextWindow = sliceSectionTextForType(
     markdownText,
     candidates,
     "health_questionnaire",
     totalPages,
+    pageTextMap,
   );
   const extractionText = sectionWindow.text;
 
@@ -425,6 +433,7 @@ async function runInvestmentSectionExtractionPass(
   envelope: DocumentReviewEnvelope,
   warnings: string[],
   totalPages?: number | null,
+  pageTextMap?: Record<number, string> | null,
 ): Promise<SubdocumentSectionOutcome> {
   const invCandidates = candidatesByType(candidates, "investment_section", 0.35);
   if (invCandidates.length === 0) {
@@ -433,12 +442,13 @@ async function runInvestmentSectionExtractionPass(
 
   const confidence = Math.max(...invCandidates.map((c) => c.confidence));
 
-  // Narrow to investment section window — explicit_section fidelity when narrowed
+  // Narrow to investment section window — exact_pages strategy when pageTextMap available
   const sectionWindow: SectionTextWindow = sliceSectionTextForType(
     markdownText,
     candidates,
     "investment_section",
     totalPages,
+    pageTextMap,
   );
   const extractionText = sectionWindow.text;
 
@@ -635,6 +645,12 @@ export async function orchestrateSubdocumentExtraction(
   envelope: DocumentReviewEnvelope,
   /** Optional total page count from preprocess meta — improves page-range-based text narrowing. */
   totalPages?: number | null,
+  /**
+   * Optional physical page-level text map (key = 1-indexed page number).
+   * When provided and has >1 page, enables exact_pages isolation for focused passes.
+   * If not provided, will be built from markdownText + totalPages as best-effort.
+   */
+  pageTextMap?: Record<number, string> | null,
 ): Promise<SubdocumentOrchestrationResult> {
   const warnings: string[] = [];
 
@@ -648,6 +664,20 @@ export async function orchestrateSubdocumentExtraction(
   const candidates = packetMeta.subdocumentCandidates ?? [];
   if (candidates.length === 0) {
     return { orchestrationRan: false, sectionOutcomes: [], mutationCount: 0, warnings };
+  }
+
+  // Build pageTextMap from markdown if not provided — enables exact_pages for documents
+  // that have page-break markers in the markdown content
+  const resolvedPageTextMap: Record<number, string> | null =
+    pageTextMap ??
+    (markdownText
+      ? buildPageTextMapFromMarkdown(markdownText, totalPages)
+      : null);
+
+  const hasPhysicalPages =
+    resolvedPageTextMap !== null && Object.keys(resolvedPageTextMap).length > 1;
+  if (hasPhysicalPages) {
+    warnings.push(`page_text_map_available:${Object.keys(resolvedPageTextMap!).length}_pages`);
   }
 
   const outcomes: SubdocumentSectionOutcome[] = [];
@@ -671,6 +701,7 @@ export async function orchestrateSubdocumentExtraction(
     envelope,
     warnings,
     totalPages,
+    resolvedPageTextMap,
   );
   outcomes.push(healthOutcome);
 
@@ -681,17 +712,29 @@ export async function orchestrateSubdocumentExtraction(
     envelope,
     warnings,
     totalPages,
+    resolvedPageTextMap,
   );
   outcomes.push(investmentOutcome);
 
   // 6. Ensure envelope.packetMeta is up-to-date (may have been partially applied earlier)
   envelope.packetMeta = packetMeta;
 
-  // Aggregate fidelity summaries for tracing
+  // Aggregate fidelity summaries and source mode trace for E2E validation
   const fidelitySummaries: Record<string, SectionFidelitySummary> = {};
+  const sourceModeTrace: Record<string, string> = {};
+
   for (const o of outcomes) {
-    if ((o.type === "health_questionnaire" || o.type === "investment_section") && o.fidelity) {
-      fidelitySummaries[o.type] = o.fidelity;
+    if (o.type === "health_questionnaire" || o.type === "investment_section") {
+      if (o.fidelity) {
+        fidelitySummaries[o.type] = o.fidelity;
+        sourceModeTrace[o.type] = describeSourceMode({
+          method: o.fidelity.sliceMethod,
+          text: "",
+          startOffset: 0,
+          endOffset: 0,
+          narrowed: o.fidelity.textNarrowed,
+        });
+      }
     }
   }
 
@@ -701,6 +744,7 @@ export async function orchestrateSubdocumentExtraction(
     mutationCount: countMutations(outcomes),
     warnings,
     fidelitySummaries: Object.keys(fidelitySummaries).length > 0 ? fidelitySummaries : undefined,
+    sourceModeTrace: Object.keys(sourceModeTrace).length > 0 ? sourceModeTrace : undefined,
   };
 }
 

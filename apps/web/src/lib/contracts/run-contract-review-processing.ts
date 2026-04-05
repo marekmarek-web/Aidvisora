@@ -19,6 +19,7 @@ import {
 } from "@/lib/ai/client-matching";
 import { logOpenAICall } from "@/lib/openai";
 import { preprocessForAiExtraction } from "@/lib/documents/processing/preprocess-for-ai";
+import { buildPageTextMapFromMarkdown } from "@/lib/ai/section-text-slicer";
 import { evaluateContractReviewScanGate } from "@/lib/contracts/contract-review-scan-gate";
 import {
   isAiReviewLlmPostprocessEnabled,
@@ -294,14 +295,28 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
   let subdocOrchestrationRoute = describeSubdocumentExtractionRoute(packetMeta);
   if (packetMeta.isBundle && markdownAvailable) {
     try {
+      // Build physical page-level text map for exact_pages isolation
+      const pageTextMap = buildPageTextMapFromMarkdown(
+        adobePreprocessResult?.markdownContent ?? null,
+        adobePreprocessResult?.pageCountEstimate ?? null,
+      );
+
       const orchResult = await orchestrateSubdocumentExtraction(
         adobePreprocessResult?.markdownContent ?? "",
         packetMeta,
         data,
         adobePreprocessResult?.pageCountEstimate ?? null,
+        pageTextMap,
       );
       if (orchResult.orchestrationRan) {
         subdocOrchestrationRoute = `${subdocOrchestrationRoute}|mutations:${orchResult.mutationCount}`;
+        // Append source mode trace for observability (e.g. "health=exact_pages,investment=heading")
+        if (orchResult.sourceModeTrace && Object.keys(orchResult.sourceModeTrace).length > 0) {
+          const traceStr = Object.entries(orchResult.sourceModeTrace)
+            .map(([k, v]) => `${k.replace("_", "")}=${v.split(" ")[0]}`)
+            .join(",");
+          subdocOrchestrationRoute = `${subdocOrchestrationRoute}|source:${traceStr}`;
+        }
         if (orchResult.warnings.length > 0) {
           console.warn(
             "[contracts/process] subdoc_orchestration_warnings",
