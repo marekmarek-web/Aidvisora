@@ -8,7 +8,32 @@ Checklist for **Supabase**, **Vercel**, and related services before production t
 - [ ] Set `DATABASE_URL` to the **connection pooler** (Supabase **Transaction** mode, port **6543**), not the direct DB port, for serverless (Vercel).
 - [ ] Confirm `prepare: false` (or equivalent) in the DB client when using the pooler.
 - [ ] Apply pending SQL migrations (including `fa_source_id` on `opportunities`, `fa_sync_log` table) — see `packages/db/migrations/`.
+- [ ] **Fondová knihovna + fronta požadavků:** `packages/db/migrations/fund_library_settings_2026-04-06.sql` (sloupec `advisor_preferences.fund_library`, tabulka `fund_add_requests`, index, normalizace stavů). Volitelně poté `fund_library_z_status_normalize_2026-04-07.sql` (stejné UPDATE — idempotentní). Reference: `packages/db/supabase-schema.sql`.
 - [ ] Review **Auth** MAU and **Storage** bucket limits for documents.
+
+## Local development — Auth & debugging
+
+When you run `pnpm dev` from the repo root, the web app uses `window.location.origin` for OAuth `redirectTo` (e.g. `http://localhost:3000/auth/callback?next=…`). If that URL is **not** listed under **Supabase → Authentication → URL Configuration → Redirect URLs**, Supabase typically falls back to the project **Site URL** (e.g. production), which looks like “Google login on localhost but I end up on www.aidvisora.cz”.
+
+**Redirect URLs to add (adjust port if needed):**
+
+- `http://localhost:3000/auth/callback`
+- `http://127.0.0.1:3000/auth/callback`
+- Optional: `http://localhost:3000/**` if your Supabase project allows wildcards for dev.
+
+Google Cloud OAuth for Supabase usually keeps redirect to `https://<project-ref>.supabase.co/auth/v1/callback`; the usual fix is the **Supabase** allowlist, not a second Google client for localhost.
+
+**Ways to work locally:**
+
+| Goal | What to do |
+|------|------------|
+| Real Google OAuth on localhost | Add the redirect URLs above; keep using `pnpm dev`. |
+| Real user without Google | Use email/password on `/prihlaseni` with a user in Supabase Auth and a matching `memberships` row (see `docs/COMMIT-TESTING.md`, `docs/ASSUMPTIONS.md`). |
+| Fast UI / server flows without login | From repo root: `pnpm dev:demo` (`NEXT_PUBLIC_SKIP_AUTH=true`). Not the same as a real Google session; see `apps/web/src/lib/auth/demo.ts`. |
+
+For local-only links in emails and server-generated URLs, set `NEXT_PUBLIC_APP_URL=http://localhost:3000` in `apps/web/.env.local` (do not use that in production).
+
+**Logs:** Server Components, Route Handlers (`app/api/...`), and Server Actions log to the **terminal** where `pnpm dev` runs. Client components and browser `fetch` errors appear in **Chrome DevTools**. To debug from the terminal, add logging or move checks into a server action / API route.
 
 ## Vercel (recommend **Pro**)
 

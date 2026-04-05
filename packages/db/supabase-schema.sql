@@ -641,6 +641,27 @@ ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS phone text;
 ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS website text;
 ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_logo_url text;
 
+-- Fondová knihovna (FA): pořadí a zapnutí fondů na úrovni poradce
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS fund_library jsonb;
+
+CREATE TABLE IF NOT EXISTS fund_add_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id text NOT NULL,
+  fund_name text NOT NULL,
+  provider text,
+  isin_or_ticker text,
+  factsheet_url text,
+  category text,
+  note text,
+  status text NOT NULL DEFAULT 'new',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fund_add_requests_tenant_created_idx
+  ON fund_add_requests (tenant_id, created_at DESC);
+
 DO $$ BEGIN
   ALTER TABLE tasks
     ADD CONSTRAINT tasks_analysis_id_financial_analyses_id_fk
