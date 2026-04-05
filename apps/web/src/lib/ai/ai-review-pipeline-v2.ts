@@ -50,6 +50,7 @@ import {
   primaryTypeFallbackFromPromptKey,
 } from "./ai-review-type-mapper";
 import { getAiReviewPromptId, getAiReviewPromptVersion, type AiReviewPromptKey } from "./prompt-model-registry";
+import { fingerprintOpenAiPromptId } from "./ai-review-prompt-rollout";
 import { isAiReviewLlmPostprocessEnabled, runAiReviewDecisionLlm } from "./ai-review-llm-postprocess";
 import { buildAiReviewExtractionPromptVariables, capAiReviewPromptString } from "./ai-review-prompt-variables";
 import { zodIssuesToAdvisorBriefMessages } from "./zod-issues-advisor-copy";
@@ -1091,8 +1092,13 @@ export async function runAiReviewV2Pipeline(
   const extStart = Date.now();
   let rawExtraction: string;
   try {
+    let extractionBuilder: "prompt_builder" | "schema_text_wrap" | "file_pdf" | undefined;
+    let extractionPmptFingerprint: string | null | undefined;
+
     if (extractionPromptId && documentTextForExtraction.length >= 400) {
       trace.extractionSecondPass = "prompt_text";
+      extractionBuilder = "prompt_builder";
+      extractionPmptFingerprint = fingerprintOpenAiPromptId(extractionPromptId);
       const extractionVariables = buildAiReviewExtractionPromptVariables({
         documentText: documentTextForExtraction,
         classificationReasons: classification.reasons,
@@ -1115,6 +1121,8 @@ export async function runAiReviewV2Pipeline(
       rawExtraction = pr.text;
     } else if (allowTextSecondPass) {
       trace.extractionSecondPass = "text";
+      extractionBuilder = "schema_text_wrap";
+      extractionPmptFingerprint = null;
       const wrapped = wrapExtractionPromptWithDocumentText(
         extractionPrompt,
         documentTextForExtraction,
@@ -1124,10 +1132,18 @@ export async function runAiReviewV2Pipeline(
       rawExtraction = await createResponse(wrapped, { routing: { category: "ai_review" } });
     } else {
       trace.extractionSecondPass = "pdf";
+      extractionBuilder = "file_pdf";
+      extractionPmptFingerprint = null;
       const fileBasedPrompt = buildFileBasedExtractionPrompt(documentType);
       rawExtraction = await createResponseWithFile(fileUrl, fileBasedPrompt, {
         routing: { category: "ai_review" },
       });
+    }
+
+    if (extractionBuilder) {
+      trace.aiReviewExtractionBuilder = extractionBuilder;
+      trace.aiReviewExtractionPmptFingerprint =
+        extractionPmptFingerprint === undefined ? null : extractionPmptFingerprint;
     }
   } catch (e) {
     trace.failedStep = "structured_extraction";

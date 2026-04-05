@@ -22,6 +22,7 @@
 
 import { createResponseStructured, createAiReviewResponseFromPrompt } from "@/lib/openai";
 import { getAiReviewPromptId } from "./prompt-model-registry";
+import { fingerprintOpenAiPromptId } from "./ai-review-prompt-rollout";
 import { buildAiReviewExtractionPromptVariables } from "./ai-review-prompt-variables";
 import { sliceSectionTextForType, describeSourceMode, buildPageTextMapFromMarkdown, type SectionTextWindow } from "./section-text-slicer";
 import type { AdobeStructuredResult } from "@/lib/adobe/structured-data-parser";
@@ -153,6 +154,11 @@ async function runHealthSectionExtractionPass(
 
   try {
     const promptId = getAiReviewPromptId("healthSectionExtraction");
+    warnings.push(
+      promptId
+        ? `pb_prompt:healthSectionExtraction:${fingerprintOpenAiPromptId(promptId)}`
+        : "pb_prompt:healthSectionExtraction:local_structured_fallback",
+    );
     let output: HealthSectionExtractionOutput | null = null;
 
     if (promptId) {
@@ -459,6 +465,11 @@ async function runInvestmentSectionExtractionPass(
 
   try {
     const promptId = getAiReviewPromptId("investmentSectionExtraction");
+    warnings.push(
+      promptId
+        ? `pb_prompt:investmentSectionExtraction:${fingerprintOpenAiPromptId(promptId)}`
+        : "pb_prompt:investmentSectionExtraction:local_structured_fallback",
+    );
     let output: InvestmentSectionExtractionOutput | null = null;
 
     if (promptId) {

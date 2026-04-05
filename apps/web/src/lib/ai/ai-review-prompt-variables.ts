@@ -16,6 +16,26 @@ export const AI_REVIEW_EXTRACTION_PROMPT_VARS = [
   "document_text",
 ] as const;
 
+/**
+ * Optional section-aware variables for bundle extraction prompts.
+ * `buildAiReviewExtractionPromptVariables` populates these (or "(not available)"); declare them
+ * in OpenAI Prompt Builder so templates can route contractual vs health vs investment text.
+ */
+export const AI_REVIEW_EXTRACTION_OPTIONAL_SECTION_VARS = [
+  "contractual_section_text",
+  "health_section_text",
+  "investment_section_text",
+  "payment_section_text",
+  "attachment_section_text",
+  "bundle_section_context",
+  "contractualSectionText",
+  "healthSectionText",
+  "investmentSectionText",
+  "paymentSectionText",
+  "attachmentSectionText",
+  "bundleSectionContext",
+] as const;
+
 const EXTRACTION_REQUIRED: readonly string[] = [
   "extracted_text",
   "classification_reasons",

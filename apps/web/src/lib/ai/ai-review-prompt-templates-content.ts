@@ -24,6 +24,9 @@
  *
  * Usage: Copy the `content` field of each template into the corresponding
  * OpenAI Prompt Builder template body. Keep the variable names exactly as shown.
+ *
+ * Rollout checklist, env map, smoke: `docs/ai-review-prompt-rollout.md`.
+ * Programmatic map: `ai-review-prompt-rollout.ts` → `getSectionAwareRolloutEntries()`.
  */
 
 export type PromptTemplateContent = {

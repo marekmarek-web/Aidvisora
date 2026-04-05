@@ -86,6 +86,15 @@ export type ExtractionTrace = {
   aiReviewRouterOutcome?: string;
   aiReviewRouterReasonCodes?: string[];
   aiReviewExtractionPromptKey?: string;
+  /**
+   * Primary structured extraction path when not using combined_single_call.
+   * prompt_builder = OpenAI Prompt Builder (pmpt_*) for router promptKey.
+   * schema_text_wrap = local `buildSchemaPrompt` + document text wrap.
+   * file_pdf = `createResponseWithFile` + short file-based prompt.
+   */
+  aiReviewExtractionBuilder?: "prompt_builder" | "schema_text_wrap" | "file_pdf";
+  /** First chars of pmpt_* id when `prompt_builder` — for rollout smoke / support (not full secret). */
+  aiReviewExtractionPmptFingerprint?: string | null;
   classifierDurationMs?: number;
   extractionDurationMs?: number;
   validationDurationMs?: number;
