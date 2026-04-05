@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, useCallback } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Paperclip, User, Plus, Search, Trash2, X } from "lucide-react";
 import {
   getConversationsList,
   getMessages,
@@ -17,91 +15,18 @@ import {
   type ConversationListItem,
   type MessageAttachmentRow,
 } from "@/app/actions/messages";
-import clsx from "clsx";
 import { getContact, getContactsList, type ContactRow } from "@/app/actions/contacts";
-import { portalPrimaryButtonClassName, portalPrimaryIconButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { ConversationList } from "./components/ConversationList";
+import { ConversationHeader } from "./components/ConversationHeader";
+import { ConversationQuickActions } from "./components/ConversationQuickActions";
+import { MessageThread } from "./components/MessageThread";
+import { MessageComposer } from "./components/MessageComposer";
+import { ConversationContextPanel } from "./components/ConversationContextPanel";
+import { NewAdvisorActionsMenu } from "./components/NewAdvisorActionsMenu";
+import { ChatModal } from "./components/ChatModal";
+import { formatLastActiveLabel, presenceFromLastMessageAt } from "./components/chat-format";
 
 const POLL_INTERVAL = 10_000;
-
-function MessageBubble({
-  m,
-  attachments,
-  isOwn,
-  onDeleteOne,
-  deletePending,
-}: {
-  m: MessageRow;
-  attachments: MessageAttachmentRow[];
-  isOwn: boolean;
-  onDeleteOne?: (messageId: string) => void;
-  deletePending?: boolean;
-}) {
-  const showDel =
-    "opacity-100 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto";
-  return (
-    <div className={`group flex items-end gap-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-      {onDeleteOne && !isOwn ? (
-        <button
-          type="button"
-          disabled={deletePending}
-          onClick={() => onDeleteOne(m.id)}
-          className={`shrink-0 mb-1 p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-40 min-h-[36px] min-w-[36px] flex items-center justify-center ${showDel}`}
-          aria-label="Smazat zprávu"
-          title="Smazat zprávu"
-        >
-          <Trash2 size={16} />
-        </button>
-      ) : null}
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm relative ${
-          isOwn
-            ? "bg-indigo-600 text-white"
-            : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] border border-[color:var(--wp-surface-card-border)]"
-        }`}
-      >
-        {onDeleteOne && isOwn ? (
-          <button
-            type="button"
-            disabled={deletePending}
-            onClick={() => onDeleteOne(m.id)}
-            className={`absolute -top-1 -right-1 p-1 rounded-full bg-white/90 text-rose-600 shadow border border-rose-100 hover:bg-rose-50 disabled:opacity-40 ${showDel}`}
-            aria-label="Smazat zprávu"
-            title="Smazat zprávu"
-          >
-            <Trash2 size={14} />
-          </button>
-        ) : null}
-        <p className="whitespace-pre-wrap break-words">{m.body}</p>
-        {attachments.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {attachments.map((a) => (
-              <a
-                key={a.id}
-                href={`/api/messages/attachments/${a.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`block text-xs truncate max-w-full ${isOwn ? "text-white/90 underline" : "text-indigo-600 underline"}`}
-                title={a.fileName}
-              >
-                📎 {a.fileName}
-              </a>
-            ))}
-          </div>
-        )}
-        <p
-          className={`text-[10px] mt-1 ${isOwn ? "text-white/70" : "text-[color:var(--wp-text-secondary)]"}`}
-        >
-          {new Date(m.createdAt).toLocaleString("cs-CZ", {
-            day: "numeric",
-            month: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export function PortalMessagesView({ initialContactId }: { initialContactId: string | null }) {
   const router = useRouter();
@@ -109,6 +34,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(initialContactId);
   const [contactName, setContactName] = useState("");
+  const [contactDetail, setContactDetail] = useState<ContactRow | null>(null);
   const [msgs, setMsgs] = useState<MessageRow[]>([]);
   const [msgAttachments, setMsgAttachments] = useState<Record<string, MessageAttachmentRow[]>>({});
   const [body, setBody] = useState("");
@@ -118,6 +44,101 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [newMsgOpen, setNewMsgOpen] = useState(false);
+  const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
+  const [contactSearch, setContactSearch] = useState("");
+
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [aiSheetOpen, setAiSheetOpen] = useState(false);
+  const [meetingSheetOpen, setMeetingSheetOpen] = useState(false);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [contextSheetOpen, setContextSheetOpen] = useState(false);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const list = await getConversationsList(searchQuery.trim() || undefined);
+      setConversations(list);
+    } catch {
+      setConversations([]);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    loadConversations();
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void loadConversations();
+    }, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (initialContactId) setSelectedContactId(initialContactId);
+  }, [initialContactId]);
+
+  useEffect(() => {
+    if (!selectedContactId) {
+      setMsgs([]);
+      setContactName("");
+      setContactDetail(null);
+      return;
+    }
+
+    const conv = conversations.find((c) => c.contactId === selectedContactId);
+    if (conv) {
+      setContactName(conv.contactName);
+    }
+
+    getContact(selectedContactId)
+      .then((c) => {
+        if (!c) return;
+        setContactDetail(c);
+        if (!conv) {
+          setContactName([c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Kontakt");
+        }
+      })
+      .catch(() => {});
+
+    let cancelled = false;
+    getMessages(selectedContactId).then((data) => {
+      if (!cancelled) setMsgs(data);
+    });
+    markMessagesRead(selectedContactId)
+      .then(() => {
+        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedContactId, conversations]);
+
+  useEffect(() => {
+    if (msgs.length === 0) {
+      setMsgAttachments({});
+      return;
+    }
+    const ids = msgs.map((m) => m.id);
+    const load = async () => {
+      const next: Record<string, MessageAttachmentRow[]> = {};
+      for (const id of ids) {
+        try {
+          const list = await getMessageAttachments(id);
+          next[id] = list;
+        } catch {
+          next[id] = [];
+        }
+      }
+      setMsgAttachments((prev) => ({ ...prev, ...next }));
+    };
+    load();
+  }, [msgs]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs.length]);
 
   function handleDeleteOneMessage(messageId: string) {
     if (!window.confirm("Smazat tuto zprávu? Tuto akci nelze vrátit zpět.")) return;
@@ -160,6 +181,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         setSelectedContactId(null);
         setMsgs([]);
         setMsgAttachments({});
+        setContactDetail(null);
         router.replace("/portal/messages", { scroll: false });
         await loadConversations();
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
@@ -168,82 +190,6 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
       }
     });
   }
-
-  const loadConversations = useCallback(async () => {
-    try {
-      const list = await getConversationsList(searchQuery.trim() || undefined);
-      setConversations(list);
-    } catch {
-      setConversations([]);
-    }
-  }, [searchQuery]);
-
-  useEffect(() => {
-    loadConversations();
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      void loadConversations();
-    }, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [loadConversations]);
-
-  useEffect(() => {
-    if (initialContactId) setSelectedContactId(initialContactId);
-  }, [initialContactId]);
-
-  useEffect(() => {
-    if (!selectedContactId) {
-      setMsgs([]);
-      setContactName("");
-      return;
-    }
-    const conv = conversations.find((c) => c.contactId === selectedContactId);
-    if (conv) {
-      setContactName(conv.contactName);
-    } else {
-      getContact(selectedContactId).then((c) => {
-        if (c) setContactName([c.firstName, c.lastName].filter(Boolean).join(" ") || "Kontakt");
-      }).catch(() => {});
-    }
-
-    let cancelled = false;
-    getMessages(selectedContactId).then((data) => {
-      if (!cancelled) setMsgs(data);
-    });
-    markMessagesRead(selectedContactId).then(() => {
-      window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-    }).catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedContactId, conversations]);
-
-  const msgIds = msgs.map((m) => m.id).join(",");
-  useEffect(() => {
-    if (msgs.length === 0) {
-      setMsgAttachments({});
-      return;
-    }
-    const ids = msgs.map((m) => m.id);
-    const load = async () => {
-      const next: Record<string, MessageAttachmentRow[]> = {};
-      for (const id of ids) {
-        try {
-          const list = await getMessageAttachments(id);
-          next[id] = list;
-        } catch {
-          next[id] = [];
-        }
-      }
-      setMsgAttachments((prev) => ({ ...prev, ...next }));
-    };
-    load();
-  }, [msgIds]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs.length]);
 
   function handleSend() {
     const trimmed = body.trim();
@@ -284,10 +230,6 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     router.replace(`/portal/messages?contact=${contactId}`, { scroll: false });
   }
 
-  const [newMsgOpen, setNewMsgOpen] = useState(false);
-  const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
-  const [contactSearch, setContactSearch] = useState("");
-
   const openNewMessage = useCallback(async () => {
     setNewMsgOpen(true);
     setContactSearch("");
@@ -308,260 +250,209 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const showList = !selectedContactId;
   const showChat = !!selectedContactId;
 
+  const activeConv = selectedContactId ? conversations.find((c) => c.contactId === selectedContactId) : undefined;
+  const lastActivitySource =
+    msgs.length > 0
+      ? new Date(msgs[msgs.length - 1]!.createdAt)
+      : activeConv
+        ? new Date(activeConv.lastMessageAt)
+        : null;
+
+  const lastClientSnippet =
+    [...msgs].reverse().find((m) => m.senderType === "client")?.body?.trim() ||
+    activeConv?.lastMessage?.trim() ||
+    "";
+
+  const openAi = () => {
+    setAiSheetOpen(true);
+    setContextSheetOpen(false);
+  };
+  const openMeeting = () => {
+    setMeetingSheetOpen(true);
+    setContextSheetOpen(false);
+  };
+  const openTask = () => {
+    setTaskSheetOpen(true);
+    setContextSheetOpen(false);
+  };
+
+  const contextPanelProps = {
+    contactName: contactName || "Kontakt",
+    contact: contactDetail,
+    lastMessagePreview: lastClientSnippet,
+    onAiSuggest: openAi,
+    onScheduleMeeting: openMeeting,
+    onCreateTask: openTask,
+  };
+
   return (
-    <div className="flex flex-1 min-h-0 border border-[color:var(--wp-surface-card-border)] rounded-2xl bg-[color:var(--wp-surface-card)] overflow-hidden shadow-sm">
-      {/* List: left on desktop, full on mobile when no selection */}
-      <div
-        className={`
-          flex flex-col border-r border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 min-w-0
-          md:w-[320px] md:shrink-0
-          ${showList ? "flex md:flex" : "hidden md:flex"}
-        `}
-      >
-        <div className="p-3 border-b border-[color:var(--wp-surface-card-border)] shrink-0 space-y-2">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Hledat v konverzacích…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
-              aria-label="Hledat v konverzacích"
-            />
-            <button
-              type="button"
-              onClick={openNewMessage}
-              className={clsx(portalPrimaryIconButtonClassName, "shadow-sm")}
-              title="Napsat zprávu"
-            >
-              <Plus size={20} />
-            </button>
-          </div>
+    <div className="flex min-h-0 flex-1 flex-col bg-[#f4f6fb] p-3 md:min-h-[calc(100vh-8rem)] md:p-4 dark:bg-slate-950">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 flex-col gap-4 xl:grid xl:min-h-0 xl:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(260px,300px)]">
+        {/* Seznam konverzací */}
+        <div
+          className={`min-h-0 min-w-0 xl:flex xl:flex-col ${showList ? "flex flex-1 flex-col" : "hidden xl:flex"} ${showList ? "max-xl:min-h-[50vh]" : ""}`}
+        >
+          <ConversationList
+            conversations={conversations}
+            selectedContactId={selectedContactId}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSelectConversation={selectConversation}
+            newMsgOpen={newMsgOpen}
+            onCloseNewMsg={() => setNewMsgOpen(false)}
+            onOpenNewMsg={openNewMessage}
+            contactSearch={contactSearch}
+            onContactSearchChange={setContactSearch}
+            filteredContacts={filteredContacts}
+            onPickNewContact={(id) => {
+              selectConversation(id);
+              setNewMsgOpen(false);
+            }}
+          />
         </div>
 
-        {newMsgOpen && (
-          <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-widest">Nová zpráva – vyberte klienta</p>
-              <button type="button" onClick={() => setNewMsgOpen(false)} className="p-1 text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Hledat klienta…"
-                value={contactSearch}
-                onChange={(e) => setContactSearch(e.target.value)}
-                className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] pl-9 pr-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px]"
-                autoFocus
-              />
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-0.5">
-              {filteredContacts.length === 0 && (
-                <p className="text-xs text-[color:var(--wp-text-secondary)] py-2 text-center">Žádní klienti</p>
-              )}
-              {filteredContacts.slice(0, 20).map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    selectConversation(c.id);
-                    setNewMsgOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-indigo-50 text-sm font-medium text-[color:var(--wp-text)] min-h-[44px] flex items-center gap-2 transition-colors"
-                >
-                  <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                    {[c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"}
-                  </span>
-                  <span className="truncate">{[c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Kontakt"}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 && (
-            <p className="p-4 text-sm text-[color:var(--wp-text-secondary)] text-center">
-              Zatím žádné konverzace.
-            </p>
-          )}
-          {conversations.map((c) => (
-            <button
-              key={c.contactId}
-              type="button"
-              onClick={() => selectConversation(c.contactId)}
-              className={`
-                w-full text-left px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] min-h-[44px] flex items-center gap-3
-                hover:bg-[color:var(--wp-surface-card)] transition-colors
-                ${selectedContactId === c.contactId ? "bg-[color:var(--wp-surface-card)] border-l-4 border-l-indigo-600" : ""}
-              `}
-            >
-              <span className="flex-1 min-w-0">
-                <span className="font-semibold text-[color:var(--wp-text)] truncate block">
-                  {c.contactName}
-                </span>
-                <span className="text-xs text-[color:var(--wp-text-secondary)] truncate block">
-                  {c.lastMessage?.slice(0, 60)}
-                  {c.lastMessage && c.lastMessage.length > 60 ? "…" : ""}
-                </span>
-              </span>
-              {c.unreadCount > 0 && (
-                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                  {c.unreadCount > 99 ? "99+" : c.unreadCount}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat: right on desktop, full on mobile when selected */}
-      <div
-        className={`
-          flex flex-col flex-1 min-w-0 min-h-0
-          ${showChat ? "flex" : "hidden md:flex md:flex-col"}
-        `}
-      >
-        {selectedContactId ? (
-          <>
-            <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
-              <button
-                type="button"
-                onClick={() => {
+        {/* Hlavní sloupec */}
+        <main
+          className={`min-h-0 min-w-0 flex flex-col overflow-hidden rounded-[28px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm ${
+            showChat ? "flex flex-1" : "hidden xl:flex"
+          }`}
+        >
+          {selectedContactId ? (
+            <>
+              <ConversationHeader
+                contactName={contactName || "Kontakt"}
+                contactId={selectedContactId}
+                presenceTier={lastActivitySource ? presenceFromLastMessageAt(lastActivitySource) : "offline"}
+                lastActiveLabel={lastActivitySource ? formatLastActiveLabel(lastActivitySource) : "Žádná aktivita"}
+                onBack={() => {
                   setSelectedContactId(null);
                   router.replace("/portal/messages", { scroll: false });
                 }}
-                className="md:hidden p-2 -ml-2 rounded-lg hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] min-w-[44px] flex items-center justify-center text-[color:var(--wp-text-secondary)]"
-                aria-label="Zpět na seznam"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <span className="flex-1 font-semibold text-[color:var(--wp-text)] truncate">
-                {contactName || "Kontakt"}
-              </span>
-              <Link
-                href={`/portal/contacts/${selectedContactId}`}
-                className="shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 min-h-[44px]"
-              >
-                <User size={18} />
-                Otevřít profil
-              </Link>
-              <button
-                type="button"
-                onClick={handleDeleteConversation}
-                disabled={isPending}
-                className="shrink-0 flex items-center justify-center rounded-xl p-2.5 text-rose-600 hover:bg-rose-50 min-h-[44px] min-w-[44px] disabled:opacity-50"
-                aria-label="Smazat konverzaci"
-                title="Smazat konverzaci"
-              >
-                <Trash2 size={20} />
-              </button>
-            </div>
+                onNewAction={() => setActionsMenuOpen(true)}
+                showMobileBack
+                showContextTrigger
+                onOpenContext={() => setContextSheetOpen(true)}
+              />
+              <ConversationQuickActions onAiSuggest={openAi} onScheduleMeeting={openMeeting} onCreateTask={openTask} />
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {msgs.length === 0 && (
-                <p className="text-center text-[color:var(--wp-text-secondary)] text-sm py-8">
-                  Zatím žádné zprávy. Napište první zprávu.
-                </p>
-              )}
-              {msgs.map((m) => (
-                <MessageBubble
-                  key={m.id}
-                  m={m}
-                  attachments={msgAttachments[m.id] ?? []}
-                  isOwn={m.senderType === "advisor"}
+              <div className="flex min-h-0 flex-1 flex-col">
+                <MessageThread
+                  msgs={msgs}
+                  msgAttachments={msgAttachments}
                   onDeleteOne={handleDeleteOneMessage}
-                  deletePending={deletingMessageId === m.id}
+                  deletingMessageId={deletingMessageId}
+                  bottomRef={bottomRef}
                 />
-              ))}
-              <div ref={bottomRef} />
-            </div>
-
-            <div className="shrink-0 border-t border-[color:var(--wp-surface-card-border)] p-3 bg-[color:var(--wp-surface-card)]">
-              {sendError ? (
-                <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-rose-800 font-semibold">{sendError}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSendError(null);
-                      handleSend();
-                    }}
-                    disabled={isPending}
-                    className="shrink-0 min-h-[40px] px-4 rounded-lg bg-rose-600 text-white text-sm font-bold disabled:opacity-50"
-                  >
-                    Zkusit znovu
-                  </button>
-                </div>
-              ) : null}
-              {files.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {files.map((f, i) => (
-                    <span
-                      key={i}
-                      className="text-xs bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] px-2 py-1 rounded-lg flex items-center gap-1"
-                    >
-                      {f.name}
-                      <button
-                        type="button"
-                        onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                        className="text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)]"
-                        aria-label="Odstranit přílohu"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="sr-only"
-                  multiple
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const added = Array.from(e.target.files ?? []);
-                    setFiles((prev) => prev.concat(added));
-                    e.target.value = "";
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="shrink-0 rounded-xl p-2.5 text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text-secondary)] min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label="Přidat přílohu"
-                >
-                  <Paperclip size={20} />
-                </button>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                <MessageComposer
+                  body={body}
+                  onBodyChange={setBody}
                   onKeyDown={handleKeyDown}
-                  placeholder="Napište zprávu… (Enter odeslat, Shift+Enter nový řádek)"
-                  rows={2}
-                  className="flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2.5 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 resize-none min-h-[44px]"
+                  onSend={handleSend}
+                  files={files}
+                  onRemoveFile={(i) => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                  fileInputRef={fileInputRef}
+                  onAttachClick={() => fileInputRef.current?.click()}
+                  onFilesPicked={(picked) => setFiles((prev) => prev.concat(picked))}
+                  sendError={sendError}
+                  onDismissError={() => setSendError(null)}
+                  onRetrySend={handleSend}
+                  isPending={isPending}
+                  canSend={body.trim().length > 0 || files.length > 0}
                 />
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  disabled={isPending || (body.trim() === "" && files.length === 0)}
-                  className={clsx(portalPrimaryButtonClassName, "shrink-0 px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50")}
-                >
-                  Odeslat
-                </button>
               </div>
+            </>
+          ) : (
+            <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-[color:var(--wp-text-secondary)]">
+              Vyberte konverzaci vlevo nebo začněte novou zprávu.
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-[color:var(--wp-text-secondary)] text-sm p-8 md:border-l border-[color:var(--wp-surface-card-border)]">
-            Vyberte konverzaci v seznamu vlevo.
-          </div>
-        )}
+          )}
+        </main>
+
+        {/* Pravý panel — desktop */}
+        <div className="hidden min-h-0 min-w-0 xl:block">
+          {selectedContactId ? (
+            <ConversationContextPanel {...contextPanelProps} />
+          ) : (
+            <aside className="flex h-full min-h-[240px] items-center justify-center rounded-[28px] border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/80 px-6 text-center text-sm text-[color:var(--wp-text-secondary)] shadow-sm">
+              Vyberte konverzaci pro zobrazení kontextu, AI náhledu a kontaktu.
+            </aside>
+          )}
+        </div>
       </div>
+
+      {/* Mobilní kontextový panel */}
+      <ChatModal open={contextSheetOpen} title="Kontext konverzace" onClose={() => setContextSheetOpen(false)}>
+        {selectedContactId ? <ConversationContextPanel {...contextPanelProps} asDiv /> : null}
+      </ChatModal>
+
+      <NewAdvisorActionsMenu
+        open={actionsMenuOpen}
+        onClose={() => setActionsMenuOpen(false)}
+        onAiSuggest={openAi}
+        onScheduleMeeting={openMeeting}
+        onCreateTask={openTask}
+        onDeleteConversation={handleDeleteConversation}
+      />
+
+      <ChatModal
+        open={aiSheetOpen}
+        title="Navrhnout odpověď AI"
+        onClose={() => setAiSheetOpen(false)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setAiSheetOpen(false)}
+            className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white hover:opacity-95"
+          >
+            Zavřít
+          </button>
+        }
+      >
+        <p>
+          Tady bude návrh odpovědi z AI podle vlákna a kontextu klienta. Ve fázi 2 napojíme model a historii zpráv; zatím můžete psát
+          ručně v poli níže.
+        </p>
+        {lastClientSnippet ? (
+          <div className="mt-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3 text-[color:var(--wp-text)]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--wp-text-tertiary)]">Poslední zpráva od klienta</div>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{lastClientSnippet}</p>
+          </div>
+        ) : null}
+      </ChatModal>
+
+      <ChatModal
+        open={meetingSheetOpen}
+        title="Naplánovat schůzku"
+        onClose={() => setMeetingSheetOpen(false)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setMeetingSheetOpen(false)}
+            className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white hover:opacity-95"
+          >
+            Zavřít
+          </button>
+        }
+      >
+        <p>Ve druhé fázi otevřeme kalendář nebo napojení na váš plánovač. Prozatím si schůzku domluvte mimo chat nebo poznačte ji do úkolů.</p>
+      </ChatModal>
+
+      <ChatModal
+        open={taskSheetOpen}
+        title="Vytvořit úkol"
+        onClose={() => setTaskSheetOpen(false)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setTaskSheetOpen(false)}
+            className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white hover:opacity-95"
+          >
+            Zavřít
+          </button>
+        }
+      >
+        <p>Ve druhé fázi přidáme formulář úkolu vázaný na tohoto klienta. Prozatím použijte svůj stávající postup pro úkoly.</p>
+      </ChatModal>
     </div>
   );
 }
