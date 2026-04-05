@@ -1,0 +1,389 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB1 mortgage + trade + note + client_request — endpoint, canonical labels, preview snapshot 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · Hypotéka
+2. Vytvořit interní poznámku · Hypotéka
+3. Vytvořit požadavek klienta · Hypotéka
+
+Playbook: Hypotéka / úvěr
+• Ověřit příjem a bonitu klienta v analýze.
+• Naplánovat předání podkladů bance a termín čerpání.
+• Zkontrolovat pojistné krytí zástavy a životní pojištění.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Hypotéka",
+      "description": "Vytvoří nový obchod v CRM (Hypotéka)",
+      "domainGroup": "Hypotéka",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Hypotéka",
+      "description": "Uloží interní poznámku ke klientovi (Hypotéka)",
+      "domainGroup": "Hypotéka",
+      "label": "Vytvořit interní poznámku",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Hypotéka",
+      "description": "Požadavek na občanský průkaz",
+      "domainGroup": "Hypotéka",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB2 implicit investment bundle — endpoint OK, snapshot, no overconfident wording 1`] = `
+{
+  "clientLabel": "Marek Marek",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Marek Marek**:
+
+1. Vytvořit obchod · Investice
+2. Vytvořit úkol · Investice
+3. Vytvořit požadavek klienta · Investice
+
+Playbook: Investice
+• Doplnit vhodnost produktu k investičnímu profilu klienta.
+• Ověřit diverzifikaci portfolia a korelaci s ostatními produkty.
+• Naplánovat pravidelnou kontrolu portfolia (doporučeno: ročně).
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Investice",
+      "description": "Vytvoří nový obchod v CRM (Investice)",
+      "domainGroup": "Investice",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Investice",
+      "description": "Doplnit informace o investici",
+      "domainGroup": "Investice",
+      "label": "Vytvořit úkol",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Investice",
+      "description": "Požadavek na investiční podklady",
+      "domainGroup": "Investice",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB4 Klient chce dipko — DIP domain + implicit bundle, clean preview snapshot 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · DIP
+2. Vytvořit úkol · DIP
+3. Vytvořit požadavek klienta · DIP
+
+Playbook: DIP / DPS – penzijní spoření
+• Ověřit daňové výhody a limity pro klientovu situaci.
+• Zkontrolovat investiční strategii vůči horizontu odchodu do důchodu.
+• Domluvit pravidelnou revizi příspěvků při změnách příjmu.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "DIP",
+      "description": "Vytvoří nový obchod v CRM (DIP)",
+      "domainGroup": "DIP",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "DIP",
+      "description": "Doplnit informace k DIP",
+      "domainGroup": "DIP",
+      "label": "Vytvořit úkol",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "DIP",
+      "description": "Požadavek na podklady k DIP",
+      "domainGroup": "DIP",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB5 penzijko — DPS / retirement, not DIP-only playbook 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · Penzijní spoření
+2. Vytvořit úkol · Penzijní spoření
+3. Vytvořit požadavek klienta · Penzijní spoření
+
+Playbook: DIP / DPS – penzijní spoření
+• Ověřit daňové výhody a limity pro klientovu situaci.
+• Zkontrolovat investiční strategii vůči horizontu odchodu do důchodu.
+• Domluvit pravidelnou revizi příspěvků při změnách příjmu.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Penzijní spoření",
+      "description": "Vytvoří nový obchod v CRM (Penzijní spoření)",
+      "domainGroup": "Penzijní spoření",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Penzijní spoření",
+      "description": "Doplnit informace o penzijním spoření",
+      "domainGroup": "Penzijní spoření",
+      "label": "Vytvořit úkol",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Penzijní spoření",
+      "description": "Požadavek na podklady k penzijnímu spoření",
+      "domainGroup": "Penzijní spoření",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB6 POV + HAV combo — stable preview snapshot 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · Pojištění vozidla
+2. Vytvořit interní poznámku · Pojištění vozidla
+3. Vytvořit požadavek klienta · Pojištění vozidla
+
+Playbook: Majetek / odpovědnost / auto / cestovní
+• Zkontrolovat podpojištění nebo nadlimitní majetek.
+• Sladit pojistnou částku s aktuální hodnotou zástavy / hypotéky.
+• Ověřit, zda je pokryto pojištění odpovědnosti domácnosti.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Pojištění vozidla",
+      "description": "Vytvoří nový obchod v CRM (Pojištění vozidla)",
+      "domainGroup": "Pojištění vozidla",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Pojištění vozidla",
+      "description": "Uloží interní poznámku ke klientovi (Pojištění vozidla)",
+      "domainGroup": "Pojištění vozidla",
+      "label": "Vytvořit interní poznámku",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Pojištění vozidla",
+      "description": "Požadavek na technický průkaz a stávající smlouvu",
+      "domainGroup": "Pojištění vozidla",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB8 life insurance rating — EUCS sourcesSummary snapshot 1`] = `
+{
+  "clientLabel": null,
+  "confidence": 0.95,
+  "message": "**Životní pojištění** — produktové pořadí podle interního EUCS podkladu (informativní):
+
+1. **UNIQA — Život & Radost** · rating 9.3 · stav k 2025-05-14
+2. **NN — Orange** · rating 9.2 · stav k 2025-11-24
+3. **Generali Česká — Bel Mondo 20** · rating 8.9 · stav k 2024-02-07
+4. **Allianz — Život** · rating 8.7 · stav k 2025-11-19
+5. **Komerční pojišťovna — Elán** · rating 8.7 · stav k 2025-09-04
+
+*Rating je pouze informativní. Aidvisora nedává doporučení. Poradce odpovídá za rozhodnutí.*",
+  "sourcesSummary": [
+    "EUCS rating (interní podklad)",
+  ],
+  "status": null,
+  "stepPreviews": [],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB10 portal message — portal step preview snapshot (needs_input until text supplied) 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.75,
+  "message": "Abych mohl připravit bezpečné akce pro **Test Novák**, potřebuji ještě doplnit nebo upřesnit:
+
+- Poslat portálovou zprávu: chybí text zprávy nebo obsah poznámky
+
+Jakmile údaje doplníte, připravím stejný canonical plán k potvrzení.",
+  "sourcesSummary": [],
+  "status": "draft",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": null,
+      "description": "Požadavek na občanský průkaz",
+      "domainGroup": null,
+      "label": "Poslat portálovou zprávu",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [
+        "Chybí: text zprávy nebo obsah poznámky",
+      ],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB11 create_contract preview — životní smlouva 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · Životní pojištění
+2. Založit smlouvu · Životní pojištění
+
+Playbook: Životní / rizikové pojištění
+• Porovnat výši krytí s měsíčními výdaji domácnosti.
+• Zkontrolovat výluky vůči zaměstnání nebo koníčkům klienta.
+• Zvážit doplnění o pojištění pracovní neschopnosti.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Životní pojištění",
+      "description": "Vytvoří nový obchod v CRM (Životní pojištění)",
+      "domainGroup": "Životní pojištění",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Životní pojištění",
+      "description": "Životní pojištění",
+      "domainGroup": "Životní pojištění",
+      "label": "Založit smlouvu",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
+
+exports[`Phase 5: AI assistant freeze gate (release blocker suite) > RB12 update_coverage preview — OŽP hotové 1`] = `
+{
+  "clientLabel": "Test Novák",
+  "confidence": 0.85,
+  "message": "Připravuji akce pro **Test Novák**:
+
+1. Vytvořit obchod · Životní pojištění
+2. Vytvořit interní poznámku · Životní pojištění
+3. Vytvořit požadavek klienta · Životní pojištění
+
+Playbook: Životní / rizikové pojištění
+• Porovnat výši krytí s měsíčními výdaji domácnosti.
+• Zkontrolovat výluky vůči zaměstnání nebo koníčkům klienta.
+• Zvážit doplnění o pojištění pracovní neschopnosti.
+
+Vyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).",
+  "sourcesSummary": [],
+  "status": "awaiting_confirmation",
+  "stepPreviews": [
+    {
+      "blockedReason": null,
+      "contextHint": "Životní pojištění",
+      "description": "Vytvoří nový obchod v CRM (Životní pojištění)",
+      "domainGroup": "Životní pojištění",
+      "label": "Vytvořit obchod",
+      "preflightStatus": "needs_input",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Životní pojištění",
+      "description": "Uloží interní poznámku ke klientovi (Životní pojištění)",
+      "domainGroup": "Životní pojištění",
+      "label": "Vytvořit interní poznámku",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+    {
+      "blockedReason": null,
+      "contextHint": "Životní pojištění",
+      "description": "Požadavek na zdravotní a identifikační podklady",
+      "domainGroup": "Životní pojištění",
+      "label": "Vytvořit požadavek klienta",
+      "preflightStatus": "ready",
+      "validationWarnings": [],
+    },
+  ],
+}
+`;
