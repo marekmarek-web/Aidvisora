@@ -1143,8 +1143,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
 
         {/* Tab: Profil poradce */}
         {activeTab === "profil" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-300">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in duration-300">
+            <div className="lg:col-span-8">
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-6 sm:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
                   <div className="relative group flex-shrink-0 mx-auto md:mx-0">
@@ -1181,7 +1181,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       <p className="text-xs text-red-600 mt-2 text-center max-w-[140px]">{advisorAvatarError}</p>
                     )}
                   </div>
-                  <div className="flex-1 w-full space-y-5">
+                  <div className="flex-1 w-full">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
                         <label className={labelClass}>Veřejné jméno</label>
@@ -1192,19 +1192,27 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                         <input type="text" value={publicRole} onChange={(e) => setPublicRole(e.target.value)} className={inputClass} placeholder="např. Poradce pro majetek" />
                       </div>
                     </div>
-                    <div>
-                      <label className={labelClass}>Název společnosti (Síť)</label>
-                      <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className={inputClass} />
-                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className={labelClass}>Krátké Bio (vizitka a rezervační stránka)</label>
-                  <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inputClass} resize-none leading-relaxed`} placeholder="Pomáhám klientům budovat majetek..." />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:items-start">
+                  <div>
+                    <label className={labelClass}>Název společnosti (Síť)</label>
+                    <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Krátké Bio (vizitka a rezervační stránka)</label>
+                    <textarea
+                      rows={6}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      className={`${inputClass} resize-none leading-relaxed min-h-[9rem] lg:min-h-[10.5rem]`}
+                      placeholder="Pomáhám klientům budovat majetek..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-4 space-y-6">
               <PublicBookingSetupBlock initial={initial.publicBooking} canonicalBaseUrl={initial.canonicalBaseUrl} />
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
@@ -1227,7 +1235,13 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   </a>
                 </div>
               </div>
-              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden mt-6">
+            </div>
+            <div
+              className={`lg:col-span-12 grid gap-6 md:gap-8 ${
+                initial.roleName === "Admin" ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 lg:grid-cols-2"
+              }`}
+            >
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
                   <h3 className="font-black text-[color:var(--wp-text)]">PDF report z finanční analýzy</h3>
                   <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Pro záhlaví a zápatí</p>
@@ -1274,7 +1288,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
               </div>
 
               {initial.roleName === "Admin" ? (
-                <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden mt-6">
+                <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                   <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
                     <h3 className="font-black text-[color:var(--wp-text)]">Narozeninové e-maily (workspace)</h3>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">
@@ -1314,7 +1328,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 </div>
               ) : null}
 
-              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden mt-6">
+              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
                   <h3 className="font-black text-[color:var(--wp-text)]">Vaše narozeninové přání</h3>
                   <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">
