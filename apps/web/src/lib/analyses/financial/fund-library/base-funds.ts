@@ -1,57 +1,14 @@
 import { DEFAULT_FUND_AVAILABILITY, type BaseFund } from "./types";
 import { BATCH_A_BASE_FUNDS } from "./base-funds-batch-a";
 import { BATCH_B_BASE_FUNDS } from "./base-funds-batch-b";
+import { BATCH_C_BASE_FUNDS } from "./base-funds-batch-c";
 
 type BaseFundInput = Omit<BaseFund, "availability">;
 
 /**
- * Katalog base fondů: Batch A + B (reálná data) + placeholdery pro zbývající klíče v1.
+ * Katalog base fondů: Batch A + B + C (reálná data) + placeholdery pro zbývající klíče v1.
  */
 const BASE_FUNDS_PLACEHOLDERS_RAW: readonly BaseFundInput[] = [
-  {
-    baseFundKey: "conseq_globalni_akciovy_ucastnicky",
-    displayName: "Conseq Globální akciový účastnický",
-    provider: "Conseq IM",
-    category: "Účastnický fond (DPS)",
-    isActive: true,
-    sources: [
-      { kind: "internal", label: "Factsheet (doplnit)" },
-      { kind: "factsheet", label: "Conseq (doplnit URL)" },
-    ],
-    assets: { logoPath: "/logos/conseq.png" },
-    notes: ["Legacy productKey: conseq. Varianty DIP/ZAL viz fund-variants."],
-    performance: null,
-  },
-  {
-    baseFundKey: "nn_povinny_konzervativni",
-    displayName: "NN povinný konzervativní",
-    provider: "NN",
-    category: "Účastnický fond (DPS)",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "nn_vyvazeny",
-    displayName: "NN vyvážený",
-    provider: "NN",
-    category: "Účastnický fond (DPS)",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "nn_rustovy",
-    displayName: "NN růstový",
-    provider: "NN",
-    category: "Účastnický fond (DPS)",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Factsheet NN (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
   {
     baseFundKey: "creif",
     displayName: "CREIF",
@@ -124,5 +81,6 @@ const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = BASE_FUNDS_PLACEHOLDERS_RAW
 export const BASE_FUNDS: readonly BaseFund[] = [
   ...BATCH_A_BASE_FUNDS,
   ...BATCH_B_BASE_FUNDS,
+  ...BATCH_C_BASE_FUNDS,
   ...BASE_FUNDS_PLACEHOLDERS,
 ];

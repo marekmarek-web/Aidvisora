@@ -4,7 +4,12 @@
 
 import type { BatchASeedRow } from "./base-funds-batch-a.seed";
 import type { BaseFundKey } from "./legacy-fund-key-map";
-import { DEFAULT_FUND_AVAILABILITY, type BaseFund, type FundSource } from "./types";
+import {
+  DEFAULT_FUND_AVAILABILITY,
+  type BaseFund,
+  type FundAvailabilityTag,
+  type FundSource,
+} from "./types";
 
 function mapSources(sources: BatchASeedRow["sources"]): FundSource[] {
   return sources.map((s) => ({
@@ -17,6 +22,7 @@ function mapSources(sources: BatchASeedRow["sources"]): FundSource[] {
 export function mapBatchSeedRowToBaseFund(
   row: BatchASeedRow,
   allowedKeys: ReadonlySet<BaseFundKey>,
+  availability: readonly FundAvailabilityTag[] = DEFAULT_FUND_AVAILABILITY,
 ): BaseFund {
   const key = row.baseFundKey as BaseFundKey;
   if (!allowedKeys.has(key)) {
@@ -56,7 +62,7 @@ export function mapBatchSeedRowToBaseFund(
     factsheetAsOf: row.factsheetAsOf,
     verifiedAt: row.verifiedAt,
     isActive: true,
-    availability: DEFAULT_FUND_AVAILABILITY,
+    availability,
     sources: mapSources(row.sources),
     assets: {
       logoPath: row.logo,

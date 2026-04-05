@@ -53,12 +53,20 @@ export type FundVariantKey = "standard" | "dip" | "zal" | "zal_dip";
  * Kde má smysl fond v aplikaci nabízet (datová vrstva; wizard/report zatím na legacy).
  * Další batchy mohou zužovat např. jen `report` pro čistě katalogové záznamy.
  */
-export type FundAvailabilityTag = "personal_fa" | "company_fa" | "report";
+export type FundAvailabilityTag = "personal_fa" | "company_fa" | "report" | "pension";
 
 export const DEFAULT_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
   "personal_fa",
   "company_fa",
   "report",
+];
+
+/** Doplňkové penzijní účastnické fondy — stejné kontexty jako default + tag pro filtrování „jen DPS“. */
+export const PENSION_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
+  "personal_fa",
+  "company_fa",
+  "report",
+  "pension",
 ];
 
 /**

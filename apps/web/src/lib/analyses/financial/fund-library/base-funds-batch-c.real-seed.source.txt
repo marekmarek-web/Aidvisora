@@ -1,0 +1,428 @@
+import type { BaseFundSeed } from './base-funds.batch-a.real-seed';
+
+/**
+ * Batch C = seed s reálnými daty pro penzijní fondy.
+ *
+ * Důležité:
+ * - `officialPerformance` = pouze veřejně doložená výkonnost z oficiálních stránek / dokumentů.
+ * - `planningRate` = interní modelový předpoklad pro projekce v Aidvisoře, NENÍ oficiální výkonnost.
+ * - U NN fondů je většina výkonnostních čísel vzata z oficiálních NN stránek k 31. 3. 2026,
+ *   10leté průměrné p.a. z tiskové zprávy NN z 9. 1. 2026.
+ * - `galleryImages` jsou jen cílové asset cesty; samotné vizuály je potřeba doplnit do asset knihovny.
+ */
+export const BASE_FUNDS_BATCH_C_REAL_SEED: BaseFundSeed[] = [
+  {
+    baseFundKey: 'conseq_globalni_akciovy_ucastnicky_fond',
+    canonicalName: 'Conseq globální akciový účastnický fond, Conseq penzijní společnost, a.s.',
+    displayName: 'Conseq globální akciový účastnický fond',
+    provider: 'Conseq penzijní společnost',
+    manager: 'Conseq Investment Management, a.s.',
+    category: 'Penzijní fond',
+    subcategory: 'Účastnický fond / akciový / dynamický',
+    currency: 'CZK',
+    isin: null,
+    ticker: null,
+    riskSRI: 5,
+    goal:
+      'Cílem fondu je dosáhnout dlouhodobého zhodnocení fondového vlastního kapitálu měřeného v českých korunách investicemi na akciových trzích v různých regionech světa včetně rozvíjejících se trhů.',
+    strategy:
+      'Dynamický účastnický fond doplňkového penzijního spoření zaměřený primárně na akcie a akciové ETF. Portfolio kombinuje globální vyspělé i rozvíjející se trhy a používá i finanční deriváty.',
+    description:
+      'Akciová penzijní strategie pro dlouhý horizont. Fond patří mezi nejdynamičtější řešení v DPS a cílí na dlouhodobý růst hodnoty penzijní jednotky.',
+    suitable:
+      'Pro investory v doplňkovém penzijním spoření, kteří mají delší horizont, chtějí růstovou akciovou složku a akceptují vyšší kolísání hodnoty.',
+    horizon: '5+ let',
+    liquidity:
+      'Účastnický fond DPS; běžná likvidita se řídí pravidly doplňkového penzijního spoření, nejde o běžně obchodovaný retailový fond nebo ETF.',
+    risks:
+      'Vysoké kolísání akciových trhů, měnové riziko, regionální a sektorová koncentrace, riziko rozvíjejících se trhů a rizika spojená s deriváty.',
+    minInvestment: null,
+    planningRate: 7,
+    officialPerformance: {
+      ytd: '-0.76%',
+      oneYear: '13.04%',
+      threeYearPA: '18.13%',
+      fiveYearPA: '10.24%',
+      tenYearPA: '8.77%',
+      sinceInceptionPA: '8.86%',
+      asOf: '2026-03-31',
+    },
+    benefits: [
+      'Dynamická akciová strategie v rámci doplňkového penzijního spoření.',
+      'Široká regionální diverzifikace napříč vyspělými i rozvíjejícími se trhy.',
+      'Silná historická výkonnost a 1. místo ve Zlaté koruně 2024 v kategorii penzijní spoření.',
+    ],
+    parameters: {
+      pensionCompany: 'Conseq penzijní společnost, a.s.',
+      currentUnitValue: '3.0469 CZK',
+      currentUnitValueDate: '2026-03-31',
+      currentFundCapital: '20 813 603 894.63 CZK',
+      currentUnitCount: '6 831 040 472.88',
+      yearlyHigh: '3.2544 CZK (2026-02-10)',
+      yearlyLow: '2.4392 CZK (2025-04-08)',
+      inceptionDate: '2013-02-19',
+      countryOfRegistration: 'Česká republika',
+      annualised2Y: '13.44%',
+      annualised3Y: '18.13%',
+      annualised5Y: '10.24%',
+      annualised10Y: '8.77%',
+    },
+    topHoldings: [
+      'S&P 500 ETF 4.77%',
+      'NLB 4.10%',
+      'S&P 600 SmallCap ETF 3.59%',
+      'MSCI Emerging Markets Value Factor ETF 3.47%',
+      'MSCI Mexico ETF 2.98%',
+      'MSCI World Health ETF 2.90%',
+      'MSCI Greece ETF 2.85%',
+      'MSCI Emerging Markets ETF 2.66%',
+      'Novo Nordisk 2.31%',
+    ],
+    countries: ['Spojené státy', 'Evropa', 'Globální rozvíjející se trhy', 'Japonsko', 'Střední Evropa'],
+    sectors: ['Akcie', 'Dluhopisy', 'Hotovost a ostatní'],
+    morningstarRating: null,
+    awards: ['Zlatá koruna 2024 – 1. místo v kategorii penzijní spoření'],
+    factsheetUrl:
+      'https://www.conseq.cz/getmedia/8b68e79e-c1a3-4d86-b761-27c3f304f722/glak-4q2025.pdf.aspx?ext=.pdf',
+    factsheetAsOf: '2025-12-31',
+    verifiedAt: '2026-04-05',
+    logo: '/logos/funds/conseq_globalni_akciovy_ucastnicky_fond.svg',
+    heroImage: '/report-assets/funds/conseq_globalni_akciovy_ucastnicky_fond/hero.webp',
+    galleryImages: [
+      '/report-assets/funds/conseq_globalni_akciovy_ucastnicky_fond/gallery-1.webp',
+      '/report-assets/funds/conseq_globalni_akciovy_ucastnicky_fond/gallery-2.webp',
+      '/report-assets/funds/conseq_globalni_akciovy_ucastnicky_fond/gallery-3.webp',
+    ],
+    sources: [
+      {
+        label: 'Official product page',
+        url: 'https://www.conseq.cz/penze/prehled-ucastnickych-fondu/conseq-globalni-akciovy-ucastnicky-fond',
+        kind: 'landing_page',
+      },
+      {
+        label: 'Official quarterly factsheet 4Q 2025',
+        url: 'https://www.conseq.cz/getmedia/8b68e79e-c1a3-4d86-b761-27c3f304f722/glak-4q2025.pdf.aspx?ext=.pdf',
+        kind: 'factsheet',
+      },
+      {
+        label: 'Official KID',
+        url: 'https://www.conseq.cz/getmedia/321edd41-e551-45d2-9bcd-e0a47e3bc8dd/260219-KIID-Conseq-globalni-akciovy-ucastnicky-fond.pdf.aspx?ext=.pdf',
+        kind: 'kid',
+      },
+      {
+        label: 'Official statute',
+        url: 'https://www.conseq.cz/getmedia/17f94a5b-e373-447b-8338-27689eb6b1fe/260219-statut-Conseq-globalni-akciovy-ucastnicky-final.pdf.aspx?ext=.pdf',
+        kind: 'documents',
+      },
+    ],
+    assetTodo: ['logo', 'hero', 'gallery-1', 'gallery-2', 'gallery-3'],
+    notes: [
+      'Rizikový profil 5/7 je doložen z KIDu.',
+      'factsheetUrl míří na čtvrtletní report portfolio manažera, protože na veřejné stránce funguje jako nejbližší náhrada factsheetu.',
+      'planningRate 7 % je interní modelový předpoklad pro projekce, ne oficiální performance.',
+    ],
+  },
+  {
+    baseFundKey: 'nn_povinny_konzervativni_fond',
+    canonicalName: 'Povinný konzervativní fond NN Penzijní společnosti, a.s.',
+    displayName: 'NN Povinný konzervativní fond',
+    provider: 'NN Penzijní společnost',
+    manager: 'NN Penzijní společnost, a.s.',
+    category: 'Penzijní fond',
+    subcategory: 'Účastnický fond / konzervativní / dluhopisový a peněžní trh',
+    currency: 'CZK',
+    isin: null,
+    ticker: null,
+    riskSRI: 2,
+    goal:
+      'Fond je určen pro účastníky, kteří jednoznačně upřednostňují bezpečné spoření a chtějí především uchovat hodnotu prostředků při nízké míře kolísání.',
+    strategy:
+      'Velmi konzervativní investiční strategie založená na nástrojích dluhopisového a peněžního trhu, termínovaných vkladech a státních dluhopisech.',
+    description:
+      'Nejbezpečnější fond z nabídky NN pro doplňkové penzijní spoření. Míří na nízké kolísání a nízké, ale stabilnější očekávané zhodnocení.',
+    suitable:
+      'Pro velmi konzervativní klienty, kteří budou spořit krátce nebo nechtějí podstupovat akciové riziko, typicky před důchodem.',
+    horizon: '0–5 let',
+    liquidity:
+      'Účastnický fond DPS; výběr prostředků a likvidita se řídí pravidly doplňkového penzijního spoření.',
+    risks:
+      'Nízké tržní riziko, ale stále existuje úrokové riziko, úvěrové riziko a riziko, že výnos nepokryje inflaci.',
+    minInvestment: null,
+    planningRate: 1,
+    officialPerformance: {
+      ytd: null,
+      oneYear: '1.36%',
+      threeYearPA: null,
+      fiveYearPA: null,
+      tenYearPA: '1.25%',
+      sinceInceptionPA: null,
+      asOf: '2026-03-31',
+    },
+    benefits: [
+      'Nejnižší riziko z účastnických fondů NN.',
+      'Vhodné pro klienty s krátkým horizontem nebo nízkou tolerancí k výkyvům.',
+      'Nízká úplata za obhospodařování 0.4 % oproti dynamičtějším fondům.',
+    ],
+    parameters: {
+      inceptionDate: '2013-01-01',
+      valuationFrequency: 'Denně',
+      currentUnitValue: '1.1561 CZK',
+      currentUnitValueDate: '2026-04-01',
+      currentFundCapital: '4 858 289 832 CZK',
+      currentUnitCount: '4 202 275 788',
+      managementFee: '0.4 %',
+      performanceFee: '10 %',
+      expectedReturnNote: 'NN uvádí očekávané zhodnocení 1 % p.a. (nejde o garanci)',
+      officialOneYearReturn: '1.36% (k 2026-03-31)',
+      officialTenYearPA: '1.25% p.a. (komunikováno NN 2026-01-09)',
+    },
+    topHoldings: [],
+    countries: ['Česká republika', 'Evropa'],
+    sectors: ['Státní dluhopisy', 'Kvalitní dluhopisy', 'Peněžní trh', 'Termínované vklady'],
+    morningstarRating: null,
+    awards: [],
+    factsheetUrl: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/klicove_informace/514351.pdf',
+    factsheetAsOf: '2026-04-01',
+    verifiedAt: '2026-04-05',
+    logo: '/logos/funds/nn_povinny_konzervativni_fond.svg',
+    heroImage: '/report-assets/funds/nn_povinny_konzervativni_fond/hero.webp',
+    galleryImages: [
+      '/report-assets/funds/nn_povinny_konzervativni_fond/gallery-1.webp',
+      '/report-assets/funds/nn_povinny_konzervativni_fond/gallery-2.webp',
+      '/report-assets/funds/nn_povinny_konzervativni_fond/gallery-3.webp',
+    ],
+    sources: [
+      {
+        label: 'Official fund page',
+        url: 'https://www.nn.cz/penze/ucastnicke-fondy/',
+        kind: 'landing_page',
+      },
+      {
+        label: 'Official key information document',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/klicove_informace/514351.pdf',
+        kind: 'kid',
+      },
+      {
+        label: 'Official statute',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/statuty_fondu/514636.pdf',
+        kind: 'documents',
+      },
+      {
+        label: 'Official NN press release on long-term performance',
+        url: 'https://www.nn.cz/tiskove-zpravy/nn-penzijnim-fondum-se-opet-darilo/',
+        kind: 'report',
+      },
+    ],
+    assetTodo: ['logo', 'hero', 'gallery-1', 'gallery-2', 'gallery-3'],
+    notes: [
+      'U NN fondů veřejné weby neukazují pohodlně kompletní factsheet strukturu jako ETF; seed proto kombinuje fund page, KID a statut.',
+      'planningRate 1 % vychází z NN komunikovaného očekávaného zhodnocení a je interní modelová vrstva pro projekce, ne garance.',
+      'Top holdings nejsou v dostupném veřejném výstupu snadno čitelné; doplnit případně z portfoliového reportu.',
+    ],
+  },
+  {
+    baseFundKey: 'nn_vyvazeny_ucastnicky_fond',
+    canonicalName: 'Vyvážený účastnický fond NN Penzijní společnosti, a.s.',
+    displayName: 'NN Vyvážený účastnický fond',
+    provider: 'NN Penzijní společnost',
+    manager: 'NN Penzijní společnost, a.s.',
+    category: 'Penzijní fond',
+    subcategory: 'Účastnický fond / vyvážený / akcie + dluhopisy',
+    currency: 'CZK',
+    isin: null,
+    ticker: null,
+    riskSRI: 4,
+    goal:
+      'Fond nabízí vyvážené investiční řešení, které kombinuje růstový potenciál akcií s tlumící rolí dluhopisové složky.',
+    strategy:
+      'Akciová složka portfolia činí maximálně 60 % majetku fondu. Zbytek tvoří zejména státní a kvalitní firemní dluhopisy a termínované vklady.',
+    description:
+      'Vyvážený penzijní fond pro klienty, kteří chtějí kombinovat růst akcií a stabilitu dluhopisů v jednom řešení bez potřeby skládat vlastní mix strategií.',
+    suitable:
+      'Pro klienty se střední tolerancí k riziku, kteří chtějí v rámci penzijního spoření využít výhod akcií i dluhopisů a mají středně dlouhý až dlouhý horizont.',
+    horizon: '5+ let',
+    liquidity:
+      'Účastnický fond DPS; likvidita a výplaty prostředků se řídí pravidly doplňkového penzijního spoření.',
+    risks:
+      'Kolísání akciových trhů, úrokové riziko dluhopisové složky a měnové riziko u zahraničních investic.',
+    minInvestment: null,
+    planningRate: 3,
+    officialPerformance: {
+      ytd: null,
+      oneYear: '3.43%',
+      threeYearPA: null,
+      fiveYearPA: null,
+      tenYearPA: '3.29%',
+      sinceInceptionPA: null,
+      asOf: '2026-03-31',
+    },
+    benefits: [
+      'Vyvážené rozložení mezi akcie a dluhopisy v jednom fondu.',
+      'Vhodné pro klienty, kteří nechtějí stavět vlastní strategii z více fondů.',
+      'Může být přirozeným středem mezi konzervativní a růstovou strategií.',
+    ],
+    parameters: {
+      inceptionDate: '2014-11-04',
+      valuationFrequency: 'Denně',
+      currentUnitValue: '1.3600 CZK',
+      currentUnitValueDate: '2026-04-01',
+      currentFundCapital: '5 603 340 437 CZK',
+      currentUnitCount: '4 120 027 774',
+      managementFee: '1 %',
+      performanceFee: '15 %',
+      expectedReturnNote: 'NN uvádí očekávané zhodnocení 3 % p.a. (nejde o garanci)',
+      officialOneYearReturn: '3.43% (k 2026-03-31)',
+      officialTenYearPA: '3.29% p.a. (komunikováno NN 2026-01-09)',
+      equityLimit: 'maximálně 60 % majetku fondu',
+    },
+    topHoldings: [],
+    countries: ['Česká republika', 'Evropa', 'Vyspělé trhy', 'Rozvíjející se trhy'],
+    sectors: ['Akcie', 'Státní dluhopisy', 'Firemní dluhopisy', 'Termínované vklady'],
+    morningstarRating: null,
+    awards: [],
+    factsheetUrl: 'https://www.nn.cz/files/archiv/cz-penze/soubory/ostatni_dokumenty/514451.pdf',
+    factsheetAsOf: '2026-04-01',
+    verifiedAt: '2026-04-05',
+    logo: '/logos/funds/nn_vyvazeny_ucastnicky_fond.svg',
+    heroImage: '/report-assets/funds/nn_vyvazeny_ucastnicky_fond/hero.webp',
+    galleryImages: [
+      '/report-assets/funds/nn_vyvazeny_ucastnicky_fond/gallery-1.webp',
+      '/report-assets/funds/nn_vyvazeny_ucastnicky_fond/gallery-2.webp',
+      '/report-assets/funds/nn_vyvazeny_ucastnicky_fond/gallery-3.webp',
+    ],
+    sources: [
+      {
+        label: 'Official fund page',
+        url: 'https://www.nn.cz/penze/ucastnicke-fondy/',
+        kind: 'landing_page',
+      },
+      {
+        label: 'Official key information document',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/soubory/ostatni_dokumenty/514451.pdf',
+        kind: 'kid',
+      },
+      {
+        label: 'Official statute',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/soubory/ostatni_dokumenty/514638e.pdf',
+        kind: 'documents',
+      },
+      {
+        label: 'Official NN press release on long-term performance',
+        url: 'https://www.nn.cz/tiskove-zpravy/nn-penzijnim-fondum-se-opet-darilo/',
+        kind: 'report',
+      },
+    ],
+    assetTodo: ['logo', 'hero', 'gallery-1', 'gallery-2', 'gallery-3'],
+    notes: [
+      'planningRate 3 % vychází z NN komunikovaného očekávaného zhodnocení a je interní modelová vrstva pro projekce, ne garance.',
+      'Top holdings doplnit případně z portfoliových reportů NN, pokud je budete chtít zobrazovat i u penzijních fondů.',
+    ],
+  },
+  {
+    baseFundKey: 'nn_rustovy_ucastnicky_fond',
+    canonicalName: 'Růstový účastnický fond NN Penzijní společnosti, a.s.',
+    displayName: 'NN Růstový účastnický fond',
+    provider: 'NN Penzijní společnost',
+    manager: 'NN Penzijní společnost, a.s.',
+    category: 'Penzijní fond',
+    subcategory: 'Účastnický fond / akciový / dynamický',
+    currency: 'CZK',
+    isin: null,
+    ticker: null,
+    riskSRI: 5,
+    goal:
+      'Hlavním dlouhodobým cílem fondu je dosažení vysokého výnosu, který překoná inflaci i typická dluhopisová či smíšená portfolia.',
+    strategy:
+      'Nejdynamičtější účastnický fond NN. Investuje téměř 100 % majetku do akcií a podobných instrumentů se zaměřením na USA, západní Evropu, rozvíjející se trhy i střední Evropu.',
+    description:
+      'Akciová penzijní strategie pro dlouhý horizont s nejvyšším potenciálem zhodnocení v nabídce NN. Vhodná pro klienty, kteří unesou vyšší volatilitu.',
+    suitable:
+      'Pro klienty s dlouhým horizontem, kteří chtějí maximalizovat růst penzijních úspor a akceptují kolísání akciových trhů.',
+    horizon: '10+ let',
+    liquidity:
+      'Účastnický fond DPS; likvidita a čerpání prostředků se řídí pravidly doplňkového penzijního spoření.',
+    risks:
+      'Vysoká volatilita akciových trhů, měnové riziko, regionální riziko a vyšší kolísání hodnoty penzijní jednotky.',
+    minInvestment: null,
+    planningRate: 6,
+    officialPerformance: {
+      ytd: null,
+      oneYear: '8.48%',
+      threeYearPA: null,
+      fiveYearPA: '15.30% (as communicated by NN for 2021-02-28 to 2026-02-28)',
+      tenYearPA: '10.01%',
+      sinceInceptionPA: null,
+      asOf: '2026-03-31',
+    },
+    benefits: [
+      'Nejvyšší růstový potenciál z nabídky NN penzijních fondů.',
+      'Silná dlouhodobá výkonnost na trhu DPS.',
+      'Kombinace ETF a přímých akciových pozic včetně expozice na střední Evropu.',
+    ],
+    parameters: {
+      inceptionDate: '2015-03-24',
+      valuationFrequency: 'Denně',
+      currentUnitValue: '2.3161 CZK',
+      currentUnitValueDate: '2026-04-01',
+      currentFundCapital: '10 892 857 837 CZK',
+      currentUnitCount: '4 703 048 419',
+      managementFee: '1 %',
+      performanceFee: '15 %',
+      expectedReturnNote: 'NN uvádí očekávané zhodnocení 6 % p.a. (nejde o garanci)',
+      officialOneYearReturn: '8.48% (k 2026-03-31)',
+      officialFiveYearPA: '15.30% p.a. (komunikováno NN pro období 2021-02-28 až 2026-02-28)',
+      officialTenYearPA: '10.01% p.a. (komunikováno NN 2026-01-09)',
+      portfolioManagerNote: 'NN uvádí portfolio manažery ze společnosti Goldman Sachs.',
+    },
+    topHoldings: ['ČEZ', 'Doosan Škoda Power', 'mBank', 'Moneta', 'OMV'],
+    countries: ['USA', 'Západní Evropa', 'Rozvíjející se trhy', 'Rakousko', 'Polsko', 'Česko', 'Maďarsko'],
+    sectors: ['Akcie', 'ETF', 'Přímé akciové pozice'],
+    morningstarRating: null,
+    awards: [],
+    factsheetUrl: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/klicove_informace/514470.pdf',
+    factsheetAsOf: '2026-04-01',
+    verifiedAt: '2026-04-05',
+    logo: '/logos/funds/nn_rustovy_ucastnicky_fond.svg',
+    heroImage: '/report-assets/funds/nn_rustovy_ucastnicky_fond/hero.webp',
+    galleryImages: [
+      '/report-assets/funds/nn_rustovy_ucastnicky_fond/gallery-1.webp',
+      '/report-assets/funds/nn_rustovy_ucastnicky_fond/gallery-2.webp',
+      '/report-assets/funds/nn_rustovy_ucastnicky_fond/gallery-3.webp',
+    ],
+    sources: [
+      {
+        label: 'Official fund page',
+        url: 'https://www.nn.cz/penze/ucastnicke-fondy/',
+        kind: 'landing_page',
+      },
+      {
+        label: 'Official key information document',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/klicove_informace/514470.pdf',
+        kind: 'kid',
+      },
+      {
+        label: 'Official statute',
+        url: 'https://www.nn.cz/files/archiv/cz-penze/dps/fondy/statuty_fondu/514637.pdf',
+        kind: 'documents',
+      },
+      {
+        label: 'Official NN penze landing page',
+        url: 'https://www.nn.cz/penze/',
+        kind: 'landing_page',
+      },
+      {
+        label: 'Official NN press release on long-term performance',
+        url: 'https://www.nn.cz/tiskove-zpravy/nn-penzijnim-fondum-se-opet-darilo/',
+        kind: 'report',
+      },
+    ],
+    assetTodo: ['logo', 'hero', 'gallery-1', 'gallery-2', 'gallery-3'],
+    notes: [
+      'U 5leté průměrné výkonnosti je použito NN komunikované číslo 15.30 % p.a. pro období 2021-02-28 až 2026-02-28, tedy jiný referenční den než 1Y údaj k 2026-03-31.',
+      'planningRate 6 % vychází z NN komunikovaného očekávaného zhodnocení a je interní modelová vrstva pro projekce, ne garance.',
+      'Top holdings jsou převzaté z oficiální NN tiskové zprávy jako příklady titulů, nikoli kompletní portfolio.',
+    ],
+  },
+];
+
+export default BASE_FUNDS_BATCH_C_REAL_SEED;
