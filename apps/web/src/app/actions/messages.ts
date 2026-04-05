@@ -33,6 +33,16 @@ function isNextRedirectError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { digest?: string }).digest === "NEXT_REDIRECT";
 }
 
+/** Drizzle + postgres.js vrací buď pole řádků, nebo objekt s .rows (.native v některých režimech). */
+function sqlExecuteRows(result: unknown): Record<string, unknown>[] {
+  if (Array.isArray(result)) return result as Record<string, unknown>[];
+  if (result && typeof result === "object" && "rows" in result) {
+    const rows = (result as { rows: unknown }).rows;
+    if (Array.isArray(rows)) return rows as Record<string, unknown>[];
+  }
+  return [];
+}
+
 function formatClientVisibleDbError(e: unknown): string {
   if (e instanceof Error && e.message === "Forbidden") {
     return "K této konverzaci nemáte přístup.";
@@ -46,6 +56,16 @@ function formatClientVisibleDbError(e: unknown): string {
     (lower.includes("does not exist") || lower.includes("neexistuje"))
   ) {
     return `Chybí tabulky pro zprávy v databázi. ${PORTAL_MESSAGES_SCHEMA_HINT}`;
+  }
+
+  if (lower.includes("permission denied") || lower.includes("42501") || lower.includes("insufficient_privilege")) {
+    return `Databáze nepovolila přístup k zprávám (často RLS na tabulce messages bez politik, nebo špatná role připojení). V Supabase znovu spusťte celý soubor portal_messages_tables.sql — obsahuje DISABLE ROW LEVEL SECURITY. Ověřte také, že Vercel DATABASE_URL míří na stejný Supabase projekt.
+${PORTAL_MESSAGES_SCHEMA_HINT}`;
+  }
+
+  if (lower.includes("42703") || (lower.includes("column") && lower.includes("does not exist"))) {
+    return `Schéma tabulky messages neodpovídá aplikaci (chybějící sloupec). V Supabase spusťte znovu portal_messages_tables.sql (ALTER … ADD COLUMN IF NOT EXISTS).
+${PORTAL_MESSAGES_SCHEMA_HINT}`;
   }
 
   if (
@@ -120,9 +140,9 @@ export async function getUnreadConversationsCount(): Promise<number> {
         AND m.sender_type = 'client'
         AND m.read_at IS NULL
     `);
-    const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
-    const row = rows[0] as { cnt: number } | undefined;
-    return row?.cnt ?? 0;
+    const rows = sqlExecuteRows(result);
+    const row = rows[0] as { cnt?: unknown } | undefined;
+    return Number(row?.cnt ?? 0);
   } catch {
     return 0;
   }
@@ -142,9 +162,9 @@ export async function getUnreadAdvisorMessagesForClientCount(): Promise<number> 
         AND m.sender_type = 'advisor'
         AND m.read_at IS NULL
     `);
-    const rows = Array.isArray(result) ? result : (result as { rows?: { cnt: number }[] }).rows ?? [];
-    const row = rows[0] as { cnt: number } | undefined;
-    return row?.cnt ?? 0;
+    const rows = sqlExecuteRows(result);
+    const row = rows[0] as { cnt?: unknown } | undefined;
+    return Number(row?.cnt ?? 0);
   } catch {
     return 0;
   }
@@ -210,15 +230,20 @@ export async function getConversationsList(search?: string): Promise<Conversatio
       LIMIT 200
     `);
 
-    const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
-    const list = (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; unread_count: number }[]).map((r) => ({
-      contactId: r.contact_id,
-      contactName: r.contact_name,
-      lastMessage: r.last_message,
-      lastMessageAt: new Date(r.last_message_at),
-      unreadCount: r.unread_count,
-      unread: r.unread_count > 0,
-    }));
+    const rows = sqlExecuteRows(result);
+    const list: ConversationListItem[] = rows.map((r) => {
+      const unreadCount = Number(r.unread_count ?? 0);
+      const at = r.last_message_at;
+      const lastMessageAt = at instanceof Date ? at : new Date(at as string | number);
+      return {
+        contactId: String(r.contact_id ?? ""),
+        contactName: (String(r.contact_name ?? "").trim() || "Kontakt").trim(),
+        lastMessage: String(r.last_message ?? ""),
+        lastMessageAt: Number.isFinite(lastMessageAt.getTime()) ? lastMessageAt : new Date(),
+        unreadCount,
+        unread: unreadCount > 0,
+      };
+    });
     return { ok: true, list };
   } catch (e) {
     if (isNextRedirectError(e)) throw e;
@@ -348,6 +373,34 @@ export async function sendMessageWithAttachments(contactId: string, formData: Fo
   return messageId;
 }
 
+export type PortalSendMessageResult =
+  | { ok: true; messageId: string | null }
+  | { ok: false; error: string };
+
+/** Odeslání z chatu portálu bez výjimky při chybě → klient nedostane HTTP 500 z action. */
+export async function sendPortalMessage(contactId: string, body: string): Promise<PortalSendMessageResult> {
+  try {
+    const messageId = await sendMessage(contactId, body);
+    return { ok: true, messageId };
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return { ok: false, error: formatClientVisibleDbError(e) };
+  }
+}
+
+export async function sendPortalMessageWithAttachments(
+  contactId: string,
+  formData: FormData
+): Promise<PortalSendMessageResult> {
+  try {
+    const messageId = await sendMessageWithAttachments(contactId, formData);
+    return { ok: true, messageId };
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return { ok: false, error: formatClientVisibleDbError(e) };
+  }
+}
+
 export async function notifyAdvisorNewMessage(
   tenantId: string,
   contactId: string,
@@ -459,14 +512,18 @@ export async function getRecentConversations(limit = 5): Promise<RecentConversat
       LIMIT ${limit}
     `);
 
-    const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? [];
-    return (rows as { contact_id: string; contact_name: string; last_message: string; last_message_at: Date; sender_type: string; unread: boolean }[]).map((r) => ({
-      contactId: r.contact_id,
-      contactName: r.contact_name,
-      lastMessage: r.last_message,
-      lastMessageAt: new Date(r.last_message_at),
-      senderType: r.sender_type,
-      unread: r.unread,
+    const rows = sqlExecuteRows(result);
+    return rows.map((r) => ({
+      contactId: String(r.contact_id ?? ""),
+      contactName: String(r.contact_name ?? "").trim() || "Kontakt",
+      lastMessage: String(r.last_message ?? ""),
+      lastMessageAt: (() => {
+        const at = r.last_message_at;
+        const d = at instanceof Date ? at : new Date(at as string | number);
+        return Number.isFinite(d.getTime()) ? d : new Date();
+      })(),
+      senderType: String(r.sender_type ?? ""),
+      unread: Boolean(r.unread),
     }));
   } catch {
     return [];

@@ -7,8 +7,8 @@ import {
   getConversationsList,
   loadThreadMessages,
   getMessageAttachments,
-  sendMessage,
-  sendMessageWithAttachments,
+  sendPortalMessage,
+  sendPortalMessageWithAttachments,
   markMessagesRead,
   deleteConversationForContact,
   deleteMessageForAdvisor,
@@ -297,10 +297,18 @@ export function MessagesMobileScreen() {
           const formData = new FormData();
           formData.set("body", trimmed || "(příloha)");
           files.forEach((f) => formData.append("file", f));
-          await sendMessageWithAttachments(selectedContactId, formData);
+          const sent = await sendPortalMessageWithAttachments(selectedContactId, formData);
+          if (!sent.ok) {
+            setSendError(sent.error);
+            return;
+          }
           setFiles([]);
         } else {
-          await sendMessage(selectedContactId, trimmed);
+          const sent = await sendPortalMessage(selectedContactId, trimmed);
+          if (!sent.ok) {
+            setSendError(sent.error);
+            return;
+          }
         }
         setBody("");
         const reload = await loadThreadMessages(selectedContactId);

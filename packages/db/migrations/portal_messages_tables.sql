@@ -26,3 +26,17 @@ CREATE TABLE IF NOT EXISTS public.message_attachments (
 CREATE INDEX IF NOT EXISTS idx_messages_tenant_unread_client
   ON public.messages (tenant_id)
   WHERE sender_type = 'client' AND read_at IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- Časté problémy na Supabase po ručních změnách / starším schématu
+-- ---------------------------------------------------------------------------
+
+-- Doplň read_at, pokud tabulka messages vznikla dřív bez tohoto sloupce
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS read_at timestamptz;
+
+-- RLS bez politik = všechny SELECT/INSERT padají (i z pooleru v některých režimech)
+ALTER TABLE public.messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.message_attachments DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE public.messages TO postgres;
+GRANT ALL ON TABLE public.message_attachments TO postgres;
