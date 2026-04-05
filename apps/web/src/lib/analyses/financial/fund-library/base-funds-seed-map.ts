@@ -4,6 +4,7 @@
 
 import type { BatchASeedRow } from "./base-funds-batch-a.seed";
 import type { BaseFundKey } from "./legacy-fund-key-map";
+import { normalizeFundAssetsFromSeed } from "./fund-report-asset-resolver";
 import {
   DEFAULT_FUND_AVAILABILITY,
   type BaseFund,
@@ -64,11 +65,11 @@ export function mapBatchSeedRowToBaseFund(
     isActive: true,
     availability,
     sources: mapSources(row.sources),
-    assets: {
-      logoPath: row.logo,
-      heroPath: row.heroImage,
-      galleryPaths: row.galleryImages,
-    },
+    assets: normalizeFundAssetsFromSeed({
+      logo: row.logo,
+      heroImage: row.heroImage,
+      galleryImages: row.galleryImages,
+    }),
     assetTodo: row.assetTodo,
     notes: row.notes,
     performance: null,

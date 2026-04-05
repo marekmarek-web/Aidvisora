@@ -6,6 +6,10 @@
 import { FUND_DETAILS, FUND_LOGOS } from "@/lib/analyses/financial/constants";
 import type { FundDetail, HoldingWeight } from "@/lib/analyses/financial/types";
 import { getBaseFundByKey, getBaseFundFromProductKey } from "./helpers";
+import {
+  FUND_PLACEHOLDER_GALLERY_PATH,
+  FUND_PLACEHOLDER_HERO_PATH,
+} from "./fund-report-asset-resolver";
 import type { BaseFundKey } from "./legacy-fund-key-map";
 import { mapLegacyFundKey } from "./legacy-fund-key-map";
 import type { BaseFund, OfficialFundPerformance } from "./types";
@@ -185,8 +189,11 @@ function buildDetailFromBaseFund(fund: BaseFund): FundDetail {
   }
 
   const ap = fund.assets ?? {};
-  const gallery = (ap.galleryPaths ?? []).filter((p) => p && String(p).trim()).slice(0, 3);
-  const hero = ap.heroPath?.trim() || undefined;
+  const galleryRaw = (ap.galleryPaths ?? []).filter((p) => p && String(p).trim()).slice(0, 3);
+  const galleryPad = [...galleryRaw];
+  while (galleryPad.length < 3) galleryPad.push(FUND_PLACEHOLDER_GALLERY_PATH);
+  const gallery = galleryPad.slice(0, 3);
+  const hero = ap.heroPath?.trim() || FUND_PLACEHOLDER_HERO_PATH;
 
   const yieldLine =
     officialSummary.split("\n").find((l) => l.trim().length > 0) ||
@@ -228,7 +235,7 @@ function buildDetailFromBaseFund(fund: BaseFund): FundDetail {
     awards: awardsStr,
     category: categoryLabel,
     heroImage: hero,
-    galleryImages: gallery.length > 0 ? gallery : undefined,
+    galleryImages: gallery,
     galleryType: "photo",
   };
 }
