@@ -240,8 +240,8 @@ export function ConversationContextPanel({
             </div>
           </dl>
         ) : (
-          <p className="mt-3 text-xs leading-relaxed text-[color:var(--wp-text-tertiary)]">
-            {aiSummaryIdleHint ?? "Souhrn se načte po načtení zpráv."}
+          <p className="mt-3 text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
+            {aiSummaryIdleHint ?? "Souhrn doplníte kliknutím na Obnovit."}
           </p>
         )}
       </div>

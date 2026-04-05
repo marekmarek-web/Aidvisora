@@ -532,16 +532,16 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     if (!selectedContactId) return null;
     if (aiSummaryLoading || aiSummary || aiSummaryError) return null;
     if (messagesLoading) {
-      return "Po načtení zpráv případně spustíme AI souhrn jen při delší konverzaci nebo konkrétní poptávce klienta.";
+      return "Krátce počkejte — souhrn doplníme po načtení konverzace.";
     }
     if (crmLoading) {
-      return "Načítám CRM kontext pro souhrn…";
+      return "Načítám kontext ke klientovi…";
     }
     if (msgs.length === 0) {
-      return "Zatím tu nejsou žádné zprávy — AI souhrn přeskakujeme.";
+      return "V této konverzaci zatím nejsou žádné zprávy.";
     }
     if (!shouldAutoRunAdvisorChatAiSummary(msgs)) {
-      return "AI souhrn teď nespouštíme (úspora API): automaticky až od 5 zpráv v konverzaci, nebo když klient v textu naznačí poptávku či otázku. Tlačítkem Obnovit ho můžete vygenerovat kdykoli.";
+      return "Souhrn zatím není k dispozici. Vygenerujete ho tlačítkem Obnovit.";
     }
     return null;
   }, [
