@@ -2,7 +2,11 @@
  * AI Review pipeline v2: classifier → routing matrix → Prompt Builder / legacy extraction → validation.
  */
 
-import { createResponse, createAiReviewResponseFromPrompt, createResponseWithFile } from "@/lib/openai";
+import {
+  aiReviewCreateResponse as createResponse,
+  aiReviewCreateResponseFromPrompt as createAiReviewResponseFromPrompt,
+  aiReviewCreateResponseWithFile as createResponseWithFile,
+} from "./review-llm-provider";
 import { detectInputMode, type InputModeResult } from "./input-mode-detection";
 import { normalizeClassification, type ClassificationResult } from "./document-classification";
 import {
@@ -1352,6 +1356,10 @@ export async function runAiReviewV2Pipeline(
   const rdStart = Date.now();
   // Skip expensive LLM postprocess when extraction is already high-confidence and there are no
   // critical warnings. This cuts ~1-2s from the happy path without quality loss.
+  const extractionConfidence =
+    typeof validated.data.documentMeta?.overallConfidence === "number"
+      ? validated.data.documentMeta.overallConfidence
+      : validated.data.documentClassification.confidence ?? 0.5;
   const hasCriticalWarnings = (validated.data.reviewWarnings ?? []).some(
     (w: { severity?: string }) => w.severity === "critical"
   );
