@@ -53,7 +53,12 @@ export type FundVariantKey = "standard" | "dip" | "zal" | "zal_dip";
  * Kde má smysl fond v aplikaci nabízet (datová vrstva; wizard/report zatím na legacy).
  * Další batchy mohou zužovat např. jen `report` pro čistě katalogové záznamy.
  */
-export type FundAvailabilityTag = "personal_fa" | "company_fa" | "report" | "pension";
+export type FundAvailabilityTag =
+  | "personal_fa"
+  | "company_fa"
+  | "report"
+  | "pension"
+  | "qualified_investor";
 
 export const DEFAULT_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
   "personal_fa",
@@ -67,6 +72,14 @@ export const PENSION_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
   "company_fa",
   "report",
   "pension",
+];
+
+/** Fond kvalifikovaných investorů — filtr `getFundsByAvailability("qualified_investor")` + oddělení v UI skupinách. */
+export const QUALIFIED_INVESTOR_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
+  "personal_fa",
+  "company_fa",
+  "report",
+  "qualified_investor",
 ];
 
 /**

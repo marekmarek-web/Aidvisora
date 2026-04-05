@@ -3,6 +3,8 @@
  * Extracted from financni-analyza.html (Phase 1).
  */
 
+import { getBaseFundFromProductKey } from '@/lib/analyses/financial/fund-library/helpers';
+
 /**
  * Format number as Czech currency (no symbol in output; caller may append " Kč").
  */
@@ -119,21 +121,32 @@ export function financialAnalysisReportFilename(
   return `${financialAnalysisReportTitle(clientName, options)}.${ext}`;
 }
 
-/** Product display names (screenshot/reference: CREIF, PENTA, ATRIS, ETF World, Fidelity 2040, Conseq Globální). */
+/** Záložní názvy pro legacy klíče (kanonické klíče jdou z katalogu). */
 export const PRODUCT_NAMES: Record<string, string> = {
   creif: 'CREIF',
   atris: 'ATRIS',
+  atris_realita: 'ATRIS',
+  realita: 'ATRIS',
   penta: 'PENTA',
-  ishares: 'iShares MSCI World ETF',
+  penta_real_estate_fund: 'Penta',
+  penta_real_estate: 'Penta',
+  ishares: 'iShares Core MSCI World',
+  ishares_core_msci_world: 'iShares Core MSCI World',
   alternative: 'Alternativní investice',
   fidelity2040: 'Fidelity 2040',
-  conseq: 'Conseq Globální',
+  fidelity_target_2040: 'Fidelity Target 2040',
+  conseq: 'Conseq Globální akciový',
+  conseq_globalni_akciovy_ucastnicky: 'Conseq Globální akciový účastnický',
 };
 
 export function getProductName(key: string, type?: string): string {
-  const base = PRODUCT_NAMES[key] ?? key;
-  if (key === 'atris' && type === 'lump') return 'ATRIS (Vklad)';
-  return base;
+  const fund = getBaseFundFromProductKey(key);
+  if (fund) {
+    const base = fund.displayName;
+    if (fund.baseFundKey === 'atris' && type === 'lump') return `${base} (Vklad)`;
+    return base;
+  }
+  return PRODUCT_NAMES[key] ?? key;
 }
 
 /** Strategy profile description. */

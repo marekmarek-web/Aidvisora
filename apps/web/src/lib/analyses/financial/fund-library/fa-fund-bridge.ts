@@ -244,15 +244,15 @@ export function getFaFundPlanningRateDecimal(productKey: string): number {
   const canonical = toCanonicalFundKey(productKey);
   if (!canonical) return 0.07;
 
+  const fund = getBaseFundByKey(canonical);
+  if (fund?.planningRate != null && Number.isFinite(fund.planningRate)) {
+    return Math.max(0.01, Math.min(0.25, fund.planningRate / 100));
+  }
+
   const legacy = CANONICAL_TO_LEGACY_DETAIL[canonical];
   if (legacy) {
     const d = FUND_DETAILS[legacy]?.defaultRate;
     if (typeof d === "number" && Number.isFinite(d)) return d;
-  }
-
-  const fund = getBaseFundByKey(canonical);
-  if (fund?.planningRate != null && Number.isFinite(fund.planningRate)) {
-    return Math.max(0.01, Math.min(0.25, fund.planningRate / 100));
   }
 
   return 0.07;

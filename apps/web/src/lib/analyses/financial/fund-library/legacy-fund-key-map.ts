@@ -43,7 +43,12 @@ export const LEGACY_FUND_KEY_TO_CANONICAL: Readonly<Record<string, BaseFundKey>>
   conseq: "conseq_globalni_akciovy_ucastnicky",
   creif: "creif",
   atris: "atris",
+  /** Jeden kanonický fond Realita — starší aliasy z dokumentace / seedů */
+  atris_realita: "atris",
+  realita: "atris",
   penta: "penta",
+  penta_real_estate_fund: "penta",
+  penta_real_estate: "penta",
 };
 
 /** Odstraněné produkty — žádný canonical cíl. */

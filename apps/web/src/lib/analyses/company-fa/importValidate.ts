@@ -18,14 +18,15 @@ import type {
   RiskDetail,
 } from "./types";
 import type { ValidateResult } from "./types";
+import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/saveLoad";
 
 const DEFAULT_INVESTMENTS: CompanyFaInvestmentItem[] = [
   { productKey: "creif", type: "lump", amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
   { productKey: "atris", type: "lump", amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
-  { productKey: "penta", type: "lump", amount: 0, years: 10, annualRate: 0.09, computed: { fv: 0 } },
-  { productKey: "ishares", type: "monthly", amount: 0, years: 20, annualRate: 0.12, computed: { fv: 0 } },
-  { productKey: "fidelity2040", type: "monthly", amount: 0, years: 20, annualRate: 0.07, computed: { fv: 0 } },
-  { productKey: "conseq", type: "pension", amount: 0, years: 30, annualRate: 0.095, computed: { fv: 0 } },
+  { productKey: "penta", type: "lump", amount: 0, years: 10, annualRate: 0.13, computed: { fv: 0 } },
+  { productKey: "ishares_core_msci_world", type: "monthly", amount: 0, years: 20, annualRate: 0.12, computed: { fv: 0 } },
+  { productKey: "fidelity_target_2040", type: "monthly", amount: 0, years: 20, annualRate: 0.07, computed: { fv: 0 } },
+  { productKey: "conseq_globalni_akciovy_ucastnicky", type: "pension", amount: 0, years: 30, annualRate: 0.095, computed: { fv: 0 } },
 ];
 
 const INDUSTRY_VALUES = ["office", "services", "light-manufacturing", "heavy-manufacturing", "construction", "transport"];
@@ -103,6 +104,10 @@ export function normalizeCompanyFaPayload(raw: CompanyFaImportPayload): CompanyF
 
   if (!Array.isArray(data.investments) || data.investments.length === 0) {
     data.investments = DEFAULT_INVESTMENTS.map((i) => ({ ...i }));
+  } else {
+    data.investments = normalizePersistedInvestmentEntries(
+      data.investments as import("@/lib/analyses/financial/types").InvestmentEntry[],
+    ) as CompanyFaInvestmentItem[];
   }
 
   if (!data.directorIns) {
