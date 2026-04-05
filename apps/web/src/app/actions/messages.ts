@@ -125,9 +125,19 @@ export type ThreadMessagesLoadResult =
   | { ok: false; error: string };
 
 /** Stejné jako getMessages, ale nikdy nehází kvůli DB — vhodné pro volání z klienta (žádný HTTP 500 při chybějící tabulce). */
-export async function loadThreadMessages(contactId: string): Promise<ThreadMessagesLoadResult> {
+export async function loadThreadMessages(
+  contactId: string,
+  options?: { markRead?: boolean },
+): Promise<ThreadMessagesLoadResult> {
   try {
     const rows = await getMessages(contactId);
+    if (options?.markRead) {
+      try {
+        await markMessagesRead(contactId);
+      } catch {
+        /* označení přečtení nesmí zhatit vrácení vlákna */
+      }
+    }
     return { ok: true, messages: rows };
   } catch (e) {
     if (isNextRedirectError(e)) throw e;
@@ -493,6 +503,55 @@ export async function getMessageAttachments(messageId: string): Promise<MessageA
     .from(messageAttachments)
     .where(eq(messageAttachments.messageId, messageId));
   return rows;
+}
+
+export type ThreadAttachmentsByContactResult =
+  | { ok: true; byMessageId: Record<string, MessageAttachmentRow[]> }
+  | { ok: false; error: string };
+
+/** Jedno volání místo N× getMessageAttachments — přílohy pro všechny zprávy kontaktu v jednom dotazu. */
+export async function loadThreadAttachmentsByContact(contactId: string): Promise<ThreadAttachmentsByContactResult> {
+  try {
+    const auth = await requireAuthInAction();
+    if (auth.roleName === "Client") {
+      if (auth.contactId !== contactId) {
+        return { ok: false, error: "K této konverzaci nemáte přístup." };
+      }
+    } else if (!hasPermission(auth.roleName, "contacts:read")) {
+      return { ok: false, error: "K této konverzaci nemáte přístup." };
+    }
+
+    const rows = await db
+      .select({
+        id: messageAttachments.id,
+        messageId: messageAttachments.messageId,
+        storagePath: messageAttachments.storagePath,
+        fileName: messageAttachments.fileName,
+        mimeType: messageAttachments.mimeType,
+        sizeBytes: messageAttachments.sizeBytes,
+      })
+      .from(messageAttachments)
+      .innerJoin(messages, eq(messageAttachments.messageId, messages.id))
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)));
+
+    const byMessageId: Record<string, MessageAttachmentRow[]> = {};
+    for (const r of rows) {
+      const mid = r.messageId;
+      if (!byMessageId[mid]) byMessageId[mid] = [];
+      byMessageId[mid].push({
+        id: r.id,
+        messageId: r.messageId,
+        storagePath: r.storagePath,
+        fileName: r.fileName,
+        mimeType: r.mimeType,
+        sizeBytes: r.sizeBytes,
+      });
+    }
+    return { ok: true, byMessageId };
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return { ok: false, error: formatClientVisibleDbError(e) };
+  }
 }
 
 export type RecentConversation = {

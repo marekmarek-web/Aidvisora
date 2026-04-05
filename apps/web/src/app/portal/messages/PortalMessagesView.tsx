@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
   getConversationsList,
   loadThreadMessages,
-  getMessageAttachments,
+  loadThreadAttachmentsByContact,
   getChatContextPanelSnapshot,
   sendPortalMessage,
   sendPortalMessageWithAttachments,
-  markMessagesRead,
   deleteConversationForContact,
   deleteMessageForAdvisor,
   type ChatContextPanelSnapshot,
@@ -30,10 +30,23 @@ import { ConversationQuickActions } from "./components/ConversationQuickActions"
 import { MessageThread } from "./components/MessageThread";
 import { MessageComposer } from "./components/MessageComposer";
 import { ConversationContextPanel } from "./components/ConversationContextPanel";
-import { NewAdvisorActionsMenu } from "./components/NewAdvisorActionsMenu";
-import { ChatModal } from "./components/ChatModal";
-import { ChatQuickScheduleOverlay } from "./components/ChatQuickScheduleOverlay";
-import { ChatQuickTaskOverlay } from "./components/ChatQuickTaskOverlay";
+
+const ChatModal = dynamic(
+  () => import("./components/ChatModal").then((m) => ({ default: m.ChatModal })),
+  { ssr: false },
+);
+const NewAdvisorActionsMenu = dynamic(
+  () => import("./components/NewAdvisorActionsMenu").then((m) => ({ default: m.NewAdvisorActionsMenu })),
+  { ssr: false },
+);
+const ChatQuickScheduleOverlay = dynamic(
+  () => import("./components/ChatQuickScheduleOverlay").then((m) => ({ default: m.ChatQuickScheduleOverlay })),
+  { ssr: false },
+);
+const ChatQuickTaskOverlay = dynamic(
+  () => import("./components/ChatQuickTaskOverlay").then((m) => ({ default: m.ChatQuickTaskOverlay })),
+  { ssr: false },
+);
 import { buildChatTaskDescriptionSeed, buildChatTaskSuggestedTitle } from "./components/chat-task-defaults";
 import { formatLastActiveLabel, presenceFromLastMessageAt } from "./components/chat-format";
 import { mergeConversationsWithSelection } from "./components/merge-conversations-with-selection";
@@ -41,6 +54,9 @@ import { getActionFriendlyErrorMessage } from "@/lib/observability/production-er
 import { shouldAutoRunAdvisorChatAiSummary } from "@/lib/advisor-chat/advisor-chat-summary-gating";
 
 const POLL_INTERVAL = 10_000;
+/** Po opakovaných pollech bez změny dat prodloužit interval (šetří requesty). */
+const POLL_INTERVAL_SLOW = 25_000;
+const POLL_BACKOFF_AFTER = 3;
 
 function humanMessageError(e: unknown, fallback: string): string {
   if (e instanceof Error && e.message === "Forbidden") return "K této konverzaci nemáte přístup.";
@@ -49,14 +65,38 @@ function humanMessageError(e: unknown, fallback: string): string {
 
 export function PortalMessagesView({ initialContactId }: { initialContactId: string | null }) {
   const router = useRouter();
-  const searchRef = useRef("");
+  const queryClient = useQueryClient();
   const conversationsRef = useRef<ConversationListItem[]>([]);
-
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [conversationsLoading, setConversationsLoading] = useState(true);
-  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const pollStableRef = useRef(0);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const conversationsSearchKey = searchQuery.trim();
+  const {
+    data: conversations = [],
+    isPending: conversationsLoading,
+    error: conversationsQueryError,
+    refetch: refetchConversations,
+  } = useQuery({
+    queryKey: queryKeys.portalMessages.conversations(conversationsSearchKey),
+    queryFn: async () => {
+      const outcome = await getConversationsList(conversationsSearchKey || undefined);
+      if (!outcome.ok) throw new Error(outcome.error);
+      return outcome.list;
+    },
+    staleTime: 30_000,
+    refetchInterval: () => {
+      if (typeof document === "undefined" || document.visibilityState !== "visible") return false;
+      return pollStableRef.current >= POLL_BACKOFF_AFTER ? POLL_INTERVAL_SLOW : POLL_INTERVAL;
+    },
+  });
+
+  const conversationsError =
+    conversationsQueryError instanceof Error
+      ? conversationsQueryError.message
+      : conversationsQueryError
+        ? String(conversationsQueryError)
+        : null;
+
   const [selectedContactId, setSelectedContactId] = useState<string | null>(initialContactId);
   const [contactName, setContactName] = useState("");
   const [contactDetail, setContactDetail] = useState<ContactRow | null>(null);
@@ -125,42 +165,27 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
 
   const scheduleOpportunityId = crmSnapshot?.primaryOpportunity?.id ?? null;
 
-  searchRef.current = searchQuery.trim();
-  conversationsRef.current = conversations;
+  const invalidateConversations = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.portalMessages.all });
+  }, [queryClient]);
 
-  const runListFetch = useCallback(async (mode: "initial" | "poll") => {
-    const q = searchRef.current || undefined;
-    try {
-      const outcome = await getConversationsList(q);
-      if (outcome.ok) {
-        setConversations(outcome.list);
-        if (mode === "initial") setConversationsError(null);
-      } else if (mode === "initial") {
-        setConversationsError(outcome.error);
-        setConversations([]);
-      }
-    } catch (e) {
-      if (mode === "initial") {
-        setConversationsError(humanMessageError(e, "Konverzace se nepodařilo načíst."));
-        setConversations([]);
-      }
-    } finally {
-      if (mode === "initial") setConversationsLoading(false);
+  const conversationsListSig = useMemo(
+    () => JSON.stringify(conversations.map((c) => [c.contactId, c.lastMessageAt, c.unreadCount])),
+    [conversations],
+  );
+  const prevConversationsSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevConversationsSigRef.current !== null && conversationsListSig === prevConversationsSigRef.current) {
+      pollStableRef.current = Math.min(pollStableRef.current + 1, 999);
+    } else {
+      pollStableRef.current = 0;
     }
-  }, []);
+    prevConversationsSigRef.current = conversationsListSig;
+  }, [conversationsListSig]);
 
   useEffect(() => {
-    setConversationsLoading(true);
-    void runListFetch("initial");
-  }, [searchQuery, runListFetch]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      void runListFetch("poll");
-    }, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [runListFetch]);
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     if (initialContactId) setSelectedContactId(initialContactId);
@@ -172,19 +197,12 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     setMessagesLoading(true);
     setMessagesError(null);
     try {
-      const outcome = await loadThreadMessages(cid);
+      const outcome = await loadThreadMessages(cid, { markRead: true });
       if (outcome.ok) {
         setMsgs(outcome.messages);
         setMessagesLoading(false);
-        void (async () => {
-          try {
-            await markMessagesRead(cid);
-            window.dispatchEvent(new Event("portal-messages-badge-refresh"));
-            await runListFetch("poll");
-          } catch {
-            /* označení přečtení / obnova seznamu nesmí blokovat UI */
-          }
-        })();
+        window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+        invalidateConversations();
       } else {
         setMessagesError(outcome.error);
         setMessagesLoading(false);
@@ -193,7 +211,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
       setMessagesError(humanMessageError(e, "Konverzaci se nepodařilo načíst."));
       setMessagesLoading(false);
     }
-  }, [selectedContactId, runListFetch]);
+  }, [selectedContactId, invalidateConversations]);
 
   useEffect(() => {
     if (!selectedContactId) {
@@ -262,6 +280,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
 
   useEffect(() => {
     if (!selectedContactId || messagesLoading) return;
+    if (crmLoading) return;
     if (!shouldAutoRunAdvisorChatAiSummary(msgs)) {
       setAiSummary(null);
       setAiSummaryError(null);
@@ -271,20 +290,22 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     let cancelled = false;
     setAiSummaryLoading(true);
     setAiSummaryError(null);
-    void generateAdvisorChatContextSummary(selectedContactId).then((r) => {
-      if (cancelled) return;
-      setAiSummaryLoading(false);
-      if (r.ok) {
-        setAiSummary(r.summary);
-      } else {
-        setAiSummary(null);
-        setAiSummaryError(r.error);
-      }
-    });
+    void generateAdvisorChatContextSummary(selectedContactId, crmSnapshot ? { crmSnapshot } : undefined).then(
+      (r) => {
+        if (cancelled) return;
+        setAiSummaryLoading(false);
+        if (r.ok) {
+          setAiSummary(r.summary);
+        } else {
+          setAiSummary(null);
+          setAiSummaryError(r.error);
+        }
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [selectedContactId, msgs, messagesLoading]);
+  }, [selectedContactId, msgs, messagesLoading, crmLoading, crmSnapshot]);
 
   useEffect(() => {
     if (!selectedContactId) return;
@@ -313,37 +334,31 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   }, [conversations, selectedContactId]);
 
   useEffect(() => {
+    if (!selectedContactId) return;
     if (msgs.length === 0) {
       setMsgAttachments({});
       setAttachmentsLoading(false);
       return;
     }
+    const cid = selectedContactId;
+    const idSet = new Set(msgs.map((m) => m.id));
     let cancelled = false;
-    const ids = msgs.map((m) => m.id);
-    const BATCH = 10;
     const load = async () => {
       setAttachmentsLoading(true);
       try {
-        for (let i = 0; i < ids.length; i += BATCH) {
-          if (cancelled) return;
-          const slice = ids.slice(i, i + BATCH);
-          const chunk = await Promise.all(
-            slice.map(async (id) => {
-              try {
-                const list = await getMessageAttachments(id);
-                return [id, list] as const;
-              } catch {
-                return [id, []] as const;
-              }
-            }),
-          );
-          if (!cancelled) {
-            const partial = Object.fromEntries(chunk) as Record<string, MessageAttachmentRow[]>;
-            setMsgAttachments((prev) => ({ ...prev, ...partial }));
-          }
+        const r = await loadThreadAttachmentsByContact(cid);
+        if (cancelled) return;
+        if (!r.ok) {
+          setMsgAttachments({});
+          return;
         }
+        const filtered: Record<string, MessageAttachmentRow[]> = {};
+        for (const id of idSet) {
+          filtered[id] = r.byMessageId[id] ?? [];
+        }
+        setMsgAttachments(filtered);
       } finally {
-        setAttachmentsLoading(false);
+        if (!cancelled) setAttachmentsLoading(false);
       }
     };
     const frame = requestAnimationFrame(() => {
@@ -353,7 +368,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [msgs]);
+  }, [msgs, selectedContactId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
@@ -372,10 +387,10 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           delete next[messageId];
           return next;
         });
-        const reload = await loadThreadMessages(cid);
+        const reload = await loadThreadMessages(cid, { markRead: true });
         if (reload.ok) setMsgs(reload.messages);
         else throw new Error(reload.error);
-        void runListFetch("poll");
+        invalidateConversations();
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch (e) {
         setSendError(humanMessageError(e, "Zprávu se nepodařilo smazat."));
@@ -403,7 +418,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         setMsgAttachments({});
         setContactDetail(null);
         router.replace("/portal/messages", { scroll: false });
-        void runListFetch("poll");
+        invalidateConversations();
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch (e) {
         setSendError(humanMessageError(e, "Konverzaci se nepodařilo smazat."));
@@ -437,10 +452,10 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           }
         }
         setBody("");
-        const reload = await loadThreadMessages(selectedContactId);
+        const reload = await loadThreadMessages(selectedContactId, { markRead: true });
         if (reload.ok) setMsgs(reload.messages);
         else setSendError(reload.error);
-        void runListFetch("poll");
+        invalidateConversations();
       } catch (e) {
         setSendError(humanMessageError(e, "Zprávu se nepodařilo odeslat."));
       }
@@ -519,6 +534,9 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     if (messagesLoading) {
       return "Po načtení zpráv případně spustíme AI souhrn jen při delší konverzaci nebo konkrétní poptávce klienta.";
     }
+    if (crmLoading) {
+      return "Načítám CRM kontext pro souhrn…";
+    }
     if (msgs.length === 0) {
       return "Zatím tu nejsou žádné zprávy — AI souhrn přeskakujeme.";
     }
@@ -533,13 +551,17 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     aiSummaryLoading,
     aiSummary,
     aiSummaryError,
+    crmLoading,
   ]);
 
   const refreshAiSummary = useCallback(() => {
     if (!selectedContactId) return;
     setAiSummaryLoading(true);
     setAiSummaryError(null);
-    void generateAdvisorChatContextSummary(selectedContactId).then((r) => {
+    void generateAdvisorChatContextSummary(
+      selectedContactId,
+      crmSnapshot ? { crmSnapshot } : undefined,
+    ).then((r) => {
       setAiSummaryLoading(false);
       if (r.ok) {
         setAiSummary(r.summary);
@@ -548,7 +570,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         setAiSummaryError(r.error);
       }
     });
-  }, [selectedContactId]);
+  }, [selectedContactId, crmSnapshot]);
 
   const runAiDraft = useCallback(
     async (variantHint?: string) => {
@@ -635,10 +657,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
             }}
             listLoading={conversationsLoading}
             listError={conversationsError}
-            onRetryList={() => {
-              setConversationsLoading(true);
-              void runListFetch("initial");
-            }}
+            onRetryList={() => void refetchConversations()}
           />
         </div>
 

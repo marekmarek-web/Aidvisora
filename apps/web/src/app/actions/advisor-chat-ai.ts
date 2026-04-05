@@ -3,6 +3,7 @@
 import { loadAdvisorChatAiBundle } from "@/lib/advisor-chat/load-advisor-chat-ai-bundle";
 import { getOpenAIAdvisorChatProvider } from "@/lib/advisor-chat/openai-advisor-chat-provider";
 import type { AdvisorChatAiSummary } from "@/lib/advisor-chat/advisor-chat-ai-types";
+import type { ChatContextPanelSnapshot } from "@/app/actions/messages";
 
 function humanError(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -16,9 +17,12 @@ export type AdvisorChatAiSummaryResult =
 export type AdvisorChatAiDraftResult = { ok: true; draft: string } | { ok: false; error: string };
 
 /** Stručný AI souhrn pro pravý panel (Fáze 5). */
-export async function generateAdvisorChatContextSummary(contactId: string): Promise<AdvisorChatAiSummaryResult> {
+export async function generateAdvisorChatContextSummary(
+  contactId: string,
+  opts?: { crmSnapshot?: ChatContextPanelSnapshot },
+): Promise<AdvisorChatAiSummaryResult> {
   try {
-    const bundle = await loadAdvisorChatAiBundle(contactId);
+    const bundle = await loadAdvisorChatAiBundle(contactId, opts?.crmSnapshot ? { crmSnapshot: opts.crmSnapshot } : undefined);
     if (!bundle) return { ok: false, error: "Kontext se nepodařilo načíst nebo k němu nemáte přístup." };
     const provider = getOpenAIAdvisorChatProvider();
     const summary = await provider.generateContextSummary(bundle);

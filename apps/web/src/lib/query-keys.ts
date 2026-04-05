@@ -32,6 +32,12 @@ export const queryKeys = {
     /** Otevřené příležitosti – sdílené s `pipeline.openListWithContact`. */
     openOpportunities: () => queryKeys.pipeline.openListWithContact,
   },
+  /** Portál Zprávy – seznam konverzací (TanStack Query + invalidace po odeslání). */
+  portalMessages: {
+    all: ["portal", "messages"] as const,
+    conversations: (searchNormalized: string) =>
+      [...queryKeys.portalMessages.all, "conversations", searchNormalized] as const,
+  },
   /** Finanční analýzy – seznam na /portal/analyses */
   analyses: {
     all: ["financialAnalyses"] as const,

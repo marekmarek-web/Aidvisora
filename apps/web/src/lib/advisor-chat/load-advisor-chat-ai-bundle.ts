@@ -15,7 +15,7 @@ import {
   sql,
   inArray,
 } from "db";
-import { getChatContextPanelSnapshot } from "@/app/actions/messages";
+import { getChatContextPanelSnapshot, type ChatContextPanelSnapshot } from "@/app/actions/messages";
 import type { AdvisorChatAiBundle } from "./advisor-chat-ai-types";
 
 const MAX_MESSAGES = 35;
@@ -27,12 +27,19 @@ function truncate(s: string, max: number): string {
   return `${t.slice(0, max)}…`;
 }
 
-export async function loadAdvisorChatAiBundle(contactId: string): Promise<AdvisorChatAiBundle | null> {
+export async function loadAdvisorChatAiBundle(
+  contactId: string,
+  options?: { crmSnapshot?: ChatContextPanelSnapshot },
+): Promise<AdvisorChatAiBundle | null> {
   const auth = await requireAuthInAction();
   if (auth.roleName === "Client" || !hasPermission(auth.roleName, "contacts:read")) return null;
 
+  const snapshotPromise = options?.crmSnapshot
+    ? Promise.resolve(options.crmSnapshot)
+    : getChatContextPanelSnapshot(contactId);
+
   const [snapshot, contactRow, msgDesc, taskRows, matRows] = await Promise.all([
-    getChatContextPanelSnapshot(contactId),
+    snapshotPromise,
     db
       .select({
         firstName: contacts.firstName,
@@ -86,7 +93,7 @@ export async function loadAdvisorChatAiBundle(contactId: string): Promise<Adviso
   const chronological = [...msgDesc].reverse();
   const messageIds = chronological.map((m) => m.id);
 
-  let attachmentHints: { fileName: string; mimeType: string | null }[] = [];
+  const attachmentHints: { fileName: string; mimeType: string | null }[] = [];
   if (messageIds.length) {
     const atts = await db
       .select({

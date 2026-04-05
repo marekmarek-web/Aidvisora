@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, useCallback } from "react";
+import { useEffect, useRef, useState, useTransition, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Paperclip, Plus, Search, Send, Trash2, User, X, MessageSquare } from "lucide-react";
 import {
   getConversationsList,
   loadThreadMessages,
-  getMessageAttachments,
+  loadThreadAttachmentsByContact,
   sendPortalMessage,
   sendPortalMessageWithAttachments,
-  markMessagesRead,
   deleteConversationForContact,
   deleteMessageForAdvisor,
   type MessageRow,
@@ -17,6 +17,7 @@ import {
   type MessageAttachmentRow,
 } from "@/app/actions/messages";
 import { getContact, getContactsList, type ContactRow } from "@/app/actions/contacts";
+import { queryKeys } from "@/lib/query-keys";
 import {
   LoadingSkeleton,
   EmptyState,
@@ -25,6 +26,8 @@ import {
 import { getActionFriendlyErrorMessage } from "@/lib/observability/production-error-ui";
 
 const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL_SLOW = 25_000;
+const POLL_BACKOFF_AFTER = 3;
 
 function MessageBubble({
   m,
@@ -156,10 +159,56 @@ function ConversationItem({
 export function MessagesMobileScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const contactFromQuery = searchParams.get("contact");
+  const pollStableRef = useRef(0);
 
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const conversationsSearchKey = searchQuery.trim();
+  const {
+    data: conversations = [],
+    isPending: loadingConversations,
+    error: conversationsQueryError,
+    refetch: refetchConversations,
+  } = useQuery({
+    queryKey: queryKeys.portalMessages.conversations(conversationsSearchKey),
+    queryFn: async () => {
+      const outcome = await getConversationsList(conversationsSearchKey || undefined);
+      if (!outcome.ok) throw new Error(outcome.error);
+      return outcome.list;
+    },
+    staleTime: 30_000,
+    refetchInterval: () => {
+      if (typeof document === "undefined" || document.visibilityState !== "visible") return false;
+      return pollStableRef.current >= POLL_BACKOFF_AFTER ? POLL_INTERVAL_SLOW : POLL_INTERVAL;
+    },
+  });
+
+  const conversationsError =
+    conversationsQueryError instanceof Error
+      ? conversationsQueryError.message
+      : conversationsQueryError
+        ? String(conversationsQueryError)
+        : null;
+
+  const conversationsListSig = useMemo(
+    () => JSON.stringify(conversations.map((c) => [c.contactId, c.lastMessageAt, c.unreadCount])),
+    [conversations],
+  );
+  const prevConversationsSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevConversationsSigRef.current !== null && conversationsListSig === prevConversationsSigRef.current) {
+      pollStableRef.current = Math.min(pollStableRef.current + 1, 999);
+    } else {
+      pollStableRef.current = 0;
+    }
+    prevConversationsSigRef.current = conversationsListSig;
+  }, [conversationsListSig]);
+
+  const invalidateConversations = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.portalMessages.all });
+  }, [queryClient]);
+
   const [selectedContactId, setSelectedContactId] = useState<string | null>(contactFromQuery?.trim() || null);
   const [contactName, setContactName] = useState("");
   const [msgs, setMsgs] = useState<MessageRow[]>([]);
@@ -169,9 +218,7 @@ export function MessagesMobileScreen() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
 
-  const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [conversationsError, setConversationsError] = useState<string | null>(null);
   const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
@@ -183,64 +230,56 @@ export function MessagesMobileScreen() {
   const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
   const [contactSearch, setContactSearch] = useState("");
 
-  const loadConversations = useCallback(async (isInitial = false) => {
-    if (isInitial) setLoadingConversations(true);
-    setConversationsError(null);
-    try {
-      const outcome = await getConversationsList(searchQuery.trim() || undefined);
-      if (outcome.ok) {
-        setConversations(outcome.list);
-      } else if (isInitial) {
-        setConversationsError(outcome.error);
-        setConversations([]);
-      }
-    } catch (e) {
-      if (isInitial) setConversationsError(getActionFriendlyErrorMessage(e, "Nepodařilo se načíst konverzace."));
-      setConversations([]);
-    } finally {
-      if (isInitial) setLoadingConversations(false);
-    }
-  }, [searchQuery]);
-
-  useEffect(() => {
-    loadConversations(true);
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      void loadConversations(false);
-    }, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [loadConversations]);
-
   useEffect(() => {
     if (contactFromQuery) setSelectedContactId(contactFromQuery.trim());
   }, [contactFromQuery]);
 
   useEffect(() => {
+    if (!selectedContactId) return;
+    const conv = conversations.find((c) => c.contactId === selectedContactId);
+    if (conv) setContactName(conv.contactName);
+  }, [conversations, selectedContactId]);
+
+  useEffect(() => {
+    if (!selectedContactId || loadingMessages) return;
+    const conv = conversations.find((c) => c.contactId === selectedContactId);
+    if (conv) return;
+    let cancelled = false;
+    getContact(selectedContactId)
+      .then((c) => {
+        if (cancelled || !c) return;
+        setContactName([c.firstName, c.lastName].filter(Boolean).join(" ") || "Kontakt");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedContactId, loadingMessages, conversations]);
+
+  useEffect(() => {
     if (!selectedContactId) {
       setMsgs([]);
+      setMsgAttachments({});
       setContactName("");
       setThreadLoadError(null);
+      setLoadingMessages(false);
       return;
     }
     setThreadLoadError(null);
+    setMsgs([]);
+    setMsgAttachments({});
     setLoadingMessages(true);
-    const conv = conversations.find((c) => c.contactId === selectedContactId);
-    if (conv) {
-      setContactName(conv.contactName);
-    } else {
-      getContact(selectedContactId)
-        .then((c) => {
-          if (c) setContactName([c.firstName, c.lastName].filter(Boolean).join(" ") || "Kontakt");
-        })
-        .catch(() => {});
-    }
-
     let cancelled = false;
-    loadThreadMessages(selectedContactId)
+    loadThreadMessages(selectedContactId, { markRead: true })
       .then((outcome) => {
-        if (!cancelled) {
-          if (outcome.ok) setMsgs(outcome.messages);
-          else setThreadLoadError(outcome.error);
+        if (cancelled) return;
+        if (outcome.ok) {
+          setMsgs(outcome.messages);
+          setLoadingMessages(false);
+          window.dispatchEvent(new Event("portal-messages-badge-refresh"));
+          invalidateConversations();
+        } else {
+          setThreadLoadError(outcome.error);
           setLoadingMessages(false);
         }
       })
@@ -250,39 +289,49 @@ export function MessagesMobileScreen() {
           setLoadingMessages(false);
         }
       });
-    markMessagesRead(selectedContactId)
-      .then(() => window.dispatchEvent(new Event("portal-messages-badge-refresh")))
-      .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [selectedContactId, conversations]);
+  }, [selectedContactId, invalidateConversations]);
 
-  const msgIds = msgs.map((m) => m.id).join(",");
   useEffect(() => {
+    if (!selectedContactId) return;
     if (msgs.length === 0) {
       setMsgAttachments({});
       return;
     }
-    const ids = msgs.map((m) => m.id);
+    const cid = selectedContactId;
+    const idSet = new Set(msgs.map((m) => m.id));
+    let cancelled = false;
     const load = async () => {
-      const next: Record<string, MessageAttachmentRow[]> = {};
-      for (const id of ids) {
-        try {
-          next[id] = await getMessageAttachments(id);
-        } catch {
-          next[id] = [];
+      try {
+        const r = await loadThreadAttachmentsByContact(cid);
+        if (cancelled) return;
+        if (!r.ok) {
+          setMsgAttachments({});
+          return;
         }
+        const filtered: Record<string, MessageAttachmentRow[]> = {};
+        for (const id of idSet) {
+          filtered[id] = r.byMessageId[id] ?? [];
+        }
+        setMsgAttachments(filtered);
+      } catch {
+        if (!cancelled) setMsgAttachments({});
       }
-      setMsgAttachments((prev) => ({ ...prev, ...next }));
     };
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [msgIds]);
+    const frame = requestAnimationFrame(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [msgs, selectedContactId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
   }, [msgs.length]);
 
   function handleSend() {
@@ -311,10 +360,10 @@ export function MessagesMobileScreen() {
           }
         }
         setBody("");
-        const reload = await loadThreadMessages(selectedContactId);
+        const reload = await loadThreadMessages(selectedContactId, { markRead: true });
         if (reload.ok) setMsgs(reload.messages);
         else setSendError(reload.error);
-        loadConversations(false);
+        invalidateConversations();
       } catch (e) {
         setSendError(getActionFriendlyErrorMessage(e, "Zprávu se nepodařilo odeslat."));
       }
@@ -351,10 +400,10 @@ export function MessagesMobileScreen() {
           delete next[messageId];
           return next;
         });
-        const reload = await loadThreadMessages(cid);
+        const reload = await loadThreadMessages(cid, { markRead: true });
         if (reload.ok) setMsgs(reload.messages);
         else setSendError(reload.error);
-        await loadConversations(false);
+        invalidateConversations();
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch {
         setSendError("Zprávu se nepodařilo smazat.");
@@ -382,7 +431,7 @@ export function MessagesMobileScreen() {
         setBody("");
         setFiles([]);
         goBackToList();
-        await loadConversations(false);
+        invalidateConversations();
         window.dispatchEvent(new Event("portal-messages-badge-refresh"));
       } catch {
         setSendError("Konverzaci se nepodařilo smazat.");
@@ -415,7 +464,7 @@ export function MessagesMobileScreen() {
       return <LoadingSkeleton variant="list" rows={6} />;
     }
     if (conversationsError) {
-      return <ErrorState title={conversationsError} onRetry={() => loadConversations(true)} />;
+      return <ErrorState title={conversationsError} onRetry={() => void refetchConversations()} />;
     }
     return (
       <div className="-mx-4 -mt-4 flex flex-col min-h-[calc(100dvh-8rem)]">
