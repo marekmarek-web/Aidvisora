@@ -390,7 +390,7 @@ function extractInvestmentData(env: DocumentReviewEnvelope): InvestmentDataRecor
   return {
     strategy: strategy ?? (isDipDps ? productType : null),
     funds,
-    investmentAmount: investmentAmountRaw ?? contributionAmount,
+    investmentAmount: investmentAmountRaw ?? null,
     isModeledData,
     isContractualData,
     notes: fieldVal(ef, "investmentScenario"),
