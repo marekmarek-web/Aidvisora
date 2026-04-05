@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getFaFundDetailForReport, getFaFundPlanningRateDecimal, getFaFundLogoUrl } from "../fa-fund-bridge";
 import { reconcileFaInvestmentsWithSnapshot, buildFaInvestmentTemplate } from "../fa-investment-rows";
-import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/saveLoad";
+import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/normalize-persisted-investment-entries";
 import type { FundLibrarySetupSnapshot } from "@/lib/fund-library/fund-library-setup-types";
 import type { InvestmentEntry } from "@/lib/analyses/financial/types";
 

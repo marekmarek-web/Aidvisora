@@ -18,7 +18,7 @@ import type {
   RiskDetail,
 } from "./types";
 import type { ValidateResult } from "./types";
-import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/saveLoad";
+import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/normalize-persisted-investment-entries";
 
 const DEFAULT_INVESTMENTS: CompanyFaInvestmentItem[] = [
   { productKey: "creif", type: "lump", amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },

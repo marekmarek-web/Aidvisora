@@ -3,23 +3,14 @@
  * Extracted from financni-analyza.html (Phase 1).
  */
 
-import type { FinancialAnalysisData, PersistedState, CompanyRiskLineDetail, InvestmentEntry } from './types';
+import type { FinancialAnalysisData, PersistedState, CompanyRiskLineDetail } from './types';
 import { getDefaultState } from './defaultState';
 import { STORAGE_KEY, TOTAL_STEPS, COMPANY_RISK_MONTHLY_PREMIUM_MAX_CZK } from './constants';
 import { computeGoalComputed } from './calculations';
 import { exportFilename } from './formatters';
-import { mapLegacyFundKey } from '@/lib/analyses/financial/fund-library/legacy-fund-key-map';
+import { normalizePersistedInvestmentEntries } from './normalize-persisted-investment-entries';
 
-/** Legacy / odstraněné klíče vyhodí; známé aliasy převede na kanonický BaseFundKey. */
-export function normalizePersistedInvestmentEntries(rows: InvestmentEntry[]): InvestmentEntry[] {
-  const out: InvestmentEntry[] = [];
-  for (const inv of rows) {
-    const c = mapLegacyFundKey(inv.productKey);
-    if (!c) continue;
-    out.push({ ...inv, productKey: c });
-  }
-  return out;
-}
+export { normalizePersistedInvestmentEntries } from './normalize-persisted-investment-entries';
 
 export interface LoadedState {
   data: FinancialAnalysisData;
