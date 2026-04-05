@@ -557,7 +557,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
                   return (
                     <div
                       key={r.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl border min-h-[44px] ${
+                      className={`flex flex-col xl:flex-row xl:items-center justify-between gap-2 p-3 rounded-xl border min-h-[44px] ${
                         isRecOverdue ? "bg-red-50/50 border-red-100/50" : "bg-amber-50/30 border-amber-100/50"
                       }`}
                     >
@@ -665,12 +665,12 @@ export function DashboardEditable(props: DashboardEditableProps) {
 
   function renderBentoGrid(sec: DashboardSecondaryBundle) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-6 pb-8">
         {visibleOrder.map((id) => {
           const isAiAssistant = id === "aiAssistant";
           const isMyTasks = id === "myTasks";
           const isNotes = id === "notes";
-          const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " md:col-span-2" : ""}`;
+          const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " lg:col-span-2" : ""}`;
           const dragClass = `${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`;
 
           if (isAiAssistant) {
@@ -820,7 +820,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
     <div
       className={clsx(
         "relative flex-1 min-h-0 overflow-y-auto bg-transparent text-[color:var(--wp-text)] animate-[wp-fade-in_0.3s_ease]",
-        "transition-[margin-right] duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "transition-[margin-right] duration-\\[800ms\\] ease-\\[cubic-bezier(0.16,1,0.3,1)\\]",
         drawerOpen && "lg:mr-[440px]",
       )}
     >

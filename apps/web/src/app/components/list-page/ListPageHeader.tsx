@@ -26,7 +26,7 @@ export function ListPageHeader({
         : "";
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
       <div className="min-w-0">
         <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight text-[color:var(--wp-text)] md:gap-3 md:text-3xl">
           {title}
@@ -39,7 +39,7 @@ export function ListPageHeader({
         {subtitle && <p className="mt-0.5 text-xs text-[color:var(--wp-text-secondary)] md:mt-1 md:text-sm">{subtitle}</p>}
       </div>
       {actions != null && (
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0 [&_button]:min-h-[44px] md:[&_button]:min-h-0 [&_a]:min-h-[44px] md:[&_a]:min-h-0">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0 [&_button]:min-h-[44px] lg:[&_button]:min-h-0 [&_a]:min-h-[44px] lg:[&_a]:min-h-0">
           {actions}
         </div>
       )}

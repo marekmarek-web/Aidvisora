@@ -203,7 +203,7 @@ export default function AnalysesPageClient({
 
       <main className="max-w-[1200px] mx-auto p-4 sm:p-6 md:p-8 hub-bg min-h-[calc(100vh-73px)]">
         {/* Hlavička stránky & akce */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-10">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 lg:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[color:var(--wp-text)] tracking-tight">
@@ -326,7 +326,7 @@ export default function AnalysesPageClient({
               return (
                 <li
                   key={a.id}
-                  className="bg-[color:var(--wp-surface-card)] rounded-2xl p-4 sm:p-5 border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6"
+                  className="bg-[color:var(--wp-surface-card)] rounded-2xl p-4 sm:p-5 border border-[color:var(--wp-surface-card-border)] shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6"
                 >
                   {/* Levá část: ikona + info */}
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -356,7 +356,7 @@ export default function AnalysesPageClient({
                   </div>
 
                   {/* Střed: progres + status */}
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto">
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full lg:w-auto min-w-0">
                     {!completed && (
                       <div className="w-full sm:w-32 min-w-0">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">
@@ -380,7 +380,7 @@ export default function AnalysesPageClient({
                   </div>
 
                   {/* Pravá část: akce */}
-                  <div className="flex items-center justify-end gap-2 border-t md:border-t-0 border-[color:var(--wp-surface-card-border)] pt-4 md:pt-0 w-full md:w-auto flex-shrink-0">
+                  <div className="flex items-center justify-end gap-2 border-t lg:border-t-0 border-[color:var(--wp-surface-card-border)] pt-4 lg:pt-0 w-full lg:w-auto flex-shrink-0">
                     {completed ? (
                       <Link
                         href={`/portal/analyses/financial?id=${encodeURIComponent(a.id)}`}

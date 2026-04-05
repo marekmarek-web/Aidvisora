@@ -103,7 +103,7 @@ export default function CalculatorsPage() {
               />
               {isFirst && theme.tagColor && (
                 <div
-                  className={`absolute top-6 right-6 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${theme.tagColor}`}
+                  className={`absolute top-6 right-6 z-20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${theme.tagColor}`}
                 >
                   Nejpoužívanější
                 </div>

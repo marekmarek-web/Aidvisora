@@ -26,6 +26,8 @@ import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styl
 import type { QuickActionsConfig } from "@/lib/quick-actions";
 
 const MOBILE_BREAKPOINT = 768;
+/** Viewport threshold below which the sidebar auto-collapses to icon-only mode. */
+const SIDEBAR_AUTO_COLLAPSE_THRESHOLD = 1100;
 
 const SIDEBAR_STORAGE_KEY = "portal-sidebar";
 /** Odsazení plovoucího sidebaru od levého okraje (Tailwind left-5). */
@@ -63,10 +65,19 @@ export function PortalShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarStateInitialized, setSidebarStateInitialized] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [isNarrowDesktop, setIsNarrowDesktop] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px)`);
     const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${SIDEBAR_AUTO_COLLAPSE_THRESHOLD - 1}px)`);
+    const update = () => setIsNarrowDesktop(mq.matches);
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
@@ -82,11 +93,13 @@ export function PortalShell({
 
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
 
+  const effectiveSidebarCollapsed = sidebarCollapsed || (isDesktop && isNarrowDesktop);
+
   const mainMarginPx = useMemo(() => {
     if (!isDesktop) return 0;
-    const sidebarPx = sidebarCollapsed ? PORTAL_SIDEBAR_COLLAPSED_PX : sidebarWidth;
+    const sidebarPx = effectiveSidebarCollapsed ? PORTAL_SIDEBAR_COLLAPSED_PX : sidebarWidth;
     return PORTAL_SIDEBAR_FLOAT_INSET_PX + sidebarPx + PORTAL_SIDEBAR_MAIN_GAP_PX;
-  }, [isDesktop, sidebarCollapsed, sidebarWidth]);
+  }, [isDesktop, effectiveSidebarCollapsed, sidebarWidth]);
 
   const handleSidebarResize = useCallback((w: number) => {
     const clamped = Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, w));
@@ -135,6 +148,7 @@ export function PortalShell({
           initSidebarState={initSidebarState}
           sidebarWidth={sidebarWidth}
           sidebarCollapsed={sidebarCollapsed}
+          effectiveSidebarCollapsed={effectiveSidebarCollapsed}
           handleSidebarResize={handleSidebarResize}
           handleSidebarCollapsed={handleSidebarCollapsed}
         >
@@ -158,6 +172,7 @@ function PortalShellInner({
   initSidebarState,
   sidebarWidth,
   sidebarCollapsed,
+  effectiveSidebarCollapsed,
   handleSidebarResize,
   handleSidebarCollapsed,
   children,
@@ -172,6 +187,7 @@ function PortalShellInner({
   initSidebarState: () => void;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
+  effectiveSidebarCollapsed: boolean;
   handleSidebarResize: (w: number) => void;
   handleSidebarCollapsed: (v: boolean) => void;
   children: React.ReactNode;
@@ -236,7 +252,7 @@ function PortalShellInner({
       <PortalSidebar
           showTeamOverview={showTeamOverview}
           width={sidebarWidth}
-          collapsed={sidebarCollapsed}
+          collapsed={effectiveSidebarCollapsed}
           onResize={handleSidebarResize}
           onCollapsedChange={handleSidebarCollapsed}
           onMount={initSidebarState}
