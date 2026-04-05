@@ -413,9 +413,11 @@ export function segmentDocumentPacket(
   }
 
   // 2. Score each known section signal and locate its first occurrence for text narrowing
+  // Threshold 0.3 = at least one strong hit (0.6) that's partial, or multiple weak hits (3×0.2).
+  // A single weak-only match (score 0.2) is not enough to classify a candidate — too many false positives.
   for (const signal of SECTION_SIGNALS) {
     const score = scoreSignal(signal, text);
-    if (score >= 0.2) {
+    if (score >= 0.3) {
       if (!detectionMethods.includes("keyword_scan")) {
         detectionMethods.push("keyword_scan");
       }
@@ -476,13 +478,24 @@ export function segmentDocumentPacket(
     "unpublishable_attachment",
   ];
 
-  const hasSensitiveAttachment = candidates.some((c) => sensitiveTypes.includes(c.type) && c.confidence >= 0.4);
-  const hasUnpublishableSection = candidates.some((c) => unpublishableTypes.includes(c.type) && c.confidence >= 0.3);
+  // Raised thresholds to reduce false positives:
+  // - sensitive attachment: requires strong signal (>= 0.5) — a single keyword hit is not enough
+  // - unpublishable: >= 0.4 (was 0.3) — requires either strong match or ≥2 weak matches
+  const hasSensitiveAttachment = candidates.some((c) => sensitiveTypes.includes(c.type) && c.confidence >= 0.5);
+  const hasUnpublishableSection = candidates.some((c) => unpublishableTypes.includes(c.type) && c.confidence >= 0.4);
 
-  const significantCandidates = candidates.filter((c) => c.confidence >= 0.3);
+  // significantCandidates: only candidates with meaningful confidence (>= 0.35, was 0.3)
+  const significantCandidates = candidates.filter((c) => c.confidence >= 0.35);
   const uniqueTypes = new Set(significantCandidates.map((c) => c.type));
+
+  // isBundle requires BOTH:
+  // - at least 2 significant unique types (each >= 0.35), AND
+  // - at least one of them has confidence >= 0.4 (not just two barely-there signals)
+  // OR an explicit document index is present (very reliable signal)
+  // OR a sensitive attachment at >= 0.5 confidence alongside a publishable section
+  const hasAtLeastOneStrongCandidate = significantCandidates.some((c) => c.confidence >= 0.4);
   const isBundle =
-    uniqueTypes.size >= 2 ||
+    (uniqueTypes.size >= 2 && hasAtLeastOneStrongCandidate) ||
     hasExplicitIndex ||
     (hasSensitiveAttachment && significantCandidates.some((c) => c.publishable));
 

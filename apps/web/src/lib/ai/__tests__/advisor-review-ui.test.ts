@@ -10,10 +10,26 @@ import { buildAdvisorReviewViewModel } from "../../ai-review/advisor-review-view
 import type { DocumentReviewEnvelope } from "../document-review-types";
 
 describe("formatExtractedValue", () => {
-  it("stringifies nested objects instead of [object Object]", () => {
+  it("never shows [object Object] for complex values", () => {
     const s = formatExtractedValue({ a: 1, b: "c" });
-    expect(s).toContain("a");
     expect(s).not.toContain("[object Object]");
+  });
+  it("returns — for opaque objects without a recognized value key", () => {
+    const s = formatExtractedValue({ a: 1, b: "c" });
+    expect(s).toBe("—");
+  });
+  it("surfaces .value from extraction cell objects", () => {
+    const s = formatExtractedValue({ value: "Roman Koloburda", confidence: 0.9, status: "extracted" });
+    expect(s).toBe("Roman Koloburda");
+  });
+  it("strips HTML tags from string values", () => {
+    const s = formatExtractedValue("<td>foo</td>");
+    expect(s).toBe("foo");
+    expect(s).not.toContain("<");
+  });
+  it("returns Ano/Ne for booleans", () => {
+    expect(formatExtractedValue(true)).toBe("Ano");
+    expect(formatExtractedValue(false)).toBe("Ne");
   });
 });
 

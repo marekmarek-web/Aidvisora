@@ -596,20 +596,47 @@ function fieldStatus(conf: number, value: unknown): FieldStatus {
   return "success";
 }
 
+/**
+ * Strip HTML tags and normalize whitespace for safe user-facing display.
+ * Prevents raw `<table>`, `<td>`, HTML fragments from reaching UI text fields.
+ */
+function stripHtmlForDisplay(s: string): string {
+  return s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function formatExtractedValue(v: unknown): string {
   if (v == null) return "—";
-  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "boolean") return v ? "Ano" : "Ne";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "string") {
+    const stripped = stripHtmlForDisplay(v);
+    if (!stripped) return "—";
+    return stripped;
+  }
   if (Array.isArray(v)) {
     const parts = v.map((x) => formatExtractedValue(x)).filter((s) => s && s !== "—");
     return parts.length ? parts.join(", ") : "—";
   }
-  if (typeof v === "object") {
-    try {
-      const s = JSON.stringify(v);
-      return s.length > 480 ? `${s.slice(0, 477)}…` : s;
-    } catch {
-      return "—";
-    }
+  if (typeof v === "object" && v !== null) {
+    const obj = v as Record<string, unknown>;
+    // Extraction envelope cell: {value, confidence, status} — surface the value
+    if ("value" in obj) return formatExtractedValue(obj.value);
+    // Named objects: surface name/label/title
+    const named = obj.name ?? obj.label ?? obj.title ?? obj.text;
+    if (named != null) return formatExtractedValue(named);
+    // Flat single-key objects: surface that value
+    const keys = Object.keys(obj);
+    if (keys.length === 1) return formatExtractedValue(obj[keys[0]]);
+    // Complex objects — never show raw JSON to advisors
+    return "—";
   }
   return String(v);
 }
@@ -629,11 +656,43 @@ type ReadabilityCtx = {
   preprocessStatus?: string;
 };
 
+/**
+ * Insurance-specific field labels that should be replaced for non-insurance document families.
+ * Key = original field key, value = [investmentLabel, genericLabel].
+ * investmentLabel is used for investment/dip/dps families; genericLabel for others.
+ */
+const INSURANCE_FIELD_LABEL_OVERRIDES_FOR_INVESTMENT: Record<string, string> = {
+  insurer: "Správce / instituce",
+  institutionName: "Instituce",
+  policyStartDate: "Datum zahájení",
+  policyEndDate: "Datum ukončení",
+  policyDuration: "Délka smlouvy",
+  existingPolicyNumber: "Číslo smlouvy / reference",
+  existingPolicyNumberOrReference: "Číslo smlouvy / reference",
+  premiumAmount: "Výše příspěvku / platby",
+  totalMonthlyPremium: "Měsíční platba",
+  annualPremium: "Roční platba",
+  riskPremium: "Rizikové pojistné",
+  investmentPremium: "Investiční příspěvek",
+};
+
+const INVESTMENT_FAMILIES = new Set(["investment", "dip", "dps", "pp"]);
+
+function fieldLabelForKeyAndFamily(rawKey: string, productFamily?: string): string {
+  if (productFamily && INVESTMENT_FAMILIES.has(productFamily)) {
+    const override = INSURANCE_FIELD_LABEL_OVERRIDES_FOR_INVESTMENT[rawKey]
+      ?? INSURANCE_FIELD_LABEL_OVERRIDES_FOR_INVESTMENT[toCamelCase(rawKey)];
+    if (override) return override;
+  }
+  return fieldLabelForKey(rawKey);
+}
+
 function flattenEnvelopeToGroups(
   envelope: Record<string, unknown>,
   fieldConfidenceMap: Record<string, number> | undefined,
   globalConfidence01: number,
-  ctx: ReadabilityCtx
+  ctx: ReadabilityCtx,
+  productFamily?: string
 ): ExtractedGroup[] {
   const groupedFields = new Map<string, ExtractedField[]>();
   const pushGroupedField = (field: ExtractedField, rawKey: string) => {
@@ -666,7 +725,7 @@ function flattenEnvelopeToGroups(
       pushGroupedField({
         id: `extractedFields.${fKey}`,
         groupId: "extractedFields",
-        label: fieldLabelForKey(fKey),
+        label: fieldLabelForKeyAndFamily(fKey, productFamily),
         value: strVal,
         confidence: confPct,
         status: pres.status,
@@ -1287,13 +1346,6 @@ export function mapApiToExtractionDocument(
     preprocessStatus: insights?.preprocessStatus,
   };
 
-  let groups =
-    Object.keys(extracted).length > 0
-      ? looksLikeDocumentEnvelope(extracted)
-        ? flattenEnvelopeToGroups(extracted, fieldConfidenceMap, confidence, readCtx)
-        : flattenPayload(extracted, fieldConfidenceMap, confidence)
-      : [];
-
   const norm = insights?.normalizedPipelineClassification;
   const baseType = (detail.detectedDocumentType as string) ?? "Neznámý typ";
   const trace = detail.extractionTrace as Record<string, unknown> | undefined;
@@ -1301,6 +1353,19 @@ export function mapApiToExtractionDocument(
   const llmExecutiveBrief =
     typeof advisorSummary?.text === "string" ? advisorSummary.text : undefined;
   const aiRaw = trace?.aiClassifierJson as Record<string, string> | undefined;
+
+  const classifierProductFamily = (
+    (aiRaw?.productFamily as string | undefined) ??
+    ((extracted as Record<string, unknown>).documentClassification as Record<string, unknown> | undefined)
+      ?.productFamily as string | undefined
+  );
+
+  let groups =
+    Object.keys(extracted).length > 0
+      ? looksLikeDocumentEnvelope(extracted)
+        ? flattenEnvelopeToGroups(extracted, fieldConfidenceMap, confidence, readCtx, classifierProductFamily)
+        : flattenPayload(extracted, fieldConfidenceMap, confidence)
+      : [];
   let documentTypeLabel = humanPrimaryTypeHeading(baseType);
   if (aiRaw && (aiRaw.documentType || aiRaw.productFamily)) {
     documentTypeLabel = formatAiClassifierForAdvisor(aiRaw);

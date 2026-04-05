@@ -1350,7 +1350,16 @@ export async function runAiReviewV2Pipeline(
   }
 
   const rdStart = Date.now();
-  if (isAiReviewLlmPostprocessEnabled()) {
+  // Skip expensive LLM postprocess when extraction is already high-confidence and there are no
+  // critical warnings. This cuts ~1-2s from the happy path without quality loss.
+  const hasCriticalWarnings = (validated.data.reviewWarnings ?? []).some(
+    (w: { severity?: string }) => w.severity === "critical"
+  );
+  const shouldSkipLlmPostprocess =
+    extractionConfidence >= 0.8 &&
+    !hasCriticalWarnings &&
+    allReasons.every((r) => r !== "critical_review_warning");
+  if (isAiReviewLlmPostprocessEnabled() && !shouldSkipLlmPostprocess) {
     const extractionSlim = {
       documentClassification: validated.data.documentClassification,
       documentMeta: {
