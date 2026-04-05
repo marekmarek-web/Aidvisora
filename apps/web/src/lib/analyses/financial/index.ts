@@ -4,6 +4,7 @@
  */
 
 export * from './types';
+export * from './fund-library';
 export * from './constants';
 export * from './defaultState';
 export * from './calculations';

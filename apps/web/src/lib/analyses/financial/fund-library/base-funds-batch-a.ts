@@ -3,7 +3,7 @@ import {
   type BatchASeedRow,
 } from "./base-funds-batch-a.seed";
 import type { BaseFundKey } from "./legacy-fund-key-map";
-import type { BaseFund, FundSource } from "./types";
+import { DEFAULT_FUND_AVAILABILITY, type BaseFund, type FundSource } from "./types";
 
 const BATCH_A_KEYS = new Set<BaseFundKey>([
   "ishares_core_msci_world",
@@ -63,6 +63,7 @@ export function mapBatchASeedRowToBaseFund(row: BatchASeedRow): BaseFund {
     factsheetAsOf: row.factsheetAsOf,
     verifiedAt: row.verifiedAt,
     isActive: true,
+    availability: DEFAULT_FUND_AVAILABILITY,
     sources: mapSources(row.sources),
     assets: {
       logoPath: row.logo,

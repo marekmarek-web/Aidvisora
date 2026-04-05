@@ -26,6 +26,14 @@ export type BaseFundKey = (typeof BASE_FUND_KEYS)[number];
 
 const BASE_FUND_KEY_SET: ReadonlySet<string> = new Set(BASE_FUND_KEYS);
 
+/**
+ * Normalizace vstupu z UI / JSON (mezery → podtržítko, lower case).
+ * Např. `World ETF` → `world_etf` → `ishares_core_msci_world`.
+ */
+export function normalizeLegacyFundKeyInput(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
 /** Legacy nebo alias klíč → canonical base (jen mapovatelné; removed řeší samostatně). */
 export const LEGACY_FUND_KEY_TO_CANONICAL: Readonly<Record<string, BaseFundKey>> = {
   ishares: "ishares_core_msci_world",
@@ -53,15 +61,15 @@ export function isCanonicalBaseFundKey(value: string): value is BaseFundKey {
 }
 
 export function isRemovedLegacyFundKey(raw: string): boolean {
-  return REMOVED_LEGACY_KEYS.has(raw.trim().toLowerCase());
+  return REMOVED_LEGACY_KEYS.has(normalizeLegacyFundKeyInput(raw));
 }
 
 /**
  * Převod uloženého / UI klíče na canonical base fund key.
- * @returns null pokud jde o removed legacy, nebo neznámý řetězec.
+ * @returns null pro odstraněné klíče (`alternative`, AlgoImperial, …) i pro neznámý řetězec — bez výjimky.
  */
 export function mapLegacyFundKey(raw: string): BaseFundKey | null {
-  const key = raw.trim().toLowerCase();
+  const key = normalizeLegacyFundKeyInput(raw);
   if (REMOVED_LEGACY_KEYS.has(key)) return null;
   const mapped = LEGACY_FUND_KEY_TO_CANONICAL[key];
   if (mapped) return mapped;

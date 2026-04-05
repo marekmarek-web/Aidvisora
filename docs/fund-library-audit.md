@@ -87,3 +87,12 @@ V `FUND_DETAILS` **stále nejsou** ETF nad rámec MSCI World jako samostatné pr
 7. **Teprve potom** bezpečně odstranit `alternative` z `defaultState` a `FUND_DETAILS` (ne dřív — riziko pro staré reporty a uložená data).
 
 Fáze 1 **nemění** výše uvedené toky — pouze přidává audit a izolovaný modul `fund-library`.
+
+## 9. Aktualizace: datová vrstva katalogu (2026-04-05+)
+
+- **Centrální vstup:** [`apps/web/src/lib/analyses/financial/fund-library/index.ts`](../apps/web/src/lib/analyses/financial/fund-library/index.ts) (re-export z `@/lib/analyses/financial` přes [`financial/index.ts`](../apps/web/src/lib/analyses/financial/index.ts)).
+- **Model:** `BaseFund` (včetně `baseFundKey`, `availability`, `planningRate`, `officialPerformance`, `factsheetUrl`, `factsheetAsOf`, `verifiedAt`, `assets`) + `FundVariant` (`variantKey` u variant nad stejným base).
+- **Investiční `productKey` dál** v `InvestmentEntry` a defaultech viz § 2–3; zpětná kompatibilita: `mapLegacyFundKey` / `getBaseFundFromProductKey` vrací `null` / `undefined` pro `alternative` a AlgoImperial bez výjimky.
+- **World ETF:** mezery v řetězci se normalizují (`World ETF` → `world_etf` → `ishares_core_msci_world`), viz `normalizeLegacyFundKeyInput` v [`legacy-fund-key-map.ts`](../apps/web/src/lib/analyses/financial/fund-library/legacy-fund-key-map.ts).
+- **Helpery:** `getBaseFundByKey`, `getFundVariantByKey`, `getFundsByCategory`, `getFundsByAvailability`, `getBaseFundFromProductKey`, `getBaseFundsList`, `getVariantsForBaseFund`.
+- **Natvrdo v aplikaci (beze změny této fáze):** `FUND_DETAILS` / `FUND_LOGOS`, `defaultState` investice, `StepStrategy` vazba na `"ishares"`, report sekce — přepojení až v další fázi.

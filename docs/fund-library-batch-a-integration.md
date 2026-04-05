@@ -38,6 +38,6 @@ Další fáze: přepojení lookupů na `getBaseFundByKey(mapLegacyFundKey(...))`
 
 ## Pole v `BaseFund` (Batch A)
 
-Naplněno ze seedu: `officialPerformance`, `planningRate`, `parameters`, `topHoldings`, `countries`, `sectors`, `sources` (včetně `landing_page`), `assetTodo`, `notes`, dále identifikátory a editoriální texty (`goal`, `strategy`, …).
+Naplněno ze seedu: `officialPerformance`, `planningRate`, `parameters`, `topHoldings`, `countries`, `sectors`, `sources` (včetně `landing_page`), `assetTodo`, `notes`, dále identifikátory a editoriální texty (`goal`, `strategy`, …). U všech záznamů v katalogu je navíc `availability` (`personal_fa` / `company_fa` / `report`) — default při mapování Batch A i placeholderů.
 
 `performance` (`FundPerformanceSnapshot` s numerickými výnosy) zůstává u Batch A `null` — numerická pole nejsou ve zdroji jako čísla.

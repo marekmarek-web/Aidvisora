@@ -2,13 +2,13 @@ import { BASE_FUNDS } from "./base-funds";
 export { BATCH_A_BASE_FUNDS, mapBatchASeedRowToBaseFund } from "./base-funds-batch-a";
 export { BATCH_A_SEED_ROWS } from "./base-funds-batch-a.seed";
 import { FUND_VARIANTS } from "./fund-variants";
-import {
-  mapLegacyFundKey as mapLegacyFundKeyInner,
-  type BaseFundKey,
-} from "./legacy-fund-key-map";
-import type { BaseFund, FundVariant, FundVariantKey } from "./types";
-
-export { mapLegacyFundKeyInner as mapLegacyFundKey };
+import { mapLegacyFundKey, type BaseFundKey } from "./legacy-fund-key-map";
+import type {
+  BaseFund,
+  FundAvailabilityTag,
+  FundVariant,
+  FundVariantKey,
+} from "./types";
 
 const baseByKey: ReadonlyMap<BaseFundKey, BaseFund> = new Map(
   BASE_FUNDS.map((f) => [f.baseFundKey, f]),
@@ -16,6 +16,19 @@ const baseByKey: ReadonlyMap<BaseFundKey, BaseFund> = new Map(
 
 export function getBaseFundByKey(key: BaseFundKey): BaseFund | undefined {
   return baseByKey.get(key);
+}
+
+/**
+ * Lookup z uloženého nebo UI `productKey` (legacy i canonical).
+ * Odstraněné klíče (`alternative`, AlgoImperial, …) → undefined (žádná výjimka).
+ */
+export function getBaseFundFromProductKey(raw: string | null | undefined): BaseFund | undefined {
+  if (raw == null) return undefined;
+  const s = String(raw).trim();
+  if (!s) return undefined;
+  const canonical = mapLegacyFundKey(s);
+  if (!canonical) return undefined;
+  return baseByKey.get(canonical);
 }
 
 export function getBaseFundsList(options?: { includeInactive?: boolean }): BaseFund[] {
@@ -32,6 +45,9 @@ export function getVariantByKey(
   );
 }
 
+/** Stejné jako `getVariantByKey` — jednotný název pro veřejné API knihovny. */
+export const getFundVariantByKey = getVariantByKey;
+
 export function getVariantsForBaseFund(
   baseFundKey: BaseFundKey,
   options?: { includeInactive?: boolean },
@@ -42,9 +58,28 @@ export function getVariantsForBaseFund(
   );
 }
 
+export function getFundsByCategory(
+  category: string,
+  options?: { includeInactive?: boolean; exact?: boolean },
+): BaseFund[] {
+  const q = category.trim().toLowerCase();
+  const list = getBaseFundsList(options);
+  if (!q) return list;
+  return list.filter((f) => {
+    const c = f.category.trim().toLowerCase();
+    return options?.exact === false ? c.includes(q) : c === q;
+  });
+}
+
+export function getFundsByAvailability(
+  tag: FundAvailabilityTag,
+  options?: { includeInactive?: boolean },
+): BaseFund[] {
+  return getBaseFundsList(options).filter((f) => f.availability.includes(tag));
+}
+
 /**
  * Cesta k logu z katalogu. Prázdný řetězec = žádný soubor (UI může zobrazit iniciály).
- * Neprovádí kontrolu existence souboru — build zůstane validní i bez assetů.
  */
 export function resolveFundLogoPath(fund: BaseFund): string {
   return (fund.assets.logoPath ?? "").trim();

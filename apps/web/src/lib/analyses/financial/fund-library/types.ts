@@ -49,6 +49,22 @@ export interface FundPerformanceSnapshot {
 
 export type FundVariantKey = "standard" | "dip" | "zal" | "zal_dip";
 
+/**
+ * Kde má smysl fond v aplikaci nabízet (datová vrstva; wizard/report zatím na legacy).
+ * Další batchy mohou zužovat např. jen `report` pro čistě katalogové záznamy.
+ */
+export type FundAvailabilityTag = "personal_fa" | "company_fa" | "report";
+
+export const DEFAULT_FUND_AVAILABILITY: readonly FundAvailabilityTag[] = [
+  "personal_fa",
+  "company_fa",
+  "report",
+];
+
+/**
+ * Záznam v centrálním katalogu (single source of truth pro metadata).
+ * Legacy `InvestmentEntry.productKey` zůstává string — mapuje se přes `mapLegacyFundKey`.
+ */
 export interface BaseFund {
   baseFundKey: BaseFundKey;
   /** Oficiální název produktu / třídy podílů */
@@ -88,6 +104,8 @@ export interface BaseFund {
   factsheetAsOf?: string | null;
   verifiedAt?: string | null;
   isActive: boolean;
+  /** Kontexty nabídky fondu (filtrování bez zásahu do UI). */
+  availability: readonly FundAvailabilityTag[];
   sources: FundSource[];
   assets: FundAssetPack;
   /** Chybějící vizuály k doplnění do asset knihovny */
@@ -97,6 +115,9 @@ export interface BaseFund {
   performance?: FundPerformanceSnapshot | null;
 }
 
+/**
+ * Varianta nad jedním `baseFundKey` (DIP / ZAL / …) — odděleně od base záznamu v katalogu.
+ */
 export interface FundVariant {
   baseFundKey: BaseFundKey;
   variantKey: FundVariantKey;

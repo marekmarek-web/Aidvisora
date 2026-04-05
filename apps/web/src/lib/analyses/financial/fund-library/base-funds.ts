@@ -1,10 +1,12 @@
-import type { BaseFund } from "./types";
+import { DEFAULT_FUND_AVAILABILITY, type BaseFund } from "./types";
 import { BATCH_A_BASE_FUNDS } from "./base-funds-batch-a";
+
+type BaseFundInput = Omit<BaseFund, "availability">;
 
 /**
  * Katalog base fondů: Batch A (reálná data) + placeholdery pro zbývající klíče v1.
  */
-const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = [
+const BASE_FUNDS_PLACEHOLDERS_RAW: readonly BaseFundInput[] = [
   {
     baseFundKey: "fidelity_target_2040",
     displayName: "Fidelity Target 2040",
@@ -156,5 +158,10 @@ const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = [
     performance: null,
   },
 ];
+
+const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = BASE_FUNDS_PLACEHOLDERS_RAW.map((f) => ({
+  ...f,
+  availability: DEFAULT_FUND_AVAILABILITY,
+}));
 
 export const BASE_FUNDS: readonly BaseFund[] = [...BATCH_A_BASE_FUNDS, ...BASE_FUNDS_PLACEHOLDERS];
