@@ -539,10 +539,27 @@ export async function runAiReviewV2Pipeline(
   mergePreprocessIntoTrace(trace, options?.preprocessMeta ?? null);
 
   const hint = (options?.ruleBasedTextHint ?? "").trim();
-  if (hint.length === 0) {
+
+  // Prefer structured source (from Adobe structuredData.json) over markdown hint.
+  // Structured source provides exact per-page text without markdown conversion artifacts.
+  const structuredText = (options?.structuredSource?.fullText ?? "").trim();
+  const useStructuredSource = structuredText.length > 0 && structuredText.length >= hint.length * 0.8;
+  const documentTextForExtraction = useStructuredSource ? structuredText : hint;
+
+  if (useStructuredSource) {
+    trace.coreExtractionSource = "adobe_structured_pages";
+    trace.warnings = [
+      ...(trace.warnings ?? []),
+      `structured_source_active:${options!.structuredSource!.pageCount}p`,
+    ];
+  } else if (hint.length === 0) {
+    trace.coreExtractionSource = "fallback";
     trace.warnings = [...(trace.warnings ?? []), "empty_hint_file_based_extraction"];
+  } else {
+    trace.coreExtractionSource = "markdown";
   }
-  const inferredInputMode = tryInferInputModeFromPreprocess(options?.preprocessMeta ?? null, hint.length);
+
+  const inferredInputMode = tryInferInputModeFromPreprocess(options?.preprocessMeta ?? null, documentTextForExtraction.length);
 
   let inputModeResult: Awaited<ReturnType<typeof detectInputMode>>;
   try {
@@ -588,7 +605,7 @@ export async function runAiReviewV2Pipeline(
         : undefined;
 
   const allowCombinedSingleCall =
-    hint.length >= COMBINED_CLASSIFY_AND_EXTRACT_MIN_HINT_CHARS &&
+    documentTextForExtraction.length >= COMBINED_CLASSIFY_AND_EXTRACT_MIN_HINT_CHARS &&
     inputModeResult.inputMode === "text_pdf" &&
     inputModeResult.extractionMode === "text";
 
@@ -598,7 +615,7 @@ export async function runAiReviewV2Pipeline(
     const combinedStart = Date.now();
     try {
       const combined = await runCombinedClassifyAndExtract({
-        documentText: hint,
+        documentText: documentTextForExtraction,
         sourceFileName: options?.sourceFileName ?? null,
         bundleHint: options?.bundleHint ?? null,
       });
@@ -637,7 +654,7 @@ export async function runAiReviewV2Pipeline(
           : resolvedDocumentType.startsWith("pension")
             ? "dps"
             : "unknown",
-        hint,
+        documentTextForExtraction,
       );
       let finalDocumentType = resolvedDocumentType;
       if (combinedFamilyOverride.overrideApplied && resolvedDocumentType.startsWith("life_insurance")) {
@@ -723,7 +740,7 @@ export async function runAiReviewV2Pipeline(
   const clsRes = await runAiReviewClassifier({
     fileUrl,
     mimeType,
-    documentTextExcerpt: hint,
+    documentTextExcerpt: documentTextForExtraction,
     filename: options?.sourceFileName ?? null,
     pageCount: classifierPageCount,
     inputMode: inputModeResult.inputMode,
@@ -761,7 +778,7 @@ export async function runAiReviewV2Pipeline(
 
   // Apply text-based product family override (DIP/DPS/PP) before router.
   // Fixes cases where the LLM classifier returns productFamily="life_insurance" for DIP/DPS/PP documents.
-  const familyOverride = applyProductFamilyTextOverride(ai.productFamily, hint);
+  const familyOverride = applyProductFamilyTextOverride(ai.productFamily, documentTextForExtraction);
   const effectiveProductFamily = familyOverride.productFamily;
   if (familyOverride.overrideApplied) {
     allReasons.push(`product_family_text_override:${familyOverride.overrideReason}`);
@@ -903,7 +920,7 @@ export async function runAiReviewV2Pipeline(
     promptKey !== "paymentInstructionsExtraction" &&
     shouldSkipContractLlmExtractionForScanOcr({
       isScanFallback: isScanFallbackEarly,
-      hintLength: hint.length,
+      hintLength: documentTextForExtraction.length,
       preprocessStatus: options?.preprocessMeta?.preprocessStatus,
       readabilityScore: options?.preprocessMeta?.readabilityScore,
       textCoverageEstimate: textCov,
@@ -943,7 +960,7 @@ export async function runAiReviewV2Pipeline(
       effectivePrimary === "investment_payment_instruction" ? "investment_payment_instruction" : "payment_instruction";
     trace.selectedSchema = "payment_instruction_dedicated_v2";
     const extStart = Date.now();
-    const payRes = await tryExtractPaymentWithPrompt(fileUrl, mimeType, hint, {
+    const payRes = await tryExtractPaymentWithPrompt(fileUrl, mimeType, documentTextForExtraction, {
       classificationReasons: classification.reasons,
       adobeSignals: buildAdobeSignalsSummary(options?.preprocessMeta ?? null),
       filename: options?.sourceFileName?.trim() || "unknown",
@@ -1051,7 +1068,7 @@ export async function runAiReviewV2Pipeline(
     options.preprocessMeta.readabilityScore >= 68;
   const isTextPdf = inputModeResult.inputMode === "text_pdf";
   const allowTextSecondPass =
-    hint.length >= minTextChars && !isScanFallback && (isTextPdf || readabilityOk);
+    documentTextForExtraction.length >= minTextChars && !isScanFallback && (isTextPdf || readabilityOk);
 
   const extractionPromptId = getAiReviewPromptId(promptKey);
   const extractionVersion = getAiReviewPromptVersion(promptKey);
@@ -1059,10 +1076,10 @@ export async function runAiReviewV2Pipeline(
   const extStart = Date.now();
   let rawExtraction: string;
   try {
-    if (extractionPromptId && hint.length >= 400) {
+    if (extractionPromptId && documentTextForExtraction.length >= 400) {
       trace.extractionSecondPass = "prompt_text";
       const extractionVariables = buildAiReviewExtractionPromptVariables({
-        documentText: hint,
+        documentText: documentTextForExtraction,
         classificationReasons: classification.reasons,
         adobeSignals: buildAdobeSignalsSummary(options?.preprocessMeta ?? null),
         filename: options?.sourceFileName?.trim() || "unknown",
@@ -1082,7 +1099,7 @@ export async function runAiReviewV2Pipeline(
       rawExtraction = pr.text;
     } else if (allowTextSecondPass) {
       trace.extractionSecondPass = "text";
-      const wrapped = wrapExtractionPromptWithDocumentText(extractionPrompt, hint);
+      const wrapped = wrapExtractionPromptWithDocumentText(extractionPrompt, documentTextForExtraction);
       rawExtraction = await createResponse(wrapped, { routing: { category: "ai_review" } });
     } else {
       trace.extractionSecondPass = "pdf";

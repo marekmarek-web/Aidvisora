@@ -91,6 +91,13 @@ export type ExtractionTrace = {
   validationDurationMs?: number;
   reviewDecisionDurationMs?: number;
   clientMatchDurationMs?: number;
+  /**
+   * Which source powered the core (primary) extraction documentText.
+   * adobe_structured_pages → used structured page text from structuredData.json
+   * markdown → used ruleBasedTextHint (markdown content)
+   * fallback → empty or very short hint
+   */
+  coreExtractionSource?: "adobe_structured_pages" | "markdown" | "fallback";
   llmReviewDecisionText?: string;
   llmClientMatchText?: string;
   llmClientMatchDurationMs?: number;
@@ -355,7 +362,7 @@ export async function listContractReviews(
     return rows as ContractReviewRow[];
   } catch (err) {
     if (!isPgMissingColumnError(err)) throw err;
-    // eslint-disable-next-line no-console
+     
     console.warn(
       "[listContractReviews] falling back to legacy column set (run Supabase patches: document_review_redesign + document_review_phase_two)"
     );

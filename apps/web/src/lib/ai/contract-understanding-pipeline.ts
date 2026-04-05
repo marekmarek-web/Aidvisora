@@ -132,6 +132,22 @@ export type BundleHint = {
   hasInvestmentSection: boolean;
 };
 
+/**
+ * Pre-built structured source from Adobe Extract structuredData.json.
+ * When present, the core extraction pipeline prefers this over the markdown hint.
+ */
+export type StructuredSourceHint = {
+  /**
+   * Full concatenated text from all pages of the structured data.
+   * Used as `documentText` in the combined extraction prompt when available.
+   */
+  fullText: string;
+  /** Total number of pages in the structured data. */
+  pageCount: number;
+  /** Trace identifier for observability. */
+  traceSource: "adobe_structured_pages";
+};
+
 export type ContractPipelineOptions = {
   /** Markdown/OCR text snippet for rule-based classification overrides (e.g. Adobe preprocess). */
   ruleBasedTextHint?: string | null;
@@ -144,6 +160,12 @@ export type ContractPipelineOptions = {
    * improving extraction accuracy for multi-section documents.
    */
   bundleHint?: BundleHint | null;
+  /**
+   * Optional structured source from Adobe Extract structuredData.json.
+   * When provided and non-empty, takes priority over ruleBasedTextHint as documentText
+   * for the core extraction pipeline, enabling structured-source core extraction.
+   */
+  structuredSource?: StructuredSourceHint | null;
 };
 
 export async function runContractUnderstandingPipeline(

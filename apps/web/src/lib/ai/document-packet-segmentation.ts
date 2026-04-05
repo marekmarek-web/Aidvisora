@@ -19,6 +19,7 @@ import type {
   PacketSubdocumentCandidate,
   PacketSubdocumentType,
 } from "./document-packet-types";
+import type { AdobeStructuredResult } from "@/lib/adobe/structured-data-parser";
 
 // ─── Keyword signal tables ─────────────────────────────────────────────────
 
@@ -588,4 +589,141 @@ export function derivePublishHintsFromPacket(
     sensitiveAttachmentOnly,
     reasons,
   };
+}
+
+// ─── Block-level heading segmentation from Adobe structured data ─────────────
+
+/**
+ * Enrich packet segmentation candidates using heading blocks from Adobe structured data.
+ *
+ * When Adobe Extract structuredData.json is available, its `isHeading=true` blocks provide
+ * exact page numbers and clean heading text — much more reliable than markdown heuristics.
+ *
+ * This function:
+ * 1. Iterates `allBlocks` where `isHeading=true`
+ * 2. Matches heading text against SECTION_SIGNALS patterns
+ * 3. Returns enriched candidates with accurate `pageNumbers` from structured data
+ * 4. Only adds candidates that aren't already covered by the markdown segmentation
+ *    (deduplication by type, taking the higher-confidence entry)
+ *
+ * Safe to call even when structuredResult is null (returns empty array).
+ */
+export function enrichCandidatesFromStructuredHeadings(
+  existingCandidates: PacketSubdocumentCandidate[],
+  structuredResult: AdobeStructuredResult | null | undefined,
+  totalPages?: number | null,
+): PacketSubdocumentCandidate[] {
+  if (!structuredResult?.ok || structuredResult.allBlocks.length === 0) {
+    return existingCandidates;
+  }
+
+  const headingBlocks = structuredResult.allBlocks.filter((b) => b.isHeading && b.text.trim().length > 3);
+  if (headingBlocks.length === 0) {
+    return existingCandidates;
+  }
+
+  // Map each heading block to a section signal match
+  type HeadingCandidate = { type: PacketSubdocumentType; label: string; page: number; headingText: string; publishable: boolean; sensitivityHint?: string; score: number };
+  const headingMatches: HeadingCandidate[] = [];
+
+  for (const block of headingBlocks) {
+    const normalized = block.text.trim();
+    for (const signal of SECTION_SIGNALS) {
+      let score = 0;
+      for (const pat of signal.strongPatterns) {
+        if (pat.test(normalized)) { score = Math.max(score, 0.9); break; }
+      }
+      if (score === 0) {
+        for (const pat of signal.weakPatterns) {
+          if (pat.test(normalized)) { score = Math.max(score, 0.5); break; }
+        }
+      }
+      if (score >= 0.5) {
+        headingMatches.push({
+          type: signal.type,
+          label: signal.label,
+          page: block.page,
+          headingText: normalized,
+          publishable: signal.publishable,
+          sensitivityHint: signal.sensitivityHint,
+          score,
+        });
+        break; // first matching signal wins per block
+      }
+    }
+  }
+
+  if (headingMatches.length === 0) {
+    return existingCandidates;
+  }
+
+  // Build a map of best structured-heading candidate per type
+  const byType = new Map<PacketSubdocumentType, HeadingCandidate>();
+  for (const match of headingMatches) {
+    const existing = byType.get(match.type);
+    if (!existing || match.score > existing.score) {
+      byType.set(match.type, match);
+    }
+  }
+
+  // Merge: structured candidates improve or add to existing markdown-derived candidates
+  const result = existingCandidates.map((c) => {
+    const structured = byType.get(c.type);
+    if (!structured) return c;
+
+    // Build page range around the detected heading page
+    const rawPages = [structured.page];
+    const enrichedPages = buildPageRange(rawPages, totalPages ?? structuredResult.totalPages ?? null);
+
+    return {
+      ...c,
+      // Upgrade page numbers if structured is more precise (non-null)
+      pageNumbers: enrichedPages.length > 0 ? enrichedPages : c.pageNumbers,
+      // Upgrade heading hint if structured heading text is cleaner
+      sectionHeadingHint: c.sectionHeadingHint ?? structured.headingText,
+      // Structured source boosts confidence slightly
+      confidence: Math.min(1, Math.max(c.confidence, structured.score)),
+    };
+  });
+
+  // Add any types found by structured headings that were NOT in existing candidates
+  const existingTypes = new Set(existingCandidates.map((c) => c.type));
+  for (const [type, structured] of byType.entries()) {
+    if (!existingTypes.has(type)) {
+      const rawPages = [structured.page];
+      const pageNumbers = buildPageRange(rawPages, totalPages ?? structuredResult.totalPages ?? null);
+      result.push({
+        type,
+        label: structured.label,
+        confidence: structured.score,
+        publishable: structured.publishable,
+        sectionHeadingHint: structured.headingText,
+        pageRangeHint: null,
+        sensitivityHint: structured.sensitivityHint ?? null,
+        charOffsetHint: null,
+        pageNumbers: pageNumbers.length > 0 ? pageNumbers : null,
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Build a set of heading strings from structured data heading blocks.
+ * Used to enrich `bundleHint.sectionHeadings` with more precise heading text
+ * than what markdown parsing can provide.
+ */
+export function extractStructuredHeadingStrings(
+  structuredResult: AdobeStructuredResult | null | undefined,
+  maxHeadings = 6,
+): string[] {
+  if (!structuredResult?.ok) return [];
+  const headings = structuredResult.allBlocks
+    .filter((b) => b.isHeading && b.text.trim().length > 3)
+    .map((b) => b.text.trim())
+    // Deduplicate
+    .filter((h, i, arr) => arr.indexOf(h) === i)
+    .slice(0, maxHeadings);
+  return headings;
 }

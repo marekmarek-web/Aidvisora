@@ -29,7 +29,13 @@ import {
   runAdvisorDocumentSummaryForAdvisorLlm,
 } from "@/lib/ai/ai-review-llm-postprocess";
 import { getAiReviewPromptId } from "@/lib/ai/prompt-model-registry";
-import { segmentDocumentPacket } from "@/lib/ai/document-packet-segmentation";
+import {
+  segmentDocumentPacket,
+  enrichCandidatesFromStructuredHeadings,
+  extractStructuredHeadingStrings,
+} from "@/lib/ai/document-packet-segmentation";
+import type { StructuredSourceHint } from "@/lib/ai/contract-understanding-pipeline";
+import { buildPageMapFromStructuredData } from "@/lib/adobe/structured-data-parser";
 import { applyCanonicalNormalizationToEnvelope } from "@/lib/ai/life-insurance-canonical-normalizer";
 import {
   orchestrateSubdocumentExtraction,
@@ -195,10 +201,10 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     processingStage: "extracting",
   }).catch(() => {});
 
-  // ── Pre-extraction: Packet segmentation (Phase 2) ─────────────────────────
-  // Run segmentation BEFORE the main pipeline so the extraction trace can
-  // include bundle hints. The packetMeta is also used post-extraction in the
-  // canonical normaliser and orchestrator.
+  // ── Pre-extraction: Packet segmentation + structured data fetch ───────────
+  // Both run BEFORE the main pipeline so that:
+  // 1. Bundle hints improve extraction-time routing.
+  // 2. Adobe structured data can replace markdown as core documentText source.
   const earlyPacketSegmentation = segmentDocumentPacket(
     adobePreprocessResult?.markdownContent ?? "",
     adobePreprocessResult?.pageCountEstimate ?? null,
@@ -206,18 +212,49 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
   );
   const earlyPacketMeta = earlyPacketSegmentation.packetMeta;
 
-  // Build bundle hint from pre-extraction segmentation for extraction-time routing.
+  // Fetch Adobe structured data early so it can power core extraction.
+  // Also used later in subdocument orchestration (reused, not re-fetched).
+  const earlyAdobeStructured = await fetchAdobeStructuredDataByStoragePath(storagePath).catch(() => null);
+  const earlyStructuredResult = earlyAdobeStructured?.structured ?? null;
+
+  // Enrich markdown-derived candidates with precise page numbers from structured headings.
+  const enrichedCandidates = enrichCandidatesFromStructuredHeadings(
+    earlyPacketMeta.subdocumentCandidates,
+    earlyStructuredResult,
+    earlyAdobeStructured?.pageCount ?? adobePreprocessResult?.pageCountEstimate ?? null,
+  );
+
+  // Build structured source hint: full concatenated page text as preferred documentText.
+  // When available and non-trivial, this replaces markdown hint in core extraction.
+  let structuredSource: StructuredSourceHint | null = null;
+  if (earlyStructuredResult?.ok && earlyStructuredResult.totalPages > 0) {
+    const structuredPageMap = buildPageMapFromStructuredData(earlyStructuredResult);
+    const structuredFullText = Object.values(structuredPageMap).join("\n\n--- page break ---\n\n").trim();
+    if (structuredFullText.length > 200) {
+      structuredSource = {
+        fullText: structuredFullText,
+        pageCount: earlyStructuredResult.totalPages,
+        traceSource: "adobe_structured_pages",
+      };
+    }
+  }
+
+  // Build bundle hint — now enriched with structured heading strings.
+  const structuredHeadings = extractStructuredHeadingStrings(earlyStructuredResult, 6);
+  const markdownHeadings = enrichedCandidates
+    .filter((c) => c.sectionHeadingHint)
+    .map((c) => c.sectionHeadingHint!)
+    .slice(0, 4);
+  const combinedHeadings = [...new Set([...structuredHeadings, ...markdownHeadings])].slice(0, 6);
+
   const bundleHint: BundleHint | null = earlyPacketMeta.isBundle
     ? {
         isBundle: true,
         primarySubdocumentType: earlyPacketMeta.primarySubdocumentType,
-        candidateTypes: earlyPacketMeta.subdocumentCandidates.map((c) => c.type),
-        sectionHeadings: earlyPacketMeta.subdocumentCandidates
-          .filter((c) => c.sectionHeadingHint)
-          .map((c) => c.sectionHeadingHint!)
-          .slice(0, 4),
+        candidateTypes: enrichedCandidates.map((c) => c.type),
+        sectionHeadings: combinedHeadings,
         hasSensitiveAttachment: earlyPacketMeta.hasSensitiveAttachment,
-        hasInvestmentSection: earlyPacketMeta.subdocumentCandidates.some(
+        hasInvestmentSection: enrichedCandidates.some(
           (c) => c.type === "investment_section",
         ),
       }
@@ -228,6 +265,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     preprocessMeta,
     sourceFileName: path.basename(storagePath),
     bundleHint,
+    structuredSource,
   });
   const pipelineDurationMs = Date.now() - pipelineStartedAt;
 
@@ -298,7 +336,8 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     try {
       // Resolve physical page-level text map for exact_pages / adobe_structured isolation.
       // Priority: Adobe structured > DB-stored > markdown rebuild.
-      const [storedMapResult, markdownMapWithSource, adobeStructured] = await Promise.all([
+      // earlyAdobeStructured was already fetched before the pipeline — reuse it here.
+      const [storedMapResult, markdownMapWithSource] = await Promise.all([
         fetchPageTextMapByStoragePath(storagePath, tenantId),
         Promise.resolve(
           buildPageTextMapFromMarkdown(
@@ -307,14 +346,13 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
             true, // returnSource flag
           ) as { map: Record<number, string>; source: string }
         ),
-        fetchAdobeStructuredDataByStoragePath(storagePath),
       ]);
 
       const { pageTextMap: resolvedPageTextMap, traceSource, structuredResult } = resolvePageTextMap(
         storedMapResult,
         markdownMapWithSource.map,
         markdownMapWithSource.source,
-        adobeStructured,
+        earlyAdobeStructured,  // reuse pre-fetched structured data
       );
 
       const orchResult = await orchestrateSubdocumentExtraction(
