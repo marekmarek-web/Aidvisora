@@ -55,7 +55,7 @@ import { FundLibrarySettings } from "@/app/portal/setup/FundLibrarySettings";
 
 const TABS = [
   { id: "osobni", label: "Osobní údaje", keywords: ["osobní", "údaje", "fakturace", "heslo", "zabezpečení", "2fa", "rychlé", "demo"] },
-  { id: "profil", label: "Profil poradce", keywords: ["profil", "poradce", "vizitka", "licence"] },
+  { id: "profil", label: "Profil poradce", keywords: ["profil", "poradce", "vizitka"] },
   { id: "tym", label: "Tým", keywords: ["tým", "člen", "pozvat"] },
   { id: "fakturace", label: "Fakturace a Tarif", keywords: ["fakturace", "tarif", "platba", "faktura"] },
   { id: "notifikace", label: "Notifikace", keywords: ["notifikace", "email", "push", "rezervace", "rezervační", "odkaz", "veřejn"] },
@@ -145,13 +145,6 @@ const INTEGRATIONS: IntegrationCard[] = [
   { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet.", category: "calendar", icon: GmailLogo },
   { id: "resend", name: "Resend (E-mail)", description: "Bleskové odesílání transakčních a notifikačních e-mailů klientům.", category: "communication", icon: ResendIcon },
   { id: "openai-gpt", name: "OpenAI GPT Mini", description: "AI asistent pro sumarizaci schůzek, generování e-mailů a extrakci dat.", category: "ai", icon: OpenAIIcon },
-];
-
-// Placeholder licenses (UI only)
-const MOCK_LICENSES = [
-  { name: "Vázaný zástupce – Pojištění", status: "valid" as const, expiry: "12. 05. 2027" },
-  { name: "Vázaný zástupce – Úvěry", status: "valid" as const, expiry: "08. 11. 2026" },
-  { name: "Vázaný zástupce – Investice", status: "expiring" as const, expiry: "15. 04. 2026" },
 ];
 
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1";
@@ -1144,7 +1137,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         {/* Tab: Profil poradce */}
         {activeTab === "profil" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in duration-300">
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-12">
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-6 sm:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
                   <div className="relative group flex-shrink-0 mx-auto md:mx-0">
@@ -1209,29 +1202,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       placeholder="Pomáhám klientům budovat majetek..."
                     />
                   </div>
-                </div>
-              </div>
-            </div>
-            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-                  <h3 className="font-black text-[color:var(--wp-text)]">Licence a Oprávnění ČNB</h3>
-                </div>
-                <div className="p-4 space-y-3">
-                  {MOCK_LICENSES.map((lic, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 flex items-start gap-3">
-                      <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lic.status === "valid" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
-                        {lic.status === "valid" ? <CheckCircle size={12} strokeWidth={3} /> : <AlertCircle size={12} strokeWidth={3} />}
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-[color:var(--wp-text)] leading-tight mb-1">{lic.name}</h4>
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${lic.status === "valid" ? "text-[color:var(--wp-text-tertiary)]" : "text-amber-600"}`}>Platnost do: {lic.expiry}</p>
-                      </div>
-                    </div>
-                  ))}
-                  <a href="https://jerrs.cnb.cz/apljerrsdad/JERRS.WEB09.DIRECT_FIND?p_lang=cz" target="_blank" rel="noopener noreferrer" className="w-full py-3 mt-2 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]">
-                    Vyhledat v registru ČNB
-                  </a>
                 </div>
               </div>
             </div>
