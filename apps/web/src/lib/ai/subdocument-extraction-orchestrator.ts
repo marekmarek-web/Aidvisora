@@ -23,6 +23,14 @@
 import { createResponseStructured, createAiReviewResponseFromPrompt } from "@/lib/openai";
 import { getAiReviewPromptId } from "./prompt-model-registry";
 import { buildAiReviewExtractionPromptVariables } from "./ai-review-prompt-variables";
+import { sliceSectionTextForType, type SectionTextWindow } from "./section-text-slicer";
+import {
+  inferFidelityFromContext,
+  pickByFidelity,
+  mergeInvestmentField,
+  buildSectionFidelitySummary,
+  type SectionFidelitySummary,
+} from "./extraction-evidence-fidelity";
 import type { DocumentReviewEnvelope } from "./document-review-types";
 import type {
   PacketMeta,
@@ -42,11 +50,11 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SubdocumentSectionOutcome =
-  | { type: "health_questionnaire"; result: HealthSectionExtractionOutput; confidence: number }
+  | { type: "health_questionnaire"; result: HealthSectionExtractionOutput; confidence: number; fidelity?: SectionFidelitySummary | null }
   | { type: "aml_fatca_heuristic"; detected: boolean; pepFlag: boolean | null; confidence: number }
   | { type: "modelation_lifecycle_patch"; previousLifecycle: string | null | undefined; patched: boolean }
   | { type: "payment_section_detected"; confidence: number }
-  | { type: "investment_section"; result: InvestmentSectionExtractionOutput; confidence: number }
+  | { type: "investment_section"; result: InvestmentSectionExtractionOutput; confidence: number; fidelity?: SectionFidelitySummary | null }
   | { type: "skipped"; reason: string };
 
 export type SubdocumentOrchestrationResult = {
@@ -58,6 +66,8 @@ export type SubdocumentOrchestrationResult = {
   mutationCount: number;
   /** Non-fatal warnings raised during orchestration. */
   warnings: string[];
+  /** Section-level fidelity summaries, keyed by candidate type. */
+  fidelitySummaries?: Record<string, SectionFidelitySummary>;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -112,11 +122,21 @@ async function runHealthSectionExtractionPass(
   candidates: PacketSubdocumentCandidate[],
   envelope: DocumentReviewEnvelope,
   warnings: string[],
+  totalPages?: number | null,
 ): Promise<SubdocumentSectionOutcome> {
   const healthCandidates = candidatesByType(candidates, "health_questionnaire", 0.4);
   if (healthCandidates.length === 0) {
     return { type: "skipped", reason: "no_health_candidates_above_threshold" };
   }
+
+  // Narrow the text to the health section window
+  const sectionWindow: SectionTextWindow = sliceSectionTextForType(
+    markdownText,
+    candidates,
+    "health_questionnaire",
+    totalPages,
+  );
+  const extractionText = sectionWindow.text;
 
   const confidence = Math.max(...healthCandidates.map((c) => c.confidence));
 
@@ -125,11 +145,11 @@ async function runHealthSectionExtractionPass(
     let output: HealthSectionExtractionOutput | null = null;
 
     if (promptId) {
-      // Prompt Builder path — env-managed prompt version
+      // Prompt Builder path — uses narrowed section text
       const variables = buildAiReviewExtractionPromptVariables({
-        documentText: markdownText,
+        documentText: extractionText,
         classificationReasons: candidates.map((c) => `${c.type}:${c.label}`),
-        adobeSignals: "",
+        adobeSignals: sectionWindow.narrowed ? `section_slice:${sectionWindow.method}` : "",
         filename: "bundle_document",
       });
       const pr = await createAiReviewResponseFromPrompt(
@@ -148,8 +168,8 @@ async function runHealthSectionExtractionPass(
         output = null;
       }
     } else {
-      // Fallback: hardcoded prompt + structured output
-      const prompt = buildHealthSectionExtractionPrompt(markdownText, candidates);
+      // Fallback: hardcoded prompt + structured output — uses narrowed section text
+      const prompt = buildHealthSectionExtractionPrompt(extractionText, candidates);
       const response = await createResponseStructured<HealthSectionExtractionOutput>(
         prompt,
         HEALTH_SECTION_EXTRACTION_SCHEMA,
@@ -163,7 +183,12 @@ async function runHealthSectionExtractionPass(
 
     if (!output) output = null;
     if (!output || !output.healthSectionPresent) {
-      return { type: "health_questionnaire", result: { healthSectionPresent: false, questionnaireEntries: [] }, confidence };
+      return {
+        type: "health_questionnaire",
+        result: { healthSectionPresent: false, questionnaireEntries: [] },
+        confidence,
+        fidelity: buildSectionFidelitySummary(sectionWindow, markdownText.length, 0, 0),
+      };
     }
 
     // Merge into envelope.healthQuestionnaires — additive
@@ -205,7 +230,20 @@ async function runHealthSectionExtractionPass(
     // Patch envelope
     envelope.healthQuestionnaires = mergedEntries.length > 0 ? mergedEntries : null;
 
-    return { type: "health_questionnaire", result: output, confidence };
+    const fidelity = buildSectionFidelitySummary(
+      sectionWindow,
+      markdownText.length,
+      mergedEntries.length,
+      0,
+    );
+
+    if (sectionWindow.narrowed) {
+      warnings.push(
+        `health_section_narrowed:method=${sectionWindow.method},coverage=${Math.round(fidelity.coverageRatio * 100)}%`,
+      );
+    }
+
+    return { type: "health_questionnaire", result: output, confidence, fidelity };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     warnings.push(`health_section_extraction_failed: ${msg.slice(0, 100)}`);
@@ -386,6 +424,7 @@ async function runInvestmentSectionExtractionPass(
   candidates: PacketSubdocumentCandidate[],
   envelope: DocumentReviewEnvelope,
   warnings: string[],
+  totalPages?: number | null,
 ): Promise<SubdocumentSectionOutcome> {
   const invCandidates = candidatesByType(candidates, "investment_section", 0.35);
   if (invCandidates.length === 0) {
@@ -394,16 +433,25 @@ async function runInvestmentSectionExtractionPass(
 
   const confidence = Math.max(...invCandidates.map((c) => c.confidence));
 
+  // Narrow to investment section window — explicit_section fidelity when narrowed
+  const sectionWindow: SectionTextWindow = sliceSectionTextForType(
+    markdownText,
+    candidates,
+    "investment_section",
+    totalPages,
+  );
+  const extractionText = sectionWindow.text;
+
   try {
     const promptId = getAiReviewPromptId("investmentSectionExtraction");
     let output: InvestmentSectionExtractionOutput | null = null;
 
     if (promptId) {
-      // Prompt Builder path — env-managed prompt version
+      // Prompt Builder path — uses narrowed section text
       const variables = buildAiReviewExtractionPromptVariables({
-        documentText: markdownText,
+        documentText: extractionText,
         classificationReasons: candidates.map((c) => `${c.type}:${c.label}`),
-        adobeSignals: "",
+        adobeSignals: sectionWindow.narrowed ? `section_slice:${sectionWindow.method}` : "",
         filename: "bundle_document",
       });
       const pr = await createAiReviewResponseFromPrompt(
@@ -422,8 +470,8 @@ async function runInvestmentSectionExtractionPass(
         output = null;
       }
     } else {
-      // Fallback: hardcoded prompt + structured output
-      const prompt = buildInvestmentSectionExtractionPrompt(markdownText, candidates);
+      // Fallback: hardcoded prompt + structured output — uses narrowed section text
+      const prompt = buildInvestmentSectionExtractionPrompt(extractionText, candidates);
       const response = await createResponseStructured<InvestmentSectionExtractionOutput>(
         prompt,
         INVESTMENT_SECTION_EXTRACTION_SCHEMA,
@@ -440,13 +488,18 @@ async function runInvestmentSectionExtractionPass(
         type: "investment_section",
         result: { investmentSectionPresent: false, productType: "unknown" },
         confidence,
+        fidelity: buildSectionFidelitySummary(sectionWindow, markdownText.length, 0, 0),
       };
     }
 
-    // Merge investmentData — only enrich, never overwrite contractual with modeled
+    // Merge investmentData — use evidence fidelity to decide which value wins.
+    // Section-local (narrowed) extraction has explicit_section fidelity; full-doc has global_context_guess.
+    const sectionFidelity = sectionWindow.narrowed ? "explicit_section" : "cross_section_inference";
+    const globalFidelity = "global_context_guess";
+
     const existing = envelope.investmentData;
     if (!existing) {
-      // No investmentData yet — populate fully
+      // No investmentData yet — populate fully from section extraction
       envelope.investmentData = {
         strategy: output.strategy ?? null,
         funds: (output.funds ?? []).map((f) => ({ name: f.name, allocation: f.allocation ?? null })),
@@ -456,33 +509,34 @@ async function runInvestmentSectionExtractionPass(
         notes: buildInvestmentNotes(output),
       };
     } else {
-      // Enrich selectively — don't overwrite contractual data with modeled
-      const canOverwrite = !existing.isContractualData || output.isContractualData;
-      if (canOverwrite) {
-        if (!existing.strategy && output.strategy) {
-          envelope.investmentData = { ...existing, strategy: output.strategy };
-        }
-        if ((!existing.funds || existing.funds.length === 0) && (output.funds ?? []).length > 0) {
-          envelope.investmentData = {
-            ...(envelope.investmentData ?? existing),
-            funds: (output.funds ?? []).map((f) => ({ name: f.name, allocation: f.allocation ?? null })),
-          };
-        }
-        if (!existing.investmentAmount && output.investmentAmount) {
-          envelope.investmentData = {
-            ...(envelope.investmentData ?? existing),
-            investmentAmount: output.investmentAmount,
-          };
-        }
-        // Upgrade to contractual if the section result is contractual
-        if (output.isContractualData && !existing.isContractualData) {
-          envelope.investmentData = {
-            ...(envelope.investmentData ?? existing),
-            isContractualData: true,
-            isModeledData: false,
-          };
-        }
+      // Enrich using fidelity-aware merge: section-local (narrowed) wins over existing global extraction
+      const updatedInvestmentData = { ...existing };
+
+      updatedInvestmentData.strategy = pickByFidelity(
+        existing.strategy,
+        existing.isContractualData ? "explicit_subdocument" : globalFidelity,
+        output.strategy,
+        output.isContractualData ? sectionFidelity : "inferred_section",
+      ) ?? existing.strategy ?? null;
+
+      if (!existing.funds?.length && output.funds?.length) {
+        updatedInvestmentData.funds = output.funds.map((f) => ({ name: f.name, allocation: f.allocation ?? null }));
       }
+
+      updatedInvestmentData.investmentAmount = pickByFidelity(
+        existing.investmentAmount ? String(existing.investmentAmount) : null,
+        existing.isContractualData ? "explicit_subdocument" : globalFidelity,
+        output.investmentAmount ? String(output.investmentAmount) : null,
+        output.isContractualData ? sectionFidelity : "inferred_section",
+      ) ? (output.investmentAmount ?? existing.investmentAmount) : existing.investmentAmount;
+
+      // Upgrade contractual flag if section result is contractual
+      if (output.isContractualData && !existing.isContractualData) {
+        updatedInvestmentData.isContractualData = true;
+        updatedInvestmentData.isModeledData = false;
+      }
+
+      envelope.investmentData = updatedInvestmentData;
     }
 
     // Enrich paymentData with investmentPremium if missing
@@ -527,7 +581,17 @@ async function runInvestmentSectionExtractionPass(
       }
     }
 
-    return { type: "investment_section", result: output, confidence };
+    const explicitCount = [output.strategy, output.investmentAmount].filter(Boolean).length +
+      (output.funds?.length ?? 0);
+    const fidelity = buildSectionFidelitySummary(sectionWindow, markdownText.length, explicitCount, 0);
+
+    if (sectionWindow.narrowed) {
+      warnings.push(
+        `investment_section_narrowed:method=${sectionWindow.method},coverage=${Math.round(fidelity.coverageRatio * 100)}%`,
+      );
+    }
+
+    return { type: "investment_section", result: output, confidence, fidelity };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     warnings.push(`investment_section_extraction_failed: ${msg.slice(0, 100)}`);
@@ -569,6 +633,8 @@ export async function orchestrateSubdocumentExtraction(
   markdownText: string,
   packetMeta: PacketMeta,
   envelope: DocumentReviewEnvelope,
+  /** Optional total page count from preprocess meta — improves page-range-based text narrowing. */
+  totalPages?: number | null,
 ): Promise<SubdocumentOrchestrationResult> {
   const warnings: string[] = [];
 
@@ -598,32 +664,43 @@ export async function orchestrateSubdocumentExtraction(
   const paymentOutcome = runPaymentSectionDetection(candidates, envelope);
   outcomes.push(paymentOutcome);
 
-  // 4. Health questionnaire targeted extraction (async LLM call — only when detected)
+  // 4. Health questionnaire targeted extraction (async LLM call — uses narrowed section text)
   const healthOutcome = await runHealthSectionExtractionPass(
     markdownText,
     candidates,
     envelope,
     warnings,
+    totalPages,
   );
   outcomes.push(healthOutcome);
 
-  // 5. Investment / DIP / DPS targeted extraction (async LLM call — only when detected)
+  // 5. Investment / DIP / DPS targeted extraction (async LLM call — uses narrowed section text)
   const investmentOutcome = await runInvestmentSectionExtractionPass(
     markdownText,
     candidates,
     envelope,
     warnings,
+    totalPages,
   );
   outcomes.push(investmentOutcome);
 
   // 6. Ensure envelope.packetMeta is up-to-date (may have been partially applied earlier)
   envelope.packetMeta = packetMeta;
 
+  // Aggregate fidelity summaries for tracing
+  const fidelitySummaries: Record<string, SectionFidelitySummary> = {};
+  for (const o of outcomes) {
+    if ((o.type === "health_questionnaire" || o.type === "investment_section") && o.fidelity) {
+      fidelitySummaries[o.type] = o.fidelity;
+    }
+  }
+
   return {
     orchestrationRan: true,
     sectionOutcomes: outcomes,
     mutationCount: countMutations(outcomes),
     warnings,
+    fidelitySummaries: Object.keys(fidelitySummaries).length > 0 ? fidelitySummaries : undefined,
   };
 }
 

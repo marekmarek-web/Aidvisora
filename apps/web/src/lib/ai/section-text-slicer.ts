@@ -1,0 +1,292 @@
+/**
+ * Section Text Slicer
+ *
+ * Narrows the full document markdown text to the relevant portion for a given
+ * PacketSubdocumentCandidate. This ensures focused extraction passes (health,
+ * investment, AML, etc.) work against the actual section text rather than the
+ * full bundle — improving evidence fidelity and avoiding cross-section bleed.
+ *
+ * Slicing strategies (tried in order, first success wins):
+ * 1. Heading-based:    find sectionHeadingHint in text → extract to next major boundary
+ * 2. Char-offset:      use charOffsetHint.start → expand forward to next boundary
+ * 3. Page-range:       estimate chars/page from pageRangeHint + total text length
+ * 4. Full text:        fallback — return unchanged (no narrowing possible)
+ *
+ * The returned SectionTextWindow carries:
+ * - text:        the narrowed text (or full text if no narrowing possible)
+ * - method:      which strategy was used
+ * - startOffset: character offset of window start in original text
+ * - endOffset:   character offset of window end in original text
+ * - narrowed:    true when the window is a genuine subset of the full text
+ */
+
+import type { PacketSubdocumentCandidate } from "./document-packet-types";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type SectionTextMethod = "heading" | "char_offset" | "page_range" | "full_text";
+
+export interface SectionTextWindow {
+  /** Narrowed text for the section (may equal full text when narrowing fails). */
+  text: string;
+  /** Strategy used to produce this window. */
+  method: SectionTextMethod;
+  /** Start character offset in the original document text. */
+  startOffset: number;
+  /** End character offset in the original document text. */
+  endOffset: number;
+  /** True when window covers < 90% of the original text. */
+  narrowed: boolean;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Maximum characters to include in a narrowed section window. Keeps prompts lean. */
+const MAX_SECTION_CHARS = 18_000;
+
+/** Minimum section length — if slice would be shorter, fall back to full text. */
+const MIN_SECTION_CHARS = 400;
+
+/**
+ * Patterns that mark a "major boundary" (next section start).
+ * When searching forward from a section start, stop at the first match.
+ */
+const MAJOR_BOUNDARY_PATTERNS: RegExp[] = [
+  // Numbered section headings: "2.", "3.", "II.", etc.
+  /^\s{0,4}(?:\d{1,2}\.|[IVX]{1,4}\.)\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/m,
+  // All-caps Czech headings on their own line (≥6 chars)
+  /^\s{0,4}[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]{6,}/m,
+  // Markdown h2/h3 headings
+  /^#{2,3}\s+/m,
+  // Horizontal rules / page separators
+  /^[-─═]{5,}$/m,
+  // Adobe Extract page-break markers
+  /\f|---\s*\n|<page[-_]break\s*\/>/,
+  // Czech section labels known to start new subdocuments
+  /^\s{0,4}(?:zdravotní\s+dotazník|AML\s+formulář|platební\s+instrukce|pojistná\s+smlouva|prohlášení\s+pojistníka)/im,
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Find the next major section boundary in `text` after `startOffset`.
+ * Returns the index of the boundary, or text.length if none found.
+ * Searches at most `searchWindow` characters ahead to avoid O(n²) behaviour.
+ */
+function findNextMajorBoundary(text: string, startOffset: number, searchWindow = 25_000): number {
+  const searchArea = text.slice(startOffset, startOffset + searchWindow);
+  let earliest = searchArea.length;
+  for (const pat of MAJOR_BOUNDARY_PATTERNS) {
+    const re = new RegExp(pat.source, pat.flags.includes("m") ? pat.flags : pat.flags + "m");
+    const m = re.exec(searchArea);
+    if (m && m.index > 100 && m.index < earliest) {
+      // Require at least 100 chars before the boundary to avoid single-line matches
+      earliest = m.index;
+    }
+  }
+  return startOffset + earliest;
+}
+
+/**
+ * Find the position of a heading/text hint within `text` (case-insensitive).
+ * Returns the character index, or null if not found.
+ */
+function findHintPosition(text: string, hint: string): number | null {
+  const needle = hint
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\s+/g, "\\s+");
+  const re = new RegExp(needle, "i");
+  const m = re.exec(
+    text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""),
+  );
+  return m ? m.index : null;
+}
+
+/**
+ * Attempt heading-based slice.
+ * Scans backward from the hint position to capture the full heading line,
+ * then slices forward to the next major boundary.
+ */
+function sliceByHeading(fullText: string, headingHint: string): SectionTextWindow | null {
+  const pos = findHintPosition(fullText, headingHint);
+  if (pos === null) return null;
+
+  // Walk backward to start of the heading line
+  const lineStart = fullText.lastIndexOf("\n", pos - 1) + 1;
+  const end = Math.min(findNextMajorBoundary(fullText, lineStart), lineStart + MAX_SECTION_CHARS);
+
+  if (end - lineStart < MIN_SECTION_CHARS) return null;
+
+  return {
+    text: fullText.slice(lineStart, end),
+    method: "heading",
+    startOffset: lineStart,
+    endOffset: end,
+    narrowed: end - lineStart < fullText.length * 0.9,
+  };
+}
+
+/**
+ * Attempt char-offset-based slice.
+ * Expands the candidate's charOffsetHint.start backward to a line boundary,
+ * then forward to the next major boundary.
+ */
+function sliceByCharOffset(fullText: string, charOffset: { start: number; end: number }): SectionTextWindow | null {
+  const lineStart = fullText.lastIndexOf("\n", charOffset.start - 1) + 1;
+  const end = Math.min(findNextMajorBoundary(fullText, lineStart), lineStart + MAX_SECTION_CHARS);
+
+  if (end - lineStart < MIN_SECTION_CHARS) return null;
+
+  return {
+    text: fullText.slice(lineStart, end),
+    method: "char_offset",
+    startOffset: lineStart,
+    endOffset: end,
+    narrowed: end - lineStart < fullText.length * 0.9,
+  };
+}
+
+/**
+ * Attempt page-range-based slice.
+ * Parses "5-12", "~9+", "3-" style hints and estimates char offsets.
+ * Uses total text length and estimated total pages to calculate chars-per-page.
+ */
+function sliceByPageRange(
+  fullText: string,
+  pageRangeHint: string,
+  estimatedTotalPages: number,
+): SectionTextWindow | null {
+  // Parse hint formats: "5-12", "~9+", "5+", "3-8"
+  const m = pageRangeHint.replace(/~/g, "").match(/^(\d+)(?:[-+](\d+))?/);
+  if (!m) return null;
+
+  const startPage = parseInt(m[1], 10);
+  const endPage = m[2] ? parseInt(m[2], 10) : startPage + 5; // default 5-page window
+
+  if (startPage <= 0 || estimatedTotalPages <= 0) return null;
+
+  const charsPerPage = fullText.length / estimatedTotalPages;
+  const startOffset = Math.max(0, Math.floor((startPage - 1) * charsPerPage) - 200);
+  const endOffset = Math.min(fullText.length, Math.ceil(endPage * charsPerPage) + 200);
+
+  if (endOffset - startOffset < MIN_SECTION_CHARS) return null;
+
+  const sliced = fullText.slice(startOffset, Math.min(endOffset, startOffset + MAX_SECTION_CHARS));
+  return {
+    text: sliced,
+    method: "page_range",
+    startOffset,
+    endOffset: startOffset + sliced.length,
+    narrowed: sliced.length < fullText.length * 0.9,
+  };
+}
+
+// ─── Estimate total pages from text ──────────────────────────────────────────
+
+function estimatePageCountFromText(text: string): number {
+  const pageBreakMatches = (text.match(/---\s*\n|<page[-_]break\s*\/>|\f/g) ?? []).length;
+  if (pageBreakMatches > 0) return pageBreakMatches + 1;
+  const stranaMatches = text.match(/strana\s+\d+\s+z\s+(\d+)/gi) ?? [];
+  for (const sm of stranaMatches) {
+    const nm = sm.match(/z\s+(\d+)/i);
+    if (nm) return parseInt(nm[1], 10);
+  }
+  // Rough fallback: ~3200 chars per page
+  return Math.max(1, Math.round(text.length / 3200));
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns the narrowed text window for a given candidate section.
+ *
+ * @param fullText    The complete markdown text of the document.
+ * @param candidate   The detected subdocument candidate.
+ * @param totalPages  Optional total page count (from preprocess meta). Used to
+ *                    refine page-range-based slicing when available.
+ */
+export function sliceSectionText(
+  fullText: string,
+  candidate: PacketSubdocumentCandidate,
+  totalPages?: number | null,
+): SectionTextWindow {
+  const fallback: SectionTextWindow = {
+    text: fullText.slice(0, MAX_SECTION_CHARS * 2),
+    method: "full_text",
+    startOffset: 0,
+    endOffset: Math.min(fullText.length, MAX_SECTION_CHARS * 2),
+    narrowed: false,
+  };
+
+  if (fullText.length < MIN_SECTION_CHARS) return fallback;
+
+  // Strategy 1: heading-based
+  if (candidate.sectionHeadingHint) {
+    const result = sliceByHeading(fullText, candidate.sectionHeadingHint);
+    if (result?.narrowed) return result;
+  }
+
+  // Strategy 2: char offset
+  if (candidate.charOffsetHint) {
+    const result = sliceByCharOffset(fullText, candidate.charOffsetHint);
+    if (result?.narrowed) return result;
+  }
+
+  // Strategy 3: page range
+  if (candidate.pageRangeHint) {
+    const pages = totalPages ?? estimatePageCountFromText(fullText);
+    const result = sliceByPageRange(fullText, candidate.pageRangeHint, pages);
+    if (result?.narrowed) return result;
+  }
+
+  return fallback;
+}
+
+/**
+ * Slices all candidates of a given type and returns the union of their windows.
+ * When multiple candidates of the same type exist (e.g. multiple health sections),
+ * their windows are merged into one contiguous range.
+ */
+export function sliceSectionTextForType(
+  fullText: string,
+  candidates: PacketSubdocumentCandidate[],
+  type: PacketSubdocumentCandidate["type"],
+  totalPages?: number | null,
+): SectionTextWindow {
+  const matching = candidates.filter((c) => c.type === type);
+  if (matching.length === 0) {
+    return {
+      text: fullText.slice(0, MAX_SECTION_CHARS * 2),
+      method: "full_text",
+      startOffset: 0,
+      endOffset: Math.min(fullText.length, MAX_SECTION_CHARS * 2),
+      narrowed: false,
+    };
+  }
+
+  if (matching.length === 1) {
+    return sliceSectionText(fullText, matching[0], totalPages);
+  }
+
+  // Multiple candidates: collect all windows and merge
+  const windows = matching.map((c) => sliceSectionText(fullText, c, totalPages));
+  const narrowedWindows = windows.filter((w) => w.narrowed);
+
+  if (narrowedWindows.length === 0) return windows[0];
+
+  const minStart = Math.min(...narrowedWindows.map((w) => w.startOffset));
+  const maxEnd = Math.min(
+    Math.max(...narrowedWindows.map((w) => w.endOffset)),
+    minStart + MAX_SECTION_CHARS,
+  );
+
+  return {
+    text: fullText.slice(minStart, maxEnd),
+    method: narrowedWindows[0].method,
+    startOffset: minStart,
+    endOffset: maxEnd,
+    narrowed: maxEnd - minStart < fullText.length * 0.9,
+  };
+}

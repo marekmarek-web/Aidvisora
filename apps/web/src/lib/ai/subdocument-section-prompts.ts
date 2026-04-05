@@ -68,10 +68,22 @@ export function buildHealthSectionExtractionPrompt(
     .join("\n");
 
   const trimmedText = documentText.trim();
+  const isNarrowedWindow = trimmedText.length < 20_000;
+  const contextNote = isNarrowedWindow
+    ? "Obdržíš POUZE relevantní část dokumentu (sekci zdravotního dotazníku, ne celý dokument)."
+    : "Obdržíš celý text dokumentu.";
+
   return `Jsi extrakční systém pro zdravotní dotazníky ve finančních dokumentech.
 
 Tvůj úkol: Identifikuj a extrahuj POUZE zdravotní dotazníky nebo zdravotní prohlášení.
 Ignoruj smlouvu, investiční sekci, AML formuláře a platební instrukce.
+
+${contextNote}
+
+DŮLEŽITÉ PRAVIDLO EVIDENCE:
+Uváděj POUZE hodnoty explicitně přítomné v textu. Nepokládej domněnky o zdravotním stavu
+ani nevypočítávej chybějící hodnoty z jiných sekcí. Pokud je jméno osoby uvedeno explicitně
+v zdravotní sekci, uveď ho. Pokud není, nech participantName prázdný.
 
 ${hintLines ? `Detekované sekce v dokumentu:\n${hintLines}\n` : ""}
 
@@ -80,7 +92,7 @@ Pro každou nalezenou osobu v zdravotní sekci vyplň:
 - participantRole: role osoby (pojistník / pojištěný / dítě / jiný)
 - questionnairePresent: true pokud je zdravotní dotazník pro tuto osobu přítomný
 - sectionSummary: stručný popis (1–2 věty) co sekce obsahuje, bez zdravotních detailů
-- medicallyRelevantFlags: obecné příznaky důležité pro upisování (max 5 položek), NIK DY konkrétní diagnózy
+- medicallyRelevantFlags: obecné příznaky důležité pro upisování (max 5 položek), NIKDY konkrétní diagnózy
 
 Pokud zdravotní sekce není přítomna, vrať healthSectionPresent: false a prázdné pole.
 Vrátíš pouze JSON dle schema. Žádný markdown, žádný komentář.
@@ -212,10 +224,24 @@ export function buildInvestmentSectionExtractionPrompt(
     .join("\n");
 
   const trimmedText = documentText.trim();
+  const isNarrowedWindow = trimmedText.length < 20_000;
+  const contextNote = isNarrowedWindow
+    ? "Obdržíš POUZE relevantní část dokumentu (investiční sekci, ne celý dokument)."
+    : "Obdržíš celý text dokumentu.";
+
   return `Jsi extrakční systém specializovaný na investiční produkty, DIP a DPS.
 
 Tvůj úkol: Identifikuj a extrahuj POUZE investiční data — strategie, fondy, alokace, investiční prémie, typ produktu.
 Ignoruj smlouvu pojištění osob, zdravotní dotazníky a AML formuláře.
+
+${contextNote}
+
+DŮLEŽITÉ PRAVIDLO EVIDENCE:
+Extrahuj VÝHRADNĚ hodnoty, které jsou explicitně uvedeny v textu před tebou.
+Nepokus se odvodit investiční strategii z jiné sekce dokumentu.
+Neodhaduj výši prémie z pojistné smlouvy — zadej pouze, pokud je v investiční sekci explicitně zmíněna.
+Pokud hodnota v textu chybí, nech pole null nebo prázdné.
+isContractualData = true POUZE pokud jde o podepsanou smlouvu (ne ilustraci, ne modelaci).
 
 ${hintLines ? `Detekované investiční sekce:\n${hintLines}\n` : ""}
 
@@ -228,15 +254,15 @@ Rozlišuj přesně:
 
 Extrahuj:
 - productType: typ produktu (DIP | DPS | PP | investment_fund | investment_life_insurance | investment_service_agreement | unknown)
-- strategy: název investiční strategie, pokud je uveden
-- funds: seznam fondů s alokací (%), pokud jsou uvedeny; může být prázdné
-- investmentAmount: celková investiční částka, pokud je uvedena
+- strategy: název investiční strategie, pokud je uveden EXPLICITNĚ v textu
+- funds: seznam fondů s alokací (%), pokud jsou uvedeny EXPLICITNĚ; může být prázdné
+- investmentAmount: celková investiční částka, pokud je uvedena EXPLICITNĚ
 - investmentPremium: investiční prémie nebo část pojistného jdoucí do investic
 - provider: název instituce / pojišťovny / penzijní společnosti
 - contractNumber: číslo smlouvy nebo DIP/DPS účtu, pokud je k dispozici
 - productName: název produktu
 - isModeledData: true pokud jsou hodnoty z modelace nebo ilustrace (nezávazné)
-- isContractualData: true pokud jsou hodnoty smluvní (závazné)
+- isContractualData: true pokud jsou hodnoty smluvní (závazné, z podepsané smlouvy)
 - notes: stručná poznámka (max 1–2 věty), pokud je relevantní
 
 Pokud investiční sekce není přítomna, vrať investmentSectionPresent: false.

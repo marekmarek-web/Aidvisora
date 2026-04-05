@@ -229,6 +229,40 @@ function scoreSignal(signal: SectionSignal, text: string): number {
   return Math.min(score, 1.0);
 }
 
+/**
+ * Locate the first character offset where this signal fires in the text.
+ * Returns null if no strong or weak pattern matches.
+ */
+function locateSignalFirstMatch(signal: SectionSignal, text: string): number | null {
+  for (const p of signal.strongPatterns) {
+    const re = new RegExp(p.source, p.flags.includes("g") ? p.flags : p.flags + "g");
+    const m = re.exec(text);
+    if (m) return m.index;
+  }
+  for (const p of signal.weakPatterns) {
+    const re = new RegExp(p.source, p.flags.includes("g") ? p.flags : p.flags + "g");
+    const m = re.exec(text);
+    if (m) return m.index;
+  }
+  return null;
+}
+
+/**
+ * Find the heading line around the given character offset.
+ * Scans backwards up to 300 chars for the start of the current line,
+ * then returns that line if it looks like a section heading.
+ */
+function findHeadingNearOffset(text: string, offset: number): string | null {
+  const lineStart = text.lastIndexOf("\n", offset - 1) + 1;
+  const lineEnd = text.indexOf("\n", offset);
+  const line = text.slice(lineStart, lineEnd === -1 ? undefined : lineEnd).trim();
+  // Accept as heading: 5–100 chars, not just numbers/symbols
+  if (line.length >= 5 && line.length <= 100 && /[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽa-záčďéěíňóřšťúůýž]/.test(line)) {
+    return line;
+  }
+  return null;
+}
+
 function detectExplicitIndex(text: string): boolean {
   return EXPLICIT_INDEX_PATTERNS.some((p) => p.test(text));
 }
@@ -320,21 +354,28 @@ export function segmentDocumentPacket(
     detectionMethods.push("explicit_index");
   }
 
-  // 2. Score each known section signal
+  // 2. Score each known section signal and locate its first occurrence for text narrowing
   for (const signal of SECTION_SIGNALS) {
     const score = scoreSignal(signal, text);
     if (score >= 0.2) {
       if (!detectionMethods.includes("keyword_scan")) {
         detectionMethods.push("keyword_scan");
       }
+      const firstMatchOffset = locateSignalFirstMatch(signal, text);
+      const headingHint =
+        firstMatchOffset !== null ? findHeadingNearOffset(text, firstMatchOffset) : null;
+
       const candidate: PacketSubdocumentCandidate = {
         type: signal.type,
         label: signal.label,
         confidence: score,
         publishable: signal.publishable,
-        sectionHeadingHint: null,
+        sectionHeadingHint: headingHint,
         pageRangeHint: tryExtractPageRangeHint(text, signal.type),
         sensitivityHint: signal.sensitivityHint ?? null,
+        charOffsetHint: firstMatchOffset !== null
+          ? { start: Math.max(0, firstMatchOffset - 200), end: firstMatchOffset }
+          : null,
       };
       candidates.push(candidate);
     }

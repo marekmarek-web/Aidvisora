@@ -298,6 +298,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
         adobePreprocessResult?.markdownContent ?? "",
         packetMeta,
         data,
+        adobePreprocessResult?.pageCountEstimate ?? null,
       );
       if (orchResult.orchestrationRan) {
         subdocOrchestrationRoute = `${subdocOrchestrationRoute}|mutations:${orchResult.mutationCount}`;

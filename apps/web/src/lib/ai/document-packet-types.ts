@@ -38,10 +38,37 @@ export interface PacketSubdocumentCandidate {
   publishable: boolean;
   /** Page range hint if detectable from heading/index — "1-8", "9+", etc. */
   pageRangeHint?: string | null;
-  /** Section heading or first significant line. */
+  /** Section heading or first significant line detected in the text. */
   sectionHeadingHint?: string | null;
   /** Sensitivity hint for this section. */
   sensitivityHint?: string | null;
+  /**
+   * Character offset range of this section within the full markdown text.
+   * Populated during segmentation when a signal match can be located.
+   * Used by section-text-slicer for narrowing the extraction input.
+   */
+  charOffsetHint?: { start: number; end: number } | null;
+}
+
+// ─── Evidence fidelity levels ──────────────────────────────────────────────────────────
+
+/**
+ * Priority order for extraction evidence, highest to lowest.
+ * Used to decide which value wins when merging section-local vs global extraction results.
+ */
+export const EVIDENCE_FIDELITY_LEVELS = [
+  "explicit_section",       // extracted from the dedicated, narrowed section text (highest)
+  "explicit_subdocument",   // extracted from a recognized subdocument (not narrowed but typed)
+  "inferred_section",       // inferred within the same section (e.g. calculated from other fields)
+  "cross_section_inference",// inferred from data in a different section
+  "global_context_guess",   // low-confidence guess from full document context (lowest)
+] as const;
+
+export type EvidenceFidelityLevel = (typeof EVIDENCE_FIDELITY_LEVELS)[number];
+
+/** Returns true if level A is strictly higher fidelity than level B. */
+export function isHigherFidelity(a: EvidenceFidelityLevel, b: EvidenceFidelityLevel): boolean {
+  return EVIDENCE_FIDELITY_LEVELS.indexOf(a) < EVIDENCE_FIDELITY_LEVELS.indexOf(b);
 }
 
 export interface PacketMeta {
