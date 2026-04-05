@@ -20,6 +20,7 @@ import {
   type MessageAttachmentRow,
 } from "@/app/actions/messages";
 import { getContact, getContactsList, type ContactRow } from "@/app/actions/contacts";
+import { getOpenOpportunitiesList } from "@/app/actions/pipeline";
 import { generateAdvisorChatContextSummary, generateAdvisorChatReplyDraft } from "@/app/actions/advisor-chat-ai";
 import type { AdvisorChatAiSummary } from "@/lib/advisor-chat/advisor-chat-ai-types";
 import { queryKeys } from "@/lib/query-keys";
@@ -32,6 +33,8 @@ import { ConversationContextPanel } from "./components/ConversationContextPanel"
 import { NewAdvisorActionsMenu } from "./components/NewAdvisorActionsMenu";
 import { ChatModal } from "./components/ChatModal";
 import { ChatQuickScheduleOverlay } from "./components/ChatQuickScheduleOverlay";
+import { ChatQuickTaskOverlay } from "./components/ChatQuickTaskOverlay";
+import { buildChatTaskDescriptionSeed, buildChatTaskSuggestedTitle } from "./components/chat-task-defaults";
 import { formatLastActiveLabel, presenceFromLastMessageAt } from "./components/chat-format";
 import { mergeConversationsWithSelection } from "./components/merge-conversations-with-selection";
 
@@ -90,11 +93,27 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
   const [aiDraftError, setAiDraftError] = useState<string | null>(null);
   const [aiDraftText, setAiDraftText] = useState("");
+  const [crmSnapshotNonce, setCrmSnapshotNonce] = useState(0);
 
-  const { data: scheduleContacts = [], isPending: scheduleContactsLoading } = useQuery({
+  const pickerContactsEnabled =
+    (meetingSheetOpen || taskSheetOpen) && Boolean(selectedContactId);
+  const { data: pickerContacts = [], isPending: pickerContactsLoading } = useQuery({
     queryKey: queryKeys.contacts.list(),
     queryFn: getContactsList,
-    enabled: meetingSheetOpen && Boolean(selectedContactId),
+    enabled: pickerContactsEnabled,
+    staleTime: 120_000,
+  });
+
+  const { data: taskOpportunities = [], isPending: taskOpportunitiesLoading } = useQuery({
+    queryKey: queryKeys.pipeline.openListWithContact,
+    queryFn: async () => {
+      try {
+        return await getOpenOpportunitiesList();
+      } catch {
+        return [] as Awaited<ReturnType<typeof getOpenOpportunitiesList>>;
+      }
+    },
+    enabled: taskSheetOpen && Boolean(selectedContactId),
     staleTime: 120_000,
   });
 
@@ -203,7 +222,7 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     return () => {
       cancelled = true;
     };
-  }, [selectedContactId, msgs.length]);
+  }, [selectedContactId, msgs.length, crmSnapshotNonce]);
 
   useEffect(() => {
     if (!selectedContactId) {
@@ -427,6 +446,22 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     [...msgs].reverse().find((m) => m.senderType === "client")?.body?.trim() ||
     activeConv?.lastMessage?.trim() ||
     "";
+
+  const suggestedTaskTitle = useMemo(
+    () =>
+      buildChatTaskSuggestedTitle(
+        contactName || "Kontakt",
+        lastClientSnippet,
+        aiSummary,
+        crmSnapshot?.primaryOpportunity?.title?.trim() ?? null,
+      ),
+    [contactName, lastClientSnippet, aiSummary, crmSnapshot?.primaryOpportunity?.title],
+  );
+
+  const taskDescriptionSeed = useMemo(
+    () => buildChatTaskDescriptionSeed(contactName || "Kontakt", lastClientSnippet),
+    [contactName, lastClientSnippet],
+  );
 
   const refreshAiSummary = useCallback(() => {
     if (!selectedContactId) return;
@@ -682,27 +717,26 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
           contactId={selectedContactId}
           suggestedTitle={suggestedMeetingTitle}
           opportunityId={scheduleOpportunityId}
-          contacts={scheduleContacts}
-          contactsLoading={scheduleContactsLoading}
+          contacts={pickerContacts}
+          contactsLoading={pickerContactsLoading}
         />
       ) : null}
 
-      <ChatModal
-        open={taskSheetOpen}
-        title="Vytvořit úkol"
-        onClose={() => setTaskSheetOpen(false)}
-        footer={
-          <button
-            type="button"
-            onClick={() => setTaskSheetOpen(false)}
-            className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white hover:opacity-95"
-          >
-            Zavřít
-          </button>
-        }
-      >
-        <p>Formulář úkolu vázaný na klienta doplníme v další iteraci.</p>
-      </ChatModal>
+      {selectedContactId ? (
+        <ChatQuickTaskOverlay
+          open={taskSheetOpen}
+          onClose={() => setTaskSheetOpen(false)}
+          contactId={selectedContactId}
+          suggestedTitle={suggestedTaskTitle}
+          descriptionSeed={taskDescriptionSeed}
+          initialOpportunityId={scheduleOpportunityId}
+          contacts={pickerContacts}
+          contactsLoading={pickerContactsLoading}
+          opportunities={taskOpportunities}
+          opportunitiesLoading={taskOpportunitiesLoading}
+          onTaskCreated={() => setCrmSnapshotNonce((n) => n + 1)}
+        />
+      ) : null}
     </div>
   );
 }
