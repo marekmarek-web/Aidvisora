@@ -14,7 +14,7 @@ export type PortalShellBadgeCounts = {
   notifications: number;
 };
 
-export function getBadgesCacheTag(userId: string) {
+function getBadgesCacheTag(userId: string) {
   return `badges-${userId}`;
 }
 
