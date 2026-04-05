@@ -172,8 +172,7 @@ function DashboardBentoSkeleton({ visibleOrder }: { visibleOrder: WidgetId[] }) 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 pb-8">
       {visibleOrder.map((id) => {
         const isAiAssistant = id === "aiAssistant";
-        const isNotes = id === "notes";
-        const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " md:col-span-2" : ""}`;
+        const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant ? " md:col-span-2" : ""}`;
         return (
           <div
             key={id}
@@ -669,8 +668,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
         {visibleOrder.map((id) => {
           const isAiAssistant = id === "aiAssistant";
           const isMyTasks = id === "myTasks";
-          const isNotes = id === "notes";
-          const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant || isNotes ? " lg:col-span-2" : ""}`;
+          const colSpan = `${WIDGET_COL_SPAN[id]}${isAiAssistant ? " lg:col-span-2" : ""}`;
           const dragClass = `${draggedWidgetId === id ? "opacity-60 scale-[0.98]" : ""} ${draggedWidgetId && draggedWidgetId !== id ? "border-dashed border-indigo-200" : ""}`;
 
           if (isAiAssistant) {

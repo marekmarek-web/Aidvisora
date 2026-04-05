@@ -139,7 +139,8 @@ export const WIDGET_COL_SPAN: Record<WidgetId, string> = {
   businessPlan: "lg:col-span-4",
   clientCare: "lg:col-span-4",
   financialAnalyses: "lg:col-span-4",
-  notes: "lg:col-span-12",
+  /** Vždy celá šířka řádku (1/2/12 sloupců podle breakpointu gridu). */
+  notes: "col-span-full",
 };
 
 /** Top-edge "envelope" border color per section (4px bar) */
