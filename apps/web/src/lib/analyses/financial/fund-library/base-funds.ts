@@ -1,56 +1,13 @@
 import { DEFAULT_FUND_AVAILABILITY, type BaseFund } from "./types";
 import { BATCH_A_BASE_FUNDS } from "./base-funds-batch-a";
+import { BATCH_B_BASE_FUNDS } from "./base-funds-batch-b";
 
 type BaseFundInput = Omit<BaseFund, "availability">;
 
 /**
- * Katalog base fondů: Batch A (reálná data) + placeholdery pro zbývající klíče v1.
+ * Katalog base fondů: Batch A + B (reálná data) + placeholdery pro zbývající klíče v1.
  */
 const BASE_FUNDS_PLACEHOLDERS_RAW: readonly BaseFundInput[] = [
-  {
-    baseFundKey: "fidelity_target_2040",
-    displayName: "Fidelity Target 2040",
-    provider: "Fidelity International",
-    category: "Smíšený (lifecycle)",
-    isActive: true,
-    sources: [
-      { kind: "internal", label: "Factsheet (doplnit)" },
-      { kind: "factsheet", label: "Výrobce (doplnit URL)" },
-    ],
-    assets: { logoPath: "/logos/fidelity.png" },
-    notes: ["Legacy productKey: fidelity2040"],
-    performance: null,
-  },
-  {
-    baseFundKey: "investika_realitni_fond",
-    displayName: "Investika realitní fond",
-    provider: "Investika",
-    category: "Nemovitostní",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Factsheet (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "monetika",
-    displayName: "Monetika",
-    provider: "—",
-    category: "Dluhopisy / hotovost (placeholder)",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Specifikace produktu (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
-  {
-    baseFundKey: "efektika",
-    displayName: "Efektika",
-    provider: "—",
-    category: "Smíšené (placeholder)",
-    isActive: true,
-    sources: [{ kind: "internal", label: "Specifikace produktu (doplnit)" }],
-    assets: {},
-    performance: null,
-  },
   {
     baseFundKey: "conseq_globalni_akciovy_ucastnicky",
     displayName: "Conseq Globální akciový účastnický",
@@ -164,4 +121,8 @@ const BASE_FUNDS_PLACEHOLDERS: readonly BaseFund[] = BASE_FUNDS_PLACEHOLDERS_RAW
   availability: DEFAULT_FUND_AVAILABILITY,
 }));
 
-export const BASE_FUNDS: readonly BaseFund[] = [...BATCH_A_BASE_FUNDS, ...BASE_FUNDS_PLACEHOLDERS];
+export const BASE_FUNDS: readonly BaseFund[] = [
+  ...BATCH_A_BASE_FUNDS,
+  ...BATCH_B_BASE_FUNDS,
+  ...BASE_FUNDS_PLACEHOLDERS,
+];
