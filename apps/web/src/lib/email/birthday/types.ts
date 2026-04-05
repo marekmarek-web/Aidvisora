@@ -2,8 +2,8 @@ export type BirthdayEmailTheme = "premium_dark" | "birthday_gif";
 
 export const BIRTHDAY_TEMPLATE_LOG_KEY = "birthday_greeting_v2";
 
-/** Soubory v `public/` — PNG má přednost (kvalita); GIF jako fallback. */
-export const BIRTHDAY_DECOR_IMAGE_FILENAMES = ["birthday-freepik.png", "birthday-freepik.gif"] as const;
+/** Soubory v `public/` — hlavní animovaný obrázek je GIF; PNG jen záloha. */
+export const BIRTHDAY_DECOR_IMAGE_FILENAMES = ["birthday-freepik.gif", "birthday-freepik.png"] as const;
 
 export function isBirthdayEmailTheme(v: string | null | undefined): v is BirthdayEmailTheme {
   return v === "premium_dark" || v === "birthday_gif";
