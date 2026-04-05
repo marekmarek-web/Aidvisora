@@ -36,7 +36,7 @@ export function renderSidebar(ctx: SectionCtx): string {
   ];
 
   const investments = (data.investments ?? []).filter(
-    (inv: InvestmentEntry) => inv.amount > 0 && inv.productKey !== 'algoimperial',
+    (inv: InvestmentEntry) => inv.amount > 0,
   );
   investments.forEach((inv: InvestmentEntry) => {
     const name = FUND_DETAILS[inv.productKey]?.name ?? inv.productKey;

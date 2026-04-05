@@ -73,7 +73,7 @@ function computeFV(inv: InvestmentEntry): number {
 export function renderProductDetails(ctx: SectionCtx): string {
   const { data, theme } = ctx;
   const investments = (data.investments ?? []).filter(
-    (inv: InvestmentEntry) => inv.amount > 0 && inv.productKey !== 'algoimperial',
+    (inv: InvestmentEntry) => inv.amount > 0,
   );
 
   return investments.map((inv: InvestmentEntry) => {

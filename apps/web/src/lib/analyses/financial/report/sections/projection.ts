@@ -129,7 +129,7 @@ export function renderProjection(ctx: SectionCtx): string {
   const num = nextSection(ctx.sectionCounter);
 
   const investments = (data.investments ?? []).filter(
-    (inv: InvestmentEntry) => inv.amount > 0 && inv.productKey !== 'algoimperial',
+    (inv: InvestmentEntry) => inv.amount > 0,
   );
 
   let totalFV = 0;

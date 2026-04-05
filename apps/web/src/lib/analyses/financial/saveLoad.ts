@@ -129,7 +129,9 @@ export function mergeLoadedState(
 
   if (Array.isArray(p.investments)) {
     const loaded = p.investments as FinancialAnalysisData['investments'];
-    data.investments = loaded.filter((inv) => inv.productKey !== 'imperial');
+    data.investments = loaded.filter(
+      (inv) => inv.productKey !== 'imperial' && inv.productKey !== 'algoimperial',
+    );
   }
 
   if (p.insurance && typeof p.insurance === 'object') {

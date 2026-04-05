@@ -7,7 +7,7 @@ export function renderCompanyPortfolio(ctx: SectionCtx): string {
   const num = nextSection(ctx.sectionCounter);
 
   const companyInvestments = ((data as unknown as Record<string, unknown>).companyInvestments as typeof data.investments | undefined ?? []).filter(
-    (inv) => inv.amount > 0 && inv.productKey !== 'algoimperial',
+    (inv) => inv.amount > 0,
   );
 
   if (companyInvestments.length === 0) {

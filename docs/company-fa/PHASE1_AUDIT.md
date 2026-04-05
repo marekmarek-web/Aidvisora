@@ -16,7 +16,7 @@ Firemní analýza má **4 kroky** (stepper + `step-content`, ř. cca 178–586).
 |------|---------|------------------------|--------|
 | 1    | step-1  | **Firma**             | Společnost: název, IČO, obor (select), počet zaměstnanců, 3. kategorie, průměrná hrubá mzda, závislost TOP klient (%). Jednatelé: dynamický seznam (přidat/odebrat), každý s jménem, věkem, podílem %, manžel/ka, děti, typ příjmu (zaměstnanec/OSVČ), čistý měsíční příjem, osobní rezervy, hlavní cíl (bezpečí/renta/daňová optimalizace), benefity (DPS/DIP/IŽP, částka), platí ze svého, staré penzijní. KPI: zaměstnanci, mzdový fond/měs, 3. kat., rizikovost. |
 | 2    | step-2  | **Finance**           | Výnosy a zisk: roční tržby, roční zisk/EBITDA. Rezervy a závazky: hotovostní rezerva, měsíční splátka úvěrů/leasingů. Inflační varování (3,5 % z rezervy). KPI: tržby, zisk, cash runway (měs.), dluhová služba/rok. |
-| 3    | step-3  | **Benefity & Rizika** | **Záložky:** (1) Benefity – DPS/DIP/IŽP, příspěvek na osobu/měs a počet zaměstnanců, roční náklad; příspěvky jednatelům měsíčně; kalkulačka mzda vs benefit (gross, odvody, náklad firmy, čisté); úspora zaměstnanci, daňová úspora majitelů; převod na firmu (paysFromOwn). (2) Pojištění firmy – 6 rizik (Majetek, Přerušení, Odpovědnost, D&O, Flotila, Kyber), u prvních tří limit a stáří smlouvy; skóre rizik 0/6, gaps. (3) Pojištění jednatele – smrt, invalidita, stupeň invalidity, státní invalidní důchod, PN/den; doporučené zajištění (6 % renty), OSVČ varování. (4) Investice – profil (dynamický/vyvážený/konzervativní), konzervativní režim; jednorázové (AlgoImperial, CREIF, PENTA, ATRIS), pravidelné (iShares, Fidelity 2040), penzijní (Conseq); FV a souhrn. |
+| 3    | step-3  | **Benefity & Rizika** | **Záložky:** (1) Benefity – DPS/DIP/IŽP, příspěvek na osobu/měs a počet zaměstnanců, roční náklad; příspěvky jednatelům měsíčně; kalkulačka mzda vs benefit (gross, odvody, náklad firmy, čisté); úspora zaměstnanci, daňová úspora majitelů; převod na firmu (paysFromOwn). (2) Pojištění firmy – 6 rizik (Majetek, Přerušení, Odpovědnost, D&O, Flotila, Kyber), u prvních tří limit a stáří smlouvy; skóre rizik 0/6, gaps. (3) Pojištění jednatele – smrt, invalidita, stupeň invalidity, státní invalidní důchod, PN/den; doporučené zajištění (6 % renty), OSVČ varování. (4) Investice – profil (dynamický/vyvážený/konzervativní), konzervativní režim; jednorázové (CREIF, PENTA, ATRIS), pravidelné (iShares, Fidelity 2040), penzijní (Conseq); FV a souhrn. |
 | 4    | step-4  | **Výstup**            | Celkové hodnocení (verdict + semafor). Orientační hodnota firmy (profit×5). TOP 3 příležitosti (benefity úspora, investice volného CF, daňová optimalizace). TOP 3 rizika (klíčová osoba, odpovědnost/D&O, koncentrace klientů). Rychlé doporučení. Tip na audit (staré smlouvy, nízké limity). Další kroky do 30 dní (3 položky). Skóre spolupráce (5 kritérií + celkové skóre). Tlačítko „Stáhnout PDF“. |
 
 **DOM / rendering:** přepínání v `updateView()` (ř. 1053–1068): třídy `stepper-item` active/completed, `step-content.active`, tlačítka Další/Zpět, na posledním kroku text „Generovat PDF“.
@@ -127,7 +127,7 @@ Každý prvek:
 
 | Pole        | Typ    | Význam |
 |-------------|--------|--------|
-| productKey  | string | imperial \| creif \| atris \| penta \| ishares \| fidelity2040 \| conseq |
+| productKey  | string | creif \| atris \| penta \| ishares \| fidelity2040 \| conseq |
 | type        | string | `lump` \| `monthly` \| `pension` |
 | amount      | number | Částka (Kč nebo Kč/měs) |
 | years       | number | Horizont (roky) |
@@ -188,7 +188,7 @@ Konstanty: 1.34 (náklad mzdy), 0.035 (inflace), 0.67 (čistá/z hrubé), 1.338 
 - **importData(e)** (ř. 1578–1594): FileReader → JSON.parse → `migrateImportedData(raw)` → `sessionStorage.setItem('fp_import_data', JSON.stringify(migrated))` → `location.reload()`. Při init (ř. 793–799) pokud `fp_import_data` v sessionStorage, parse a `this.data = migrateImportedData(parsed)`, pak removeItem a pokračovat.
 - **migrateImportedData(raw)** (ř. 1596–1635):
   - Pokud existuje `director` a ne `directors`: převést na jeden prvek v `directors[]` (name, age z birthYear, share, hasFamily→hasSpouse, incomeType, netIncome, savings, goal; benefits prázdné, paysFromOwn false, hasOldPension false).
-  - Doplnit `investment`, `strategy`, `investments` (7 položek), `directorIns` (včetně invalidityDegree, statePensionMonthly), `directors` (array), `risks` (plný tvar).
+  - Doplnit `investment`, `strategy`, `investments` (6 položek), `directorIns` (včetně invalidityDegree, statePensionMonthly), `directors` (array), `risks` (plný tvar).
   - risks: property/interruption/liability musí být objekt { has, limit, contractYears }; pokud jsou boolean, převést na objekt s limit 0, contractYears 0. director, fleet, cyber default false.
 
 Pro Fázi 2: payload = normalizovaný objekt (migrateImportedData bez side-effectů); ukládat do DB, ne do JSON/local storage jako finální cíl.
@@ -201,9 +201,9 @@ Pro Fázi 2: payload = normalizovaný objekt (migrateImportedData bez side-effec
 - **Benefity – typy:** DPS (doplňkové penzijní spoření), PP (penzijní připojištění), DIP (dlouhodobý investiční produkt), IŽP (životní pojištění).
 - **Rizika (firemní pojištění):** property (Majetek), interruption (Přerušení provozu), liability (Odpovědnost), director (D&O), fleet (Flotila), cyber (Kyber). První tři mají detail: limit (Kč), contractYears.
 - **Investiční profil:** dynamic 9 %, balanced 7 %, conservative 5 % (INV_STRATEGY_RATES). conservativeMode sníží rate o 2 %.
-- **Fondy (investments):** productKey + type + default annualRate: imperial lump 12 %, creif lump 6 %, atris lump 6 %, penta lump 9 % (volba 10 %), ishares monthly 12 %, fidelity2040 monthly 7 %, conseq pension 9,5 %. getProductName(key) → zobrazený název (AlgoImperial, CREIF, ATRIS, PENTA, iShares MSCI World, Fidelity Target 2040, Conseq Globální).
+- **Fondy (investments):** productKey + type + default annualRate: creif lump 6 %, atris lump 6 %, penta lump 9 % (volba 10 %), ishares monthly 12 %, fidelity2040 monthly 7 %, conseq pension 9,5 %. getProductName(key) → zobrazený název (CREIF, ATRIS, PENTA, iShares MSCI World, Fidelity Target 2040, Conseq Globální).
 - **PDF_FUNDS** (ř. 1795–1803): pro každý fond key, name, badge, badgeColor, risk, goal, horizon, minInvest, currency, liquidity, description, strategy, benefits[], representation, morningstar, zlataKoruna.
-- **FUND_LOGOS:** AlgoImperial, Creif, ATRIS, Fidelity, iShares, PENTA, Conseq (pro data URL v PDF, getAssetUrl('/images/'+key+'.png')).
+- **FUND_LOGOS:** Creif, ATRIS, Fidelity, iShares, PENTA, Conseq (pro data URL v PDF, getAssetUrl('/images/'+key+'.png')).
 
 Tyto seznamy mají být v modulu konstant (např. companyFaConstants.ts, companyFaFunds.ts) bez změny hodnot oproti HTML.
 

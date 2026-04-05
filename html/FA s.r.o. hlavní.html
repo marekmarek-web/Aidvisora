@@ -471,13 +471,6 @@
                                     </h4>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                            <div class="flex justify-between mb-3"><span class="font-bold text-slate-800">AlgoImperial</span><span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">12% p.a.</span></div>
-                                            <div class="space-y-2">
-                                                <div class="relative"><input type="number" id="inv-imperial-amount" class="form-input w-full pl-3 pr-10 py-2 text-sm" placeholder=""><span class="absolute right-3 top-2 text-xs text-slate-400">Kč</span></div>
-                                                <div class="relative"><input type="number" id="inv-imperial-years" class="form-input w-full pl-3 pr-10 py-2 text-sm" placeholder=""><span class="absolute right-3 top-2 text-xs text-slate-400">roků</span></div>
-                                            </div>
-                                        </div>
-                                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                             <div class="flex justify-between mb-3"><span class="font-bold text-slate-800">CREIF</span><span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">6% p.a.</span></div>
                                             <div class="space-y-2">
                                                 <div class="relative"><input type="number" id="inv-creif-amount" class="form-input w-full pl-3 pr-10 py-2 text-sm" placeholder=""><span class="absolute right-3 top-2 text-xs text-slate-400">Kč</span></div>
@@ -746,7 +739,7 @@
             constructor() {
                 this.step = 1;
                 this.totalSteps = 4;
-                this.FUND_LOGOS = ['AlgoImperial', 'Creif', 'ATRIS', 'Fidelity', 'iShares', 'PENTA', 'Conseq'];
+                this.FUND_LOGOS = ['Creif', 'ATRIS', 'Fidelity', 'iShares', 'PENTA', 'Conseq'];
                 this.logoCache = {};
                 this.data = {
                     company: { name: '', ico: '', industry: 'office', employees: 0, cat3: 0, avgWage: 0, topClient: 0 },
@@ -764,7 +757,6 @@
                 this.data.investment = { goal: 'renta', targetAmount: 0, targetRentaMonthly: 0, horizonYears: 10, currentAssets: 0, strategy: 'balanced' };
                 this.data.strategy = { profile: 'balanced', conservativeMode: false };
                 this.data.investments = [
-                    { productKey: 'imperial', type: 'lump', amount: 0, years: 10, annualRate: 0.12, computed: { fv: 0 } },
                     { productKey: 'creif', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                     { productKey: 'atris', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                     { productKey: 'penta', type: 'lump', amount: 0, years: 10, annualRate: 0.09, computed: { fv: 0 } },
@@ -774,7 +766,7 @@
                 ];
                 this.INV_STRATEGY_RATES = { conservative: 0.05, balanced: 0.07, dynamic: 0.09 };
                 this.INV_FUNDS = [
-                    { name: 'AlgoImperial', yieldPct: 12 }, { name: 'iShares MSCI World', yieldPct: 12 },
+                    { name: 'iShares MSCI World', yieldPct: 12 },
                     { name: 'Penta Public', yieldPct: 9.5 }, { name: 'CREIF / ATRIS', yieldPct: 6 }, { name: 'Fidelity 2040', yieldPct: 7 }
                 ];
                 this._defaultDirector = function() {
@@ -840,7 +832,6 @@
             ensureInvestmentsAndStrategy() {
                 if (!this.data.strategy) this.data.strategy = { profile: 'balanced', conservativeMode: false };
                 var defaultInvs = [
-                    { productKey: 'imperial', type: 'lump', amount: 0, years: 10, annualRate: 0.12, computed: { fv: 0 } },
                     { productKey: 'creif', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                     { productKey: 'atris', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                     { productKey: 'penta', type: 'lump', amount: 0, years: 10, annualRate: 0.09, computed: { fv: 0 } },
@@ -848,7 +839,11 @@
                     { productKey: 'fidelity2040', type: 'monthly', amount: 0, years: 20, annualRate: 0.07, computed: { fv: 0 } },
                     { productKey: 'conseq', type: 'pension', amount: 0, years: 30, annualRate: 0.095, computed: { fv: 0 } }
                 ];
-                if (!Array.isArray(this.data.investments) || this.data.investments.length === 0) this.data.investments = defaultInvs;
+                if (!Array.isArray(this.data.investments)) this.data.investments = [];
+                this.data.investments = this.data.investments.filter(function(i) {
+                    return i.productKey !== 'imperial' && i.productKey !== 'algoimperial';
+                });
+                if (this.data.investments.length === 0) this.data.investments = defaultInvs;
             }
 
             updateInvestment(productKey, type, field, value) {
@@ -926,8 +921,6 @@
             bindInvestmentInputs() {
                 var self = this;
                 var map = [
-                    { id: 'inv-imperial-amount', key: 'imperial', type: 'lump', field: 'amount' },
-                    { id: 'inv-imperial-years', key: 'imperial', type: 'lump', field: 'years' },
                     { id: 'inv-creif-amount', key: 'creif', type: 'lump', field: 'amount' },
                     { id: 'inv-creif-years', key: 'creif', type: 'lump', field: 'years' },
                     { id: 'inv-atris-lump-amount', key: 'atris', type: 'lump', field: 'amount' },
@@ -1033,7 +1026,7 @@
             fmt(n) { return n ? Math.round(n).toLocaleString('cs-CZ') + ' Kč' : '—'; }
             fmtShort(n) { if (!n) return '—'; if (n >= 1e6) return (n/1e6).toFixed(1) + ' mil.'; if (n >= 1e3) return Math.round(n/1e3) + ' tis.'; return n.toLocaleString('cs-CZ'); }
             getProductName(key) {
-                var names = { imperial: 'AlgoImperial', creif: 'CREIF', atris: 'ATRIS', penta: 'PENTA', ishares: 'iShares MSCI World', fidelity2040: 'Fidelity Target 2040', conseq: 'Conseq Globální' };
+                var names = { creif: 'CREIF', atris: 'ATRIS', penta: 'PENTA', ishares: 'iShares MSCI World', fidelity2040: 'Fidelity Target 2040', conseq: 'Conseq Globální' };
                 return names[key] || key;
             }
 
@@ -1327,7 +1320,6 @@
                     var el = document.getElementById(id);
                     if (el && item) el.value = (item[field] != null && item[field] !== '') ? item[field] : '';
                 };
-                set('imperial', 'lump', 'amount', 'inv-imperial-amount'); set('imperial', 'lump', 'years', 'inv-imperial-years');
                 set('creif', 'lump', 'amount', 'inv-creif-amount'); set('creif', 'lump', 'years', 'inv-creif-years');
                 set('atris', 'lump', 'amount', 'inv-atris-lump-amount'); set('atris', 'lump', 'years', 'inv-atris-lump-years');
                 set('penta', 'lump', 'amount', 'inv-penta-amount'); set('penta', 'lump', 'years', 'inv-penta-years');
@@ -1605,7 +1597,6 @@
                 if (!data.strategy) data.strategy = { profile: 'balanced', conservativeMode: false };
                 if (!Array.isArray(data.investments) || data.investments.length === 0) {
                     data.investments = [
-                        { productKey: 'imperial', type: 'lump', amount: 0, years: 10, annualRate: 0.12, computed: { fv: 0 } },
                         { productKey: 'creif', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                         { productKey: 'atris', type: 'lump', amount: 0, years: 10, annualRate: 0.06, computed: { fv: 0 } },
                         { productKey: 'penta', type: 'lump', amount: 0, years: 10, annualRate: 0.09, computed: { fv: 0 } },
@@ -1613,6 +1604,11 @@
                         { productKey: 'fidelity2040', type: 'monthly', amount: 0, years: 20, annualRate: 0.07, computed: { fv: 0 } },
                         { productKey: 'conseq', type: 'pension', amount: 0, years: 30, annualRate: 0.095, computed: { fv: 0 } }
                     ];
+                }
+                if (Array.isArray(data.investments)) {
+                    data.investments = data.investments.filter(function(i) {
+                        return i.productKey !== 'imperial' && i.productKey !== 'algoimperial';
+                    });
                 }
                 if (!data.directorIns) data.directorIns = { death: 0, invalidity: 0, sick: 0, invalidityDegree: 3, statePensionMonthly: 0 };
                 if (data.directorIns.invalidityDegree == null) data.directorIns.invalidityDegree = 3;
@@ -1793,7 +1789,6 @@
                             (portfolioRows ? '<table class="table table-5col"><thead><tr><th>Produkt</th><th style="text-align:center">Typ</th><th style="text-align:right">Vklad</th><th style="text-align:center">Výnos</th><th style="text-align:right;color:#0B3A7A">Předpoklad FV</th></tr></thead><tbody>' + portfolioRows + '</tbody><tfoot><tr><td colspan="5" style="padding:3mm;"><div class="total-summary-bar"><strong style="font-size:10pt;color:#0f172a;">CELKEM</strong><div style="display:flex;gap:3mm;"><div class="total-chip"><span class="total-chip-label">Jednorázově:</span><span class="total-chip-value">' + Math.round(totalLump).toLocaleString('cs-CZ') + ' Kč</span></div><div class="total-chip"><span class="total-chip-label">Měsíčně:</span><span class="total-chip-value">' + Math.round(totalMonthly).toLocaleString('cs-CZ') + ' Kč/m</span></div></div><div class="total-fv">' + Math.round(totalFV).toLocaleString('cs-CZ') + ' Kč</div></div></td></tr></tfoot></table>' : '<p style="color:#64748b;">Žádné fondy nebyly vybrány. Vyplňte částky v kroku 3 → Investice.</p>') +
                             '</div>' + ftr(4) + '</section>';
                         var PDF_FUNDS = [
-                            { key:'imperial', name:'AlgoImperial', badge:'Dynamický', badgeColor:'#dc2626', risk:'5/7', goal:'Absolutní výnos', horizon:'5+ let', minInvest:'1 000 000 Kč', currency:'CZK', liquidity:'Měsíční', description:'AlgoImperial je dynamický fond využívající algoritmické strategie pro dosažení absolutního výnosu nezávisle na tržních podmínkách.', strategy:'Fond kombinuje kvantitativní analýzu s aktivním řízením rizika. Využívá pokročilé matematické modely pro identifikaci tržních neefektivit a arbitrážních příležitostí napříč různými třídami aktiv.', benefits:['Nízká korelace s tradičními trhy','Aktivní řízení rizika','Systematický investiční přístup','Diverzifikace portfolia'], representation:'Algoritmické strategie, Futures, Opce', morningstar:0, zlataKoruna:false },
                             { key:'creif', name:'CREIF', badge:'Nemovitostní', badgeColor:'#0B3A7A', risk:'3/7', goal:'Stabilní výnos z nájmů', horizon:'5+ let', minInvest:'1 000 000 Kč', currency:'EUR', liquidity:'Čtvrtletní', description:'CREIF je nemovitostní fond zaměřený na prémiové komerční nemovitosti ve střední Evropě s důrazem na stabilní příjem z nájmů.', strategy:'Fond investuje do kancelářských budov, logistických center a retailových parků v České republice, Polsku a dalších zemích CEE regionu. Důraz je kladen na kvalitní nájemce a dlouhodobé nájemní smlouvy.', benefits:['Stabilní příjem z nájmů','Ochrana proti inflaci','Diverzifikace v rámci CEE','Profesionální správa nemovitostí'], representation:'Kancelářské budovy, Logistická centra, Retail', morningstar:0, zlataKoruna:false },
                             { key:'atris', name:'ATRIS', badge:'Alternativní', badgeColor:'#ea8d00', risk:'4/7', goal:'Diverzifikace & Ochrana', horizon:'7+ let', minInvest:'500 000 Kč', currency:'CZK', liquidity:'Pololetní', description:'ATRIS je alternativní fond investující do energetické infrastruktury a obnovitelných zdrojů energie s cílem dlouhodobého stabilního výnosu.', strategy:'Fond se zaměřuje na projekty v oblasti solární a větrné energie, bioplynové stanice a energetickou infrastrukturu. Investice jsou geograficky diverzifikovány napříč střední a západní Evropou.', benefits:['Ochrana proti inflaci','Stabilní cash flow z provozu','ESG kompatibilní investice','Nízká korelace s akciovými trhy'], representation:'Solární parky, Větrné elektrárny, Bioplyn', morningstar:0, zlataKoruna:false },
                             { key:'penta', name:'PENTA', badge:'Private Equity', badgeColor:'#7c3aed', risk:'4/7', goal:'Růst hodnoty firem', horizon:'7-10 let', minInvest:'1 000 000 Kč', currency:'EUR', liquidity:'Omezená', description:'PENTA je private equity fond zaměřený na akvizice a rozvoj společností v regionu střední a východní Evropy.', strategy:'Fond investuje do etablovaných společností s potenciálem růstu. Aktivně se podílí na strategickém řízení a operativním zlepšování firem v portfoliu. Mezi známé investice patří Dr.Max, Fortuna či Aero Vodochody.', benefits:['Přístup k privátním investicím','Aktivní správa portfoliových firem','Potenciál nadprůměrných výnosů','Zkušený investiční tým'], representation:'Healthcare, Gaming, Aerospace, Retail', morningstar:0, zlataKoruna:false },

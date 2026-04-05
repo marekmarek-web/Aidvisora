@@ -7,7 +7,7 @@ export function renderGoals(ctx: SectionCtx): string {
 
   const goals = data.goals ?? [];
   const investments = (data.investments ?? []).filter(
-    (inv) => inv.amount > 0 && inv.productKey !== 'algoimperial',
+    (inv) => inv.amount > 0,
   );
 
   const totalMonthlyInvestment = investments

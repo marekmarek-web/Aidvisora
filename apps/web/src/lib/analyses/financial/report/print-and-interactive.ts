@@ -17,7 +17,7 @@ export function renderPrintAdvisorChrome(branding: ReportBranding): string {
 
 export function computeReportMonthlyDeposit(data: FinancialAnalysisData): number {
   const invs = (data.investments ?? []).filter(
-    (i: InvestmentEntry) => i.amount > 0 && i.productKey !== 'algoimperial',
+    (i: InvestmentEntry) => i.amount > 0,
   );
   let m = 0;
   for (const inv of invs) {
