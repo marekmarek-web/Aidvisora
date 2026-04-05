@@ -4,6 +4,26 @@ Krátká **release poznámka**: před prvním použitím Fondová knihovna / fro
 
 Hlubší ruční QA: [`fund-library-manual-qa.md`](./fund-library-manual-qa.md).
 
+Inventář assetů (placeholder vs. hotové soubory): [`fund-library-asset-inventory.md`](./fund-library-asset-inventory.md).
+
+---
+
+## Deploy readiness lock (execute plán — fáze 1)
+
+- **Poslední Drizzle migrace pro fondovou knihovnu:** tag `0020_fund_library_settings` v `packages/db/drizzle/meta/_journal.json`. Pro ověření na DB: `SELECT * FROM __drizzle_migrations ORDER BY id;` — musí být řádek obsahující `0020_fund_library_settings`.
+- **Portal + FA schéma:** migrace `0017_portal_fa_schema_sync` je v journal před 0020 — při čistém `pnpm db:migrate` z aktuálního repa proběhne v pořadí.
+- **Portálový chat (zprávy):** tabulky `messages` / `message_attachments` nejsou součástí Drizzle journalu; pokud prostředí používá chat, ověřte nebo aplikujte idempotentní skript [`packages/db/migrations/portal_messages_tables.sql`](../packages/db/migrations/portal_messages_tables.sql).
+- **Poznámka k souborům ve `packages/db/drizzle/`:** mohou existovat číslované `.sql` soubory, které **nejsou** v `_journal.json` (historické nebo mimo hlavní řetězec). Ostrý deploy řiďte výstupem `pnpm db:migrate`, ne ručním výběrem podle názvu souboru.
+
+### Blocker vs. non-blocker (shrnutí)
+
+| Blocker | Non-blocker |
+|---------|-------------|
+| `0020` neaplikovaná na DB, kterou používá app | Placeholder SVG u části fondů |
+| `DATABASE_URL` app ≠ DB po migraci | Batch D (CREIF/ATRIS/Penta) na legacy cestách v `public/report-assets/` |
+| zápis fronty / `fund_library` / FA ukládání → 500 | Textové loga v PDF |
+| PDF route 500 po smoke testu | Drobná kosmetika textů v modalu |
+
 ---
 
 ## Co migrace zavádí
@@ -72,13 +92,6 @@ Spusť na **nasazené** URL s reálným účtem (ideálně Admin + poradce).
 | 4 | **Chci přidat fond:** odeslat požadavek → řádek ve frontě. |
 | 5 | **FA:** investice do povoleného fondu → **uložit** analýzu bez chyby. |
 | 6 | **PDF:** vygenerovat z téže analýzy → soubor se otevře / stáhne bez chyby. |
+| 7 | **Legacy analýza:** otevřít starší uloženou FA → uložit znovu bez chyby; v investicích žádný nový řádek s `alternative` ani „World ETF“ jako nový default (viz unit testy fondové knihovny). |
 
----
-
-## Blocker vs. non-blocker (release)
-
-| Blocker | Non-blocker |
-|---------|--------------|
-| Migrace neproběhla → chyby při uložení fondů / fronty | Placeholder obrázky u části fondů v `public/` |
-| `DATABASE_URL` na app ≠ DB po migraci | Úklid duplicitních `.svg` vedle JPG v `report-assets` |
-| PDF nebo FA 500 po deployi při výše uvedeném smoke | Textové loga v PDF tabulkách (záměr) |
+Kritéria *blocker / non-blocker* jsou v sekci **Deploy readiness lock** výše.

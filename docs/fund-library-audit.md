@@ -2,6 +2,8 @@
 
 Datum: 2026-04-05. Účel: jednorázový přehled před zavedením modulu `apps/web/src/lib/analyses/financial/fund-library/`.
 
+> **Aktualizace po execute plánu (2026-04-05+):** Osobní FA `getDefaultInvestments()` vrací `[]` — nová analýza neinjektuje starý hardcoded seznam. `alternative` není v `FUND_DETAILS` / default investicích; legacy klíče řeší `legacy-fund-key-map.ts` + testy v `fund-library/__tests__/`. Historické řádky § 2–3 níže popisují stav *před* návaznou prací — pro současný deploy viz [`fund-library-deploy.md`](fund-library-deploy.md).
+
 ## 1. Kde je dnes „katalog“ fondů
 
 | Zdroj | Popis |
@@ -13,25 +15,25 @@ Datum: 2026-04-05. Účel: jednorázový přehled před zavedením modulu `apps/
 
 ## 2. Product keys v `FUND_DETAILS` / `FUND_LOGOS` (aktuální)
 
-`creif`, `atris`, `penta`, `ishares`, `alternative`, `fidelity2040`, `conseq`
+`creif`, `atris`, `penta`, `ishares`, `fidelity2040`, `conseq` *(legacy `constants.ts`; kanonická metadata v `fund-library` batch seeds — `alternative` v `FUND_DETAILS` už není)*
 
 ## 3. Default / seed investice (`productKey`)
 
 | Soubor | Poznámka |
 |--------|----------|
-| [`financial/defaultState.ts`](../apps/web/src/lib/analyses/financial/defaultState.ts) | 9 řádků včetně `alternative` |
-| [`company-fa/defaultState.ts`](../apps/web/src/lib/analyses/company-fa/defaultState.ts) | 8 řádků, **bez** `alternative` |
+| [`financial/defaultState.ts`](../apps/web/src/lib/analyses/financial/defaultState.ts) | *Historicky:* více řádků včetně `alternative`. *Nyní:* prázdné `investments[]` + test `__tests__/defaultState.test.ts`. |
+| [`company-fa/defaultState.ts`](../apps/web/src/lib/analyses/company-fa/defaultState.ts) | Výchozí řádky s kanonickým `ishares_core_msci_world` (viz soubor) |
 | [`company-fa/importValidate.ts`](../apps/web/src/lib/analyses/company-fa/importValidate.ts) | stejné jako company default |
 
-**Nekonzistence:** osobní FA má navíc `alternative`, firemní ne — při budoucí unifikaci klíčů sjednotit.
+**Nekonzistence (vyřešeno pro nové osobní FA):** výchozí investice osobní FA jsou prázdné; firemní FA má explicitní seed řádky — sjednocení chování wizardu řeší fondová knihovna / produktové rozhodnutí.
 
 ## 4. Legacy klíče
 
 | Klíč | Chování |
 |------|---------|
 | `imperial`, `algoimperial` | Při parsování uložené analýzy se **vyfiltrují** z `investments` v [`saveLoad.ts`](../apps/web/src/lib/analyses/financial/saveLoad.ts). V `FUND_DETAILS` už nejsou. |
-| `alternative` | Stále v `defaultState`, `FUND_DETAILS`, `PRODUCT_NAMES` — aktivní produkt v nových analýzách, dokud ho nepřepojíme/migrujeme. |
-| `world_etf` | V kódu **není** explicitně; očekává se jako budoucí alias → canonical `ishares_core_msci_world` (viz `legacy-fund-key-map.ts`). |
+| `alternative` | Z výchozího stavu **odstraněno**; při načtení uložených dat se vyfiltruje / nemapuje (viz `legacy-fund-key-map.ts`, `normalize-persisted-investment-entries`). |
+| `world_etf` / `World ETF` | Alias → `ishares_core_msci_world` v `legacy-fund-key-map.ts` + testy. |
 
 ## 5. Nekonzistence názvů (příklad)
 
