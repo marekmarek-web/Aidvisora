@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
 import Link from "next/link";
-import { Plus, CheckCircle2, LayoutList, Briefcase } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, LayoutList, Briefcase } from "lucide-react";
 import { getPipelineByContact } from "@/app/actions/pipeline";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import { PipelineBoardDynamic } from "@/app/dashboard/pipeline/PipelineBoardDynamic";
@@ -31,6 +32,10 @@ export function ContactOpportunityBoard({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [openCreateStageId, setOpenCreateStageId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const newOpportunityConsumed = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,11 +66,24 @@ export function ContactOpportunityBoard({
     };
   }, [contactId, retry]);
 
+  const firstStageId = stages[0]?.id ?? null;
+
+  useEffect(() => {
+    if (newOpportunityConsumed.current) return;
+    if (searchParams.get("newOpportunity") !== "1") return;
+    if (loading || !firstStageId) return;
+    startTransition(() => setOpenCreateStageId(firstStageId));
+    newOpportunityConsumed.current = true;
+    const q = new URLSearchParams(searchParams.toString());
+    q.delete("newOpportunity");
+    const qs = q.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router, loading, firstStageId]);
+
   const contactsForCreate: ContactOption[] = [
     { id: contactId, firstName: contactFirstName ?? "", lastName: contactLastName ?? "" },
   ];
 
-  const firstStageId = stages[0]?.id ?? null;
   const totalOpportunities = stages.reduce((sum, s) => sum + s.opportunities.length, 0);
   const isEmpty = totalOpportunities === 0 && stages.length > 0;
   const noStages = stages.length === 0;

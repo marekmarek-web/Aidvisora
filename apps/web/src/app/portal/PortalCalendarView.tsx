@@ -937,16 +937,17 @@ export function PortalCalendarView() {
   const dayNames = useMemo(() => getDayNames(settings.firstDayOfWeek), [settings.firstDayOfWeek]);
 
   useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      const todayStr = formatDate(new Date());
-      const startNew = `${todayStr}T09:00`;
-      setModal({
-        ...EMPTY_FORM,
-        startAt: startNew,
-        endAt: addMsToLocalDateTime(startNew, DEFAULT_EVENT_DURATION_MS),
-      });
-      window.history.replaceState(null, "", "/portal/calendar");
-    }
+    if (searchParams.get("new") !== "1") return;
+    const todayStr = formatDate(new Date());
+    const startNew = `${todayStr}T09:00`;
+    const contactIdParam = searchParams.get("contactId")?.trim() ?? "";
+    setModal({
+      ...EMPTY_FORM,
+      startAt: startNew,
+      endAt: addMsToLocalDateTime(startNew, DEFAULT_EVENT_DURATION_MS),
+      contactId: contactIdParam,
+    });
+    window.history.replaceState(null, "", "/portal/calendar");
   }, [searchParams]);
 
   const loadDayTasks = useCallback((dateStr: string) => {

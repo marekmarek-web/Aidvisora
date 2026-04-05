@@ -462,14 +462,14 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
         {selectedContactId ? <ConversationContextPanel {...contextPanelProps} asDiv /> : null}
       </ChatModal>
 
-      <NewAdvisorActionsMenu
-        open={actionsMenuOpen}
-        onClose={() => setActionsMenuOpen(false)}
-        onAiSuggest={openAi}
-        onScheduleMeeting={openMeeting}
-        onCreateTask={openTask}
-        onDeleteConversation={handleDeleteConversation}
-      />
+      {selectedContactId ? (
+        <NewAdvisorActionsMenu
+          open={actionsMenuOpen}
+          onClose={() => setActionsMenuOpen(false)}
+          contactId={selectedContactId}
+          onDeleteConversation={handleDeleteConversation}
+        />
+      ) : null}
 
       <ChatModal
         open={aiSheetOpen}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Pin,
   Plus,
@@ -149,6 +149,7 @@ function NotesVisionBoardInner({
   initialNoteId: string | null;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const searchQuery = searchParams.get("q") ?? initialSearchQuery;
   const noteIdFromQuery = searchParams.get("noteId") ?? initialNoteId ?? "";
   const [notes, setNotes] = useState(initialNotes);
@@ -167,6 +168,7 @@ function NotesVisionBoardInner({
   const [mobileTab, setMobileTab] = useState<"feed" | "board">("board");
   const boardRef = useRef<HTMLDivElement>(null);
   const deepLinkHandled = useRef(false);
+  const contactFromQueryHandled = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -300,6 +302,28 @@ function NotesVisionBoardInner({
       }
     }
   }, [noteIdFromQuery, notes]);
+
+  useEffect(() => {
+    if (contactFromQueryHandled.current) return;
+    const nid = searchParams.get("noteId") ?? initialNoteId ?? "";
+    if (nid) return;
+    const cid = searchParams.get("contactId")?.trim();
+    if (!cid) return;
+    contactFromQueryHandled.current = true;
+    const today = new Date().toISOString().slice(0, 10);
+    setFormData({
+      title: "",
+      client: cid,
+      date: today,
+      time: "",
+      type: "hypo",
+      content: "",
+      recommendation: "",
+    });
+    setEditingId(null);
+    setIsModalOpen(true);
+    router.replace("/portal/notes", { scroll: false });
+  }, [searchParams, initialNoteId, router]);
 
   const handleOpenNew = () => {
     const today = new Date().toISOString().slice(0, 10);

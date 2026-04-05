@@ -5,6 +5,7 @@ import { ChevronLeft, Plus, User } from "lucide-react";
 import { StatusDot } from "./StatusDot";
 import type { PresenceTier } from "./chat-format";
 import { initialsFromFullName } from "./chat-format";
+import { contactProfileHref } from "./advisor-chat-crm-routes";
 
 export function ConversationHeader({
   contactName,
@@ -71,8 +72,10 @@ export function ConversationHeader({
             </button>
           ) : null}
           <Link
-            href={`/portal/contacts/${contactId}`}
+            href={contactProfileHref(contactId)}
+            prefetch
             className="inline-flex items-center gap-2 rounded-[22px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text)] shadow-sm hover:bg-[color:var(--wp-surface-muted)] sm:px-5 sm:py-3"
+            aria-label={`Profil klienta ${contactName}`}
           >
             <User className="h-4 w-4" />
             Profil

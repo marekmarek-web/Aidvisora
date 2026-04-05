@@ -441,11 +441,13 @@ function NewTaskWizard({
   onCreated,
   contacts,
   opportunities,
+  initialContactId,
 }: {
   onClose: () => void;
   onCreated: () => void;
   contacts: ContactRow[];
   opportunities: Array<{ id: string; title: string }>;
+  initialContactId?: string | null;
 }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -455,10 +457,18 @@ function NewTaskWizard({
     date: new Date().toISOString().slice(0, 10),
     priority: "normal",
     reminder: "1h",
-    client: "none",
+    client:
+      initialContactId && String(initialContactId).trim() ? String(initialContactId).trim() : "none",
     deal: "none",
     desc: "",
   });
+
+  useEffect(() => {
+    const cid = initialContactId?.trim();
+    if (!cid || contacts.length === 0) return;
+    if (!contacts.some((c) => c.id === cid)) return;
+    setTaskData((prev) => (prev.client === "none" ? { ...prev, client: cid } : prev));
+  }, [initialContactId, contacts]);
 
   const isStep1Valid = taskData.title.trim() !== "" && taskData.date !== "";
 
@@ -1293,7 +1303,13 @@ function TasksPageContent() {
 
       {/* Wizard */}
       {isWizardOpen && (
-        <NewTaskWizard onClose={() => setIsWizardOpen(false)} onCreated={() => invalidateTasks()} contacts={contacts} opportunities={opportunityOptions} />
+        <NewTaskWizard
+          onClose={() => setIsWizardOpen(false)}
+          onCreated={() => invalidateTasks()}
+          contacts={contacts}
+          opportunities={opportunityOptions}
+          initialContactId={searchParams.get("contactId")}
+        />
       )}
 
       {/* Settings */}
