@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getFaFundDetailForReport, getFaFundPlanningRateDecimal, getFaFundLogoUrl } from "../fa-fund-bridge";
 import { reconcileFaInvestmentsWithSnapshot, buildFaInvestmentTemplate } from "../fa-investment-rows";
 import { normalizePersistedInvestmentEntries } from "@/lib/analyses/financial/normalize-persisted-investment-entries";
+import { getProductName } from "@/lib/analyses/financial/formatters";
+import { mapLegacyFundKey, isRemovedLegacyFundKey } from "../legacy-fund-key-map";
+import { getBaseFundFromProductKey } from "../helpers";
 import type { FundLibrarySetupSnapshot } from "@/lib/fund-library/fund-library-setup-types";
 import type { InvestmentEntry } from "@/lib/analyses/financial/types";
 
@@ -78,5 +81,32 @@ describe("fund library release hardening — edge cases", () => {
     expect(d).toBeDefined();
     expect(d?.name?.length).toBeGreaterThan(0);
     expect(d?.defaultRate).toBeGreaterThan(0);
+  });
+
+  it("QA: World ETF aliasy → iShares Core MSCI World (kanonický klíč)", () => {
+    expect(mapLegacyFundKey("world_etf")).toBe("ishares_core_msci_world");
+    expect(mapLegacyFundKey("World ETF")).toBe("ishares_core_msci_world");
+    expect(mapLegacyFundKey("msci_world")).toBe("ishares_core_msci_world");
+    expect(mapLegacyFundKey("ishares")).toBe("ishares_core_msci_world");
+    expect(getBaseFundFromProductKey("world_etf")?.baseFundKey).toBe("ishares_core_msci_world");
+    expect(getProductName("world_etf")).toContain("MSCI World");
+  });
+
+  it("QA: CREIF legacy + detail pro report", () => {
+    expect(mapLegacyFundKey("creif")).toBe("creif");
+    const d = getFaFundDetailForReport("creif");
+    expect(d).toBeDefined();
+    expect(d?.heroImage?.length).toBeGreaterThan(0);
+    expect(d?.galleryImages?.length).toBe(3);
+  });
+
+  it("QA: odstraněné legacy klíče se nevracejí do katalogu", () => {
+    for (const k of ["alternative", "AlgoImperial", "imperial", "algo_imperial"]) {
+      expect(mapLegacyFundKey(k)).toBeNull();
+      expect(isRemovedLegacyFundKey(k)).toBe(true);
+      expect(getBaseFundFromProductKey(k)).toBeUndefined();
+    }
+    expect(getFaFundDetailForReport("alternative")).toBeUndefined();
+    expect(getFaFundLogoUrl("alternative")).toBeUndefined();
   });
 });
