@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createResponseStructured } from "@/lib/openai";
+import { aiReviewCreateResponseStructured as createResponseStructured } from "./review-llm-provider";
 import {
   DOCUMENT_INTENTS,
   DOCUMENT_LIFECYCLE_STATUSES,
@@ -330,6 +330,10 @@ Pravidla:
   - Zprostředkovatel: intermediaryName, intermediaryCode, intermediaryCompany, advisorName, brokerName.
   - Investice: investmentStrategy, investmentFunds, fundAllocation, investmentAllocation, investmentScenario.
   - Oprávněné osoby: beneficiaries.
+- KLIENTSKÝ BLOK — KRITICKÉ PRAVIDLO: Klientská data (fullName, birthDate, personalId, address) ber VÝHRADNĚ z bloku označeného jako "Pojistník", "Klient", "Žadatel", "Pojištěný" nebo "Dlužník" — NIKDY z hlavičky pojistitele/banky/instituce, z kontaktů prodejce nebo z části "O nás". Pokud dokument začíná logem a adresou pojišťovny (Generali, UNIQA, ČPP atd.), tato data NEPATŘÍ do fullName klienta.
+- ZPROSTŘEDKOVATEL vs INSTITUCE: IntermediaryName je poradce/makléř klienta. Osoba nebo firma podepsaná za pojišťovnu/banku/leasingovou společnost NENÍ zprostředkovatel — to je zaměstnanec instituce. Zaměňuj je pouze pokud je v dokumentu explicitně uveden jako "poradce" nebo "zprostředkovatel".
+- PLATBY — FREKVENCE: paymentFrequency extrahuj přesně podle textu. Rozlišuj: "měsíčně" vs "ročně" vs "čtvrtletně" vs "pololetně" vs "jednorázově". Nesmíš zaměnit roční pojistné za měsíční — pokud dokument říká "roční pojistné X Kč", pak paymentFrequency="ročně" a annualPremium=X. Pokud říká "měsíční pojistné X Kč", pak totalMonthlyPremium=X.
+- INTERNÍ IDENTIFIKÁTORY: personalId (rodné číslo), bankAccount, iban, datum narození extrahuj bez maskování — jde o interní review flow Aidvisory, ne o veřejný export. Nenahrazuj rodné číslo za "XX/XXXX".
 - MULTI-PERSON: Pokud dokument obsahuje více osob (pojistník ≠ pojištěný, děti, spoludlužník), extrahuj každou osobu zvlášť do parties jako { role, fullName, birthDate, personalId?, address?, email?, phone?, occupation? }. Role: "policyholder", "insured", "legal_representative", "beneficiary", "child_insured", "co_applicant".
 - MULTI-RISK: Pro každé sjednané riziko/připojištění vyplň insuredPersons a coverages jako JSON string pole prvků [{ person, riskType, riskLabel, insuredAmount, termEnd?, premium? }].
 - INVESTICE: Extrahuj investmentStrategy (string), investmentFunds jako JSON string [{ name, allocation }], investmentPremium. U modelace napiš lifecycleStatus = "modelation" nebo "non_binding_projection".

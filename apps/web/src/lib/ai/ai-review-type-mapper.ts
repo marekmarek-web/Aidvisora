@@ -59,14 +59,26 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
     }
     if (dt === "life_insurance_change_request" || dt === "amendment") return "life_insurance_change_request";
   }
-  if (fam === "non_life_insurance") {
+  const isNonLifeFam =
+    fam === "non_life_insurance" ||
+    fam === "property_insurance" ||
+    fam === "liability_insurance" ||
+    fam === "household_insurance" ||
+    fam === "home_insurance" ||
+    fam === "travel_insurance" ||
+    fam === "motor_insurance" ||
+    fam === "car_insurance";
+  if (isNonLifeFam) {
     if (dt === "proposal" || dt === "offer") {
-      if (sub.includes("liability")) return "liability_insurance_offer";
-      if (sub.includes("car")) return "nonlife_insurance_contract";
+      if (sub.includes("liability") || fam === "liability_insurance") return "liability_insurance_offer";
+      if (sub.includes("car") || fam === "car_insurance" || fam === "motor_insurance") return "nonlife_insurance_contract";
       return "precontract_information";
     }
     if (dt === "modelation") return "precontract_information";
-    if (dt === "contract") return "nonlife_insurance_contract";
+    if (dt === "contract") {
+      if (sub.includes("car") || fam === "car_insurance" || fam === "motor_insurance") return "nonlife_insurance_contract";
+      return "nonlife_insurance_contract";
+    }
     if (dt === "amendment") return "insurance_policy_change_or_service_doc";
   }
   if (fam === "investment") {

@@ -51,6 +51,23 @@ Pokud dostáváš sekce s labely [SMLUVNÍ ČÁST], [ZDRAVOTNÍ DOTAZNÍK], [INV
 - Platební údaje (účet, variabilní symbol, frekvence): PRIMÁRNĚ z [PLATEBNÍ SEKCE] nebo [SMLUVNÍ ČÁSTI].
 - Příloha / AML / doprovodný dokument: NESMÍ přepsat smluvní fakta. Nastav sensitiveAttachmentOnly signál.
 - Pokud sekce nejsou k dispozici (text je "(not available)"), čti z celého textu v {{extracted_text}}.
+
+KLIENTSKÝ BLOK — KRITICKÉ PRAVIDLO:
+- Klientská data (fullName, birthDate, personalId, address) ber VÝHRADNĚ z bloku označeného jako "Pojistník", "Klient", "Žadatel", "Pojištěný" nebo "Dlužník".
+- NIKDY neber klientská data z hlavičky pojistitele/banky/instituce, z kontaktů prodejce nebo z části "O nás".
+- Pokud dokument začíná logem a adresou pojišťovny (Generali, UNIQA, ČPP, Kooperativa, AXA atd.), tato data NEPATŘÍ do fullName klienta.
+
+INTERNÍ IDENTIFIKÁTORY — NEMASKOVAT:
+- personalId (rodné číslo), bankAccount, iban, datum narození extrahuj bez maskování.
+- Jde o interní review flow Aidvisory, ne o veřejný export. Nenahrazuj rodné číslo za "XX/XXXX".
+
+FREKVENCE PLATEB — POVINNÉ ROZLIŠENÍ:
+- paymentFrequency extrahuj přesně. Rozlišuj: "měsíčně" / "ročně" / "čtvrtletně" / "pololetně" / "jednorázově".
+- Nesmíš zaměnit roční pojistné za měsíční. Pokud dokument říká "roční pojistné X Kč" → paymentFrequency="ročně" a annualPremium=X.
+
+ZPROSTŘEDKOVATEL vs INSTITUCE:
+- intermediaryName je poradce/makléř klienta.
+- Osoba nebo firma podepsaná za pojišťovnu/banku NENÍ zprostředkovatel.
 `.trim();
 
 const BUNDLE_PUBLISH_RULES = `
@@ -375,6 +392,373 @@ TEXT INVESTIČNÍ SEKCE:
 Vrátíš POUZE JSON dle schema. Žádný markdown.`,
 };
 
+// ─── Doc Classifier V2 ───────────────────────────────────────────────────────
+
+export const DOC_CLASSIFIER_V2_TEMPLATE: PromptTemplateContent = {
+  key: "docClassifierV2",
+  label: "Klasifikátor dokumentu v2",
+  variables: ["filename", "page_count", "input_mode", "text_excerpt", "adobe_signals", "source_channel"],
+  systemPrompt: `Jsi klasifikátor finančních dokumentů pro český finanční trh.
+Soubor: {{filename}}
+Počet stran: {{page_count}}
+Input mode: {{input_mode}}
+Adobe signály: {{adobe_signals}}
+Source channel: {{source_channel}}
+
+Výňatek z dokumentu:
+{{text_excerpt}}
+
+Urči typ dokumentu a vrať POUZE platný JSON (žádný markdown, žádný text mimo JSON):
+{
+  "documentType": "<primární typ EN snake_case, viz seznam níže>",
+  "productFamily": "<rodina produktu: life_insurance | nonlife_insurance | investment | pension | dip | loan | mortgage | building_savings | payment | income_proof | identity | consent | supporting | unknown>",
+  "productSubtype": "<podtyp EN snake_case nebo 'unknown'>",
+  "businessIntent": "<creates_new_product | modifies_existing_product | illustrative_only | supports_underwriting_or_bonita | supports_income_verification | reference_only | manual_review_required>",
+  "recommendedRoute": "<EN snake_case route identifikátor>",
+  "confidence": <0.0–1.0>,
+  "warnings": ["<cs string>"],
+  "reasons": ["<cs string>"],
+  "documentTypeLabel": "<cs label>",
+  "productFamilyLabel": "<cs label>",
+  "productSubtypeLabel": "<cs label>",
+  "businessIntentLabel": "<cs label>",
+  "documentTypeUncertain": <boolean>,
+  "supportedForDirectExtraction": <boolean — false pro nečitelné scany nebo nepodporované typy>
+}
+
+Typy documentType (použij snake_case EN):
+life_insurance_final_contract, life_insurance_contract, life_insurance_investment_contract,
+life_insurance_proposal, life_insurance_change_request, life_insurance_modelation,
+nonlife_insurance_contract, consumer_loan_contract, consumer_loan_with_payment_protection,
+mortgage_document, pension_contract, investment_service_agreement,
+investment_subscription_document, investment_modelation, payment_instruction,
+investment_payment_instruction, payment_schedule, payslip_document, income_proof_document,
+income_confirmation, corporate_tax_return, self_employed_tax_or_income_document,
+financial_analysis_document, insurance_policy_change_or_service_doc, bank_statement,
+liability_insurance_offer, insurance_comparison, precontract_information, identity_document,
+medical_questionnaire, consent_or_declaration, service_agreement,
+generic_financial_document, unsupported_or_unknown`,
+};
+
+// ─── Non-Life Insurance Extraction ───────────────────────────────────────────
+
+export const NON_LIFE_INSURANCE_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "nonLifeInsuranceExtraction",
+  label: "Neživotní pojištění — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro neživotní pojistné smlouvy (majetek, odpovědnost, cestovní, úrazové).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+${SECTION_AWARE_RULES}
+
+${BUNDLE_PUBLISH_RULES}
+
+NEŽIVOTNÍ POJIŠTĚNÍ — povinná extrakce:
+- contractNumber / proposalNumber
+- insurer (pojišťovna)
+- productName, productType (majetková, odpovědnost, cestovní, úrazová, sdružená…)
+- policyStartDate, policyEndDate
+- totalAnnualPremium, totalMonthlyPremium, paymentFrequency
+- bankAccount, variableSymbol
+- policyholder: fullName, birthDate / companyId, address
+- insured: fullName, birthDate / companyId
+- insuredRisks[] / coverages[]: riskType (požár, krádež, odpovědnost, úraz…), insuredAmount, premium
+- contentFlags.isFinalContract
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Car Insurance Extraction ────────────────────────────────────────────────
+
+export const CAR_INSURANCE_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "carInsuranceExtraction",
+  label: "Autopojištění — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro autopojistné smlouvy (povinné ručení, havarijní pojištění).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+${BUNDLE_PUBLISH_RULES}
+
+AUTOPOJIŠTĚNÍ — povinná extrakce:
+- contractNumber / proposalNumber
+- insurer (pojišťovna)
+- productName, productType (povinné ručení / havarijní / kombinované)
+- policyStartDate, policyEndDate
+- totalAnnualPremium, totalMonthlyPremium, paymentFrequency
+- bankAccount, variableSymbol
+- policyholder: fullName, birthDate / companyId, address
+- vehicle: registrationPlate, VIN, brandModel, yearOfManufacture
+- insuredRisks[]: povinné ručení (limit škody na zdraví, majetku), havarijní (spoluúčast), doplňkové
+- contentFlags.isFinalContract
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Insurance Amendment Extraction ─────────────────────────────────────────
+
+export const INSURANCE_AMENDMENT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "insuranceAmendment",
+  label: "Pojistný dodatek / změna smlouvy — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro dodatky a změny pojistných smluv.
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+DODATEK / ZMĚNA SMLOUVY — povinná extrakce:
+- contractNumber (číslo EXISTUJÍCÍ smlouvy, ke které se vztahuje)
+- insurer (pojišťovna)
+- productName, productType
+- amendmentDate / effectiveDate
+- description (co se mění — pojistné, krytí, pojistník, beneficiář…)
+- changedFields[]: {"field": "...", "oldValue": "...", "newValue": "..."}
+- parties[] — kdo podepisuje změnu
+- contentFlags.isFinalContract = false (dodatky nejsou finální smlouvy)
+- documentClassification.documentIntent = "modifies_existing_product"
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Building Savings Extraction ─────────────────────────────────────────────
+
+export const BUILDING_SAVINGS_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "buildingSavingsExtraction",
+  label: "Stavební spoření — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro smlouvy o stavebním spoření (stavební spořitelny: ČSOB, Raiffeisen, Moneta, Wüstenrot, Česká…).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+${BUNDLE_PUBLISH_RULES}
+
+STAVEBNÍ SPOŘENÍ — povinná extrakce:
+- contractNumber
+- institution (stavební spořitelna)
+- productName
+- targetAmount (cílová částka)
+- policyStartDate, policyEndDate
+- regularSavingsAmount (pravidelná úložka / měsíční vklad)
+- paymentFrequency
+- bankAccount, variableSymbol
+- interestRate, stateBonusEligible
+- saver: fullName, birthDate, personalId, address
+- contentFlags.isFinalContract
+- POZOR: stavební spoření není životní pojištění — documentFamily = "building_savings"
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Loan Contract Extraction ────────────────────────────────────────────────
+
+export const LOAN_CONTRACT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "loanContractExtraction",
+  label: "Spotřebitelský úvěr / půjčka — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro smlouvy o spotřebitelském úvěru, půjčkách a úvěrech (ne hypotéka).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+${BUNDLE_PUBLISH_RULES}
+
+SPOTŘEBITELSKÝ ÚVĚR — povinná extrakce:
+- contractNumber
+- lender (věřitel / banka)
+- productName, productType (spotřebitelský úvěr / revolvingový / kontokorent / kreditní karta / americká hypotéka)
+- loanAmount (výše úvěru)
+- interestRate (roční úroková sazba), RPSN
+- repaymentPeriod (počet měsíců / let)
+- monthlyInstalment (měsíční splátka)
+- totalRepaymentAmount (celková výše splatné částky)
+- disbursementDate / contractDate
+- firstRepaymentDate
+- bankAccount (účet pro splácení), variableSymbol
+- borrower: fullName, birthDate, personalId, address
+- coApplicant (pokud existuje)
+- contentFlags.isFinalContract
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Payment Instructions Extraction ─────────────────────────────────────────
+
+export const PAYMENT_INSTRUCTIONS_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "paymentInstructionsExtraction",
+  label: "Platební pokyny — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro dokumenty s platebními pokyny (inkasní příkazy, výzvy k úhradě, platební instrukce k pojistným smlouvám).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+PLATEBNÍ POKYNY — povinná extrakce:
+- contractNumber (číslo smlouvy, ke které se platba vztahuje)
+- insurer / institution
+- amount (výše platby)
+- paymentFrequency
+- bankAccount (číslo účtu pro platbu)
+- variableSymbol, specificSymbol, constantSymbol
+- iban
+- dueDate / firstPaymentDate
+- paymentDescription (popis platby)
+- payer: fullName, contractNumber
+- contentFlags.containsPaymentInstructions = true
+- documentClassification.documentFamily = "payment_instruction"
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Supporting Document Extraction ──────────────────────────────────────────
+
+export const SUPPORTING_DOCUMENT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "supportingDocumentExtraction",
+  label: "Podpůrný dokument — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro podpůrné finanční dokumenty (výpisy, potvrzení, přehledy, výroční zprávy fondů).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+PODPŮRNÝ DOKUMENT — povinná extrakce:
+- documentType (výpis / potvrzení / přehled / výroční zpráva / jiné)
+- institution / issuer
+- dateOfIssue
+- referenceNumber (pokud existuje)
+- subjectPerson: fullName, contractNumber (pokud jde o konkrétní osobu / smlouvu)
+- summaryText (krátké shrnutí obsahu, max 3 věty)
+- containsClientData (boolean)
+- contentFlags.isFinalContract = false
+- contentFlags.containsAttachmentOnly = true
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Legacy Financial Product Extraction ─────────────────────────────────────
+
+export const LEGACY_FINANCIAL_PRODUCT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "legacyFinancialProductExtraction",
+  label: "Starší / neznámý finanční produkt — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro starší nebo neobvyklé finanční produkty (kapitálové pojištění, kombinované produkty, investiční pojištění starší generace).
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+${BUNDLE_PUBLISH_RULES}
+
+STARŠÍ / NEZNÁMÝ PRODUKT — povinná extrakce (best effort):
+- contractNumber
+- insurer / institution
+- productName, productType (best effort description)
+- policyStartDate, policyEndDate
+- premium / monthlySavings / monthlyPayment
+- paymentFrequency
+- bankAccount, variableSymbol
+- parties[]: fullName, role, birthDate
+- insuredRisks[] (pokud jde o pojistný prvek)
+- investmentData (pokud jde o investiční prvek)
+- warnings: ["legacy_product_manual_review_recommended"]
+- contentFlags.isFinalContract (best effort)
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Review Decision ─────────────────────────────────────────────────────────
+
+export const REVIEW_DECISION_TEMPLATE: PromptTemplateContent = {
+  key: "reviewDecision",
+  label: "Review rozhodnutí (postprocess LLM)",
+  variables: [
+    "normalized_document_type", "extraction_payload", "validation_warnings",
+    "section_confidence", "input_mode", "preprocess_warnings",
+  ],
+  systemPrompt: `Jsi review decision engine pro AI Review pipeline.
+Typ dokumentu: {{normalized_document_type}}
+Input mode: {{input_mode}}
+Validační varování: {{validation_warnings}}
+Preprocess varování: {{preprocess_warnings}}
+Section confidence: {{section_confidence}}
+
+Extrakce:
+{{extraction_payload}}
+
+Zhodnoť kvalitu extrakce a vrať POUZE JSON:
+{
+  "processingStatus": "<done | review_required | blocked>",
+  "confidence": "<high | medium | low>",
+  "reasonsForReview": ["<string>"],
+  "llmReviewDecision": "<approved | flagged | blocked>",
+  "llmReviewDecisionText": "<1–3 věty cs vysvětlení>",
+  "publishHints": {
+    "canPublish": <boolean>,
+    "blockReasons": ["<string>"]
+  }
+}
+
+PRAVIDLA:
+- review_required pokud chybí klíčová pole (contractNumber, policyholder, premium)
+- blocked pokud jde o modelaci, návrh, nebo AML-only dokument
+- done pouze pokud je extrakce kompletní a jde o finální smlouvu`,
+};
+
+// ─── Client Match ─────────────────────────────────────────────────────────────
+
+export const CLIENT_MATCH_TEMPLATE: PromptTemplateContent = {
+  key: "clientMatch",
+  label: "Párování klienta (postprocess LLM)",
+  variables: ["extracted_client_payload", "existing_client_candidates"],
+  systemPrompt: `Jsi client match engine pro CRM systém.
+Extrahovaná data o klientech z dokumentu:
+{{extracted_client_payload}}
+
+Kandidáti z CRM databáze:
+{{existing_client_candidates}}
+
+Porovnej extrahovaná data se záznamy v CRM a vrať POUZE JSON:
+{
+  "matchKind": "<exact_match | likely_match | ambiguous | no_match>",
+  "bestCandidateId": "<clientId nebo null>",
+  "confidence": <0.0–1.0>,
+  "reasons": ["<cs string>"],
+  "warnings": ["<cs string>"]
+}
+
+PRAVIDLA:
+- exact_match: shoduje se jméno + datum narození nebo rodné číslo
+- likely_match: shoduje se jméno a alespoň 1 další atribut
+- ambiguous: více kandidátů s podobným skóre
+- no_match: žádná shoda`,
+};
+
 // ─── All templates (for reference / iteration) ────────────────────────────────
 
 export const ALL_PROMPT_TEMPLATE_CONTENTS: PromptTemplateContent[] = [
@@ -385,6 +769,18 @@ export const ALL_PROMPT_TEMPLATE_CONTENTS: PromptTemplateContent[] = [
   INSURANCE_PROPOSAL_MODELATION_TEMPLATE,
   HEALTH_SECTION_EXTRACTION_TEMPLATE,
   INVESTMENT_SECTION_EXTRACTION_TEMPLATE,
+  // Added for Anthropic/Claude provider path
+  DOC_CLASSIFIER_V2_TEMPLATE,
+  NON_LIFE_INSURANCE_EXTRACTION_TEMPLATE,
+  CAR_INSURANCE_EXTRACTION_TEMPLATE,
+  INSURANCE_AMENDMENT_EXTRACTION_TEMPLATE,
+  BUILDING_SAVINGS_EXTRACTION_TEMPLATE,
+  LOAN_CONTRACT_EXTRACTION_TEMPLATE,
+  PAYMENT_INSTRUCTIONS_EXTRACTION_TEMPLATE,
+  SUPPORTING_DOCUMENT_EXTRACTION_TEMPLATE,
+  LEGACY_FINANCIAL_PRODUCT_EXTRACTION_TEMPLATE,
+  REVIEW_DECISION_TEMPLATE,
+  CLIENT_MATCH_TEMPLATE,
 ];
 
 /**

@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
 
-const EXPECTED_CORPUS_COUNT = 29;
+const EXPECTED_CORPUS_COUNT = 41;
 
 /** Repo root when vitest cwd is apps/web */
 function manifestPath(): string {
@@ -20,6 +20,9 @@ const ALLOWED_FAMILY_BUCKETS = new Set([
   "leasing",
   "service_or_aml_or_supporting_doc",
   "non_publishable_attachment_only",
+  // Phase 3 additions
+  "non_life_insurance",
+  "compliance",
 ]);
 
 const ALLOWED_EXPECTED_FAMILIES = new Set([
@@ -29,6 +32,8 @@ const ALLOWED_EXPECTED_FAMILIES = new Set([
   "mortgage",
   "leasing",
   "compliance",
+  // Phase 3 additions
+  "non_life_insurance",
 ]);
 
 const ALLOWED_OUTPUT_MODES = new Set([
@@ -38,7 +43,7 @@ const ALLOWED_OUTPUT_MODES = new Set([
   "reference_or_supporting_document",
 ]);
 
-const ALLOWED_SENSITIVITY = new Set(["standard", "high_sensitivity", "mixed_sensitive"]);
+const ALLOWED_SENSITIVITY = new Set(["standard", "high_sensitivity", "mixed_sensitive", "financial_data"]);
 
 type FallbackBehavior = {
   expectedSummaryFocus: string;
@@ -90,12 +95,12 @@ function sameStringArray(a: string[], b: string[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
-describe("golden-dataset manifest (phase 1, corpus v3)", () => {
-  it("parses v3 with 12 scenarios and full corpusDocuments", () => {
+describe("golden-dataset manifest (phase 1–3, corpus v4)", () => {
+  it("parses v4 with 12 scenarios and full corpusDocuments", () => {
     const p = manifestPath();
     expect(existsSync(p)).toBe(true);
     const raw = JSON.parse(readFileSync(p, "utf8")) as Manifest;
-    expect(raw.version).toBe(3);
+    expect(raw.version).toBeGreaterThanOrEqual(3);
     expect(Array.isArray(raw.scenarios)).toBe(true);
     expect(raw.scenarios.length).toBe(12);
     expect(Array.isArray(raw.corpusDocuments)).toBe(true);
@@ -123,22 +128,35 @@ describe("golden-dataset manifest (phase 1, corpus v3)", () => {
       expect(d.expectedPrimaryType.length).toBeGreaterThan(0);
       expect(["boolean", "string"].includes(typeof d.publishable)).toBe(true);
       expect(typeof d.isPacket).toBe("boolean");
-      expect(Array.isArray(d.expectedEntities)).toBe(true);
-      expect(d.expectedEntities.length).toBeGreaterThan(0);
-      expect(Array.isArray(d.expectedExtractedFields)).toBe(true);
-      expect(d.expectedExtractedFields.length).toBeGreaterThan(0);
-      expect(Array.isArray(d.expectedForbiddenActions)).toBe(true);
-      expect(Array.isArray(d.expectedReviewFlags)).toBe(true);
-      expect(typeof d.expectedAssistantRelevance).toBe("string");
-      expect(d.expectedAssistantRelevance.length).toBeGreaterThan(0);
-      expect(Array.isArray(d.mapsToGoldenScenarioIds)).toBe(true);
-      for (const g of d.mapsToGoldenScenarioIds) {
-        expect(g).toMatch(/^G\d{2}$/);
-        const covers = scenarioCovers.get(g) ?? [];
-        expect(
-          covers.includes(d.id),
-          `corpus ${d.id} lists ${g} but scenario does not cover this id`,
-        ).toBe(true);
+      // Legacy fields (C001-C029) — present on older entries, optional on Phase 3 additions
+      if (d.expectedEntities !== undefined) {
+        expect(Array.isArray(d.expectedEntities)).toBe(true);
+        expect(d.expectedEntities.length).toBeGreaterThan(0);
+      }
+      if (d.expectedExtractedFields !== undefined) {
+        expect(Array.isArray(d.expectedExtractedFields)).toBe(true);
+        expect(d.expectedExtractedFields.length).toBeGreaterThan(0);
+      }
+      if (d.expectedForbiddenActions !== undefined) {
+        expect(Array.isArray(d.expectedForbiddenActions)).toBe(true);
+      }
+      if (d.expectedReviewFlags !== undefined) {
+        expect(Array.isArray(d.expectedReviewFlags)).toBe(true);
+      }
+      if (d.expectedAssistantRelevance !== undefined) {
+        expect(typeof d.expectedAssistantRelevance).toBe("string");
+        expect(d.expectedAssistantRelevance.length).toBeGreaterThan(0);
+      }
+      if (d.mapsToGoldenScenarioIds !== undefined) {
+        expect(Array.isArray(d.mapsToGoldenScenarioIds)).toBe(true);
+        for (const g of d.mapsToGoldenScenarioIds) {
+          expect(g).toMatch(/^G\d{2}$/);
+          const covers = scenarioCovers.get(g) ?? [];
+          expect(
+            covers.includes(d.id),
+            `corpus ${d.id} lists ${g} but scenario does not cover this id`,
+          ).toBe(true);
+        }
       }
       if (d.aliasFileNames) {
         expect(Array.isArray(d.aliasFileNames)).toBe(true);
@@ -159,7 +177,10 @@ describe("golden-dataset manifest (phase 1, corpus v3)", () => {
       expect(Array.isArray(d.expectedActionsAllowed)).toBe(true);
       expect(d.expectedActionsAllowed.length).toBeGreaterThan(0);
       expect(Array.isArray(d.expectedActionsForbidden)).toBe(true);
-      expect(sameStringArray(d.expectedActionsForbidden, d.expectedForbiddenActions)).toBe(true);
+      // expectedForbiddenActions must mirror expectedActionsForbidden when both are present
+      if (d.expectedForbiddenActions !== undefined) {
+        expect(sameStringArray(d.expectedActionsForbidden, d.expectedForbiddenActions)).toBe(true);
+      }
       expect(typeof d.expectedNotesForAdvisor).toBe("string");
 
       if (d.expectedOutputMode === "reference_or_supporting_document") {
@@ -178,6 +199,7 @@ describe("golden-dataset manifest (phase 1, corpus v3)", () => {
     }
     expect(seen.size).toBe(EXPECTED_CORPUS_COUNT);
   });
+
 
   it("G02 covers only modelation-aligned corpus ids (not liability proposal)", () => {
     const raw = JSON.parse(readFileSync(manifestPath(), "utf8")) as Manifest;

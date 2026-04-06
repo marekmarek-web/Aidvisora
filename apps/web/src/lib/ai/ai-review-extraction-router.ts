@@ -68,9 +68,11 @@ export function coerceClassifierDocumentTypeForRouter(raw: string): string {
   if (d === "life_insurance_modelation") return "modelation";
   if (d === "life_insurance_proposal") return "proposal";
   if (d === "life_insurance_change_request") return "amendment";
-  if (d === "nonlife_insurance_contract") return "contract";
+  if (d === "nonlife_insurance_contract" || d === "non_life_insurance_contract") return "contract";
+  if (d === "property_insurance_contract" || d === "home_insurance_contract" || d === "household_insurance_contract") return "contract";
+  if (d === "liability_insurance_contract") return "contract";
   if (d === "consumer_loan_contract" || d === "consumer_loan_with_payment_protection") return "contract";
-  if (d === "mortgage_document") return "contract";
+  if (d === "mortgage_document" || d === "mortgage_contract" || d === "mortgage_proposal") return "contract";
   if (d === "investment_subscription_document" || d === "investment_service_agreement") return "contract";
   if (d === "investment_modelation") return "modelation";
   if (d === "pension_contract") return "contract";
@@ -151,10 +153,20 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
-  // §2 Non-life
-  if (fam === "non_life_insurance") {
+  // §2 Non-life (also handle family aliases: property_insurance, liability, motor, etc.)
+  const isNonLife =
+    fam === "non_life_insurance" ||
+    fam === "property_insurance" ||
+    fam === "liability_insurance" ||
+    fam === "household_insurance" ||
+    fam === "home_insurance" ||
+    fam === "travel_insurance" ||
+    fam === "motor_insurance" ||
+    fam === "car_insurance";
+  if (isNonLife) {
+    const isCarFam = fam === "car_insurance" || fam === "motor_insurance";
     if (dt === "contract") {
-      if (sub === "car_insurance") {
+      if (sub === "car_insurance" || isCarFam) {
         return { outcome: "extract", promptKey: "carInsuranceExtraction", reasonCodes: ["car_contract"] };
       }
       const nonLifeSubs = new Set([
@@ -168,12 +180,14 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
       if (nonLifeSubs.has(sub) || sub === ANY) {
         return { outcome: "extract", promptKey: "nonLifeInsuranceExtraction", reasonCodes: ["nonlife_contract"] };
       }
+      // Accept any other sub for non-life contract rather than falling through
+      return { outcome: "extract", promptKey: "nonLifeInsuranceExtraction", reasonCodes: ["nonlife_contract_any_sub"] };
     }
-    if (dt === "proposal" || dt === "modelation") {
+    if (dt === "proposal" || dt === "offer" || dt === "modelation") {
       return { outcome: "extract", promptKey: "insuranceProposalModelation", reasonCodes: ["nonlife_proposal_modelation"] };
     }
     if (dt === "amendment") {
-      if (sub === "car_insurance") {
+      if (sub === "car_insurance" || isCarFam) {
         if (!amendmentConfidenceOk(input.confidence, amendTh)) {
           return { outcome: "review_required", reasonCodes: ["nonlife_car_amendment_low_confidence"] };
         }
@@ -183,6 +197,10 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
         return { outcome: "review_required", reasonCodes: ["nonlife_amendment_low_confidence"] };
       }
       return { outcome: "extract", promptKey: "insuranceAmendment", reasonCodes: ["nonlife_amendment"] };
+    }
+    // Fallback: any non-life document with known family but unknown documentType → extract
+    if (dt === "unknown" || dt === "") {
+      return { outcome: "extract", promptKey: "nonLifeInsuranceExtraction", reasonCodes: ["nonlife_unknown_dt_fallback"] };
     }
   }
 
@@ -265,7 +283,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
   if (fam === "mortgage") {
-    if (dt === "contract") {
+    if (dt === "contract" || dt === "proposal" || dt === "offer") {
       return { outcome: "extract", promptKey: "loanContractExtraction", reasonCodes: ["mortgage_via_loan"] };
     }
     if (dt === "amendment") {
@@ -273,6 +291,10 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
         return { outcome: "review_required", reasonCodes: ["mortgage_amendment_low_confidence"] };
       }
       return { outcome: "extract", promptKey: "loanContractExtraction", reasonCodes: ["mortgage_amendment"] };
+    }
+    // Unknown doc type but family is mortgage — try extraction rather than manual_review
+    if (dt === "unknown" || dt === "") {
+      return { outcome: "extract", promptKey: "loanContractExtraction", reasonCodes: ["mortgage_unknown_dt_fallback"] };
     }
   }
 

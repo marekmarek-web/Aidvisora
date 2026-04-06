@@ -4,7 +4,7 @@
  */
 
 import type { DocumentReviewEnvelope, ExtractedField, PrimaryDocumentType } from "./document-review-types";
-import { normalizeExtractedFieldDates } from "./canonical-date-normalize";
+import { normalizeExtractedFieldDates, normalizeExtractedFieldFrequencies } from "./canonical-date-normalize";
 
 function valuePresent(cell: ExtractedField | undefined): boolean {
   if (!cell) return false;
@@ -498,4 +498,5 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
     skipContractNumberSalvage: isModelationDoc,
   });
   normalizeExtractedFieldDates(ef);
+  normalizeExtractedFieldFrequencies(ef);
 }

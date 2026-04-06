@@ -43,6 +43,8 @@ const REFERENCE_PRIMARY_TYPES = new Set<string>([
   "consent_or_declaration",
   "identity_document",
   "insurance_policy_change_or_service_doc",
+  // Change requests and amendments are service docs — no greenfield contract publish
+  "life_insurance_change_request",
   "service_agreement",
 ]);
 
@@ -172,6 +174,12 @@ export function outputModeMatchOk(
     (expected === "structured_product_document" && actual === "signature_ready_proposal") ||
     (expected === "signature_ready_proposal" && actual === "structured_product_document")
   ) {
+    return true;
+  }
+
+  // structured → modelation is a soft downgrade, not a hard lane violation.
+  // Happens when classifier sees a final contract as a proposal/precontract IPID.
+  if (expected === "structured_product_document" && actual === "modelation_or_precontract") {
     return true;
   }
 

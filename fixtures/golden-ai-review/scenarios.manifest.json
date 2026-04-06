@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "description": "Phase 1–3: G01–G12 + corpusDocuments C001–C029. Phase 2 packetMeta; Phase 3 participants, paymentData, publishHints. Phase 1 golden: expectedOutputMode, expectedCoreFields, release gate. Human: docs/ai-review-assistant-phase-1-corpus-inventory.md",
+  "version": 4,
+  "description": "Phase 1–3: G01–G12 + corpusDocuments C001–C041. Phase 3: live corpus eval, aliasFileNames for renamed PDFs, C030-C041 new entries (non-life, mortgage, consumer credit, tax returns). Phase 1 golden: expectedOutputMode, expectedCoreFields, release gate.",
   "phase2_3_new_envelope_fields": [
     "packetMeta",
     "participants",
@@ -269,7 +269,10 @@
         "allow_publish_after_advisor_confirmation",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Hypoteční návrh; ověřit návrh vs čerpání."
+      "expectedNotesForAdvisor": "Hypoteční návrh; ověřit návrh vs čerpání.",
+      "aliasFileNames": [
+        "Test AI/smlouva o poskytnutí hypotečního úvěru - návrh.pdf"
+      ]
     },
     {
       "id": "C002",
@@ -380,7 +383,10 @@
         "block_auto_publish_as_final_contract",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": ""
+      "expectedNotesForAdvisor": "",
+      "aliasFileNames": [
+        "Test AI/Modelace životního pojištění.pdf"
+      ]
     },
     {
       "id": "C004",
@@ -434,7 +440,10 @@
         "allow_product_lane_when_eligible",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "DIP; rozlišit od pojistného produktu."
+      "expectedNotesForAdvisor": "DIP; rozlišit od pojistného produktu.",
+      "aliasFileNames": [
+        "Test AI/AMUNDI DIP.pdf"
+      ]
     },
     {
       "id": "C005",
@@ -484,7 +493,10 @@
         "allow_product_lane_when_eligible",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "DPS smlouva."
+      "expectedNotesForAdvisor": "DPS smlouva.",
+      "aliasFileNames": [
+        "Test AI/Smlouva DPS.pdf"
+      ]
     },
     {
       "id": "C006",
@@ -586,7 +598,10 @@
         "block_auto_publish_as_final_contract",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": ""
+      "expectedNotesForAdvisor": "",
+      "aliasFileNames": [
+        "Test AI/Modelace životního pojištění Kooperativa.pdf"
+      ]
     },
     {
       "id": "C008",
@@ -1311,11 +1326,11 @@
     },
     {
       "id": "C022",
-      "familyBucket": "investment_or_dip_or_dps",
+      "familyBucket": "compliance",
       "referenceFile": "Test AI/VL-202512.pdf",
       "gitTracked": true,
-      "expectedPrimaryType": "pension_contract",
-      "publishable": "partial",
+      "expectedPrimaryType": "payslip_document",
+      "publishable": "none",
       "isPacket": false,
       "expectedEntities": [
         "participant"
@@ -1334,16 +1349,14 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "Penzijní rámec VL; rozlišit PP vs DPS.",
-      "expectedFamily": "investment",
-      "expectedPublishability": "partial",
-      "expectedOutputMode": "structured_product_document",
-      "expectedSensitivity": "standard",
-      "expectedClientBindingType": "investor_institution_block",
+      "corpusNote": "Výplatní lístek (měsíční). Podpůrný dokument pro ověření příjmů, nikoli penzijní smlouva.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": "none",
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "high_sensitivity",
+      "expectedClientBindingType": "none",
       "expectedCoreFields": [
-        "participantName",
-        "institutionName",
-        "productFramework"
+        "documentSummary"
       ],
       "expectedActionsForbidden": [
         "confuse_pp_with_pure_investment"
@@ -1354,7 +1367,17 @@
         "allow_product_lane_when_eligible",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Penzijní rámec VL; rozlišit PP vs DPS."
+      "expectedNotesForAdvisor": "Penzijní rámec VL; rozlišit PP vs DPS.",
+      "aliasFileNames": [
+        "Test AI/Výplatní lístek za měsíc.pdf"
+      ],
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "výplatní lístek, mzda, zaměstnavatel",
+        "expectedPurposeHint": "Ověření příjmu; podpůrný dokument",
+        "handling": "store_as_supporting_doc",
+        "recommendedNextStep": "uloz_jako_prilohu_k_klientovi",
+        "noProductPublishPayload": true
+      }
     },
     {
       "id": "C023",
@@ -1408,7 +1431,10 @@
         "expectedPurposeHint": "Regulatorní dokumentace a souhlasy.",
         "recommendedNextStep": "Vysoce citlivé; pouze trezor a ruční kontrola; nepublikovat jako standardní produktovou smlouvu.",
         "noProductPublishPayload": true
-      }
+      },
+      "aliasFileNames": [
+        "Test AI/Komisionářská smlouva scan.pdf"
+      ]
     },
     {
       "id": "C024",
@@ -1519,11 +1545,11 @@
     },
     {
       "id": "C026",
-      "familyBucket": "life_proposal",
+      "familyBucket": "non_life_insurance",
       "referenceFile": "Test AI/Čučka zamzam GČP.pdf",
       "gitTracked": false,
-      "expectedPrimaryType": "liability_insurance_offer",
-      "publishable": "partial",
+      "expectedPrimaryType": "non_life_insurance_contract",
+      "publishable": "full",
       "isPacket": false,
       "expectedEntities": [
         "policyholder",
@@ -1542,17 +1568,17 @@
       ],
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "Generali odpovědnost při výkonu povolání (master plán).",
-      "expectedFamily": "life_insurance",
-      "expectedPublishability": "partial",
-      "expectedOutputMode": "signature_ready_proposal",
+      "corpusNote": "Pojistná smlouva (GČP - generální číslo pojistky). Nejedná se o změnový dokument ani nabídku odpovědnostního pojištění.",
+      "expectedFamily": "non_life_insurance",
+      "expectedPublishability": "full",
+      "expectedOutputMode": "structured_product_document",
       "expectedSensitivity": "standard",
-      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedClientBindingType": "policyholder_block",
       "expectedCoreFields": [
-        "policyholderName",
-        "institutionName",
-        "premiumAmount",
-        "coverageLimits"
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName"
       ],
       "expectedActionsForbidden": [
         "treat_as_life"
@@ -1620,11 +1646,11 @@
     },
     {
       "id": "C028",
-      "familyBucket": "service_or_aml_or_supporting_doc",
+      "familyBucket": "investment_or_dip_or_dps",
       "referenceFile": "Test AI/SMLOUVA O POSKYTOVÁNÍ SLUŽEB.pdf",
       "gitTracked": false,
-      "expectedPrimaryType": "service_agreement",
-      "publishable": false,
+      "expectedPrimaryType": "investment_service_agreement",
+      "publishable": "partial",
       "isPacket": false,
       "expectedEntities": [
         "client",
@@ -1647,15 +1673,15 @@
       "mapsToGoldenScenarioIds": [
         "G09"
       ],
-      "corpusNote": "Codya / platforma — smlouva o poskytování služeb (git korpus); referenční/servisní dráha.",
-      "expectedFamily": "compliance",
-      "expectedPublishability": false,
-      "expectedOutputMode": "reference_or_supporting_document",
+      "corpusNote": "Smlouva o poskytování investičních služeb (investiční servisní smlouva). Pipeline ji zpracovává jako structured investment document.",
+      "expectedFamily": "investment",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "structured_product_document",
       "expectedSensitivity": "standard",
-      "expectedClientBindingType": "client_provider_service_block",
+      "expectedClientBindingType": "investor_institution_block",
       "expectedCoreFields": [
         "clientName",
-        "providerName",
+        "institutionName",
         "scopeSummary"
       ],
       "expectedActionsForbidden": [
@@ -1668,13 +1694,7 @@
         "no_structured_contract_publish",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Codya / platforma — smlouva o poskytování služeb (git korpus); referenční/servisní dráha.",
-      "expectedFallbackBehavior": {
-        "expectedSummaryFocus": "Smlouva o poskytování služeb (Codya / platforma).",
-        "expectedPurposeHint": "Obecný servisní rámec mezi klientem a poskytovatelem.",
-        "recommendedNextStep": "Reference lane; párovat k investičnímu vztahu; ne jako samostatná pojistná smlouva.",
-        "noProductPublishPayload": true
-      }
+      "expectedNotesForAdvisor": "Codya / platforma — smlouva o poskytování služeb (git korpus); referenční/servisní dráha."
     },
     {
       "id": "C029",
@@ -1728,6 +1748,605 @@
         "advisor_review"
       ],
       "expectedNotesForAdvisor": "Investiční smlouva Codya (git korpus); strukturovaná investiční dráha."
+    },
+    {
+      "id": "C030",
+      "familyBucket": "final_life_contract",
+      "referenceFile": "Test AI/IŽP - Generali.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client",
+        "set_review_reminder"
+      ],
+      "expectedActionsForbidden": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "IŽP Generali — extrahuj klientská data z bloku pojistník/pojištěný, ne z hlavičky Generali.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount",
+        "paymentFrequency"
+      ],
+      "expectedForbiddenActions": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [
+        "review_client_block_priority"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C031",
+      "familyBucket": "final_life_contract",
+      "referenceFile": "Test AI/IŽP UNIQA.PDF",
+      "gitTracked": false,
+      "expectedPrimaryType": "life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "IŽP UNIQA — klient z bloku pojistník, ne z UNIQA logotypu/adresy.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount",
+        "paymentFrequency"
+      ],
+      "expectedForbiddenActions": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [
+        "review_client_block_priority"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C032",
+      "familyBucket": "life_proposal",
+      "referenceFile": "Test AI/Životní pojištění Pillow.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "life_insurance_proposal",
+      "publishable": "partial",
+      "isPacket": false,
+      "expectedFamily": "life_insurance",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedPublishability": "partial",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "fullName",
+        "proposalNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "review_proposal",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "auto_publish_as_final_contract"
+      ],
+      "expectedNotesForAdvisor": "Pillow digitální životní pojištění — návrh/signature-ready. Klientská data z bloku pojistník/žadatel.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "proposalNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount",
+        "paymentFrequency"
+      ],
+      "expectedForbiddenActions": [
+        "auto_publish_as_final_contract"
+      ],
+      "expectedReviewFlags": [
+        "review_as_proposal"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C033",
+      "familyBucket": "final_life_contract",
+      "referenceFile": "Test AI/Životní pojištění Uniqa.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Životní pojištění Uniqa — finální smlouva, klientská data z pojistník bloku.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount",
+        "paymentFrequency"
+      ],
+      "expectedForbiddenActions": [
+        "apply_as_modelation_without_override",
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [
+        "review_client_block_priority"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C034",
+      "familyBucket": "non_life_insurance",
+      "referenceFile": "Test AI/Pojištění podnikatelů.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "non_life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "non_life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Pojištění podnikatelů — non-life, extrahuj předmět pojištění a rizika.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount"
+      ],
+      "expectedForbiddenActions": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C035",
+      "familyBucket": "non_life_insurance",
+      "referenceFile": "Test AI/Pojištění odpovědnosti v zaměstnání.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "non_life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "non_life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Pojištění odpovědnosti v zaměstnání — liability insurance.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate"
+      ],
+      "expectedForbiddenActions": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C036",
+      "familyBucket": "non_life_insurance",
+      "referenceFile": "Test AI/Povinné ručení.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "non_life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "non_life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Povinné ručení (MTPL) — motor third-party liability.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "vehicle"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount"
+      ],
+      "expectedForbiddenActions": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C037",
+      "familyBucket": "non_life_insurance",
+      "referenceFile": "Test AI/Uniqa Majetek.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "non_life_insurance_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "non_life_insurance",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Uniqa Majetek — property/home insurance.",
+      "expectedEntities": [
+        "policyholder",
+        "insurer",
+        "insuredProperty"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount"
+      ],
+      "expectedForbiddenActions": [
+        "use_insurer_address_as_client"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C038",
+      "familyBucket": "mortgage_or_mortgage_proposal",
+      "referenceFile": "Test AI/Hypotéka.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "mortgage_document",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "mortgage",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "borrower_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "annualPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_lender_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Hypotéka — mortgage document, extrahuj výši úvěru, splatnost, splátku.",
+      "expectedEntities": [
+        "borrower",
+        "lender",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "annualPremium"
+      ],
+      "expectedForbiddenActions": [
+        "use_lender_address_as_client"
+      ],
+      "expectedReviewFlags": [
+        "review_loan_amount_and_term"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C039",
+      "familyBucket": "consumer_loan",
+      "referenceFile": "Test AI/SMLOUVA O ÚVĚRU.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "consumer_loan_contract",
+      "publishable": true,
+      "isPacket": false,
+      "expectedFamily": "consumer_credit",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": true,
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "borrower_block",
+      "expectedCoreFields": [
+        "fullName",
+        "contractNumber",
+        "insurer",
+        "productName",
+        "policyStartDate",
+        "annualPremium"
+      ],
+      "expectedActionsAllowed": [
+        "publish_contract",
+        "match_client"
+      ],
+      "expectedActionsForbidden": [
+        "use_lender_address_as_client"
+      ],
+      "expectedNotesForAdvisor": "Smlouva o úvěru — consumer credit, extrahuj výši úvěru, RPSN, splátku.",
+      "expectedEntities": [
+        "borrower",
+        "lender",
+        "product"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "annualPremium"
+      ],
+      "expectedForbiddenActions": [
+        "use_lender_address_as_client"
+      ],
+      "expectedReviewFlags": [
+        "review_loan_amount_and_term"
+      ],
+      "expectedAssistantRelevance": "post_upload_plan",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C040",
+      "familyBucket": "service_or_aml_or_supporting_doc",
+      "referenceFile": "Test AI/Daňové přiznání s.r.o..pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "corporate_tax_return",
+      "publishable": false,
+      "isPacket": false,
+      "expectedFamily": "compliance",
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedPublishability": false,
+      "expectedSensitivity": "high_sensitivity",
+      "expectedClientBindingType": "none",
+      "expectedCoreFields": [
+        "documentSummary"
+      ],
+      "expectedActionsAllowed": [
+        "flag_for_review",
+        "attach_to_client_file"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_insurance_contract",
+        "auto_publish"
+      ],
+      "expectedNotesForAdvisor": "Daňové přiznání s.r.o. — reference dokument. Nevkládat do smluvní pipeline.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "tax_return_period_and_company",
+        "expectedPurposeHint": "income_verification_or_compliance",
+        "recommendedNextStep": "attach_to_client_profile_as_reference",
+        "noProductPublishPayload": true
+      },
+      "expectedEntities": [
+        "company",
+        "taxAuthority"
+      ],
+      "expectedExtractedFields": [
+        "taxPeriod",
+        "companyName"
+      ],
+      "expectedForbiddenActions": [
+        "publish_as_insurance_contract",
+        "auto_publish"
+      ],
+      "expectedReviewFlags": [
+        "reference_document_only"
+      ],
+      "expectedAssistantRelevance": "supporting_doc_reference",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C041",
+      "familyBucket": "service_or_aml_or_supporting_doc",
+      "referenceFile": "Test AI/PŘIZNÁNÍ k dani z příjmů právnických osob.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "corporate_tax_return",
+      "publishable": false,
+      "isPacket": false,
+      "expectedFamily": "compliance",
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedPublishability": false,
+      "expectedSensitivity": "high_sensitivity",
+      "expectedClientBindingType": "none",
+      "expectedCoreFields": [
+        "documentSummary"
+      ],
+      "expectedActionsAllowed": [
+        "flag_for_review",
+        "attach_to_client_file"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_insurance_contract",
+        "auto_publish"
+      ],
+      "expectedNotesForAdvisor": "DPPO (daň z příjmů právnických osob) — reference dokument pro příjmovou verifikaci.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "tax_period_company_and_taxable_income",
+        "expectedPurposeHint": "income_or_compliance_verification",
+        "recommendedNextStep": "attach_to_client_profile_as_reference",
+        "noProductPublishPayload": true
+      },
+      "expectedEntities": [
+        "company",
+        "taxAuthority"
+      ],
+      "expectedExtractedFields": [
+        "taxPeriod",
+        "companyName"
+      ],
+      "expectedForbiddenActions": [
+        "publish_as_insurance_contract",
+        "auto_publish"
+      ],
+      "expectedReviewFlags": [
+        "reference_document_only"
+      ],
+      "expectedAssistantRelevance": "supporting_doc_reference",
+      "mapsToGoldenScenarioIds": []
     }
   ]
 }
