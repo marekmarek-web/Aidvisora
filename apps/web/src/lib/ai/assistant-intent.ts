@@ -373,6 +373,10 @@ export function shouldUseMortgageVerifiedBundle(c: CanonicalIntent): boolean {
   const wantsOpp = c.requestedActions.includes("create_opportunity");
   const wantsFu = c.requestedActions.includes("create_followup");
   if (!wantsOpp || !wantsFu) return false;
+  const hasAmount = c.extractedFacts.some(
+    (f) => f.key === "amount" && typeof f.value === "number" && Number.isFinite(f.value) && f.value > 0,
+  );
+  if (!hasAmount) return false;
   if (c.productDomain === "hypo" || c.productDomain === "uver") return true;
   const hasHypoLex = c.extractedFacts.some(
     (f) =>

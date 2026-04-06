@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   const xDebugPath = request.headers.get("x-debug-path");
   const userId = request.headers.get(USER_ID_HEADER);
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.log("[route GET /api/contracts/review]", {
       url,
       method,
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const membership = await getMembership(userId);
     if (!membership) {
       if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
+         
         console.log("[route GET /api/contracts/review] 403", { hasMembership: false });
       }
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const errName = err instanceof Error ? err.name : "";
-    // eslint-disable-next-line no-console
+     
     console.error("[route GET /api/contracts/review] 500", errName, message, err instanceof Error ? err.stack : "");
     return NextResponse.json(
       { error: "Načtení seznamu selhalo." },

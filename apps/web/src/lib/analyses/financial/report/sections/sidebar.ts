@@ -1,7 +1,6 @@
 import type { SectionCtx } from '../types';
-import { esc } from '../helpers';
+import { esc, getProductDisplayName } from '../helpers';
 import type { InvestmentEntry } from '../../types';
-import { FUND_DETAILS } from '../../constants';
 import { REPORT_BRAND_LOGO_SRC } from '../branding';
 
 function navIcon(type: string): string {
@@ -39,8 +38,13 @@ export function renderSidebar(ctx: SectionCtx): string {
     (inv: InvestmentEntry) => inv.amount > 0,
   );
   investments.forEach((inv: InvestmentEntry) => {
-    const name = FUND_DETAILS[inv.productKey]?.name ?? inv.productKey;
-    items.push({ id: `prod-${inv.productKey}`, label: name, icon: 'product', group: items.length === 4 ? 'Produkty' : undefined });
+    const name = getProductDisplayName(inv.productKey);
+    items.push({
+      id: `prod-${inv.productKey}-${inv.type}`,
+      label: name,
+      icon: 'product',
+      group: items.length === 4 ? 'Produkty' : undefined,
+    });
   });
 
   items.push({ id: 'projekce', label: 'Projekce', icon: 'projekce' });

@@ -9,6 +9,8 @@ import { canonicalDealTitle, looksInternalOrRaw } from "./assistant-canonical-na
 export const PRODUCT_DOMAIN_TO_CASE_TYPE: Record<ProductDomain, string> = {
   hypo: "hypo",
   uver: "úvěr",
+  leasing: "leasing",
+  stavebni_sporeni: "stavební spoření",
   investice: "investice",
   dip: "DIP",
   dps: "DPS",

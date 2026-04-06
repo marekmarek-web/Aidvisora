@@ -1,6 +1,5 @@
 import type { SectionCtx } from '../types';
-import { nextSection, fmtCzk, fmtMonthly, fmtPct, colorForIndex, renderDonutSVG, investmentLabel, esc } from '../helpers';
-import { FUND_DETAILS } from '../../constants';
+import { nextSection, fmtCzk, fmtMonthly, fmtPct, colorForIndex, renderDonutSVG, investmentLabel, esc, getProductDisplayName } from '../helpers';
 import { getStrategyProfileLabel } from '../../formatters';
 import type { InvestmentEntry } from '../../types';
 
@@ -15,10 +14,9 @@ export function renderPortfolio(ctx: SectionCtx): string {
   const totalAmount = investments.reduce((s: number, i: InvestmentEntry) => s + i.amount, 0);
 
   const items = investments.map((inv: InvestmentEntry, idx: number) => {
-    const detail = FUND_DETAILS[inv.productKey];
-    const name = detail?.name ?? inv.productKey;
+    const name = getProductDisplayName(inv.productKey);
     const weight = totalAmount > 0 ? (inv.amount / totalAmount) * 100 : 0;
-    return { inv, name, weight, color: colorForIndex(idx, theme), manager: detail?.manager ?? '' };
+    return { inv, name, weight, color: colorForIndex(idx, theme), manager: '' };
   });
 
   const rows = items.map((item) => {

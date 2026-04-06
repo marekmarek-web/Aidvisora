@@ -358,7 +358,7 @@ export async function seedDemoData(): Promise<{ ok: boolean; message: string }> 
     });
   }
 
-  let templateIds = await db
+  const templateIds = await db
     .select({ id: noteTemplates.id, domain: noteTemplates.domain })
     .from(noteTemplates)
     .where(eq(noteTemplates.tenantId, auth.tenantId));

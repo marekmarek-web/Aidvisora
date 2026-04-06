@@ -16,7 +16,7 @@ const chainable = () => {
 };
 vi.mock("db", () => ({
   db: chainable(),
-  eq: vi.fn(), and: vi.fn(), isNull: vi.fn(), sql: vi.fn(), asc: vi.fn(), desc: vi.fn(),
+  eq: vi.fn(), and: vi.fn(), or: vi.fn(), isNull: vi.fn(), sql: vi.fn(), asc: vi.fn(), desc: vi.fn(),
   tasks: { contactId: "c", id: "id", tenantId: "t", completedAt: "ca", dueDate: "dd", title: "ti" },
   contacts: { id: "id", tenantId: "t", firstName: "fn", lastName: "ln", nextServiceDue: "nsd", email: "e", phone: "p" },
   contracts: {}, opportunities: { id: "id", tenantId: "t", title: "ti", expectedCloseDate: "ecd", contactId: "c", closedAt: "ca" },
@@ -46,6 +46,23 @@ vi.mock("../assistant-intent-extract", () => ({
     noEmail: false,
     dueDateText: null,
   }),
+  extractCanonicalIntent: vi.fn().mockResolvedValue({
+    intentType: "general_chat",
+    subIntent: null,
+    productDomain: null,
+    targetClient: null,
+    targetOpportunity: null,
+    targetDocument: null,
+    requestedActions: ["general_chat"],
+    extractedFacts: [],
+    missingFields: [],
+    temporalExpressions: [],
+    confidence: 0.5,
+    requiresConfirmation: false,
+    switchClient: false,
+    noEmail: false,
+    userConstraints: [],
+  }),
 }));
 vi.mock("../assistant-crm-writes", () => ({
   executeMortgageDealAndFollowUpTask: vi.fn(),
@@ -53,10 +70,12 @@ vi.mock("../assistant-crm-writes", () => ({
 
 
 
-const { parseModelToolCalls, formatToolResultForModel, routeAssistantMessage } = await import(
+const { parseModelToolCalls, formatToolResultForModel, routeAssistantMessage, routeAssistantMessageCanonical } = await import(
   "../assistant-tool-router"
 );
 const { getOrCreateSession } = await import("../assistant-session");
+const { extractCanonicalIntent } = await import("../assistant-intent-extract");
+const entityResolution = await import("../assistant-entity-resolution");
 
 describe("parseModelToolCalls", () => {
   it("extracts tool calls from text", () => {
@@ -116,5 +135,52 @@ describe("routeAssistantMessage", () => {
     expect(session.messageCount).toBe(0);
     await routeAssistantMessage("Test", session);
     expect(session.messageCount).toBe(1);
+  });
+});
+
+describe("routeAssistantMessageCanonical", () => {
+  it("keeps draft plan in preview when mortgage amount is missing", async () => {
+    vi.mocked(extractCanonicalIntent).mockResolvedValueOnce({
+      intentType: "create_opportunity",
+      subIntent: null,
+      productDomain: "hypo",
+      targetClient: null,
+      targetOpportunity: null,
+      targetDocument: null,
+      requestedActions: ["create_opportunity"],
+      extractedFacts: [],
+      missingFields: [],
+      temporalExpressions: [],
+      confidence: 0.92,
+      requiresConfirmation: true,
+      switchClient: false,
+      noEmail: false,
+      userConstraints: [],
+    });
+    vi.spyOn(entityResolution, "resolveEntities").mockResolvedValueOnce({
+      client: {
+        entityType: "contact",
+        entityId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        displayLabel: "Jan Novák",
+        confidence: 1,
+        ambiguous: false,
+        alternatives: [],
+      },
+      opportunity: null,
+      document: null,
+      contract: null,
+      warnings: [],
+    });
+
+    const session = getOrCreateSession(undefined, "t1", "u1");
+    const response = await routeAssistantMessageCanonical(
+      "Klient Jan Novák chce hypotéku, vytvoř obchod.",
+      session,
+      { clientId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
+    );
+
+    expect(response.executionState?.status).toBe("draft");
+    expect(response.message).toMatch(/chybí cílová částka/i);
+    expect(response.executionState?.stepPreviews?.[0]?.preflightStatus).toBe("needs_input");
   });
 });

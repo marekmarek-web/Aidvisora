@@ -44,7 +44,7 @@ export function DashboardCalendarSidePanel({
         type="button"
         onClick={onOpen}
         className={clsx(
-          "fixed top-1/2 z-[35] flex h-32 w-10 -translate-y-1/2 flex-col items-center justify-center gap-3 rounded-l-2xl border border-r-0 py-3 pl-1 pr-0.5 backdrop-blur-xl transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "fixed top-1/2 z-[35] flex h-32 w-10 -translate-y-1/2 flex-col items-center justify-center gap-3 rounded-l-2xl border border-r-0 py-3 pl-1 pr-0.5 backdrop-blur-xl transition-all duration-\\[800ms\\] ease-\\[cubic-bezier(0.16,1,0.3,1)\\]",
           "border-[color:var(--wp-sc-panel-border)] bg-[color:var(--wp-sc-panel-bg)] text-[color:var(--wp-text-muted)] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] hover:text-indigo-600 dark:shadow-[-10px_0_30px_rgba(0,0,0,0.25)] dark:hover:text-indigo-300",
           "right-[max(0px,env(safe-area-inset-right,0px))]",
           drawerOpen && "pointer-events-none translate-x-full opacity-0",
@@ -58,7 +58,7 @@ export function DashboardCalendarSidePanel({
 
       <aside
         className={clsx(
-          "fixed z-drawer-panel flex flex-col overflow-hidden backdrop-blur-3xl transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "fixed z-drawer-panel flex flex-col overflow-hidden backdrop-blur-3xl transition-all duration-\\[800ms\\] ease-\\[cubic-bezier(0.16,1,0.3,1)\\]",
           "max-lg:inset-y-0 max-lg:right-0 max-lg:left-auto max-lg:w-full max-lg:max-w-[min(100vw,420px)] max-lg:rounded-none max-lg:border-l max-lg:border-[color:var(--wp-sc-panel-border)] max-lg:bg-[color:var(--wp-sc-panel-bg)] max-lg:shadow-[var(--wp-sc-panel-shadow)] max-lg:pt-[env(safe-area-inset-top,0px)]",
           "lg:right-5 lg:top-5 lg:bottom-5 lg:left-auto lg:h-auto lg:w-[420px] lg:max-w-[420px] lg:rounded-[32px] lg:border lg:border-[color:var(--wp-sc-panel-border)] lg:bg-[color:var(--wp-sc-panel-bg)] lg:shadow-[0_20px_60px_rgba(0,0,0,0.06)] dark:lg:shadow-[0_20px_60px_rgba(0,0,0,0.45)]",
           drawerOpen

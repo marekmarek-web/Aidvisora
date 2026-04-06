@@ -53,6 +53,16 @@ function hintToLookupKey(hint: string): string {
     ?.toLowerCase() ?? "";
 }
 
+function hasOnlyImplicitGeneralChatActions(intent: CanonicalIntent): boolean {
+  return intent.requestedActions.length === 0 || (
+    intent.requestedActions.length === 1 && intent.requestedActions[0] === "general_chat"
+  );
+}
+
+function looksLikeExplicitActionBundleRequest(message: string): boolean {
+  return /\b(vytvoř|vytvor|založ|zaloz|udělej|udelej|pošli|posli|naplánuj|naplanuj|zapiš|zapis|vyžádej|vyzadej|nastav)\b/i.test(message);
+}
+
 /**
  * Doplní productDomain a uživatelské hints z playbooku (bez LLM).
  * Pro write intenty propaguje priorityMissingHints jako `hint:…` záznamy
@@ -76,7 +86,26 @@ export function enrichCanonicalIntentWithPlaybooks(intent: CanonicalIntent, mess
     next.productDomain = pb.defaultProductDomain;
   }
 
-  next.userConstraints.push(`playbook:${pb.id}`);
+  if (!next.userConstraints.includes(`playbook:${pb.id}`)) {
+    next.userConstraints.push(`playbook:${pb.id}`);
+  }
+
+  if (
+    pb.defaultRequestedActions &&
+    pb.defaultRequestedActions.length > 0 &&
+    (
+      hasOnlyImplicitGeneralChatActions(intent) ||
+      (
+        intent.requestedActions.length === 1 &&
+        intent.requestedActions[0] === "create_opportunity" &&
+        !looksLikeExplicitActionBundleRequest(message)
+      )
+    )
+  ) {
+    next.requestedActions = [...pb.defaultRequestedActions];
+    next.intentType =
+      next.requestedActions.length > 1 ? "multi_action" : next.requestedActions[0] ?? next.intentType;
+  }
 
   // Determine whether this intent should receive individual hint entries.
   const intentInGlobalSet = PLAYBOOK_HINT_INTENTS.has(intent.intentType);

@@ -82,7 +82,7 @@ export async function withOpenAIRateLimitRetry<T>(
       const baseMs = parsed != null ? Math.ceil(parsed * 1000) : Math.min(2000 * 2 ** (attempt - 1), 30_000);
       const jitter = 150 + attempt * 120;
       const waitMs = Math.min(baseMs + jitter, 95_000);
-      // eslint-disable-next-line no-console
+       
       console.warn(
         `[OpenAI] ${options.label}: rate limit (attempt ${attempt}/${maxAttempts}), waiting ${waitMs}ms then retry`
       );

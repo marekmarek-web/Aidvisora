@@ -1,6 +1,5 @@
 import type { SectionCtx } from '../types';
-import { nextSection, fmtCzk, fmtMonthly, esc, investmentLabel, colorForIndex, fmtPct, renderDonutSVG } from '../helpers';
-import { FUND_DETAILS } from '../../constants';
+import { nextSection, fmtCzk, fmtMonthly, esc, investmentLabel, colorForIndex, fmtPct, renderDonutSVG, getProductDisplayName } from '../helpers';
 
 export function renderCompanyPortfolio(ctx: SectionCtx): string {
   const { data, theme } = ctx;
@@ -26,10 +25,9 @@ export function renderCompanyPortfolio(ctx: SectionCtx): string {
   const totalAmount = companyInvestments.reduce((s, i) => s + i.amount, 0);
 
   const items = companyInvestments.map((inv, idx) => {
-    const detail = FUND_DETAILS[inv.productKey];
-    const name = detail?.name ?? inv.productKey;
+    const name = getProductDisplayName(inv.productKey);
     const weight = totalAmount > 0 ? (inv.amount / totalAmount) * 100 : 0;
-    return { inv, name, weight, color: colorForIndex(idx, theme), manager: detail?.manager ?? '' };
+    return { inv, name, weight, color: colorForIndex(idx, theme), manager: '' };
   });
 
   const rows = items.map((item) => {

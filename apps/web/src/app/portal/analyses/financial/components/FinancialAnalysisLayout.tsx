@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
 import { createTask } from "@/app/actions/tasks";
 import { createMeetingNote } from "@/app/actions/meeting-notes";
@@ -18,6 +18,12 @@ import { StepSummary } from "./steps/StepSummary";
 import { StepBenefitsRisks } from "./steps/StepBenefitsRisks";
 import { PersonalFALinkBanner } from "./PersonalFALinkBanner";
 import { StickyNote, CheckSquare, FileText } from "lucide-react";
+import { useFundLibraryFaSnapshot } from "./FundLibraryFaContext";
+import {
+  buildOfflineFundLibrarySnapshot,
+  reconcileFaInvestmentsWithSnapshot,
+  faInvestmentShapeMatches,
+} from "@/lib/analyses/financial/fund-library/fa-investment-rows";
 
 const STEP_COMPONENTS_BASE = [
   StepClientInfo,
@@ -56,6 +62,34 @@ export function FinancialAnalysisLayout() {
   const setData = useFinancialAnalysisStore((s) => s.setData);
   const prevStep = useFinancialAnalysisStore((s) => s.prevStep);
   const nextStep = useFinancialAnalysisStore((s) => s.nextStep);
+
+  const fundLibrarySnapshot = useFundLibraryFaSnapshot();
+
+  useEffect(() => {
+    const snap = fundLibrarySnapshot ?? buildOfflineFundLibrarySnapshot();
+    const includeCompany = data.includeCompany ?? false;
+    const next = reconcileFaInvestmentsWithSnapshot(data.investments, snap, includeCompany);
+    const same =
+      faInvestmentShapeMatches(data.investments, next) &&
+      data.investments.length === next.length &&
+      data.investments.every((inv, i) => {
+        const n = next[i];
+        return (
+          n &&
+          inv.id === n.id &&
+          inv.productKey === n.productKey &&
+          inv.type === n.type &&
+          inv.amount === n.amount &&
+          inv.years === n.years &&
+          inv.annualRate === n.annualRate
+        );
+      });
+    if (same) return;
+    setData({ investments: next });
+    queueMicrotask(() => {
+      useFinancialAnalysisStore.getState().recalcInvestmentsFv();
+    });
+  }, [fundLibrarySnapshot, data.includeCompany, data.investments, setData]);
 
   const stepComponents = getStepComponents(data.includeCompany ?? false);
   const StepComponent = stepComponents[currentStep - 1];

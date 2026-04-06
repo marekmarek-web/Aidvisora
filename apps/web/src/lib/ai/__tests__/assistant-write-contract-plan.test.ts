@@ -87,7 +87,7 @@ describe("buildExecutionPlan — missing fields → draft", () => {
     expect(computeWriteActionMissingFields(step!.action, step!.params)).toContain("startAt|resolvedDate");
   });
 
-  it("schedule_meeting with resolved date-only derives startAt and awaits confirmation", () => {
+  it("schedule_meeting with resolved date-only stays draft until time is provided", () => {
     const plan = buildExecutionPlan(
       intent({
         intentType: "schedule_meeting",
@@ -96,9 +96,9 @@ describe("buildExecutionPlan — missing fields → draft", () => {
       }),
       resolutionWithClient(),
     );
-    expect(plan.status).toBe("awaiting_confirmation");
+    expect(plan.status).toBe("draft");
     const step = plan.steps.find((s) => s.action === "scheduleCalendarEvent");
-    expect(step?.params.startAt).toBe("2026-04-10T09:00:00.000Z");
+    expect(step?.params.startAt).toBeUndefined();
     expect(computeWriteActionMissingFields(step!.action, step!.params)).toHaveLength(0);
   });
 

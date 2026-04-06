@@ -18,6 +18,7 @@ import {
   isMatchingAmbiguous,
 } from "@/lib/ai/client-matching";
 import { logOpenAICall } from "@/lib/openai";
+import { getAiReviewProviderMeta } from "@/lib/ai/review-llm-provider";
 import { preprocessForAiExtraction } from "@/lib/documents/processing/preprocess-for-ai";
 import { buildPageTextMapFromMarkdown, sliceSectionTextForType } from "@/lib/ai/section-text-slicer";
 import type { BundleSectionTexts } from "@/lib/ai/combined-extraction";
@@ -603,9 +604,12 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     }
   }
 
+  const providerMeta = getAiReviewProviderMeta();
+
   const mergedTrace = {
     ...pipelineResult.extractionTrace,
     ...advisorSummaryTrace,
+    ...providerMeta,
     preprocessDurationMs,
     pipelineDurationMs,
     clientMatchDurationMs,

@@ -1,0 +1,14 @@
+---
+description: Po dokončení úkolu/plánu uvést SQL migrace k ručnímu spuštění (odkaz + kopírovatelný blok)
+alwaysApply: true
+---
+
+# Závěr úkolu: SQL migrace
+
+Po **ukončení úkolu** nebo **dokončení plánu** musí **poslední část finální odpovědi** obsahovat:
+
+1. **Migrace SQL** — jasně vyjmenuj, co má být provedeno na databázi (nové/alterované migrace, pořadí).
+2. **Odkaz do repa** — plná cesta k souboru v repozitáři (např. `https://github.com/org/repo/blob/main/packages/db/migrations/…` nebo cesta `repo/path/k/migraci.sql` podle toho, co uživatel používá), **nebo**
+3. **Klikací kopírování** — SQL v oploceném bloku s jazykem `sql`, aby šlo jedním kliknutím zkopírovat celý skript.
+
+Pokud **žádná migrace nebyla potřeba**, napiš to výslovně jednou větou (např. „Žádné SQL migrace nejsou potřeba.“).

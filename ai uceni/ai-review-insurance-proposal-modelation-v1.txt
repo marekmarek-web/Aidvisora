@@ -18,3 +18,35 @@ const response = await openai.responses.create({
     }
   }
 });
+
+---
+
+## Spec výstupu pro Prompt Builder (zkopírovat do system / instructions)
+
+Výstup MUSÍ být jeden platný JSON objekt ve tvaru DocumentReviewEnvelope (viz Zod schéma v repu:
+apps/web/src/lib/ai/document-review-types.ts — documentReviewEnvelopeSchema).
+
+Povinné kořenové klíče: documentClassification, documentMeta, parties ({}), extractedFields,
+evidence ([]), reviewWarnings ([]), suggestedActions ([]), contentFlags.
+
+documentClassification: primaryType musí odpovídat očekávanému typu z pipeline (např. life_insurance_modelation),
+lifecycleStatus (např. modelation, illustration, proposal), documentIntent (typicky illustrative_only),
+confidence 0–1, reasons — krátké české tagy.
+
+Každé pole v extractedFields MUSÍ mít tvar:
+{ "value": <string|number|object|array>, "status": "extracted"|"missing"|"inferred_low_confidence"|..., "confidence": 0–1 }
+
+Vyplň v češtině (hodnoty pro poradce), co dokument obsahuje:
+
+- Klient / pojistník: fullName, birthDate, personalId, address, phone, email, occupation, sports.
+- Více pojištěných: insuredPersons (pole objektů: jméno, narození, vztah, rizika, částky).
+- Produkt: insurer, productName, productType (český popis), proposalNumber, modelationId (číslo návrhu/modelace),
+  policyStartDate, policyEndDate, policyDuration.
+- Rizika: selectedCoverages, coverages, riders; případně deathBenefit, disabilityBenefit, accidentBenefit, hospitalizationBenefit, seriousIllnessBenefit.
+- Platby: totalMonthlyPremium nebo annualPremium, paymentFrequency, currency, paymentAccountNumber, bankCode, iban, variableSymbol, specificSymbol.
+- Zprostředkovatel: intermediaryName, intermediaryCode, intermediaryCompany, intermediaryPhone, intermediaryEmail, dateSigned.
+- Poznámky modelu: importantNotes lze převést do reviewWarnings jako message (česky).
+
+NIKDY neposílej do value polí pro poradce surové interní kódy typu insurance_modelation — použij český popis v productType / subtypeLabel nebo shrnutí v documentSummary.
+
+Proměnné: extracted_text, classification_reasons, adobe_signals, filename (jako dnes).

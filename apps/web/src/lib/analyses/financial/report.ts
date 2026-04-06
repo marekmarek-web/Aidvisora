@@ -5,7 +5,8 @@
 
 import type { FinancialAnalysisData, CompanyRisks, FundDetail } from './types';
 import { STATE_PENSION_TAX_LIMIT_ANNUAL, STATE_PENSION_TAX_REFUND_ANNUAL } from './types';
-import { CREDIT_WISH_BANKS, FUND_DETAILS, FUND_LOGOS, INSURANCE_LOGOS } from './constants';
+import { CREDIT_WISH_BANKS, INSURANCE_LOGOS } from './constants';
+import { getFaFundDetailForReport, getFaFundLogoUrl } from './fund-library/fa-fund-bridge';
 import { safeMonthlySavingsCzk } from './company-risk-premium';
 import { buildPremiumReportHTML } from './report/index';
 import {
@@ -597,7 +598,7 @@ function renderInvestmentsRows(data: FinancialAnalysisData): string {
     .map((i) => {
       const displayRate = Math.max(0, (i.annualRate || 0) - (conservative ? 0.02 : 0));
       const fv = i.computed?.fv ?? 0;
-      const logoHtml = renderLogoOrFallback(FUND_LOGOS[i.productKey], getProductName(i.productKey));
+      const logoHtml = renderLogoOrFallback(getFaFundLogoUrl(i.productKey), getProductName(i.productKey));
       return `<tr><td>${logoHtml}<span class="fund-name">${getProductName(i.productKey)}</span></td><td><span class="${getBadgeClass(i.type)}">${getTypeName(i.type)}</span></td><td style="text-align:right; font-variant-numeric: tabular-nums;">${i.type === 'lump' ? formatCzk(i.amount ?? 0) : formatCurrencyMonthly(i.amount ?? 0)}</td><td><span class="yield-pill">${formatPercent(displayRate)}</span></td><td style="text-align:right; font-weight:700; color:#0073ea; font-variant-numeric: tabular-nums;">${formatCzk(Math.round(fv))}</td></tr>`;
     })
     .join('');
@@ -654,7 +655,12 @@ function renderCreditWishesPDF(list: FinancialAnalysisData['newCreditWishList'])
 function renderHoldingsBlock(detail: FundDetail): string {
   const hasHoldings = (detail.topHoldings?.length ?? 0) > 0 || (detail.countries?.length ?? 0) > 0 || (detail.sectors?.length ?? 0) > 0;
   if (!hasHoldings) return '';
-  const maxWeight = Math.max(...[(detail.topHoldings ?? []).map((h) => h.weight), (detail.countries ?? []).map((c) => c.weight), (detail.sectors ?? []).map((s) => s.weight)].flat(), 1);
+  const flat = [
+    ...(detail.topHoldings ?? []).map((h) => h.weight),
+    ...(detail.countries ?? []).map((c) => c.weight),
+    ...(detail.sectors ?? []).map((s) => s.weight),
+  ];
+  const maxWeight = flat.length > 0 ? Math.max(...flat, 1e-6) : 1;
   const bar = (w: number) => `<div style="width: ${(w / maxWeight) * 100}%; min-width: 2px; height: 6px; background: #0073ea; border-radius: 2px;"></div>`;
   let html = '<div class="h2" style="margin-top: 4mm;">Holdings</div>';
   html += '<p style="font-size: 9pt; color: #4a4a4a; margin: 0 0 3mm 0;">Níže najdete informace o složení fondu.</p>';
@@ -664,7 +670,7 @@ function renderHoldingsBlock(detail: FundDetail): string {
       html += `<p style="font-size: 9pt; color: #4a4a4a; margin: 0 0 2mm 0;">Váha top 10: <strong>${formatPercent((detail.top10WeightPercent ?? 0) / 100, 2)}</strong> z ${formatInteger(detail.totalHoldingsCount ?? 0)} holdingu.</p>`;
     }
     html += '<div style="display: flex; flex-direction: column; gap: 1.5mm;">';
-    detail.topHoldings!.forEach((h) => {
+    (detail.topHoldings ?? []).forEach((h) => {
       html += `<div style="display: flex; align-items: center; gap: 3mm;"><span style="font-size: 9pt; color: #1f1c2e; min-width: 120px;">${escapeHtml(h.name)}</span><span style="font-size: 9pt; font-weight: 600; color: #0073ea; min-width: 36px;">${formatPercent(h.weight / 100, 2)}</span><div style="flex: 1; background: #e9ebf0; border-radius: 2px; overflow: hidden;">${bar(h.weight)}</div></div>`;
     });
     html += '</div></div>';
@@ -699,7 +705,7 @@ function renderProductDetailPages(
   const getTypeName = (type: string) => (type === 'lump' ? 'Jednorázová' : type === 'pension' ? 'Penzijní spoření' : 'Pravidelná');
   let html = '';
   invs.forEach((inv) => {
-    const detail = FUND_DETAILS[inv.productKey];
+    const detail = getFaFundDetailForReport(inv.productKey);
     if (!detail) return;
     const name = getProductName(inv.productKey);
     const amount = inv.amount ?? 0;
@@ -707,7 +713,7 @@ function renderProductDetailPages(
     const fv = inv.computed?.fv ?? 0;
     const displayRate = Math.max(0, (inv.annualRate ?? 0) - (conservative ? 0.02 : 0));
     const badgeClass = inv.type === 'lump' ? 'inv-badge inv-badge-lump' : inv.type === 'pension' ? 'inv-badge inv-badge-pension' : 'inv-badge inv-badge-monthly';
-    const productLogoHtml = renderLogoOrFallback(FUND_LOGOS[inv.productKey], getProductName(inv.productKey), 'width: 40px; height: 40px; object-fit: contain; margin-right: 3mm; flex-shrink: 0;');
+    const productLogoHtml = renderLogoOrFallback(getFaFundLogoUrl(inv.productKey), getProductName(inv.productKey), 'width: 40px; height: 40px; object-fit: contain; margin-right: 3mm; flex-shrink: 0;');
     html += `
     <section class="pdf-page">
       ${renderPdfHeader('DETAIL PRODUKTU', clientName, today, authorName)}
@@ -725,21 +731,53 @@ function renderProductDetailPages(
             <div style="font-size: 14pt; font-weight: 700; color: #0073ea;">${inv.type === 'lump' ? formatCzk(amount) : formatCurrencyMonthly(amount)}</div>
           </div>
         </div>
-        <p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.why)}</p>
+        ${
+          detail.why && detail.why.trim() && detail.why !== "—"
+            ? `<p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.why)}</p>`
+            : ""
+        }
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-bottom: 6mm;">
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
-            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Riziko</div>
-            <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${escapeHtml(detail.risks)}</div>
+            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Rizika (shrnutí)</div>
+            <div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; line-height: 1.35;">${escapeHtml(detail.risks)}</div>
           </div>
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
             <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Likvidita</div>
-            <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${escapeHtml(detail.liquidity)}</div>
+            <div style="font-size: 10pt; font-weight: 700; color: #1f1c2e; line-height: 1.35;">${escapeHtml(detail.liquidity)}</div>
           </div>
           <div style="background: #f8fafc; padding: 3mm; border-radius: 2mm; text-align: center;">
-            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Výnos</div>
+            <div style="font-size: 8pt; color: #4a4a4a; margin-bottom: 1mm;">Předpoklad v projekci</div>
             <div style="font-size: 11pt; font-weight: 700; color: #1f1c2e;">${formatPercent(displayRate)} p.a.</div>
+            ${
+              detail.planningRatePercent != null && Number.isFinite(detail.planningRatePercent)
+                ? `<div style="font-size: 7pt; color: #64748b; margin-top: 1mm;">interní model: ${String(detail.planningRatePercent).replace(".", ",")} % p.a.</div>`
+                : ""
+            }
           </div>
         </div>
+        ${
+          detail.provider && detail.provider !== detail.manager
+            ? `<p style="font-size: 9pt; color: #64748b; margin: -2mm 0 4mm 0;">Správce / značka: <strong>${escapeHtml(detail.provider)}</strong></p>`
+            : ""
+        }
+        ${
+          detail.morningstarRatingLabel
+            ? `<p style="font-size: 9pt; color: #1f1c2e; margin-bottom: 4mm;"><strong>Morningstar:</strong> ${escapeHtml(detail.morningstarRatingLabel)}</p>`
+            : ""
+        }
+        ${
+          detail.officialPerformanceSummary
+            ? `<div class="h2">Oficiální výkonnost (ze zdroje)</div><p style="font-size: 9pt; color: #1f1c2e; line-height: 1.55; margin-bottom: 5mm; white-space: pre-line;">${escapeHtml(detail.officialPerformanceSummary)}</p>`
+            : ""
+        }
+        ${
+          detail.factsheetUrl
+            ? `<div class="h2">Dokumentace</div><p style="font-size: 9pt; margin-bottom: 5mm;"><a href="${escapeHtml(detail.factsheetUrl)}">Factsheet</a>${
+                detail.factsheetAsOf ? ` <span style="color:#64748b">(k ${escapeHtml(detail.factsheetAsOf)})</span>` : ""
+              }</p>`
+            : ""
+        }
+        ${detail.verifiedAt ? `<p style="font-size: 8pt; color: #94a3b8; margin: -3mm 0 5mm 0;">Ověření v katalogu: ${escapeHtml(detail.verifiedAt)}</p>` : ""}
         <div class="h2">Investiční cíl</div>
         <p style="font-size: 10pt; color: #1f1c2e; line-height: 1.6; margin-bottom: 5mm;">${escapeHtml(detail.goal)}</p>
         <div class="h2">Vhodné pro</div>
@@ -749,8 +787,8 @@ function renderProductDetailPages(
         ${detail.parameters && Object.keys(detail.parameters).length > 0 ? `<div class="h2">Základní parametry</div><table class="table" style="margin-bottom: 5mm;"><tbody>${Object.entries(detail.parameters).map(([k, v]) => `<tr><td style="width: 40%; color: #4a4a4a;">${escapeHtml(k)}</td><td style="font-weight: 600;">${escapeHtml(v)}</td></tr>`).join('')}</tbody></table>` : ''}
         <table class="table" style="margin-bottom: 5mm;">
           <tbody>
-            <tr><td style="width: 40%; color: #4a4a4a;">Aktiva</td><td style="font-weight: 600;">${escapeHtml(detail.assets)}</td></tr>
-            <tr><td style="color: #4a4a4a;">Výnos</td><td style="font-weight: 600;">${escapeHtml(detail.yield)}</td></tr>
+            <tr><td style="width: 40%; color: #4a4a4a;">Strategie / zaměření</td><td style="font-weight: 600;">${escapeHtml(detail.assets)}</td></tr>
+            <tr><td style="color: #4a4a4a;">Výkonnost (zdroj)</td><td style="font-weight: 600;">${escapeHtml(detail.yield)}</td></tr>
           </tbody>
         </table>
         ${renderHoldingsBlock(detail)}
@@ -766,6 +804,7 @@ function renderProductDetailPages(
             </div>
           </div>
         </div>
+        <p style="font-size: 7pt; color: #94a3b8; margin-top: 2mm; line-height: 1.4;">Odhad budoucí hodnoty vychází z parametrů zadaných v analýze (včetně konzervativního režimu). Oficiální výkonnost z factsheetu je uvedena výše odděleně — nejde o záruku výnosu.</p>
       </div></div>
       ${renderPdfFooter(footerLine)}
     </section>`;
@@ -1077,7 +1116,7 @@ function renderCompanyPDFSection(
   if (benefits.izp) benefitLabels.push('IŽP');
   const benefitSummary = benefitLabels.length ? benefitLabels.join(', ') + (benefits.annualCost ? ` – roční náklad cca ${formatCzk(benefits.annualCost ?? 0)}` : '') : 'Nejsou zadány.';
 
-  let html = `
+  const html = `
   <section class="pdf-page pdf-title-page">
     ${renderPdfHeader('FINANČNÍ ANALÝZA – FIRMA', clientName, today, authorName)}
     <div class="pdf-page-content"><div style="text-align: center;">

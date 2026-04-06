@@ -1,6 +1,5 @@
-import { formatCzk, formatCurrencyMonthly, formatCurrencyDaily } from '../formatters';
+import { formatCzk, formatCurrencyMonthly, formatCurrencyDaily, getProductName } from '../formatters';
 import type { InvestmentEntry } from '../types';
-import { FUND_DETAILS } from '../constants';
 
 export function esc(s: string | null | undefined): string {
   return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -50,7 +49,7 @@ export function investmentAmountLabel(inv: InvestmentEntry): string {
 }
 
 export function getProductDisplayName(productKey: string): string {
-  return FUND_DETAILS[productKey]?.name ?? productKey;
+  return getProductName(productKey);
 }
 
 /** SVG donut chart for portfolio allocation. Returns SVG markup. */

@@ -345,7 +345,7 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
   consumer_loan_contract: {
     primaryType: "consumer_loan_contract",
     allowedLifecycle: ["final_contract", "annex", "unknown"],
-    subtypeHints: ["moneta_expres_pujcka", "csob_consumer_loan"],
+    subtypeHints: ["moneta_expres_pujcka", "csob_consumer_loan", "raiffeisenbank_loan", "equa_loan"],
     defaultIntent: "creates_new_product",
     extractionRules: {
       required: [
@@ -353,19 +353,30 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
         "extractedFields.contractNumber",
         "extractedFields.loanAmount",
         "extractedFields.installmentAmount",
+        "extractedFields.installmentCount",
       ],
       optional: [
+        "extractedFields.interestRate",
         "extractedFields.rpsn",
         "extractedFields.totalPayable",
         "extractedFields.accountForRepayment",
         "extractedFields.relatedBankAccount",
+        "extractedFields.startDate",
+        "extractedFields.maturityDate",
+        "extractedFields.intermediaryName",
+        "extractedFields.intermediaryCompany",
+        "extractedFields.purpose",
         ...commonOptional,
       ],
       conditional: ["extractedFields.collateral_if_secured_loan"],
       notApplicableRules: ["companyId not required for natural person borrower"],
       matchingKeys: ["fullName", "birthDate", "maskedPersonalId", "address", "phone", "email"],
       crmMappingTarget: "contracts(segment=UVER)",
-      reviewRules: ["distinguish missing vs not_applicable for collateral"],
+      reviewRules: [
+        "distinguish missing vs not_applicable for collateral",
+        "lender from creditor/bank header, never from borrower block",
+        "intermediaryName only from explicit Zprostredkovatel uuveru section",
+      ],
       suggestedActionRules: [
         "create_or_link_client",
         "create_contract_record",
@@ -408,17 +419,38 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
   mortgage_document: {
     primaryType: "mortgage_document",
     allowedLifecycle: [...DOCUMENT_LIFECYCLE_STATUSES],
-    subtypeHints: ["mortgage_annex", "mortgage_offer"],
-    defaultIntent: "supports_underwriting_or_bonita",
+    subtypeHints: ["mortgage_annex", "mortgage_offer", "mortgage_contract"],
+    defaultIntent: "creates_new_product",
     extractionRules: {
-      required: ["extractedFields.lender", "extractedFields.documentStatus"],
-      optional: ["extractedFields.loanAmount", "extractedFields.interestRate", ...commonOptional],
+      required: [
+        "extractedFields.lender",
+        "extractedFields.contractNumber",
+        "extractedFields.loanAmount",
+        "extractedFields.installmentAmount",
+        "extractedFields.documentStatus",
+      ],
+      optional: [
+        "extractedFields.interestRate",
+        "extractedFields.rpsn",
+        "extractedFields.installmentCount",
+        "extractedFields.startDate",
+        "extractedFields.maturityDate",
+        "extractedFields.accountForRepayment",
+        "extractedFields.coBorrowerName",
+        "extractedFields.intermediaryName",
+        "extractedFields.purpose",
+        ...commonOptional,
+      ],
       conditional: ["extractedFields.collateral_if_present"],
       notApplicableRules: ["for pure annex product fields may be not_applicable"],
       matchingKeys: ["fullName", "birthDate", "maskedPersonalId", "address"],
       crmMappingTarget: "contracts(segment=HYPO)",
-      reviewRules: ["annex must not overwrite final contract data without review"],
-      suggestedActionRules: ["create_or_link_client", "create_task_manual_review"],
+      reviewRules: [
+        "annex must not overwrite final contract data without review",
+        "lender must come from creditor block, never from borrower block",
+        "borrowerName from Dluznik/Klient block, coBorrowerName from Spoludluznik block",
+      ],
+      suggestedActionRules: ["create_or_link_client", "create_contract_record", "create_task_manual_review"],
     },
   },
   pension_contract: {
@@ -1383,6 +1415,49 @@ Vždy extrahuj referenci na existující číslo smlouvy (existingPolicyNumber).
 Nikdy neoznačuj jako novou smlouvu.
 `;
 
+const LOAN_MORTGAGE_PROMPT_ADDENDUM = `
+KRITICKÉ POKYNY PRO ÚVĚROVÉ DOKUMENTY (spotřebitelský úvěr / hypotéka):
+
+POVINNÁ POLE — musíš extrahovat pokud jsou v dokumentu přítomna:
+- contractNumber: číslo smlouvy ("Smlouva o úvěru č.", "Úvěrová smlouva č.", "č. smlouvy")
+- lender: věřitel / banka (z hlavičky věřitele — Raiffeisenbank, ČSOB, Moneta, Equa atd.) — NIKDY z bloku klienta
+- loanAmount: výše úvěru ("Výše Úvěru", "celkový limit Úvěru", "hlavní jistina", "Výše hypotečního úvěru")
+- installmentAmount: výše splátky ("Výše měsíčních anuitních splátek", "měsíční splátka", "výše splátky")
+- installmentCount: počet splátek ("Počet měsíčních anuitních splátek", "počet splátek", "doba splácení v měsících")
+- interestRate: roční úroková sazba ("Roční úroková sazba", "fixní úroková sazba", "úroková sazba p.a.")
+- rpsn: RPSN ("Roční procentní sazba nákladů", "RPSN")
+- startDate: datum uzavření nebo datum čerpání ("datum uzavření smlouvy", "počátek úvěru", "datum poskytnutí")
+- maturityDate: datum splatnosti ("splatnost do", "datum konečné splatnosti")
+- accountForRepayment: číslo účtu pro splácení ("číslo účtu pro splácení", "splátka bude strhávána z účtu č.")
+- purpose: účel úvěru ("účel úvěru", "účel hypotéky")
+
+KLIENTSKÝ BLOK — KRITICKY DŮLEŽITÉ:
+- borrowerName / fullName: extrahuj VÝHRADNĚ z bloku "Dlužník", "Klient", "Žadatel" — NIKDY z hlavičky věřitele/banky/instituce
+- coBorrowerName: extrahuj z bloku "Spoludlužník" nebo "Spoluúčastník" pokud existuje; uložit i do parties[role=co_applicant]
+- birthDate, personalId, address: extrahuj z klientského bloku, NIKOLI z firemního záhlaví banky
+
+ZPROSTŘEDKOVATEL:
+- intermediaryName: extrahuj VÝHRADNĚ z bloku "Zprostředkovatel" nebo "Zprostředkovatel úvěru" nebo "Pojišťovací zprostředkovatel"
+- Osoba podepsaná "za věřitele" nebo "za banku" NENÍ zprostředkovatel
+- intermediaryCompany: firma zprostředkovatele (napr. BEplan, Partners, FinancePoint...)
+
+OZNAČENÍ VĚŘITELE:
+- Věřitel / banka NIKDY není pojišťovna (insurer). Použij pole lender.
+- lender je instituce na straně věřitele smlouvy, ne pojišťovna.
+
+DOKUMENTOVÝ STATUS:
+- Pokud dokument obsahuje "Smlouva o úvěru", "Úvěrová smlouva", "Smlouva o hypotečním úvěru" + číslo smlouvy: lifecycleStatus = "final_contract"
+- Pokud je dokument "Návrh smlouvy", "Žádost o úvěr": lifecycleStatus = "proposal"
+`;
+
+const PROPOSAL_VS_CONTRACT_NUMBER_ADDENDUM = `
+KRITICKÉ: Rozliš číslo návrhu (proposalNumber) od čísla smlouvy (contractNumber).
+- "Číslo návrhu", "Č. návrhu pojistné smlouvy", "Číslo nabídky" → ukládej POUZE do proposalNumber, NIKOLI do contractNumber
+- "Číslo smlouvy", "Č. pojistné smlouvy", "Smlouva č." + finální doložka → ukládej do contractNumber
+- Pokud existuje pouze číslo návrhu, contractNumber NECHEJ prázdný (missing nebo not_applicable)
+- Nezdvojovat proposalNumber do contractNumber
+`;
+
 /** Czech market: DPS vs PP vs FUNDOO vs DIP — injected for pension & investment-related extraction. */
 const CZECH_PENSION_VS_INVESTMENT_ADDENDUM = `
 České pojmenování produktů (nepřekládej zkratky):
@@ -1403,10 +1478,15 @@ function getTypeSpecificAddendum(primaryType: string): string {
   if (primaryType === "payment_instruction" || primaryType === "investment_payment_instruction") {
     return PAYMENT_INSTRUCTION_PROMPT_ADDENDUM;
   }
+  if (primaryType === "mortgage_document" ||
+      primaryType === "consumer_loan_contract" ||
+      primaryType === "consumer_loan_with_payment_protection") {
+    return LOAN_MORTGAGE_PROMPT_ADDENDUM;
+  }
   if (primaryType === "life_insurance_proposal" || primaryType === "life_insurance_modelation" ||
       primaryType === "investment_modelation" || primaryType === "precontract_information" ||
       primaryType === "liability_insurance_offer" || primaryType === "insurance_comparison") {
-    return PROPOSAL_VS_CONTRACT_PROMPT_ADDENDUM;
+    return PROPOSAL_VS_CONTRACT_PROMPT_ADDENDUM + PROPOSAL_VS_CONTRACT_NUMBER_ADDENDUM;
   }
   if (primaryType === "life_insurance_change_request" || primaryType === "insurance_policy_change_or_service_doc") {
     return CHANGE_REQUEST_PROMPT_ADDENDUM;

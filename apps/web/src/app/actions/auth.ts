@@ -707,7 +707,7 @@ export async function updatePortalProfile(
     const selfRoleName = selfMembership[0]?.roleName as string | undefined;
     if (!selfRoleName) throw new Error("Membership not found.");
 
-    let nextParent: string | null = supervisorUserId ?? null;
+    const nextParent: string | null = supervisorUserId ?? null;
     if (nextParent === auth.userId) throw new Error("Nadřízený nemůže být stejný uživatel.");
     if (nextParent) {
       const supervisorRows = await db

@@ -34,7 +34,8 @@ describe("toplists seed lookup", () => {
     const out = tryRatingLookupReply(msg);
     expect(out).toBeTruthy();
     expect(out).toContain("Životní pojištění");
-    expect(out).toMatch(/Allianz|Kooperativa|UNIQA/i);
+    expect(out).toMatch(/UNIQA|Orange|Bel Mondo/i);
+    expect(out).toContain("EUCS");
   });
 
   it("P3: rating reply includes disclaimer text from seed note", () => {
@@ -42,11 +43,22 @@ describe("toplists seed lookup", () => {
     expect(note).toContain("Top seznamy");
     const out = tryRatingLookupReply("Jaké životní pojištění má nejvyšší rating?");
     expect(out).toBeTruthy();
-    expect(out!.replace(/\s+/g, " ")).toContain("Top seznamy (pojišťovny");
+    const normalized = out!.replace(/\s+/g, " ");
+    expect(
+      normalized.includes("Top seznamy (pojišťovny") ||
+      normalized.includes("Rating je pouze informativní"),
+    ).toBe(true);
   });
 
   it("tryRatingLookupReply is null without rating intent or segment", () => {
     expect(tryRatingLookupReply("Ahoj, jak se máš?")).toBeNull();
     expect(tryRatingLookupReply("Kdo má nejlepší rating vůbec?")).toBeNull();
+  });
+
+  it("DPS top query stays deterministic from internal seed list", () => {
+    const out = tryRatingLookupReply("Jaké DPS je u nás top?");
+    expect(out).toBeTruthy();
+    expect(out).toContain("Penzijní");
+    expect(out).not.toContain("nemám interní podklad");
   });
 });

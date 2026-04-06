@@ -1,0 +1,10 @@
+# investmentProposal — zástupný spec (repo)
+#
+# Env: OPENAI_PROMPT_AI_REVIEW_INVESTMENT_PROPOSAL_ID
+# Router používá tento prompt jen pokud je ID nastavené; jinak fallback insuranceProposalModelation.
+#
+# Povinné proměnné (Prompt Builder): extracted_text, classification_reasons, adobe_signals, filename
+# Kód duplicitně posílá extractedText, classificationReasons, adobeSignals, document_text.
+#
+# Detail: docs/ai-review-prompt-inventory.md
+ 

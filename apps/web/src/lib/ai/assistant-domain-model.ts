@@ -6,6 +6,8 @@
 export const PRODUCT_DOMAINS = [
   "hypo",
   "uver",
+  "leasing",
+  "stavebni_sporeni",
   "investice",
   "dip",
   "dps",
@@ -270,11 +272,32 @@ export function defaultContextLock(): ContextLockState {
 export const CASE_TYPE_TO_PRODUCT_DOMAIN: Record<string, ProductDomain> = {
   hypo: "hypo",
   hypotéka: "hypo",
+  hypotéku: "hypo",
+  hypoteku: "hypo",
   hypoteční: "hypo",
+  refin: "hypo",
+  refinancování: "hypo",
+  refinancovani: "hypo",
+  fixace: "hypo",
+  ltv: "hypo",
+  konsolidace: "uver",
+  konsolidovat: "uver",
   uver: "uver",
   úvěr: "uver",
+  úvěru: "uver",
+  půjčka: "uver",
+  pujcka: "uver",
+  leasing: "leasing",
+  leasingový: "leasing",
+  leasingovy: "leasing",
+  stavebko: "stavebni_sporeni",
+  "stavební spoření": "stavebni_sporeni",
+  "stavebni sporeni": "stavebni_sporeni",
+  "spoření stavební": "stavebni_sporeni",
   investice: "investice",
   investiční: "investice",
+  fond: "investice",
+  fondy: "investice",
   dip: "dip",
   dps: "dps",
   penze: "dps",
@@ -292,11 +315,15 @@ export const CASE_TYPE_TO_PRODUCT_DOMAIN: Record<string, ProductDomain> = {
   domácnost: "majetek",
   odp: "odpovednost",
   odpovědnost: "odpovednost",
+  odpovědko: "odpovednost",
+  odpovedko: "odpovednost",
   auto: "auto",
   auto_pr: "auto",
   auto_hav: "auto",
   povinné: "auto",
   havarijní: "auto",
+  povko: "auto",
+  havko: "auto",
   cestovní: "cestovni",
   cest: "cestovni",
   cestovka: "cestovni",
@@ -314,6 +341,8 @@ export const CASE_TYPE_TO_PRODUCT_DOMAIN: Record<string, ProductDomain> = {
   /** Poradenský slang → productDomain (P1) */
   životko: "zivotni_pojisteni",
   životka: "zivotni_pojisteni",
+  krytí: "zivotni_pojisteni",
+  kryti: "zivotni_pojisteni",
   penzijko: "dps",
   penžijko: "dps",
   dpsko: "dps",
@@ -322,8 +351,6 @@ export const CASE_TYPE_TO_PRODUCT_DOMAIN: Record<string, ProductDomain> = {
   hypošku: "hypo",
   spotřebák: "uver",
   spotrebak: "uver",
-  povko: "auto",
-  havko: "auto",
 };
 
 function escapeRegExp(s: string): string {
@@ -405,4 +432,21 @@ export function resolveProductDomain(text: string | null | undefined): ProductDo
   if (!text) return null;
   const lower = text.toLowerCase().trim();
   return CASE_TYPE_TO_PRODUCT_DOMAIN[lower] ?? null;
+}
+
+export function detectProductSubIntent(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  if (/refinanc|refin\b|fixace|výročí fixace|vyroci fixace/i.test(text)) return "refinancovani";
+  if (/konsolidac|sloučit půjčky|sloucit pujcky|sloučení úvěrů|slouceni uveru/i.test(text)) {
+    return "konsolidace";
+  }
+  if (/leasing/i.test(text)) return "leasing";
+  if (/stavební spoření|stavebni sporeni|stavebko/i.test(text)) return "stavebni_sporeni";
+  if (/povko|povinné ručení|povinne ruceni|\bpov\b/i.test(lower) && /havko|havarijn|kasko|\bhav\b/i.test(lower)) {
+    return "auto_combo";
+  }
+  if (/povko|povinné ručení|povinne ruceni|\bpov\b/i.test(lower)) return "auto_pr";
+  if (/havko|havarijn|kasko|\bhav\b/i.test(lower)) return "auto_hav";
+  return null;
 }

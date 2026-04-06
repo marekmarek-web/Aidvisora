@@ -254,6 +254,76 @@ function coerceSuggestedActions(raw: unknown): unknown[] {
 }
 
 /**
+ * For loan/mortgage stored-prompt responses that return a nested legacy format:
+ * { client: {fullName,...}, loanDetails: {loanAmount,...}, paymentDetails: {...} }
+ * Flattens these into the standard flat extractedFields map.
+ */
+function flattenLegacyLoanNestedFields(
+  parsed: Record<string, unknown>,
+  ef: Record<string, Record<string, unknown>>,
+): void {
+  const LOAN_NESTED_BLOCKS: Record<string, string[]> = {
+    // nested block key → canonical extractedField keys to lift up
+    client: ["fullName", "birthDate", "personalId", "address", "phone", "email", "occupation",
+             "firstName", "lastName", "clientFullName", "borrowerName", "dluznik"],
+    loanDetails: [
+      "loanAmount", "installmentAmount", "installmentCount", "repaymentPeriod", "interestRate",
+      "rpsn", "totalRepaymentAmount", "firstRepaymentDate", "disbursementDate", "contractDate",
+      "startDate", "maturityDate", "purpose", "monthlyInstalment", "monthlyInstallment",
+      "vyseUveru", "pocetSplatek", "mesicniSplatka",
+    ],
+    paymentDetails: [
+      "bankAccount", "variableSymbol", "specificSymbol", "constantSymbol", "iban", "bankCode",
+      "accountForRepayment", "repaymentAccount", "firstRepaymentDate",
+    ],
+    coApplicant: ["coBorrowerName", "spoludluznik", "coApplicantFullName", "coApplicant"],
+    intermediary: ["intermediaryName", "intermediaryCompany", "intermediaryCode", "zprostredkovatel"],
+    intermediaryDetails: ["intermediaryName", "intermediaryCompany", "intermediaryCode"],
+    lender: [], // handled separately
+  };
+
+  for (const [blockKey, fieldKeys] of Object.entries(LOAN_NESTED_BLOCKS)) {
+    const block = parsed[blockKey];
+    if (!block || typeof block !== "object" || Array.isArray(block)) continue;
+    const blockObj = block as Record<string, unknown>;
+
+    for (const fk of fieldKeys) {
+      if (ef[fk]) continue; // don't overwrite already-present fields
+      const val = blockObj[fk];
+      if (val == null || (typeof val === "string" && !val.trim())) continue;
+      ef[fk] = normalizeExtractedFieldCell(fk, val);
+    }
+    // Also lift any remaining fields from the block that look scalar / useful
+    for (const [k, v] of Object.entries(blockObj)) {
+      if (k.startsWith("_") || ef[k]) continue;
+      if (v == null || (typeof v === "string" && !v.trim())) continue;
+      if (typeof v === "object" && !Array.isArray(v)) continue; // skip deeply nested
+      ef[k] = normalizeExtractedFieldCell(k, v);
+    }
+  }
+
+  // Handle lender as a top-level string or nested object
+  const lenderRaw = parsed.lender ?? parsed.veritel ?? parsed.bankName;
+  if (lenderRaw && !ef.lender) {
+    if (typeof lenderRaw === "string" && lenderRaw.trim()) {
+      ef.lender = normalizeExtractedFieldCell("lender", lenderRaw);
+    } else if (typeof lenderRaw === "object" && !Array.isArray(lenderRaw)) {
+      const ln = (lenderRaw as Record<string, unknown>);
+      const name = ln.name ?? ln.value ?? ln.lenderName;
+      if (typeof name === "string" && name.trim()) {
+        ef.lender = normalizeExtractedFieldCell("lender", name);
+      }
+    }
+  }
+}
+
+const LOAN_MORTGAGE_PRIMARY_TYPES = new Set<string>([
+  "mortgage_document",
+  "consumer_loan_contract",
+  "consumer_loan_with_payment_protection",
+]);
+
+/**
  * Mutates a shallow-cloned envelope-shaped object, then runs `documentReviewEnvelopeSchema.safeParse`.
  */
 export function tryCoerceReviewEnvelopeAfterValidationFailure(
@@ -274,10 +344,16 @@ export function tryCoerceReviewEnvelopeAfterValidationFailure(
     classification
   );
   draft.documentMeta = coerceDocumentMeta(draft.documentMeta);
-  draft.extractedFields = {
-    ...collectTopLevelFieldCandidates(draft),
-    ...coerceExtractedFields(draft.extractedFields),
-  };
+  const topLevelCandidates = collectTopLevelFieldCandidates(draft);
+  const baseEf = coerceExtractedFields(draft.extractedFields);
+  const mergedEf: Record<string, Record<string, unknown>> = { ...topLevelCandidates, ...baseEf };
+
+  // For loan/mortgage docs: flatten nested legacy format (client, loanDetails, paymentDetails)
+  if (LOAN_MORTGAGE_PRIMARY_TYPES.has(forcedPrimaryType)) {
+    flattenLegacyLoanNestedFields(draft, mergedEf);
+  }
+
+  draft.extractedFields = mergedEf;
   if (draft.parties == null || typeof draft.parties !== "object" || Array.isArray(draft.parties)) {
     draft.parties = {};
   }

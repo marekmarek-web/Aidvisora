@@ -57,7 +57,7 @@ export function buildCompanyReportHTML(data: CompanyFaPayload): string {
   };
   const strategyLabel = strategyLabels[data.strategy?.profile ?? "balanced"] ?? "Vyvážený";
 
-  let html = `
+  const html = `
 <section class="pdf-page pdf-title-page">
   <div style="text-align: center;">
     <h1 class="h1" style="font-size: 40px; margin-bottom: 10px;">FINANČNÍ PLÁNOVÁNÍ</h1>

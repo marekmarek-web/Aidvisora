@@ -24,7 +24,7 @@ export async function MobilePortalApp({
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[100dvh] flex-col bg-[color:var(--wp-app-canvas-bg)]">
+        <div className="fixed inset-0 z-[1] flex min-h-0 flex-col overflow-hidden bg-[color:var(--wp-app-canvas-bg)]">
           <div className="px-4 pt-[var(--safe-area-top)] pb-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]">
             <div className="h-10 w-40 rounded-lg bg-[color:var(--wp-surface-muted)] animate-pulse" />
           </div>

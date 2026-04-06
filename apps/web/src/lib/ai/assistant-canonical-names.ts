@@ -16,8 +16,10 @@ import type { ProductDomain } from "./assistant-domain-model";
 const DOMAIN_DISPLAY_LABEL: Partial<Record<ProductDomain | string, string>> = {
   hypo: "Hypotéka",
   uver: "Spotřebitelský úvěr",
+  leasing: "Leasing",
+  stavebni_sporeni: "Stavební spoření",
   investice: "Investice",
-  dip: "Investice (DIP)",
+  dip: "DIP",
   dps: "Penzijní spoření",
   zivotni_pojisteni: "Životní pojištění",
   majetek: "Pojištění majetku",
@@ -87,8 +89,10 @@ function purposeRenamePrefix(purpose: string | null | undefined, domain: string 
 const DEAL_TITLE_WITH_AMOUNT: Partial<Record<string, (a: string) => string>> = {
   hypo: (a) => `Hypotéka ${a}`,
   uver: (a) => `Spotřebitelský úvěr ${a}`,
+  leasing: (a) => `Leasing ${a}`,
+  stavebni_sporeni: (a) => `Stavební spoření ${a}`,
   investice: (a) => `Investice ${a}`,
-  dip: (a) => `Investice DIP ${a}`,
+  dip: (a) => `DIP ${a}`,
   dps: (a) => `Penzijní spoření ${a}`,
   zivotni_pojisteni: (a) => `Životní pojištění ${a}`,
   majetek: (a) => `Pojištění majetku ${a}`,
@@ -97,7 +101,7 @@ const DEAL_TITLE_WITH_AMOUNT: Partial<Record<string, (a: string) => string>> = {
 
 const DEAL_TITLE_WITH_AMOUNT_MONTHLY: Partial<Record<string, (a: string) => string>> = {
   investice: (a) => `Investice ${a} měsíčně`,
-  dip: (a) => `Investice DIP ${a} měsíčně`,
+  dip: (a) => `DIP ${a} měsíčně`,
   dps: (a) => `Penzijní spoření ${a} měsíčně`,
   zivotni_pojisteni: (a) => `Životní pojištění ${a} měsíčně`,
   majetek: (a) => `Pojištění majetku ${a} měsíčně`,
@@ -144,8 +148,10 @@ export function canonicalDealTitle(params: {
 const TASK_TITLE_BY_DOMAIN: Partial<Record<string, string>> = {
   hypo: "Zkontrolovat podklady k hypotéce",
   uver: "Zkontrolovat podklady k úvěru",
+  leasing: "Zkontrolovat podklady k leasingu",
+  stavebni_sporeni: "Zkontrolovat podklady ke stavebnímu spoření",
   investice: "Doplnit informace o investici",
-  dip: "Doplnit informace o DIP",
+  dip: "Doplnit informace k DIP",
   dps: "Doplnit informace o penzijním spoření",
   zivotni_pojisteni: "Ověřit krytí životního pojištění",
   majetek: "Prověřit pojištění majetku",
@@ -159,6 +165,8 @@ const TASK_TITLE_BY_DOMAIN: Partial<Record<string, string>> = {
 const FOLLOWUP_TITLE_BY_DOMAIN: Partial<Record<string, string>> = {
   hypo: "Naplánovat schůzku ke hypotéce",
   uver: "Naplánovat schůzku k úvěru",
+  leasing: "Naplánovat schůzku k leasingu",
+  stavebni_sporeni: "Naplánovat schůzku ke stavebnímu spoření",
   investice: "Naplánovat schůzku k investici",
   dip: "Naplánovat schůzku k DIP",
   dps: "Naplánovat schůzku k penzijnímu spoření",
@@ -211,15 +219,17 @@ export function canonicalTaskTitle(params: {
 // ─── Client request subject ───────────────────────────────────────────────────
 
 const CLIENT_REQUEST_BY_DOMAIN: Partial<Record<string, string>> = {
-  hypo: "Doložit podklady k hypotéce",
-  uver: "Doložit podklady k úvěru",
-  investice: "Doplnit informace k investici",
-  dip: "Doplnit informace k DIP",
-  dps: "Doplnit informace k penzijnímu spoření",
-  zivotni_pojisteni: "Poskytnout informace k životnímu pojištění",
-  majetek: "Doložit informace k pojištění majetku",
-  auto: "Doložit informace k pojištění vozidla",
-  firma_pojisteni: "Doložit informace k firemnímu pojištění",
+  hypo: "Požadavek na podklady k hypotéce",
+  uver: "Požadavek na podklady k úvěru",
+  leasing: "Požadavek na podklady k leasingu",
+  stavebni_sporeni: "Požadavek na podklady ke stavebnímu spoření",
+  investice: "Požadavek na investiční podklady",
+  dip: "Požadavek na podklady k DIP",
+  dps: "Požadavek na podklady k penzijnímu spoření",
+  zivotni_pojisteni: "Požadavek na zdravotní a identifikační podklady",
+  majetek: "Požadavek na podklady k nemovitosti a stávající smlouvu",
+  auto: "Požadavek na technický průkaz a stávající smlouvu",
+  firma_pojisteni: "Požadavek na podklady k firemnímu pojištění",
 };
 
 export function canonicalClientRequestSubject(params: {
@@ -238,12 +248,14 @@ export function canonicalClientRequestSubject(params: {
 const MATERIAL_REQUEST_BY_DOMAIN: Partial<Record<string, string>> = {
   hypo: "Podklady k hypotéce",
   uver: "Podklady k úvěru",
+  leasing: "Podklady k leasingu",
+  stavebni_sporeni: "Podklady ke stavebnímu spoření",
   investice: "Podklady k investici",
   dip: "Podklady k DIP",
   dps: "Podklady k penzijnímu spoření",
-  zivotni_pojisteni: "Podklady k životnímu pojištění",
-  majetek: "Podklady k pojištění majetku",
-  auto: "Podklady k pojištění vozidla",
+  zivotni_pojisteni: "Zdravotní a identifikační podklady",
+  majetek: "Podklady k nemovitosti a stávající smlouvě",
+  auto: "Technický průkaz a stávající smlouva",
   firma_pojisteni: "Podklady k firemnímu pojištění",
 };
 
@@ -263,6 +275,8 @@ export function canonicalMaterialRequestTitle(params: {
 const MEETING_TITLE_BY_DOMAIN: Partial<Record<string, string>> = {
   hypo: "Schůzka ke hypotéce",
   uver: "Schůzka k úvěru",
+  leasing: "Schůzka k leasingu",
+  stavebni_sporeni: "Schůzka ke stavebnímu spoření",
   investice: "Schůzka k investici",
   dip: "Schůzka k DIP",
   dps: "Schůzka k penzijnímu spoření",
@@ -298,11 +312,14 @@ export function canonicalMeetingTitle(params: {
 const PORTAL_MESSAGE_BY_DOMAIN: Partial<Record<string, string>> = {
   hypo: "Dobrý den, pro zpracování hypotéky potřebuji od Vás podklady. Jakmile je obdržím, připravím pro Vás další kroky.",
   uver: "Dobrý den, pro přípravu úvěru potřebuji doplňující informace. Prosím o zaslání podkladů.",
+  leasing: "Dobrý den, pro přípravu leasingu potřebuji doplňující podklady k vozidlu a financování.",
+  stavebni_sporeni: "Dobrý den, pro přípravu stavebního spoření potřebuji doplnit potřebné podklady.",
   investice: "Dobrý den, připravuji pro Vás investiční řešení. Potřebuji ověřit několik informací — prosím o odpověď.",
   dip: "Dobrý den, pro nastavení DIP potřebuji vaše doplňující informace. Jsem k dispozici pro dotazy.",
   dps: "Dobrý den, pro nastavení penzijního spoření prosím o zaslání podkladů.",
   zivotni_pojisteni: "Dobrý den, pro přípravu životního pojištění potřebuji od Vás doplňující informace.",
   majetek: "Dobrý den, pro zpracování pojištění majetku prosím o zaslání podkladů a informací.",
+  auto: "Dobrý den, pro přípravu pojištění vozidla prosím o zaslání technického průkazu a případně stávající smlouvy.",
 };
 
 /**
@@ -319,6 +336,39 @@ export function canonicalPortalMessageTemplate(params: {
   const domain = params.productDomain ?? null;
   return PORTAL_MESSAGE_BY_DOMAIN[domain ?? ""] ??
     "Dobrý den, mám pro Vás aktuální informace. Prosím o odpověď na zprávu.";
+}
+
+export function canonicalPortalMessageTitle(params: {
+  productDomain?: string | null;
+  existingTitle?: string | null;
+}): string {
+  const existing = params.existingTitle?.trim();
+  if (existing && !looksInternalOrRaw(existing)) return existing;
+  const domain = params.productDomain ?? null;
+  switch (domain) {
+    case "hypo":
+      return "Požadavek na podklady k hypotéce";
+    case "uver":
+      return "Požadavek na podklady k úvěru";
+    case "leasing":
+      return "Požadavek na podklady k leasingu";
+    case "stavebni_sporeni":
+      return "Požadavek na podklady ke stavebnímu spoření";
+    case "investice":
+      return "Požadavek na investiční podklady";
+    case "dip":
+      return "Požadavek na podklady k DIP";
+    case "dps":
+      return "Požadavek na podklady k penzijnímu spoření";
+    case "zivotni_pojisteni":
+      return "Požadavek na zdravotní a identifikační podklady";
+    case "auto":
+      return "Požadavek na technický průkaz a stávající smlouvu";
+    case "majetek":
+      return "Požadavek na podklady k nemovitosti";
+    default:
+      return "Portálová zpráva klientovi";
+  }
 }
 
 // ─── Deal detail line (for step preview description and board card subtitle) ──

@@ -1,0 +1,2 @@
+# Benchmark výstupy — lokální, nechceme do gitu (mohou obsahovat PII z PDF)
+*.json

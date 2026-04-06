@@ -275,6 +275,23 @@ CREATE INDEX IF NOT EXISTS idx_advisor_notif_target ON advisor_notifications(tar
 CREATE INDEX IF NOT EXISTS idx_advisor_notif_group ON advisor_notifications(group_key);
 ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_analysis_id uuid REFERENCES financial_analyses(id) ON DELETE SET NULL;
 ALTER TABLE contact_coverage ADD COLUMN IF NOT EXISTS fa_item_id uuid REFERENCES fa_plan_items(id) ON DELETE SET NULL;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS fund_library jsonb;
+CREATE TABLE IF NOT EXISTS fund_add_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id text NOT NULL,
+  fund_name text NOT NULL,
+  provider text,
+  isin_or_ticker text,
+  factsheet_url text,
+  category text,
+  note text,
+  status text NOT NULL DEFAULT 'new',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS fund_add_requests_tenant_created_idx
+  ON fund_add_requests (tenant_id, created_at DESC);
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS visible_to_client boolean NOT NULL DEFAULT true;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS portfolio_status text NOT NULL DEFAULT 'active';
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS source_kind text NOT NULL DEFAULT 'manual';

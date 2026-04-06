@@ -20,7 +20,10 @@
  * - Full page-level section text isolation: NOT YET (future iteration)
  */
 
-import { createResponseStructured, createAiReviewResponseFromPrompt } from "@/lib/openai";
+import {
+  aiReviewCreateResponseStructured as createResponseStructured,
+  aiReviewCreateResponseFromPrompt as createAiReviewResponseFromPrompt,
+} from "./review-llm-provider";
 import { getAiReviewPromptId } from "./prompt-model-registry";
 import { fingerprintOpenAiPromptId } from "./ai-review-prompt-rollout";
 import { buildAiReviewExtractionPromptVariables } from "./ai-review-prompt-variables";

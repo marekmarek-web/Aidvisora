@@ -105,7 +105,7 @@ export async function DELETE(
             { status: 500 }
           );
         }
-        // eslint-disable-next-line no-console
+         
         console.warn("[DELETE /api/contracts/review/[id]] storage object already missing or benign error:", msg);
       }
     }

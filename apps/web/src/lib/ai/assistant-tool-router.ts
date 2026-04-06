@@ -68,6 +68,62 @@ function stepPreviewContextHint(step: ExecutionStep): string | undefined {
   return productDomainChipLabel(step.params.productDomain as string | undefined);
 }
 
+function buildStepPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
+  return plan.steps.map((step) => {
+    const pf = computeWriteStepPreflight(step.action, step.params, plan.productDomain);
+    const baseWarnings = buildValidationWarnings(step.action, step.params);
+    const extraWarnings =
+      pf.preflightStatus === "needs_input" && pf.advisorMessage && pf.missingFields.length === 0
+        ? [pf.advisorMessage]
+        : [];
+    return {
+      stepId: step.stepId,
+      label: step.label,
+      action: step.label,
+      contextHint: stepPreviewContextHint(step),
+      description: buildStepDescription(step.action, step.params),
+      domainGroup: productDomainChipLabel(step.params.productDomain as string | undefined) ?? null,
+      validationWarnings: [...baseWarnings, ...extraWarnings],
+      preflightStatus: pf.preflightStatus,
+      blockedReason: pf.preflightStatus === "blocked" ? pf.advisorMessage : undefined,
+    };
+  });
+}
+
+function buildDraftPlanMessage(clientLabel: string, plan: ExecutionPlan): string {
+  const needsInput = plan.steps
+    .map((step) => {
+      const pf = computeWriteStepPreflight(step.action, step.params, plan.productDomain);
+      if (pf.preflightStatus !== "needs_input") return null;
+      if (pf.advisorMessage) return `- ${step.label}: ${pf.advisorMessage}`;
+      const details = buildValidationWarnings(step.action, step.params)
+        .map((warning) => warning.replace(/^Chybí:\s*/, ""))
+        .join(", ");
+      return details ? `- ${step.label}: chybí ${details}` : `- ${step.label}: chybí doplnění údajů`;
+    })
+    .filter(Boolean);
+
+  const blocked = plan.steps
+    .map((step) => {
+      const pf = computeWriteStepPreflight(step.action, step.params, plan.productDomain);
+      if (pf.preflightStatus !== "blocked" || !pf.advisorMessage) return null;
+      return `- ${step.label}: ${pf.advisorMessage}`;
+    })
+    .filter(Boolean);
+
+  const sections = [`Abych mohl připravit bezpečné akce pro **${clientLabel}**, potřebuji ještě doplnit nebo upřesnit:`];
+  if (needsInput.length > 0) sections.push(needsInput.join("\n"));
+  if (blocked.length > 0) sections.push(`Blokované kroky:\n${blocked.join("\n")}`);
+  sections.push("Jakmile údaje doplníte, připravím stejný canonical plán k potvrzení.");
+  return sections.join("\n\n");
+}
+
+function ratingSourcesSummaryFromReply(reply: string): string[] {
+  return /\bEUCS\b/i.test(reply)
+    ? ["EUCS rating (interní podklad)"]
+    : ["Top seznamy (seed v2)"];
+}
+
 export type AssistantResponse = {
   message: string;
   referencedEntities: { type: string; id: string; label?: string }[];
@@ -787,7 +843,7 @@ export async function routeAssistantMessageCanonical(
       suggestedActions: [],
       warnings: [],
       confidence: 0.95,
-      sourcesSummary: ["Top seznamy (seed v2)"],
+      sourcesSummary: ratingSourcesSummaryFromReply(ratingReply),
       sessionId: session.sessionId,
     };
   }
@@ -798,6 +854,7 @@ export async function routeAssistantMessageCanonical(
 
   const hasPendingDisambiguation = Boolean(session.pendingClientDisambiguation);
   const intentHasExplicitClient = Boolean(canonicalIntent.targetClient?.ref);
+  const explicitClientRef = canonicalIntent.targetClient?.ref?.trim() ?? null;
 
   if (
     !session.lockedClientId &&
@@ -815,6 +872,11 @@ export async function routeAssistantMessageCanonical(
 
   if (canonicalIntent.switchClient) {
     clearAssistantClientLock(session);
+    session.lastExecutionPlan = undefined;
+  } else if (explicitClientRef && session.lockedClientId) {
+    // Explicit client mention in a new message should not be shadowed by a stale lock.
+    clearAssistantClientLock(session);
+    session.lastExecutionPlan = undefined;
   }
 
   const READ_ONLY_INTENTS = new Set([
@@ -917,7 +979,7 @@ export async function routeAssistantMessageCanonical(
       .map((a, i) => `${i + 1}. ${a.label}`)
       .join("\n");
     return {
-      message: `Nalezeno více klientů. Upřesněte prosím:\n\n${resolution.client.displayLabel} (vybraný)\n${altLines}`,
+      message: `Našel jsem více klientů pro toto zadání. Upřesněte prosím, kterého máte na mysli:\n\n1. ${resolution.client.displayLabel}\n${altLines}`,
       referencedEntities: [],
       suggestedActions: [],
       warnings: resolution.warnings,
@@ -929,7 +991,7 @@ export async function routeAssistantMessageCanonical(
 
   if (!resolution.client && canonicalIntent.targetClient) {
     return {
-      message: `Klient „${canonicalIntent.targetClient.ref}“ nebyl nalezen. Zkontrolujte jméno nebo otevřete kartu klienta.`,
+      message: `Klienta „${canonicalIntent.targetClient.ref}“ jsem nenašel. Zkontrolujte jméno nebo otevřete správnou kartu klienta.`,
       referencedEntities: [],
       suggestedActions: [],
       warnings: resolution.warnings,
@@ -994,7 +1056,11 @@ export async function routeAssistantMessageCanonical(
       sessionId: session.sessionId,
     };
   }
-  if (ctxSafety.requiresConfirmation && plan.status !== "awaiting_confirmation") {
+  if (
+    ctxSafety.requiresConfirmation &&
+    plan.status !== "awaiting_confirmation" &&
+    plan.status !== "draft"
+  ) {
     logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_CROSS_ENTITY, {
       planId: plan.planId,
       warningCount: ctxSafety.warnings.length,
@@ -1008,7 +1074,7 @@ export async function routeAssistantMessageCanonical(
   }
 
   const awaiting = getStepsAwaitingConfirmation(plan);
-  if (awaiting.length > 0) {
+  if (plan.status === "awaiting_confirmation" && awaiting.length > 0) {
     logAssistantTelemetry(AssistantTelemetryAction.AWAITING_CONFIRMATION, {
       planId: plan.planId,
       pendingSteps: awaiting.length,
@@ -1023,25 +1089,7 @@ export async function routeAssistantMessageCanonical(
         ? await loadProactiveHintsForContact(tenantId, resolution.client.entityId)
         : [];
     const proactiveBlock = formatProactiveHintsBlock(proactiveHints);
-    const stepPreviews: StepPreviewItem[] = plan.steps.map((s) => {
-      const pf = computeWriteStepPreflight(s.action, s.params);
-      const baseVw = buildValidationWarnings(s.action, s.params);
-      const extra =
-        pf.preflightStatus === "needs_input" && pf.advisorMessage && pf.missingFields.length === 0
-          ? [pf.advisorMessage]
-          : [];
-      return {
-        stepId: s.stepId,
-        label: s.label,
-        action: s.label,
-        contextHint: stepPreviewContextHint(s),
-        description: buildStepDescription(s.action, s.params),
-        domainGroup: productDomainChipLabel(s.params.productDomain as string | undefined) ?? null,
-        validationWarnings: [...baseVw, ...extra],
-        preflightStatus: pf.preflightStatus,
-        blockedReason: pf.preflightStatus === "blocked" ? pf.advisorMessage : undefined,
-      };
-    });
+    const stepPreviews = buildStepPreviewItems(plan);
     return {
       message: `Připravuji akce pro **${clientLabel}**:\n\n${summary}${playbookBlock}${proactiveBlock}\n\nVyberte kroky v náhledu a potvrďte tlačítkem „Potvrdit a provést“ (popř. zrušte).`,
       referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
@@ -1056,6 +1104,33 @@ export async function routeAssistantMessageCanonical(
         totalSteps: plan.steps.length,
         pendingSteps: awaiting.length,
         stepPreviews,
+        clientLabel: resolution.client?.displayLabel,
+      },
+      contextState: {
+        channel: assistantSessionChannelForUi(session),
+        lockedClientId: session.lockedClientId ?? null,
+        lockedClientLabel: resolution.client?.displayLabel ?? null,
+      },
+    };
+  }
+
+  if (plan.status === "draft") {
+    session.lastExecutionPlan = plan;
+    const clientLabel = resolution.client?.displayLabel ?? "neznámý klient";
+    return {
+      message: buildDraftPlanMessage(clientLabel, plan),
+      referencedEntities: resolution.client ? [{ type: "contact", id: resolution.client.entityId, label: resolution.client.displayLabel }] : [],
+      suggestedActions: [],
+      warnings: resolution.warnings,
+      confidence: 0.75,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+      executionState: {
+        status: "draft",
+        planId: plan.planId,
+        totalSteps: plan.steps.length,
+        pendingSteps: 0,
+        stepPreviews: buildStepPreviewItems(plan),
         clientLabel: resolution.client?.displayLabel,
       },
       contextState: {

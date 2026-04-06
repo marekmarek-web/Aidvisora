@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { createResponseWithFile } from "@/lib/openai";
+import { aiReviewCreateResponseWithFile as createResponseWithFile } from "./review-llm-provider";
 import {
   INPUT_MODES,
   type InputModeResult,

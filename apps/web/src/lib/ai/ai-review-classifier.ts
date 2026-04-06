@@ -3,7 +3,10 @@
  */
 
 import { z } from "zod";
-import { createAiReviewResponseFromPrompt, createResponseWithFile } from "@/lib/openai";
+import {
+  aiReviewCreateResponseFromPrompt as createAiReviewResponseFromPrompt,
+  aiReviewCreateResponseWithFile as createResponseWithFile,
+} from "./review-llm-provider";
 import { selectExcerptForExtraction } from "./extraction-schemas-by-type";
 import { getAiReviewPromptId, getAiReviewPromptVersion } from "./prompt-model-registry";
 

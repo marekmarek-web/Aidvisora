@@ -50,8 +50,8 @@ function parseTimeInputValue(v: string): { hour: number; minute: number } | null
   const parts = (v || "").split(":");
   const h = parts[0];
   const m = parts[1];
-  let hour = Number(h);
-  let minute = Number(m);
+  const hour = Number(h);
+  const minute = Number(m);
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
   const c = clampClock(hour, minute);
   return { hour: c.hour, minute: c.minute };

@@ -70,6 +70,27 @@ export function labelProductSubtype(code: string): string {
   return SUBTYPE[k] ?? code.replace(/_/g, " ");
 }
 
+/** Normalized pipeline branch labels (internal codes → Czech for advisors). */
+const PIPELINE_NORMALIZED: Record<string, string> = {
+  insurance_modelation: "Modelace / návrh životního pojištění (nezávazná projekce)",
+  insurance_proposal: "Návrh životního pojištění",
+  life_insurance_contract: "Životní pojištění — smlouva",
+  life_insurance: "Životní pojištění",
+  nonlife_insurance_contract: "Neživotní pojištění — smlouva",
+  consumer_loan: "Spotřebitelský úvěr",
+  mortgage: "Hypotéka",
+  investment: "Investice",
+  payment_instructions: "Platební pokyny",
+  supporting_document: "Podpůrný dokument",
+  manual_review_only: "Vyžaduje ruční kontrolu",
+  unknown: "Neurčeno",
+};
+
+export function labelNormalizedPipelineClassification(code: string): string {
+  const k = code.trim().toLowerCase();
+  return PIPELINE_NORMALIZED[k] ?? code.replace(/_/g, " ");
+}
+
 export type AiClassifierLike = {
   documentType?: string;
   productFamily?: string;

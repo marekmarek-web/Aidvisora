@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     "",
   );
 
-  let scanned = rows.length;
+  const scanned = rows.length;
   let markedNotified = 0;
   let skippedNoChannel = 0;
   let inAppEmitted = 0;

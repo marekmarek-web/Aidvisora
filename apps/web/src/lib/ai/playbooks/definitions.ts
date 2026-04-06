@@ -22,7 +22,9 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
     matches: (m, i) =>
       i.productDomain === "hypo" ||
       i.productDomain === "uver" ||
-      /hypoték|hypoteční|úvěr|uver|ltv|úrokov|sazeb|fixac|refinanc/i.test(m),
+      i.subIntent === "refinancovani" ||
+      i.subIntent === "konsolidace" ||
+      /hypoték|hypoteční|úvěr|uver|ltv|úrokov|sazeb|fixac|refinanc|konsolidac|půjčk|pujck/i.test(m),
     defaultProductDomain: "hypo",
     priorityMissingHints: [
       "částka jistiny",
@@ -37,6 +39,52 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Naplánovat předání podkladů bance a termín čerpání.",
       "Zkontrolovat pojistné krytí zástavy a životní pojištění.",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "request_client_documents"],
+    supportedIntents: ["create_opportunity", "update_opportunity"],
+  },
+  {
+    id: "leasing",
+    label: "Leasing",
+    matches: (m, i) =>
+      i.productDomain === "leasing" ||
+      i.subIntent === "leasing" ||
+      /leasing|operativní leasing|operativni leasing|finanční leasing|financni leasing/i.test(m),
+    defaultProductDomain: "leasing",
+    priorityMissingHints: [
+      "předmět financování",
+      "pořizovací cena nebo akontace",
+      "doba financování",
+      "IČO nebo rodné číslo klienta",
+      "technické údaje vozidla nebo zařízení",
+    ],
+    nextStepSuggestions: [
+      "Ověřit účel financování a parametry předmětu leasingu.",
+      "Vyžádat technický průkaz nebo nabídku dodavatele.",
+      "Naplánovat kontrolu schvalovacího procesu a podpisu smlouvy.",
+    ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "request_client_documents"],
+    supportedIntents: ["create_opportunity", "update_opportunity"],
+  },
+  {
+    id: "stavebni_sporeni",
+    label: "Stavební spoření",
+    matches: (m, i) =>
+      i.productDomain === "stavebni_sporeni" ||
+      i.subIntent === "stavebni_sporeni" ||
+      /stavební spoření|stavebni sporeni|stavebko/i.test(m),
+    defaultProductDomain: "stavebni_sporeni",
+    priorityMissingHints: [
+      "cílová částka nebo měsíční vklad",
+      "účel spoření",
+      "délka spoření",
+      "státní podpora nebo návazné financování",
+    ],
+    nextStepSuggestions: [
+      "Upřesnit cílovou částku a délku spoření.",
+      "Vyžádat základní podklady k identifikaci klienta a parametry smlouvy.",
+      "Naplánovat navazující kontrolu vhodnosti produktu.",
+    ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "create_client_request"],
     supportedIntents: ["create_opportunity", "update_opportunity"],
   },
 
@@ -60,6 +108,7 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Ověřit diverzifikaci portfolia a korelaci s ostatními produkty.",
       "Naplánovat pravidelnou kontrolu portfolia (doporučeno: ročně).",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "create_client_request"],
     supportedIntents: ["create_opportunity", "update_opportunity"],
   },
 
@@ -84,6 +133,7 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Zkontrolovat investiční strategii vůči horizontu odchodu do důchodu.",
       "Domluvit pravidelnou revizi příspěvků při změnách příjmu.",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "create_client_request"],
     supportedIntents: ["create_opportunity", "update_opportunity", "create_service_case"],
   },
 
@@ -107,6 +157,7 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Zkontrolovat výluky vůči zaměstnání nebo koníčkům klienta.",
       "Zvážit doplnění o pojištění pracovní neschopnosti.",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_internal_note", "create_client_request"],
     supportedIntents: ["create_opportunity", "update_opportunity"],
   },
 
@@ -130,6 +181,7 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Sladit pojistnou částku s aktuální hodnotou zástavy / hypotéky.",
       "Ověřit, zda je pokryto pojištění odpovědnosti domácnosti.",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_internal_note", "create_client_request"],
     supportedIntents: ["create_opportunity", "update_opportunity"],
   },
 
@@ -153,6 +205,7 @@ export const ASSISTANT_PLAYBOOKS: AssistantPlaybook[] = [
       "Zkontrolovat pojistku majetku firmy, provozovny a vybavení.",
       "Domluvit předání podkladů (faktury, smlouvy, soupis vybavení).",
     ],
+    defaultRequestedActions: ["create_opportunity", "create_task", "request_client_documents"],
     supportedIntents: ["create_opportunity", "update_opportunity"],
   },
 

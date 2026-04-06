@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { getStepTitles } from "@/lib/analyses/financial/constants";
 import {
   FileText,
   CheckCircle2,
@@ -48,7 +49,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 type Filter = "all" | "draft" | "done";
 
-const TOTAL_STEPS = 8;
+const DEFAULT_WIZARD_STEPS = 8;
 
 function getStatusConfig(status: string) {
   switch (status) {
@@ -63,18 +64,27 @@ function getStatusConfig(status: string) {
   }
 }
 
-function ProgressBar({ pct, status }: { pct: number; status: string }) {
+function ProgressBar({
+  pct,
+  status,
+  totalSteps = DEFAULT_WIZARD_STEPS,
+}: {
+  pct: number;
+  status: string;
+  totalSteps?: number;
+}) {
   const barColor =
     status === "completed" || status === "exported"
       ? "bg-emerald-500"
       : status === "archived"
         ? "bg-amber-400"
         : "bg-indigo-500";
+  const steps = Math.max(1, totalSteps);
   return (
     <div className="mt-2.5">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] text-[color:var(--wp-text-tertiary)] font-bold">
-          {pct < 100 ? `Krok ${Math.ceil((pct / 100) * TOTAL_STEPS)} z ${TOTAL_STEPS}` : "Dokončeno"}
+          {pct < 100 ? `Krok ${Math.ceil((pct / 100) * steps)} z ${steps}` : "Dokončeno"}
         </span>
         <span className="text-[10px] font-black text-[color:var(--wp-text-secondary)]">{pct}%</span>
       </div>
@@ -152,6 +162,7 @@ function AnalysisDetailPanel({
   onPermanentDelete: (id: string) => void;
   pending: boolean;
 }) {
+  const router = useRouter();
   const [payload, setPayload] = useState<{ currentStep?: number; data?: Record<string, unknown> } | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -182,7 +193,19 @@ function AnalysisDetailPanel({
   const pct = item?.progress ?? 0;
   const currentStep = payload?.currentStep ?? 0;
   const clientData = payload?.data?.client as Record<string, unknown> | undefined;
+  const includeCompany = Boolean(
+    (payload?.data as { includeCompany?: boolean } | undefined)?.includeCompany
+  );
+  const totalSteps = getStepTitles(includeCompany).length;
+  const stepLabelX =
+    currentStep <= 0 ? 1 : Math.min(currentStep, totalSteps);
+  const clampedProgress =
+    currentStep <= 0 ? 0 : Math.min(currentStep, totalSteps);
   const cfg = getStatusConfig(item?.status ?? "draft");
+
+  function openWizard() {
+    router.push(`/portal/analyses/financial?id=${encodeURIComponent(detailId)}`);
+  }
 
   return (
     <div className="space-y-3 pb-4">
@@ -204,8 +227,16 @@ function AnalysisDetailPanel({
             </div>
           </div>
         </div>
-        <ProgressBar pct={pct} status={item?.status ?? "draft"} />
+        <ProgressBar pct={pct} status={item?.status ?? "draft"} totalSteps={totalSteps} />
       </MobileCard>
+
+      <button
+        type="button"
+        onClick={openWizard}
+        className="w-full min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-black shadow-sm active:scale-[0.99] transition-transform"
+      >
+        Pokračovat v průvodci
+      </button>
 
       {/* Client data */}
       {loadingDetail ? (
@@ -240,7 +271,7 @@ function AnalysisDetailPanel({
             <div className="flex items-center justify-between py-3 px-0.5">
               <span className="text-xs text-[color:var(--wp-text-secondary)] font-bold">Postup</span>
               <span className="text-sm font-black text-[color:var(--wp-text)]">
-                Krok {currentStep} z {TOTAL_STEPS}
+                Krok {stepLabelX} z {totalSteps}
               </span>
             </div>
             {clientData?.name ? (
@@ -269,20 +300,28 @@ function AnalysisDetailPanel({
               Průběh kroků
             </p>
             <div className="grid grid-cols-4 gap-1.5">
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => {
+              {Array.from({ length: totalSteps }, (_, i) => {
                 const step = i + 1;
-                const done = step < currentStep;
-                const active = step === currentStep;
+                const allDone = currentStep > totalSteps;
+                const done =
+                  allDone || (clampedProgress > 0 && step < clampedProgress);
+                const active =
+                  !allDone &&
+                  clampedProgress > 0 &&
+                  step === clampedProgress &&
+                  currentStep <= totalSteps;
                 return (
-                  <div
+                  <button
                     key={step}
+                    type="button"
+                    onClick={openWizard}
                     className={cx(
-                      "h-8 rounded-lg flex items-center justify-center text-xs font-black",
+                      "h-9 rounded-lg flex items-center justify-center text-xs font-black transition-transform active:scale-95",
                       done ? "bg-emerald-100 text-emerald-700" : active ? "bg-indigo-600 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"
                     )}
                   >
                     {step}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -585,7 +624,12 @@ export function AnalysesHubScreen({
 
       {/* Phone detail sheet */}
       {!isTablet ? (
-        <FullscreenSheet open={detailOpen} onClose={() => setDetailOpen(false)} title="Detail analýzy">
+        <FullscreenSheet
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+          title="Detail analýzy"
+          reserveMobileBottomNav
+        >
           {detailId ? (
             <AnalysisDetailPanel
               detailId={detailId}

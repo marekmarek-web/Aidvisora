@@ -3,9 +3,14 @@
  * Covers: service case semantics, domain-aware missing fields,
  * playbook bridge, legacy intent domain resolution fixes.
  */
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/openai", () => ({
+  createResponseStructured: vi.fn(),
+}));
 
 import {
+  detectProductSubIntent,
   emptyCanonicalIntent,
   resolveProductDomain,
   type CanonicalIntent,
@@ -13,6 +18,7 @@ import {
 import type { EntityResolutionResult } from "../assistant-entity-resolution";
 import { buildExecutionPlan, computeWriteActionMissingFields } from "../assistant-execution-plan";
 import { legacyIntentToCanonical } from "../assistant-intent";
+import { createResponseStructured } from "@/lib/openai";
 import { enrichCanonicalIntentWithPlaybooks, getAllMatchingPlaybookIds, pickPlaybookForIntent } from "../playbooks";
 
 const CONTACT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -38,6 +44,11 @@ function resolutionWithClient(extra: Partial<EntityResolutionResult> = {}): Enti
 function intent(partial: Partial<CanonicalIntent>): CanonicalIntent {
   return { ...emptyCanonicalIntent(), ...partial };
 }
+
+beforeEach(() => {
+  vi.mocked(createResponseStructured).mockReset();
+  vi.mocked(createResponseStructured).mockResolvedValue({ parsed: {} } as never);
+});
 
 // ─── SERVICE CASE MAPPING ──────────────────────────────────────────────────
 
@@ -136,9 +147,7 @@ describe("domain-aware advisory missing fields (3C)", () => {
     expect(missing).toHaveLength(0);
   });
 
-  it("hypo plan with only contactId is awaiting_confirmation (advisory hints are non-blocking)", () => {
-    // Domain advisory hints don't push plan to draft — only structural fields do.
-    // Hints are surfaced via playbook userConstraints instead.
+  it("hypo plan without amount stays draft", () => {
     const plan = buildExecutionPlan(
       intent({
         intentType: "create_opportunity",
@@ -147,7 +156,7 @@ describe("domain-aware advisory missing fields (3C)", () => {
       }),
       resolutionWithClient(),
     );
-    expect(plan.status).toBe("awaiting_confirmation");
+    expect(plan.status).toBe("draft");
   });
 
   it("hypo plan with contactId + amount is awaiting_confirmation", () => {
@@ -202,6 +211,23 @@ describe("resolveProductDomain — 3C aliases", () => {
 
   it("returns null for unknown domain text", () => {
     expect(resolveProductDomain("obecné")).toBeNull();
+  });
+
+  it("resolves leasing and stavebko aliases", () => {
+    expect(resolveProductDomain("leasing")).toBe("leasing");
+    expect(resolveProductDomain("stavebko")).toBe("stavebni_sporeni");
+  });
+});
+
+describe("Phase 3: product sub-intent detection", () => {
+  it("detects refinancování and konsolidace", () => {
+    expect(detectProductSubIntent("Klient chce refinancovat hypotéku")).toBe("refinancovani");
+    expect(detectProductSubIntent("Klient chce konsolidaci půjček")).toBe("konsolidace");
+  });
+
+  it("detects combined auto request and leasing", () => {
+    expect(detectProductSubIntent("Klient chce povko a havko")).toBe("auto_combo");
+    expect(detectProductSubIntent("Klient chce leasing na auto")).toBe("leasing");
   });
 });
 
@@ -470,6 +496,40 @@ describe("3G: investice vs DIP/DPS playbook split", () => {
     expect(ids1).not.toContain("dip_dps");
     expect(ids2).toContain("dip_dps");
     expect(ids2).not.toContain("investice");
+  });
+
+  it("descriptive investment request without explicit actions gets playbook default bundle", async () => {
+    const { extractCanonicalIntent } = await import("../assistant-intent-extract");
+    const intent = await extractCanonicalIntent("Klient chce investovat 10 000 měsíčně do fondu ATRIS.");
+    expect(intent.productDomain).toBe("investice");
+    expect(intent.requestedActions).toEqual(
+      expect.arrayContaining(["create_opportunity", "create_task", "create_client_request"]),
+    );
+    expect(intent.requestedActions).not.toContain("general_chat");
+  });
+
+  it("DPS text stays dps and not dip", async () => {
+    const { extractCanonicalIntent } = await import("../assistant-intent-extract");
+    const intent = await extractCanonicalIntent("Klient chce penzijko / DPS.");
+    expect(intent.productDomain).toBe("dps");
+    expect(intent.productDomain).not.toBe("dip");
+  });
+
+  it("DIP slang stays dip and not dps", async () => {
+    const { extractCanonicalIntent } = await import("../assistant-intent-extract");
+    const intent = await extractCanonicalIntent("Klient chce dipko.");
+    expect(intent.productDomain).toBe("dip");
+    expect(intent.productDomain).not.toBe("dps");
+  });
+
+  it("auto combo request uses auto playbook follow-up bundle", async () => {
+    const { extractCanonicalIntent } = await import("../assistant-intent-extract");
+    const intent = await extractCanonicalIntent("Klient chce povko a havko.");
+    expect(intent.productDomain).toBe("auto");
+    expect(intent.subIntent).toBe("auto_combo");
+    expect(intent.requestedActions).toEqual(
+      expect.arrayContaining(["create_opportunity", "create_internal_note", "create_client_request"]),
+    );
   });
 });
 

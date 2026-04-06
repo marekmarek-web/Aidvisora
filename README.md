@@ -40,6 +40,10 @@ CRM pro finanční poradce v ČR – MVP dle specifikace (domácnosti, pipeline,
      - `OPENAI_API_KEY` a případně `OPENAI_PROMPT_*` (viz šablona v souboru)
    - V kořeni repa je zkrácený `.env.example` (legacy); plná šablona včetně OpenAI je v `apps/web/.env.example`.
    - **Registrace bez e-mailu:** Aplikace po registraci rovnou přesměruje do portálu. Pokud v Supabase máš zapnuté „Confirm email“, buď ho v **Authentication → Providers → Email** vypni, nebo nakonfiguruj vlastní SMTP (Supabase defaultní e-maily často nedorazí).
+   - **OAuth (Google/Apple) na localhostu:** V Supabase → **Authentication → URL Configuration** → **Redirect URLs** musí být mimo jiné `http://localhost:3000/auth/callback` (a případně stejná cesta na `127.0.0.1` nebo jiném portu). Jinak Supabase často přesměruje na **Site URL** (produkci). Podrobnosti: `docs/PLATFORM_SETUP.md` → *Local development — Auth & debugging*.
+   - **Veřejný klíč:** Kromě legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT) lze použít nový publishable klíč z API settings v `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` — viz komentáře v `apps/web/.env.example`.
+   - **Lokální odkazy:** Pro dev nastav v `.env.local` např. `NEXT_PUBLIC_APP_URL=http://localhost:3000`, ať server negeneruje odkazy na produkci.
+   - **Demo bez přihlášení:** `pnpm dev:demo` (stejné jako `NEXT_PUBLIC_SKIP_AUTH=true` ve `apps/web`). Vhodné na rychlé UI; není to reálná OAuth session.
 
 3. **Databáze**
    - **Důležité:** Pokud používáte existující Supabase projekt a vidíte chyby typu `column X does not exist` nebo `relation Y does not exist`, spusťte migraci schématu (načte `DATABASE_URL` z `apps/web/.env.local`):

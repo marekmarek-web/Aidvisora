@@ -24,7 +24,7 @@ export function PensionInputPanel({
   estimatedPension,
 }: PensionInputPanelProps) {
   const update = (patch: Partial<PensionState>) => {
-    let next = { ...state, ...patch };
+    const next = { ...state, ...patch };
     if (patch.age !== undefined && next.age >= next.retireAge) {
       next.retireAge = Math.min(LIMITS.retireAge.max, next.age + 1);
     }

@@ -12,6 +12,7 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
     emailSent?: boolean;
     emailError?: string;
     error?: string;
+    devHint?: string;
   } | null>(null);
 
   async function handleClick() {
@@ -28,10 +29,21 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
           emailError: res.emailError,
         });
       } else {
-        setResult({ error: res.error });
+        setResult({
+          error: res.error,
+          ...(res.devHint ? { devHint: res.devHint } : {}),
+        });
       }
     } catch {
-      setResult({ error: "Nepodařilo se odeslat pozvánku. Zkuste to znovu." });
+      setResult({
+        error: "Nepodařilo se odeslat pozvánku. Zkuste to znovu.",
+        ...(process.env.NODE_ENV === "development"
+          ? {
+              devHint:
+                "Server action se nepodařila dokončit (síť nebo pád na serveru). Podívejte se do terminálu, kde běží pnpm dev.",
+            }
+          : {}),
+      });
     } finally {
       setLoading(false);
     }
@@ -90,7 +102,14 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
           </button>
         </div>
       )}
-      {result?.error && <p className="text-sm text-red-600">{result.error}</p>}
+      {result?.error && (
+        <div className="space-y-1">
+          <p className="text-sm text-red-600">{result.error}</p>
+          {result.devHint && (
+            <p className="text-xs text-monday-text-muted font-mono break-words">{result.devHint}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

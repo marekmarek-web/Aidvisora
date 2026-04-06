@@ -29,7 +29,9 @@
     "test": "pnpm -r test",
     "test:assistant-regression": "pnpm --filter web test:assistant-regression",
     "compliance:copy-check": "node scripts/compliance-copy-check.mjs",
-    "db:verify-documents-schema": "node scripts/verify-documents-schema.mjs"
+    "db:verify-documents-schema": "node scripts/verify-documents-schema.mjs",
+    "benchmark:claude": "node --env-file=apps/web/.env.local scripts/benchmark-claude-review.mjs",
+    "eval:golden-live": "pnpm --filter web eval:golden-live"
   },
   "dependencies": {
     "postgres": "^3.4.4"

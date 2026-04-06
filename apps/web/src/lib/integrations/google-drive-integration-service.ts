@@ -11,7 +11,7 @@ import { GoogleInvalidGrantError, refreshGoogleAccessToken } from "./google-oaut
 const LOG_PREFIX = "[google-drive-integration]";
 function log(msg: string, meta?: Record<string, unknown>) {
   if (process.env.NODE_ENV !== "development") return;
-  // eslint-disable-next-line no-console
+   
   console.log(`${LOG_PREFIX} ${msg}`, meta ? JSON.stringify(meta) : "");
 }
 function logError(msg: string, err?: unknown) {

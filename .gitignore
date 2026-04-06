@@ -35,3 +35,5 @@ legals/_tmp_*/
 legals/_extract_*.txt
 legals/*.zip
 legals/_op.zip
+
+claude api.rtf

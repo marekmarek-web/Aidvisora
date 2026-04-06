@@ -39,7 +39,7 @@ export function Popover({
             ? rect.left + rect.width / 2 - menuWidth / 2
             : rect.left;
 
-      let nextLeft = Math.max(spacing, Math.min(alignedLeft, window.innerWidth - menuWidth - spacing));
+      const nextLeft = Math.max(spacing, Math.min(alignedLeft, window.innerWidth - menuWidth - spacing));
       let nextTop = rect.bottom + 4;
 
       if (nextTop + menuHeight > window.innerHeight - spacing) {

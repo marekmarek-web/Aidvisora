@@ -1,0 +1,3 @@
+# Live eval reports (may contain paths / metadata)
+*.json
+!/.gitignore

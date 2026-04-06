@@ -9,6 +9,7 @@ import { MobilePortalApp } from "./mobile/MobilePortalApp";
 import { PortalThemeProvider } from "./PortalThemeProvider";
 import { PORTAL_THEME_STORAGE_PREFLIGHT } from "./theme-storage-preflight";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
+import { shouldOmitPortalMobilePageTree } from "@/app/shared/mobile-ui/omit-portal-mobile-page-tree";
 import "@/styles/aidvisora-monday.css";
 import "@/styles/board.css";
 import "@/styles/monday.css";
@@ -64,6 +65,8 @@ export default async function PortalLayout({
     userAgent: headerList.get("user-agent"),
     cookieStore,
   });
+  const pathnameForMobileSlot = headerList.get("x-pathname");
+  const omitMobilePageTree = mobileUiEnabled && shouldOmitPortalMobilePageTree(pathnameForMobileSlot);
   /** Quick actions načte klient (`useQuickActionsItems` v QuickNewMenu) — šetří DB round-trip v layoutu. */
   const initialQuickActions = undefined;
   if (mobileUiEnabled) {
@@ -75,10 +78,12 @@ export default async function PortalLayout({
         <PortalThemeProvider>
           <PortalAppProviders>
             <MobilePortalApp showTeamOverview={showTeamOverview} />
-            {/* RSC slot: deep link / refresh musí vyhodnotit vnořené stránky (analýzy, dokumenty, …). */}
-            <div className="sr-only" aria-hidden data-portal-mobile-rsc-slot>
-              {children}
-            </div>
+            {/* Nepřimountovávat `page.tsx` pod mobile shellem — duplicitní client stromy (FA, Setup, …) padají. */}
+            {!omitMobilePageTree ? (
+              <div className="sr-only" aria-hidden data-portal-mobile-rsc-slot>
+                {children}
+              </div>
+            ) : null}
           </PortalAppProviders>
         </PortalThemeProvider>
       </>

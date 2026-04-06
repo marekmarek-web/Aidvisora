@@ -300,9 +300,10 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "bankName",
         "creditor",
         "institutionName",
-        "insurer",
         "loanProvider",
         "financialInstitution",
+        "veritel",
+        "poskytovatelUveru",
       ]);
       mergeFromAliases(ef, "loanAmount", [
         "principal",
@@ -310,6 +311,9 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "totalLoanAmount",
         "borrowedAmount",
         "loanPrincipal",
+        "vysaUveru",
+        "celkovaVyseUveru",
+        "limitUveru",
       ]);
       mergeFromAliases(ef, "installmentAmount", [
         "monthlyInstallment",
@@ -317,13 +321,180 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "installment",
         "regularPayment",
         "annuityPayment",
+        "mesicniSplatka",
+        "vyseAnuitniSplatky",
+        "vyseSpLatky",
       ]);
-      mergeFromAliases(ef, "accountForRepayment", ["bankAccount", "relatedBankAccount", "repaymentAccount"]);
+      mergeFromAliases(ef, "installmentCount", [
+        "numberOfInstallments",
+        "numberOfPayments",
+        "repaymentPeriod",
+        "termMonths",
+        "loanTermMonths",
+        "numberOfMonths",
+        "pocetSplatek",
+        "pocetMesicnichSplatek",
+        "pocetAnuitnichSplatek",
+        "pocetPlateb",
+      ]);
+      mergeFromAliases(ef, "interestRate", [
+        "nominalInterestRate",
+        "annualInterestRate",
+        "urokSazba",
+        "urokoveRocniSazba",
+        "rocniUrokovaSazba",
+        "debitInterestRate",
+        "fixedInterestRate",
+      ]);
+      mergeFromAliases(ef, "rpsn", ["apr", "RPSN", "rocniProcentniSazbaNavkladu", "annualPercentageRate"]);
+      mergeFromAliases(ef, "contractNumber", [
+        "loanContractNumber",
+        "cisloSmlouvy",
+        "smlouvaCislo",
+        "contractId",
+        "uverovaSmlCislo",
+        "uverovaSmluvaCislo",
+      ]);
+      mergeFromAliases(ef, "borrowerName", [
+        "dluznik",
+        "borrower",
+        "clientFullName",
+        "fullName",
+      ]);
+      mergeFromAliases(ef, "fullName", [
+        "borrowerName",
+        "dluznik",
+        "borrower",
+        "clientFullName",
+      ]);
+      mergeFromAliases(ef, "accountForRepayment", [
+        "bankAccount",
+        "relatedBankAccount",
+        "repaymentAccount",
+        "cisloUctuProSplaceni",
+        "splatkovyUcet",
+      ]);
+      mergeFromAliases(ef, "startDate", [
+        "disbursementDate",
+        "contractDate",
+        "datumUzavreniSmlouvy",
+        "policyStartDate",
+        "effectiveDate",
+      ]);
+      mergeFromAliases(ef, "intermediaryName", [
+        "advisorName",
+        "brokerName",
+        "zprostredkovatel",
+        "zprostredkovatelUveru",
+        "intermediary",
+        "agentName",
+      ]);
+      mergeFromAliases(ef, "intermediaryCompany", [
+        "brokerCompany",
+        "intermediaryFirm",
+        "zprostredkovatelFirma",
+      ]);
       break;
     case "mortgage_document":
-      mergeFromAliases(ef, "lender", ["bankName", "creditor", "institutionName", "insurer", "mortgageBank"]);
-      mergeFromAliases(ef, "documentStatus", ["documentType", "documentKind", "agreementType", "contractStatus"]);
-      mergeFromAliases(ef, "loanAmount", ["principal", "mortgageAmount", "creditAmount"]);
+      mergeFromAliases(ef, "lender", [
+        "bankName",
+        "creditor",
+        "institutionName",
+        "mortgageBank",
+        "veritel",
+        "hypotecniBanka",
+        "poskytovatelHypoteky",
+      ]);
+      mergeFromAliases(ef, "documentStatus", [
+        "documentType",
+        "documentKind",
+        "agreementType",
+        "contractStatus",
+        "druhSmlouvy",
+        "stavDokumentu",
+      ]);
+      mergeFromAliases(ef, "loanAmount", [
+        "principal",
+        "mortgageAmount",
+        "creditAmount",
+        "vysaHypotecnihoUveru",
+        "vysaUveru",
+        "celkovaVyseUveru",
+      ]);
+      mergeFromAliases(ef, "installmentAmount", [
+        "monthlyInstallment",
+        "monthlyPayment",
+        "installment",
+        "regularPayment",
+        "annuityPayment",
+        "mesicniSplatka",
+        "vyseAnuitniSplatky",
+      ]);
+      mergeFromAliases(ef, "installmentCount", [
+        "numberOfInstallments",
+        "numberOfPayments",
+        "repaymentPeriod",
+        "termMonths",
+        "pocetSplatek",
+        "pocetMesicnichSplatek",
+        "pocetAnuitnichSplatek",
+      ]);
+      mergeFromAliases(ef, "interestRate", [
+        "nominalInterestRate",
+        "annualInterestRate",
+        "urokoveRocniSazba",
+        "rocniUrokovaSazba",
+        "fixedInterestRate",
+        "debitInterestRate",
+      ]);
+      mergeFromAliases(ef, "rpsn", ["apr", "RPSN", "rocniProcentniSazbaNavkladu"]);
+      mergeFromAliases(ef, "contractNumber", [
+        "loanContractNumber",
+        "cisloSmlouvy",
+        "smlouvaCislo",
+        "contractId",
+        "hypotekaSmlouvaCislo",
+      ]);
+      mergeFromAliases(ef, "borrowerName", [
+        "dluznik",
+        "borrower",
+        "clientFullName",
+        "fullName",
+      ]);
+      mergeFromAliases(ef, "fullName", [
+        "borrowerName",
+        "dluznik",
+        "borrower",
+        "clientFullName",
+      ]);
+      // coBorrowers / spoludluznik
+      mergeFromAliases(ef, "coBorrowerName", [
+        "spoludluznik",
+        "coBorrower",
+        "coApplicant",
+        "coApplicantName",
+        "spoludluznikJmeno",
+      ]);
+      mergeFromAliases(ef, "startDate", [
+        "disbursementDate",
+        "contractDate",
+        "datumUzavreniSmlouvy",
+        "policyStartDate",
+        "effectiveDate",
+      ]);
+      mergeFromAliases(ef, "maturityDate", [
+        "endDate",
+        "policyEndDate",
+        "datumSplatnosti",
+        "datumUkonceni",
+        "loanEndDate",
+      ]);
+      mergeFromAliases(ef, "intermediaryName", [
+        "advisorName",
+        "brokerName",
+        "zprostredkovatel",
+        "intermediary",
+      ]);
       break;
     case "pension_contract":
       mergeFromAliases(ef, "provider", [
@@ -379,17 +550,26 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
 
   const primary = envelope.documentClassification.primaryType;
 
-  mergeFromAliases(ef, "insurer", [
-    "institutionName",
-    "insuranceCompany",
-    "pojistitel",
-    "pojistovna",
-    "insurerName",
-    "carrier",
-    "providerName",
-    "institution",
-  ]);
-  mergeFromAliases(ef, "institutionName", ["insurer", "pojistovna", "insuranceCompany", "pojistitel"]);
+  const isLoanOrMortgage =
+    primary === "mortgage_document" ||
+    primary === "consumer_loan_contract" ||
+    primary === "consumer_loan_with_payment_protection";
+
+  // For loan/mortgage: DO NOT promote institutionName → insurer (bank is not an insurer).
+  // For insurance docs: apply the normal alias so insurer is always populated.
+  if (!isLoanOrMortgage) {
+    mergeFromAliases(ef, "insurer", [
+      "institutionName",
+      "insuranceCompany",
+      "pojistitel",
+      "pojistovna",
+      "insurerName",
+      "carrier",
+      "providerName",
+      "institution",
+    ]);
+    mergeFromAliases(ef, "institutionName", ["insurer", "pojistovna", "insuranceCompany", "pojistitel"]);
+  }
 
   mergeFromAliases(ef, "productName", [
     "product",
@@ -405,7 +585,11 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   const isModelationDoc =
     primary === "life_insurance_modelation" || primary === "investment_modelation";
 
-  if (!isModelationDoc) {
+  // For proposals: do NOT auto-promote proposalNumber → contractNumber.
+  // The LLM should explicitly set contractNumber only if it sees a finalized contract number.
+  const isProposalDoc = primary === "life_insurance_proposal";
+
+  if (!isModelationDoc && !isProposalDoc) {
     mergeFromAliases(ef, "contractNumber", [
       "policyNumber",
       "policyNo",
@@ -417,6 +601,13 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
       "policyId",
       "pojistnaSmlouvaCislo",
       "contractNumberOrPolicyNumber",
+    ]);
+  } else if (!isModelationDoc) {
+    // For proposals: only copy from explicitly final-contract-type aliases (never from proposalNumber)
+    mergeFromAliases(ef, "contractNumber", [
+      "policyNumber",
+      "policyNo",
+      "pojistnaSmlouvaCislo",
     ]);
   }
 

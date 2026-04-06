@@ -1,0 +1,7 @@
+# consentIdentificationExtraction — zástupný spec (repo)
+#
+# Env: OPENAI_PROMPT_AI_REVIEW_CONSENT_IDENTIFICATION_ID
+#
+# Povinné proměnné: extracted_text, classification_reasons, adobe_signals, filename
+#
+# Detail: docs/ai-review-prompt-inventory.md

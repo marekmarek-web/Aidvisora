@@ -323,18 +323,37 @@ Pravidla:
 - Nevymýšlej hodnoty. Pokud si nejsi jistý, dej field status "missing" nebo pole vůbec neuváděj.
 - Extrahuj co nejvíce praktických údajů pro finančního poradce a CRM.
 - Preferované kategorie v extractedFields:
-  - Klient: fullName, birthDate, personalId, address, permanentAddress, phone, email, occupation, sports.
-  - Smlouva: contractNumber, proposalNumber, insurer, productName, productType, documentStatus, policyStartDate, policyEndDate, policyDuration, dateSigned, businessCaseNumber.
+  - Klient / dlužník: fullName, birthDate, personalId, address, permanentAddress, phone, email, occupation, sports.
+  - Smlouva / úvěr: contractNumber, proposalNumber, insurer, lender, productName, productType, documentStatus, policyStartDate, policyEndDate, policyDuration, dateSigned, businessCaseNumber.
   - Rizika a připojištění: coverages, riders, insuredRisks, insuredPersons, deathBenefit, accidentBenefit, disabilityBenefit, hospitalizationBenefit, seriousIllnessBenefit.
-  - Platby: totalMonthlyPremium, annualPremium, riskPremium, investmentPremium, paymentFrequency, paymentAccountNumber, bankAccount, iban, variableSymbol, bankCode, firstPaymentDate, paymentPurpose.
+  - Platby pojistné: totalMonthlyPremium, annualPremium, riskPremium, investmentPremium, paymentFrequency, paymentAccountNumber, bankAccount, iban, variableSymbol, bankCode, firstPaymentDate, paymentPurpose.
+  - Úvěr / hypotéka (povinné pokud jde o úvěrový dokument):
+    loanAmount (výše úvěru / "Výše Úvěru" / "celkový limit úvěru"),
+    installmentAmount (měsíční splátka / "Výše měsíčních anuitních splátek"),
+    installmentCount (počet splátek / "Počet měsíčních anuitních splátek"),
+    installmentFrequency (frekvence splátek),
+    interestRate (roční úroková sazba),
+    rpsn (RPSN),
+    lender (věřitel / banka — z hlavičky věřitele, NIKOLI z bloku klienta),
+    borrowerName (dlužník — z bloku "Dlužník" nebo "Klient"),
+    coBorrowerName (spoludlužník — z bloku "Spoludlužník" pokud existuje),
+    accountForRepayment (číslo účtu pro splácení),
+    startDate (datum uzavření / datum čerpání),
+    maturityDate (datum splatnosti),
+    purpose (účel úvěru),
+    intermediaryName (zprostředkovatel úvěru — z bloku "Zprostředkovatel úvěru").
   - Zprostředkovatel: intermediaryName, intermediaryCode, intermediaryCompany, advisorName, brokerName.
   - Investice: investmentStrategy, investmentFunds, fundAllocation, investmentAllocation, investmentScenario.
   - Oprávněné osoby: beneficiaries.
-- KLIENTSKÝ BLOK — KRITICKÉ PRAVIDLO: Klientská data (fullName, birthDate, personalId, address) ber VÝHRADNĚ z bloku označeného jako "Pojistník", "Klient", "Žadatel", "Pojištěný" nebo "Dlužník" — NIKDY z hlavičky pojistitele/banky/instituce, z kontaktů prodejce nebo z části "O nás". Pokud dokument začíná logem a adresou pojišťovny (Generali, UNIQA, ČPP atd.), tato data NEPATŘÍ do fullName klienta.
-- ZPROSTŘEDKOVATEL vs INSTITUCE: IntermediaryName je poradce/makléř klienta. Osoba nebo firma podepsaná za pojišťovnu/banku/leasingovou společnost NENÍ zprostředkovatel — to je zaměstnanec instituce. Zaměňuj je pouze pokud je v dokumentu explicitně uveden jako "poradce" nebo "zprostředkovatel".
-- PLATBY — FREKVENCE: paymentFrequency extrahuj přesně podle textu. Rozlišuj: "měsíčně" vs "ročně" vs "čtvrtletně" vs "pololetně" vs "jednorázově". Nesmíš zaměnit roční pojistné za měsíční — pokud dokument říká "roční pojistné X Kč", pak paymentFrequency="ročně" a annualPremium=X. Pokud říká "měsíční pojistné X Kč", pak totalMonthlyPremium=X.
-- INTERNÍ IDENTIFIKÁTORY: personalId (rodné číslo), bankAccount, iban, datum narození extrahuj bez maskování — jde o interní review flow Aidvisory, ne o veřejný export. Nenahrazuj rodné číslo za "XX/XXXX".
-- MULTI-PERSON: Pokud dokument obsahuje více osob (pojistník ≠ pojištěný, děti, spoludlužník), extrahuj každou osobu zvlášť do parties jako { role, fullName, birthDate, personalId?, address?, email?, phone?, occupation? }. Role: "policyholder", "insured", "legal_representative", "beneficiary", "child_insured", "co_applicant".
+- KLIENTSKÝ BLOK — KRITICKÉ PRAVIDLO:
+  Pro pojištění: fullName ber VÝHRADNĚ z bloku "Pojistník", "Klient", "Žadatel", "Pojištěný" — NIKDY z hlavičky pojistitele.
+  Pro úvěr / hypotéku: borrowerName / fullName ber VÝHRADNĚ z bloku "Dlužník", "Klient", "Žadatel" — NIKDY z hlavičky věřitele/banky. Spoludlužník → coBorrowerName + parties[role=co_applicant].
+  Pokud dokument začíná logem a adresou pojišťovny nebo banky (Generali, UNIQA, Raiffeisenbank, ČSOB atd.), tato data NEPATŘÍ do fullName klienta.
+- VĚŘITEL / BANKA: Pro úvěrové dokumenty lender je institucionální strana (Raiffeisenbank, ČSOB, Moneta atd.). NIKDY ji nevkládej do pole insurer. Použij pole lender.
+- ZPROSTŘEDKOVATEL vs INSTITUCE: intermediaryName je poradce/makléř klienta. Osoba podepsaná za pojišťovnu/banku NENÍ zprostředkovatel. Zprostředkovatel pochází z bloku "Zprostředkovatel" nebo "Zprostředkovatel úvěru".
+- PLATBY — FREKVENCE: paymentFrequency extrahuj přesně. Rozlišuj: "měsíčně" / "ročně" / "čtvrtletně" / "pololetně" / "jednorázově". Nesmíš zaměnit roční pojistné za měsíční.
+- INTERNÍ IDENTIFIKÁTORY: personalId (rodné číslo), bankAccount, iban, datum narození extrahuj bez maskování — jde o interní review flow Aidvisory. Nenahrazuj rodné číslo za "XX/XXXX".
+- MULTI-PERSON: Více osob (pojistník ≠ pojištěný, děti, spoludlužník) extrahuj každou zvlášť do parties jako { role, fullName, birthDate, personalId?, address?, email?, phone?, occupation? }. Role: "policyholder", "insured", "legal_representative", "beneficiary", "child_insured", "co_applicant".
 - MULTI-RISK: Pro každé sjednané riziko/připojištění vyplň insuredPersons a coverages jako JSON string pole prvků [{ person, riskType, riskLabel, insuredAmount, termEnd?, premium? }].
 - INVESTICE: Extrahuj investmentStrategy (string), investmentFunds jako JSON string [{ name, allocation }], investmentPremium. U modelace napiš lifecycleStatus = "modelation" nebo "non_binding_projection".
 - PLATBY: bankAccount, variableSymbol, iban, bankCode, paymentFrequency extrahuj vždy, pokud jsou v dokumentu. Neodhaduj — pouze hodnoty z textu.

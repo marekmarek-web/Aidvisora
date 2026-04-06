@@ -53,9 +53,12 @@ Pokud dostáváš sekce s labely [SMLUVNÍ ČÁST], [ZDRAVOTNÍ DOTAZNÍK], [INV
 - Pokud sekce nejsou k dispozici (text je "(not available)"), čti z celého textu v {{extracted_text}}.
 
 KLIENTSKÝ BLOK — KRITICKÉ PRAVIDLO:
-- Klientská data (fullName, birthDate, personalId, address) ber VÝHRADNĚ z bloku označeného jako "Pojistník", "Klient", "Žadatel", "Pojištěný" nebo "Dlužník".
-- NIKDY neber klientská data z hlavičky pojistitele/banky/instituce, z kontaktů prodejce nebo z části "O nás".
-- Pokud dokument začíná logem a adresou pojišťovny (Generali, UNIQA, ČPP, Kooperativa, AXA atd.), tato data NEPATŘÍ do fullName klienta.
+- Pro pojistné smlouvy: fullName, birthDate, personalId, address ber VÝHRADNĚ z bloku "Pojistník", "Klient", "Žadatel", "Pojištěný" — NIKDY z hlavičky pojistitele.
+- Pro úvěry / hypotéky: fullName / borrowerName ber VÝHRADNĚ z bloku "Dlužník", "Klient", "Žadatel" — NIKDY z hlavičky věřitele/banky. coBorrowerName z bloku "Spoludlužník".
+- Pokud dokument začíná logem a adresou pojišťovny nebo banky (Generali, UNIQA, Raiffeisenbank, ČSOB atd.), tato data NEPATŘÍ do fullName klienta.
+
+VĚŘITEL vs POJIŠŤOVNA:
+- Pro úvěrové dokumenty: banka / věřitel je pole lender, NIKOLI insurer. Nikdy nedávej název banky do pole insurer.
 
 INTERNÍ IDENTIFIKÁTORY — NEMASKOVAT:
 - personalId (rodné číslo), bankAccount, iban, datum narození extrahuj bez maskování.
@@ -67,7 +70,7 @@ FREKVENCE PLATEB — POVINNÉ ROZLIŠENÍ:
 
 ZPROSTŘEDKOVATEL vs INSTITUCE:
 - intermediaryName je poradce/makléř klienta.
-- Osoba nebo firma podepsaná za pojišťovnu/banku NENÍ zprostředkovatel.
+- Osoba nebo firma podepsaná za pojišťovnu/banku NENÍ zprostředkovatel. Zprostředkovatel pochází z bloku "Zprostředkovatel" nebo "Zprostředkovatel úvěru".
 `.trim();
 
 const BUNDLE_PUBLISH_RULES = `
@@ -569,30 +572,49 @@ Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný mark
 
 export const LOAN_CONTRACT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
   key: "loanContractExtraction",
-  label: "Spotřebitelský úvěr / půjčka — extrakce",
+  label: "Spotřebitelský úvěr / hypotéka — extrakce",
   variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
-  systemPrompt: `Jsi extrakční engine pro smlouvy o spotřebitelském úvěru, půjčkách a úvěrech (ne hypotéka).
+  systemPrompt: `Jsi extrakční engine pro smlouvy o spotřebitelském úvěru, hypotéce a jiných úvěrových produktech.
 Soubor: {{filename}}
 Klasifikační signály: {{classification_reasons}}
 Adobe signály: {{adobe_signals}}
 
+${SECTION_AWARE_RULES}
+
 ${BUNDLE_PUBLISH_RULES}
 
-SPOTŘEBITELSKÝ ÚVĚR — povinná extrakce:
-- contractNumber
-- lender (věřitel / banka)
-- productName, productType (spotřebitelský úvěr / revolvingový / kontokorent / kreditní karta / americká hypotéka)
-- loanAmount (výše úvěru)
-- interestRate (roční úroková sazba), RPSN
-- repaymentPeriod (počet měsíců / let)
-- monthlyInstalment (měsíční splátka)
-- totalRepaymentAmount (celková výše splatné částky)
-- disbursementDate / contractDate
-- firstRepaymentDate
-- bankAccount (účet pro splácení), variableSymbol
-- borrower: fullName, birthDate, personalId, address
-- coApplicant (pokud existuje)
-- contentFlags.isFinalContract
+ÚVĚR / HYPOTÉKA — povinná extrakce (vždy pokud přítomno v dokumentu):
+- contractNumber: číslo smlouvy ("Smlouva o úvěru č.", "Úvěrová smlouva č.", "Smlouva o hypotečním úvěru č.")
+- lender: věřitel / banka (z hlavičky věřitele — Raiffeisenbank, ČSOB, Moneta, Equa atd.) — NIKDY z bloku klienta
+- productName: název produktu ("Spotřebitelský úvěr", "Hypoteční úvěr", "Flexihypotéka" atd.)
+- loanAmount: výše úvěru ("Výše Úvěru", "celkový limit Úvěru", "Výše hypotečního úvěru")
+- installmentAmount: měsíční splátka ("Výše měsíčních anuitních splátek", "výše splátky")
+- installmentCount: počet splátek ("Počet měsíčních anuitních splátek", "počet splátek", "splatnost v měsících")
+- interestRate: roční úroková sazba ("Roční úroková sazba", "fixní úroková sazba p.a.")
+- rpsn: RPSN ("Roční procentní sazba nákladů")
+- startDate: datum uzavření nebo poskytnutí úvěru
+- maturityDate: datum konečné splatnosti
+- accountForRepayment: číslo účtu pro splácení
+- purpose: účel úvěru
+- documentStatus: typ dokumentu (final_contract / proposal / annex)
+
+KLIENTSKÝ BLOK — KRITICKÉ:
+- borrowerName / fullName: VÝHRADNĚ z bloku "Dlužník", "Klient", "Žadatel" — NIKDY z hlavičky věřitele/banky
+- birthDate, personalId, address: z klientského bloku, NIKOLI ze záhlaví banky
+- coBorrowerName: z bloku "Spoludlužník" nebo "Spoluúčastník" — také ukládej do parties[role=co_applicant]
+- personalId (rodné číslo), bankAccount extrahuj bez maskování — interní review flow
+
+ZPROSTŘEDKOVATEL:
+- intermediaryName: VÝHRADNĚ z bloku "Zprostředkovatel úvěru" nebo "Zprostředkovatel"
+- intermediaryCompany: firma zprostředkovatele (BEplan, Partners, FinancePoint atd.)
+- Osoba podepsaná za banku NENÍ zprostředkovatel
+
+VĚŘITEL vs POJIŠŤOVNA:
+- Banka / věřitel NIKDY není pojišťovna. Použij pole lender, NIKOLIV insurer.
+
+DOKUMENTOVÝ STATUS:
+- "Smlouva o úvěru" + číslo + podpis: lifecycleStatus = "final_contract", contentFlags.isFinalContract = true
+- "Žádost o úvěr", "Návrh smlouvy": lifecycleStatus = "proposal"
 
 TEXT DOKUMENTU:
 {{extracted_text}}

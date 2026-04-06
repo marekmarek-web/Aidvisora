@@ -70,7 +70,7 @@ export function MindmapHubMobileScreen() {
   useEffect(() => {
     if (entityKey) return;
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+     
   }, [entityKey]);
 
   if (entityKey) {

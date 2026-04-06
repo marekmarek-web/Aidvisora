@@ -4,7 +4,7 @@
  * Advisor summary: runs when OPENAI_PROMPT_AI_REVIEW_DOCUMENT_SUMMARY_FOR_ADVISOR_ID is set.
  */
 
-import { createAiReviewResponseFromPrompt } from "@/lib/openai";
+import { aiReviewCreateResponseFromPrompt as createAiReviewResponseFromPrompt } from "./review-llm-provider";
 import { capAiReviewPromptString } from "./ai-review-prompt-variables";
 import { getAiReviewPromptId, getAiReviewPromptVersion } from "./prompt-model-registry";
 

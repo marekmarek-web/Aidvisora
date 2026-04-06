@@ -1,0 +1,8 @@
+# mortgageExtraction — zástupný spec (repo)
+#
+# Env: OPENAI_PROMPT_AI_REVIEW_MORTGAGE_EXTRACTION_ID
+# V registry označeno jako budoucí / specializovaná hypotéka.
+#
+# Povinné proměnné: extracted_text, classification_reasons, adobe_signals, filename
+#
+# Detail: docs/ai-review-prompt-inventory.md

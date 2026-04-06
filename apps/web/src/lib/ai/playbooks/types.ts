@@ -7,6 +7,8 @@ import type { ProductDomain, CanonicalIntent, CanonicalIntentType } from "../ass
  */
 export type AssistantPlaybookId =
   | "hypo_uver"
+  | "leasing"
+  | "stavebni_sporeni"
   | "investice"
   | "dip_dps"
   | "zivotni_riziko"
@@ -26,6 +28,8 @@ export type AssistantPlaybook = {
   priorityMissingHints: string[];
   /** Krátké návrhy dalších kroků (copy pro UI / odpověď) */
   nextStepSuggestions: string[];
+  /** Deterministický bundle akcí pro případ, že uživatel popisuje nový případ bez explicitních kroků. */
+  defaultRequestedActions?: CanonicalIntentType[];
   /**
    * 3G: Volitelný seznam intentů, pro které se tento playbook surfacuje přednostně.
    * Pokud je vyplněno, enricher surfacuje hints i pro tuto sadu intentů navíc

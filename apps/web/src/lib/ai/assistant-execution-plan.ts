@@ -18,6 +18,7 @@ import {
   canonicalClientRequestSubject,
   canonicalMaterialRequestTitle,
   canonicalDealDetailLine,
+  canonicalPortalMessageTitle,
 } from "./assistant-canonical-names";
 import { resolveContractSegmentFromUserText, PRODUCT_DOMAIN_DEFAULT_SEGMENT } from "./assistant-domain-model";
 import {
@@ -213,12 +214,8 @@ function buildStepParams(
 
   if (action === "scheduleCalendarEvent") {
     const rd = typeof params.resolvedDate === "string" ? params.resolvedDate.trim() : "";
-    if (!params.startAt && rd) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(rd)) {
-        params.startAt = `${rd}T09:00:00.000Z`;
-      } else if (/\d{4}-\d{2}-\d{2}T/.test(rd)) {
-        params.startAt = rd;
-      }
+    if (!params.startAt && rd && /\d{4}-\d{2}-\d{2}T/.test(rd)) {
+      params.startAt = rd;
     }
   }
 
@@ -247,6 +244,14 @@ function buildStepParams(
   if (action === "createMaterialRequest") {
     if (!params.title && !params.taskTitle) {
       params.taskTitle = canonicalMaterialRequestTitle({
+        productDomain: typeof params.productDomain === "string" ? params.productDomain : null,
+      });
+    }
+  }
+
+  if (action === "sendPortalMessage" || action === "draftClientPortalMessage") {
+    if (!params.taskTitle && !params.title) {
+      params.taskTitle = canonicalPortalMessageTitle({
         productDomain: typeof params.productDomain === "string" ? params.productDomain : null,
       });
     }
@@ -353,6 +358,30 @@ const DOMAIN_ADVISORY_HINTS: Partial<
   },
 };
 
+const SEGMENT_LABELS: Record<string, string> = {
+  HYPO: "Hypotéka",
+  UVER: "Spotřebitelský úvěr",
+  INV: "Investice",
+  DIP: "DIP",
+  DPS: "Penzijní spoření",
+  ZP: "Životní pojištění",
+  MAJ: "Pojištění majetku",
+  ODP: "Pojištění odpovědnosti",
+  AUTO_PR: "Povinné ručení",
+  AUTO_HAV: "Havarijní pojištění",
+  CEST: "Cestovní pojištění",
+  FIRMA_POJ: "Firemní pojištění",
+};
+
+const COVERAGE_STATUS_LABELS: Record<string, string> = {
+  done: "hotovo",
+  in_progress: "rozpracováno",
+  none: "bez pokrytí",
+  not_relevant: "neřeší se",
+  opportunity: "v řešení",
+  waiting_signature: "čeká na podpis",
+};
+
 /** Exported for tests and tooling — same rules as planner slot-filling. */
 export function computeWriteActionMissingFields(
   action: WriteActionType,
@@ -411,6 +440,23 @@ export function computeWriteStepPreflight(
 ): WriteStepPreflightResult {
   const missingFields = computeWriteActionMissingFields(action, params, productDomain);
 
+  if (action === "createOpportunity") {
+    const domain = (typeof params.productDomain === "string" ? params.productDomain : productDomain) ?? null;
+    if (domain === "hypo") {
+      const amount = params.amount;
+      const hasAmount =
+        (typeof amount === "number" && Number.isFinite(amount) && amount > 0) ||
+        (typeof amount === "string" && amount.trim().length > 0);
+      if (!hasAmount) {
+        return {
+          preflightStatus: "needs_input",
+          missingFields: missingFields.includes("amount") ? missingFields : [...missingFields, "amount"],
+          advisorMessage: "Pro založení obchodu k hypotéce chybí cílová částka.",
+        };
+      }
+    }
+  }
+
   if (action === "upsertContactCoverage") {
     const st = strParamFromRecord(params, "status");
     if (st && !(COVERAGE_STATUS_WHITELIST as readonly string[]).includes(st)) {
@@ -429,6 +475,16 @@ export function computeWriteStepPreflight(
 
     if (dtRaw) {
       const t = dtRaw.trim();
+      if (!startAt && resolvedDate) {
+        return {
+          preflightStatus: "needs_input",
+          missingFields: missingFields.includes("startAt|resolvedDate")
+            ? missingFields
+            : [...missingFields, "startAt|resolvedDate"],
+          advisorMessage:
+            "Schůzka má zatím jen orientační datum. Doplňte konkrétní čas začátku v ISO 8601 s časovou zónou.",
+        };
+      }
       if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
         return {
           preflightStatus: "needs_input",
@@ -539,11 +595,8 @@ export function buildExecutionPlan(
 
   applyMultiActionOpportunityChaining(steps, intent);
 
-  // Structural fields only — advisory domain hints don't block execution.
-  // Plan is "awaiting_confirmation" if at least one step is ready (no missing fields).
-  // Only "draft" when EVERY step has missing critical fields.
   const readyCount = steps.filter(
-    (s) => computeWriteActionMissingFields(s.action, s.params).length === 0,
+    (s) => computeWriteStepPreflight(s.action, s.params, intent.productDomain).preflightStatus === "ready",
   ).length;
 
   return {
@@ -565,14 +618,14 @@ export function buildExecutionPlan(
 
 const PRODUCT_DOMAIN_LABELS: Record<string, string> = {
   hypo: "Hypotéka",
-  uver: "Úvěr",
+  uver: "Spotřebitelský úvěr",
   investice: "Investice",
   dip: "DIP",
-  dps: "DPS",
+  dps: "Penzijní spoření",
   zivotni_pojisteni: "Životní pojištění",
-  majetek: "Majetek",
-  odpovednost: "Odpovědnost",
-  auto: "Auto",
+  majetek: "Pojištění majetku",
+  odpovednost: "Pojištění odpovědnosti",
+  auto: "Pojištění vozidla",
   cestovni: "Cestovní pojištění",
   firma_pojisteni: "Firemní pojištění",
   servis: "Servis",
@@ -596,7 +649,7 @@ function buildStepLabel(action: WriteActionType, _params: Record<string, unknown
     createTask: "Vytvořit úkol",
     createFollowUp: "Vytvořit follow-up úkol",
     scheduleCalendarEvent: "Naplánovat schůzku",
-    createMeetingNote: "Vytvořit poznámku",
+    createMeetingNote: "Přidat zápisek",
     appendMeetingNote: "Doplnit poznámku",
     attachDocumentToClient: "Připojit dokument",
     attachDocumentToOpportunity: "Připojit dokument k obchodu",
@@ -611,7 +664,7 @@ function buildStepLabel(action: WriteActionType, _params: Record<string, unknown
     createReminder: "Vytvořit připomínku",
     draftEmail: "Připravit email",
     draftClientPortalMessage: "Připravit zprávu klientovi",
-    sendPortalMessage: "Odeslat portálovou zprávu",
+    sendPortalMessage: "Poslat portálovou zprávu",
     approveAiContractReview: "Schválit AI kontrolu smlouvy",
     applyAiContractReviewToCrm: "Aplikovat schválenou AI kontrolu do CRM",
     linkAiContractReviewToDocuments: "Propojit soubor z AI kontroly do dokumentů klienta",
@@ -619,7 +672,7 @@ function buildStepLabel(action: WriteActionType, _params: Record<string, unknown
     linkDocumentToMaterialRequest: "Přiřadit dokument k materiálovému požadavku",
     createClientPortalNotification: "Poslat upozornění do klientského portálu",
     createContract: "Založit smlouvu",
-    upsertContactCoverage: "Uložit stav pokrytí produktu",
+    upsertContactCoverage: "Doplnit pokrytí produktů",
   };
 
   return labels[action] ?? action;
@@ -678,7 +731,12 @@ export function buildStepDescription(action: WriteActionType, params: Record<str
       : typeof params.startAt === "string"
         ? params.startAt.split("T")[0]
         : null;
-    const title = typeof params.title === "string" ? params.title.trim() : null;
+    const title =
+      typeof params.title === "string"
+        ? params.title.trim()
+        : typeof params.taskTitle === "string"
+          ? params.taskTitle.trim()
+          : null;
     if (date && title) return `${date} · ${title}`;
     if (date) return date;
   }
@@ -686,14 +744,14 @@ export function buildStepDescription(action: WriteActionType, params: Record<str
   if (action === "upsertContactCoverage") {
     const ik = typeof params.itemKey === "string" ? params.itemKey.trim() : null;
     const st = typeof params.status === "string" ? params.status.trim() : null;
-    if (ik && st) return `${ik} → ${st}`;
+    if (ik && st) return `${ik} → ${COVERAGE_STATUS_LABELS[st] ?? st}`;
     if (ik) return ik;
   }
 
   if (action === "createContract") {
     const parts: string[] = [];
     const seg = typeof params.segment === "string" ? params.segment : null;
-    if (seg) parts.push(seg);
+    if (seg) parts.push(SEGMENT_LABELS[seg] ?? seg);
     const pn = typeof params.partnerName === "string" ? params.partnerName.trim() : null;
     if (pn) parts.push(pn);
     const pr = typeof params.productName === "string" ? params.productName.trim() : null;
@@ -706,6 +764,16 @@ export function buildStepDescription(action: WriteActionType, params: Record<str
     const sub = typeof params.subject === "string" ? params.subject.trim()
       : typeof params.taskTitle === "string" ? params.taskTitle.trim() : null;
     if (sub) return sub;
+  }
+
+  if (action === "sendPortalMessage" || action === "draftClientPortalMessage") {
+    const title =
+      typeof params.taskTitle === "string"
+        ? params.taskTitle.trim()
+        : typeof params.title === "string"
+          ? params.title.trim()
+          : null;
+    if (title) return title;
   }
 
   // Fallback: generic description with domain chip if available

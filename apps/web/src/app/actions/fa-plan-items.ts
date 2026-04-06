@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db, financialAnalyses, faPlanItems, eq, and } from "db";
 import type { FinancialAnalysisData } from "@/lib/analyses/financial/types";
 import { CREDIT_WISH_BANKS } from "@/lib/analyses/financial/constants";
+import { getProductName } from "@/lib/analyses/financial/formatters";
 import type { FaPlanItemStatus } from "db";
 
 export type FaPlanItemRow = {
@@ -116,7 +117,7 @@ export async function extractFaPlanItems(analysisId: string): Promise<number> {
       itemType: inv.type === "pension" ? "pension" : "investment",
       itemKey: inv.productKey,
       segmentCode: segment,
-      label: inv.productKey,
+      label: getProductName(inv.productKey),
       provider: undefined,
       amountMonthly: inv.type === "monthly" || inv.type === "pension" ? String(Math.round(inv.amount ?? 0)) : null,
       amountAnnual: inv.type === "lump" ? String(Math.round(inv.amount ?? 0)) : null,

@@ -1,6 +1,8 @@
 import topListsSeed from "../../../../../../packages/db/src/data/top-lists-seed-v2.json";
 import catalogSeed from "../../../../../../packages/db/src/catalog.json";
 import { resolveContractSegmentFromUserText } from "../assistant-domain-model";
+import { EUCS_ZP_DISCLAIMER, type EucsZivotItem } from "../../../data/insurance-ratings";
+import eucsZivotRating from "../../../data/eucs-zivot-rating.json";
 
 type TopListEntry = {
   partner: string;
@@ -21,6 +23,7 @@ type TopListsFile = {
 };
 
 const seed = topListsSeed as TopListsFile;
+const eucsItems = (eucsZivotRating as { items?: EucsZivotItem[] }).items ?? [];
 
 const excludePartnerNames = new Set(
   (catalogSeed as { rules?: { excludePartners?: string[] } }).rules?.excludePartners?.map((p) =>
@@ -109,7 +112,7 @@ export function resolveSegmentFromText(text: string): string | null {
 }
 
 const RATING_QUERY_RE =
-  /\b(rating|ratingy|žebříček|zebricek|top\s*\d{1,2}|top\s+10|nejlepší|nejlepsi|nejlépe\s+hodnocen|nejlépe|doporuč|doporuc|hodnocen|pořadí|poradi|která\s+pojišťovna|ktera\s+pojistovna|které\s+pojištění|ktere\s+pojisteni|kdo\s+má\s+nej|kdo\s+ma\s+nej|jak[áa]\s+(je|jsou)\s+nej|nejvyšší\s+rating|nejvysi\s+rating)\b/i;
+  /\b(rating|ratingy|žebříček|zebricek|top\b|top\s*\d{1,2}|top\s+10|nejlepší|nejlepsi|nejlépe\s+hodnocen|nejlépe|doporuč|doporuc|hodnocen|pořadí|poradi|která\s+pojišťovna|ktera\s+pojistovna|které\s+pojištění|ktere\s+pojisteni|kdo\s+má\s+nej|kdo\s+ma\s+nej|jak[áa]\s+(je|jsou)\s+nej|nejvyšší\s+rating|nejvysi\s+rating)\b/i;
 
 const WRITE_INTENT_HINT_RE =
   /\b(založ|zaloz|vytvoř|vytvor|ulož|uloz|proveď|proved|schvál\s+a\s+zapiš|zapiš\s+do\s+crm|zápis|zapis|create\s+opport|execute\s+plan)\b/i;
@@ -118,6 +121,24 @@ function looksLikeRatingQuestion(message: string): boolean {
   if (!RATING_QUERY_RE.test(message)) return false;
   if (WRITE_INTENT_HINT_RE.test(message)) return false;
   return true;
+}
+
+function looksLikeProductLevelQuestion(message: string): boolean {
+  return /\b(jaké|jake|které|ktere)\s+(životní pojištění|pojisteni|pojištění)|\bprodukt\b|\bprodukty\b/i.test(message);
+}
+
+function formatLifeProductRatingReply(items: EucsZivotItem[]): string {
+  const lines: string[] = [
+    "**Životní pojištění** — produktové pořadí podle interního EUCS podkladu (informativní):",
+    "",
+  ];
+  for (const [idx, item] of items.entries()) {
+    lines.push(
+      `${idx + 1}. **${item.partner} — ${item.product}** · rating ${item.rating_total.toFixed(1)} · stav k ${item.as_of}`,
+    );
+  }
+  lines.push("", `*${EUCS_ZP_DISCLAIMER}*`);
+  return lines.join("\n");
 }
 
 function formatRatingReply(segmentCode: string, rows: TopPartnerRow[]): string {
@@ -146,6 +167,12 @@ export function tryRatingLookupReply(message: string): string | null {
   if (!looksLikeRatingQuestion(message)) return null;
   const segment = resolveSegmentFromText(message);
   if (!segment) return null;
+  if (segment === "ZP" && looksLikeProductLevelQuestion(message)) {
+    const rows = [...eucsItems]
+      .sort((a, b) => b.rating_total - a.rating_total || a.partner.localeCompare(b.partner, "cs"))
+      .slice(0, 5);
+    if (rows.length > 0) return formatLifeProductRatingReply(rows);
+  }
   const rows = getTopPartnersForSegment(segment, 5);
   if (rows.length === 0) return null;
   return formatRatingReply(segment, rows);

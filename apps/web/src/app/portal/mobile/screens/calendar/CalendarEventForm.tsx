@@ -154,7 +154,7 @@ export function CalendarEventForm({
       className={
         largeScreen
           ? "fixed inset-0 z-[100] flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] p-0 sm:items-center sm:p-4"
-          : "fixed inset-0 z-[100] flex min-h-0 flex-col bg-[color:var(--wp-surface-card)] max-h-[100dvh]"
+          : "fixed inset-0 z-[100] flex min-h-0 flex-col bg-[color:var(--wp-surface-card)] max-h-[100dvh] pt-[env(safe-area-inset-top,0px)]"
       }
       role="presentation"
       onClick={largeScreen ? onClose : undefined}
@@ -183,8 +183,16 @@ export function CalendarEventForm({
         </div>
 
         <div
-          className="flex-1 space-y-5 overflow-y-auto px-4 py-5"
-          style={keyboardInset ? { paddingBottom: `${keyboardInset + 80}px` } : undefined}
+          className="flex-1 min-h-0 space-y-5 overflow-y-auto overscroll-y-contain px-4 py-5"
+          style={
+            largeScreen
+              ? keyboardInset
+                ? { paddingBottom: `${keyboardInset + 80}px` }
+                : undefined
+              : {
+                  paddingBottom: `max(calc(104px + var(--safe-area-bottom) + 1.25rem), ${(keyboardInset ?? 0) + 88}px)`,
+                }
+          }
         >
           <div className="grid grid-cols-3 gap-2">
             {EVENT_FORM_PRIMARY_TYPE_ORDER.map((id) => {

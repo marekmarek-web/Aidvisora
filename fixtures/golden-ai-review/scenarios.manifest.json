@@ -656,7 +656,10 @@
         "allow_publish_after_advisor_confirmation",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Multi-person MetLife návrh."
+      "expectedNotesForAdvisor": "Multi-person MetLife návrh.",
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Lehnert Metlife.pdf"
+      ]
     },
     {
       "id": "C009",
@@ -1113,7 +1116,10 @@
         "allow_publish_after_advisor_confirmation",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Ověřit návrh vs finální smlouva podle záhlaví (checklist)."
+      "expectedNotesForAdvisor": "Ověřit návrh vs finální smlouva podle záhlaví (checklist).",
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Roman Koloburda UNIQA.pdf"
+      ]
     },
     {
       "id": "C018",
@@ -1195,6 +1201,7 @@
         "G06"
       ],
       "aliasFileNames": [
+        "Test AI/Tested preprompt/Smlouva o ČSOB Spotřebitelském úvěru.pdf",
         "Test AI/Smlouva_o_ČSOB_Spotřebitelském_úvěru.pdf"
       ],
       "expectedFamily": "consumer_credit",
@@ -1541,7 +1548,10 @@
         "allow_product_lane_when_eligible",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Leasing / podnikatelské financování; POV/HAV v textu."
+      "expectedNotesForAdvisor": "Leasing / podnikatelské financování; POV/HAV v textu.",
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/ČSOB Leasing PBI.pdf"
+      ]
     },
     {
       "id": "C026",
@@ -1905,7 +1915,10 @@
         "review_as_proposal"
       ],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Životní pojištění Pillow.pdf"
+      ]
     },
     {
       "id": "C033",
@@ -2148,7 +2161,10 @@
       ],
       "expectedReviewFlags": [],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Uniqa Majetek.pdf"
+      ]
     },
     {
       "id": "C038",
@@ -2198,7 +2214,10 @@
         "review_loan_amount_and_term"
       ],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Hypotéka.pdf"
+      ]
     },
     {
       "id": "C039",
@@ -2248,7 +2267,10 @@
         "review_loan_amount_and_term"
       ],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/SMLOUVA O ÚVĚRU.pdf"
+      ]
     },
     {
       "id": "C040",
