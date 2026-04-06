@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
 
-const EXPECTED_CORPUS_COUNT = 41;
+const EXPECTED_CORPUS_COUNT = 43;
 
 /** Repo root when vitest cwd is apps/web */
 function manifestPath(): string {
@@ -23,6 +23,9 @@ const ALLOWED_FAMILY_BUCKETS = new Set([
   // Phase 3 additions
   "non_life_insurance",
   "compliance",
+  // Phase 2 cross-family additions
+  "pension_dps",
+  "life_modelation",
 ]);
 
 const ALLOWED_EXPECTED_FAMILIES = new Set([

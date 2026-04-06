@@ -342,6 +342,37 @@ Pravidla:
     maturityDate (datum splatnosti),
     purpose (účel úvěru),
     intermediaryName (zprostředkovatel úvěru — z bloku "Zprostředkovatel úvěru").
+  - Leasing / financování (povinné pokud jde o leasingovou nebo financovací smlouvu):
+    lender / financingProvider (leasingová nebo financovací společnost — z hlavičky věřitele/pronajímatele),
+    customer / customerName (zákazník — z bloku "Zákazník", "Klient", "Příjemce" — NIKDY z hlavičky leasingové společnosti),
+    customerIco (IČO zákazníka pokud je firemní zákazník),
+    representedBy (zástupce zákazníka — jednatel, prokurista),
+    totalFinancedAmount (celková výše financování),
+    downPayment (akontace / vlastní zdroje),
+    installmentAmount (výše splátky),
+    installmentCount / duration (počet splátek nebo délka v měsících),
+    firstInstallmentDate (datum první splátky),
+    financedObject (předmět financování — vozidlo, stroj, zařízení),
+    vin (VIN nebo výrobní číslo předmětu).
+  - Investiční smlouva / úpis (povinné pokud jde o investiční produkt):
+    investorFullName (investor/klient — z bloku "Klient", "Investor", "Žadatel" — NIKDY z hlavičky investiční společnosti),
+    institutionName (správce/investiční společnost),
+    isin (ISIN fondu nebo cenného papíru),
+    intendedInvestment (zamýšlená výše investice),
+    entryFeePercent (vstupní poplatek v %),
+    amountToPay (částka k úhradě),
+    bankAccount (číslo účtu pro úhradu — NEMASKOVAT),
+    variableSymbol (variabilní symbol — NEMASKOVAT).
+  - Dodatek / změna smlouvy (povinné pokud jde o servisní nebo změnový dokument):
+    existingPolicyNumber (číslo EXISTUJÍCÍ smlouvy — hledej "ke smlouvě č.", "na smlouvu č."),
+    insurer (pojišťovna z hlavičky),
+    fullName (pojistník — z bloku pojistník/klient, NIKDY z hlavičky pojistitele),
+    effectiveDate (datum účinnosti),
+    requestedChanges (shrnutí požadované změny).
+  - Podpůrný dokument (výplatní lístek, daňové přiznání, výpis):
+    Pro výplatní lístek: employer, fullName (zaměstnanec), payPeriod, grossPay, netPay, payoutAccount (NEMASKOVAT).
+    Pro daňové přiznání: companyName, ico, taxPeriodFrom, taxPeriodTo, taxType, taxAmountDue.
+    Nikdy netvoř contractNumber nebo insurer pro supporting docs.
   - Zprostředkovatel: intermediaryName, intermediaryCode, intermediaryCompany, advisorName, brokerName.
   - Investice: investmentStrategy, investmentFunds, fundAllocation, investmentAllocation, investmentScenario.
   - Oprávněné osoby: beneficiaries.

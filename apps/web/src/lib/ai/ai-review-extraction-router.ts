@@ -59,6 +59,9 @@ export function coerceClassifierDocumentTypeForRouter(raw: string): string {
     "consent_or_identification_document",
     "confirmation_document",
     "supporting_document",
+    "corporate_tax_return",
+    "payslip_document",
+    "insurance_policy_change_or_service_doc",
     "unknown",
   ]);
   if (shortOk.has(d)) return String(raw || "").trim();
@@ -68,6 +71,7 @@ export function coerceClassifierDocumentTypeForRouter(raw: string): string {
   if (d === "life_insurance_modelation") return "modelation";
   if (d === "life_insurance_proposal") return "proposal";
   if (d === "life_insurance_change_request") return "amendment";
+  if (d === "insurance_policy_change_or_service_doc") return "amendment";
   if (d === "nonlife_insurance_contract" || d === "non_life_insurance_contract") return "contract";
   if (d === "property_insurance_contract" || d === "home_insurance_contract" || d === "household_insurance_contract") return "contract";
   if (d === "liability_insurance_contract") return "contract";
@@ -78,6 +82,8 @@ export function coerceClassifierDocumentTypeForRouter(raw: string): string {
   if (d === "pension_contract") return "contract";
   if (d === "consent_or_declaration") return "consent_or_identification_document";
   if (d === "final_contract") return "contract";
+  if (d === "corporate_tax_return" || d === "self_employed_tax_or_income_document") return "corporate_tax_return";
+  if (d === "payslip_document" || d === "income_proof_document") return "payslip_document";
   // Leasing / financial lease document types
   if (d.includes("leasing") || d === "financial_lease" || d === "operating_lease" || d === "leasing_contract") return "contract";
 
@@ -333,12 +339,16 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     return { outcome: "manual_review", reasonCodes: ["prompt_missing_termination"] };
   }
 
-  // §X Leasing / financial lease / fleet financing
+  // §X Leasing / financial lease / fleet financing — dedicated prompt with leasing field set
   {
-    const LEASING_FAMILIES = new Set(["leasing", "financing", "financial_leasing", "fleet_financing", "factoring", "compliance"]);
-    if (LEASING_FAMILIES.has(fam) && fam !== "compliance") {
+    const LEASING_FAMILIES = new Set(["leasing", "financing", "financial_leasing", "fleet_financing", "factoring"]);
+    if (LEASING_FAMILIES.has(fam)) {
       if (dt === "contract" || dt === "amendment" || dt === "unknown" || dt === "") {
-        return { outcome: "extract", promptKey: "legacyFinancialProductExtraction", reasonCodes: ["leasing_contract"] };
+        // Use dedicated leasing prompt if configured, otherwise fall back to legacy
+        if (getAiReviewPromptId("leasingExtraction")) {
+          return { outcome: "extract", promptKey: "leasingExtraction", reasonCodes: ["leasing_contract_dedicated"] };
+        }
+        return { outcome: "extract", promptKey: "leasingExtraction", reasonCodes: ["leasing_contract_local"] };
       }
     }
   }
@@ -357,8 +367,34 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     return { outcome: "extract", promptKey: "legacyFinancialProductExtraction", reasonCodes: ["consent_kyc_legacy_fallback"] };
   }
 
-  // §X2 Compliance family (AML/KYC/FATCA documents detected via text override)
+  // §X2 Compliance family — distinguish amendment, supporting and generic
   if (fam === "compliance") {
+    // Insurance amendments / change requests detected via compliance family
+    if (
+      dt === "amendment" ||
+      dt === "insurance_policy_change_or_service_doc" ||
+      dt === "life_insurance_change_request"
+    ) {
+      if (!amendmentConfidenceOk(input.confidence, amendTh)) {
+        return { outcome: "review_required", reasonCodes: ["compliance_amendment_low_confidence"] };
+      }
+      return { outcome: "extract", promptKey: "insuranceAmendment", reasonCodes: ["compliance_insurance_amendment"] };
+    }
+    // Tax returns, payslips, income proofs, and other supporting docs
+    const SUPPORTING_DT = new Set([
+      "supporting_document",
+      "corporate_tax_return",
+      "self_employed_tax_or_income_document",
+      "payslip_document",
+      "income_proof_document",
+      "income_confirmation",
+      "bank_statement",
+      "financial_analysis_document",
+      "statement",
+    ]);
+    if (SUPPORTING_DT.has(dt) || sub === "tax_return" || sub === "payslip") {
+      return { outcome: "extract", promptKey: "supportingDocumentExtraction", reasonCodes: ["compliance_supporting_doc"] };
+    }
     return { outcome: "extract", promptKey: "legacyFinancialProductExtraction", reasonCodes: ["compliance_document"] };
   }
 

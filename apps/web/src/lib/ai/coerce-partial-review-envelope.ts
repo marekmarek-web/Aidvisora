@@ -317,6 +317,114 @@ function flattenLegacyLoanNestedFields(
   }
 }
 
+/**
+ * For investment/subscription stored-prompt responses that return nested legacy format:
+ * { investor: {fullName,...}, fund: {isin,...}, payment: {bankAccount,...} }
+ */
+function flattenLegacyInvestmentNestedFields(
+  parsed: Record<string, unknown>,
+  ef: Record<string, Record<string, unknown>>,
+): void {
+  const INVESTMENT_NESTED_BLOCKS: Record<string, string[]> = {
+    investor: ["fullName", "birthDate", "personalId", "address", "phone", "email",
+               "investorFullName", "investorName", "klient"],
+    client: ["fullName", "birthDate", "personalId", "address", "phone", "email",
+             "investorFullName", "clientFullName"],
+    fund: ["isin", "productName", "fundName", "name", "isinCode", "allocation"],
+    payment: ["bankAccount", "variableSymbol", "specificSymbol", "iban", "bankCode",
+              "amountToPay", "castkaKUhrade", "intendedInvestment"],
+    subscription: ["isin", "productName", "intendedInvestment", "entryFeePercent", "amountToPay"],
+    intermediary: ["intermediaryName", "intermediaryCompany", "intermediaryCode", "zprostredkovatel"],
+    institution: [], // handled separately
+  };
+
+  for (const [blockKey, fieldKeys] of Object.entries(INVESTMENT_NESTED_BLOCKS)) {
+    const block = parsed[blockKey];
+    if (!block || typeof block !== "object" || Array.isArray(block)) continue;
+    const blockObj = block as Record<string, unknown>;
+
+    for (const fk of fieldKeys) {
+      if (ef[fk]) continue;
+      const val = blockObj[fk];
+      if (val == null || (typeof val === "string" && !val.trim())) continue;
+      ef[fk] = normalizeExtractedFieldCell(fk, val);
+    }
+    // Lift remaining scalar fields
+    for (const [k, v] of Object.entries(blockObj)) {
+      if (k.startsWith("_") || ef[k]) continue;
+      if (v == null || (typeof v === "string" && !v.trim())) continue;
+      if (typeof v === "object" && !Array.isArray(v)) continue;
+      ef[k] = normalizeExtractedFieldCell(k, v);
+    }
+  }
+
+  // Handle top-level provider/institution
+  const providerRaw = parsed.provider ?? parsed.institutionName ?? parsed.institution;
+  if (providerRaw && !ef.institutionName && !ef.provider) {
+    if (typeof providerRaw === "string" && providerRaw.trim()) {
+      ef.institutionName = normalizeExtractedFieldCell("institutionName", providerRaw);
+    }
+  }
+}
+
+/**
+ * For leasing/financing stored-prompt responses that return nested legacy format:
+ * { customer: {...}, financedObject: {...}, financingTerms: {...} }
+ */
+function flattenLegacyLeasingNestedFields(
+  parsed: Record<string, unknown>,
+  ef: Record<string, Record<string, unknown>>,
+): void {
+  const LEASING_NESTED_BLOCKS: Record<string, string[]> = {
+    customer: ["fullName", "customerName", "zakaznik", "companyName", "ico", "representedBy",
+               "customerFullName", "customerIco"],
+    lessee: ["fullName", "customerName", "zakaznik", "companyName", "ico", "representedBy"],
+    financingTerms: ["totalFinancedAmount", "installmentAmount", "installmentCount", "duration",
+                     "firstInstallmentDate", "startDate", "maturityDate", "downPayment",
+                     "interestRate", "paymentFrequency", "firstDrawdownDate"],
+    leasingTerms: ["totalFinancedAmount", "installmentAmount", "installmentCount", "duration",
+                   "firstInstallmentDate", "startDate", "maturityDate", "downPayment",
+                   "paymentFrequency"],
+    vehicleDetails: ["financedObject", "vin", "serialNumber", "brandModel", "vehicleType",
+                     "registrationPlate", "vehicleDescription"],
+    objectDetails: ["financedObject", "vin", "serialNumber", "equipmentDescription"],
+    intermediary: ["intermediaryName", "intermediaryCompany", "zprostredkovatel"],
+  };
+
+  for (const [blockKey, fieldKeys] of Object.entries(LEASING_NESTED_BLOCKS)) {
+    const block = parsed[blockKey];
+    if (!block || typeof block !== "object" || Array.isArray(block)) continue;
+    const blockObj = block as Record<string, unknown>;
+
+    for (const fk of fieldKeys) {
+      if (ef[fk]) continue;
+      const val = blockObj[fk];
+      if (val == null || (typeof val === "string" && !val.trim())) continue;
+      ef[fk] = normalizeExtractedFieldCell(fk, val);
+    }
+    for (const [k, v] of Object.entries(blockObj)) {
+      if (k.startsWith("_") || ef[k]) continue;
+      if (v == null || (typeof v === "string" && !v.trim())) continue;
+      if (typeof v === "object" && !Array.isArray(v)) continue;
+      ef[k] = normalizeExtractedFieldCell(k, v);
+    }
+  }
+
+  // Handle lender
+  const lenderRaw = parsed.lender ?? parsed.financingProvider ?? parsed.pronajimatel ?? parsed.leasingCompany;
+  if (lenderRaw && !ef.lender) {
+    if (typeof lenderRaw === "string" && lenderRaw.trim()) {
+      ef.lender = normalizeExtractedFieldCell("lender", lenderRaw);
+    } else if (typeof lenderRaw === "object" && !Array.isArray(lenderRaw)) {
+      const ln = lenderRaw as Record<string, unknown>;
+      const name = ln.name ?? ln.value ?? ln.companyName;
+      if (typeof name === "string" && name.trim()) {
+        ef.lender = normalizeExtractedFieldCell("lender", name);
+      }
+    }
+  }
+}
+
 const LOAN_MORTGAGE_PRIMARY_TYPES = new Set<string>([
   "mortgage_document",
   "consumer_loan_contract",
@@ -351,6 +459,21 @@ export function tryCoerceReviewEnvelopeAfterValidationFailure(
   // For loan/mortgage docs: flatten nested legacy format (client, loanDetails, paymentDetails)
   if (LOAN_MORTGAGE_PRIMARY_TYPES.has(forcedPrimaryType)) {
     flattenLegacyLoanNestedFields(draft, mergedEf);
+  }
+
+  // For investment/subscription docs: flatten nested legacy format (investor, fund, payment)
+  if (
+    forcedPrimaryType === "investment_subscription_document" ||
+    forcedPrimaryType === "investment_service_agreement" ||
+    forcedPrimaryType === "investment_modelation" ||
+    forcedPrimaryType === "pension_contract"
+  ) {
+    flattenLegacyInvestmentNestedFields(draft, mergedEf);
+  }
+
+  // For leasing/financing docs: flatten nested legacy format (customer, vehicleDetails, financingTerms)
+  if (forcedPrimaryType === "generic_financial_document") {
+    flattenLegacyLeasingNestedFields(draft, mergedEf);
   }
 
   draft.extractedFields = mergedEf;

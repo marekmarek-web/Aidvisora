@@ -156,17 +156,30 @@ ${BUNDLE_PUBLISH_RULES}
 
 INVESTICE — povinná extrakce:
 - contractNumber (číslo smlouvy nebo investičního účtu)
-- institutionName (instituce / správce)
-- productName, productType
+- institutionName (instituce / správce / investiční společnost)
+- productName (název produktu / fondu)
+- productType (investiční smlouva / DPS / DIP / fondový úpis / investiční program)
 - startDate, endDate
+- investorFullName / fullName (investor / klient — z bloku "Klient", "Investor", "Účastník" — NIKDY z hlavičky instituce)
+- birthDate, personalId, address (investora)
 - investmentStrategy (název strategie — PRIMÁRNĚ z investiční sekce)
 - investmentFunds: [{ name, allocation, isin? }] — PRIMÁRNĚ z investiční sekce
-- investmentPremium, investmentAmount
-- paymentFrequency, bankAccount, variableSymbol, iban
-- fullName, birthDate, address
-- parties[] — owner, beneficiary, attorney-in-fact kde relevantní
+  → Pro každý fond/třídu: name, isin, allocation (%), currency
+- isin (primární ISIN pokud je jednoznačný)
+- intendedInvestment / investmentAmount (zamýšlená výše investice / jistina)
+- entryFeePercent / vstupniPoplatek (vstupní poplatek v %)
+- amountToPay / castkaKUhrade (částka k úhradě po odečtení poplatku nebo celkem)
+- investmentPremium / contributionAmount (pravidelný příspěvek)
+- paymentFrequency, bankAccount, variableSymbol, iban (platební instrukce — NEMASKOVAT)
+- parties[] — owner/investor, beneficiary, zprostředkovatel kde relevantní
+- intermediaryName / zprostredkovatel (zprostředkovatel — VÝHRADNĚ z bloku "Zprostředkovatel" nebo "Poradce")
 - isModeledData: true pokud jde o ilustraci, ne smlouvu
 - isContractualData: true pokud jde o podepsanou smlouvu
+
+INVESTOR vs INSTITUCE — KRITICKÉ:
+- fullName / investorFullName je KLIENT/INVESTOR — z bloku "Klient", "Investor", "Žadatel".
+- NIKDY nepoužívej jméno/adresu správce fondu nebo investiční společnosti jako jméno klienta.
+- institutionName je správce / investiční společnost (např. CODYA investiční společnost, a.s.).
 
 INVESTIČNÍ SEKCE (primární zdroj):
 {{investment_section_text}}
@@ -513,21 +526,35 @@ export const INSURANCE_AMENDMENT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
   key: "insuranceAmendment",
   label: "Pojistný dodatek / změna smlouvy — extrakce",
   variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
-  systemPrompt: `Jsi extrakční engine pro dodatky a změny pojistných smluv.
+  systemPrompt: `Jsi extrakční engine pro dodatky, změny a servisní dokumenty pojistných smluv.
 Soubor: {{filename}}
 Klasifikační signály: {{classification_reasons}}
 Adobe signály: {{adobe_signals}}
 
-DODATEK / ZMĚNA SMLOUVY — povinná extrakce:
-- contractNumber (číslo EXISTUJÍCÍ smlouvy, ke které se vztahuje)
-- insurer (pojišťovna)
-- productName, productType
-- amendmentDate / effectiveDate
-- description (co se mění — pojistné, krytí, pojistník, beneficiář…)
-- changedFields[]: {"field": "...", "oldValue": "...", "newValue": "..."}
-- parties[] — kdo podepisuje změnu
-- contentFlags.isFinalContract = false (dodatky nejsou finální smlouvy)
+${SECTION_AWARE_RULES}
+
+KRITICKÉ: Toto je změna/servisní dokument k EXISTUJÍCÍ pojistné smlouvě, NIKOLI nová smlouva.
 - documentClassification.documentIntent = "modifies_existing_product"
+- contentFlags.isFinalContract = false
+- lifecycleStatus = "policy_change_request" nebo "endorsement_request"
+
+DODATEK / ZMĚNA SMLOUVY — povinná extrakce:
+- existingPolicyNumber / contractNumber (číslo EXISTUJÍCÍ smlouvy, ke které se vztahuje — hledej "ke smlouvě č.", "na pojistnou smlouvu č.", "číslo smlouvy")
+- insurer (pojišťovna — z hlavičky dokumentu nebo z bloku pojistitele)
+- productName, productType (pojistný produkt, pokud je uveden)
+- fullName / policyholder (pojistník — z bloku pojistník/klient/žadatel, NIKDY z hlavičky pojistitele)
+- birthDate, personalId (z bloku pojistníka pokud jsou přítomné)
+- amendmentDate / effectiveDate (datum účinnosti změny, datum podání žádosti)
+- requestedChanges / description (co se mění — pojistné, krytí, pojistník, beneficiář, adresa, zdravotní stav...)
+- changedFields[]: {"field": "...", "oldValue": "...", "newValue": "..."} (pokud jsou staré/nové hodnoty explicitní)
+- healthQuestionnaireAttached (true pokud je přiložen zdravotní dotazník nebo zdravotní prohlášení)
+- parties[] — kdo podepisuje změnu
+- summaryText (krátké shrnutí požadované změny, max 3 věty)
+
+HLEDEJ PŘESNĚ:
+- "ke smlouvě č." → existingPolicyNumber
+- "Pojistník:" nebo "Klient:" → fullName (ne "Pojistitel:" nebo "Pojišťovna:")
+- "platnost od", "účinnost od", "ke dni" → effectiveDate
 
 TEXT DOKUMENTU:
 {{extracted_text}}
@@ -653,25 +680,124 @@ TEXT DOKUMENTU:
 Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
 };
 
-// ─── Supporting Document Extraction ──────────────────────────────────────────
+// ─── Leasing / Business Financing Extraction ─────────────────────────────────
 
-export const SUPPORTING_DOCUMENT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
-  key: "supportingDocumentExtraction",
-  label: "Podpůrný dokument — extrakce",
+export const LEASING_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "leasingExtraction",
+  label: "Leasingová / financovací smlouva — extrakce",
   variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
-  systemPrompt: `Jsi extrakční engine pro podpůrné finanční dokumenty (výpisy, potvrzení, přehledy, výroční zprávy fondů).
+  systemPrompt: `Jsi extrakční engine pro leasingové a financovací smlouvy (finanční leasing, operativní leasing, úvěr na vozidlo / stroj / vybavení).
+
 Soubor: {{filename}}
 Klasifikační signály: {{classification_reasons}}
 Adobe signály: {{adobe_signals}}
 
-PODPŮRNÝ DOKUMENT — povinná extrakce:
-- documentType (výpis / potvrzení / přehled / výroční zpráva / jiné)
+${SECTION_AWARE_RULES}
+
+LEASING / FINANCOVÁNÍ — povinná extrakce:
+- contractNumber (číslo leasingové nebo financovací smlouvy)
+- lender / financingProvider (leasingová nebo úvěrová společnost — z hlavičky věřitele, např. ČSOB Leasing a.s.)
+  → NIKDY z bloku zákazníka/klienta
+- customer / customerName (zákazník = firma nebo osoba — z bloku "Zákazník", "Klient", "Příjemce")
+- customerCompany (název firmy zákazníka pokud je firemní smlouva)
+- customerIco (IČO zákazníka pokud je uvedeno)
+- representedBy (zástupce zákazníka — jméno a funkce)
+- totalFinancedAmount (celková výše financování, "celková cena", "výše leasingu")
+- firstPayment / downPayment (akontace / mimořádná splátka / vlastní zdroje)
+- monthlyInstallment / installmentAmount (výše pravidelné splátky)
+- installmentCount / duration (počet splátek / doba trvání v měsících)
+- paymentFrequency (měsíčně / čtvrtletně / pololetně)
+- firstDrawdownDate / startDate (datum zahájení / datum první splátky)
+- firstInstallmentDate (datum první pravidelné splátky)
+- maturityDate (datum ukončení / konečná splatnost)
+- interestRate (úroková sazba pokud je uvedena)
+- financedObject (předmět financování — druh/typ objektu, obchodní název)
+- vin / serialNumber (VIN číslo nebo výrobní číslo předmětu)
+- purpose / businessPurpose (účel financování, podnikatelský kontext)
+- requiredInsurance (povinné pojištění — pojistné podmínky pokud jsou uvedeny)
+- paymentAccount / accountForPayment (číslo účtu pro splátky)
+- intermediaryName / intermediaryCompany (zprostředkovatel pokud je v dokumentu uveden — NIKDY zaměstnanec leasingové společnosti)
+
+ZÁKAZNÍK vs VĚŘITEL — KRITICKÉ:
+- Zákazník/klient (kdo podepisuje smlouvu na straně příjemce financování) ≠ leasingová společnost.
+- Věřitel/poskytovatel (leasingová společnost) se nikdy nedostane do pole customer.
+- Hledej blok "Zákazník", "Příjemce", "Dlužník", "Klient" pro zákaznická data.
+
+FIREMNÍ KONTEXT:
+- Pokud je zákazník firma (s.r.o., a.s., OSVČ), extrahuj IČO a název firmy.
+- Zástupce/jednatel zákazníka → representedBy.
+- Firemní smlouva NENÍ spotřebitelský úvěr.
+
+PŘEDMĚT FINANCOVÁNÍ:
+- Vozidlo: značka, model, typ, VIN.
+- Stroj/zařízení: název, výrobní číslo, specifikace.
+
+TEXT DOKUMENTU:
+{{extracted_text}}
+
+Vrátíš POUZE platný JSON dle struktury DocumentReviewEnvelope. Žádný markdown.`,
+};
+
+// ─── Supporting Document Extraction ──────────────────────────────────────────
+
+export const SUPPORTING_DOCUMENT_EXTRACTION_TEMPLATE: PromptTemplateContent = {
+  key: "supportingDocumentExtraction",
+  label: "Podpůrný dokument (výplatní lístek, daňové přiznání, výpis...) — extrakce",
+  variables: ["extracted_text", "classification_reasons", "adobe_signals", "filename"],
+  systemPrompt: `Jsi extrakční engine pro podpůrné a referenční finanční dokumenty.
+TOTO NENÍ produktová smlouva — nemaskuj interní identifikátory, ale netvoř fiktivní smluvní čísla.
+
+Soubor: {{filename}}
+Klasifikační signály: {{classification_reasons}}
+Adobe signály: {{adobe_signals}}
+
+Pravidlo: supporting/reference dokument NIKDY neplní smluvní pole (contractNumber, insurer, policyStartDate).
+Místo toho extrahuj to, co je smysluplné pro daný typ dokumentu.
+
+VÝPLATNÍ LÍSTEK / MZDOVÝ DOKLAD (payslip_document):
+Pokud jde o výplatní lístek, extrahuj:
+- employer (zaměstnavatel / firma)
+- employee / fullName (zaměstnanec)
+- payPeriod / period (mzdové období — měsíc/rok)
+- grossPay / hrubaMzda (hrubá mzda)
+- netPay / cistaMzda (čistá mzda k výplatě)
+- payoutAccount (číslo účtu pro výplatu — NEMASKOVAT)
+- bankCode (kód banky)
+- variableSymbol (pokud je uveden)
+- documentType = "payslip_document"
+- documentPurpose = "income_verification"
+
+DAŇOVÉ PŘIZNÁNÍ / CORPORATE TAX RETURN (corporate_tax_return):
+Pokud jde o daňové přiznání firmy nebo OSVČ, extrahuj:
+- companyName / taxpayerName (název poplatníka / firmy)
+- ico (IČO)
+- dic (DIČ)
+- taxPeriodFrom, taxPeriodTo (zdaňovací období)
+- taxType (daň z příjmů právnických osob / DPPO / DPFO)
+- taxAmountDue / daňováPovinnost (výsledná daňová povinnost)
+- taxBase / zakladDane (základ daně pokud je zjevný)
+- mainBusinessActivity (hlavní činnost)
+- filingDate / datumPodani (datum podání pokud je uveden)
+- documentType = "corporate_tax_return"
+- documentPurpose = "tax_filing_reference"
+- contentFlags.isFinalContract = false
+
+VÝPIS Z ÚČTU (bank_statement):
+- accountHolder (majitel účtu)
+- accountNumber / bankAccount (číslo účtu — NEMASKOVAT)
+- period (výpisové období)
+- openingBalance, closingBalance (počáteční a konečný zůstatek pokud jsou)
+- institution (banka)
+- documentType = "bank_statement"
+
+OBECNÝ PODPŮRNÝ DOKUMENT:
+- documentType (výpis / potvrzení / přehled / formulář / jiné)
 - institution / issuer
 - dateOfIssue
-- referenceNumber (pokud existuje)
-- subjectPerson: fullName, contractNumber (pokud jde o konkrétní osobu / smlouvu)
+- subjectPerson: fullName (pokud jde o konkrétní osobu)
 - summaryText (krátké shrnutí obsahu, max 3 věty)
-- containsClientData (boolean)
+- documentPurpose (účel dokumentu)
+- recommendedHandling (jak s dokumentem naložit — připojit ke klientovi, ke smlouvě, archivovat...)
 - contentFlags.isFinalContract = false
 - contentFlags.containsAttachmentOnly = true
 
@@ -798,6 +924,7 @@ export const ALL_PROMPT_TEMPLATE_CONTENTS: PromptTemplateContent[] = [
   INSURANCE_AMENDMENT_EXTRACTION_TEMPLATE,
   BUILDING_SAVINGS_EXTRACTION_TEMPLATE,
   LOAN_CONTRACT_EXTRACTION_TEMPLATE,
+  LEASING_EXTRACTION_TEMPLATE,
   PAYMENT_INSTRUCTIONS_EXTRACTION_TEMPLATE,
   SUPPORTING_DOCUMENT_EXTRACTION_TEMPLATE,
   LEGACY_FINANCIAL_PRODUCT_EXTRACTION_TEMPLATE,

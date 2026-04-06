@@ -1415,6 +1415,86 @@ Vždy extrahuj referenci na existující číslo smlouvy (existingPolicyNumber).
 Nikdy neoznačuj jako novou smlouvu.
 `;
 
+const LEASING_BUSINESS_PROMPT_ADDENDUM = `
+KRITICKÉ POKYNY PRO LEASINGOVÉ / FINANCOVACÍ DOKUMENTY:
+
+POVINNÁ POLE — musíš extrahovat pokud jsou v dokumentu přítomna:
+- contractNumber: číslo smlouvy (leasingová smlouva č., smlouva o financování č.)
+- lender / financingProvider: leasingová nebo financovací společnost (ČSOB Leasing, UniCredit Leasing, ŠkoFIN…) — z hlavičky věřitele NIKDY ze zákaznického bloku
+- customer / customerName: zákazník — z bloku "Zákazník", "Klient", "Příjemce"
+- customerCompany: IČO a název firemního zákazníka pokud jsou přítomné
+- representedBy: zástupce zákazníka (jednatel, prokurista)
+- totalFinancedAmount: celková výše financování
+- firstPayment / downPayment: akontace / vlastní zdroje
+- installmentAmount: výše pravidelné splátky
+- installmentCount / duration: počet splátek nebo délka v měsících
+- paymentFrequency: frekvence splátek (měsíčně / čtvrtletně)
+- startDate / firstDrawdownDate: datum zahájení
+- firstInstallmentDate: datum první splátky
+- maturityDate: datum ukončení
+- financedObject: předmět financování (vozidlo, stroj, zařízení)
+- vin: VIN nebo výrobní číslo předmětu
+- purpose: účel financování
+
+ZÁKAZNÍK vs VĚŘITEL:
+- Zákazník (příjemce financování) je v bloku "Zákazník" nebo "Klient"
+- Věřitel (leasingová společnost) je v hlavičce nebo bloku "Věřitel" / "Pronajímatel"
+- Záměna těchto rolí je ZAKÁZÁNA
+
+LEASINGOVÝ vs SPOTŘEBITELSKÝ ÚVĚR:
+- Firemní leasing (pro podnikání): documentFamily = "leasing", NENÍ spotřebitelský úvěr
+- Firemní zákazník má IČO — extrahuj ho
+`;
+
+const INVESTMENT_SUBSCRIPTION_PROMPT_ADDENDUM = `
+KRITICKÉ POKYNY PRO INVESTIČNÍ SMLOUVY / ÚPISY:
+
+POVINNÁ POLE:
+- investorFullName / fullName: investor/klient — VÝHRADNĚ z bloku "Klient", "Investor", "Žadatel" — NIKDY z hlavičky instituce
+- institutionName: investiční společnost / správce fondů
+- productName: název produktu nebo fondu
+- isin: ISIN cenného papíru nebo podfondu (formát CZ nebo mezinárodní)
+- intendedInvestment: zamýšlená výše investice
+- entryFeePercent: vstupní poplatek v %
+- amountToPay: částka k úhradě
+- bankAccount: číslo účtu pro úhradu — NEMASKOVAT
+- variableSymbol: variabilní symbol pro platbu — NEMASKOVAT
+- contractNumber: číslo smlouvy nebo investičního účtu
+
+ROZLIŠ:
+- DIP (Dlouhodobý investiční produkt) = daňový rámec od 2024, productType = "DIP"
+- DPS (Doplňkové penzijní spoření) = penzijní společnosti, productType = "DPS"
+- Fondový úpis / investiční smlouva = investiční společnost, productType = "investment_subscription"
+
+ZPROSTŘEDKOVATEL:
+- intermediaryName: VÝHRADNĚ z bloku "Zprostředkovatel", "Investiční poradce"
+- Osoba podepsaná za investiční společnost NENÍ zprostředkovatel
+`;
+
+const AMENDMENT_PROMPT_ADDENDUM = `
+KRITICKÉ POKYNY PRO DODATKY A ZMĚNY SMLUV:
+- existingPolicyNumber: číslo EXISTUJÍCÍ smlouvy (hledej "ke smlouvě č.", "na smlouvu č.", "pojistná smlouva č.")
+- fullName / policyholder: pojistník — VÝHRADNĚ z bloku "Pojistník", "Klient", "Žadatel" — NIKDY z hlavičky pojistitele
+- insurer: pojišťovna — z hlavičky nebo bloku pojistitele
+- effectiveDate / amendmentDate: datum účinnosti nebo datum podání
+- requestedChanges: souhrn požadovaných změn
+- Tento dokument NENÍ nová smlouva: isFinalContract = false, intent = "modifies_existing_product"
+`;
+
+const SUPPORTING_DOC_PROMPT_ADDENDUM = `
+KRITICKÉ POKYNY PRO PODPŮRNÉ / REFERENČNÍ DOKUMENTY:
+- Toto NENÍ produktová smlouva — netvořit contractNumber, insurer, policyStartDate
+- contentFlags.isFinalContract = false
+- contentFlags.containsAttachmentOnly = true
+- lifecycleStatus = "statement", "payroll_statement" nebo "tax_return"
+
+Pro VÝPLATNÍ LÍSTEK: extrahuj employer, fullName, payPeriod, grossPay, netPay, payoutAccount (NEMASKOVAT)
+Pro DAŇOVÉ PŘIZNÁNÍ: extrahuj companyName/taxpayerName, ico, taxPeriodFrom, taxPeriodTo, taxType, taxAmountDue
+Pro VÝPIS Z ÚČTU: extrahuj accountHolder, accountNumber (NEMASKOVAT), period, institution
+
+Vždy vrať summaryText (shrnutí), documentPurpose a recommendedHandling.
+`;
+
 const LOAN_MORTGAGE_PROMPT_ADDENDUM = `
 KRITICKÉ POKYNY PRO ÚVĚROVÉ DOKUMENTY (spotřebitelský úvěr / hypotéka):
 
@@ -1483,13 +1563,24 @@ function getTypeSpecificAddendum(primaryType: string): string {
       primaryType === "consumer_loan_with_payment_protection") {
     return LOAN_MORTGAGE_PROMPT_ADDENDUM;
   }
+  if (primaryType === "generic_financial_document") {
+    // leasing docs come through as generic_financial_document
+    return LEASING_BUSINESS_PROMPT_ADDENDUM;
+  }
+  if (primaryType === "investment_subscription_document" || primaryType === "investment_service_agreement") {
+    return INVESTMENT_SUBSCRIPTION_PROMPT_ADDENDUM;
+  }
+  if (primaryType === "corporate_tax_return" || primaryType === "payslip_document" ||
+      primaryType === "bank_statement" || primaryType === "self_employed_tax_or_income_document") {
+    return SUPPORTING_DOC_PROMPT_ADDENDUM;
+  }
   if (primaryType === "life_insurance_proposal" || primaryType === "life_insurance_modelation" ||
       primaryType === "investment_modelation" || primaryType === "precontract_information" ||
       primaryType === "liability_insurance_offer" || primaryType === "insurance_comparison") {
     return PROPOSAL_VS_CONTRACT_PROMPT_ADDENDUM + PROPOSAL_VS_CONTRACT_NUMBER_ADDENDUM;
   }
   if (primaryType === "life_insurance_change_request" || primaryType === "insurance_policy_change_or_service_doc") {
-    return CHANGE_REQUEST_PROMPT_ADDENDUM;
+    return CHANGE_REQUEST_PROMPT_ADDENDUM + AMENDMENT_PROMPT_ADDENDUM;
   }
   if (primaryType === "life_insurance_final_contract" || primaryType === "life_insurance_contract" ||
       primaryType === "life_insurance_investment_contract" || primaryType === "nonlife_insurance_contract") {

@@ -550,7 +550,10 @@
         "expectedPurposeHint": "Aktualizace krytí / údajů u stávající pojistky.",
         "recommendedNextStep": "Párovat k existujícímu kontraktu v CRM; nepublikovat jako nový produktový kontrakt.",
         "noProductPublishPayload": true
-      }
+      },
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Honzajk čpp změna.pdf"
+      ]
     },
     {
       "id": "C007",
@@ -1376,6 +1379,7 @@
       ],
       "expectedNotesForAdvisor": "Penzijní rámec VL; rozlišit PP vs DPS.",
       "aliasFileNames": [
+        "Test AI/Tested preprompt/Výplatní lístek za měsíc.pdf",
         "Test AI/Výplatní lístek za měsíc.pdf"
       ],
       "expectedFallbackBehavior": {
@@ -1757,7 +1761,10 @@
         "allow_product_lane_when_eligible",
         "advisor_review"
       ],
-      "expectedNotesForAdvisor": "Investiční smlouva Codya (git korpus); strukturovaná investiční dráha."
+      "expectedNotesForAdvisor": "Investiční smlouva Codya (git korpus); strukturovaná investiční dráha.",
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Investiční smlouva Codya.pdf"
+      ]
     },
     {
       "id": "C030",
@@ -1811,7 +1818,10 @@
         "review_client_block_priority"
       ],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/IŽP - Generali.pdf"
+      ]
     },
     {
       "id": "C031",
@@ -2065,7 +2075,10 @@
       ],
       "expectedReviewFlags": [],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Pojištění odpovědnosti v zaměstnání.pdf"
+      ]
     },
     {
       "id": "C036",
@@ -2319,7 +2332,10 @@
         "reference_document_only"
       ],
       "expectedAssistantRelevance": "supporting_doc_reference",
-      "mapsToGoldenScenarioIds": []
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Daňové přiznání s.r.o..pdf"
+      ]
     },
     {
       "id": "C041",
@@ -2368,6 +2384,99 @@
         "reference_document_only"
       ],
       "expectedAssistantRelevance": "supporting_doc_reference",
+      "mapsToGoldenScenarioIds": [],
+      "aliasFileNames": [
+        "Test AI/PŘIZNÁNÍ k dani z příjmů právnických osob.pdf"
+      ]
+    },
+    {
+      "id": "C042",
+      "familyBucket": "life_modelation",
+      "referenceFile": "Test AI/Modelace životního pojištění Kooperativa.pdf",
+      "aliasFileNames": [
+        "Test AI/Tested preprompt/Modelace životního pojištění Kooperativa.pdf"
+      ],
+      "gitTracked": false,
+      "expectedPrimaryType": "life_insurance_modelation",
+      "publishable": "none",
+      "isPacket": false,
+      "expectedFamily": "life_insurance",
+      "expectedOutputMode": "modelation_or_precontract",
+      "expectedPublishability": "none",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "insurer",
+        "productName",
+        "totalMonthlyPremium"
+      ],
+      "expectedActionsAllowed": [
+        "uloz_jako_modelaci",
+        "zobraz_review"
+      ],
+      "expectedActionsForbidden": [
+        "auto_publish_contract",
+        "publish_as_final_contract"
+      ],
+      "expectedNotesForAdvisor": "Modelace životního pojištění Kooperativa — must be modelation_or_precontract, not final contract.",
+      "expectedEntities": [
+        "insurer",
+        "policyholder",
+        "insured"
+      ],
+      "expectedExtractedFields": [
+        "insurer",
+        "productName",
+        "totalMonthlyPremium"
+      ],
+      "expectedForbiddenActions": [
+        "auto_publish_contract",
+        "publish_as_final_contract"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "0.7",
+      "mapsToGoldenScenarioIds": []
+    },
+    {
+      "id": "C043",
+      "familyBucket": "pension_dps",
+      "referenceFile": "Test AI/Smlouva DPS.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "pension_contract",
+      "publishable": "full",
+      "isPacket": false,
+      "expectedFamily": "investment",
+      "expectedOutputMode": "structured_product_document",
+      "expectedPublishability": "full",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block",
+      "expectedCoreFields": [
+        "contractNumber",
+        "institutionName",
+        "fullName"
+      ],
+      "expectedActionsAllowed": [
+        "publish_to_contract",
+        "uloz_do_crm"
+      ],
+      "expectedActionsForbidden": [
+        "auto_publish_without_review"
+      ],
+      "expectedNotesForAdvisor": "Smlouva DPS — pension savings contract.",
+      "expectedEntities": [
+        "participant",
+        "pensionProvider"
+      ],
+      "expectedExtractedFields": [
+        "contractNumber",
+        "institutionName",
+        "fullName"
+      ],
+      "expectedForbiddenActions": [
+        "auto_publish_without_review"
+      ],
+      "expectedReviewFlags": [],
+      "expectedAssistantRelevance": "0.8",
       "mapsToGoldenScenarioIds": []
     }
   ]

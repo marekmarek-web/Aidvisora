@@ -26,6 +26,7 @@ export const AI_REVIEW_PROMPT_KEYS = [
   "loanContractExtraction",
   "mortgageExtraction",
   "paymentInstructionsExtraction",
+  "leasingExtraction",
   "supportingDocumentExtraction",
   "legacyFinancialProductExtraction",
   "terminationDocumentExtraction",
@@ -60,6 +61,7 @@ const AI_REVIEW_ENV_KEYS: Record<AiReviewPromptKey, string> = {
   loanContractExtraction: "OPENAI_PROMPT_AI_REVIEW_LOAN_CONTRACT_EXTRACTION_ID",
   mortgageExtraction: "OPENAI_PROMPT_AI_REVIEW_MORTGAGE_EXTRACTION_ID",
   paymentInstructionsExtraction: "OPENAI_PROMPT_AI_REVIEW_PAYMENT_INSTRUCTIONS_EXTRACTION_ID",
+  leasingExtraction: "OPENAI_PROMPT_AI_REVIEW_LEASING_EXTRACTION_ID",
   supportingDocumentExtraction: "OPENAI_PROMPT_AI_REVIEW_SUPPORTING_DOCUMENT_EXTRACTION_ID",
   legacyFinancialProductExtraction: "OPENAI_PROMPT_AI_REVIEW_LEGACY_FINANCIAL_PRODUCT_EXTRACTION_ID",
   terminationDocumentExtraction: "OPENAI_PROMPT_AI_REVIEW_TERMINATION_DOCUMENT_ID",
@@ -178,6 +180,12 @@ export const AI_REVIEW_REGISTRY: Record<AiReviewPromptKey, AiReviewRegistryEntry
     category: "ai_review",
     envKey: AI_REVIEW_ENV_KEYS.supportingDocumentExtraction,
     purpose: "Supporting / statement documents",
+  },
+  leasingExtraction: {
+    key: "leasingExtraction",
+    category: "ai_review",
+    envKey: AI_REVIEW_ENV_KEYS.leasingExtraction,
+    purpose: "Leasing / business financing — vehicle, equipment, fleet leasing contracts",
   },
   legacyFinancialProductExtraction: {
     key: "legacyFinancialProductExtraction",

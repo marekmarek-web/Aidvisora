@@ -528,6 +528,175 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "platform",
         "fundManager",
         "assetManager",
+        "investicniSpolecnost",
+        "spravce",
+      ]);
+      mergeFromAliases(ef, "investorFullName", [
+        "fullName",
+        "clientFullName",
+        "investorName",
+        "klient",
+        "ucastnik",
+        "investor",
+      ]);
+      mergeFromAliases(ef, "fullName", [
+        "investorFullName",
+        "clientFullName",
+        "investorName",
+        "klient",
+      ]);
+      mergeFromAliases(ef, "isin", [
+        "isinCode",
+        "isinCenneho",
+        "isinPodfondu",
+        "cennyPapir",
+      ]);
+      mergeFromAliases(ef, "intendedInvestment", [
+        "investmentAmount",
+        "contributionAmount",
+        "investicniCastka",
+        "zamislenVyseInvestice",
+        "zamyslenaInvestice",
+      ]);
+      mergeFromAliases(ef, "entryFeePercent", [
+        "vstupniPoplatek",
+        "poplatekVstupni",
+        "entryFee",
+        "frontendFeePercent",
+        "subscriptionFeePercent",
+      ]);
+      mergeFromAliases(ef, "amountToPay", [
+        "castkaKUhrade",
+        "platba",
+        "totalAmountDue",
+        "celkovaCastka",
+        "amountDue",
+      ]);
+      mergeFromAliases(ef, "contractNumber", [
+        "accountNumber",
+        "investicniUcet",
+        "cisloSmlouvy",
+        "cisloUctu",
+        "smlouvaCislo",
+      ]);
+      mergeFromAliases(ef, "intermediaryName", [
+        "advisorName",
+        "brokerName",
+        "zprostredkovatel",
+        "investicniPoradce",
+        "intermediary",
+      ]);
+      mergeFromAliases(ef, "startDate", [
+        "contractDate",
+        "subscriptionDate",
+        "datumUzavreni",
+        "policyStartDate",
+        "effectiveDate",
+      ]);
+      deriveInvestmentStrategyFromNested(ef);
+      break;
+
+    case "generic_financial_document":
+      // Leasing / business financing docs are mapped to generic_financial_document
+      mergeFromAliases(ef, "lender", [
+        "financingProvider",
+        "leasingProvider",
+        "pronajimatel",
+        "veritel",
+        "leasingCompany",
+        "leasingova_spolecnost",
+        "financingCompany",
+      ]);
+      mergeFromAliases(ef, "customer", [
+        "customerName",
+        "zakaznik",
+        "klient",
+        "prijemce",
+        "dluznik",
+        "leasingTenant",
+        "lessee",
+      ]);
+      mergeFromAliases(ef, "fullName", [
+        "customer",
+        "customerName",
+        "zakaznik",
+        "representedBy",
+        "customerFullName",
+      ]);
+      mergeFromAliases(ef, "contractNumber", [
+        "leasingContractNumber",
+        "cisloLeasingoveSmalouvy",
+        "cisloSmlouvy",
+        "smlouvaCislo",
+        "contractId",
+        "financingContractNumber",
+      ]);
+      mergeFromAliases(ef, "totalFinancedAmount", [
+        "loanAmount",
+        "financedAmount",
+        "leasingAmount",
+        "celkoveFinancovani",
+        "celkovaCena",
+        "vyseFinancovani",
+      ]);
+      mergeFromAliases(ef, "loanAmount", [
+        "totalFinancedAmount",
+        "financedAmount",
+        "leasingAmount",
+        "celkoveCena",
+      ]);
+      mergeFromAliases(ef, "installmentAmount", [
+        "monthlyInstallment",
+        "monthlyPayment",
+        "leasingInstallment",
+        "mesicniSplatka",
+        "splatka",
+        "regularPayment",
+      ]);
+      mergeFromAliases(ef, "installmentCount", [
+        "duration",
+        "leasingTerm",
+        "numberOfInstallments",
+        "pocetSplatek",
+        "dobaFinancovani",
+      ]);
+      mergeFromAliases(ef, "firstInstallmentDate", [
+        "firstRepaymentDate",
+        "datumPrvniSplatky",
+        "startDate",
+      ]);
+      mergeFromAliases(ef, "startDate", [
+        "firstDrawdownDate",
+        "datumZahajeni",
+        "contractDate",
+        "effectiveDate",
+      ]);
+      mergeFromAliases(ef, "financedObject", [
+        "subjectOfFinancing",
+        "predmetFinancovani",
+        "vehicleDescription",
+        "vehicle",
+        "equipment",
+        "leasedObject",
+      ]);
+      mergeFromAliases(ef, "vin", [
+        "vinNumber",
+        "serialNumber",
+        "vyrobniCislo",
+        "identificationNumber",
+      ]);
+      mergeFromAliases(ef, "downPayment", [
+        "firstPayment",
+        "akontace",
+        "vlastniZdroje",
+        "mimoradnaSplatka",
+        "ownResources",
+      ]);
+      mergeFromAliases(ef, "intermediaryName", [
+        "advisorName",
+        "brokerName",
+        "zprostredkovatel",
+        "intermediary",
       ]);
       break;
     case "payment_instruction":
@@ -535,6 +704,81 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
       mergeFromAliases(ef, "provider", ["institutionName", "insurer", "payerBank", "recipientName"]);
       mergeFromAliases(ef, "contractReference", ["contractNumber", "policyNumber", "referenceNumber"]);
       break;
+
+    case "insurance_policy_change_or_service_doc":
+    case "life_insurance_change_request":
+      mergeFromAliases(ef, "existingPolicyNumber", [
+        "contractNumber",
+        "policyNumber",
+        "policyNo",
+        "cisloSmlouvy",
+        "pojistnaSmlouvaCislo",
+        "existingContractNumber",
+      ]);
+      mergeFromAliases(ef, "contractNumber", [
+        "existingPolicyNumber",
+        "policyNumber",
+        "pojistnaSmlouvaCislo",
+      ]);
+      mergeFromAliases(ef, "fullName", [
+        "policyholder",
+        "pojistnik",
+        "klient",
+        "clientFullName",
+      ]);
+      mergeFromAliases(ef, "effectiveDate", [
+        "amendmentDate",
+        "requestDate",
+        "datumZmeny",
+        "datumPodani",
+        "validFrom",
+      ]);
+      mergeFromAliases(ef, "requestedChanges", [
+        "description",
+        "changedFields",
+        "requestDescription",
+        "changeDescription",
+        "pozadovaneZmeny",
+      ]);
+      break;
+
+    case "corporate_tax_return":
+    case "payslip_document":
+    case "bank_statement":
+      mergeFromAliases(ef, "fullName", [
+        "employee",
+        "taxpayerName",
+        "companyName",
+        "accountHolder",
+        "ownerName",
+      ]);
+      mergeFromAliases(ef, "grossPay", [
+        "hrubaMzda",
+        "grossSalary",
+        "grossWage",
+        "grossAmount",
+      ]);
+      mergeFromAliases(ef, "netPay", [
+        "cistaMzda",
+        "netSalary",
+        "netWage",
+        "netAmount",
+        "castkaKVyplate",
+      ]);
+      mergeFromAliases(ef, "payoutAccount", [
+        "bankAccount",
+        "accountForPayment",
+        "vyplatniUcet",
+        "ucetProVyplatu",
+      ]);
+      mergeFromAliases(ef, "companyName", [
+        "employer",
+        "institutionName",
+        "taxpayerName",
+        "zamestnavatel",
+      ]);
+      break;
+
     default:
       break;
   }
@@ -555,9 +799,12 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
     primary === "consumer_loan_contract" ||
     primary === "consumer_loan_with_payment_protection";
 
-  // For loan/mortgage: DO NOT promote institutionName → insurer (bank is not an insurer).
+  // Leasing/financing docs: bank/lender must NOT be labeled insurer
+  const isLeasingOrFinancing = primary === "generic_financial_document";
+
+  // For loan/mortgage/leasing: DO NOT promote institutionName → insurer (bank/lender is not an insurer).
   // For insurance docs: apply the normal alias so insurer is always populated.
-  if (!isLoanOrMortgage) {
+  if (!isLoanOrMortgage && !isLeasingOrFinancing) {
     mergeFromAliases(ef, "insurer", [
       "institutionName",
       "insuranceCompany",

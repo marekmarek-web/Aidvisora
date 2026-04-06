@@ -96,10 +96,20 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
   if (fam === "building_savings" && (dt === "contract" || dt === "amendment")) return "generic_financial_document";
   if (fam === "loan" && (dt === "contract" || dt === "consumer_loan_contract")) return "consumer_loan_contract";
   if (fam === "mortgage" && (dt === "contract" || dt === "mortgage_document")) return "mortgage_document";
-  // compliance family — AML/FATCA/KYC service docs detected via text override or classifier
+  // compliance family — AML/FATCA/KYC service docs, amendments, supporting docs
   if (fam === "compliance") {
     if (dt === "consent_or_identification_document") return "consent_or_declaration";
-    // Service agreements detected via compliance path (e.g. komisionářská smlouva, rámcová smlouva)
+    // Insurance amendments detected via compliance path
+    if (
+      dt === "amendment" ||
+      dt === "insurance_policy_change_or_service_doc" ||
+      dt === "life_insurance_change_request"
+    ) return "insurance_policy_change_or_service_doc";
+    // Tax returns and payslips
+    if (dt === "corporate_tax_return" || dt === "self_employed_tax_or_income_document") return "corporate_tax_return";
+    if (dt === "payslip_document" || dt === "income_proof_document" || dt === "income_confirmation") return "payslip_document";
+    if (dt === "bank_statement" || dt === "statement" || dt === "supporting_document") return "bank_statement";
+    // Service agreements detected via compliance path
     if (dt === "contract") return "service_agreement";
     return "consent_or_declaration";
   }
@@ -143,7 +153,9 @@ export function primaryTypeFallbackFromPromptKey(
     case "insuranceAmendment":
       if (fam === "life_insurance") return "life_insurance_change_request";
       if (fam === "non_life_insurance") return "insurance_policy_change_or_service_doc";
-      return null;
+      // Compliance-routed amendment (e.g. Honzajk čpp změna)
+      if (fam === "compliance") return "insurance_policy_change_or_service_doc";
+      return "insurance_policy_change_or_service_doc";
     case "nonLifeInsuranceExtraction":
       return "nonlife_insurance_contract";
     case "carInsuranceExtraction":
@@ -155,6 +167,8 @@ export function primaryTypeFallbackFromPromptKey(
     case "loanContractExtraction":
     case "mortgageExtraction":
       return fam === "mortgage" ? "mortgage_document" : "consumer_loan_contract";
+    case "leasingExtraction":
+      return "generic_financial_document";
     case "retirementProductExtraction":
       return "pension_contract";
     case "dipExtraction":
