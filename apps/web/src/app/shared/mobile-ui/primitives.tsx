@@ -1,6 +1,7 @@
 "use client";
 
 import { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { X, Plus, AlertCircle, Wifi, WifiOff, PackageOpen, RefreshCw } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
@@ -1078,24 +1079,101 @@ export function ProfileFieldRow({
 /*  OfflineBanner – shows when browser has no network connection       */
 /* ------------------------------------------------------------------ */
 
+const OFFLINE_DEBUG_STORAGE_KEY = "aidv_debug_network";
+
+function offlineBannerDebugLog(...args: unknown[]) {
+  try {
+    if (typeof window === "undefined" || window.localStorage?.getItem(OFFLINE_DEBUG_STORAGE_KEY) !== "1") {
+      return;
+    }
+    console.log("[OfflineBanner]", new Date().toISOString(), ...args);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** WKWebView often fires spurious offline/online; debounce before showing the banner on native. */
+function nativeOfflineDebounceMs(): number {
+  if (!Capacitor.isNativePlatform()) return 0;
+  return Capacitor.getPlatform() === "ios" ? 1400 : 900;
+}
+
 export function OfflineBanner() {
-  const [offline, setOffline] = useState(
-    typeof navigator !== "undefined" ? !navigator.onLine : false
-  );
+  const [offline, setOffline] = useState(false);
   const [justCameBack, setJustCameBack] = useState(false);
 
   useEffect(() => {
-    function onOffline() { setOffline(true); setJustCameBack(false); }
+    const debounceMs = nativeOfflineDebounceMs();
+    let offlineTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function clearOfflineTimer() {
+      if (offlineTimer !== null) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+      }
+    }
+
+    function scheduleShowOfflineIfStillDisconnected(source: string) {
+      clearOfflineTimer();
+      if (typeof navigator === "undefined" || navigator.onLine) {
+        offlineBannerDebugLog("skip offline schedule; onLine", { source });
+        return;
+      }
+      if (debounceMs <= 0) {
+        setOffline(true);
+        setJustCameBack(false);
+        offlineBannerDebugLog("offline immediate", { source });
+        return;
+      }
+      offlineTimer = setTimeout(() => {
+        offlineTimer = null;
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          setOffline(true);
+          setJustCameBack(false);
+          offlineBannerDebugLog("offline after debounce", { source, debounceMs });
+        } else {
+          offlineBannerDebugLog("offline debounce cleared; connection ok", { source });
+        }
+      }, debounceMs);
+    }
+
+    function onOffline() {
+      offlineBannerDebugLog("offline event", { onLine: navigator.onLine });
+      scheduleShowOfflineIfStillDisconnected("event_offline");
+    }
+
     function onOnline() {
+      offlineBannerDebugLog("online event");
+      clearOfflineTimer();
       setOffline(false);
       setJustCameBack(true);
       setTimeout(() => setJustCameBack(false), 3000);
     }
+
+    function onVisibility() {
+      if (document.visibilityState !== "visible") return;
+      offlineBannerDebugLog("visibility visible", { onLine: navigator.onLine });
+      clearOfflineTimer();
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        setOffline(false);
+      } else {
+        scheduleShowOfflineIfStillDisconnected("visibility_resume");
+      }
+    }
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      scheduleShowOfflineIfStillDisconnected("mount");
+    }
+
     window.addEventListener("offline", onOffline);
     window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
+      clearOfflineTimer();
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

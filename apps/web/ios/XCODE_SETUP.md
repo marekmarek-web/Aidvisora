@@ -130,3 +130,46 @@ Kde nastavit: Vercel → Project → Settings → Environment Variables → `NEX
 - Chci ladit frontend lokalne: `pnpm dev` + `pnpm cap:dev`
 - Xcode hlasi SPM chybu: reset caches + resolve packages + clean build
 - Appka se sestavi, ale auth nefunguje: neni to primarne Xcode problem
+
+## 9. Ladeni Capacitor WebView (logy, JS, sit, vykon)
+
+Tato cast odpovida postupu z planu **iOS WebView / prihlaseni** — Xcode konzole casto ukaze jen systemovy sum (`RTIInputSystemClient`, `WebKit.Networking`, `Connection interrupted`). Skutecne JS chyby a sit patri do **Safari Web Inspectoru**.
+
+### 9.1 Safari Web Inspector (Console + stack trace)
+
+1. Na Macu: **Safari → Settings → Advanced →** zapni **Show features for web developers**.
+2. Spust appku ve **simulatoru** nebo na **iPhonu** (USB).
+3. V Safari menu **Develop**:
+   - Simulator: **Develop → Simulator →** vyber stranku (WebView).
+   - Zarizeni: **Develop →** (název připojeného iPhonu) **→** vyber WebView.
+4. Otevri zalozku **Console** a reprodukuj nacteni `https://www.aidvisora.cz/prihlaseni?native=1` (nebo localhost rezim).
+5. Pri hlaskach typu **JS Eval error** v Xcode hledej v konzoli **prvni cervenou chybu se stack trace** (soubor a radek) — bez toho nejde chybu priradit ke konkretnimu kodu.
+
+### 9.2 Simulator vs. fyzicke zarizeni
+
+- **Simulator** je pomocny, ale WebView a sit tam byvaji **hlucnejsi** (sekani, falesne vypadky). Pokud se problem **na iPhonu neprojevuje**, jde casto o prostredi simulátoru, ne o produkcni bug.
+- OAuth, kamera, deep linky: **preferuj iPhone** (viz sekce 4).
+
+### 9.3 Korelace casovani (kdy presne to spadne)
+
+Pri reportu chyby poznamenej:
+
+- **Cold start** aplikace vs. az po **tap do inputu** vs. po **navigaci** v portalu.
+- Pomaha to spojit problem s hydrataci, klavesnici, nebo konkretni strankou.
+
+### 9.4 Sit a „sekani“ — zalozka Network
+
+Ve Web Inspectoru otevri **Network** behem reprodukce:
+
+- Padaji **document** nebo **hlavni JS** chunky, nebo jen API?
+- Opakuje se **plne nacteni** stranky, nebo jen pomale XHR?
+
+To rozlisi **skutecny vypadek spojeni** od **tezkeho JS** na hlavnim vlakne.
+
+### 9.5 „Offline“ banner vs. systemova obrazovka
+
+- Pokud je presny text **„Offline – zkontrolujte připojení“**, jde o **React `OfflineBanner`** v mobilnim portalu (`OfflineBanner` v `apps/web/src/app/shared/mobile-ui/primitives.tsx`). Ve WKWebView byva `navigator.onLine` **nespolehlivy**; v appce je proto **debounce** offline signalu na nativnich platformach (delší na iOS).
+- **Debug log** online/offline a visibility (s casovou znackou): v Safari konzoli spust  
+  `localStorage.setItem("aidv_debug_network","1")`  
+  a reloadni WebView; v konzoli uvidis radky `[OfflineBanner] …`. Vypnuti: `localStorage.removeItem("aidv_debug_network")`.
+- Pokud text **neni** z banneru, jde spis o **WebKit / chybu nacteni dokumentu** — sleduj Network a pripadne cervene chyby v Console.
