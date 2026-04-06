@@ -763,6 +763,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
     case "bank_statement":
       mergeFromAliases(ef, "fullName", [
         "employee",
+        "clientName",
         "taxpayerName",
         "companyName",
         "accountHolder",
@@ -773,6 +774,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "grossSalary",
         "grossWage",
         "grossAmount",
+        "grossIncome",
       ]);
       mergeFromAliases(ef, "netPay", [
         "cistaMzda",
@@ -780,6 +782,14 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "netWage",
         "netAmount",
         "castkaKVyplate",
+        "netIncome",
+      ]);
+      mergeFromAliases(ef, "payPeriod", [
+        "periodLabel",
+        "period",
+        "payPeriodLabel",
+        "statementPeriod",
+        "mzdoveObdobi",
       ]);
       mergeFromAliases(ef, "payoutAccount", [
         "bankAccount",
@@ -793,6 +803,10 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "taxpayerName",
         "zamestnavatel",
       ]);
+      // Tax-return specific: IČO/DIČ and tax period
+      mergeFromAliases(ef, "companyId", ["ico", "ic", "icoNumber", "businessId"]);
+      mergeFromAliases(ef, "taxId", ["dic", "dicNumber", "vatId"]);
+      mergeFromAliases(ef, "taxPeriod", ["taxPeriodLabel", "danoveObdobi", "taxYear", "zdanovaciObdobi"]);
       break;
 
     default:

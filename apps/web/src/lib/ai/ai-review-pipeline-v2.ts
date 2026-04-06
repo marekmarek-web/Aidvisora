@@ -295,6 +295,29 @@ function classificationFromEnvelope(envelope: DocumentReviewEnvelope): Classific
   });
 }
 
+/**
+ * When the stored supportingDocumentExtraction prompt returns generic "bank_statement" as its
+ * document type label, try to infer a more specific supporting subtype from the response.
+ * Checks: (1) explicit documentType field returned by stored prompt, (2) payslip/tax field presence.
+ */
+function inferSupportingSubtypeFromPromptResponse(
+  parsed: Record<string, unknown>
+): ContractDocumentType | null {
+  const dt = String(parsed.documentType ?? parsed.normalizedSubtype ?? "").toLowerCase().replace(/[-_\s]/g, "");
+  if (dt === "payslip" || dt === "payslip_document" || dt === "salarydocument" || dt === "salarislip" || dt === "payslippayment") return "payslip_document";
+  if (dt === "corporate_tax_return" || dt === "taxreturn" || dt === "taxdeclaration" || dt === "corporate_tax" || dt === "danove_priznani") return "corporate_tax_return";
+
+  // Field-presence heuristics
+  const keys = new Set(Object.keys(parsed).map((k) => k.toLowerCase().replace(/[-_]/g, "")));
+  const payslipSignals = ["grosspay", "netpay", "grossincome", "netincome", "hrubazmda", "cistamzda", "hrubamzda", "employer", "employee", "payperiod", "payoutaccount"];
+  const taxReturnSignals = ["taxperiod", "taxtype", "taxperiod", "taxperiodfrom", "taxpayername", "companyname", "taxamount", "taxamountdue", "danoveobdobi"];
+
+  if (payslipSignals.some((s) => keys.has(s))) return "payslip_document";
+  if (taxReturnSignals.some((s) => keys.has(s))) return "corporate_tax_return";
+
+  return null;
+}
+
 function finalizeContractPayload(params: {
   data: ExtractedContractByType;
   classification: ClassificationResult;
@@ -1102,7 +1125,7 @@ export async function runAiReviewV2Pipeline(
     };
   }
 
-  const documentType = effectivePrimary;
+  let documentType = effectivePrimary;
   trace.selectedSchema = documentType;
   const mode = inputModeResult.extractionMode as string;
   const isScanFallback = mode === "vision_fallback" || mode === "ocr_enhanced";
@@ -1223,6 +1246,17 @@ export async function runAiReviewV2Pipeline(
   trace.validationDurationMs = Date.now() - valStart;
 
   const parsedExtractionObj = parseJsonObjectFromAiReviewRaw(rawExtraction);
+
+  // For supporting-doc prompt: refine generic bank_statement to specific subtype (payslip / tax return)
+  // based on the stored prompt's own documentType signal or payslip/tax field presence.
+  if (documentType === "bank_statement" && promptKey === "supportingDocumentExtraction" && parsedExtractionObj) {
+    const refinedType = inferSupportingSubtypeFromPromptResponse(parsedExtractionObj);
+    if (refinedType) {
+      documentType = refinedType;
+      trace.selectedSchema = documentType;
+    }
+  }
+
   const parsedExtractionTopKeys =
     parsedExtractionObj && typeof parsedExtractionObj === "object"
       ? Object.keys(parsedExtractionObj).slice(0, 24)

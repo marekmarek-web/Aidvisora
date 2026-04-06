@@ -426,16 +426,24 @@ function primaryMatches(
     return { ok: false, note: `want amendment/service_doc, got ${actual}` };
   }
 
-  // Corporate tax return: accept bank_statement as close enough (financial data)
+  // Corporate tax return: pipeline should now return corporate_tax_return directly.
+  // bank_statement tolerance kept as soft fallback only (logged as a subtype mismatch, not a lane fail).
   if (expected === "corporate_tax_return") {
-    if (["corporate_tax_return", "bank_statement", "payslip_document"].includes(actual)) return { ok: true };
-    return { ok: false, note: `want tax return, got ${actual}` };
+    if (actual === "corporate_tax_return") return { ok: true };
+    if (["bank_statement", "payslip_document"].includes(actual)) {
+      return { ok: true, note: `subtype_mismatch: want corporate_tax_return, got ${actual} (bank_statement tolerance)` };
+    }
+    return { ok: false, note: `want corporate_tax_return, got ${actual}` };
   }
 
-  // Payslip document: bank_statement is the closest mapped type the pipeline can return
+  // Payslip document: pipeline should now return payslip_document directly.
+  // bank_statement tolerance kept as soft fallback only (logged as a subtype mismatch, not a lane fail).
   if (expected === "payslip_document") {
-    if (["payslip_document", "bank_statement", "income_confirmation"].includes(actual)) return { ok: true };
-    return { ok: false, note: `want payslip/supporting doc, got ${actual}` };
+    if (actual === "payslip_document") return { ok: true };
+    if (["bank_statement", "income_confirmation"].includes(actual)) {
+      return { ok: true, note: `subtype_mismatch: want payslip_document, got ${actual} (bank_statement tolerance)` };
+    }
+    return { ok: false, note: `want payslip_document, got ${actual}` };
   }
 
   // Investment service agreement: accept investment_subscription_document as a near-match
@@ -1157,13 +1165,19 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
           continue;
         }
 
-        // Skip scan-only / preprocessing-required docs — pipeline cannot extract without OCR
+        // Skip scan-only / preprocessing-required docs — pipeline cannot extract without OCR.
+        // This is a clean skip (preprocess_prerequisite_not_met), NOT a routing or extraction failure.
         if ((doc as Record<string, unknown>).requiresPreprocessing === true) {
+          const d = doc as Record<string, unknown>;
           cRows.push({
             id: doc.id,
             referenceFile: doc.referenceFile,
             status: "skipped",
-            skipReason: "requires_preprocessing",
+            skipReason: (d.evalSkipReason as string | undefined) ?? "preprocess_prerequisite_not_met",
+            skipNote: (d.evalSkipNote as string | undefined) ?? "Document requires OCR/Adobe preprocessing before field extraction is possible.",
+            preprocessingReason: (d.preprocessingReason as string | undefined) ?? "scan_only_pdf",
+            preprocessingLane: (d.preprocessingLane as string | undefined) ?? "adobe_text_extraction",
+            preprocessingStatus: (d.preprocessingStatus as string | undefined) ?? "awaiting_ocr",
             expectedFamily: doc.expectedFamily,
             actualFamilyInferred: "—",
             familyPass: false,
@@ -1174,7 +1188,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
             coreFieldsExpected: doc.expectedCoreFields.length,
             coreFieldsFound: 0,
             coreFieldsPass: false,
-            failReasons: ["requires_preprocessing_skipped"],
+            failReasons: [],
             overallPass: false,
           });
           continue;
@@ -1375,13 +1389,22 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       console.info("\n=== CORPUS EVAL SCORECARD (C-level) ===\n");
       for (const r of cRows) {
         // eslint-disable-next-line no-console
-        console.info(
-          `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
-            `fam=${r.familyPass} primary=${r.primaryPass} mode=${r.outputModePass ?? "—"} ` +
-            `core=${r.coreFieldsFound}/${r.coreFieldsExpected} fb=${r.fallbackBehaviorPass ?? "—"} ` +
-            `${r.actualPrimaryType ?? "—"} ${r.latencyMs ?? 0}ms` +
-            (r.failReasons.length ? ` [${r.failReasons.slice(0, 3).join(",")}]` : ""),
-        );
+        if (r.status === "skipped") {
+          const d = r as Record<string, unknown>;
+          console.info(
+            `${r.id} SKIPPED [${d.skipReason ?? "preprocess_prerequisite_not_met"}] ` +
+              `preprocessing=${d.preprocessingReason ?? "scan_only_pdf"} lane=${d.preprocessingLane ?? "adobe_text_extraction"} ` +
+              `status=${d.preprocessingStatus ?? "awaiting_ocr"}`,
+          );
+        } else {
+          console.info(
+            `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
+              `fam=${r.familyPass} primary=${r.primaryPass} mode=${r.outputModePass ?? "—"} ` +
+              `core=${r.coreFieldsFound}/${r.coreFieldsExpected} fb=${r.fallbackBehaviorPass ?? "—"} ` +
+              `${r.actualPrimaryType ?? "—"} ${r.latencyMs ?? 0}ms` +
+              (r.failReasons.length ? ` [${r.failReasons.slice(0, 3).join(",")}]` : ""),
+          );
+        }
       }
       // eslint-disable-next-line no-console
       console.info(`\nROOT CAUSE BUCKETS: routing=${rootCauseBuckets.routing.join(",") || "none"} | mode=${rootCauseBuckets.outputMode.join(",") || "none"} | extraction=${rootCauseBuckets.coreExtraction.join(",") || "none"} | fallback=${rootCauseBuckets.fallbackLane.join(",") || "none"}\n`);

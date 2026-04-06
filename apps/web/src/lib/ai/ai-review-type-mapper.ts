@@ -108,7 +108,15 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
     // Tax returns and payslips
     if (dt === "corporate_tax_return" || dt === "self_employed_tax_or_income_document") return "corporate_tax_return";
     if (dt === "payslip_document" || dt === "income_proof_document" || dt === "income_confirmation") return "payslip_document";
-    if (dt === "bank_statement" || dt === "statement" || dt === "supporting_document") return "bank_statement";
+    if (dt === "bank_statement" || dt === "statement") return "bank_statement";
+    if (dt === "supporting_document") {
+      // Try to resolve to specific subtype using productSubtype signal from classifier
+      if (sub.includes("payslip") || sub.includes("mzda") || sub.includes("salary") || sub.includes("income_proof")) return "payslip_document";
+      if (sub.includes("tax_return") || sub.includes("tax_declaration") || sub.includes("danove_priznani") || sub.includes("corporate_tax")) return "corporate_tax_return";
+      // If subtype is not specific, fall through to bank_statement as generic supporting-doc label.
+      // The pipeline will refine this further after extraction via inferSupportingSubtypeFromPromptResponse.
+      return "bank_statement";
+    }
     // Service agreements detected via compliance path
     if (dt === "contract") return "service_agreement";
     return "consent_or_declaration";
@@ -176,6 +184,9 @@ export function primaryTypeFallbackFromPromptKey(
     case "buildingSavingsExtraction":
       return "generic_financial_document";
     case "supportingDocumentExtraction":
+      // Prefer specific classifier type when available; fall back to bank_statement as generic label
+      if (dt === "payslip_document" || dt === "income_proof_document" || dt === "income_confirmation") return "payslip_document";
+      if (dt === "corporate_tax_return" || dt === "self_employed_tax_or_income_document") return "corporate_tax_return";
       return "bank_statement";
     case "legacyFinancialProductExtraction":
       return "generic_financial_document";

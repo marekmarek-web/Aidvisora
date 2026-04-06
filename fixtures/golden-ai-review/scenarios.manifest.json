@@ -1557,7 +1557,12 @@
         "Test AI/Tested preprompt/ČSOB Leasing PBI.pdf"
       ],
       "requiresPreprocessing": true,
-      "preprocessingNote": "Scan-only PDF — requires Adobe preprocessing or OCR for text extraction. Pipeline cannot extract data from raw file without preprocessed text."
+      "preprocessingReason": "scan_only_pdf",
+      "preprocessingNote": "Scan-only PDF — pdf-parse extracts insufficient text (<400 chars). Requires Adobe text extraction or OCR preprocessing before pipeline can extract leasing fields.",
+      "preprocessingLane": "adobe_text_extraction",
+      "preprocessingStatus": "awaiting_ocr",
+      "evalSkipReason": "preprocess_prerequisite_not_met",
+      "evalSkipNote": "Clean skip — this is not a routing or extraction failure. Document is valid but needs OCR lane before field extraction is possible."
     },
     {
       "id": "C026",
@@ -1825,7 +1830,12 @@
         "Test AI/Tested preprompt/IŽP - Generali.pdf"
       ],
       "requiresPreprocessing": true,
-      "preprocessingNote": "Scan-only PDF — requires Adobe preprocessing or OCR for text extraction. Pipeline cannot extract data from raw file without preprocessed text."
+      "preprocessingReason": "scan_only_pdf",
+      "preprocessingNote": "Pure scan-only PDF — 0 embedded text operators (BT/Tj). Pipeline cannot extract any text. Requires Adobe text extraction or OCR preprocessing before insurance field extraction is possible.",
+      "preprocessingLane": "adobe_text_extraction",
+      "preprocessingStatus": "awaiting_ocr",
+      "evalSkipReason": "preprocess_prerequisite_not_met",
+      "evalSkipNote": "Clean skip — this is not a routing or extraction failure. Document is valid but needs OCR lane before field extraction is possible."
     },
     {
       "id": "C031",
