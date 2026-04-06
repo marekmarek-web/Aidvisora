@@ -17,6 +17,16 @@ vi.mock("@/lib/openai", () => ({
   createResponseStructured: vi.fn(),
   createResponseStructuredWithImage: vi.fn(),
 }));
+vi.mock("db", () => ({
+  db: {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({ where: vi.fn(() => ({ orderBy: vi.fn(() => ({ limit: vi.fn(async () => []) })) })) })),
+    })),
+  },
+  opportunities: { id: "id", tenantId: "tenantId", contactId: "contactId", title: "title", archivedAt: "archivedAt", updatedAt: "updatedAt" },
+  eq: vi.fn(), and: vi.fn(), isNull: vi.fn(), desc: vi.fn(),
+  contacts: {}, or: vi.fn(), sql: vi.fn(),
+}));
 vi.mock("../assistant-contact-search", () => ({
   searchContactsForAssistant: vi.fn(),
 }));

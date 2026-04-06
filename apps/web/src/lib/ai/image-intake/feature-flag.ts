@@ -58,6 +58,45 @@ export function getImageIntakeMultimodalFlagState(): "enabled" | "disabled" {
 }
 
 /**
+ * Returns true when multi-image session stitching is enabled (Phase 4).
+ * Requires IMAGE_INTAKE_ENABLED=true AND IMAGE_INTAKE_STITCHING_ENABLED=true.
+ * Default: false — each asset is processed independently when disabled.
+ */
+export function isImageIntakeStitchingEnabled(): boolean {
+  return isImageIntakeEnabled() && process.env.IMAGE_INTAKE_STITCHING_ENABLED === "true";
+}
+
+/**
+ * Returns true when AI Review handoff recommendation is enabled (Phase 4).
+ * Requires IMAGE_INTAKE_ENABLED=true AND IMAGE_INTAKE_REVIEW_HANDOFF_ENABLED=true.
+ * Default: false — review-like docs stay in image intake with archive-only outcome.
+ */
+export function isImageIntakeReviewHandoffEnabled(): boolean {
+  return isImageIntakeEnabled() && process.env.IMAGE_INTAKE_REVIEW_HANDOFF_ENABLED === "true";
+}
+
+export function getImageIntakeStitchingFlagState(): "enabled" | "disabled" {
+  return isImageIntakeStitchingEnabled() ? "enabled" : "disabled";
+}
+
+export function getImageIntakeReviewHandoffFlagState(): "enabled" | "disabled" {
+  return isImageIntakeReviewHandoffEnabled() ? "enabled" : "disabled";
+}
+
+/**
+ * Returns all flag states as a single trace-safe object.
+ * Used for structured audit logging. Never logs env values.
+ */
+export function getImageIntakeFlagSummary(): Record<string, "enabled" | "disabled"> {
+  return {
+    base: getImageIntakeFlagState(),
+    multimodal: getImageIntakeMultimodalFlagState(),
+    stitching: getImageIntakeStitchingFlagState(),
+    review_handoff: getImageIntakeReviewHandoffFlagState(),
+  };
+}
+
+/**
  * Returns the model routing config for the multimodal combined pass.
  * Uses copilot category (same as classifier) for consistent model routing.
  */

@@ -1,22 +1,31 @@
 /**
- * AI Photo / Image Intake — CRM-aware client binding v2 (Phase 3).
+ * AI Photo / Image Intake — CRM-aware binding v2 (Phase 3) + v2 case binding (Phase 4).
  *
- * Extends binding v1 (session → UI context) with:
- * - CRM name lookup when a name signal exists from multimodal pass
- * - Safe candidate matching (no auto-pick on conflict)
- * - Explicit weak_candidate state when only one low-confidence match
+ * Phase 3 (client binding):
+ * - Session priority chain + CRM name lookup
+ * - Safe candidate matching, explicit weak_candidate
+ *
+ * Phase 4 (case/opportunity binding v2):
+ * - Active context priority
+ * - Client-scoped opportunity lookup when client is known
+ * - Conservative: unresolved when evidence is insufficient
+ * - Reuses opportunities table via existing db pattern from assistant-entity-resolution
  *
  * Safety rules:
- * - Active session context always has priority
- * - No confident write-ready path from CRM lookup alone without confirmation
- * - Multiple candidates → multiple_candidates state (no silent auto-pick)
- * - Single match with low confidence → weak_candidate (not confident)
- * - Only searchContactsForAssistant is used (existing, tested utility)
+ * - No auto-pick on multiple candidates
+ * - No confident case binding without sufficient evidence
+ * - CaseBindingStateV2 provides explainable binding states
  */
 
+import { db, opportunities, eq, and, isNull, desc } from "db";
 import { searchContactsForAssistant } from "../assistant-contact-search";
 import type { AssistantSession } from "../assistant-session";
-import type { ClientBindingResult, CaseBindingResult, ImageIntakeRequest } from "./types";
+import type {
+  ClientBindingResult,
+  CaseBindingResult,
+  CaseBindingResultV2,
+  ImageIntakeRequest,
+} from "./types";
 
 // ---------------------------------------------------------------------------
 // CRM lookup thresholds
@@ -173,35 +182,145 @@ export async function resolveClientBindingV2(
 }
 
 /**
- * Case/opportunity binding v2.
- * Priority chain same as v1 — CRM case lookup deferred to Phase 4.
+ * Case/opportunity binding v2 (Phase 4).
+ * Priority: active context → client-scoped DB lookup → unresolved.
+ *
+ * Reuses opportunities table (same pattern as assistant-entity-resolution).
+ * Conservative: weak/multiple candidates do NOT produce confident binding.
  */
-export function resolveCaseBindingV2(
+export async function resolveCaseBindingV2(
   request: ImageIntakeRequest,
   session: AssistantSession | null,
-): CaseBindingResult {
-  const caseId =
-    (session as any)?.lockedOpportunityId ??
-    request.activeOpportunityId ??
-    null;
-
-  if (caseId) {
+  resolvedClientId: string | null,
+): Promise<CaseBindingResultV2> {
+  // 1. Active session opportunity (highest confidence)
+  const sessionOpportunityId = (session as any)?.lockedOpportunityId ?? null;
+  if (sessionOpportunityId) {
     return {
-      state: "bound_case_confident",
-      caseId,
+      state: "bound_case_from_active_context",
+      caseId: sessionOpportunityId,
       caseLabel: null,
-      confidence: 0.80,
+      confidence: 0.95,
       candidates: [],
-      source: (session as any)?.lockedOpportunityId ? "session_context" : "ui_context",
+      source: "active_context",
+      warnings: [],
     };
   }
 
+  // 2. UI context from request
+  if (request.activeOpportunityId) {
+    return {
+      state: "bound_case_from_active_context",
+      caseId: request.activeOpportunityId,
+      caseLabel: null,
+      confidence: 0.80,
+      candidates: [],
+      source: "active_context",
+      warnings: [],
+    };
+  }
+
+  // 3. Client-scoped opportunity lookup (Phase 4)
+  if (resolvedClientId) {
+    return lookupOpportunitiesForClient(resolvedClientId, request.tenantId);
+  }
+
+  // 4. Unresolved
   return {
-    state: "insufficient_binding",
+    state: "unresolved_case",
     caseId: null,
     caseLabel: null,
     confidence: 0.0,
     candidates: [],
     source: "none",
+    warnings: ["Case nebyl identifikován — bez aktivního kontextu nelze bezpečně navázat."],
+  };
+}
+
+async function lookupOpportunitiesForClient(
+  clientId: string,
+  tenantId: string,
+): Promise<CaseBindingResultV2> {
+  try {
+    const rows = await db
+      .select({ id: opportunities.id, title: opportunities.title })
+      .from(opportunities)
+      .where(
+        and(
+          eq(opportunities.tenantId, tenantId),
+          eq(opportunities.contactId, clientId),
+          isNull(opportunities.archivedAt),
+        ),
+      )
+      .orderBy(desc(opportunities.updatedAt))
+      .limit(5);
+
+    if (rows.length === 0) {
+      return {
+        state: "unresolved_case",
+        caseId: null,
+        caseLabel: null,
+        confidence: 0.0,
+        candidates: [],
+        source: "client_scoped_lookup",
+        warnings: ["Klient nemá žádné aktivní příležitosti/cases."],
+      };
+    }
+
+    if (rows.length === 1 && rows[0]) {
+      return {
+        state: "bound_case_from_strong_lookup",
+        caseId: rows[0].id,
+        caseLabel: rows[0].title,
+        confidence: 0.70,
+        candidates: [{ id: rows[0].id, label: rows[0].title, score: 0.70 }],
+        source: "client_scoped_lookup",
+        warnings: ["Case byl odvozený jako jediný kandidát ke klientovi — potvrzení doporučeno."],
+      };
+    }
+
+    // Multiple candidates — no auto-pick
+    return {
+      state: "multiple_case_candidates",
+      caseId: null,
+      caseLabel: null,
+      confidence: 0.0,
+      candidates: rows.map((r) => ({ id: r.id, label: r.title, score: 0.5 })),
+      source: "client_scoped_lookup",
+      warnings: [`Nalezeno ${rows.length} příležitostí ke klientovi — poradce musí vybrat správný case.`],
+    };
+  } catch {
+    return {
+      state: "unresolved_case",
+      caseId: null,
+      caseLabel: null,
+      confidence: 0.0,
+      candidates: [],
+      source: "none",
+      warnings: ["Lookup příležitostí selhal — case zůstává nevyřešený."],
+    };
+  }
+}
+
+/**
+ * Backward-compatible adapter: maps CaseBindingResultV2 → legacy CaseBindingResult.
+ * Used by parts of the code that still expect the v1 shape.
+ */
+export function toCaseBindingResult(v2: CaseBindingResultV2): CaseBindingResult {
+  const stateMap: Record<CaseBindingResultV2["state"], CaseBindingResult["state"]> = {
+    bound_case_from_active_context: "bound_case_confident",
+    bound_case_from_strong_lookup: "bound_case_confident",
+    weak_case_candidate: "insufficient_binding",
+    multiple_case_candidates: "multiple_candidates",
+    unresolved_case: "insufficient_binding",
+  };
+  return {
+    state: stateMap[v2.state],
+    caseId: v2.caseId,
+    caseLabel: v2.caseLabel,
+    confidence: v2.confidence,
+    candidates: v2.candidates,
+    source: v2.source === "active_context" ? "session_context" :
+            v2.source === "client_scoped_lookup" ? "crm_match" : "none",
   };
 }

@@ -390,6 +390,88 @@ export type ImageIntakeTrace = {
 };
 
 // ---------------------------------------------------------------------------
+// Phase 4: Multi-image stitching
+// ---------------------------------------------------------------------------
+
+export const STITCHING_DECISIONS = [
+  "grouped_thread",    // Related screenshots — likely same conversation thread
+  "grouped_related",   // Related but not obviously same thread (similar context/type)
+  "standalone",        // Unrelated to other assets in batch
+  "duplicate",         // Exact or near-duplicate of another asset
+] as const;
+export type StitchingDecision = (typeof STITCHING_DECISIONS)[number];
+
+export type StitchedAssetGroup = {
+  groupId: string;
+  decision: StitchingDecision;
+  assetIds: string[];
+  /** Primary asset to use for multimodal pass (most representative). */
+  primaryAssetId: string;
+  /** Asset IDs suppressed as duplicates of primary. */
+  duplicateAssetIds: string[];
+  confidence: number;
+  rationale: string;
+};
+
+export type MultiImageStitchingResult = {
+  groups: StitchedAssetGroup[];
+  standaloneAssetIds: string[];
+  duplicateAssetIds: string[];
+  /** true when stitching found any groupable assets. */
+  hasGroupedAssets: boolean;
+  stitchingConfidence: number;
+};
+
+// ---------------------------------------------------------------------------
+// Phase 4: Case / opportunity binding (extends CaseBindingResult)
+// ---------------------------------------------------------------------------
+
+export const CASE_BINDING_STATES_V2 = [
+  "bound_case_from_active_context",
+  "bound_case_from_strong_lookup",
+  "weak_case_candidate",
+  "multiple_case_candidates",
+  "unresolved_case",
+] as const;
+export type CaseBindingStateV2 = (typeof CASE_BINDING_STATES_V2)[number];
+
+export type CaseBindingResultV2 = {
+  state: CaseBindingStateV2;
+  caseId: string | null;
+  caseLabel: string | null;
+  confidence: number;
+  candidates: Array<{ id: string; label: string; score: number }>;
+  source: "active_context" | "strong_lookup" | "client_scoped_lookup" | "none";
+  warnings: string[];
+};
+
+// ---------------------------------------------------------------------------
+// Phase 4: AI Review handoff boundary
+// ---------------------------------------------------------------------------
+
+export const REVIEW_HANDOFF_SIGNALS = [
+  "contract_like_document",
+  "multi_page_document_scan",
+  "formal_policy_document",
+  "dense_legal_text",
+  "insurance_policy_attachment",
+] as const;
+export type ReviewHandoffSignal = (typeof REVIEW_HANDOFF_SIGNALS)[number];
+
+export type ReviewHandoffRecommendation = {
+  /** Whether image intake recommends handing off to AI Review. */
+  recommended: boolean;
+  signals: ReviewHandoffSignal[];
+  confidence: number;
+  /** What image intake was able to extract briefly (orientation only). */
+  orientationSummary: string | null;
+  /** Explanation shown to advisor. */
+  advisorExplanation: string;
+  /** True when handoff flag is enabled AND recommendation is confident. */
+  handoffReady: boolean;
+};
+
+// ---------------------------------------------------------------------------
 // O) Constants
 // ---------------------------------------------------------------------------
 

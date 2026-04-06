@@ -20,12 +20,19 @@ export type {
   ClientBindingState,
   ClientBindingResult,
   CaseBindingResult,
+  CaseBindingStateV2,
+  CaseBindingResultV2,
   EvidenceReference,
   FactType,
   ExtractedImageFact,
   ExtractedFactBundle,
   MultimodalFactItem,
   MultimodalCombinedPassResult,
+  StitchingDecision,
+  StitchedAssetGroup,
+  MultiImageStitchingResult,
+  ReviewHandoffSignal,
+  ReviewHandoffRecommendation,
   ImageIntakeActionCandidate,
   ImageIntakeActionPlan,
   ImageIntakeRequest,
@@ -49,6 +56,9 @@ export {
   MAX_IMAGES_PER_INTAKE,
   IMAGE_INTAKE_ALLOWED_INTENTS,
   IMAGE_INTAKE_ALLOWED_WRITE_ACTIONS,
+  STITCHING_DECISIONS,
+  CASE_BINDING_STATES_V2,
+  REVIEW_HANDOFF_SIGNALS,
   emptyFactBundle,
   emptyActionPlan,
 } from "./types";
@@ -69,17 +79,32 @@ export type { GuardrailVerdict } from "./guardrails";
 export { classifyImageInput, classifyBatch } from "./classifier";
 export type { ClassifierDecision } from "./classifier";
 
-// --- Planner v1 + v2 ---
-export { buildActionPlanV1, buildActionPlanV2 } from "./planner";
+// --- Planner v1 + v2 + v3 ---
+export { buildActionPlanV1, buildActionPlanV2, buildActionPlanV3 } from "./planner";
+
+// --- Multi-image stitching v1 (Phase 4) ---
+export {
+  computeStitchingGroups,
+  getPrimaryAssetIds,
+  buildStitchingSummary,
+} from "./stitching";
+
+// --- AI Review handoff boundary v1 (Phase 4) ---
+export { evaluateReviewHandoff } from "./review-handoff";
 
 // --- Feature flag ---
 export {
   isImageIntakeEnabled,
   isImageIntakeMultimodalEnabled,
+  isImageIntakeStitchingEnabled,
+  isImageIntakeReviewHandoffEnabled,
   getImageIntakeClassifierConfig,
   getImageIntakeMultimodalConfig,
   getImageIntakeFlagState,
   getImageIntakeMultimodalFlagState,
+  getImageIntakeStitchingFlagState,
+  getImageIntakeReviewHandoffFlagState,
+  getImageIntakeFlagSummary,
 } from "./feature-flag";
 
 // --- Multimodal combined pass (Phase 3) ---
@@ -94,8 +119,8 @@ export {
   buildFactsSummaryLines,
 } from "./extractor";
 
-// --- CRM-aware binding v2 (Phase 3) ---
-export { resolveClientBindingV2, resolveCaseBindingV2 } from "./binding-v2";
+// --- CRM-aware binding v2 (Phase 3) + case binding v2 (Phase 4) ---
+export { resolveClientBindingV2, resolveCaseBindingV2, toCaseBindingResult } from "./binding-v2";
 
 // --- Draft reply preview (Phase 3) ---
 export {

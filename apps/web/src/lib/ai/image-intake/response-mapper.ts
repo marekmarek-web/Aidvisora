@@ -13,6 +13,7 @@
 import type { AssistantResponse } from "../assistant-tool-router";
 import type { ImageIntakeOrchestratorResult } from "./orchestrator";
 import { buildFactsSummaryLines } from "./extractor";
+import { buildStitchingSummary } from "./stitching";
 
 // ---------------------------------------------------------------------------
 // Message templates by output mode
@@ -26,8 +27,14 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
   const binding = response.clientBinding.state;
 
   switch (mode) {
-    case "no_action_archive_only":
+    case "no_action_archive_only": {
+      // Check for review handoff recommendation
+      const handoff = result.reviewHandoff;
+      if (handoff?.recommended) {
+        return `Obrázek vypadá jako kandidát na AI Review: ${handoff.advisorExplanation.slice(0, 200)} Image intake zpracovala jen orientační přehled.`;
+      }
       return "Na obrázku jsem nenašel použitelné CRM informace. Obrázek lze archivovat, ale navrhovat žádnou CRM akci nemám.";
+    }
 
     case "ambiguous_needs_input": {
       const bindingIssue =
@@ -135,8 +142,28 @@ export function mapImageIntakeToAssistantResponse(
     );
   }
 
+  // Stitching summary (Phase 4)
+  const stitchingSummary = result.stitchingResult
+    ? buildStitchingSummary(result.stitchingResult)
+    : null;
+  if (stitchingSummary) {
+    suggestedNextSteps.unshift(stitchingSummary);
+  }
+
+  // Case binding v2 warning (Phase 4)
+  if (result.caseBindingV2) {
+    const cbv2 = result.caseBindingV2;
+    if (cbv2.state === "multiple_case_candidates") {
+      suggestedNextSteps.push("Vyberte správný case/příležitost — nalezeno více kandidátů.");
+    } else if (cbv2.state === "weak_case_candidate") {
+      suggestedNextSteps.push(
+        `Potvrďte příslušnost ke case: ${cbv2.caseLabel ?? "nalezený kandidát"}.`,
+      );
+    }
+  }
+
   const sourceLabel = result.multimodalUsed
-    ? `Image intake v3 (multimodal, ${response.actionPlan.outputMode})`
+    ? `Image intake v4 (multimodal, ${response.actionPlan.outputMode})`
     : `Image intake (${response.actionPlan.outputMode})`;
 
   return {

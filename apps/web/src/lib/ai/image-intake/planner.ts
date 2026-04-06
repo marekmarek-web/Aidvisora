@@ -18,6 +18,7 @@ import type {
   ImageIntakeActionCandidate,
   ImageOutputMode,
   ExtractedFactBundle,
+  ReviewHandoffRecommendation,
 } from "./types";
 import { safeOutputModeForUncertainInput } from "./guardrails";
 
@@ -283,6 +284,54 @@ export function buildActionPlanV2(
   // Enrich whyThisAction with fact extraction note
   if (factBundle.extractionSource === "multimodal_pass" && factBundle.facts.length > 0) {
     base.whyThisAction += ` Extrahováno ${factBundle.facts.length} fakt${factBundle.facts.length > 1 ? "ů" : ""}.`;
+  }
+
+  return base;
+}
+
+/**
+ * Phase 4: action planning v3.
+ * Extends v2 with review handoff recommendation surfacing.
+ * When handoff is recommended, adds a note action with handoff explanation
+ * and prevents normal write-ready paths from masking the handoff signal.
+ */
+export function buildActionPlanV3(
+  classification: InputClassificationResult,
+  binding: ClientBindingResult,
+  factBundle: ExtractedFactBundle,
+  draftReplyText: string | null,
+  reviewHandoff: ReviewHandoffRecommendation | null,
+): ImageIntakeActionPlan {
+  const base = buildActionPlanV2(classification, binding, factBundle, draftReplyText);
+
+  if (!reviewHandoff?.recommended) return base;
+
+  // Handoff is recommended: surface it as safety flag + note action
+  base.safetyFlags.push(
+    `AI_REVIEW_HANDOFF_RECOMMENDED: ${reviewHandoff.advisorExplanation.slice(0, 150)}`,
+  );
+
+  if (reviewHandoff.handoffReady) {
+    // When handoff flag is on AND confidence is sufficient, downgrade to archive-only
+    // and add an explicit "consider AI Review" note action
+    if (base.outputMode !== "no_action_archive_only") {
+      base.outputMode = "no_action_archive_only";
+      base.needsAdvisorInput = true;
+      base.whyThisAction = reviewHandoff.advisorExplanation;
+      base.recommendedActions = [
+        makeAction(
+          "create_internal_note",
+          "createInternalNote",
+          "Uložit jako orientační poznámku (AI Review doporučen)",
+          reviewHandoff.advisorExplanation,
+          {
+            _imageIntakeOutputMode: "no_action_archive_only",
+            _reviewHandoffSignals: reviewHandoff.signals,
+            _reviewHandoffRecommended: true,
+          },
+        ),
+      ];
+    }
   }
 
   return base;

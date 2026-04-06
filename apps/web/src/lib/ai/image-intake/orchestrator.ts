@@ -37,12 +37,15 @@ import type {
   ExtractedFactBundle,
   ImageOutputMode,
   MultimodalCombinedPassResult,
+  MultiImageStitchingResult,
+  ReviewHandoffRecommendation,
+  CaseBindingResultV2,
 } from "./types";
 import { emptyFactBundle, emptyActionPlan } from "./types";
 import { runBatchPreflight } from "./preflight";
 import { enforceImageIntakeGuardrails } from "./guardrails";
 import { classifyBatch } from "./classifier";
-import { buildActionPlanV2 } from "./planner";
+import { buildActionPlanV3 } from "./planner";
 import {
   shouldRunMultimodalPass,
   runCombinedMultimodalPass,
@@ -52,11 +55,16 @@ import {
   buildSupportingReferenceFacts,
   buildUnusableFacts,
 } from "./extractor";
-import { resolveClientBindingV2, resolveCaseBindingV2 } from "./binding-v2";
+import { resolveClientBindingV2, resolveCaseBindingV2, toCaseBindingResult } from "./binding-v2";
 import { tryBuildDraftReply } from "./draft-reply";
 import {
   isImageIntakeMultimodalEnabled,
+  isImageIntakeStitchingEnabled,
+  isImageIntakeReviewHandoffEnabled,
+  getImageIntakeFlagSummary,
 } from "./feature-flag";
+import { computeStitchingGroups, getPrimaryAssetIds } from "./stitching";
+import { evaluateReviewHandoff } from "./review-handoff";
 
 // ---------------------------------------------------------------------------
 // Lane decision
@@ -184,6 +192,12 @@ export type ImageIntakeOrchestratorResult = {
   classifierUsedModel: boolean;
   multimodalUsed: boolean;
   multimodalResult: MultimodalCombinedPassResult | null;
+  /** Phase 4: stitching result (null when stitching is disabled or single asset). */
+  stitchingResult: MultiImageStitchingResult | null;
+  /** Phase 4: review handoff recommendation (null when handoff is disabled or not applicable). */
+  reviewHandoff: ReviewHandoffRecommendation | null;
+  /** Phase 4: case/opportunity binding v2 result. */
+  caseBindingV2: CaseBindingResultV2 | null;
 };
 
 export async function processImageIntake(
@@ -219,7 +233,29 @@ export async function processImageIntake(
   // 2. Lane decision
   const laneDecision = decideLane(request.assets);
 
-  // 3. Classifier v1 (cheap-first: deterministic + optional text)
+  // 3. Multi-image stitching (Phase 4 — metadata-only, free)
+  const stitchingEnabled = isImageIntakeStitchingEnabled();
+  let stitchingResult: MultiImageStitchingResult | null = null;
+  let primaryAssets = request.assets;
+
+  if (stitchingEnabled && request.assets.length > 1) {
+    // We need per-asset classification for stitching; run a cheap batch first
+    // For stitching we use a lightweight heuristic pass (no model yet)
+    const classMap = new Map<string, InputClassificationResult | null>();
+    // Classify each asset cheaply (deterministic only — skip model for stitching pass)
+    for (const asset of request.assets) {
+      const { classifyImageInput } = await import("./classifier");
+      const dec = await classifyImageInput(asset, request.accompanyingText);
+      classMap.set(asset.assetId, dec.earlyExit ? null : dec.result);
+    }
+    stitchingResult = computeStitchingGroups(request.assets, classMap);
+    // Only process primary (non-duplicate) assets downstream
+    const primaryIds = new Set(getPrimaryAssetIds(stitchingResult));
+    primaryAssets = request.assets.filter((a) => primaryIds.has(a.assetId));
+  }
+
+  // 4. Classifier v1 (cheap-first: deterministic + optional text)
+  // Run over primary assets only (duplicates excluded by stitching)
   let classification: InputClassificationResult | null = null;
   let classifierUsedModel = false;
   let earlyExit = false;
@@ -227,7 +263,7 @@ export async function processImageIntake(
   if (batchPreflight.eligible) {
     const eligibleAssets = batchPreflight.assetResults
       .filter((r) => r.result.eligible && !r.result.isDuplicate)
-      .map((r) => request.assets.find((a) => a.assetId === r.assetId)!)
+      .map((r) => primaryAssets.find((a) => a.assetId === r.assetId)!)
       .filter(Boolean);
 
     if (eligibleAssets.length > 0) {
@@ -238,7 +274,7 @@ export async function processImageIntake(
     }
   }
 
-  // 4. Early exits for unusable / no eligible assets
+  // 5. Early exits for unusable / no eligible assets
   if (earlyExit || !batchPreflight.eligible || !classification) {
     const earlyPlan = emptyActionPlan("no_action_archive_only");
     const earlyFacts = buildUnusableFacts();
@@ -265,12 +301,13 @@ export async function processImageIntake(
       response: { intakeId, laneDecision, preflight: primaryPreflight, classification, clientBinding: binding, caseBinding, factBundle: earlyFacts, actionPlan: earlyPlan, previewSteps: [], trace },
       executionPlan: null, previewPayload: earlyPreview,
       classifierUsedModel, multimodalUsed: false, multimodalResult: null,
+      stitchingResult, reviewHandoff: null, caseBindingV2: null,
     };
   }
 
-  // 5. Multimodal combined pass (escalation — Phase 3)
+  // 6. Multimodal combined pass (escalation — Phase 3)
   // One call: classification upgrade + fact extraction + client name signal
-  const primaryAsset = request.assets.find(
+  const primaryAsset = primaryAssets.find(
     (a) => batchPreflight.assetResults.find((r) => r.assetId === a.assetId && r.result.eligible)
   );
   const hasStorageUrl = Boolean(primaryAsset?.storageUrl);
@@ -309,12 +346,20 @@ export async function processImageIntake(
     factBundle = buildSupportingReferenceFacts(primaryAsset?.assetId ?? intakeId);
   }
 
-  // 6. CRM-aware binding v2 (uses name signal from multimodal if available)
+  // 7. CRM-aware binding v2 (uses name signal from multimodal if available)
   const nameSignal = multimodalResult?.possibleClientNameSignal ?? null;
   const clientBinding = await resolveClientBindingV2(effectiveRequest, session, nameSignal);
-  const caseBinding = resolveCaseBindingV2(effectiveRequest, session);
 
-  // 7. Draft reply (preview-only, communication screenshots + confident binding only)
+  // 8. Case/opportunity binding v2 (Phase 4 — DB lookup when client is known)
+  const resolvedClientId = clientBinding.clientId;
+  const caseBindingV2 = await resolveCaseBindingV2(effectiveRequest, session, resolvedClientId);
+  const caseBinding = toCaseBindingResult(caseBindingV2);
+
+  // 9. Review handoff recommendation (Phase 4 — no model call)
+  const handoffFlagEnabled = isImageIntakeReviewHandoffEnabled();
+  const reviewHandoff = evaluateReviewHandoff(classification, factBundle, handoffFlagEnabled);
+
+  // 10. Draft reply (preview-only, communication screenshots + confident binding only)
   const draftReplyText = tryBuildDraftReply(
     classification.inputType,
     clientBinding,
@@ -322,10 +367,10 @@ export async function processImageIntake(
     multimodalResult?.draftReplyIntent ?? null,
   );
 
-  // 8. Action planning v2 (uses extracted facts)
-  const actionPlan = buildActionPlanV2(classification, clientBinding, factBundle, draftReplyText);
+  // 11. Action planning v3 (Phase 4 — uses extracted facts + handoff recommendation)
+  const actionPlan = buildActionPlanV3(classification, clientBinding, factBundle, draftReplyText, reviewHandoff);
 
-  // 9. Guardrails (unchanged from Phase 1)
+  // 12. Guardrails (unchanged from Phase 1)
   const guardrailVerdict = enforceImageIntakeGuardrails(
     laneDecision,
     classification,
@@ -348,7 +393,7 @@ export async function processImageIntake(
     );
   }
 
-  // 10. Execution plan
+  // 13. Execution plan
   const executionPlan =
     actionPlan.recommendedActions.length > 0
       ? mapToExecutionPlan(intakeId, actionPlan, clientBinding.clientId, caseBinding.caseId)
@@ -356,12 +401,12 @@ export async function processImageIntake(
 
   const previewSteps = executionPlan ? mapToPreviewItems(executionPlan) : [];
 
-  // 11. Preview payload
+  // 14. Preview payload
   const previewPayload = buildImageIntakePreview(
     intakeId, classification, clientBinding, caseBinding, factBundle, actionPlan,
   );
 
-  // 12. Trace
+  // 15. Trace
   const trace: ImageIntakeTrace = {
     intakeId, sessionId: request.sessionId,
     assetIds: request.assets.map((a) => a.assetId),
@@ -383,5 +428,9 @@ export async function processImageIntake(
     factBundle, actionPlan, previewSteps, trace,
   };
 
-  return { response, executionPlan, previewPayload, classifierUsedModel, multimodalUsed, multimodalResult };
+  return {
+    response, executionPlan, previewPayload,
+    classifierUsedModel, multimodalUsed, multimodalResult,
+    stitchingResult, reviewHandoff, caseBindingV2,
+  };
 }
