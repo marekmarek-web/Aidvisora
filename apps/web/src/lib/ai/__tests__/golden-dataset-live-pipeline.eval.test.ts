@@ -7,7 +7,8 @@
  * Env:
  *   GOLDEN_LIVE_EVAL=1        — required to run (otherwise skipped)
  *   GOLDEN_EVAL_DELAY_MS=2500 — delay between scenarios (rate limits)
- *   GOLDEN_EVAL_ONLY=G01,G05  — optional comma-separated scenario ids
+ *   GOLDEN_EVAL_ONLY=G01,G05  — optional comma-separated scenario/corpus ids
+ *   GOLDEN_CORPUS_EVAL=1      — also run per-corpus-document eval (in addition to scenario eval)
  *
  * Note: Loopback HTTP serves PDFs (Node fetch does not load file:// PDFs reliably here).
  * Bundle/segmentation checks from manifest phase2 may not apply without preprocess — see report.caveats.
@@ -26,6 +27,7 @@ import { applyCanonicalNormalizationToEnvelope } from "../life-insurance-canonic
 import type { PublishHints } from "../document-packet-types";
 import { formatExtractedValue } from "@/lib/ai-review/mappers";
 import { getAiReviewProviderMeta } from "../review-llm-provider";
+import { deriveOutputModeFromPrimary, outputModeMatchOk, type DocumentOutputMode } from "../document-output-mode";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** __tests__ → ai → lib → src → apps/web */
@@ -43,11 +45,35 @@ type Scenario = {
   publishableAsContract: boolean | "partial" | null;
   referenceFile: string | null;
   assistantOnly?: boolean;
+  coversCorpusIds?: string[];
   phase2_acceptance?: Record<string, unknown>;
   phase3_acceptance?: Record<string, unknown>;
 };
 
-type Manifest = { version: number; scenarios: Scenario[] };
+type CorpusDoc = {
+  id: string;
+  familyBucket: string;
+  referenceFile: string;
+  gitTracked: boolean;
+  expectedPrimaryType: string;
+  publishable: boolean | "partial";
+  isPacket: boolean;
+  expectedFamily: string;
+  expectedOutputMode: DocumentOutputMode;
+  expectedSensitivity: string;
+  expectedCoreFields: string[];
+  expectedActionsAllowed: string[];
+  expectedActionsForbidden: string[];
+  expectedFallbackBehavior?: {
+    expectedSummaryFocus: string;
+    expectedPurposeHint: string;
+    recommendedNextStep: string;
+    noProductPublishPayload: boolean;
+  };
+  corpusNote?: string;
+};
+
+type Manifest = { version: number; scenarios: Scenario[]; corpusDocuments: CorpusDoc[] };
 
 type Row = {
   id: string;
@@ -65,6 +91,10 @@ type Row = {
   expectedPublishable: boolean | "partial" | null;
   actualPublishable?: boolean | null;
   publishPass: boolean;
+  /** Phase 2: output mode check */
+  expectedOutputMode?: DocumentOutputMode | null;
+  actualOutputMode?: DocumentOutputMode;
+  outputModePass?: boolean;
   participantOk?: boolean;
   paymentOk?: boolean;
   investmentOk?: boolean;
@@ -79,6 +109,36 @@ type Row = {
   latencyMs?: number;
   lifecycleStatus?: string;
   failReasons?: string[];
+  overallPass: boolean;
+};
+
+/** Per-corpus-document row for the corpus-level eval (C-level). */
+type CorpusRow = {
+  id: string;
+  referenceFile: string;
+  status: "ran" | "skipped" | "error";
+  skipReason?: string;
+  errorMessage?: string;
+  expectedFamily: string;
+  actualFamilyInferred: string;
+  familyPass: boolean;
+  expectedPrimaryType: string;
+  actualPrimaryType?: string;
+  primaryPass: boolean;
+  expectedOutputMode: DocumentOutputMode;
+  actualOutputMode?: DocumentOutputMode;
+  outputModePass?: boolean;
+  /** Hard failure: reference doc ended up in a product contract lane */
+  fallbackLaneViolation?: boolean;
+  /** Core fields: how many of expectedCoreFields were found in extracted output */
+  coreFieldsExpected: number;
+  coreFieldsFound: number;
+  coreFieldsPass: boolean;
+  /** For reference docs: was fallback behavior respected (no product publish payload) */
+  fallbackBehaviorPass?: boolean;
+  latencyMs?: number;
+  lifecycleStatus?: string;
+  failReasons: string[];
   overallPass: boolean;
 };
 
@@ -173,8 +233,20 @@ function inferFamilyFromPrimary(primary: string, classifierPf?: string): string 
   if (primary.startsWith("life_insurance")) return "life_insurance";
   if (primary === "mortgage_document") return "mortgage";
   if (primary.includes("consumer_loan")) return "consumer_credit";
-  if (primary === "generic_financial_document" || primary === "service_agreement") return "leasing";
-  if (primary === "consent_or_declaration") return "compliance";
+  // Compliance/reference: these primary types always belong in compliance family
+  if (
+    primary === "consent_or_declaration" ||
+    primary === "service_agreement" ||
+    primary === "insurance_policy_change_or_service_doc" ||
+    primary === "corporate_tax_return" ||
+    primary === "bank_statement" ||
+    primary === "payslip_document" ||
+    primary === "income_confirmation" ||
+    primary === "medical_questionnaire"
+  ) return "compliance";
+  if (pf === "compliance") return "compliance";
+  if (primary === "generic_financial_document" && pf !== "leasing") return "leasing";
+  if (primary === "generic_financial_document") return "leasing";
   return "unknown";
 }
 
@@ -209,7 +281,17 @@ function familyMatches(expected: string, primary: string, classifier?: Record<st
     return inferred === "leasing" || primary === "generic_financial_document" || primary === "service_agreement";
   }
   if (expected === "compliance") {
-    return inferred === "compliance" || primary === "consent_or_declaration" || primary === "identity_document";
+    return (
+      inferred === "compliance" ||
+      pf === "compliance" ||
+      primary === "consent_or_declaration" ||
+      primary === "identity_document" ||
+      primary === "service_agreement" ||
+      primary === "insurance_policy_change_or_service_doc" ||
+      primary === "corporate_tax_return" ||
+      primary === "bank_statement" ||
+      primary === "payslip_document"
+    );
   }
   return inferred === expected;
 }
@@ -474,6 +556,130 @@ function deriveInputModeFromTrace(trace?: Record<string, unknown>): string {
   return "unknown";
 }
 
+/** Build a map referenceFile → expectedOutputMode from corpusDocuments. */
+function buildCorpusOutputModeMap(manifest: Manifest): Map<string, DocumentOutputMode> {
+  const m = new Map<string, DocumentOutputMode>();
+  for (const doc of manifest.corpusDocuments ?? []) {
+    if (doc.referenceFile && doc.expectedOutputMode) {
+      m.set(doc.referenceFile, doc.expectedOutputMode);
+    }
+  }
+  return m;
+}
+
+/**
+ * Semantic alias map for core field name → pipeline extractedFields key patterns.
+ * Used by corpus-level eval to check if a field was actually extracted.
+ * "present" = at least one matching key has a non-null, non-empty value.
+ */
+const CORE_FIELD_ALIASES: Record<string, RegExp> = {
+  contractNumber: /contractNumber|policyNumber|smlouvaNumber|cisloSmlouvy|cislo_smlouvy|proposalRef/i,
+  institutionName: /insurer|lender|institution|provider|bankName|pensionFund|fundPlatform|custodian/i,
+  productName: /productName|productLabel|nazevProduktu|strategyOrFund/i,
+  effectiveDate: /effectiveDate|policyStartDate|startDate|datumPocatku|contractDate|drawingDate/i,
+  premiumAmount: /premium|totalMonthlyPremium|annualPremium|contributionAmount|regularAmount|investmentPremium/i,
+  paymentFrequency: /paymentFrequency|frekvence|frequency/i,
+  borrowerName: /borrowerName|fullName|clientFullName|proposerName|dluznikName/i,
+  lenderName: /lenderName|institutionName|insurer|creditorName/i,
+  policyholderName: /fullName|clientFullName|policyholderName|proposerName|pojistnikName/i,
+  principal: /principal|loanAmount|vyseUveru|jistina|financedAmount/i,
+  installment: /installment|monthlyInstallment|splatka|periodicPayment/i,
+  termMonths: /termMonths|maturityMonths|duration|splatnost/i,
+  investorName: /fullName|clientFullName|investorName/i,
+  isinOrFundName: /isin|fundName|isinOrFundName|strategyOrFund/i,
+  account: /account|iban|accountNumber|bankAccount/i,
+  iban: /iban|accountNumber|bankAccount/i,
+  strategyOrFund: /strategyOrFund|fundName|strategy|isin/i,
+  contributionAmount: /contributionAmount|regularAmount|premiumAmount|amount/i,
+  nominatedPersons: /nominatedPersons|obmyslene|beneficiaries/i,
+  financedAmount: /financedAmount|principal|loanAmount/i,
+  vin: /vin\b|vinNumber|chassisNumber/i,
+  registrationPlate: /registrationPlate|licensePlate|spz|ecv/i,
+  lesseeName: /fullName|clientFullName|lesseeName/i,
+  coverageLimits: /coverageLimits|limit|coverage|krytie/i,
+  coinsurance: /coinsurance|spoluúčast|spoluucast/i,
+  investmentStrategy: /investmentStrategy|strategy|isin|fundName/i,
+  healthSegments: /healthSegments|healthSectionSignals|zdravotni/i,
+  healthSectionSignals: /healthSectionSignals|healthSegments|zdravotni/i,
+  proposalOrContractRef: /proposalRef|contractNumber|policyNumber|cislo/i,
+  vehicleIdentifier: /vin|licensePlate|registrationPlate|spz/i,
+  propertyAddress: /propertyAddress|address|adresa|nemovitost/i,
+  policyReference: /policyReference|policyNumber|contractNumber/i,
+  changeDescription: /changeDescription|amendment|zmena|change/i,
+  taxPeriod: /taxPeriod|year|period|obdobi/i,
+  companyName: /companyName|institutionName|firma|company/i,
+  clientName: /fullName|clientFullName|clientName/i,
+  providerName: /providerName|institutionName|provider/i,
+  scopeSummary: /scopeSummary|businessScope|predmet|subject/i,
+  documentKind: /documentKind|type|kind|druh/i,
+  signatureDate: /signatureDate|dateSigned|datumPodpisu/i,
+  interestRate: /interestRate|rate|urokSazba|rpsn/i,
+  security: /security|collateral|zajisteni|záruka/i,
+  businessPurpose: /businessPurpose|purpose|ucel|cil/i,
+  drawingDateOrSchedule: /drawingDate|schedule|datum.*cerpani|harmonogram/i,
+  insuredPersons: /insuredPersons|pojisteni|insured|persons/i,
+  risks: /risks|rizika|coverages|riskPremium/i,
+  annualIncome: /annualIncome|income|prijem/i,
+  smokerStatus: /smokerStatus|kurer|smoker/i,
+  illustrationDates: /illustrationDates|effectiveDate|datum/i,
+  contractOrParticipantRef: /contractOrParticipantRef|contractNumber|participantNumber|cislo/i,
+  productFramework: /productFramework|productName|framework|scheme/i,
+};
+
+function coreFieldPresent(
+  ef: Record<string, { value?: unknown; status?: string } | undefined> | undefined,
+  fieldName: string,
+): boolean {
+  if (!ef) return false;
+  const pat = CORE_FIELD_ALIASES[fieldName] ?? new RegExp(fieldName, "i");
+  for (const [k, cell] of Object.entries(ef)) {
+    if (!cell) continue;
+    if (cell.status === "missing" || cell.status === "not_applicable" || cell.status === "explicitly_not_selected") continue;
+    const v = cell.value;
+    if (v == null) continue;
+    const s = typeof v === "string" ? v.trim() : String(v);
+    if (!s || s === "—" || s === "null" || s === "0" || s === "unknown") continue;
+    if (pat.test(k)) return true;
+  }
+  return false;
+}
+
+function evaluateCoreFields(
+  ef: Record<string, { value?: unknown; status?: string } | undefined> | undefined,
+  expectedCoreFields: string[],
+): { found: number; total: number; pass: boolean; missing: string[] } {
+  if (!expectedCoreFields.length) return { found: 0, total: 0, pass: true, missing: [] };
+  let found = 0;
+  const missing: string[] = [];
+  for (const field of expectedCoreFields) {
+    if (coreFieldPresent(ef, field)) {
+      found++;
+    } else {
+      missing.push(field);
+    }
+  }
+  // Pass if ≥ 50% of expected core fields are found (lenient threshold for eval without Adobe)
+  const pass = found >= Math.ceil(expectedCoreFields.length * 0.5);
+  return { found, total: expectedCoreFields.length, pass, missing };
+}
+
+/**
+ * Returns true when a reference/supporting document was NOT incorrectly routed into
+ * a structured product lane.
+ * A "fallback lane violation" means the pipeline returned a publishable primary type
+ * for a doc that must never be auto-published.
+ */
+function isFallbackLaneViolation(
+  expectedOutputMode: DocumentOutputMode,
+  actualOutputMode: DocumentOutputMode,
+  primaryType: string,
+): boolean {
+  if (expectedOutputMode !== "reference_or_supporting_document") return false;
+  // Violation: reference doc ended up classified as a publishable product
+  return actualOutputMode === "structured_product_document" ||
+    (actualOutputMode === "signature_ready_proposal" && !primaryType.includes("consent") && !primaryType.includes("service"));
+}
+
 describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eval + release gate", () => {
   it(
     "runs G01–G09 through runContractUnderstandingPipeline and writes scorecard",
@@ -481,6 +687,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       const manifest = loadManifest();
       const delayMs = Number(process.env.GOLDEN_EVAL_DELAY_MS ?? "2500");
       const only = process.env.GOLDEN_EVAL_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
+      const corpusOutputModeMap = buildCorpusOutputModeMap(manifest);
 
       mkdirSync(evalOutDir, { recursive: true });
 
@@ -636,6 +843,13 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
         const providerTraceOk = Boolean(traceProvider && String(traceProvider).trim());
         const inputModeTraceOk = traceInputMode !== "unknown" && traceInputMode !== "none";
 
+        // Phase 2: output mode check
+        const actualOutputMode = deriveOutputModeFromPrimary(primary, lifecycle);
+        const expectedOutputModeFromCorpus = sc.referenceFile ? corpusOutputModeMap.get(sc.referenceFile) ?? null : null;
+        const outputModePass = expectedOutputModeFromCorpus != null
+          ? outputModeMatchOk(expectedOutputModeFromCorpus, actualOutputMode)
+          : true;
+
         const overallPass =
           familyPass &&
           pr.ok &&
@@ -646,7 +860,8 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
           paymentOk &&
           investmentOk &&
           providerTraceOk &&
-          inputModeTraceOk;
+          inputModeTraceOk &&
+          outputModePass;
 
         const failReasons: string[] = [];
         if (!familyPass) failReasons.push("family_mismatch");
@@ -659,6 +874,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
         if (!investmentOk) failReasons.push("investment_phase3");
         if (!providerTraceOk) failReasons.push("provider_trace");
         if (!inputModeTraceOk) failReasons.push("input_mode_trace");
+        if (!outputModePass) failReasons.push(`output_mode:want_${expectedOutputModeFromCorpus ?? "?"},got_${actualOutputMode}`);
 
         rows.push({
           id: sc.id,
@@ -674,6 +890,9 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
           expectedPublishable: sc.publishableAsContract,
           actualPublishable: hints?.contractPublishable ?? null,
           publishPass,
+          expectedOutputMode: expectedOutputModeFromCorpus,
+          actualOutputMode,
+          outputModePass,
           participantOk,
           paymentOk,
           investmentOk,
@@ -710,6 +929,12 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       const missingProviderTrace = providerTraceRows.length > 0;
       const failedScenarios = runnable.filter((r) => !r.overallPass).map((r) => r.id);
 
+      // Phase 2: output mode accuracy
+      const outputModeRows = coreRan.filter((r) => r.expectedOutputMode != null);
+      const outputModeAcc = outputModeRows.length > 0
+        ? outputModeRows.filter((r) => r.outputModePass).length / outputModeRows.length
+        : 1;
+
       const blockers: string[] = [];
       if (skipped.length > 0) blockers.push(`missing_pdf:${skipped.map((s) => s.id).join(",")}`);
       if (errors.length > 0) blockers.push(`pipeline_errors:${errors.map((e) => e.id).join(",")}`);
@@ -719,6 +944,10 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       if (anyUiBlocker) blockers.push("ui_blocker_raw_html_or_json");
       if (anyInsuranceContam) blockers.push("investment_scenario_insurance_contamination");
       if (missingProviderTrace) blockers.push(`missing_provider_or_input_mode_trace:${providerTraceRows.map((r) => r.id).join(",")}`);
+      if (outputModeRows.length > 0 && outputModeAcc < 0.95) {
+        const failedModes = coreRan.filter((r) => r.expectedOutputMode != null && !r.outputModePass).map((r) => `${r.id}:${r.failReasons?.find(f => f.startsWith("output_mode")) ?? "?"}`);
+        blockers.push(`output_mode_accuracy_${(outputModeAcc * 100).toFixed(1)}%_below_95%:${failedModes.join(",")}`);
+      }
 
       const verdict = blockers.length === 0 ? "READY TO FREEZE AI REVIEW" : `BLOCKED BY: ${blockers.join(" | ")}`;
 
@@ -733,6 +962,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
           skipped: skipped.length,
           errors: errors.length,
           coreFamilyAccuracy: familyAcc,
+          coreOutputModeAccuracy: outputModeAcc,
           strictPublishG02G03G09: strictPublishPass,
         },
         caveats,
@@ -748,7 +978,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
         // eslint-disable-next-line no-console
         console.info(
           `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
-            `fam=${r.familyPass} primary=${r.primaryPass} pub=${r.publishPass} ui=${r.uiBlocker ? "BLOCK" : "ok"} ` +
+            `fam=${r.familyPass} primary=${r.primaryPass} pub=${r.publishPass} mode=${r.outputModePass ?? "—"} ui=${r.uiBlocker ? "BLOCK" : "ok"} ` +
             `lc=${r.lifecycleStatus ?? "—"} ${r.actualPrimaryType ?? "—"} ${r.latencyMs ?? 0}ms` +
             (r.failReasons?.length ? ` [${r.failReasons.join(",")}]` : ""),
         );
@@ -764,10 +994,269 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       expect(anyUiBlocker).toBe(false);
       expect(anyInsuranceContam).toBe(false);
       expect(missingProviderTrace).toBe(false);
+      expect(outputModeAcc, "output mode accuracy").toBeGreaterThanOrEqual(0.95);
       } finally {
         await pdfServer.close().catch(() => {});
       }
     },
     600_000,
+  );
+
+  it.skipIf(!process.env.GOLDEN_CORPUS_EVAL)(
+    "runs all available corpus documents (C-level) through pipeline and writes corpus scorecard",
+    async () => {
+      const manifest = loadManifest();
+      const delayMs = Number(process.env.GOLDEN_EVAL_DELAY_MS ?? "2500");
+      const only = process.env.GOLDEN_EVAL_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
+
+      mkdirSync(evalOutDir, { recursive: true });
+
+      const corpusDocs = (manifest.corpusDocuments ?? []).filter(
+        (d) => !only?.length || only.includes(d.id),
+      );
+
+      const pdfServer = await startRepoPdfServer(repoRoot);
+
+      const cRows: CorpusRow[] = [];
+      try {
+      for (const doc of corpusDocs) {
+        const pdfPath = join(repoRoot, doc.referenceFile);
+        if (!existsSync(pdfPath)) {
+          cRows.push({
+            id: doc.id,
+            referenceFile: doc.referenceFile,
+            status: "skipped",
+            skipReason: "pdf_missing",
+            expectedFamily: doc.expectedFamily,
+            actualFamilyInferred: "—",
+            familyPass: false,
+            expectedPrimaryType: doc.expectedPrimaryType,
+            primaryPass: false,
+            expectedOutputMode: doc.expectedOutputMode,
+            outputModePass: false,
+            coreFieldsExpected: doc.expectedCoreFields.length,
+            coreFieldsFound: 0,
+            coreFieldsPass: false,
+            failReasons: ["pdf_missing"],
+            overallPass: false,
+          });
+          continue;
+        }
+
+        const fileUrl = pdfHttpUrl(pdfServer.baseUrl, doc.referenceFile);
+        const textHint = await extractPdfTextHintFromDisk(pdfPath);
+        const started = Date.now();
+        let result: Awaited<ReturnType<typeof runContractUnderstandingPipeline>>;
+        try {
+          result = await runContractUnderstandingPipeline(fileUrl, "application/pdf", {
+            sourceFileName: doc.referenceFile.split("/").pop() ?? "doc.pdf",
+            ruleBasedTextHint: textHint,
+            bundleSectionTexts: textHint ? { contractualText: textHint, investmentText: textHint } : null,
+            preprocessMeta: {
+              preprocessStatus: textHint ? "golden_eval_pdf_parse_hint" : "golden_eval_local",
+              preprocessMode: "none",
+              adobePreprocessed: false,
+              markdownContentLength: textHint?.length ?? 0,
+              readabilityScore: textHint && textHint.length >= 800 ? 80 : 0,
+            },
+          });
+        } catch (e) {
+          cRows.push({
+            id: doc.id,
+            referenceFile: doc.referenceFile,
+            status: "error",
+            errorMessage: `${e instanceof Error ? e.message : String(e)}`,
+            expectedFamily: doc.expectedFamily,
+            actualFamilyInferred: "—",
+            familyPass: false,
+            expectedPrimaryType: doc.expectedPrimaryType,
+            primaryPass: false,
+            expectedOutputMode: doc.expectedOutputMode,
+            outputModePass: false,
+            coreFieldsExpected: doc.expectedCoreFields.length,
+            coreFieldsFound: 0,
+            coreFieldsPass: false,
+            failReasons: ["pipeline_error"],
+            overallPass: false,
+          });
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue;
+        }
+
+        const latencyMs = Date.now() - started;
+        await new Promise((r) => setTimeout(r, delayMs));
+
+        if (!result.ok) {
+          cRows.push({
+            id: doc.id,
+            referenceFile: doc.referenceFile,
+            status: "error",
+            errorMessage: result.errorMessage,
+            expectedFamily: doc.expectedFamily,
+            actualFamilyInferred: "—",
+            familyPass: false,
+            expectedPrimaryType: doc.expectedPrimaryType,
+            primaryPass: false,
+            expectedOutputMode: doc.expectedOutputMode,
+            outputModePass: false,
+            coreFieldsExpected: doc.expectedCoreFields.length,
+            coreFieldsFound: 0,
+            coreFieldsPass: false,
+            failReasons: ["pipeline_error"],
+            overallPass: false,
+          });
+          continue;
+        }
+
+        const env = result.extractedPayload as unknown as DocumentReviewEnvelope;
+        const savedPublishHints = env.publishHints;
+        applyCanonicalNormalizationToEnvelope(env, null);
+        env.publishHints = savedPublishHints;
+
+        const primary = env.documentClassification.primaryType;
+        const lifecycle = env.documentClassification.lifecycleStatus;
+        const trace = result.extractionTrace as Record<string, unknown> | undefined;
+        const classifier = trace?.aiClassifierJson as Record<string, unknown> | undefined;
+
+        const actualFamilyInferred = inferFamilyFromPrimary(primary, String(classifier?.productFamily ?? ""));
+        const familyPass = familyMatches(doc.expectedFamily, primary, classifier);
+
+        const pr = primaryMatches(doc.id, doc.expectedPrimaryType, primary, lifecycle, classifier);
+        const primaryPass = pr.ok;
+
+        const actualOutputMode = deriveOutputModeFromPrimary(primary, lifecycle);
+        const outputModePass = outputModeMatchOk(doc.expectedOutputMode, actualOutputMode);
+
+        const ef = env.extractedFields as Record<string, { value?: unknown; status?: string } | undefined> | undefined;
+        const coreCheck = evaluateCoreFields(ef, doc.expectedCoreFields);
+
+        // Fallback lane: reference docs must never end up as structured product
+        const fallbackLaneViolation = isFallbackLaneViolation(doc.expectedOutputMode, actualOutputMode, primary);
+
+        // Fallback behavior check: reference docs should not have a product contract payload
+        let fallbackBehaviorPass: boolean | undefined;
+        if (doc.expectedFallbackBehavior) {
+          // noProductPublishPayload: pipeline must not have publishHints.contractPublishable = true
+          const pub = env.publishHints?.contractPublishable;
+          fallbackBehaviorPass = pub !== true && !fallbackLaneViolation;
+        }
+
+        const failReasons: string[] = [];
+        if (!familyPass) failReasons.push("family_mismatch");
+        if (!primaryPass) failReasons.push(`primary_type:want_${doc.expectedPrimaryType},got_${primary}`);
+        if (!outputModePass) failReasons.push(`output_mode:want_${doc.expectedOutputMode},got_${actualOutputMode}`);
+        if (!coreCheck.pass) failReasons.push(`core_fields:${coreCheck.found}/${coreCheck.total}:missing=[${coreCheck.missing.slice(0, 4).join(",")}]`);
+        if (fallbackLaneViolation) failReasons.push("fallback_lane_violation");
+        if (fallbackBehaviorPass === false) failReasons.push("fallback_behavior_publish_not_blocked");
+
+        const overallPass =
+          familyPass &&
+          primaryPass &&
+          outputModePass &&
+          coreCheck.pass &&
+          !fallbackLaneViolation &&
+          (fallbackBehaviorPass !== false);
+
+        cRows.push({
+          id: doc.id,
+          referenceFile: doc.referenceFile,
+          status: "ran",
+          expectedFamily: doc.expectedFamily,
+          actualFamilyInferred,
+          familyPass,
+          expectedPrimaryType: doc.expectedPrimaryType,
+          actualPrimaryType: primary,
+          primaryPass,
+          expectedOutputMode: doc.expectedOutputMode,
+          actualOutputMode,
+          outputModePass,
+          fallbackLaneViolation,
+          coreFieldsExpected: coreCheck.total,
+          coreFieldsFound: coreCheck.found,
+          coreFieldsPass: coreCheck.pass,
+          fallbackBehaviorPass,
+          latencyMs,
+          lifecycleStatus: lifecycle,
+          failReasons,
+          overallPass,
+        });
+      }
+
+      const cRunnable = cRows.filter((r) => r.status === "ran");
+      const cSkipped = cRows.filter((r) => r.status === "skipped");
+      const cErrors = cRows.filter((r) => r.status === "error");
+      const cFailed = cRunnable.filter((r) => !r.overallPass);
+
+      const cFamilyAcc = cRunnable.length > 0
+        ? cRunnable.filter((r) => r.familyPass).length / cRunnable.length : 0;
+      const cOutputModeAcc = cRunnable.length > 0
+        ? cRunnable.filter((r) => r.outputModePass).length / cRunnable.length : 0;
+      const cCoreFieldsAcc = cRunnable.length > 0
+        ? cRunnable.filter((r) => r.coreFieldsPass).length / cRunnable.length : 0;
+      const anyFallbackViolation = cRunnable.some((r) => r.fallbackLaneViolation);
+
+      const rootCauseBuckets = {
+        routing: cRunnable.filter((r) => !r.familyPass || !r.primaryPass).map((r) => r.id),
+        outputMode: cRunnable.filter((r) => !r.outputModePass).map((r) => r.id),
+        coreExtraction: cRunnable.filter((r) => !r.coreFieldsPass).map((r) => r.id),
+        fallbackLane: cRunnable.filter((r) => r.fallbackLaneViolation).map((r) => r.id),
+        fieldNormalization: cRunnable.filter((r) => r.coreFieldsFound > 0 && r.coreFieldsFound < r.coreFieldsExpected).map((r) => r.id),
+      };
+
+      const cReport = {
+        generatedAt: new Date().toISOString(),
+        manifestVersion: manifest.version,
+        evalType: "corpus_level_c_docs",
+        metrics: {
+          total: cRows.length,
+          ran: cRunnable.length,
+          skipped: cSkipped.length,
+          errors: cErrors.length,
+          passed: cRunnable.filter((r) => r.overallPass).length,
+          failed: cFailed.length,
+          familyAccuracy: cFamilyAcc,
+          outputModeAccuracy: cOutputModeAcc,
+          coreFieldsAccuracy: cCoreFieldsAcc,
+          fallbackLaneViolations: cRunnable.filter((r) => r.fallbackLaneViolation).length,
+        },
+        rootCauseBuckets,
+        rows: cRows,
+      };
+
+      writeFileSync(
+        join(evalOutDir, `corpus-eval-report-${Date.now()}.json`),
+        JSON.stringify(cReport, null, 2),
+        "utf8",
+      );
+      writeFileSync(
+        join(evalOutDir, "latest-corpus-eval-report.json"),
+        JSON.stringify(cReport, null, 2),
+        "utf8",
+      );
+
+      // eslint-disable-next-line no-console
+      console.info("\n=== CORPUS EVAL SCORECARD (C-level) ===\n");
+      for (const r of cRows) {
+        // eslint-disable-next-line no-console
+        console.info(
+          `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
+            `fam=${r.familyPass} primary=${r.primaryPass} mode=${r.outputModePass ?? "—"} ` +
+            `core=${r.coreFieldsFound}/${r.coreFieldsExpected} fb=${r.fallbackBehaviorPass ?? "—"} ` +
+            `${r.actualPrimaryType ?? "—"} ${r.latencyMs ?? 0}ms` +
+            (r.failReasons.length ? ` [${r.failReasons.slice(0, 3).join(",")}]` : ""),
+        );
+      }
+      // eslint-disable-next-line no-console
+      console.info(`\nROOT CAUSE BUCKETS: routing=${rootCauseBuckets.routing.join(",") || "none"} | mode=${rootCauseBuckets.outputMode.join(",") || "none"} | extraction=${rootCauseBuckets.coreExtraction.join(",") || "none"} | fallback=${rootCauseBuckets.fallbackLane.join(",") || "none"}\n`);
+
+      expect(cErrors.length, "corpus pipeline hard errors").toBe(0);
+      expect(cFamilyAcc, "corpus family accuracy").toBeGreaterThanOrEqual(0.8);
+      expect(cOutputModeAcc, "corpus output mode accuracy").toBeGreaterThanOrEqual(0.8);
+      expect(anyFallbackViolation, "no reference doc in product contract lane").toBe(false);
+      } finally {
+        await pdfServer.close().catch(() => {});
+      }
+    },
+    900_000,
   );
 });

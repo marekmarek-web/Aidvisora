@@ -84,6 +84,13 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
   if (fam === "building_savings" && (dt === "contract" || dt === "amendment")) return "generic_financial_document";
   if (fam === "loan" && (dt === "contract" || dt === "consumer_loan_contract")) return "consumer_loan_contract";
   if (fam === "mortgage" && (dt === "contract" || dt === "mortgage_document")) return "mortgage_document";
+  // compliance family — AML/FATCA/KYC service docs detected via text override or classifier
+  if (fam === "compliance") {
+    if (dt === "consent_or_identification_document") return "consent_or_declaration";
+    // Service agreements detected via compliance path (e.g. komisionářská smlouva, rámcová smlouva)
+    if (dt === "contract") return "service_agreement";
+    return "consent_or_declaration";
+  }
   if (dt === "statement" || dt === "supporting_document") return "bank_statement";
   if (fam === "legacy_financial_product") return "generic_financial_document";
   if (dt === "termination_document") return "generic_financial_document";
