@@ -298,22 +298,48 @@ function classificationFromEnvelope(envelope: DocumentReviewEnvelope): Classific
 /**
  * When the stored supportingDocumentExtraction prompt returns generic "bank_statement" as its
  * document type label, try to infer a more specific supporting subtype from the response.
- * Checks: (1) explicit documentType field returned by stored prompt, (2) payslip/tax field presence.
+ *
+ * The stored prompt returns a DocumentReviewEnvelope JSON, so signals come from:
+ *   1. documentClassification.primaryType (if the stored prompt set it)
+ *   2. extractedFields.documentType.value (explicit documentType instruction in prompt)
+ *   3. Top-level documentType key (flat/legacy shape from some stored prompts)
+ *   4. normalizedSubtype or similar
+ *   5. Presence of payslip/tax-return specific field keys in extractedFields
  */
 function inferSupportingSubtypeFromPromptResponse(
   parsed: Record<string, unknown>
 ): ContractDocumentType | null {
-  const dt = String(parsed.documentType ?? parsed.normalizedSubtype ?? "").toLowerCase().replace(/[-_\s]/g, "");
-  if (dt === "payslip" || dt === "payslip_document" || dt === "salarydocument" || dt === "salarislip" || dt === "payslippayment") return "payslip_document";
-  if (dt === "corporate_tax_return" || dt === "taxreturn" || dt === "taxdeclaration" || dt === "corporate_tax" || dt === "danove_priznani") return "corporate_tax_return";
+  // Path 1: documentClassification.primaryType
+  const dc = parsed.documentClassification as Record<string, unknown> | undefined;
+  const dcPrimary = typeof dc?.primaryType === "string" ? dc.primaryType.toLowerCase().replace(/[-_\s]/g, "") : "";
+  if (dcPrimary === "payslip" || dcPrimary === "payslip_document") return "payslip_document";
+  if (dcPrimary === "corporate_tax_return" || dcPrimary === "corporatetaxreturn") return "corporate_tax_return";
 
-  // Field-presence heuristics
-  const keys = new Set(Object.keys(parsed).map((k) => k.toLowerCase().replace(/[-_]/g, "")));
-  const payslipSignals = ["grosspay", "netpay", "grossincome", "netincome", "hrubazmda", "cistamzda", "hrubamzda", "employer", "employee", "payperiod", "payoutaccount"];
-  const taxReturnSignals = ["taxperiod", "taxtype", "taxperiod", "taxperiodfrom", "taxpayername", "companyname", "taxamount", "taxamountdue", "danoveobdobi"];
+  // Path 2: extractedFields.documentType.value (stored prompt explicit field)
+  const ef = parsed.extractedFields as Record<string, unknown> | undefined;
+  const efDt = ef?.documentType;
+  const efDtValue = typeof efDt === "object" && efDt !== null
+    ? String((efDt as Record<string, unknown>).value ?? "")
+    : typeof efDt === "string" ? efDt : "";
+  const dtFromEf = efDtValue.toLowerCase().replace(/[-_\s]/g, "");
+  if (dtFromEf === "payslip" || dtFromEf === "payslip_document" || dtFromEf === "salarydocument" || dtFromEf === "payslippayment") return "payslip_document";
+  if (dtFromEf === "corporate_tax_return" || dtFromEf === "taxreturn" || dtFromEf === "taxdeclaration" || dtFromEf === "corporatetax" || dtFromEf === "danove_priznani") return "corporate_tax_return";
 
-  if (payslipSignals.some((s) => keys.has(s))) return "payslip_document";
-  if (taxReturnSignals.some((s) => keys.has(s))) return "corporate_tax_return";
+  // Path 3: top-level documentType / normalizedSubtype (flat/legacy shape)
+  const topDt = String(parsed.documentType ?? parsed.normalizedSubtype ?? "").toLowerCase().replace(/[-_\s]/g, "");
+  if (topDt === "payslip" || topDt === "payslip_document" || topDt === "salarydocument" || topDt === "salarislip") return "payslip_document";
+  if (topDt === "corporate_tax_return" || topDt === "taxreturn" || topDt === "taxdeclaration" || topDt === "danove_priznani") return "corporate_tax_return";
+
+  // Path 4: field-presence heuristics — look at extractedFields keys and their values
+  const efKeys = ef ? new Set(Object.keys(ef).map((k) => k.toLowerCase().replace(/[-_]/g, ""))) : new Set<string>();
+  const topKeys = new Set(Object.keys(parsed).map((k) => k.toLowerCase().replace(/[-_]/g, "")));
+  const allKeys = new Set([...efKeys, ...topKeys]);
+
+  const payslipSignals = ["grosspay", "netpay", "grossincome", "netincome", "hrubazmda", "cistamzda", "hrubamzda", "employer", "employee", "payperiod", "payoutaccount", "employeename", "employername"];
+  const taxReturnSignals = ["taxperiodfrom", "taxperiodto", "taxtype", "taxpayername", "taxamountdue", "taxbase", "taxamount", "mainbusinessactivity", "danoveobdobi", "zakladDane"];
+
+  if (payslipSignals.some((s) => allKeys.has(s))) return "payslip_document";
+  if (taxReturnSignals.some((s) => allKeys.has(s))) return "corporate_tax_return";
 
   return null;
 }
@@ -1241,14 +1267,10 @@ export async function runAiReviewV2Pipeline(
     normalizedPipeline: normPipeline,
   });
 
-  const valStart = Date.now();
-  let validationOutcome = validateExtractionByType(rawExtraction, documentType);
-  trace.validationDurationMs = Date.now() - valStart;
-
   const parsedExtractionObj = parseJsonObjectFromAiReviewRaw(rawExtraction);
 
-  // For supporting-doc prompt: refine generic bank_statement to specific subtype (payslip / tax return)
-  // based on the stored prompt's own documentType signal or payslip/tax field presence.
+  // For supporting-doc prompt: refine generic bank_statement to specific subtype BEFORE validation,
+  // so the correct schema (payslip_document / corporate_tax_return) is used for validation and coercion.
   if (documentType === "bank_statement" && promptKey === "supportingDocumentExtraction" && parsedExtractionObj) {
     const refinedType = inferSupportingSubtypeFromPromptResponse(parsedExtractionObj);
     if (refinedType) {
@@ -1256,6 +1278,10 @@ export async function runAiReviewV2Pipeline(
       trace.selectedSchema = documentType;
     }
   }
+
+  const valStart = Date.now();
+  let validationOutcome = validateExtractionByType(rawExtraction, documentType);
+  trace.validationDurationMs = Date.now() - valStart;
 
   const parsedExtractionTopKeys =
     parsedExtractionObj && typeof parsedExtractionObj === "object"
