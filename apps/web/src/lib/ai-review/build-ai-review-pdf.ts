@@ -351,7 +351,9 @@ export async function buildAiReviewPdfBlob(
   );
 
   const bytes = await pdfDoc.save();
-  return new Blob([bytes], { type: "application/pdf" });
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return new Blob([copy], { type: "application/pdf" });
 }
 
 export function aiReviewPdfFileName(doc: ExtractionDocument): string {

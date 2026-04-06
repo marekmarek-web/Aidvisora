@@ -875,7 +875,7 @@ export function ContractsReviewScreen({
 
   return (
     <>
-      <Toast toast={toast} onDismiss={dismissToast} />
+      {toast ? <Toast message={toast.message} variant={toast.variant} onDismiss={dismissToast} /> : null}
       {error ? <ErrorState title={error} onRetry={fetchList} /> : null}
 
       {/* Header */}
