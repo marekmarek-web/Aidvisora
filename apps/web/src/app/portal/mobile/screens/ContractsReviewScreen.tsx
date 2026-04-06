@@ -17,6 +17,7 @@ import {
   Zap,
   FileText,
   Eye,
+  Download,
 } from "lucide-react";
 import {
   approveContractReview,
@@ -37,9 +38,13 @@ import {
   MobileCard,
   SearchBar,
   StatusBadge,
+  Toast,
+  useToast,
 } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { confidenceToPercentForUi } from "@/lib/ai/review-ui-confidence";
+import { mapApiToExtractionDocument, hasMeaningfulReviewContent } from "@/lib/ai-review/mappers";
+import { aiReviewPdfFileName, buildAiReviewPdfBlob } from "@/lib/ai-review/build-ai-review-pdf";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -335,6 +340,8 @@ function ReviewDetailPanel({
   onApply,
   onSelectClient,
   onCreateNewClient,
+  onDownloadPdf,
+  pdfExportBusy,
 }: {
   detail: ReviewDetail;
   pending: boolean;
@@ -344,6 +351,8 @@ function ReviewDetailPanel({
   onApply: () => void;
   onSelectClient: (clientId: string) => void;
   onCreateNewClient: () => void;
+  onDownloadPdf?: () => void;
+  pdfExportBusy?: boolean;
 }) {
   const status = detail.reviewStatus ?? detail.processingStatus;
   const cfg = getStatusConfig(status);
@@ -392,6 +401,21 @@ function ReviewDetailPanel({
             ) : null}
           </div>
         </div>
+        {onDownloadPdf ? (
+          <button
+            type="button"
+            onClick={onDownloadPdf}
+            disabled={!!pdfExportBusy || pending}
+            className="mt-3 w-full min-h-[44px] rounded-xl border border-indigo-400/50 bg-indigo-500/10 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-100 disabled:opacity-40"
+          >
+            {pdfExportBusy ? (
+              <Loader2 size={16} className="animate-spin shrink-0" />
+            ) : (
+              <Download size={16} className="shrink-0" />
+            )}
+            Stáhnout PDF
+          </button>
+        ) : null}
       </MobileCard>
 
       {/* Error */}
@@ -648,6 +672,8 @@ export function ContractsReviewScreen({
   const [detailOpen, setDetailOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [pdfExportBusy, setPdfExportBusy] = useState(false);
+  const { toast, showToast, dismissToast } = useToast();
 
   async function fetchList() {
     try {
@@ -799,10 +825,57 @@ export function ContractsReviewScreen({
     });
   }
 
+  async function handleDownloadPdf() {
+    if (!detail) return;
+    setPdfExportBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/contracts/review/${detail.id}`, { cache: "no-store" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error || "Načtení detailu pro export selhalo.");
+      }
+      const json = (await res.json()) as Record<string, unknown>;
+      let pdfUrl = "";
+      try {
+        const fr = await fetch(`/api/contracts/review/${detail.id}/file`, { cache: "no-store" });
+        if (fr.ok) {
+          const fj = (await fr.json()) as { url?: string };
+          if (typeof fj.url === "string") pdfUrl = fj.url;
+        }
+      } catch {
+        /* optional */
+      }
+      const mapped = mapApiToExtractionDocument(json, pdfUrl);
+      const isFailed = mapped.processingStatus === "failed";
+      const isProcessing = mapped.processingStatus === "uploaded" || mapped.processingStatus === "processing";
+      if (isFailed || isProcessing || !hasMeaningfulReviewContent(mapped)) {
+        showToast("PDF export pro tento stav není k dispozici.", "error");
+        return;
+      }
+      const blob = await buildAiReviewPdfBlob(mapped, {});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = aiReviewPdfFileName(mapped);
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast("PDF bylo staženo.", "success");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Export PDF se nepodařil.", "error");
+    } finally {
+      setPdfExportBusy(false);
+    }
+  }
+
   const isTablet = deviceClass === "tablet" || deviceClass === "desktop";
 
   return (
     <>
+      <Toast toast={toast} onDismiss={dismissToast} />
       {error ? <ErrorState title={error} onRetry={fetchList} /> : null}
 
       {/* Header */}
@@ -888,6 +961,8 @@ export function ContractsReviewScreen({
                 onApply={handleApply}
                 onSelectClient={(id) => startTransition(async () => { await selectMatchedClient(detail.id, id); await fetchDetail(detail.id); })}
                 onCreateNewClient={() => startTransition(async () => { await confirmCreateNewClient(detail.id); await fetchDetail(detail.id); })}
+                onDownloadPdf={() => void handleDownloadPdf()}
+                pdfExportBusy={pdfExportBusy}
               />
             ) : (
               <div className="h-full flex items-center justify-center">
@@ -921,6 +996,8 @@ export function ContractsReviewScreen({
               onApply={handleApply}
               onSelectClient={(id) => startTransition(async () => { await selectMatchedClient(detail.id, id); await fetchDetail(detail.id); })}
               onCreateNewClient={() => startTransition(async () => { await confirmCreateNewClient(detail.id); await fetchDetail(detail.id); })}
+              onDownloadPdf={() => void handleDownloadPdf()}
+              pdfExportBusy={pdfExportBusy}
             />
           ) : (
             <LoadingSkeleton rows={3} />

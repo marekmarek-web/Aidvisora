@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Shield,
   CreditCard,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { createTask } from "@/app/actions/tasks";
@@ -27,6 +28,7 @@ import type {
   FieldFilter,
 } from "@/lib/ai-review/types";
 import { hasMeaningfulReviewContent } from "@/lib/ai-review/mappers";
+import { aiReviewPdfFileName, buildAiReviewPdfBlob } from "@/lib/ai-review/build-ai-review-pdf";
 import { ExtractionLeftPanel } from "./ExtractionLeftPanel";
 
 const PDFViewerPanel = dynamic(
@@ -191,11 +193,13 @@ export function AIReviewExtractionShell({
   const [rejectReason, setRejectReason] = useState("");
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [applyOverrideEnabled, setApplyOverrideEnabled] = useState(false);
+  const [pdfExportBusy, setPdfExportBusy] = useState(false);
   const toast = useToast();
 
   const isFailed = doc.processingStatus === "failed";
   const isProcessing = doc.processingStatus === "uploaded" || doc.processingStatus === "processing";
   const hasData = hasMeaningfulReviewContent(doc);
+  const canExportPdf = !isFailed && !isProcessing && hasData;
   const isPending = doc.reviewStatus === "pending" || !doc.reviewStatus;
   const canApproveReject =
     isPending &&
@@ -291,6 +295,29 @@ export function AIReviewExtractionShell({
     if (!onApproveAndApply) return;
     void Promise.resolve(onApproveAndApply(state.editedFields, resolveApplyOverrideOptions()));
   }, [onApproveAndApply, resolveApplyOverrideOptions, state.editedFields]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    setPdfExportBusy(true);
+    try {
+      const blob = await buildAiReviewPdfBlob(doc, state.editedFields, {
+        dismissedRecommendationIds: state.dismissedRecommendations,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = aiReviewPdfFileName(doc);
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.showToast("PDF bylo staženo.", "success");
+    } catch {
+      toast.showToast("Export PDF se nepodařil.", "error");
+    } finally {
+      setPdfExportBusy(false);
+    }
+  }, [doc, state.dismissedRecommendations, state.editedFields, toast]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden -m-4 md:-m-6">
@@ -604,14 +631,31 @@ export function AIReviewExtractionShell({
         >
           <div className="shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 md:px-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)]"
-              >
-                <ArrowLeft size={14} />
-                <span>Zpět</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)]"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Zpět</span>
+                </button>
+                {canExportPdf ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadPdf()}
+                    disabled={pdfExportBusy}
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 text-xs font-black uppercase tracking-widest text-indigo-800 transition-colors hover:bg-indigo-100 disabled:opacity-50"
+                  >
+                    {pdfExportBusy ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Download size={14} />
+                    )}
+                    <span>Stáhnout PDF</span>
+                  </button>
+                ) : null}
+              </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {canApproveReject ? (
                   <button
