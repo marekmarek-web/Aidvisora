@@ -1,6 +1,6 @@
 # AI Review — manuální regrese na PDF korpusu
 
-Korpus žije ve složce **`Test AI/`** (kořen monorepa). **Plný inventář** (C001–C027, `familyBucket`, očekávané typy): [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md) a [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json).
+Korpus žije ve složce **`Test AI/`** (kořen monorepa). **Plný inventář** (C001–C029, `familyBucket`, `expectedOutputMode`, očekávané typy): [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md) a [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json).
 
 Část PDF může být **jen lokálně** (ne v gitu); sloupec „v git“ v inventáři odpovídá `git ls-files -- Test AI/`. Pro aktualizaci strojového stavu po přidání PDF do repa spusť z kořene repa: `node fixtures/golden-ai-review/regenerate-manifest.cjs` (přepočítá `gitTracked`).
 

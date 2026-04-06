@@ -2,7 +2,7 @@
 
 Konkrétní, testovatelné věty. Splnění = pro daný golden scénář (G01–G12) bez regrese.
 
-**Odkaz na korpus:** kde je v textu název souboru, eval prováděj primárně proti příslušnému ID **C001–C027** v [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) — viz [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md). Např. bod 1 ↔ **C003**, bod 2 ↔ **C019**, bod 3 ↔ **C004**, bod 4 ↔ **C023**.
+**Odkaz na korpus:** kde je v textu název souboru, eval prováděj primárně proti příslušnému ID **C001–C029** v [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) — viz [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md). Např. bod 1 ↔ **C003**, bod 2 ↔ **C019**, bod 3 ↔ **C004**, bod 4 ↔ **C023**.
 
 ---
 

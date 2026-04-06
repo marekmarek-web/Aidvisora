@@ -1,7 +1,7 @@
 # Fáze 1 — golden dataset (scénáře pravdy)
 
 **Účel:** Tvrdý referenční rámec pro Fázi 2+ (eval, regrese, acceptance).  
-**Širší korpus:** Každý reálný PDF má záznam **C001–C027** v [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) (`corpusDocuments`: `familyBucket`, `expectedPrimaryType`, entity, pole, zakázané akce, review flagy, `expectedAssistantRelevance`). Přehledová tabulka: [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md). **G01–G12** dál slouží jako agregační scénáře; mapování **G → C** je v manifestu (`scenarios[].coversCorpusIds`).
+**Širší korpus:** Každý řádek korpusu má záznam **C001–C029** v [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) (`corpusDocuments`: `familyBucket`, `expectedPrimaryType`, Fáze 1 navíc `expectedOutputMode`, `expectedCoreFields`, `expectedActions*`, `expectedFallbackBehavior` u reference, entity, pole, zakázané akce, review flagy, `expectedAssistantRelevance`). Přehledová tabulka: [ai-review-assistant-phase-1-corpus-inventory.md](./ai-review-assistant-phase-1-corpus-inventory.md). **G01–G12** dál slouží jako agregační scénáře; mapování **G → C** je v manifestu (`scenarios[].coversCorpusIds`).
 
 **PDF soubory:** pod `Test AI/`; část jen lokálně (není v gitu). Soubor `Hanna Havdan GČP.pdf` může chybět ve fyzické složce — doplnit lokálně dle master plánu.
 
@@ -200,4 +200,4 @@ Legenda **publishable**: zda má systém dovolit „apply jako smlouvu / visible
 
 ## Manifest
 
-Strojový index: [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) — **`version`: 2**, pole `scenarios` + `corpusDocuments`. Po přidání PDF do gitu nebo změně cesty spusť z kořene repa: `node fixtures/golden-ai-review/regenerate-manifest.cjs`.
+Strojový index: [`fixtures/golden-ai-review/scenarios.manifest.json`](../fixtures/golden-ai-review/scenarios.manifest.json) — **`version`: 3**, pole `scenarios` + `corpusDocuments`. Po přidání PDF do gitu nebo změně cesty spusť z kořene repa: `node fixtures/golden-ai-review/regenerate-manifest.cjs`.

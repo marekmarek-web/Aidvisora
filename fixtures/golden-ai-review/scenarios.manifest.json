@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "description": "Phase 1–3: G01–G12 + corpusDocuments C001–C027. Phase 2 adds packetMeta (bundle detection). Phase 3 adds participants[], insuredRisks[], investmentData, paymentData, publishHints. Human table: docs/ai-review-assistant-phase-1-corpus-inventory.md",
+  "description": "Phase 1–3: G01–G12 + corpusDocuments C001–C029. Phase 2 packetMeta; Phase 3 participants, paymentData, publishHints. Phase 1 golden: expectedOutputMode, expectedCoreFields, release gate. Human: docs/ai-review-assistant-phase-1-corpus-inventory.md",
   "phase2_3_new_envelope_fields": [
     "packetMeta",
     "participants",
@@ -33,7 +33,6 @@
       "coversCorpusIds": [
         "C003",
         "C007",
-        "C011",
         "C013"
       ]
     },
@@ -44,13 +43,22 @@
       "expectedPrimaryType": "life_insurance_investment_contract",
       "publishableAsContract": "partial",
       "referenceFile": "Test AI/Hanna Havdan GČP.pdf",
-      "coversCorpusIds": ["C009", "C014", "C027"],
+      "coversCorpusIds": [
+        "C009",
+        "C014",
+        "C027"
+      ],
       "phase2_acceptance": {
         "expectedPacketIsBundle": true,
-        "expectedSubdocumentTypes": ["final_contract", "health_questionnaire"],
+        "expectedSubdocumentTypes": [
+          "final_contract",
+          "health_questionnaire"
+        ],
         "expectedHasSensitiveAttachment": true,
         "expectedHasUnpublishableSection": true,
-        "expectedReviewWarningCodes": ["multi_section_bundle_detected"]
+        "expectedReviewWarningCodes": [
+          "multi_section_bundle_detected"
+        ]
       },
       "phase3_acceptance": {
         "expectedParticipantsMinCount": 0,
@@ -70,12 +78,20 @@
       "expectedPrimaryType": "life_insurance_proposal",
       "publishableAsContract": true,
       "referenceFile": "Test AI/Lehnert Metlife.pdf",
-      "coversCorpusIds": ["C008", "C009"],
+      "coversCorpusIds": [
+        "C008",
+        "C009"
+      ],
       "phase3_acceptance": {
         "expectedParticipantsMinCount": 0,
-        "expectedParticipantRoles": ["policyholder", "insured"],
+        "expectedParticipantRoles": [
+          "policyholder",
+          "insured"
+        ],
         "expectedInsuredRisksPresent": true,
-        "forbidden": ["merge_two_persons_into_one"],
+        "forbidden": [
+          "merge_two_persons_into_one"
+        ],
         "evalNote": "Participant extraction returns minimal data for scanned MetLife proposal PDF in eval environment (no Adobe preprocessing). Multi-person routing is verified via family/primary/publish checks."
       }
     },
@@ -86,11 +102,20 @@
       "expectedPrimaryType": "investment_subscription_document",
       "publishableAsContract": true,
       "referenceFile": "Test AI/AMUNDI PLATFORMA - účet CZ KLASIK - DIP (4).pdf",
-      "coversCorpusIds": ["C004", "C005", "C018", "C021", "C022"],
+      "coversCorpusIds": [
+        "C004",
+        "C005",
+        "C018",
+        "C021",
+        "C022",
+        "C029"
+      ],
       "phase3_acceptance": {
         "expectedInvestmentDataPresent": false,
         "expectedPaymentDataPresent": false,
-        "expectedPublishHints": { "contractPublishable": true },
+        "expectedPublishHints": {
+          "contractPublishable": true
+        },
         "evalNote": "Investment/payment data completeness is non-deterministic in eval environment (Anthropic extraction of AMUNDI DIP without Adobe preprocessing returns variable fields). Family/type routing is verified via family/primary/publish checks."
       }
     },
@@ -135,9 +160,17 @@
       "expectedPrimaryType": "consent_or_declaration",
       "publishableAsContract": false,
       "referenceFile": "Test AI/komis sml. aml fatca (1).pdf",
-      "coversCorpusIds": ["C006", "C020", "C023", "C016"],
+      "coversCorpusIds": [
+        "C006",
+        "C016",
+        "C020",
+        "C023",
+        "C028"
+      ],
       "phase2_acceptance": {
-        "expectedSubdocumentTypes": ["aml_fatca_form"],
+        "expectedSubdocumentTypes": [
+          "aml_fatca_form"
+        ],
         "expectedHasUnpublishableSection": true
       },
       "phase3_acceptance": {
@@ -213,7 +246,30 @@
       "mapsToGoldenScenarioIds": [
         "G07"
       ],
-      "corpusNote": "Hypoteční návrh; ověřit návrh vs čerpání."
+      "corpusNote": "Hypoteční návrh; ověřit návrh vs čerpání.",
+      "expectedFamily": "mortgage",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "borrower_lender_block",
+      "expectedCoreFields": [
+        "principal",
+        "interestRate",
+        "borrowerName",
+        "lenderName",
+        "drawingDateOrSchedule"
+      ],
+      "expectedActionsForbidden": [
+        "classify_as_consumer_loan_only",
+        "drop_co_borrower_when_present"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Hypoteční návrh; ověřit návrh vs čerpání."
     },
     {
       "id": "C002",
@@ -248,7 +304,31 @@
       "expectedAssistantRelevance": "post_upload_plan",
       "mapsToGoldenScenarioIds": [
         "G01"
-      ]
+      ],
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "contractNumber",
+        "institutionName",
+        "productName",
+        "effectiveDate",
+        "premiumAmount",
+        "paymentFrequency"
+      ],
+      "expectedActionsForbidden": [
+        "apply_as_modelation_without_override",
+        "wrong_client_match_from_attachment"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": ""
     },
     {
       "id": "C003",
@@ -279,7 +359,28 @@
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [
         "G02"
-      ]
+      ],
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "modelation_or_precontract",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "institutionName",
+        "productName",
+        "premiumAmount",
+        "illustrationDates"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_final_contract_without_override"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "block_auto_publish_as_final_contract",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": ""
     },
     {
       "id": "C004",
@@ -312,7 +413,28 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "DIP; rozlišit od pojistného produktu."
+      "corpusNote": "DIP; rozlišit od pojistného produktu.",
+      "expectedFamily": "investment",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "institutionName",
+        "strategyOrFund",
+        "contributionAmount",
+        "iban"
+      ],
+      "expectedActionsForbidden": [
+        "classify_as_pure_life_insurance"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "DIP; rozlišit od pojistného produktu."
     },
     {
       "id": "C005",
@@ -342,7 +464,27 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "DPS smlouva."
+      "corpusNote": "DPS smlouva.",
+      "expectedFamily": "investment",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "institutionName",
+        "contributionAmount",
+        "contractOrParticipantRef"
+      ],
+      "expectedActionsForbidden": [
+        "misclassify_as_consumer_loan"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "DPS smlouva."
     },
     {
       "id": "C006",
@@ -371,7 +513,32 @@
       "mapsToGoldenScenarioIds": [
         "G09"
       ],
-      "corpusNote": "Změna / servis u stávající pojistky."
+      "corpusNote": "Změna / servis u stávající pojistky.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "policyholder_block_not_insurer_marketing_header",
+      "expectedCoreFields": [
+        "policyReference",
+        "changeDescription"
+      ],
+      "expectedActionsForbidden": [
+        "create_new_contract_as_greenfield"
+      ],
+      "expectedActionsAllowed": [
+        "classify_supporting_or_service",
+        "summarize_for_vault",
+        "no_structured_contract_publish",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Změna / servis u stávající pojistky.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "Změna nebo servis u existující pojistné smlouvy; ne nová smlouva.",
+        "expectedPurposeHint": "Aktualizace krytí / údajů u stávající pojistky.",
+        "recommendedNextStep": "Párovat k existujícímu kontraktu v CRM; nepublikovat jako nový produktový kontrakt.",
+        "noProductPublishPayload": true
+      }
     },
     {
       "id": "C007",
@@ -399,7 +566,27 @@
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [
         "G02"
-      ]
+      ],
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "modelation_or_precontract",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "institutionName",
+        "productName",
+        "premiumAmount"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_final_contract_without_override"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "block_auto_publish_as_final_contract",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": ""
     },
     {
       "id": "C008",
@@ -432,7 +619,29 @@
       "mapsToGoldenScenarioIds": [
         "G04"
       ],
-      "corpusNote": "Multi-person MetLife návrh."
+      "corpusNote": "Multi-person MetLife návrh.",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "insuredPersons",
+        "institutionName",
+        "premiumAmount",
+        "productName"
+      ],
+      "expectedActionsForbidden": [
+        "merge_two_persons_into_one_name"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Multi-person MetLife návrh."
     },
     {
       "id": "C009",
@@ -466,7 +675,28 @@
         "G03",
         "G04"
       ],
-      "corpusNote": "Bundle: návrh + zdravotní části (master plán)."
+      "corpusNote": "Bundle: návrh + zdravotní části (master plán).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "mixed_sensitive",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "premiumAmount",
+        "proposalOrContractRef",
+        "healthSectionSignals"
+      ],
+      "expectedActionsForbidden": [
+        "treat_health_appendix_as_portal_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Bundle: návrh + zdravotní části (master plán)."
     },
     {
       "id": "C010",
@@ -495,7 +725,28 @@
       ],
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "non_life motor (POV). Bucket life_proposal = insurance offer stage; taxonomie může být rozšířena ve Fázi 2."
+      "corpusNote": "non_life motor (POV). Bucket life_proposal = insurance offer stage; taxonomie může být rozšířena ve Fázi 2.",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "vehicleIdentifier",
+        "institutionName",
+        "premiumAmount"
+      ],
+      "expectedActionsForbidden": [
+        "force_life_insurance_taxonomy"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "non_life motor (POV). Bucket life_proposal = insurance offer stage; taxonomie může být rozšířena ve Fázi 2."
     },
     {
       "id": "C011",
@@ -522,10 +773,30 @@
         "apply_barrier_proposal"
       ],
       "expectedAssistantRelevance": "post_upload_plan",
-      "mapsToGoldenScenarioIds": [
-        "G02"
+      "mapsToGoldenScenarioIds": [],
+      "corpusNote": "Návrh odpovědnosti (ČSOB dle master plánu).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "institutionName",
+        "premiumAmount",
+        "paymentAccount",
+        "variableSymbol"
       ],
-      "corpusNote": "Návrh odpovědnosti (ČSOB dle master plánu)."
+      "expectedActionsForbidden": [
+        "map_motor_rules_onto_liability_doc"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Návrh odpovědnosti (ČSOB dle master plánu)."
     },
     {
       "id": "C012",
@@ -553,7 +824,28 @@
       ],
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "non_life majetek/domácnost."
+      "corpusNote": "non_life majetek/domácnost.",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "propertyAddress",
+        "institutionName",
+        "premiumAmount"
+      ],
+      "expectedActionsForbidden": [
+        "map_to_life_segment_in_crm"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "non_life majetek/domácnost."
     },
     {
       "id": "C013",
@@ -582,7 +874,28 @@
       "mapsToGoldenScenarioIds": [
         "G02"
       ],
-      "corpusNote": "Velký export návrhu; stejná očekávání jako ostatní návrhy."
+      "corpusNote": "Velký export návrhu; stejná očekávání jako ostatní návrhy.",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "institutionName",
+        "premiumAmount",
+        "productName"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_final_without_confirmation"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Velký export návrhu; stejná očekávání jako ostatní návrhy."
     },
     {
       "id": "C014",
@@ -613,7 +926,28 @@
       "mapsToGoldenScenarioIds": [
         "G03"
       ],
-      "corpusNote": "Pillow úraz/nemoc + zdravotní části (master plán)."
+      "corpusNote": "Pillow úraz/nemoc + zdravotní části (master plán).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "mixed_sensitive",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "premiumAmount",
+        "paymentAccount",
+        "healthSignals"
+      ],
+      "expectedActionsForbidden": [
+        "ignore_health_sensitivity"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Pillow úraz/nemoc + zdravotní části (master plán)."
     },
     {
       "id": "C015",
@@ -641,7 +975,28 @@
       ],
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "Podnikatelská odpovědnost (neživot)."
+      "corpusNote": "Podnikatelská odpovědnost (neživot).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "institutionName",
+        "premiumAmount",
+        "coverageLimits"
+      ],
+      "expectedActionsForbidden": [
+        "apply_life_insurance_schema"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Podnikatelská odpovědnost (neživot)."
     },
     {
       "id": "C016",
@@ -670,7 +1025,32 @@
       "mapsToGoldenScenarioIds": [
         "G09"
       ],
-      "corpusNote": "DP podklady; evidence / analýza, ne CRM smlouva."
+      "corpusNote": "DP podklady; evidence / analýza, ne CRM smlouva.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "company_tax_subject_reference_only",
+      "expectedCoreFields": [
+        "companyName",
+        "taxPeriod"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_insurance_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_supporting_or_service",
+        "summarize_for_vault",
+        "no_structured_contract_publish",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "DP podklady; evidence / analýza, ne CRM smlouva.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "Daňové přiznání právnické osoby; podklad k analýze.",
+        "expectedPurposeHint": "Compliance / majetková situace klienta.",
+        "recommendedNextStep": "Uložit jako referenční dokument; nepovinné mapování do pojistné smlouvy.",
+        "noProductPublishPayload": true
+      }
     },
     {
       "id": "C017",
@@ -697,7 +1077,28 @@
       ],
       "expectedAssistantRelevance": "post_upload_plan",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "Ověřit návrh vs finální smlouva podle záhlaví (checklist)."
+      "corpusNote": "Ověřit návrh vs finální smlouva podle záhlaví (checklist).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "institutionName",
+        "premiumAmount",
+        "productName"
+      ],
+      "expectedActionsForbidden": [
+        "commit_final_contract_without_verifying_header"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Ověřit návrh vs finální smlouva podle záhlaví (checklist)."
     },
     {
       "id": "C018",
@@ -727,7 +1128,27 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "Conseq DPS (master plán)."
+      "corpusNote": "Conseq DPS (master plán).",
+      "expectedFamily": "investment",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "institutionName",
+        "contributionAmount",
+        "nominatedPersons"
+      ],
+      "expectedActionsForbidden": [
+        "classify_as_life_insurance_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Conseq DPS (master plán)."
     },
     {
       "id": "C019",
@@ -760,7 +1181,29 @@
       ],
       "aliasFileNames": [
         "Test AI/Smlouva_o_ČSOB_Spotřebitelském_úvěru.pdf"
-      ]
+      ],
+      "expectedFamily": "consumer_credit",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "borrower_lender_block",
+      "expectedCoreFields": [
+        "borrowerName",
+        "lenderName",
+        "principal",
+        "installment",
+        "termMonths"
+      ],
+      "expectedActionsForbidden": [
+        "classify_as_mortgage"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": ""
     },
     {
       "id": "C020",
@@ -788,7 +1231,33 @@
       "mapsToGoldenScenarioIds": [
         "G09"
       ],
-      "corpusNote": "CODYA servisní / rámcová investiční smlouva."
+      "corpusNote": "CODYA servisní / rámcová investiční smlouva.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "client_provider_service_block",
+      "expectedCoreFields": [
+        "clientName",
+        "providerName",
+        "scopeSummary"
+      ],
+      "expectedActionsForbidden": [
+        "auto_create_client_product_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_supporting_or_service",
+        "summarize_for_vault",
+        "no_structured_contract_publish",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "CODYA servisní / rámcová investiční smlouva.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "Servisní nebo rámcová smlouva o poskytování služeb (investiční platforma).",
+        "expectedPurposeHint": "Rámec vztahu klient–poskytovatel služeb.",
+        "recommendedNextStep": "Trezor / reference; nesloučit automaticky s konkrétním úpisem fondu bez kontroly.",
+        "noProductPublishPayload": true
+      }
     },
     {
       "id": "C021",
@@ -817,7 +1286,28 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "CODYA úpis."
+      "corpusNote": "CODYA úpis.",
+      "expectedFamily": "investment",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "investorName",
+        "institutionName",
+        "isinOrFundName",
+        "account"
+      ],
+      "expectedActionsForbidden": [
+        "treat_as_life_policy"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "CODYA úpis."
     },
     {
       "id": "C022",
@@ -844,7 +1334,27 @@
       "mapsToGoldenScenarioIds": [
         "G05"
       ],
-      "corpusNote": "Penzijní rámec VL; rozlišit PP vs DPS."
+      "corpusNote": "Penzijní rámec VL; rozlišit PP vs DPS.",
+      "expectedFamily": "investment",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "participantName",
+        "institutionName",
+        "productFramework"
+      ],
+      "expectedActionsForbidden": [
+        "confuse_pp_with_pure_investment"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Penzijní rámec VL; rozlišit PP vs DPS."
     },
     {
       "id": "C023",
@@ -873,7 +1383,32 @@
       "mapsToGoldenScenarioIds": [
         "G09"
       ],
-      "corpusNote": "AML/FATCA / komisionářská dokumentace."
+      "corpusNote": "AML/FATCA / komisionářská dokumentace.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "high_sensitivity",
+      "expectedClientBindingType": "signatory_party_institution_header_not_auto_broker",
+      "expectedCoreFields": [
+        "documentKind",
+        "signatureDate"
+      ],
+      "expectedActionsForbidden": [
+        "publish_as_standard_product_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_supporting_or_service",
+        "summarize_for_vault",
+        "no_structured_contract_publish",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "AML/FATCA / komisionářská dokumentace.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "AML / FATCA / souhlas nebo prohlášení.",
+        "expectedPurposeHint": "Regulatorní dokumentace a souhlasy.",
+        "recommendedNextStep": "Vysoce citlivé; pouze trezor a ruční kontrola; nepublikovat jako standardní produktovou smlouvu.",
+        "noProductPublishPayload": true
+      }
     },
     {
       "id": "C024",
@@ -906,7 +1441,29 @@
       "mapsToGoldenScenarioIds": [
         "G07"
       ],
-      "corpusNote": "RB hypotéka / úvěr na bydlení; více stran."
+      "corpusNote": "RB hypotéka / úvěr na bydlení; více stran.",
+      "expectedFamily": "mortgage",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "borrower_lender_block",
+      "expectedCoreFields": [
+        "borrowerName",
+        "lenderName",
+        "principal",
+        "interestRate",
+        "security"
+      ],
+      "expectedActionsForbidden": [
+        "single_borrower_when_two_listed"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "RB hypotéka / úvěr na bydlení; více stran."
     },
     {
       "id": "C025",
@@ -937,7 +1494,28 @@
       "mapsToGoldenScenarioIds": [
         "G08"
       ],
-      "corpusNote": "Leasing / podnikatelské financování; POV/HAV v textu."
+      "corpusNote": "Leasing / podnikatelské financování; POV/HAV v textu.",
+      "expectedFamily": "leasing",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "lessee_lessor_block",
+      "expectedCoreFields": [
+        "lesseeName",
+        "financedAmount",
+        "vin",
+        "registrationPlate"
+      ],
+      "expectedActionsForbidden": [
+        "map_to_consumer_loan_schema"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Leasing / podnikatelské financování; POV/HAV v textu."
     },
     {
       "id": "C026",
@@ -964,7 +1542,28 @@
       ],
       "expectedAssistantRelevance": "review_detail_context",
       "mapsToGoldenScenarioIds": [],
-      "corpusNote": "Generali odpovědnost při výkonu povolání (master plán)."
+      "corpusNote": "Generali odpovědnost při výkonu povolání (master plán).",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "signature_ready_proposal",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "policyholderName",
+        "institutionName",
+        "premiumAmount",
+        "coverageLimits"
+      ],
+      "expectedActionsForbidden": [
+        "treat_as_life"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_publish_after_advisor_confirmation",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Generali odpovědnost při výkonu povolání (master plán)."
     },
     {
       "id": "C027",
@@ -996,7 +1595,139 @@
       "mapsToGoldenScenarioIds": [
         "G03"
       ],
-      "corpusNote": "Komplexní balík (master plán); soubor nemusí být fyzicky v každém git checkout – doplnit lokálně do Test AI/."
+      "corpusNote": "Komplexní balík (master plán); soubor nemusí být fyzicky v každém git checkout – doplnit lokálně do Test AI/.",
+      "expectedFamily": "life_insurance",
+      "expectedPublishability": "partial",
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "mixed_sensitive",
+      "expectedClientBindingType": "insured_policyholder_block_not_insurer_header",
+      "expectedCoreFields": [
+        "contractNumber",
+        "institutionName",
+        "premiumAmount",
+        "investmentStrategy"
+      ],
+      "expectedActionsForbidden": [
+        "publish_health_bundle_as_single_visible_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Komplexní balík (master plán); soubor nemusí být fyzicky v každém git checkout – doplnit lokálně do Test AI/."
+    },
+    {
+      "id": "C028",
+      "familyBucket": "service_or_aml_or_supporting_doc",
+      "referenceFile": "Test AI/SMLOUVA O POSKYTOVÁNÍ SLUŽEB.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "service_agreement",
+      "publishable": false,
+      "isPacket": false,
+      "expectedEntities": [
+        "client",
+        "provider"
+      ],
+      "expectedExtractedFields": [
+        "effectiveDate",
+        "scopeSummary",
+        "institutionName"
+      ],
+      "expectedForbiddenActions": [
+        "auto_create_client_product_contract",
+        "publish_as_insurance_contract"
+      ],
+      "expectedReviewFlags": [
+        "manual_review_required",
+        "reference_only"
+      ],
+      "expectedAssistantRelevance": "review_detail_context",
+      "mapsToGoldenScenarioIds": [
+        "G09"
+      ],
+      "corpusNote": "Codya / platforma — smlouva o poskytování služeb (git korpus); referenční/servisní dráha.",
+      "expectedFamily": "compliance",
+      "expectedPublishability": false,
+      "expectedOutputMode": "reference_or_supporting_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "client_provider_service_block",
+      "expectedCoreFields": [
+        "clientName",
+        "providerName",
+        "scopeSummary"
+      ],
+      "expectedActionsForbidden": [
+        "auto_create_client_product_contract",
+        "publish_as_insurance_contract"
+      ],
+      "expectedActionsAllowed": [
+        "classify_supporting_or_service",
+        "summarize_for_vault",
+        "no_structured_contract_publish",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Codya / platforma — smlouva o poskytování služeb (git korpus); referenční/servisní dráha.",
+      "expectedFallbackBehavior": {
+        "expectedSummaryFocus": "Smlouva o poskytování služeb (Codya / platforma).",
+        "expectedPurposeHint": "Obecný servisní rámec mezi klientem a poskytovatelem.",
+        "recommendedNextStep": "Reference lane; párovat k investičnímu vztahu; ne jako samostatná pojistná smlouva.",
+        "noProductPublishPayload": true
+      }
+    },
+    {
+      "id": "C029",
+      "familyBucket": "investment_or_dip_or_dps",
+      "referenceFile": "Test AI/Investiční smlouva Codya.pdf",
+      "gitTracked": false,
+      "expectedPrimaryType": "investment_subscription_document",
+      "publishable": true,
+      "isPacket": false,
+      "expectedEntities": [
+        "investor",
+        "fundPlatform"
+      ],
+      "expectedExtractedFields": [
+        "institutionName",
+        "productName",
+        "account",
+        "effectiveDate"
+      ],
+      "expectedForbiddenActions": [
+        "treat_as_life_policy",
+        "classify_as_pure_life_insurance"
+      ],
+      "expectedReviewFlags": [
+        "review_required"
+      ],
+      "expectedAssistantRelevance": "review_detail_context",
+      "mapsToGoldenScenarioIds": [
+        "G05"
+      ],
+      "corpusNote": "Investiční smlouva Codya (git korpus); strukturovaná investiční dráha.",
+      "expectedFamily": "investment",
+      "expectedPublishability": true,
+      "expectedOutputMode": "structured_product_document",
+      "expectedSensitivity": "standard",
+      "expectedClientBindingType": "investor_institution_block",
+      "expectedCoreFields": [
+        "investorName",
+        "institutionName",
+        "productName",
+        "accountOrReference"
+      ],
+      "expectedActionsForbidden": [
+        "treat_as_life_policy",
+        "classify_as_pure_life_insurance"
+      ],
+      "expectedActionsAllowed": [
+        "classify_document",
+        "extract_core_fields",
+        "allow_product_lane_when_eligible",
+        "advisor_review"
+      ],
+      "expectedNotesForAdvisor": "Investiční smlouva Codya (git korpus); strukturovaná investiční dráha."
     }
   ]
 }
