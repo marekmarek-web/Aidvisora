@@ -713,6 +713,7 @@ LEASING / FINANCOVÁNÍ — povinná extrakce:
 - interestRate (úroková sazba pokud je uvedena)
 - financedObject (předmět financování — druh/typ objektu, obchodní název)
 - vin / serialNumber (VIN číslo nebo výrobní číslo předmětu)
+- registrationPlate / spz (registrační značka vozidla — pokud je uvedena v dokumentu)
 - purpose / businessPurpose (účel financování, podnikatelský kontext)
 - requiredInsurance (povinné pojištění — pojistné podmínky pokud jsou uvedeny)
 - paymentAccount / accountForPayment (číslo účtu pro splátky)

@@ -669,6 +669,7 @@ const CORE_FIELD_ALIASES: Record<string, RegExp> = {
   isinOrFundName: /isin|fundName|isinOrFundName|strategyOrFund/i,
   account: /account|iban|accountNumber|bankAccount/i,
   iban: /iban|accountNumber|bankAccount/i,
+  accountOrReference: /accountOrReference|bankAccount|variableSymbol|accountNumber|contractNumber/i,
   strategyOrFund: /strategyOrFund|fundName|strategy|isin/i,
   contributionAmount: /contributionAmount|regularAmount|premiumAmount|amount/i,
   nominatedPersons: /nominatedPersons|obmyslene|beneficiaries/i,

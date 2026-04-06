@@ -593,6 +593,14 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "policyStartDate",
         "effectiveDate",
       ]);
+      mergeFromAliases(ef, "accountOrReference", [
+        "bankAccount",
+        "variableSymbol",
+        "accountNumber",
+        "contractNumber",
+        "investicniUcet",
+        "cisloUctu",
+      ]);
       deriveInvestmentStrategyFromNested(ef);
       break;
 
@@ -691,6 +699,14 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "vlastniZdroje",
         "mimoradnaSplatka",
         "ownResources",
+      ]);
+      mergeFromAliases(ef, "registrationPlate", [
+        "spz",
+        "spzNumber",
+        "licensePlate",
+        "ecv",
+        "registrationNumber",
+        "statniZnacka",
       ]);
       mergeFromAliases(ef, "intermediaryName", [
         "advisorName",

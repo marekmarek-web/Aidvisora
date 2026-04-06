@@ -1434,6 +1434,7 @@ POVINNÁ POLE — musíš extrahovat pokud jsou v dokumentu přítomna:
 - maturityDate: datum ukončení
 - financedObject: předmět financování (vozidlo, stroj, zařízení)
 - vin: VIN nebo výrobní číslo předmětu
+- registrationPlate / spz: registrační značka vozidla pokud je uvedena
 - purpose: účel financování
 
 ZÁKAZNÍK vs VĚŘITEL:
