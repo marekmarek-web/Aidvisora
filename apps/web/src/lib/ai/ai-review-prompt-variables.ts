@@ -68,6 +68,7 @@ export const AI_REVIEW_PROMPT_REQUIRED_VARS: Partial<Record<AiReviewPromptKey, r
   retirementProductExtraction: EXTRACTION_REQUIRED,
   dipExtraction: EXTRACTION_REQUIRED,
   buildingSavingsExtraction: EXTRACTION_REQUIRED,
+  leasingExtraction: EXTRACTION_REQUIRED,
   loanContractExtraction: EXTRACTION_REQUIRED,
   mortgageExtraction: EXTRACTION_REQUIRED,
   paymentInstructionsExtraction: PAYMENT_EXTRACTION_REQUIRED,

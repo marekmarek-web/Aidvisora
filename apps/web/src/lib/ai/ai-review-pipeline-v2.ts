@@ -1233,6 +1233,41 @@ export async function runAiReviewV2Pipeline(
         throw new Error(pr.error);
       }
       rawExtraction = pr.text;
+
+      // Stored prompt divergence guard: detect if stored prompt returned a classifier-shaped
+      // response instead of an extraction envelope. This happens when the stored prompt content
+      // is outdated (e.g. it was the classifier prompt, not the extraction prompt).
+      // When detected, fall through to local template if text is available.
+      if (allowTextSecondPass && documentTextForExtraction.length >= 400) {
+        const parsedStoredResult = parseJsonObjectFromAiReviewRaw(rawExtraction);
+        const isClassifierShape = parsedStoredResult != null && (
+          typeof parsedStoredResult.rawClassification === "string" ||
+          (typeof parsedStoredResult.normalizedDocumentType === "string" && parsedStoredResult.recommendedRoute != null) ||
+          typeof parsedStoredResult.supportedForDirectExtraction === "boolean"
+        );
+        if (isClassifierShape) {
+          (trace as Record<string, unknown>).storedPromptDivergenceDetected = true;
+          (trace as Record<string, unknown>).storedPromptDivergenceKey = promptKey;
+          console.warn(`[ai-review-v2] stored_prompt_divergence_detected { key: "${promptKey}", shape: "classifier_response" } → falling back to local template`);
+          const localTemplate = getPromptTemplateContent(promptKey);
+          if (localTemplate?.systemPrompt) {
+            const vars2 = buildAiReviewExtractionPromptVariables({
+              documentText: documentTextForExtraction,
+              classificationReasons: classification.reasons,
+              adobeSignals: buildAdobeSignalsSummary(options?.preprocessMeta ?? null),
+              filename: options?.sourceFileName?.trim() || "unknown",
+              bundleSectionTexts: options?.bundleSectionTexts ?? null,
+            });
+            let sysPrompt2 = localTemplate.systemPrompt;
+            for (const [k, v] of Object.entries(vars2)) {
+              sysPrompt2 = sysPrompt2.replaceAll(`{{${k}}}`, typeof v === "string" ? v : "");
+            }
+            rawExtraction = await createResponse(sysPrompt2, { routing: { category: "ai_review" } });
+            extractionBuilder = "schema_text_wrap";
+            (trace as Record<string, unknown>).localTemplateFallback = `divergence:${promptKey}`;
+          }
+        }
+      }
     } else if (allowTextSecondPass) {
       trace.extractionSecondPass = "text";
       extractionBuilder = "schema_text_wrap";

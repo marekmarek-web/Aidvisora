@@ -18,7 +18,7 @@ Generováno jako součást auditu. **Prompt Builder** musí používat přesně 
 | Prompt key | Env proměnná (ID) | Soubor spec v `ai uceni/` | Stav |
 |------------|-------------------|---------------------------|------|
 | `docClassifierV2` | `OPENAI_PROMPT_AI_REVIEW_DOC_CLASSIFIER_ID` | `ai-review-doc-classifier-v1.txt` | OK |
-| `insuranceContractExtraction` | `OPENAI_PROMPT_AI_REVIEW_INSURANCE_CONTRACT_EXTRACTION_ID` | `ai-review-insurance-contract-extraction-v1.txt` | OK |
+| `insuranceContractExtraction` | `OPENAI_PROMPT_AI_REVIEW_INSURANCE_CONTRACT_EXTRACTION_ID` | `ai-review-insurance-contract-extraction-v2.txt` | **RUČNÍ AKCE POTŘEBNÁ** — stored prompt v4 vrací classifier shape, pipeline má divergence guard; viz v2 spec pro update |
 | `insuranceProposalModelation` | `OPENAI_PROMPT_AI_REVIEW_INSURANCE_PROPOSAL_MODELATION_ID` | `ai-review-insurance-proposal-modelation-v1.txt` | OK |
 | `insuranceAmendment` | `OPENAI_PROMPT_AI_REVIEW_INSURANCE_AMENDMENT_ID` | `ai-review-insurance-amendment-v1.txt` | OK |
 | `nonLifeInsuranceExtraction` | `OPENAI_PROMPT_AI_REVIEW_NON_LIFE_INSURANCE_EXTRACTION_ID` | `ai-review-non-life-insurance-extraction-v1.txt` | OK |
@@ -32,6 +32,7 @@ Generováno jako součást auditu. **Prompt Builder** musí používat přesně 
 | `mortgageExtraction` | `OPENAI_PROMPT_AI_REVIEW_MORTGAGE_EXTRACTION_ID` | `ai-review-mortgage-extraction-v1.txt` (zástupný spec) | Future / zástupný |
 | `paymentInstructionsExtraction` | `OPENAI_PROMPT_AI_REVIEW_PAYMENT_INSTRUCTIONS_EXTRACTION_ID` | `ai-review-payment-instructions-extraction-v1.txt` | OK |
 | `supportingDocumentExtraction` | `OPENAI_PROMPT_AI_REVIEW_SUPPORTING_DOCUMENT_EXTRACTION_ID` | `ai-review-supporting-document-extraction-v1.txt` | OK |
+| `leasingExtraction` | `OPENAI_PROMPT_AI_REVIEW_LEASING_EXTRACTION_ID` | `ai-review-leasing-extraction-v1.txt` | **RUČNÍ AKCE POTŘEBNÁ** — vytvořit nový stored prompt v Prompt Builderu; dočasně bridge na legacyFinancialProductExtraction |
 | `legacyFinancialProductExtraction` | `OPENAI_PROMPT_AI_REVIEW_LEGACY_FINANCIAL_PRODUCT_EXTRACTION_ID` | `ai-review-legacy-financial-product-extraction-v1.txt` | OK |
 | `terminationDocumentExtraction` | `OPENAI_PROMPT_AI_REVIEW_TERMINATION_DOCUMENT_ID` | `ai-review-termination-document-v1.txt` (zástupný spec) | Zástupný |
 | `consentIdentificationExtraction` | `OPENAI_PROMPT_AI_REVIEW_CONSENT_IDENTIFICATION_ID` | `ai-review-consent-identification-v1.txt` (zástupný spec) | Zástupný |
@@ -50,3 +51,24 @@ Tyto txt patří k jiným funkcím (copilot / portál), ne k tabulce výše:
 
 1. Zástupné soubory `ai-review-*-v1.txt` u `investmentProposal`, `mortgageExtraction`, `termination*`, `consent*`, `confirmation*` doplň v Prompt Builderu a sem vlož export ID / stručný popis výstupu.
 2. Po každé změně šablony v OpenAI zvýšit **verzi** promptu, pokud používáte `OPENAI_PROMPT_*_VERSION` (dnes u `docClassifierV2`, `reviewDecision`, `clientMatch`).
+
+## Ruční akce v OpenAI Prompt Builderu (Phase 5A)
+
+### 1. `leasingExtraction` — nový stored prompt
+- Spec: `ai uceni/ai-review-leasing-extraction-v1.txt`
+- Aktuálně: dočasně bridge na `legacyFinancialProductExtraction` ID → divergence guard → local template fallback
+- Po vytvoření: doplnit `pmpt_***` do `.env.local` jako `OPENAI_PROMPT_AI_REVIEW_LEASING_EXTRACTION_ID`
+- Proměnné v Prompt Builderu: `extracted_text`, `classification_reasons`, `adobe_signals`, `filename`
+
+### 2. `insuranceContractExtraction` — update stávajícího stored promptu
+- Stored prompt ID: `pmpt_69c53af89c088195bc749ef3a43983be06a726b6a6491df5`
+- Spec pro novou verzi: `ai uceni/ai-review-insurance-contract-extraction-v2.txt`
+- Problém: stávající v4 vrací classifier shape → pipeline divergence guard detekuje + přejde na local template
+- Po update: přidat všechny proměnné (viz v2 spec), nahradit system prompt, kliknout Update
+- Bez změny env ID (ID zůstane stejné, jen nová verze)
+
+### Divergence guard v kódu
+Pipeline v `ai-review-pipeline-v2.ts` automaticky detekuje, kdy stored prompt vrátí classifier-shaped JSON
+(`rawClassification`, `normalizedDocumentType`, `recommendedRoute`, `supportedForDirectExtraction`)
+a automaticky přejde na local template fallback. Trace bude obsahovat `storedPromptDivergenceDetected: true`.
+Po ruční aktualizaci stored promptů bude divergence guard přeskočen a stored prompt path bude primární.
