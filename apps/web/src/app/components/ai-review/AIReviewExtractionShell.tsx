@@ -320,6 +320,8 @@ type Props = {
   onApply?: (options?: { overrideGateReasons?: string[]; overrideReason?: string }) => void;
   onSelectClient?: (clientId: string) => void;
   onConfirmCreateNew?: () => void;
+  /** Fáze 11: Per-field pending confirmation */
+  onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
   isApproving?: boolean;
   actionLoading?: string | null;
   onRefreshPdf?: () => void | Promise<void>;
@@ -335,6 +337,7 @@ export function AIReviewExtractionShell({
   onApply,
   onSelectClient,
   onConfirmCreateNew,
+  onConfirmPendingField,
   isApproving,
   actionLoading,
   onRefreshPdf,
@@ -900,6 +903,7 @@ export function AIReviewExtractionShell({
               onDismissRec={handleDismissRec}
               onRestoreRec={handleRestoreRec}
               onCreateTask={handleCreateTask}
+              onConfirmPendingField={onConfirmPendingField}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-8">

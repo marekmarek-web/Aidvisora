@@ -52,6 +52,17 @@ export type ApplyResultPayload = {
     contractEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
     paymentEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
   };
+  /**
+   * Fáze 11: Per-field confirmation trace — záznamy o potvrzení jednotlivých pending polí poradcem.
+   * Klíč = fieldKey (např. "birthDate", "contractNumber"), hodnota = metadata potvrzení.
+   */
+  confirmedFieldsTrace?: Record<string, {
+    confirmedAt: string;
+    confirmedBy: string;
+    scope: "contact" | "contract" | "payment";
+    targetId: string | null;
+    fromValue: unknown;
+  }>;
 };
 
 /** Extraction trace stored in DB (no document content). */

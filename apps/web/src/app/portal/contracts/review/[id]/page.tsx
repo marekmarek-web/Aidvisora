@@ -10,6 +10,7 @@ import {
   selectMatchedClient,
   confirmCreateNewClient,
   linkContractReviewFileToContactDocuments,
+  confirmPendingField,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
@@ -449,6 +450,22 @@ export default function ContractReviewDetailPage() {
     }
   }, [id, toast, load]);
 
+  /** Fáze 11: Per-field pending confirmation handler */
+  const handleConfirmPendingField = useCallback(
+    async (fieldKey: string, scope: "contact" | "contract" | "payment") => {
+      const result = await confirmPendingField(id, fieldKey, scope);
+      if (result.ok) {
+        toast.showToast(`Pole "${fieldKey}" potvrzeno a zapsáno.`, "success");
+        // Optimistic update — refresh dat pro přepočet počtů
+        load();
+      } else {
+        toast.showToast(result.error ?? "Potvrzení selhalo.", "error");
+        throw new Error(result.error);
+      }
+    },
+    [id, toast, load]
+  );
+
   if (processingStatus === "uploaded" || processingStatus === "processing") {
     return <ProcessingProgress stepHint={processingStepHint} />;
   }
@@ -582,6 +599,7 @@ export default function ContractReviewDetailPage() {
         onApply={handleApply}
         onSelectClient={handleSelectClient}
         onConfirmCreateNew={handleConfirmCreateNew}
+        onConfirmPendingField={handleConfirmPendingField}
         isApproving={actionLoading === "approve"}
         actionLoading={actionLoading}
         onRefreshPdf={loadPdf}

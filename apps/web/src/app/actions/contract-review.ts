@@ -19,7 +19,7 @@ import {
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
 import { logActivity } from "./activity";
 import { db } from "db";
-import { contacts, documents } from "db";
+import { contacts, documents, clientPaymentSetups, auditLog } from "db";
 import { eq, and } from "db";
 import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 
@@ -447,4 +447,174 @@ export async function linkContractReviewFileToContactDocuments(
   }
 
   return { ok: true, documentId: newId };
+}
+
+// ─── Fáze 11: Per-field Pending Confirmation ──────────────────────────────────
+
+export type ConfirmPendingFieldResult =
+  | { ok: true; updatedPayload: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
+  | { ok: false; error: string };
+
+/**
+ * Fáze 11: Potvrdí jedno konkrétní pending pole inline.
+ *
+ * Bezpečnostní guardy:
+ * - Pole musí být skutečně v pendingConfirmationFields (prefill_confirm policy)
+ * - manual_required a do_not_apply pole nelze tímto flow potvrdit
+ * - supporting document guard nesmí být obcházen
+ * - Pro payment scope: nastaví clientPaymentSetups.needsHumanReview = false
+ * - Pro contact/contract scope: zapíše trace bez zápisu do contacts/contracts (data již zapsána)
+ * - Idempotentní: druhé potvrzení stejného pole je bezpečně ignorováno
+ */
+export async function confirmPendingField(
+  reviewId: string,
+  fieldKey: string,
+  scope: "contact" | "contract" | "payment",
+): Promise<ConfirmPendingFieldResult> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:write")) {
+    return { ok: false, error: "Nemáte oprávnění." };
+  }
+
+  const row = await getContractReviewById(reviewId, auth.tenantId);
+  if (!row) return { ok: false, error: "Položka nenalezena." };
+
+  if (row.reviewStatus !== "applied") {
+    return { ok: false, error: "Potvrzení pole je možné jen u aplikovaných kontrol." };
+  }
+
+  const trace = row.applyResultPayload?.policyEnforcementTrace;
+  if (!trace) {
+    return { ok: false, error: "Enforcement trace nenalezen — nelze ověřit stav pole." };
+  }
+
+  // Supporting document guard — supporting docs nesmí dostat confirm flow pro contract-like scope
+  if (trace.supportingDocumentGuard && (scope === "contract" || scope === "payment")) {
+    return { ok: false, error: "Podpůrný dokument nemůže mít potvrzení smluvních nebo platebních polí." };
+  }
+
+  // Ověř, že pole je opravdu v pending (prefill_confirm) stavu
+  const scopeEnforcement = scope === "contact"
+    ? trace.contactEnforcement
+    : scope === "contract"
+      ? trace.contractEnforcement
+      : trace.paymentEnforcement;
+
+  if (!scopeEnforcement) {
+    return { ok: false, error: `Scope "${scope}" nemá enforcement data.` };
+  }
+
+  // Hard guard: manual_required a do_not_apply nesmí dostat confirm CTA
+  if (scopeEnforcement.manualRequiredFields.includes(fieldKey)) {
+    return { ok: false, error: `Pole "${fieldKey}" vyžaduje ruční doplnění — nelze potvrdit jako prefill.` };
+  }
+  if (scopeEnforcement.excludedFields.includes(fieldKey)) {
+    return { ok: false, error: `Pole "${fieldKey}" je vyloučeno ze zápisu — nelze potvrdit.` };
+  }
+
+  // Idempotent: pole již bylo potvrzeno
+  const existingConfirmed = row.applyResultPayload?.confirmedFieldsTrace ?? {};
+  if (existingConfirmed[fieldKey]) {
+    return { ok: true, updatedPayload: row.applyResultPayload! };
+  }
+
+  if (!scopeEnforcement.pendingConfirmationFields.includes(fieldKey)) {
+    return { ok: false, error: `Pole "${fieldKey}" není ve stavu "čeká na potvrzení" pro scope "${scope}".` };
+  }
+
+  // Načti hodnotu z draftActions nebo extractedPayload pro audit trace
+  const extractedFields = (row.extractedPayload as Record<string, unknown> | null)?.extractedFields as
+    | Record<string, { value?: unknown } | undefined>
+    | undefined;
+  const fromValue = extractedFields?.[fieldKey]?.value ?? null;
+
+  // Zjisti target ID pro scope
+  let targetId: string | null = null;
+  if (scope === "contact") {
+    targetId = row.applyResultPayload?.createdClientId ?? row.applyResultPayload?.linkedClientId ?? null;
+  } else if (scope === "contract") {
+    targetId = row.applyResultPayload?.createdContractId ?? null;
+  } else if (scope === "payment") {
+    targetId = row.applyResultPayload?.createdPaymentSetupId ?? null;
+  }
+
+  // Pro payment scope: nastav needsHumanReview = false v clientPaymentSetups
+  // (jen pokud jsou všechna pending payment pole potvrzena)
+  if (scope === "payment" && targetId) {
+    const allPaymentPending = scopeEnforcement.pendingConfirmationFields;
+    const alreadyConfirmedPayment = Object.entries(existingConfirmed)
+      .filter(([, v]) => (v as { scope: string }).scope === "payment")
+      .map(([k]) => k);
+    // Po přidání tohoto pole — zbývají ještě jiná?
+    const remainingPending = allPaymentPending.filter(
+      (f) => f !== fieldKey && !alreadyConfirmedPayment.includes(f)
+    );
+    if (remainingPending.length === 0) {
+      // Všechna payment pending pole jsou potvrzena → odblokuj payment setup
+      await db
+        .update(clientPaymentSetups)
+        .set({ needsHumanReview: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(clientPaymentSetups.id, targetId),
+            eq(clientPaymentSetups.tenantId, auth.tenantId),
+          )
+        );
+    }
+  }
+
+  // Zapíše audit log
+  await db.insert(auditLog).values({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "confirm_pending_field",
+    entityType: "contract_review",
+    entityId: reviewId,
+    meta: {
+      reviewId,
+      fieldKey,
+      scope,
+      targetId,
+      fromValue,
+    },
+  });
+
+  // Aktualizuj applyResultPayload — přidej do confirmedFieldsTrace
+  const updatedTrace: NonNullable<typeof existingConfirmed> = {
+    ...existingConfirmed,
+    [fieldKey]: {
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: auth.userId,
+      scope,
+      targetId,
+      fromValue,
+    },
+  };
+
+  // Přepočítej summary — confirmed pole přesuneme z pending do auto (zobrazovací)
+  const updatedPolicyTrace = {
+    ...trace,
+    [scope === "contact" ? "contactEnforcement" : scope === "contract" ? "contractEnforcement" : "paymentEnforcement"]: {
+      ...scopeEnforcement,
+      pendingConfirmationFields: scopeEnforcement.pendingConfirmationFields.filter((f) => f !== fieldKey),
+      autoAppliedFields: [...scopeEnforcement.autoAppliedFields, fieldKey],
+    },
+    summary: {
+      ...trace.summary,
+      totalPendingConfirmation: Math.max(0, trace.summary.totalPendingConfirmation - 1),
+      totalAutoApplied: trace.summary.totalAutoApplied + 1,
+    },
+  };
+
+  const updatedPayload = {
+    ...row.applyResultPayload!,
+    policyEnforcementTrace: updatedPolicyTrace,
+    confirmedFieldsTrace: updatedTrace,
+  };
+
+  await updateContractReview(reviewId, auth.tenantId, {
+    applyResultPayload: updatedPayload,
+  });
+
+  return { ok: true, updatedPayload };
 }

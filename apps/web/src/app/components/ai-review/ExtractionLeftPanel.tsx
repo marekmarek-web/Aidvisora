@@ -739,9 +739,75 @@ function resolveFieldResultStatus(
   return null;
 }
 
-/* ─── Fáze 10: Enforcement Result Card (replaces CrmMappingProposalCard after apply) ── */
+/* ─── Fáze 10+11: Enforcement Result Card (replaces CrmMappingProposalCard after apply) ── */
 
-function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
+const SCOPE_KEY_MAP: Record<string, "contact" | "contract" | "payment"> = {
+  contactEnforcement: "contact",
+  contractEnforcement: "contract",
+  paymentEnforcement: "payment",
+};
+
+function PendingFieldRow({
+  fieldKey,
+  scope,
+  onConfirmPendingField,
+}: {
+  fieldKey: string;
+  scope: "contact" | "contract" | "payment";
+  onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  if (confirmed) {
+    return (
+      <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 rounded px-1.5 py-0.5">
+        <CheckCircle2 size={10} className="shrink-0" />
+        {fieldKey} — Potvrzeno a zapsáno
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 pl-2 pr-1 py-0.5">
+      <span className="text-[10px] font-semibold text-amber-900">{fieldKey}</span>
+      {onConfirmPendingField ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await onConfirmPendingField(fieldKey, scope);
+              setConfirmed(true);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded px-1.5 py-0.5 transition-colors disabled:opacity-50 min-h-[20px]"
+          title={`Potvrdit pole ${fieldKey}`}
+        >
+          {busy ? (
+            <span className="inline-block w-2.5 h-2.5 border border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Check size={9} />
+          )}
+          {busy ? "" : "Potvrdit"}
+        </button>
+      ) : (
+        <ApplyResultBadge status="pending" />
+      )}
+    </div>
+  );
+}
+
+function EnforcementResultCard({
+  doc,
+  onConfirmPendingField,
+}: {
+  doc: ExtractionDocument;
+  onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const trace = doc.applyResultPayload?.policyEnforcementTrace;
   if (!doc.isApplied || !trace) return null;
@@ -749,15 +815,26 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
   const s = trace.summary;
   const isSupporting = trace.supportingDocumentGuard;
 
+  // Auto-open pokud jsou pending pole k potvrzení
+  const hasPending = s.totalPendingConfirmation > 0 && !isSupporting;
+
   return (
-    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-emerald-200 shadow-sm overflow-hidden">
+    <div className={`bg-[color:var(--wp-surface-card)] rounded-[20px] border shadow-sm overflow-hidden ${hasPending ? "border-amber-300" : "border-emerald-200"}`}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-5 md:px-6 py-4 flex items-center justify-between text-left"
       >
-        <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 size={14} className="text-emerald-600" />
-          {isSupporting ? "Výsledek zpracování podkladu" : "Výsledek zápisu do CRM"}
+        <span className={`text-[11px] font-black uppercase tracking-widest flex items-center gap-2 ${hasPending ? "text-amber-800" : "text-emerald-800"}`}>
+          {hasPending ? (
+            <Clock size={14} className="text-amber-600" />
+          ) : (
+            <CheckCircle2 size={14} className="text-emerald-600" />
+          )}
+          {isSupporting
+            ? "Výsledek zpracování podkladu"
+            : hasPending
+              ? `Výsledek zápisu — ${s.totalPendingConfirmation} čeká na potvrzení`
+              : "Výsledek zápisu do CRM"}
         </span>
         {open ? (
           <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" />
@@ -766,7 +843,7 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
         )}
       </button>
 
-      {open && (
+      {(open || hasPending) && (
         <div className="px-5 md:px-6 pb-5 pt-0 border-t border-emerald-100 space-y-3">
           {isSupporting ? (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
@@ -791,7 +868,7 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
                   <Clock size={16} className="text-amber-600 shrink-0" />
                   <div>
                     <div className="text-base font-black text-amber-800 tabular-nums">{s.totalPendingConfirmation}</div>
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-amber-700 leading-tight">K potvrzení</div>
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-amber-700 leading-tight">Čeká na potvrzení</div>
                   </div>
                 </div>
               )}
@@ -816,7 +893,7 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
             </div>
           )}
 
-          {/* Per-section breakdown */}
+          {/* Per-section breakdown s inline Potvrdit tlačítky pro pending pole */}
           {!isSupporting && (
             <div className="space-y-3 mt-1">
               {[
@@ -826,29 +903,67 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
               ].map(({ key, label }) => {
                 const e = trace[key];
                 if (!e) return null;
-                const allRows: Array<{ status: ApplyResultStatus; fields: string[] }> = [
-                  { status: "auto" as const, fields: e.autoAppliedFields },
-                  { status: "pending" as const, fields: e.pendingConfirmationFields },
-                  { status: "manual" as const, fields: e.manualRequiredFields },
-                  { status: "excluded" as const, fields: e.excludedFields },
-                ];
-                const rows = allRows.filter((r) => r.fields.length > 0);
-                if (rows.length === 0) return null;
+                const scope = SCOPE_KEY_MAP[key];
+                const hasAny = e.autoAppliedFields.length + e.pendingConfirmationFields.length +
+                  e.manualRequiredFields.length + e.excludedFields.length > 0;
+                if (!hasAny) return null;
                 return (
                   <div key={key}>
                     <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5">{label}</p>
                     <div className="space-y-1.5">
-                      {rows.map(({ status, fields }) => (
-                        <div key={status} className="flex flex-wrap gap-1 items-center">
-                          <ApplyResultBadge status={status} />
+                      {/* Auto-applied pole */}
+                      {e.autoAppliedFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-center">
+                          <ApplyResultBadge status="auto" />
                           <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">—</span>
-                          {fields.map((f) => (
+                          {e.autoAppliedFields.map((f) => (
                             <span key={f} className="text-[10px] font-semibold text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] rounded px-1.5 py-0.5">
                               {f}
                             </span>
                           ))}
                         </div>
-                      ))}
+                      )}
+                      {/* Pending pole — s inline Potvrdit */}
+                      {e.pendingConfirmationFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-start">
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            <ApplyResultBadge status="pending" />
+                            <span className="text-[10px] text-[color:var(--wp-text-tertiary)] ml-0.5">—</span>
+                          </div>
+                          {e.pendingConfirmationFields.map((f) => (
+                            <PendingFieldRow
+                              key={f}
+                              fieldKey={f}
+                              scope={scope}
+                              onConfirmPendingField={onConfirmPendingField}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {/* Manual required pole */}
+                      {e.manualRequiredFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-center">
+                          <ApplyResultBadge status="manual" />
+                          <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">—</span>
+                          {e.manualRequiredFields.map((f) => (
+                            <span key={f} className="text-[10px] font-semibold text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] rounded px-1.5 py-0.5">
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Excluded pole */}
+                      {e.excludedFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-center">
+                          <ApplyResultBadge status="excluded" />
+                          <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">—</span>
+                          {e.excludedFields.map((f) => (
+                            <span key={f} className="text-[10px] font-semibold text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] rounded px-1.5 py-0.5">
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -861,7 +976,7 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
               <p className="text-xs font-bold text-amber-900 leading-snug flex items-start gap-1.5">
                 <Clock size={13} className="shrink-0 mt-0.5 text-amber-600" />
-                {s.totalPendingConfirmation} {s.totalPendingConfirmation === 1 ? "pole bylo" : "pole byla"} předvyplněno a čeká na ověření poradcem. Zkontrolujte tato pole přímo v záznamu klienta nebo smlouvy.
+                {s.totalPendingConfirmation} {s.totalPendingConfirmation === 1 ? "pole čeká" : "polí čeká"} na potvrzení poradcem — klikněte <strong>Potvrdit</strong> u každého pole výše.
               </p>
             </div>
           )}
@@ -871,7 +986,7 @@ function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
             <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-2.5">
               <p className="text-xs font-bold text-rose-900 leading-snug flex items-start gap-1.5">
                 <Pencil size={13} className="shrink-0 mt-0.5 text-rose-600" />
-                {s.totalManualRequired} {s.totalManualRequired === 1 ? "pole vyžaduje" : "pole vyžadují"} ruční doplnění — automatický zápis nebyl možný. Doplňte chybějící data ručně v záznamu.
+                {s.totalManualRequired} {s.totalManualRequired === 1 ? "pole vyžaduje" : "polí vyžaduje"} ruční doplnění — automatický zápis nebyl možný. Doplňte data ručně v záznamu.
               </p>
             </div>
           )}
@@ -1539,6 +1654,8 @@ type LeftPanelProps = {
   onDismissRec: (id: string) => void;
   onRestoreRec: (id: string) => void;
   onCreateTask: (rec: AIRecommendation) => void | Promise<void>;
+  /** Fáze 11: Per-field pending confirmation */
+  onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
 };
 
 export function ExtractionLeftPanel({
@@ -1553,6 +1670,7 @@ export function ExtractionLeftPanel({
   onDismissRec,
   onRestoreRec,
   onCreateTask,
+  onConfirmPendingField,
 }: LeftPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -1635,8 +1753,8 @@ export function ExtractionLeftPanel({
           <div data-section="recommendations" className="space-y-6">
             {/* 4E: CRM mapping proposal – payload detail before apply (hidden after apply) */}
             <CrmMappingProposalCard doc={doc} />
-            {/* Fáze 10: Enforcement result card – shown after apply */}
-            <EnforcementResultCard doc={doc} />
+            {/* Fáze 10+11: Enforcement result card – shown after apply */}
+            <EnforcementResultCard doc={doc} onConfirmPendingField={onConfirmPendingField} />
             <WorkActionsCard doc={doc} />
             <AIRecommendationsCard
               recommendations={doc.recommendations}
