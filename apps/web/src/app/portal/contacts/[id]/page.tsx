@@ -5,8 +5,9 @@ import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, MessageSquare } from "lucide-react";
-import { getContact } from "@/app/actions/contacts";
+import { getContact, getContactAiProvenance, type ContactAiProvenanceResult } from "@/app/actions/contacts";
 import { getHouseholdForContact } from "@/app/actions/households";
+import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { ContractsSection } from "@/app/dashboard/contacts/[id]/ContractsSection";
 import { SendPaymentPdfButton } from "@/app/dashboard/contacts/[id]/SendPaymentPdfButton";
 import { ContactActivityTimeline } from "@/app/dashboard/contacts/[id]/ContactActivityTimeline";
@@ -244,6 +245,24 @@ function ContactTabBody({
   }
 }
 
+/**
+ * Fáze 13: resoluje per-field AI provenance pro contact identity pole.
+ * Vrací null pokud pro dané pole neexistuje AI provenance evidence.
+ */
+function resolveContactFieldProvenance(
+  fieldKey: string,
+  provenance: ContactAiProvenanceResult,
+): { kind: "confirmed" | "auto_applied"; reviewId: string; confirmedAt?: string | null } | null {
+  if (!provenance) return null;
+  if (provenance.confirmedFields.includes(fieldKey)) {
+    return { kind: "confirmed", reviewId: provenance.reviewId, confirmedAt: provenance.appliedAt };
+  }
+  if (provenance.autoAppliedFields.includes(fieldKey)) {
+    return { kind: "auto_applied", reviewId: provenance.reviewId };
+  }
+  return null;
+}
+
 export default async function ContactDetailPage({ params, searchParams }: PageProps) {
   const { id: rawId } = await params;
   const contactId = rawId?.trim() ?? "";
@@ -287,14 +306,22 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
     clientOpportunities: null,
     nextBestAction: null,
   };
+  let contactProvenance: ContactAiProvenanceResult = null;
   if (tab === "prehled") {
     try {
-      [household, latestGenerations] = await Promise.all([
+      [household, latestGenerations, contactProvenance] = await Promise.all([
         getHouseholdForContact(contactId),
         getLatestClientGenerations(contactId),
+        getContactAiProvenance(contactId),
       ]);
     } catch {
       /* Sekundární data – přehled doplní prázdné bloky */
+    }
+  } else {
+    try {
+      contactProvenance = await getContactAiProvenance(contactId);
+    } catch {
+      /* provenance je neblokující */
     }
   }
 
@@ -355,37 +382,88 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                 </div>
               </div>
               <div className="pt-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
                   <h1 className="text-2xl md:text-3xl font-black text-[color:var(--wp-text)] tracking-tight">
                     {contact.firstName} {contact.lastName}
                   </h1>
                   <ContactTagsEditor contactId={contactId} initialTags={contact.tags ?? []} />
                 </div>
+                {(() => {
+                  const pFirst = resolveContactFieldProvenance("firstName", contactProvenance);
+                  const pLast = resolveContactFieldProvenance("lastName", contactProvenance);
+                  const p = pFirst ?? pLast;
+                  if (!p) return null;
+                  return (
+                    <div className="mb-2">
+                      <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-[color:var(--wp-text-secondary)]">
-                  {contact.email && (
-                    <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors min-h-[44px] md:min-h-0">
-                      <Mail size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
-                      <span className="truncate">{contact.email}</span>
-                    </a>
-                  )}
-                  {contact.phone && (
-                    <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors min-h-[44px] md:min-h-0">
-                      <Phone size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
-                      {contact.phone}
-                    </a>
-                  )}
-                  {addressLine && (
-                    <span className="flex items-center gap-2 min-h-[44px] md:min-h-0">
-                      <MapPin size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
-                      <span className="truncate">{addressLine}</span>
-                    </span>
-                  )}
-                  {contact.birthDate && (
-                    <span className="flex items-center gap-2 min-h-[44px] md:min-h-0">
-                      <Calendar size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
-                      {contact.birthDate}
-                    </span>
-                  )}
+                  {contact.email && (() => {
+                    const p = resolveContactFieldProvenance("email", contactProvenance);
+                    return (
+                      <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
+                        <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors">
+                          <Mail size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                        {p && (
+                          <span className="pl-6">
+                            <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {contact.phone && (() => {
+                    const p = resolveContactFieldProvenance("phone", contactProvenance);
+                    return (
+                      <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
+                        <a href={`tel:${contact.phone!.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors">
+                          <Phone size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                          {contact.phone}
+                        </a>
+                        {p && (
+                          <span className="pl-6">
+                            <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {addressLine && (() => {
+                    const p = resolveContactFieldProvenance("address", contactProvenance);
+                    return (
+                      <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
+                        <span className="flex items-center gap-2">
+                          <MapPin size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                          <span className="truncate">{addressLine}</span>
+                        </span>
+                        {p && (
+                          <span className="pl-6">
+                            <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {contact.birthDate && (() => {
+                    const p = resolveContactFieldProvenance("birthDate", contactProvenance);
+                    return (
+                      <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
+                        <span className="flex items-center gap-2">
+                          <Calendar size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+                          {contact.birthDate}
+                        </span>
+                        {p && (
+                          <span className="pl-6">
+                            <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

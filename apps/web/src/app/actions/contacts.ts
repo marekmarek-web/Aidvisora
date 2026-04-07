@@ -5,8 +5,8 @@ import { requireAuthInAction, type AuthContext } from "@/lib/auth/require-auth";
 import { getHouseholdIdForContactWithAuth, getHouseholdsListWithAuth } from "@/app/actions/households";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { contacts } from "db";
-import { eq, and, asc, inArray, isNull, sql } from "db";
+import { contacts, contractUploadReviews } from "db";
+import { eq, and, asc, inArray, isNull, sql, desc, or } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export type ContactRow = {
@@ -782,3 +782,88 @@ export async function setContactTags(contactId: string, tags: string[]): Promise
     .set({ tags: normalized.length ? normalized : null, updatedAt: new Date() })
     .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
 }
+
+/**
+ * Fáze 13: Contact-level AI provenance.
+ * Najde poslední applied review, které vytvořilo nebo linkovalo daný kontakt.
+ * Vrací per-field provenance pro contact identity pole.
+ */
+export type ContactAiProvenanceResult = {
+  reviewId: string;
+  appliedAt: string | null;
+  /** Pole potvrzená poradcem (z confirmedFieldsTrace, scope="contact") */
+  confirmedFields: string[];
+  /** Pole auto-aplikovaná z AI Review (z policyEnforcementTrace.contactEnforcement.autoAppliedFields) */
+  autoAppliedFields: string[];
+} | null;
+
+async function loadContactAiProvenance(contactId: string): Promise<ContactAiProvenanceResult> {
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:read")) return null;
+
+    const rows = await db
+      .select({
+        id: contractUploadReviews.id,
+        appliedAt: contractUploadReviews.appliedAt,
+        matchedClientId: contractUploadReviews.matchedClientId,
+        applyResultPayload: contractUploadReviews.applyResultPayload,
+      })
+      .from(contractUploadReviews)
+      .where(
+        and(
+          eq(contractUploadReviews.tenantId, auth.tenantId),
+          eq(contractUploadReviews.reviewStatus, "applied"),
+          or(
+            eq(contractUploadReviews.matchedClientId, contactId),
+            sql`${contractUploadReviews.applyResultPayload}->>'createdClientId' = ${contactId}`,
+            sql`${contractUploadReviews.applyResultPayload}->>'linkedClientId' = ${contactId}`,
+          ),
+        )
+      )
+      .orderBy(desc(contractUploadReviews.appliedAt))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) return null;
+
+    const payload = row.applyResultPayload as Record<string, unknown> | null | undefined;
+
+    // Confirmed fields: z confirmedFieldsTrace se scope = "contact"
+    const confirmedFieldsTrace = payload?.confirmedFieldsTrace as Record<string, { scope?: string }> | null | undefined;
+    const confirmedFields: string[] = [];
+    if (confirmedFieldsTrace) {
+      for (const [fieldKey, meta] of Object.entries(confirmedFieldsTrace)) {
+        if (meta?.scope === "contact") {
+          confirmedFields.push(fieldKey);
+        }
+      }
+    }
+
+    // Auto-applied fields: z policyEnforcementTrace.contactEnforcement.autoAppliedFields
+    const policyTrace = payload?.policyEnforcementTrace as Record<string, unknown> | null | undefined;
+    const contactEnforcement = policyTrace?.contactEnforcement as { autoAppliedFields?: string[] } | null | undefined;
+    const autoAppliedFields: string[] = contactEnforcement?.autoAppliedFields ?? [];
+
+    // Pokud pro tento kontakt nenajdeme žádná concrete pole, ale review ho vytvořilo/linkovalo,
+    // označíme základní identity pole jako auto_applied (kontakt byl vytvořen z AI Review).
+    const createdClientId = (payload?.createdClientId as string | undefined) ?? null;
+    const effectiveAutoApplied =
+      autoAppliedFields.length > 0
+        ? autoAppliedFields
+        : createdClientId === contactId
+        ? ["firstName", "lastName", "email", "phone", "birthDate", "personalId", "address"]
+        : autoAppliedFields;
+
+    return {
+      reviewId: row.id,
+      appliedAt: row.appliedAt ? row.appliedAt.toISOString() : null,
+      confirmedFields,
+      autoAppliedFields: effectiveAutoApplied,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export const getContactAiProvenance = cache(loadContactAiProvenance);
