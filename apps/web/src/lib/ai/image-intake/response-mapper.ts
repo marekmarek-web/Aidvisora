@@ -199,6 +199,31 @@ export function mapImageIntakeToAssistantResponse(
     }
   }
 
+  // Phase 9: Household / multi-client ambiguity surfacing
+  if (result.householdBinding) {
+    const hh = result.householdBinding;
+    if (hh.state === "household_ambiguous") {
+      suggestedNextSteps.push(
+        `⚠ Domácnost více klientů: ${hh.ambiguityNote ?? "Upřesněte, ke kterému klientovi obrázek patří."}`,
+      );
+    } else if (hh.state === "household_detected" && hh.ambiguityNote) {
+      suggestedNextSteps.push(`Domácnost: ${hh.ambiguityNote}`);
+    }
+  }
+
+  // Phase 9: Document multi-image set outcome
+  if (result.documentSetResult) {
+    const ds = result.documentSetResult;
+    if (ds.documentSetSummary) {
+      suggestedNextSteps.push(`Dokumentový set: ${ds.documentSetSummary}`);
+    }
+  }
+
+  // Phase 9: AI Review handoff lifecycle note
+  if (result.previewPayload.lifecycleStatusNote) {
+    suggestedNextSteps.push(result.previewPayload.lifecycleStatusNote);
+  }
+
   const sourceLabel = result.multimodalUsed
     ? `Image intake v4 (multimodal, ${response.actionPlan.outputMode})`
     : `Image intake (${response.actionPlan.outputMode})`;

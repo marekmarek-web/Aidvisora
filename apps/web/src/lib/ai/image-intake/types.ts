@@ -349,6 +349,26 @@ export type ImageIntakePreviewPayload = {
   /** Signals whether the plan is write-ready or needs advisor input first. */
   writeReady: boolean;
   warnings: string[];
+  /**
+   * Phase 9: Household / multi-client ambiguity note.
+   * Non-null when household_ambiguous or household_detected state was found.
+   */
+  householdAmbiguityNote: string | null;
+  /**
+   * Phase 9: Document multi-image set outcome note.
+   * Non-null when assets were evaluated as a document set.
+   */
+  documentSetNote: string | null;
+  /**
+   * Phase 9: AI Review handoff lifecycle note.
+   * Non-null when a reviewRowId is known and lifecycle was looked up.
+   */
+  lifecycleStatusNote: string | null;
+  /**
+   * Phase 9: Intent-assist cache status hint (for debug/ops visibility).
+   * Omitted from user-facing output but available for admin/logging.
+   */
+  intentAssistCacheStatus: import("./types").IntentAssistCacheStatus | null;
 };
 
 // ---------------------------------------------------------------------------

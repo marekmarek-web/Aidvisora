@@ -76,9 +76,11 @@ import { executeBatchMultimodalStrategy } from "./combined-multimodal-execution"
 import { extractCaseSignals, mergeCaseSignalBundles } from "./case-signal-extraction";
 import { resolveCaseBindingWithSignals } from "./binding-v2";
 import { reconstructCrossSessionThread, persistThreadArtifact, mergePersistedArtifacts } from "./cross-session-reconstruction";
-import { detectIntentChange, buildIntentChangeSummary } from "./intent-change-detection";
+import { detectIntentChange } from "./intent-change-detection";
 import { runIntentChangeAssist } from "./intent-change-assist";
 import { getImageIntakeConfig } from "./image-intake-config";
+import { buildDocumentSetPreviewNote } from "./document-set-intake";
+import { buildHandoffLifecycleNote } from "./handoff-lifecycle";
 import type {
   ThreadReconstructionResult,
   ReviewHandoffPayload,
@@ -86,6 +88,10 @@ import type {
   BatchMultimodalDecision,
   CrossSessionReconstructionResult,
   IntentChangeFinding,
+  HouseholdBindingResult,
+  DocumentMultiImageResult,
+  HandoffLifecycleFeedback,
+  IntentAssistCacheStatus,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -172,11 +178,37 @@ export function buildImageIntakePreview(
   caseBinding: CaseBindingResult,
   factBundle: ExtractedFactBundle,
   actionPlan: ImageIntakeActionPlan,
+  phase9?: {
+    householdBinding?: HouseholdBindingResult | null;
+    documentSetResult?: DocumentMultiImageResult | null;
+    lifecycleFeedback?: HandoffLifecycleFeedback | null;
+    intentAssistCacheStatus?: IntentAssistCacheStatus | null;
+  },
 ): ImageIntakePreviewPayload {
   const writeReady =
     actionPlan.recommendedActions.length > 0 &&
     !actionPlan.needsAdvisorInput &&
     (clientBinding.state === "bound_client_confident" || clientBinding.state === "bound_case_confident");
+
+  // Phase 9: household ambiguity note
+  const householdAmbiguityNote = phase9?.householdBinding?.ambiguityNote ?? null;
+
+  // Phase 9: document set note (from evaluator)
+  const documentSetNote: string | null = phase9?.documentSetResult
+    ? buildDocumentSetPreviewNote(phase9.documentSetResult)
+    : null;
+
+  // Phase 9: lifecycle note
+  const lifecycleStatusNote: string | null =
+    phase9?.lifecycleFeedback && phase9.lifecycleFeedback.status !== "unknown"
+      ? buildHandoffLifecycleNote(phase9.lifecycleFeedback)
+      : null;
+
+  const warnings = [...clientBinding.warnings, ...actionPlan.safetyFlags];
+  // Phase 9: surface household ambiguity as a warning
+  if (householdAmbiguityNote) {
+    warnings.push(householdAmbiguityNote);
+  }
 
   return {
     intakeId,
@@ -199,7 +231,11 @@ export function buildImageIntakePreview(
       reason: a.reason,
     })),
     writeReady,
-    warnings: [...clientBinding.warnings, ...actionPlan.safetyFlags],
+    warnings,
+    householdAmbiguityNote,
+    documentSetNote,
+    lifecycleStatusNote,
+    intentAssistCacheStatus: phase9?.intentAssistCacheStatus ?? null,
   };
 }
 
@@ -234,6 +270,14 @@ export type ImageIntakeOrchestratorResult = {
   crossSessionReconstruction: CrossSessionReconstructionResult | null;
   /** Phase 6: intent change detection finding. */
   intentChange: IntentChangeFinding | null;
+  /** Phase 9: household / multi-client binding result (null when not evaluated). */
+  householdBinding: import("./types").HouseholdBindingResult | null;
+  /** Phase 9: document multi-image set evaluator result (null when not applicable). */
+  documentSetResult: import("./types").DocumentMultiImageResult | null;
+  /** Phase 9: AI Review handoff lifecycle feedback (null when no reviewRowId known). */
+  lifecycleFeedback: import("./types").HandoffLifecycleFeedback | null;
+  /** Phase 9: intent-assist cache status from last assist call. */
+  intentAssistCacheStatus: import("./types").IntentAssistCacheStatus | null;
 };
 
 export async function processImageIntake(
@@ -343,6 +387,7 @@ export async function processImageIntake(
       stitchingResult, reviewHandoff: null, caseBindingV2: null,
       threadReconstruction: null, handoffPayload: null, caseSignals: null, batchDecision: null,
       combinedMultimodalResult: null, crossSessionReconstruction: null, intentChange: null,
+      householdBinding: null, documentSetResult: null, lifecycleFeedback: null, intentAssistCacheStatus: null,
     };
   }
 
@@ -543,14 +588,73 @@ export async function processImageIntake(
     );
 
     // Phase 7: Optional model assist for ambiguous intent (max 1 extra call)
+    // Phase 9: passes userId for persistent cache
     if (intentChange?.status === "ambiguous") {
       const assisted = await runIntentChangeAssist(
         intentChange,
         threadReconstruction.mergedFacts,
         effectiveRequest.tenantId,
+        effectiveRequest.userId,
       );
       if (assisted) intentChange = assisted;
     }
+  }
+
+  // Phase 9: Household / multi-client binding scope
+  let householdBinding: HouseholdBindingResult | null = null;
+  if (clientBinding.clientId && effectiveRequest.tenantId) {
+    try {
+      const { resolveHouseholdBinding } = await import("./binding-household");
+      householdBinding = await resolveHouseholdBinding(
+        effectiveRequest.tenantId,
+        clientBinding.clientId,
+        effectiveRequest.activeClientId,
+      );
+    } catch {
+      // Non-blocking — safe degradation
+    }
+  }
+
+  // Phase 9: Document multi-image set evaluation (for grouped_related document assets)
+  let documentSetResult: DocumentMultiImageResult | null = null;
+  if (stitchingResult && stitchingResult.hasGroupedAssets) {
+    const relatedDocGroup = stitchingResult.groups.find(
+      (g) =>
+        g.decision === "grouped_related" &&
+        g.assetIds.length >= 2,
+    );
+    if (relatedDocGroup) {
+      try {
+        const { evaluateDocumentMultiImageSet } = await import("./document-set-intake");
+        const perAssetBundles = new Map<string, ExtractedFactBundle>();
+        perAssetBundles.set(relatedDocGroup.primaryAssetId, factBundle);
+        documentSetResult = evaluateDocumentMultiImageSet(
+          relatedDocGroup,
+          stitchingClassMap,
+          perAssetBundles,
+        );
+        // If consolidated facts available, merge them into factBundle
+        if (
+          documentSetResult.decision === "consolidated_document_facts" &&
+          documentSetResult.mergedFactBundle
+        ) {
+          factBundle = documentSetResult.mergedFactBundle;
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+  }
+
+  // Phase 9: Track intent-assist cache status (from last assist call context)
+  let intentAssistCacheStatus: IntentAssistCacheStatus | null = null;
+  if (intentChange && threadReconstruction) {
+    const { lookupIntentAssistCache } = await import("./intent-assist-cache");
+    const lookup = lookupIntentAssistCache(
+      { ...intentChange, status: "ambiguous" },
+      threadReconstruction.mergedFacts,
+    );
+    intentAssistCacheStatus = lookup.cacheStatus;
   }
 
   // Phase 5: Structured handoff payload (when handoff recommended)
@@ -609,9 +713,15 @@ export async function processImageIntake(
 
   const previewSteps = executionPlan ? mapToPreviewItems(executionPlan) : [];
 
-  // 14. Preview payload
+  // 14. Preview payload (Phase 9: pass new context)
   const previewPayload = buildImageIntakePreview(
     intakeId, classification, clientBinding, finalCaseBinding, factBundle, actionPlan,
+    {
+      householdBinding,
+      documentSetResult,
+      lifecycleFeedback: null, // lifecycle is looked up on-demand after submit; not available during intake run
+      intentAssistCacheStatus,
+    },
   );
 
   // 15. Trace
@@ -644,5 +754,9 @@ export async function processImageIntake(
     combinedMultimodalResult,
     crossSessionReconstruction,
     intentChange,
+    householdBinding,
+    documentSetResult,
+    lifecycleFeedback: null,
+    intentAssistCacheStatus,
   };
 }

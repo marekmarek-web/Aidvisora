@@ -24,6 +24,7 @@ import { isFeatureEnabled } from "@/lib/admin/feature-flags";
 import type { IntentChangeFinding, MergedThreadFact } from "./types";
 import { getImageIntakeConfig } from "./image-intake-config";
 import { lookupIntentAssistCache, storeIntentAssistCache } from "./intent-assist-cache";
+import { lookupIntentAssistCachePersistent, storeIntentAssistCachePersistent } from "./intent-assist-cache-persistence";
 
 // ---------------------------------------------------------------------------
 // Schema for model assist
@@ -150,11 +151,13 @@ function normalizeAssistOutput(raw: RawIntentAssistOutput): IntentChangeFinding 
  * - Facts are insufficient for meaningful assist
  *
  * Uses `createResponseStructured` (text-only, no image — facts already extracted).
+ * Phase 9: uses persistent cache (DB-backed) when tenantId is provided.
  */
 export async function runIntentChangeAssist(
   finding: IntentChangeFinding,
   mergedFacts: MergedThreadFact[],
   tenantId?: string,
+  userId?: string,
 ): Promise<IntentChangeFinding | null> {
   const config = getImageIntakeConfig();
 
@@ -183,10 +186,18 @@ export async function runIntentChangeAssist(
     return null;
   }
 
-  // Phase 8: cache lookup — skip model call if we have a fresh result
-  const cacheResult = lookupIntentAssistCache(finding, mergedFacts);
-  if (cacheResult.cacheStatus === "cache_hit" && cacheResult.finding) {
-    return cacheResult.finding;
+  // Phase 9: persistent cache lookup (DB-backed when tenantId available)
+  if (tenantId) {
+    const persistentResult = await lookupIntentAssistCachePersistent(finding, mergedFacts, tenantId);
+    if (persistentResult.cacheStatus === "cache_hit" && persistentResult.finding) {
+      return persistentResult.finding;
+    }
+  } else {
+    // Phase 8 fallback: in-process only
+    const cacheResult = lookupIntentAssistCache(finding, mergedFacts);
+    if (cacheResult.cacheStatus === "cache_hit" && cacheResult.finding) {
+      return cacheResult.finding;
+    }
   }
 
   const prompt = buildIntentAssistPrompt(priorFacts, currentFacts);
@@ -210,8 +221,12 @@ export async function runIntentChangeAssist(
       return finding;
     }
 
-    // Phase 8: store non-ambiguous result in cache
-    storeIntentAssistCache(mergedFacts, normalized);
+    // Phase 9: store in persistent cache (DB-backed) or fallback to in-process
+    if (tenantId) {
+      await storeIntentAssistCachePersistent(mergedFacts, normalized, tenantId, userId ?? "system");
+    } else {
+      storeIntentAssistCache(mergedFacts, normalized);
+    }
 
     return normalized;
   } catch {
