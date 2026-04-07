@@ -9,6 +9,7 @@
  *   GOLDEN_EVAL_DELAY_MS=2500 — delay between scenarios (rate limits)
  *   GOLDEN_EVAL_ONLY=G01,G05  — optional comma-separated scenario/corpus ids
  *   GOLDEN_CORPUS_EVAL=1      — also run per-corpus-document eval (in addition to scenario eval)
+ *   VERBOSE_TESTS=1           — tisk scorecardu na stdout (jinak jen soubory v eval-outputs/)
  *
  * Note: Loopback HTTP serves PDFs (Node fetch does not load file:// PDFs reliably here).
  * Bundle/segmentation checks from manifest phase2 may not apply without preprocess — see report.caveats.
@@ -37,6 +38,13 @@ const appsWebRoot = join(__dirname, "../../../..");
 const repoRoot = join(appsWebRoot, "..", "..");
 const manifestPath = join(repoRoot, "fixtures/golden-ai-review/scenarios.manifest.json");
 const evalOutDir = join(repoRoot, "fixtures/golden-ai-review/eval-outputs");
+
+/** Scorecard na stdout jen při VERBOSE_TESTS=1 (JSON reporty se zapisují vždy). */
+const VERBOSE_EVAL_SCORECARD = process.env.VERBOSE_TESTS === "1";
+function goldenScorecardInfo(...args: Parameters<typeof console.info>) {
+  if (!VERBOSE_EVAL_SCORECARD) return;
+  console.info(...args);
+}
 
 type Scenario = {
   id: string;
@@ -1118,19 +1126,16 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
       writeFileSync(join(evalOutDir, `eval-report-${Date.now()}.json`), JSON.stringify(report, null, 2), "utf8");
       writeFileSync(join(evalOutDir, "latest-eval-report.json"), JSON.stringify(report, null, 2), "utf8");
 
-      // eslint-disable-next-line no-console
-      console.info("\n=== GOLDEN LIVE EVAL SCORECARD ===\n");
+      goldenScorecardInfo("\n=== GOLDEN LIVE EVAL SCORECARD ===\n");
       for (const r of rows) {
-        // eslint-disable-next-line no-console
-        console.info(
+        goldenScorecardInfo(
           `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
             `fam=${r.familyPass} primary=${r.primaryPass} pub=${r.publishPass} mode=${r.outputModePass ?? "—"} ui=${r.uiBlocker ? "BLOCK" : "ok"} ` +
             `lc=${r.lifecycleStatus ?? "—"} ${r.actualPrimaryType ?? "—"} ${r.latencyMs ?? 0}ms` +
             (r.failReasons?.length ? ` [${r.failReasons.join(",")}]` : ""),
         );
       }
-      // eslint-disable-next-line no-console
-      console.info(`\nVERDICT: ${verdict}\n`);
+      goldenScorecardInfo(`\nVERDICT: ${verdict}\n`);
 
       expect(errors.length, "pipeline hard errors").toBe(0);
       expect(skipped.length, "all golden PDFs should exist locally").toBe(0);
@@ -1204,7 +1209,7 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
         // - Without flag and no cache: records preprocess_required (clean skip, not a fail).
         // - If preprocess fails: records preprocess_failed (separate bucket from routing/extraction errors).
         const docRequiresPreprocess = (doc as Record<string, unknown>).requiresPreprocessing === true;
-        let nativeTextHint = await extractPdfTextHintFromDisk(pdfPath);
+        const nativeTextHint = await extractPdfTextHintFromDisk(pdfPath);
         let effectiveTextHint = nativeTextHint;
         let effectivePreprocessMeta: import("../contract-understanding-pipeline").PipelinePreprocessMeta;
 
@@ -1473,19 +1478,17 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
         "utf8",
       );
 
-      // eslint-disable-next-line no-console
-      console.info("\n=== CORPUS EVAL SCORECARD (C-level) ===\n");
+      goldenScorecardInfo("\n=== CORPUS EVAL SCORECARD (C-level) ===\n");
       for (const r of cRows) {
-        // eslint-disable-next-line no-console
         if (r.status === "skipped") {
           const d = r as Record<string, unknown>;
-          console.info(
+          goldenScorecardInfo(
             `${r.id} SKIPPED [${d.skipReason ?? "preprocess_prerequisite_not_met"}] ` +
               `preprocessing=${d.preprocessingReason ?? "scan_only_pdf"} lane=${d.preprocessingLane ?? "adobe_text_extraction"} ` +
               `status=${d.preprocessingStatus ?? "awaiting_ocr"}`,
           );
         } else {
-          console.info(
+          goldenScorecardInfo(
             `${r.id} ${r.status === "ran" ? (r.overallPass ? "PASS" : "FAIL") : r.status.toUpperCase()} ` +
               `fam=${r.familyPass} primary=${r.primaryPass} mode=${r.outputModePass ?? "—"} ` +
               `core=${r.coreFieldsFound}/${r.coreFieldsExpected} fb=${r.fallbackBehaviorPass ?? "—"} ` +
@@ -1494,10 +1497,9 @@ describe.skipIf(!process.env.GOLDEN_LIVE_EVAL)("golden dataset live pipeline eva
           );
         }
       }
-      // eslint-disable-next-line no-console
-      console.info(`\nROOT CAUSE BUCKETS: routing=${rootCauseBuckets.routing.join(",") || "none"} | mode=${rootCauseBuckets.outputMode.join(",") || "none"} | extraction=${rootCauseBuckets.coreExtraction.join(",") || "none"} | fallback=${rootCauseBuckets.fallbackLane.join(",") || "none"}\n`);
+      goldenScorecardInfo(`\nROOT CAUSE BUCKETS: routing=${rootCauseBuckets.routing.join(",") || "none"} | mode=${rootCauseBuckets.outputMode.join(",") || "none"} | extraction=${rootCauseBuckets.coreExtraction.join(",") || "none"} | fallback=${rootCauseBuckets.fallbackLane.join(",") || "none"}\n`);
       if (cPreprocessSkipped.length > 0 || cPreprocessFailed.length > 0 || cPreprocessSucceeded.length > 0) {
-        console.info(`PREPROCESS LANE: awaiting_ocr=${cPreprocessSkipped.map((r) => r.id).join(",") || "none"} | failed=${cPreprocessFailed.map((r) => r.id).join(",") || "none"} | succeeded=${cPreprocessSucceeded.map((r) => r.id).join(",") || "none"}\n`);
+        goldenScorecardInfo(`PREPROCESS LANE: awaiting_ocr=${cPreprocessSkipped.map((r) => r.id).join(",") || "none"} | failed=${cPreprocessFailed.map((r) => r.id).join(",") || "none"} | succeeded=${cPreprocessSucceeded.map((r) => r.id).join(",") || "none"}\n`);
       }
 
       expect(cErrors.length, "corpus pipeline hard errors").toBe(0);

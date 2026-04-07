@@ -370,7 +370,7 @@ describe("orchestration — section isolation and fidelity", () => {
   });
 
   it("SR18: investment extraction pass receives narrowed text when heading present", async () => {
-    let capturedTexts: string[] = [];
+    const capturedTexts: string[] = [];
     mockLLM.mockImplementation((prompt: string) => {
       capturedTexts.push(prompt);
       return Promise.resolve({ parsed: { investmentSectionPresent: false, productType: "unknown" } });

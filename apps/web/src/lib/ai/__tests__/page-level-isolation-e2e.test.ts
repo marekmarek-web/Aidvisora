@@ -297,7 +297,7 @@ describe("orchestration — pageTextMap threading + source mode trace", () => {
   });
 
   it("PL11: orchestration uses exact_pages for investment section when available", async () => {
-    let capturedPrompts: string[] = [];
+    const capturedPrompts: string[] = [];
     mockLLM.mockImplementation((prompt: string) => {
       capturedPrompts.push(prompt);
       return Promise.resolve({ parsed: { investmentSectionPresent: true, productType: "DIP", strategy: "Vyvážená", isContractualData: true } });

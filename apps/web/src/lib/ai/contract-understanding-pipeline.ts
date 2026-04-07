@@ -21,6 +21,7 @@ import type { ValidationWarning } from "./extraction-validation";
 import type { DocumentReviewEnvelope } from "./document-review-types";
 import { selectSchemaForType } from "./document-schema-router";
 import { applyRuleBasedClassificationOverride } from "./document-classification-overrides";
+import { isAiReviewPipelineDebug } from "./ai-review-debug";
 import { mapPrimaryToNormalized } from "./normalized-document-taxonomy";
 import { runVerificationPass } from "./document-verification";
 import { applyExtractedFieldAliasNormalizations } from "./extraction-field-alias-normalize";
@@ -107,6 +108,7 @@ export type PipelinePreprocessMeta = {
 
 function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {
   if (process.env.NODE_ENV === "production") return;
+  if (!isAiReviewPipelineDebug()) return;
   console.info(
     `[contract-pipeline] ${phase}`,
     JSON.stringify({
