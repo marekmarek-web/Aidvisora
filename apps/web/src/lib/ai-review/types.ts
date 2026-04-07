@@ -54,6 +54,12 @@ export type ExtractedField = {
   displayStatus?: "Nalezeno" | "Odvozeno" | "Chybí";
   /** Advisor-facing source label: e.g. "z bloku Pojistník", "z tabulky plateb" */
   displaySource?: string;
+  /** Evidence-aware apply policy (Fáze 8) */
+  applyPolicy?: "auto_apply" | "prefill_confirm" | "manual_required" | "do_not_apply";
+  /** Human-readable apply policy label for advisor UI */
+  applyPolicyLabel?: string;
+  /** Whether field requires advisor confirmation before applying to CRM */
+  requiresConfirmation?: boolean;
 };
 
 export type ExtractedGroup = {

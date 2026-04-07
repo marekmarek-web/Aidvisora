@@ -445,6 +445,74 @@ const PAYMENT_PAYLOAD_LABELS: Record<string, string> = {
   clientNote: "Poznámka",
 };
 
+/** Build a fieldKey → {applyPolicyLabel, requiresConfirmation} lookup from extracted groups */
+function buildApplyPolicyLookup(
+  groups: ExtractionDocument["groups"]
+): Map<string, { label: string; requires: boolean }> {
+  const map = new Map<string, { label: string; requires: boolean }>();
+  for (const g of groups) {
+    for (const f of g.fields) {
+      if (f.applyPolicyLabel) {
+        // Strip "extractedFields." prefix from id to get raw key
+        const key = f.id.replace(/^extractedFields\./, "");
+        map.set(key, {
+          label: f.applyPolicyLabel,
+          requires: f.requiresConfirmation ?? false,
+        });
+      }
+    }
+  }
+  return map;
+}
+
+type ApplyLabelBadgeProps = { label: string; requires: boolean };
+function ApplyLabelBadge({ label, requires }: ApplyLabelBadgeProps) {
+  const cls =
+    label === "Propíše se automaticky"
+      ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
+      : label === "Předvyplněno k potvrzení"
+      ? "text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400"
+      : label === "Vyžaduje ruční doplnění"
+      ? "text-rose-500 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400"
+      : "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500";
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded leading-none mt-0.5 w-fit ${cls}`}
+    >
+      {requires && label !== "Propíše se automaticky" && (
+        <AlertCircle size={8} className="shrink-0" />
+      )}
+      {label}
+    </span>
+  );
+}
+
+/** Row for a single field inside CrmMappingProposalCard */
+function CrmFieldRow({
+  fieldKey,
+  label,
+  value,
+  applyLookup,
+}: {
+  fieldKey: string;
+  label: string;
+  value: string;
+  applyLookup: Map<string, { label: string; requires: boolean }>;
+}) {
+  const policy = applyLookup.get(fieldKey);
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+        {label}
+      </span>
+      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={value}>
+        {value}
+      </span>
+      {policy && <ApplyLabelBadge label={policy.label} requires={policy.requires} />}
+    </div>
+  );
+}
+
 function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
   const [open, setOpen] = useState(false);
   const actions = doc.draftActions ?? [];
@@ -469,6 +537,14 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
 
   const hasAnyDetail = paymentAction?.payload || contractAction?.payload || clientAction?.payload;
   if (!hasAnyDetail) return null;
+
+  const applyLookup = buildApplyPolicyLookup(doc.groups);
+
+  // Summary counts for apply policy
+  const allPolicyLabels: string[] = [];
+  for (const [, v] of applyLookup) allPolicyLabels.push(v.label);
+  const prefillCount = allPolicyLabels.filter((l) => l === "Předvyplněno k potvrzení").length;
+  const manualCount = allPolicyLabels.filter((l) => l === "Vyžaduje ruční doplnění").length;
 
   const readiness = doc.publishReadiness;
   const readinessBadge =
@@ -501,28 +577,47 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
 
       {open && (
         <div className="px-5 md:px-6 pb-5 pt-0 border-t border-[color:var(--wp-surface-card-border)] space-y-4">
-          <p className="mt-3 text-xs text-[color:var(--wp-text-tertiary)] leading-relaxed">
-            Tato data se zapíší do CRM po kliknutí na <strong>Zapsat do CRM</strong>. Zkontrolujte je před odesláním.
-          </p>
+          {/* Apply policy summary */}
+          {(prefillCount > 0 || manualCount > 0) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {prefillCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400 px-2 py-1 rounded-lg">
+                  <AlertCircle size={10} />
+                  {prefillCount} {prefillCount === 1 ? "pole" : prefillCount <= 4 ? "pole" : "polí"} k potvrzení
+                </span>
+              )}
+              {manualCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400 px-2 py-1 rounded-lg">
+                  <AlertCircle size={10} />
+                  {manualCount} {manualCount === 1 ? "pole" : manualCount <= 4 ? "pole" : "polí"} k ručnímu doplnění
+                </span>
+              )}
+            </div>
+          )}
+
+          {!prefillCount && !manualCount && (
+            <p className="mt-3 text-xs text-[color:var(--wp-text-tertiary)] leading-relaxed">
+              Tato data se zapíší do CRM po kliknutí na <strong>Zapsat do CRM</strong>. Zkontrolujte je před odesláním.
+            </p>
+          )}
 
           {clientAction && (
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
                 <User size={11} /> Klient
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {Object.entries(clientAction.payload ?? {})
                   .filter(([, v]) => v && String(v).trim())
                   .slice(0, 8)
                   .map(([k, v]) => (
-                    <div key={k} className="flex flex-col">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
-                        {k}
-                      </span>
-                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
-                        {String(v)}
-                      </span>
-                    </div>
+                    <CrmFieldRow
+                      key={k}
+                      fieldKey={k}
+                      label={k}
+                      value={String(v)}
+                      applyLookup={applyLookup}
+                    />
                   ))}
               </div>
             </div>
@@ -533,19 +628,18 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
               <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
                 <Shield size={11} /> Smlouva / Produkt
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {Object.entries(contractAction.payload ?? {})
                   .filter(([, v]) => v && String(v).trim())
                   .slice(0, 8)
                   .map(([k, v]) => (
-                    <div key={k} className="flex flex-col">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
-                        {k}
-                      </span>
-                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
-                        {String(v)}
-                      </span>
-                    </div>
+                    <CrmFieldRow
+                      key={k}
+                      fieldKey={k}
+                      label={k}
+                      value={String(v)}
+                      applyLookup={applyLookup}
+                    />
                   ))}
               </div>
             </div>
@@ -556,18 +650,17 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
               <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5 flex items-center gap-1.5">
                 <CreditCard size={11} /> Platební instrukce
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {Object.entries(paymentAction.payload ?? {})
                   .filter(([, v]) => v && String(v).trim())
                   .map(([k, v]) => (
-                    <div key={k} className="flex flex-col">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
-                        {PAYMENT_PAYLOAD_LABELS[k] ?? k}
-                      </span>
-                      <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={String(v)}>
-                        {String(v)}
-                      </span>
-                    </div>
+                    <CrmFieldRow
+                      key={k}
+                      fieldKey={k}
+                      label={PAYMENT_PAYLOAD_LABELS[k] ?? k}
+                      value={String(v)}
+                      applyLookup={applyLookup}
+                    />
                   ))}
               </div>
             </div>

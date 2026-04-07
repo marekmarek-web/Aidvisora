@@ -27,6 +27,7 @@ import {
   shouldSuppressGroup,
 } from "../ai/field-quality-gate";
 import { buildAdvisorReviewViewModel } from "./advisor-review-view-model";
+import { deriveFieldApplyPolicy } from "./field-apply-policy";
 
 type ApiReviewDetail = Record<string, unknown>;
 
@@ -799,6 +800,17 @@ function flattenEnvelopeToGroups(
         finalMessage = contractConflict.reason ?? "Číslo smlouvy a variabilní symbol si mohou odporovat.";
       }
 
+      const hasFieldConflict =
+        (paymentConflict.hasConflict && (fKey === "paymentFrequency" || fKey === "totalMonthlyPremium" || fKey === "annualPremium")) ||
+        (contractConflict.hasConflict && (fKey === "contractNumber" || fKey === "variableSymbol"));
+
+      const applyDecision = deriveFieldApplyPolicy(
+        fKey,
+        pres.displayStatus,
+        outputMode,
+        hasFieldConflict,
+      );
+
       pushGroupedField({
         id: `extractedFields.${fKey}`,
         groupId: "extractedFields",
@@ -815,6 +827,9 @@ function flattenEnvelopeToGroups(
         originalAiValue: strVal,
         displayStatus: pres.displayStatus,
         displaySource: pres.displaySource || undefined,
+        applyPolicy: applyDecision.policy,
+        applyPolicyLabel: applyDecision.label,
+        requiresConfirmation: applyDecision.requiresConfirmation,
       }, fKey);
     }
   }
