@@ -256,7 +256,23 @@ export async function POST(request: Request) {
           // Cheap-first: parse assets from body before any model call.
           // Text-only requests are completely unaffected (imageAssets absent → 0 assets).
           const rawImageAssets = parseImageAssetsFromBody(body);
-          const isImageRequest = rawImageAssets.length > 0 && isImageIntakeEnabled();
+          const imageIntakeEnvOn = isImageIntakeEnabled();
+          const isImageRequest = rawImageAssets.length > 0 && imageIntakeEnvOn;
+
+          if (process.env.DEBUG_ASSISTANT_IMAGE_PASTE === "true") {
+            console.info("[assistant-image-pipeline][api:lane]", {
+              traceId,
+              parsedImageAssetCount: rawImageAssets.length,
+              imageIntakeEnabled: imageIntakeEnvOn,
+              entersImageIntakeLane: isImageRequest,
+              skipReason:
+                rawImageAssets.length === 0
+                  ? "no_assets_in_body"
+                  : !imageIntakeEnvOn
+                    ? "IMAGE_INTAKE_ENABLED_not_true"
+                    : null,
+            });
+          }
 
           let response: AssistantResponse;
 

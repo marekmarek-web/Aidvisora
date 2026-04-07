@@ -39,6 +39,11 @@ import {
   parsePortalContactIdFromPathname,
   parsePortalOpportunityIdFromPathname,
 } from "@/lib/ai/assistant-chat-client";
+import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
+import {
+  extractImageBlobFromClipboardData,
+  logAssistantImagePipelineClient,
+} from "@/lib/ai/assistant-clipboard-image-paste";
 import type { AssistantResponse } from "@/lib/ai/assistant-tool-router";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
@@ -386,13 +391,20 @@ export function AiAssistantDrawer() {
   }, [routeContactId]);
 
   const sendChatMessage = useCallback(
-    async (rawMsg: string) => {
+    async (rawMsg: string, imageAssets?: ImageAssetPayload[]) => {
       const msg = rawMsg.trim();
-      if (!msg || chatLoading || chatSubmitLockRef.current) return;
+      const hasImages = (imageAssets?.length ?? 0) > 0;
+      logAssistantImagePipelineClient("sendChatMessage", {
+        surface: "AiAssistantDrawer",
+        textLen: msg.length,
+        imageAssetsCount: imageAssets?.length ?? 0,
+      });
+      if ((!msg && !hasImages) || chatLoading || chatSubmitLockRef.current) return;
       chatSubmitLockRef.current = true;
+      const displayMsg = msg || (hasImages ? "📎 obrázek" : "");
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: msg },
+        { role: "user", content: displayMsg },
         { role: "assistant", content: "", suggestedActions: [], warnings: [] },
       ]);
       setChatLoading(true);
@@ -409,6 +421,7 @@ export function AiAssistantDrawer() {
                 routeOpportunityId,
                 reviewId: activeReviewId,
                 channel: "web_drawer",
+                imageAssets,
               }),
             ),
           },
@@ -639,6 +652,48 @@ export function AiAssistantDrawer() {
     setInput("");
     void sendChatMessage(msg);
   };
+
+  // Stable ref so reader.onload closure always has the latest sendChatMessage,
+  // even if chatLoading / other deps caused a rebuild between attach and async fire.
+  const sendChatMessageRef = useRef(sendChatMessage);
+  sendChatMessageRef.current = sendChatMessage;
+
+  const handlePasteOnInput = useCallback((e: React.ClipboardEvent<HTMLElement>) => {
+    const cd = e.clipboardData;
+    logAssistantImagePipelineClient("paste_fired", {
+      targetTag: (e.target as HTMLElement).tagName,
+      activeElementTag: document.activeElement?.tagName,
+    });
+    const blob = extractImageBlobFromClipboardData(cd);
+    logAssistantImagePipelineClient("paste_clipboard", {
+      itemCount: cd.items.length,
+      fileCount: cd.files.length,
+      types: Array.from(cd.types),
+      blob: blob ? `${blob.type} ${blob.size}b` : null,
+    });
+    if (!blob) return;
+    e.preventDefault();
+
+    const capturedBlob = blob;
+    const accompanyingText = inputRef.current?.value.trim() ?? "";
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const asset: ImageAssetPayload = {
+        url: dataUrl,
+        mimeType: capturedBlob.type,
+        filename: (capturedBlob as File).name || null,
+        sizeBytes: capturedBlob.size,
+      };
+      logAssistantImagePipelineClient("paste_invoke_send", {
+        accompanyingLen: accompanyingText.length,
+      });
+      setInput("");
+      void sendChatMessageRef.current(accompanyingText, [asset]);
+    };
+    reader.readAsDataURL(capturedBlob);
+  }, []);
 
   const handleUrgent = async () => {
     if (chatLoading || chatSubmitLockRef.current) return;
@@ -1500,7 +1555,9 @@ export function AiAssistantDrawer() {
                 </button>
               </div>
             ) : null}
-            <div className="flex gap-2">
+            {/* onPaste on the wrapper catches image paste even when the browser
+                suppresses clipboard events on <input type="text"> for non-text content */}
+            <div className="flex gap-2" onPaste={handlePasteOnInput}>
               <input
                 ref={inputRef}
                 type="text"

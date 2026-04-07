@@ -1,4 +1,8 @@
 import type { AssistantResponse } from "@/lib/ai/assistant-tool-router";
+import {
+  assistantImagePastePipelineDebugEnabled,
+  logAssistantImagePipelineClient,
+} from "@/lib/ai/assistant-clipboard-image-paste";
 
 function parseSseDataLine(line: string): unknown | null {
   const t = line.trimEnd();
@@ -62,11 +66,26 @@ export async function postAssistantChatStreaming(
   init: RequestInit,
   onDelta: (chunk: string) => void
 ): Promise<AssistantResponse> {
+  if (typeof init.body === "string" && assistantImagePastePipelineDebugEnabled()) {
+    try {
+      const parsed = JSON.parse(init.body) as {
+        imageAssets?: unknown[];
+        message?: string;
+      };
+      const n = Array.isArray(parsed.imageAssets) ? parsed.imageAssets.length : 0;
+      logAssistantImagePipelineClient("fetch_pre", {
+        imageAssetsCount: n,
+        messageLen: typeof parsed.message === "string" ? parsed.message.length : 0,
+      });
+    } catch {
+      /* ignore */
+    }
+  }
   const res = await fetch("/api/ai/assistant/chat?stream=1", init);
   return consumeAssistantChatSse(res, onDelta);
 }
 
-export type { AssistantChatRequestBody } from "./assistant-chat-request";
+export type { AssistantChatRequestBody, ImageAssetPayload } from "./assistant-chat-request";
 export {
   buildAssistantChatRequestBody,
   buildAssistantPostUploadReviewBootstrapBody,

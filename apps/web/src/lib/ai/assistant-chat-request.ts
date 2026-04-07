@@ -22,6 +22,13 @@ export function parsePortalOpportunityIdFromPathname(pathname: string | null): s
   return m?.[1]?.toLowerCase();
 }
 
+export type ImageAssetPayload = {
+  url: string;
+  mimeType: string;
+  filename?: string | null;
+  sizeBytes?: number;
+};
+
 export type AssistantChatRequestBody = {
   message: string;
   sessionId?: string;
@@ -40,6 +47,8 @@ export type AssistantChatRequestBody = {
     reviewId?: string | null;
     paymentContactId?: string | null;
   };
+  /** Image intake: pasted / dropped images sent as data URLs or storage URLs. */
+  imageAssets?: ImageAssetPayload[];
 };
 
 export function buildAssistantChatRequestBody(
@@ -52,6 +61,7 @@ export function buildAssistantChatRequestBody(
     reviewId?: string | null;
     orchestration?: "legacy" | "canonical";
     channel?: "web_drawer" | "mobile" | "contact_detail" | "dashboard" | "client_portal_bridge";
+    imageAssets?: ImageAssetPayload[];
   },
 ): AssistantChatRequestBody {
   const body: AssistantChatRequestBody = {
@@ -68,6 +78,9 @@ export function buildAssistantChatRequestBody(
     opportunityId: oid || null,
     reviewId: rid || null,
   };
+  if (opts.imageAssets && opts.imageAssets.length > 0) {
+    body.imageAssets = opts.imageAssets;
+  }
   return body;
 }
 

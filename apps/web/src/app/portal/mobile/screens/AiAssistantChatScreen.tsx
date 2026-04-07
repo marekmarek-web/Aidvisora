@@ -28,6 +28,11 @@ import {
   parsePortalContactIdFromPathname,
   parsePortalOpportunityIdFromPathname,
 } from "@/lib/ai/assistant-chat-client";
+import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
+import {
+  extractImageBlobFromClipboardData,
+  logAssistantImagePipelineClient,
+} from "@/lib/ai/assistant-clipboard-image-paste";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
   ExecutionBadge,
@@ -446,6 +451,9 @@ export function AiAssistantChatScreen() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sendMessageRef = useRef<
+    ((text: string, imageAssets?: ImageAssetPayload[]) => Promise<void>) | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -621,15 +629,22 @@ export function AiAssistantChatScreen() {
     };
   }, [scrollToBottom]);
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, imageAssets?: ImageAssetPayload[]) {
     const trimmed = text.trim();
-    if (!trimmed || isTyping || chatSubmitLockRef.current) return;
+    const hasImages = (imageAssets?.length ?? 0) > 0;
+    if ((!trimmed && !hasImages) || isTyping || chatSubmitLockRef.current) return;
     chatSubmitLockRef.current = true;
+
+    const displayText = trimmed || (hasImages ? "📎 obrázek" : "");
+    logAssistantImagePipelineClient("sendMessage", {
+      textLen: trimmed.length,
+      imageAssetsCount: imageAssets?.length ?? 0,
+    });
 
     const userMsg: ChatMessage = {
       id: nextId(),
       role: "user",
-      text: trimmed,
+      text: displayText,
       timestamp: new Date(),
     };
 
@@ -660,6 +675,7 @@ export function AiAssistantChatScreen() {
                 routeContactId,
                 routeOpportunityId,
                 channel: "mobile",
+                imageAssets,
               }),
             ),
           },
@@ -714,6 +730,42 @@ export function AiAssistantChatScreen() {
       }
     });
   }
+
+  sendMessageRef.current = sendMessage;
+
+  const handlePasteOnComposer = useCallback((e: React.ClipboardEvent<HTMLElement>) => {
+    const cd = e.clipboardData;
+    logAssistantImagePipelineClient("paste_fired", {
+      surface: "AiAssistantChatScreen",
+      targetTag: (e.target as HTMLElement).tagName,
+      activeElementTag: document.activeElement?.tagName,
+    });
+    const blob = extractImageBlobFromClipboardData(cd);
+    logAssistantImagePipelineClient("paste_clipboard", {
+      itemCount: cd.items.length,
+      fileCount: cd.files.length,
+      types: Array.from(cd.types),
+      blob: blob ? `${blob.type} ${blob.size}b` : null,
+    });
+    if (!blob) return;
+    e.preventDefault();
+    const captured = blob;
+    const accompanying = inputRef.current?.value.trim() ?? "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const asset: ImageAssetPayload = {
+        url: dataUrl,
+        mimeType: captured.type,
+        filename: (captured as File).name || null,
+        sizeBytes: captured.size,
+      };
+      logAssistantImagePipelineClient("paste_invoke_send", { accompanyingLen: accompanying.length });
+      setInput("");
+      void sendMessageRef.current?.(accompanying, [asset]);
+    };
+    reader.readAsDataURL(captured);
+  }, []);
 
   /** 6F / 6C — potvrdit plán bez psaní „ano"; provede jen zaškrtnuté kroky. */
   const submitPlanConfirmation = useCallback(async () => {
@@ -1330,7 +1382,7 @@ export function AiAssistantChatScreen() {
           </div>
         ) : null}
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2" onPaste={handlePasteOnComposer}>
           <input
             type="file"
             ref={fileInputRef}
