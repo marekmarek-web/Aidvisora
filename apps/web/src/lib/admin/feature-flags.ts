@@ -125,27 +125,6 @@ export const FEATURE_FLAGS: FeatureFlag[] = [
 const tenantOverrides = new Map<string, Map<string, boolean>>();
 const globalOverrides = new Map<string, boolean>();
 
-// ---------------------------------------------------------------------------
-// Image Intake admin controls (Phase 7 — runtime control surface)
-// ---------------------------------------------------------------------------
-
-/** Returns image-intake admin flag states for a given tenant. Defined after isFeatureEnabled. */
-export function getImageIntakeAdminFlags(tenantId: string): {
-  enabled: boolean;
-  combinedMultimodal: boolean;
-  intentAssist: boolean;
-  handoffQueueSubmit: boolean;
-  crossSessionPersistence: boolean;
-} {
-  return {
-    enabled: isFeatureEnabled("image_intake_enabled", tenantId),
-    combinedMultimodal: isFeatureEnabled("image_intake_combined_multimodal", tenantId),
-    intentAssist: isFeatureEnabled("image_intake_intent_assist", tenantId),
-    handoffQueueSubmit: isFeatureEnabled("image_intake_handoff_queue", tenantId),
-    crossSessionPersistence: isFeatureEnabled("image_intake_cross_session_persistence", tenantId),
-  };
-}
-
 export function getFlagDefinition(flagCode: string): FeatureFlag | undefined {
   return FEATURE_FLAGS.find((f) => f.code === flagCode);
 }
@@ -184,6 +163,27 @@ export function isFeatureEnabled(
   }
 
   return flag.defaultEnabled;
+}
+
+// ---------------------------------------------------------------------------
+// Image Intake admin controls (Phase 7 — runtime control surface)
+// ---------------------------------------------------------------------------
+
+/** Returns image-intake admin flag states for a given tenant (after `isFeatureEnabled` is defined). */
+export function getImageIntakeAdminFlags(tenantId: string): {
+  enabled: boolean;
+  combinedMultimodal: boolean;
+  intentAssist: boolean;
+  handoffQueueSubmit: boolean;
+  crossSessionPersistence: boolean;
+} {
+  return {
+    enabled: isFeatureEnabled("image_intake_enabled", tenantId),
+    combinedMultimodal: isFeatureEnabled("image_intake_combined_multimodal", tenantId),
+    intentAssist: isFeatureEnabled("image_intake_intent_assist", tenantId),
+    handoffQueueSubmit: isFeatureEnabled("image_intake_handoff_queue", tenantId),
+    crossSessionPersistence: isFeatureEnabled("image_intake_cross_session_persistence", tenantId),
+  };
 }
 
 export function setFeatureOverride(

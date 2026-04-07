@@ -58,11 +58,13 @@ import {
 import { resolveClientBindingV2, resolveCaseBindingV2, toCaseBindingResult } from "./binding-v2";
 import { tryBuildDraftReply } from "./draft-reply";
 import {
-  isImageIntakeMultimodalEnabled,
+  isImageIntakeMultimodalEnabledForUser,
   isImageIntakeStitchingEnabled,
-  isImageIntakeReviewHandoffEnabled,
+  isImageIntakeReviewHandoffEnabledForUser,
   isImageIntakeThreadReconstructionEnabledForUser,
   isImageIntakeCaseSignalEnabledForUser,
+  isImageIntakeCombinedMultimodalEnabledForUser,
+  isImageIntakeCrossSessionEnabledForUser,
   getImageIntakeFlagSummary,
 } from "./feature-flag";
 import { computeStitchingGroups, getPrimaryAssetIds } from "./stitching";
@@ -76,10 +78,6 @@ import { resolveCaseBindingWithSignals } from "./binding-v2";
 import { reconstructCrossSessionThread, persistThreadArtifact, mergePersistedArtifacts } from "./cross-session-reconstruction";
 import { detectIntentChange, buildIntentChangeSummary } from "./intent-change-detection";
 import { runIntentChangeAssist } from "./intent-change-assist";
-import {
-  isImageIntakeCombinedMultimodalEnabledForUser,
-  isImageIntakeCrossSessionEnabledForUser,
-} from "./feature-flag";
 import { getImageIntakeConfig } from "./image-intake-config";
 import type {
   ThreadReconstructionResult,
@@ -273,8 +271,11 @@ export async function processImageIntake(
 
   // 3. Multi-image stitching (Phase 4 — metadata-only, free)
   const stitchingEnabled = isImageIntakeStitchingEnabled();
-  const threadReconstructionEnabled = isImageIntakeThreadReconstructionEnabledForUser(request.userId);
-  const caseSignalEnabled = isImageIntakeCaseSignalEnabledForUser(request.userId);
+  const threadReconstructionEnabled = isImageIntakeThreadReconstructionEnabledForUser(
+    request.userId,
+    request.tenantId,
+  );
+  const caseSignalEnabled = isImageIntakeCaseSignalEnabledForUser(request.userId, request.tenantId);
   let stitchingResult: MultiImageStitchingResult | null = null;
   let primaryAssets = request.assets;
   const stitchingClassMap = new Map<string, InputClassificationResult | null>();
@@ -351,7 +352,7 @@ export async function processImageIntake(
     (a) => batchPreflight.assetResults.find((r) => r.assetId === a.assetId && r.result.eligible)
   );
   const hasStorageUrl = Boolean(primaryAsset?.storageUrl);
-  const multimodalEnabled = isImageIntakeMultimodalEnabled();
+  const multimodalEnabled = isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId);
 
   let multimodalResult: MultimodalCombinedPassResult | null = null;
   let multimodalUsed = false;
@@ -396,7 +397,10 @@ export async function processImageIntake(
   const caseBinding = toCaseBindingResult(caseBindingV2);
 
   // 9. Review handoff recommendation (Phase 4 — no model call)
-  const handoffFlagEnabled = isImageIntakeReviewHandoffEnabled();
+  const handoffFlagEnabled = isImageIntakeReviewHandoffEnabledForUser(
+    effectiveRequest.userId,
+    effectiveRequest.tenantId,
+  );
   const reviewHandoff = evaluateReviewHandoff(classification, factBundle, handoffFlagEnabled);
 
   // Phase 5: Thread reconstruction (for grouped threads when flag enabled)
@@ -426,7 +430,7 @@ export async function processImageIntake(
         request.assets,
         stitchingClassMap,
         existingMultimodalResults,
-        isImageIntakeMultimodalEnabled(),
+        isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId),
       );
     }
   }
@@ -451,7 +455,10 @@ export async function processImageIntake(
 
   // Phase 6: Combined multimodal execution (when decision says combined_pass + flag enabled)
   let combinedMultimodalResult: import("./combined-multimodal-execution").CombinedMultimodalExecutionResult | null = null;
-  const combinedMultimodalEnabled = isImageIntakeCombinedMultimodalEnabledForUser(effectiveRequest.userId ?? "");
+  const combinedMultimodalEnabled = isImageIntakeCombinedMultimodalEnabledForUser(
+    effectiveRequest.userId ?? "",
+    effectiveRequest.tenantId,
+  );
   if (batchDecision && batchDecision.strategy === "combined_pass" && combinedMultimodalEnabled) {
     combinedMultimodalResult = await executeBatchMultimodalStrategy(
       batchDecision,
@@ -466,7 +473,10 @@ export async function processImageIntake(
 
   // Phase 6: Cross-session thread reconstruction (when enabled + client known)
   let crossSessionReconstruction: CrossSessionReconstructionResult | null = null;
-  const crossSessionEnabled = isImageIntakeCrossSessionEnabledForUser(effectiveRequest.userId ?? "");
+  const crossSessionEnabled = isImageIntakeCrossSessionEnabledForUser(
+    effectiveRequest.userId ?? "",
+    effectiveRequest.tenantId,
+  );
   if (crossSessionEnabled && threadReconstruction) {
     // Phase 7: Load persisted artifacts from DB (non-blocking, degrades gracefully)
     const ph7Config = getImageIntakeConfig();
@@ -534,7 +544,11 @@ export async function processImageIntake(
 
     // Phase 7: Optional model assist for ambiguous intent (max 1 extra call)
     if (intentChange?.status === "ambiguous") {
-      const assisted = await runIntentChangeAssist(intentChange, threadReconstruction.mergedFacts);
+      const assisted = await runIntentChangeAssist(
+        intentChange,
+        threadReconstruction.mergedFacts,
+        effectiveRequest.tenantId,
+      );
       if (assisted) intentChange = assisted;
     }
   }

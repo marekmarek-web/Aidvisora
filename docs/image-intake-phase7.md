@@ -81,7 +81,7 @@ Cost: +1 text-only model call, only for genuinely ambiguous threads.
 - Writes `clientMatchCandidates` if client is known
 - Writes audit record via `logAudit()`
 
-Status mapping: `submitted | skipped_no_payload | skipped_flag_disabled | skipped_no_confirm | failed`
+Status mapping: `submitted | skipped_no_payload | skipped_flag_disabled | skipped_tenant_feature_disabled | skipped_no_confirm | failed` (`skipped_tenant_feature_disabled` = tenant nemá `image_intake_enabled` nebo `image_intake_handoff_queue` v admin přepínačích.)
 
 Lane safety:
 - Image intake does NOT run AI Review pipeline
@@ -103,6 +103,8 @@ Added 5 image-intake flags to `FEATURE_FLAGS`:
 
 `getImageIntakeAdminFlags(tenantId)` — returns all flags state for a tenant.
 `setFeatureOverride(code, tenantId, enabled)` — existing admin mechanism.
+
+**Runtime AND:** For production paths, orchestrator and `submitToAiReviewQueue` pass `tenantId`. Per-user gates in `feature-flag.ts` AND with `isFeatureEnabled` for the corresponding codes (master `image_intake_enabled` plus sub-flag where applicable). Intent assist additionally requires `image_intake_intent_assist` when `tenantId` is passed to `runIntentChangeAssist`. See the rollout matrix in [`docs/image-intake.md`](image-intake.md).
 
 Existing admin API `GET /api/admin/feature-flags` returns all flags including image-intake flags.
 
@@ -168,18 +170,19 @@ Validation: min/max enforced, invalid values fallback to default.
 
 ## Test coverage (Phase 7)
 
-**File:** `image-intake-phase7.test.ts` — 38 tests
+**File:** `image-intake-phase7.test.ts` — includes config, multi-image pass, persistence, intent assist, queue integration, admin flags, tenant AND gates, guardrails.
 
-Sections:
+Sections (indicative):
 - Config hardening (6 tests)
 - Multi-image combined pass (5 tests)
 - Cross-session persistence adapter (4 tests)
 - Optional intent-change model assist (6 tests)
-- AI Review queue integration (6 tests)
+- AI Review queue integration (7 tests: includes tenant skip path)
 - Admin rollout controls (3 tests)
+- Tenant AND env gates (3 tests)
 - Golden dataset guardrails Phase 7 (7 tests): GD7-1 through GD7-7
 
-All image-intake tests (Phases 1-7): 310+ tests passing.
+Run all phase tests: `pnpm --filter web test:image-intake` (see [`docs/image-intake.md`](image-intake.md)).
 
 ---
 

@@ -17,7 +17,6 @@ vi.mock("@/lib/audit", () => ({ logAudit: vi.fn(async () => undefined), logAudit
 vi.mock("@/lib/openai", () => ({
   createResponseSafe: vi.fn(),
   createResponseStructured: vi.fn(async () => ({ text: "{}", parsed: null, model: "gpt-4o-mini" })),
-  createResponseStructured: vi.fn(async () => ({ text: "{}", parsed: null, model: "gpt-4o-mini" })),
   createResponseStructuredWithImage: vi.fn(async () => ({ text: "{}", parsed: null, model: "gpt-4o-mini" })),
   createResponseStructuredWithImages: vi.fn(async () => ({ text: "{}", parsed: null, model: "gpt-4o-mini" })),
 }));
@@ -56,7 +55,8 @@ import {
 } from "../image-intake/cross-session-reconstruction";
 import { runIntentChangeAssist } from "../image-intake/intent-change-assist";
 import { submitToAiReviewQueue } from "../image-intake/handoff-queue-integration";
-import { getImageIntakeAdminFlags, setFeatureOverride } from "../../admin/feature-flags";
+import { getImageIntakeAdminFlags, setFeatureOverride, clearFeatureOverride } from "../../admin/feature-flags";
+import { isImageIntakeCombinedMultimodalEnabledForUser } from "../image-intake/feature-flag";
 import type {
   MergedThreadFact,
   ReviewHandoffPayload,
@@ -69,6 +69,18 @@ import type {
 
 function makeFact(key: string, value: string, isLatest = true): MergedThreadFact {
   return { factKey: key, value, isLatestSignal: isLatest, sourceAssetIds: ["a1"], occurrenceCount: 1, confidence: 0.8 };
+}
+
+const QUEUE_TEST_TENANT = "t1";
+
+function enableQueueSubmitTenantFlags(tenantId = QUEUE_TEST_TENANT) {
+  setFeatureOverride("image_intake_enabled", tenantId, true);
+  setFeatureOverride("image_intake_handoff_queue", tenantId, true);
+}
+
+function resetQueueSubmitTenantFlags(tenantId = QUEUE_TEST_TENANT) {
+  clearFeatureOverride("image_intake_enabled", tenantId);
+  clearFeatureOverride("image_intake_handoff_queue", tenantId);
 }
 
 function makeHandoffPayload(handoffId = "hid-1"): ReviewHandoffPayload {
@@ -321,8 +333,14 @@ describe("optional intent-change model assist", () => {
 // ---------------------------------------------------------------------------
 
 describe("AI Review queue integration", () => {
-  beforeEach(() => clearAllImageIntakeConfigOverrides());
-  afterEach(() => clearAllImageIntakeConfigOverrides());
+  beforeEach(() => {
+    clearAllImageIntakeConfigOverrides();
+    resetQueueSubmitTenantFlags();
+  });
+  afterEach(() => {
+    clearAllImageIntakeConfigOverrides();
+    resetQueueSubmitTenantFlags();
+  });
 
   it("returns skipped_no_payload when payload is null", async () => {
     const result = await submitToAiReviewQueue(null, "u1", "submit_ai_review_handoff");
@@ -345,8 +363,18 @@ describe("AI Review queue integration", () => {
     expect(result.reviewRowId).toBeNull();
   });
 
+  it("returns skipped_tenant_feature_disabled when tenant admin flags off", async () => {
+    setImageIntakeConfigOverride("handoff_queue_submit_enabled", true);
+    resetQueueSubmitTenantFlags();
+    const payload = makeHandoffPayload();
+    const result = await submitToAiReviewQueue(payload, "u1", "submit_ai_review_handoff");
+    expect(result.status).toBe("skipped_tenant_feature_disabled");
+    expect(result.reviewRowId).toBeNull();
+  });
+
   it("returns submitted with reviewRowId when all conditions met", async () => {
     setImageIntakeConfigOverride("handoff_queue_submit_enabled", true);
+    enableQueueSubmitTenantFlags();
     const { createContractReview } = await import("@/lib/ai/review-queue-repository");
     vi.mocked(createContractReview).mockResolvedValueOnce("review-row-test-1");
 
@@ -368,6 +396,7 @@ describe("AI Review queue integration", () => {
 
   it("handles queue unavailable gracefully (DB throws)", async () => {
     setImageIntakeConfigOverride("handoff_queue_submit_enabled", true);
+    enableQueueSubmitTenantFlags();
     const { createContractReview } = await import("@/lib/ai/review-queue-repository");
     vi.mocked(createContractReview).mockRejectedValueOnce(new Error("DB unavailable"));
 
@@ -387,10 +416,9 @@ describe("admin rollout runtime controls", () => {
   const TENANT_ID = "tenant-admin-test";
 
   afterEach(() => {
-    // Clear overrides
     ["image_intake_enabled", "image_intake_combined_multimodal", "image_intake_intent_assist",
      "image_intake_handoff_queue", "image_intake_cross_session_persistence"].forEach((code) => {
-      setFeatureOverride(code, TENANT_ID, false); // reset to false
+      clearFeatureOverride(code, TENANT_ID);
     });
   });
 
@@ -416,6 +444,42 @@ describe("admin rollout runtime controls", () => {
     const flagsB = getImageIntakeAdminFlags("other-tenant");
     expect(flagsA.enabled).toBe(true);
     expect(flagsB.enabled).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tenant AND (env/user + admin FEATURE_FLAGS)
+// ---------------------------------------------------------------------------
+
+describe("tenant AND env gates (feature-flag)", () => {
+  const origEnv = { ...process.env };
+  const TENANT = "t-tenant-and";
+
+  beforeEach(() => {
+    process.env = { ...origEnv };
+    process.env.IMAGE_INTAKE_ENABLED = "true";
+    process.env.IMAGE_INTAKE_MULTIMODAL_ENABLED = "true";
+    process.env.IMAGE_INTAKE_COMBINED_MULTIMODAL_PERCENTAGE = "100";
+  });
+
+  afterEach(() => {
+    process.env = origEnv;
+    clearFeatureOverride("image_intake_enabled", TENANT);
+    clearFeatureOverride("image_intake_combined_multimodal", TENANT);
+  });
+
+  it("combined multimodal is false for tenant when admin flags default off", () => {
+    expect(isImageIntakeCombinedMultimodalEnabledForUser("user-1", TENANT)).toBe(false);
+  });
+
+  it("combined multimodal is true when tenant has base + combined admin flags on", () => {
+    setFeatureOverride("image_intake_enabled", TENANT, true);
+    setFeatureOverride("image_intake_combined_multimodal", TENANT, true);
+    expect(isImageIntakeCombinedMultimodalEnabledForUser("user-1", TENANT)).toBe(true);
+  });
+
+  it("omitting tenantId keeps env-only gate (backward compatible)", () => {
+    expect(isImageIntakeCombinedMultimodalEnabledForUser("user-1")).toBe(true);
   });
 });
 

@@ -5,7 +5,13 @@
  * (AI_REVIEW_USE_V2_PIPELINE, NEXT_PUBLIC_DISABLE_CLIENT_PORTAL_AI, etc.)
  *
  * Safe defaults: feature is OFF unless IMAGE_INTAKE_ENABLED=true.
+ *
+ * Phase 7: Optional `tenantId` on per-user gates ANDs Plan 8C.2 tenant feature flags
+ * (see `@/lib/admin/feature-flags`). When `tenantId` is omitted, behavior matches
+ * pre-Phase-7 env/user-only gates (tests and legacy call sites).
  */
+
+import { isFeatureEnabled } from "@/lib/admin/feature-flags";
 
 /**
  * Returns true when image intake lane is enabled for this environment.
@@ -126,47 +132,93 @@ function isUserAllowed(userId: string, allowlistEnvVar: string): boolean {
   return allowlist.has(userId);
 }
 
+/** Tenant admin: master image intake flag. Omitted tenantId → skip tenant AND. */
+function tenantAllowsImageIntakeBase(tenantId?: string): boolean {
+  if (!tenantId) return true;
+  return isFeatureEnabled("image_intake_enabled", tenantId);
+}
+
+function tenantAllowsCombinedMultimodal(tenantId?: string): boolean {
+  if (!tenantId) return true;
+  return (
+    isFeatureEnabled("image_intake_enabled", tenantId) &&
+    isFeatureEnabled("image_intake_combined_multimodal", tenantId)
+  );
+}
+
+function tenantAllowsCrossSessionPersistence(tenantId?: string): boolean {
+  if (!tenantId) return true;
+  return (
+    isFeatureEnabled("image_intake_enabled", tenantId) &&
+    isFeatureEnabled("image_intake_cross_session_persistence", tenantId)
+  );
+}
+
+function tenantAllowsHandoffQueue(tenantId?: string): boolean {
+  if (!tenantId) return true;
+  return (
+    isFeatureEnabled("image_intake_enabled", tenantId) &&
+    isFeatureEnabled("image_intake_handoff_queue", tenantId)
+  );
+}
+
 /**
  * Phase 5: Returns true when image intake is enabled for a specific user.
  * Checks base flag + optional per-user allowlist.
  */
-export function isImageIntakeEnabledForUser(userId: string): boolean {
-  return isImageIntakeEnabled() && isUserAllowed(userId, "IMAGE_INTAKE_ALLOWED_USER_IDS");
+export function isImageIntakeEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeEnabled() &&
+    isUserAllowed(userId, "IMAGE_INTAKE_ALLOWED_USER_IDS") &&
+    tenantAllowsImageIntakeBase(tenantId)
+  );
 }
 
 /**
  * Returns true when multimodal pass is enabled for a specific user.
  */
-export function isImageIntakeMultimodalEnabledForUser(userId: string): boolean {
-  return isImageIntakeMultimodalEnabled() &&
-    isUserAllowed(userId, "IMAGE_INTAKE_MULTIMODAL_ALLOWED_USER_IDS");
+export function isImageIntakeMultimodalEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeMultimodalEnabled() &&
+    isUserAllowed(userId, "IMAGE_INTAKE_MULTIMODAL_ALLOWED_USER_IDS") &&
+    tenantAllowsImageIntakeBase(tenantId)
+  );
 }
 
 /**
  * Returns true when thread reconstruction is enabled for a specific user.
  * Requires base + stitching flag ON.
  */
-export function isImageIntakeThreadReconstructionEnabledForUser(userId: string): boolean {
-  return isImageIntakeStitchingEnabled() &&
+export function isImageIntakeThreadReconstructionEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeStitchingEnabled() &&
     process.env.IMAGE_INTAKE_THREAD_RECONSTRUCTION_ENABLED === "true" &&
-    isUserAllowed(userId, "IMAGE_INTAKE_THREAD_RECONSTRUCTION_ALLOWED_USER_IDS");
+    isUserAllowed(userId, "IMAGE_INTAKE_THREAD_RECONSTRUCTION_ALLOWED_USER_IDS") &&
+    tenantAllowsImageIntakeBase(tenantId)
+  );
 }
 
 /**
  * Returns true when AI Review handoff is enabled for a specific user.
  */
-export function isImageIntakeReviewHandoffEnabledForUser(userId: string): boolean {
-  return isImageIntakeReviewHandoffEnabled() &&
-    isUserAllowed(userId, "IMAGE_INTAKE_REVIEW_HANDOFF_ALLOWED_USER_IDS");
+export function isImageIntakeReviewHandoffEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeReviewHandoffEnabled() &&
+    isUserAllowed(userId, "IMAGE_INTAKE_REVIEW_HANDOFF_ALLOWED_USER_IDS") &&
+    tenantAllowsImageIntakeBase(tenantId)
+  );
 }
 
 /**
  * Returns true when advanced case signal extraction is enabled for a specific user.
  */
-export function isImageIntakeCaseSignalEnabledForUser(userId: string): boolean {
-  return isImageIntakeEnabled() &&
+export function isImageIntakeCaseSignalEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeEnabled() &&
     process.env.IMAGE_INTAKE_CASE_SIGNAL_ENABLED === "true" &&
-    isUserAllowed(userId, "IMAGE_INTAKE_CASE_SIGNAL_ALLOWED_USER_IDS");
+    isUserAllowed(userId, "IMAGE_INTAKE_CASE_SIGNAL_ALLOWED_USER_IDS") &&
+    tenantAllowsImageIntakeBase(tenantId)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -218,33 +270,42 @@ function isUserInPercentageBucket(userId: string, envVar: string, salt: string):
  * Phase 6: Returns true when combined multimodal execution is enabled for a user.
  * Requires base + multimodal enabled + percentage gate.
  */
-export function isImageIntakeCombinedMultimodalEnabledForUser(userId: string): boolean {
-  return isImageIntakeMultimodalEnabledForUser(userId) &&
-    isUserInPercentageBucket(userId, "IMAGE_INTAKE_COMBINED_MULTIMODAL_PERCENTAGE", "combined");
+export function isImageIntakeCombinedMultimodalEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeMultimodalEnabledForUser(userId, tenantId) &&
+    isUserInPercentageBucket(userId, "IMAGE_INTAKE_COMBINED_MULTIMODAL_PERCENTAGE", "combined") &&
+    tenantAllowsCombinedMultimodal(tenantId)
+  );
 }
 
 /**
  * Phase 6: Returns true when cross-session reconstruction is enabled for a user.
  */
-export function isImageIntakeCrossSessionEnabledForUser(userId: string): boolean {
-  return isImageIntakeThreadReconstructionEnabledForUser(userId) &&
+export function isImageIntakeCrossSessionEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeThreadReconstructionEnabledForUser(userId, tenantId) &&
     process.env.IMAGE_INTAKE_CROSS_SESSION_ENABLED === "true" &&
-    isUserInPercentageBucket(userId, "IMAGE_INTAKE_CROSS_SESSION_PERCENTAGE", "cross_session");
+    isUserInPercentageBucket(userId, "IMAGE_INTAKE_CROSS_SESSION_PERCENTAGE", "cross_session") &&
+    tenantAllowsCrossSessionPersistence(tenantId)
+  );
 }
 
 /**
  * Phase 6: Returns true when AI Review handoff submit is enabled for a user.
  */
-export function isImageIntakeHandoffSubmitEnabledForUser(userId: string): boolean {
-  return isImageIntakeReviewHandoffEnabledForUser(userId) &&
+export function isImageIntakeHandoffSubmitEnabledForUser(userId: string, tenantId?: string): boolean {
+  return (
+    isImageIntakeReviewHandoffEnabledForUser(userId, tenantId) &&
     process.env.IMAGE_INTAKE_HANDOFF_SUBMIT_ENABLED === "true" &&
-    isUserInPercentageBucket(userId, "IMAGE_INTAKE_HANDOFF_SUBMIT_PERCENTAGE", "handoff_submit");
+    isUserInPercentageBucket(userId, "IMAGE_INTAKE_HANDOFF_SUBMIT_PERCENTAGE", "handoff_submit") &&
+    tenantAllowsHandoffQueue(tenantId)
+  );
 }
 
 /**
  * Returns Phase 5 rollout summary for a specific user (trace-safe).
  */
-export function getImageIntakeUserRolloutSummary(userId: string): {
+export function getImageIntakeUserRolloutSummary(userId: string, tenantId?: string): {
   base: boolean;
   multimodal: boolean;
   threadReconstruction: boolean;
@@ -255,16 +316,16 @@ export function getImageIntakeUserRolloutSummary(userId: string): {
   handoffSubmit: boolean;
   reason: string;
 } {
-  const base = isImageIntakeEnabledForUser(userId);
+  const base = isImageIntakeEnabledForUser(userId, tenantId);
   return {
     base,
-    multimodal: base && isImageIntakeMultimodalEnabledForUser(userId),
-    threadReconstruction: base && isImageIntakeThreadReconstructionEnabledForUser(userId),
-    reviewHandoff: base && isImageIntakeReviewHandoffEnabledForUser(userId),
-    caseSignal: base && isImageIntakeCaseSignalEnabledForUser(userId),
-    combinedMultimodal: base && isImageIntakeCombinedMultimodalEnabledForUser(userId),
-    crossSession: base && isImageIntakeCrossSessionEnabledForUser(userId),
-    handoffSubmit: base && isImageIntakeHandoffSubmitEnabledForUser(userId),
+    multimodal: base && isImageIntakeMultimodalEnabledForUser(userId, tenantId),
+    threadReconstruction: base && isImageIntakeThreadReconstructionEnabledForUser(userId, tenantId),
+    reviewHandoff: base && isImageIntakeReviewHandoffEnabledForUser(userId, tenantId),
+    caseSignal: base && isImageIntakeCaseSignalEnabledForUser(userId, tenantId),
+    combinedMultimodal: base && isImageIntakeCombinedMultimodalEnabledForUser(userId, tenantId),
+    crossSession: base && isImageIntakeCrossSessionEnabledForUser(userId, tenantId),
+    handoffSubmit: base && isImageIntakeHandoffSubmitEnabledForUser(userId, tenantId),
     reason: base
       ? "user is allowed by base flag, allowlists and percentage gates"
       : "image intake disabled (base flag or user allowlist exclusion)",

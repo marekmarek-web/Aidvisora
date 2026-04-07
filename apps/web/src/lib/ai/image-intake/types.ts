@@ -656,6 +656,7 @@ export type HandoffSubmitStatus =
   | "submitted"
   | "skipped_no_confirm"
   | "skipped_flag_disabled"
+  | "skipped_tenant_feature_disabled"
   | "skipped_no_payload"
   | "failed";
 

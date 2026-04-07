@@ -4,6 +4,10 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/ai/review-queue-repository", () => ({
+  createContractReview: vi.fn(async () => "mock-review-row"),
+}));
 vi.mock("@/lib/openai", () => ({
   createResponseStructured: vi.fn(),
   createResponseSafe: vi.fn(),

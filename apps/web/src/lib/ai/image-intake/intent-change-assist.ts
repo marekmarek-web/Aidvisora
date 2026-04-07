@@ -19,6 +19,7 @@
  */
 
 import { createResponseStructured } from "@/lib/openai";
+import { isFeatureEnabled } from "@/lib/admin/feature-flags";
 import type { IntentChangeFinding, MergedThreadFact } from "./types";
 import { getImageIntakeConfig } from "./image-intake-config";
 
@@ -141,7 +142,8 @@ function normalizeAssistOutput(raw: RawIntentAssistOutput): IntentChangeFinding 
  * Optional model assist for ambiguous intent change cases.
  *
  * Returns null when:
- * - Feature flag disabled
+ * - Env/runtime config disabled
+ * - Tenant admin flags off (when `tenantId` is passed from orchestrator)
  * - Finding is not ambiguous (no escalation needed)
  * - Facts are insufficient for meaningful assist
  *
@@ -150,11 +152,20 @@ function normalizeAssistOutput(raw: RawIntentAssistOutput): IntentChangeFinding 
 export async function runIntentChangeAssist(
   finding: IntentChangeFinding,
   mergedFacts: MergedThreadFact[],
+  tenantId?: string,
 ): Promise<IntentChangeFinding | null> {
   const config = getImageIntakeConfig();
 
   // Only escalate when config-enabled and finding is genuinely ambiguous
   if (!config.intentAssistEnabled) {
+    return null;
+  }
+
+  if (
+    tenantId &&
+    (!isFeatureEnabled("image_intake_enabled", tenantId) ||
+      !isFeatureEnabled("image_intake_intent_assist", tenantId))
+  ) {
     return null;
   }
 

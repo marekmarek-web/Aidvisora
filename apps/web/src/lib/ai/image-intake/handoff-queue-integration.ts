@@ -11,9 +11,11 @@
  *
  * Lane safety:
  * - Image intake does NOT process the review — just enqueues it
- * - processingStatus = "pending_extraction" triggers the existing AI Review pipeline
+ * - Row is created with `processingStatus: "uploaded"` (same as newly uploaded contracts);
+ *   the AI Review worker picks up `uploaded` rows and runs extraction / pipeline as usual
  * - Submit requires advisor confirm (isHandoffConfirmAction check)
  * - No auto-submit without confirm
+ * - Tenant admin flags (`image_intake_enabled`, `image_intake_handoff_queue`) AND config/env gates
  * - Graceful degradation if queue unavailable
  *
  * Status mapping:
@@ -33,6 +35,7 @@ import { randomUUID } from "crypto";
 import type { ReviewHandoffPayload, HandoffSubmitResult } from "./types";
 import { isHandoffConfirmAction } from "./handoff-submit";
 import { getImageIntakeConfig } from "./image-intake-config";
+import { isFeatureEnabled } from "@/lib/admin/feature-flags";
 
 // ---------------------------------------------------------------------------
 // Queue integration submit
@@ -42,9 +45,9 @@ import { getImageIntakeConfig } from "./image-intake-config";
  * Submits handoff payload to AI Review queue after advisor confirmation.
  *
  * What this does:
- * 1. Validates: payload exists + flag enabled + confirm action present
+ * 1. Validates: payload exists + runtime config + tenant feature flags + confirm action
  * 2. Creates a `contractUploadReviews` row via `createContractReview()`
- *    with processingStatus="pending_extraction"
+ *    with processingStatus="uploaded"
  * 3. Writes audit record
  * 4. Returns typed HandoffSubmitResult
  *
@@ -72,11 +75,31 @@ export async function submitToAiReviewQueue(
     return { status: "skipped_no_confirm", handoffId: payload.handoffId, reason: "Handoff queue submit vyžaduje explicitní potvrzení (submit_ai_review_handoff).", auditRef: null, reviewRowId: null };
   }
 
+  const tenantId = payload.metadata.tenantId;
+  if (!isFeatureEnabled("image_intake_enabled", tenantId)) {
+    return {
+      status: "skipped_tenant_feature_disabled",
+      handoffId: payload.handoffId,
+      reason: "Image intake není pro tento tenant v administraci povolen.",
+      auditRef: null,
+      reviewRowId: null,
+    };
+  }
+  if (!isFeatureEnabled("image_intake_handoff_queue", tenantId)) {
+    return {
+      status: "skipped_tenant_feature_disabled",
+      handoffId: payload.handoffId,
+      reason: "Zápis handoffu do AI Review fronty není pro tento tenant v administraci povolen.",
+      auditRef: null,
+      reviewRowId: null,
+    };
+  }
+
   try {
     // Build a synthetic storagePath from source asset refs for queue compatibility
     const syntheticStoragePath = `image_intake_handoff/${payload.handoffId}`;
 
-    // Create queue entry — processingStatus "pending_extraction" triggers existing AI Review pipeline
+    // Create queue entry — "uploaded" is picked up by the same AI Review ingestion as file uploads
     const reviewRowId = await createContractReview({
       tenantId: payload.metadata.tenantId,
       fileName: `intake_handoff_${payload.handoffId}.json`,
