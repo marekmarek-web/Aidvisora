@@ -5,22 +5,10 @@ import Link from "next/link";
 import { Briefcase, ChevronRight, ExternalLink } from "lucide-react";
 import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
-import { AiReviewProvenanceBadge, resolveAiProvenanceKind } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
+import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
+import { contractSourceKindLabel, resolveAiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 const PREVIEW_COUNT = 4;
-
-function sourceKindLabel(kind: string): string {
-  switch (kind) {
-    case "document":
-      return "Dokument";
-    case "ai_review":
-      return "AI kontrola";
-    case "import":
-      return "Import";
-    default:
-      return "Ručně";
-  }
-}
 
 export function ContactProductsPreview({ contactId }: { contactId: string }) {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
@@ -64,7 +52,9 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
         ) : contracts.length === 0 ? (
           <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné smlouvy.</p>
         ) : (
-          contracts.map((c) => (
+          contracts.map((c) => {
+            const aiProvenanceKind = resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt);
+            return (
             <Link
               key={c.id}
               href="#smlouvy"
@@ -82,15 +72,15 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
                     {c.partnerName ?? "—"}
                   </p>
                   <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    {resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt) ? (
+                    {aiProvenanceKind ? (
                       <AiReviewProvenanceBadge
-                        kind={resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt)!}
+                        kind={aiProvenanceKind}
                         reviewId={c.sourceContractReviewId}
                         confirmedAt={c.advisorConfirmedAt}
                       />
                     ) : (
                       <>
-                        <span>Zdroj: {sourceKindLabel(c.sourceKind)}</span>
+                        <span>Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
                         {c.sourceDocumentId ? (
                           <a
                             href={`/api/documents/${c.sourceDocumentId}/download`}
@@ -114,7 +104,8 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
                 <ChevronRight size={20} className="text-[color:var(--wp-text-tertiary)] group-hover:text-indigo-600 transition-colors shrink-0" />
               </div>
             </Link>
-          ))
+            );
+          })
         )}
         <Link
           href="#smlouvy&add=1"

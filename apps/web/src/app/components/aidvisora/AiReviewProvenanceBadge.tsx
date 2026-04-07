@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { Sparkles, CheckCircle2 } from "lucide-react";
+import type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
-export type AiProvenanceKind = "confirmed" | "auto_applied";
+export type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 export type AiReviewProvenanceBadgeProps = {
   /** "confirmed" = poradce explicitně potvrdil pole, "auto_applied" = zapsáno automaticky z AI Review */
@@ -62,16 +63,4 @@ export function AiReviewProvenanceBadge({
       ) : null}
     </span>
   );
-}
-
-/**
- * Pomocná funkce: ze sourceKind a advisorConfirmedAt urči provenance kind.
- * Vrací null pokud pole není z AI Review.
- */
-export function resolveAiProvenanceKind(
-  sourceKind: string | null | undefined,
-  advisorConfirmedAt: Date | string | null | undefined,
-): AiProvenanceKind | null {
-  if (sourceKind !== "ai_review") return null;
-  return advisorConfirmedAt ? "confirmed" : "auto_applied";
 }

@@ -13,6 +13,7 @@ import {
   validateContractFormForSubmit,
   type ContractFormState,
 } from "@/lib/contracts/contract-form-payload";
+import { breadcrumbContractAiReviewMissingSourceReview } from "@/lib/observability/contract-review-sentry";
 
 export type ContractRow = {
   id: string;
@@ -81,13 +82,23 @@ export async function getContractsByContact(contactId: string): Promise<Contract
     .from(contracts)
     .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)))
     .orderBy(asc(contracts.startDate));
-  return rows.map((r) => ({
+  const mapped: ContractRow[] = rows.map((r) => ({
     ...r,
     type: r.type ?? r.segment,
     portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
     extractionConfidence:
       r.extractionConfidence != null ? String(r.extractionConfidence) : null,
   }));
+  const orphanAiReviewCount = mapped.filter(
+    (r) => r.sourceKind === "ai_review" && !r.sourceContractReviewId,
+  ).length;
+  if (orphanAiReviewCount > 0) {
+    breadcrumbContractAiReviewMissingSourceReview({
+      contactId,
+      orphanCount: orphanAiReviewCount,
+    });
+  }
+  return mapped;
 }
 
 /**

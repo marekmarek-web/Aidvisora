@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { fetchContactDocumentsBundle } from "@/app/dashboard/contacts/contact-documents-bundle";
-import Link from "next/link";
 import {
   getContractSegments,
   updateContract,
@@ -34,20 +33,8 @@ import {
 } from "@/lib/contracts/contract-form-payload";
 import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
 import { getSegmentUiGroup } from "@/lib/contracts/contract-segment-wizard-config";
-import { AiReviewProvenanceBadge, resolveAiProvenanceKind } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
-
-function sourceKindLabel(kind: string): string {
-  switch (kind) {
-    case "document":
-      return "Dokument";
-    case "ai_review":
-      return "AI kontrola";
-    case "import":
-      return "Import";
-    default:
-      return "Ručně";
-  }
-}
+import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
+import { contractSourceKindLabel, resolveAiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 export function ContractsSection({ contactId }: { contactId: string }) {
   const queryClient = useQueryClient();
@@ -287,7 +274,9 @@ export function ContractsSection({ contactId }: { contactId: string }) {
         <div className="mb-4 rounded-[var(--wp-radius)] border border-indigo-200 bg-indigo-50/60 px-4 py-3">
           <p className="text-sm font-semibold text-indigo-950 mb-2">Čeká na publikaci do klientské zóny</p>
           <ul className="space-y-3">
-            {pendingList.map((c) => (
+            {pendingList.map((c) => {
+              const aiProvenanceKind = resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt);
+              return (
               <li
                 key={c.id}
                 className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
@@ -307,14 +296,14 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                     <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />
                   )}
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                    {resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt) ? (
+                    {aiProvenanceKind ? (
                       <AiReviewProvenanceBadge
-                        kind={resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt)!}
+                        kind={aiProvenanceKind}
                         reviewId={c.sourceContractReviewId}
                         confirmedAt={c.advisorConfirmedAt}
                       />
                     ) : (
-                      <span>Zdroj: {sourceKindLabel(c.sourceKind)}</span>
+                      <span>Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
                     )}
                     {c.sourceDocumentId && c.sourceKind !== "ai_review" ? (
                       <a
@@ -353,12 +342,15 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                   </button>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       ) : null}
       <ul className="space-y-3 mb-4">
-        {mainList.map((c) => (
+        {mainList.map((c) => {
+          const aiProvenanceKind = resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt);
+          return (
           <li
             key={c.id}
             className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm min-h-[44px]"
@@ -380,15 +372,15 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                   {c.visibleToClient === false ? "Skryto v klientské zóně" : "V klientské zóně"}
                   {c.portfolioStatus && c.portfolioStatus !== "active" ? ` · ${c.portfolioStatus}` : ""}
                 </span>
-                {resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt) ? (
+                {aiProvenanceKind ? (
                   <AiReviewProvenanceBadge
-                    kind={resolveAiProvenanceKind(c.sourceKind, c.advisorConfirmedAt)!}
+                    kind={aiProvenanceKind}
                     reviewId={c.sourceContractReviewId}
                     confirmedAt={c.advisorConfirmedAt}
                   />
                 ) : (
                   <>
-                    <span>· Zdroj: {sourceKindLabel(c.sourceKind)}</span>
+                    <span>· Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
                     {c.sourceDocumentId ? (
                       <a
                         href={`/api/documents/${c.sourceDocumentId}/download`}
@@ -412,7 +404,8 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               </button>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
       <NewContractWizard
         open={adding}

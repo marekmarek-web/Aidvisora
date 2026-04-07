@@ -21,6 +21,7 @@ vi.mock("@sentry/nextjs", () => {
 });
 
 import {
+  breadcrumbContractAiReviewMissingSourceReview,
   breadcrumbContractReviewApplyFailure,
   breadcrumbContractReviewPaymentGate,
   captureContractReviewApplyFailure,
@@ -54,6 +55,20 @@ describe("contract-review-sentry", () => {
     });
     expect(Sentry.addBreadcrumb).toHaveBeenCalled();
     expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("breadcrumbContractAiReviewMissingSourceReview emits provenance warning", () => {
+    breadcrumbContractAiReviewMissingSourceReview({
+      contactId: "00000000-0000-4000-8000-000000000001",
+      orphanCount: 2,
+    });
+    expect(Sentry.addBreadcrumb).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(Sentry.addBreadcrumb).mock.calls[0]![0] as {
+      category: string;
+      data: { contactId: string; orphanCount: number };
+    };
+    expect(call.category).toBe("contract.provenance");
+    expect(call.data.orphanCount).toBe(2);
   });
 
   it("breadcrumbContractReviewPaymentGate records blocked reasons", () => {

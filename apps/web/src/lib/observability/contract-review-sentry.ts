@@ -49,6 +49,29 @@ export function captureContractReviewApplyFailure(ctx: {
   }
 }
 
+/**
+ * Smlouva označená jako ai_review bez vazby na review řádek — data k doplnění nebo migraci.
+ */
+export function breadcrumbContractAiReviewMissingSourceReview(ctx: {
+  contactId: string;
+  orphanCount: number;
+}): void {
+  try {
+    Sentry.addBreadcrumb({
+      category: "contract.provenance",
+      type: "default",
+      level: "warning",
+      message: "ai_review_contract_missing_source_contract_review_id",
+      data: {
+        contactId: ctx.contactId.slice(0, 36),
+        orphanCount: ctx.orphanCount,
+      },
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export function breadcrumbContractReviewPaymentGate(ctx: {
   reviewId: string;
   blockedReasons: string[];
