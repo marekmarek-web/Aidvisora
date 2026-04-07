@@ -39,3 +39,25 @@ export {
 
 // --- Rules engine ---
 export { evaluateTerminationRules } from "./rules-engine";
+
+// --- Fáze 6: document builder (termination_letter) ---
+export type {
+  TerminationLetterViewModel,
+  TerminationLetterBuildResult,
+  TerminationLetterPreviewBadge,
+  TerminationLetterPublishState,
+  TerminationLetterDeliveryChannel,
+  TerminationOfficialFormOutput,
+} from "./termination-letter-types";
+export { TERMINATION_DOCUMENT_TYPE } from "./termination-letter-types";
+export {
+  buildTerminationLetterResult,
+  mapDbDeliveryToLetterChannel,
+  terminationModeToLabels,
+  legalBasisShortForReason,
+  type TerminationLetterBuildInput,
+  type TerminationRequestRowLike,
+  type ContactRowLike,
+  type ContractRowLike,
+  type InsurerRegistryRowLike,
+} from "./termination-letter-builder";

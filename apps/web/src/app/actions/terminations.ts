@@ -8,6 +8,7 @@ import {
   contracts,
   contacts,
   insurerTerminationRegistry,
+  terminationReasonCatalog,
   terminationRequests,
   terminationRequestEvents,
   terminationRequiredAttachments,
@@ -25,6 +26,13 @@ import type {
   TerminationRequestSource,
   TerminationRequestStatus,
 } from "db";
+import {
+  buildTerminationLetterResult,
+  type ContactRowLike,
+  type ContractRowLike,
+  type InsurerRegistryRowLike,
+} from "@/lib/terminations/termination-letter-builder";
+import type { TerminationLetterBuildResult } from "@/lib/terminations/termination-letter-types";
 
 export type TerminationWizardPrefill = {
   mode: "crm" | "contact_only" | "standalone";
@@ -394,4 +402,134 @@ export async function createTerminationDraft(
       error: e instanceof Error ? e.message : "Uložení žádosti se nezdařilo.",
     };
   }
+}
+
+export type TerminationLetterPreviewResponse =
+  | { ok: true; data: TerminationLetterBuildResult }
+  | { ok: false; error: string };
+
+/**
+ * Fáze 6 – náhled dopisu / formulářového režimu z uložené žádosti.
+ */
+export async function getTerminationLetterPreview(requestId: string): Promise<TerminationLetterPreviewResponse> {
+  const auth = await requireAuthInAction();
+  if (auth.roleName === "Client") {
+    return { ok: false, error: "Nepovoleno." };
+  }
+  if (!hasPermission(auth.roleName, "contacts:read")) {
+    return { ok: false, error: "Forbidden" };
+  }
+
+  const [req] = await db
+    .select()
+    .from(terminationRequests)
+    .where(and(eq(terminationRequests.id, requestId), eq(terminationRequests.tenantId, auth.tenantId)))
+    .limit(1);
+
+  if (!req) {
+    return { ok: false, error: "Žádost nenalezena." };
+  }
+
+  let contact: ContactRowLike | null = null;
+  if (req.contactId) {
+    const [c] = await db
+      .select({
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        title: contacts.title,
+        birthDate: contacts.birthDate,
+        personalId: contacts.personalId,
+        street: contacts.street,
+        city: contacts.city,
+        zip: contacts.zip,
+        email: contacts.email,
+        phone: contacts.phone,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.id, req.contactId), eq(contacts.tenantId, auth.tenantId)))
+      .limit(1);
+    contact = c ?? null;
+  }
+
+  let contract: ContractRowLike | null = null;
+  if (req.contractId) {
+    const [ct] = await db
+      .select({
+        productName: contracts.productName,
+        partnerName: contracts.partnerName,
+      })
+      .from(contracts)
+      .where(and(eq(contracts.id, req.contractId), eq(contracts.tenantId, auth.tenantId)))
+      .limit(1);
+    contract = ct ?? null;
+  }
+
+  let insurerRegistry: InsurerRegistryRowLike | null = null;
+  if (req.insurerRegistryId) {
+    const [ir] = await db
+      .select({
+        insurerName: insurerTerminationRegistry.insurerName,
+        officialFormName: insurerTerminationRegistry.officialFormName,
+        officialFormNotes: insurerTerminationRegistry.officialFormNotes,
+        mailingAddress: insurerTerminationRegistry.mailingAddress,
+      })
+      .from(insurerTerminationRegistry)
+      .where(eq(insurerTerminationRegistry.id, req.insurerRegistryId))
+      .limit(1);
+    if (ir) {
+      insurerRegistry = {
+        insurerName: ir.insurerName,
+        officialFormName: ir.officialFormName,
+        officialFormNotes: ir.officialFormNotes,
+        mailingAddress: (ir.mailingAddress as Record<string, unknown> | null) ?? null,
+      };
+    }
+  }
+
+  let reasonLabel = req.terminationReasonCode;
+  if (req.reasonCatalogId) {
+    const [rc] = await db
+      .select({ labelCs: terminationReasonCatalog.labelCs })
+      .from(terminationReasonCatalog)
+      .where(eq(terminationReasonCatalog.id, req.reasonCatalogId))
+      .limit(1);
+    if (rc?.labelCs) reasonLabel = rc.labelCs;
+  }
+
+  const attRows = await db
+    .select({ label: terminationRequiredAttachments.label })
+    .from(terminationRequiredAttachments)
+    .where(
+      and(
+        eq(terminationRequiredAttachments.requestId, requestId),
+        eq(terminationRequiredAttachments.tenantId, auth.tenantId)
+      )
+    );
+
+  const data = buildTerminationLetterResult({
+    request: {
+      insurerName: req.insurerName,
+      contractNumber: req.contractNumber,
+      productSegment: req.productSegment,
+      terminationMode: req.terminationMode,
+      terminationReasonCode: req.terminationReasonCode,
+      requestedEffectiveDate: req.requestedEffectiveDate,
+      computedEffectiveDate: req.computedEffectiveDate,
+      contractStartDate: req.contractStartDate,
+      contractAnniversaryDate: req.contractAnniversaryDate,
+      deliveryChannel: req.deliveryChannel,
+      freeformLetterAllowed: req.freeformLetterAllowed,
+      requiresInsurerForm: req.requiresInsurerForm,
+      reviewRequiredReason: req.reviewRequiredReason,
+      status: req.status,
+      deliveryAddressSnapshot: (req.deliveryAddressSnapshot as Record<string, unknown> | null) ?? null,
+    },
+    contact,
+    contract,
+    insurerRegistry,
+    reasonLabel,
+    attachmentLabels: attRows.map((a) => a.label),
+  });
+
+  return { ok: true, data };
 }

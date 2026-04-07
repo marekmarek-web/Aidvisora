@@ -97,3 +97,12 @@ Alternativa pro lokální vývoj: po sladění schématu lze znovu použít `dri
 - **CRM UI:** v sekci smluv u kontaktu tlačítko **Výpověď** u každé smlouvy a odkaz **Výpověď bez smlouvy** (`ContractsSection.tsx`).
 - **Rychlá akce:** položka „Výpověď smlouvy“ v katalogu `quick-actions.ts` (`termination_intake`).
 - **Oprávnění:** čtení předvyplnění vyžaduje `contacts:read`, vytvoření draftu `contacts:write` (Viewer jen čte formulář).
+
+## Fáze 6 – template draft v1 (document builder)
+
+- **Typy (canonical view model):** `apps/web/src/lib/terminations/termination-letter-types.ts`
+- **Builder (mapování DB → VM, validace, plain text dopis / formulářový blok):** `apps/web/src/lib/terminations/termination-letter-builder.ts`
+- **Server action náhledu:** `getTerminationLetterPreview(requestId)` v `apps/web/src/app/actions/terminations.ts`
+- **UI:** po uložení žádosti wizard zobrazí `TerminationLetterPreviewPanel` (badge Volná forma / Oficiální formulář / Vyžaduje kontrolu, audit panel, náhled textu nebo strukturovaný blok formuláře).
+
+Logika odpovídá draftu: volná forma jen pokud není `requiresOfficialForm` a registr dovoluje volný dopis; oficiální formulář negeneruje hlavní dopis; datum v textu preferuje `computedEffectiveDate`; odstoupení na dálku má samostatnou šablonu (sekce 3.6).

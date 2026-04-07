@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/terminations";
 import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "db";
 import type { TerminationRulesResult } from "@/lib/terminations";
+import { TerminationLetterPreviewPanel } from "./TerminationLetterPreviewPanel";
 
 const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "end_of_insurance_period", label: "Ke konci pojistného období / výročnímu dni" },
@@ -209,6 +210,12 @@ export function TerminationIntakeWizard({
             </div>
           ) : null}
         </div>
+
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-[color:var(--wp-text)]">Náhled dokumentu (fáze 6)</h2>
+          <TerminationLetterPreviewPanel requestId={requestId} />
+        </div>
+
         <div className="flex flex-wrap gap-3">
           {prefill.contactId ? (
             <Link
