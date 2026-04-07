@@ -183,6 +183,35 @@ export type ApplyResultPayload = {
     href: string;
     type: "analysis" | "service_action";
   }>;
+  /** Fáze 9/10: Apply policy enforcement trace — co se skutečně zapsalo. */
+  policyEnforcementTrace?: {
+    supportingDocumentGuard: boolean;
+    outputMode?: string;
+    summary: {
+      totalAutoApplied: number;
+      totalPendingConfirmation: number;
+      totalManualRequired: number;
+      totalExcluded: number;
+    };
+    contactEnforcement?: {
+      autoAppliedFields: string[];
+      pendingConfirmationFields: string[];
+      manualRequiredFields: string[];
+      excludedFields: string[];
+    };
+    contractEnforcement?: {
+      autoAppliedFields: string[];
+      pendingConfirmationFields: string[];
+      manualRequiredFields: string[];
+      excludedFields: string[];
+    };
+    paymentEnforcement?: {
+      autoAppliedFields: string[];
+      pendingConfirmationFields: string[];
+      manualRequiredFields: string[];
+      excludedFields: string[];
+    };
+  };
 };
 
 export type ExtractionDocument = {

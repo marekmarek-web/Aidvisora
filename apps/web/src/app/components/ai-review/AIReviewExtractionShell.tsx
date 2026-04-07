@@ -16,6 +16,10 @@ import {
   Shield,
   CreditCard,
   Download,
+  CheckCircle2,
+  Clock,
+  Pencil,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { createTask } from "@/app/actions/tasks";
@@ -26,6 +30,7 @@ import type {
   ExtractionReviewAction,
   AIRecommendation,
   FieldFilter,
+  ApplyResultPayload,
 } from "@/lib/ai-review/types";
 import { hasMeaningfulReviewContent } from "@/lib/ai-review/mappers";
 import { aiReviewPdfFileName, buildAiReviewPdfBlob } from "@/lib/ai-review/build-ai-review-pdf";
@@ -90,6 +95,152 @@ function humanizeApplyGateReason(code: string): string {
     return `Nízká jistota u pole ${fieldName}.`;
   }
   return code.replace(/_/g, " ").toLowerCase();
+}
+
+/* ─── Fáze 10: Apply Enforcement Result Summary ──────────────────── */
+
+type EnforcementTrace = NonNullable<ApplyResultPayload["policyEnforcementTrace"]>;
+
+function pluralizeFields(n: number): string {
+  if (n === 1) return "pole";
+  if (n >= 2 && n <= 4) return "pole";
+  return "polí";
+}
+
+function EnforcementCountBadge({
+  count,
+  label,
+  icon,
+  colorCls,
+}: {
+  count: number;
+  label: string;
+  icon: React.ReactNode;
+  colorCls: string;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold ${colorCls}`}>
+      {icon}
+      <span className="font-black tabular-nums">{count}</span>
+      <span className="font-semibold">{pluralizeFields(count)} — {label}</span>
+    </div>
+  );
+}
+
+function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
+  const s = trace.summary;
+  const isSupporting = trace.supportingDocumentGuard;
+  const total = s.totalAutoApplied + s.totalPendingConfirmation + s.totalManualRequired + s.totalExcluded;
+  if (total === 0 && !isSupporting) return null;
+
+  // Collect all pending + manual field names for per-section detail
+  const pendingFields: string[] = [
+    ...(trace.contactEnforcement?.pendingConfirmationFields ?? []),
+    ...(trace.contractEnforcement?.pendingConfirmationFields ?? []),
+    ...(trace.paymentEnforcement?.pendingConfirmationFields ?? []),
+  ];
+  const manualFields: string[] = [
+    ...(trace.contactEnforcement?.manualRequiredFields ?? []),
+    ...(trace.contractEnforcement?.manualRequiredFields ?? []),
+    ...(trace.paymentEnforcement?.manualRequiredFields ?? []),
+  ];
+  const excludedFields: string[] = [
+    ...(trace.contactEnforcement?.excludedFields ?? []),
+    ...(trace.contractEnforcement?.excludedFields ?? []),
+    ...(trace.paymentEnforcement?.excludedFields ?? []),
+  ];
+
+  return (
+    <div className="rounded-xl border border-emerald-200 bg-white/70 px-4 py-3 space-y-2.5">
+      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
+        <Shield size={11} className="shrink-0" />
+        {isSupporting ? "Výsledek zpracování" : "Výsledek enforcement zápisu"}
+      </p>
+
+      {isSupporting ? (
+        <p className="text-xs font-semibold text-amber-800 leading-snug flex items-start gap-1.5">
+          <AlertCircle size={13} className="shrink-0 mt-0.5 text-amber-600" />
+          Tento dokument slouží jako podklad — nevznikla žádná smluvní smlouva ani automatický zápis platebních dat.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <EnforcementCountBadge
+            count={s.totalAutoApplied}
+            label="Zapsáno automaticky"
+            icon={<CheckCircle2 size={13} className="shrink-0 text-emerald-600" />}
+            colorCls="bg-emerald-100 text-emerald-800"
+          />
+          <EnforcementCountBadge
+            count={s.totalPendingConfirmation}
+            label="Předvyplněno, čeká na potvrzení"
+            icon={<Clock size={13} className="shrink-0 text-amber-600" />}
+            colorCls="bg-amber-100 text-amber-800"
+          />
+          <EnforcementCountBadge
+            count={s.totalManualRequired}
+            label="Vyžaduje ruční doplnění"
+            icon={<Pencil size={13} className="shrink-0 text-rose-600" />}
+            colorCls="bg-rose-100 text-rose-800"
+          />
+          <EnforcementCountBadge
+            count={s.totalExcluded}
+            label="Nezapsáno"
+            icon={<XCircle size={13} className="shrink-0 text-slate-500" />}
+            colorCls="bg-slate-100 text-slate-600"
+          />
+        </div>
+      )}
+
+      {/* Pending fields — need advisor confirmation */}
+      {pendingFields.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-1.5 flex items-center gap-1">
+            <Clock size={10} /> Čeká na potvrzení poradcem
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {pendingFields.map((f) => (
+              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-800 bg-amber-100 rounded px-1.5 py-0.5">
+                {f}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual required fields */}
+      {manualFields.length > 0 && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-rose-800 mb-1.5 flex items-center gap-1">
+            <Pencil size={10} /> Vyžaduje ruční doplnění
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {manualFields.map((f) => (
+              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-800 bg-rose-100 rounded px-1.5 py-0.5">
+                {f}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Excluded / not applied fields */}
+      {excludedFields.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5 flex items-center gap-1">
+            <XCircle size={10} /> Nezapsáno
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {excludedFields.map((f) => (
+              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded px-1.5 py-0.5">
+                {f}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function reducer(
@@ -381,7 +532,7 @@ export function AIReviewExtractionShell({
         </div>
       )}
 
-      {/* 4F: Apply result summary – co se propsalo, kam, co zůstalo jako návrh */}
+      {/* Fáze 10: Apply result summary – enforcement trace + co se propsalo */}
       {doc.isApplied && doc.applyResultPayload && (
         <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-4 md:px-6">
           <div className="max-w-6xl mx-auto space-y-3">
@@ -434,6 +585,11 @@ export function AIReviewExtractionShell({
                 </span>
               )}
             </div>
+
+            {/* Fáze 10: Policy enforcement result summary */}
+            {doc.applyResultPayload.policyEnforcementTrace && (
+              <ApplyEnforcementResultSummary trace={doc.applyResultPayload.policyEnforcementTrace} />
+            )}
 
             {/* Payment setup detail when present */}
             {doc.applyResultPayload.paymentSetup && (

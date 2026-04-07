@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   XCircle,
   MinusCircle,
+  Pencil,
 } from "lucide-react";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
@@ -49,6 +50,7 @@ import type {
   FieldStatus,
   ExtractionReviewState,
   PaymentSyncPreview,
+  ApplyResultPayload,
 } from "@/lib/ai-review/types";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -493,13 +495,16 @@ function CrmFieldRow({
   label,
   value,
   applyLookup,
+  enforcementTrace,
 }: {
   fieldKey: string;
   label: string;
   value: string;
   applyLookup: Map<string, { label: string; requires: boolean }>;
+  enforcementTrace?: ApplyResultPayload["policyEnforcementTrace"];
 }) {
   const policy = applyLookup.get(fieldKey);
+  const resultStatus = enforcementTrace ? resolveFieldResultStatus(fieldKey, enforcementTrace) : null;
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
@@ -508,7 +513,10 @@ function CrmFieldRow({
       <span className="text-xs font-semibold text-[color:var(--wp-text)] truncate" title={value}>
         {value}
       </span>
-      {policy && <ApplyLabelBadge label={policy.label} requires={policy.requires} />}
+      {resultStatus
+        ? <ApplyResultBadge status={resultStatus} />
+        : policy && <ApplyLabelBadge label={policy.label} requires={policy.requires} />
+      }
     </div>
   );
 }
@@ -539,6 +547,7 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
   if (!hasAnyDetail) return null;
 
   const applyLookup = buildApplyPolicyLookup(doc.groups);
+  const enforcementTrace = doc.applyResultPayload?.policyEnforcementTrace;
 
   // Summary counts for apply policy
   const allPolicyLabels: string[] = [];
@@ -617,6 +626,7 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
                       label={k}
                       value={String(v)}
                       applyLookup={applyLookup}
+                      enforcementTrace={enforcementTrace}
                     />
                   ))}
               </div>
@@ -639,6 +649,7 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
                       label={k}
                       value={String(v)}
                       applyLookup={applyLookup}
+                      enforcementTrace={enforcementTrace}
                     />
                   ))}
               </div>
@@ -660,9 +671,208 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
                       label={PAYMENT_PAYLOAD_LABELS[k] ?? k}
                       value={String(v)}
                       applyLookup={applyLookup}
+                      enforcementTrace={enforcementTrace}
                     />
                   ))}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Fáze 10: Apply Result Field Badge ─────────────────────────── */
+
+type ApplyResultStatus = "auto" | "pending" | "manual" | "excluded";
+
+function ApplyResultBadge({ status }: { status: ApplyResultStatus }) {
+  const cfg: Record<ApplyResultStatus, { label: string; cls: string; icon: React.ReactNode }> = {
+    auto: {
+      label: "Zapsáno automaticky",
+      cls: "bg-emerald-100 text-emerald-700",
+      icon: <CheckCircle2 size={9} className="shrink-0" />,
+    },
+    pending: {
+      label: "Předvyplněno k potvrzení",
+      cls: "bg-amber-100 text-amber-700",
+      icon: <Clock size={9} className="shrink-0" />,
+    },
+    manual: {
+      label: "Vyžaduje ruční doplnění",
+      cls: "bg-rose-100 text-rose-700",
+      icon: <Pencil size={9} className="shrink-0" />,
+    },
+    excluded: {
+      label: "Nezapsáno",
+      cls: "bg-slate-100 text-slate-500",
+      icon: <XCircle size={9} className="shrink-0" />,
+    },
+  };
+  const { label, cls, icon } = cfg[status];
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded leading-none mt-0.5 w-fit ${cls}`}>
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+/** Determine per-field result status from policyEnforcementTrace */
+function resolveFieldResultStatus(
+  fieldKey: string,
+  trace: NonNullable<ApplyResultPayload["policyEnforcementTrace"]>
+): ApplyResultStatus | null {
+  const sections = [
+    trace.contactEnforcement,
+    trace.contractEnforcement,
+    trace.paymentEnforcement,
+  ].filter(Boolean) as NonNullable<typeof trace.contactEnforcement>[];
+
+  for (const s of sections) {
+    if (s.autoAppliedFields.includes(fieldKey)) return "auto";
+    if (s.pendingConfirmationFields.includes(fieldKey)) return "pending";
+    if (s.manualRequiredFields.includes(fieldKey)) return "manual";
+    if (s.excludedFields.includes(fieldKey)) return "excluded";
+  }
+  return null;
+}
+
+/* ─── Fáze 10: Enforcement Result Card (replaces CrmMappingProposalCard after apply) ── */
+
+function EnforcementResultCard({ doc }: { doc: ExtractionDocument }) {
+  const [open, setOpen] = useState(false);
+  const trace = doc.applyResultPayload?.policyEnforcementTrace;
+  if (!doc.isApplied || !trace) return null;
+
+  const s = trace.summary;
+  const isSupporting = trace.supportingDocumentGuard;
+
+  return (
+    <div className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-emerald-200 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-5 md:px-6 py-4 flex items-center justify-between text-left"
+      >
+        <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800 flex items-center gap-2">
+          <CheckCircle2 size={14} className="text-emerald-600" />
+          {isSupporting ? "Výsledek zpracování podkladu" : "Výsledek zápisu do CRM"}
+        </span>
+        {open ? (
+          <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" />
+        ) : (
+          <ChevronRight size={16} className="text-[color:var(--wp-text-tertiary)]" />
+        )}
+      </button>
+
+      {open && (
+        <div className="px-5 md:px-6 pb-5 pt-0 border-t border-emerald-100 space-y-3">
+          {isSupporting ? (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+              <p className="text-xs font-bold text-amber-900 leading-snug flex items-start gap-1.5">
+                <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                Tento dokument byl zpracován jako podklad. Nevznikla žádná smluvní smlouva ani zápis platebních instrukcí. Slouží pouze jako reference.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {s.totalAutoApplied > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <div>
+                    <div className="text-base font-black text-emerald-800 tabular-nums">{s.totalAutoApplied}</div>
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 leading-tight">Zapsáno automaticky</div>
+                  </div>
+                </div>
+              )}
+              {s.totalPendingConfirmation > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
+                  <Clock size={16} className="text-amber-600 shrink-0" />
+                  <div>
+                    <div className="text-base font-black text-amber-800 tabular-nums">{s.totalPendingConfirmation}</div>
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-amber-700 leading-tight">K potvrzení</div>
+                  </div>
+                </div>
+              )}
+              {s.totalManualRequired > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2.5">
+                  <Pencil size={16} className="text-rose-600 shrink-0" />
+                  <div>
+                    <div className="text-base font-black text-rose-800 tabular-nums">{s.totalManualRequired}</div>
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-rose-700 leading-tight">Ruční doplnění</div>
+                  </div>
+                </div>
+              )}
+              {s.totalExcluded > 0 && (
+                <div className="flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5">
+                  <XCircle size={16} className="text-slate-500 shrink-0" />
+                  <div>
+                    <div className="text-base font-black text-slate-700 tabular-nums">{s.totalExcluded}</div>
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500 leading-tight">Nezapsáno</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Per-section breakdown */}
+          {!isSupporting && (
+            <div className="space-y-3 mt-1">
+              {[
+                { key: "contactEnforcement" as const, label: "Klient" },
+                { key: "contractEnforcement" as const, label: "Smlouva" },
+                { key: "paymentEnforcement" as const, label: "Platební instrukce" },
+              ].map(({ key, label }) => {
+                const e = trace[key];
+                if (!e) return null;
+                const allRows: Array<{ status: ApplyResultStatus; fields: string[] }> = [
+                  { status: "auto" as const, fields: e.autoAppliedFields },
+                  { status: "pending" as const, fields: e.pendingConfirmationFields },
+                  { status: "manual" as const, fields: e.manualRequiredFields },
+                  { status: "excluded" as const, fields: e.excludedFields },
+                ];
+                const rows = allRows.filter((r) => r.fields.length > 0);
+                if (rows.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-1.5">{label}</p>
+                    <div className="space-y-1.5">
+                      {rows.map(({ status, fields }) => (
+                        <div key={status} className="flex flex-wrap gap-1 items-center">
+                          <ApplyResultBadge status={status} />
+                          <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">—</span>
+                          {fields.map((f) => (
+                            <span key={f} className="text-[10px] font-semibold text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] rounded px-1.5 py-0.5">
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pending confirmation call-to-action */}
+          {s.totalPendingConfirmation > 0 && !isSupporting && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+              <p className="text-xs font-bold text-amber-900 leading-snug flex items-start gap-1.5">
+                <Clock size={13} className="shrink-0 mt-0.5 text-amber-600" />
+                {s.totalPendingConfirmation} {s.totalPendingConfirmation === 1 ? "pole bylo" : "pole byla"} předvyplněno a čeká na ověření poradcem. Zkontrolujte tato pole přímo v záznamu klienta nebo smlouvy.
+              </p>
+            </div>
+          )}
+
+          {/* Manual required call-to-action */}
+          {s.totalManualRequired > 0 && !isSupporting && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-2.5">
+              <p className="text-xs font-bold text-rose-900 leading-snug flex items-start gap-1.5">
+                <Pencil size={13} className="shrink-0 mt-0.5 text-rose-600" />
+                {s.totalManualRequired} {s.totalManualRequired === 1 ? "pole vyžaduje" : "pole vyžadují"} ruční doplnění — automatický zápis nebyl možný. Doplňte chybějící data ručně v záznamu.
+              </p>
             </div>
           )}
         </div>
@@ -1423,8 +1633,10 @@ export function ExtractionLeftPanel({
           </div>
 
           <div data-section="recommendations" className="space-y-6">
-            {/* 4E: CRM mapping proposal – payload detail before apply */}
+            {/* 4E: CRM mapping proposal – payload detail before apply (hidden after apply) */}
             <CrmMappingProposalCard doc={doc} />
+            {/* Fáze 10: Enforcement result card – shown after apply */}
+            <EnforcementResultCard doc={doc} />
             <WorkActionsCard doc={doc} />
             <AIRecommendationsCard
               recommendations={doc.recommendations}
