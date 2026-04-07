@@ -1,0 +1,89 @@
+# AI Výpověď smlouvy – datový model (fáze DB základ)
+
+Scope zdroj pravdy pro tuto fázi: `packages/db/src/schema/termination-*.ts`, export v `packages/db/src/schema/index.ts`. UI a AI chat nejsou součástí tohoto dokumentu.
+
+## Execute plan (shrnutí feature)
+
+1. **Centrální entita** `termination_requests` napojená na CRM (`contacts`, `contracts`), zdrojový dokument (`documents`) a volitelně asistenta (`assistant_conversations`).
+2. **Registr a katalog** – `insurer_termination_registry`, `termination_reason_catalog` jako seedovatelná referenční data (globální `tenant_id = NULL` nebo per-tenant override).
+3. **Audit a provoz** – `termination_request_events`, strukturované přílohy `termination_required_attachments`, vazba na vygenerované soubory `termination_generated_documents` → `documents`, odeslání `termination_dispatch_log`.
+4. **Další fáze** (mimo tento krok) – rules engine v aplikaci, seed skripty, migrace SQL, API/actions, wizard UI.
+
+## Tabulky a vazby
+
+| Tabulka | Účel | Klíčové FK |
+|--------|------|------------|
+| `insurer_termination_registry` | Pravidla kanálů, formulářů, příloh u pojistitele | — |
+| `termination_reason_catalog` | Důvody výpovědi, výchozí výpočet data, review | — |
+| `termination_requests` | Jedna žádost / workflow run | `contact_id`, `contract_id`, `source_document_id`, `source_conversation_id`, `insurer_registry_id`, `reason_catalog_id` |
+| `termination_request_events` | Append-only události | `request_id` |
+| `termination_required_attachments` | Požadavky na přílohy | `request_id`, `satisfied_document_id` |
+| `termination_generated_documents` | Navázání CRM dokumentu na žádost | `request_id`, `document_id` |
+| `termination_dispatch_log` | Pokusy o odeslání | `request_id` |
+
+Enumy a string uniony jsou v `termination-enums.ts` (`terminationReasonCodes`, `terminationRequestStatuses`, `terminationModes`, kanály, typy událostí, …).
+
+## Seed-ready konvence
+
+### Pojistitel (`insurer_termination_registry`)
+
+- **`catalog_key`**: Stabilní řetězec pro idempotentní seed (např. `cz:SLAVIA`, `cz:GENERALI`). V jedné migraci vžcky `ON CONFLICT` podle domluveného unikátního klíče (viz níže – partial indexy).
+- **`tenant_id`**: `NULL` = globální řádek pro všechny tenanty; jinak override jen pro daného tenanta (stejný `catalog_key` u tenant scope).
+
+Příklad záznamu pro seed definici (JSON-like, sloupce odpovídají schématu):
+
+```json
+{
+  "catalog_key": "cz:EXAMPLE_INSURER",
+  "tenant_id": null,
+  "insurer_name": "Example pojišťovna a.s.",
+  "aliases": ["EXAMPLE", "Example PV"],
+  "supported_segments": ["ZP", "MAJ", "AUTO_PR"],
+  "mailing_address": {
+    "name": "Example – výpovědi",
+    "street": "…",
+    "city": "…",
+    "zip": "…"
+  },
+  "freeform_letter_allowed": true,
+  "requires_official_form": false,
+  "allowed_channels": ["postal_mail", "data_box"],
+  "attachment_rules": { "identity_copy": "recommended" },
+  "registry_needs_verification": true,
+  "active": true
+}
+```
+
+### Důvod (`termination_reason_catalog`)
+
+- **`reason_code`**: Kód z `terminationReasonCodes` (nebo rozšíření v nové migraci).
+- **`default_date_computation`**: Hodnota z `terminationDefaultDateComputations` v `termination-enums.ts`.
+- **`label_cs`**, **`instructions`**, **`supported_segments`**, **`required_fields`**, **`always_review`**, **`attachment_required`**, **`sort_order`**, **`version`**.
+
+Příklad:
+
+```json
+{
+  "tenant_id": null,
+  "reason_code": "end_of_period_6_weeks",
+  "label_cs": "Ke konci pojistného období / výročnímu dni (výpověď s lhůtou)",
+  "supported_segments": ["ZP", "MAJ", "ODP", "AUTO_PR", "AUTO_HAV", "CEST"],
+  "default_date_computation": "end_of_period_notice_6w",
+  "required_fields": ["contract_anniversary_date", "requested_effective_date"],
+  "attachment_required": false,
+  "always_review": false,
+  "sort_order": 10,
+  "version": 1,
+  "active": true
+}
+```
+
+## Migrace (jeden SQL soubor)
+
+Kompletní **`CREATE TABLE`**, cizí klíče, partial unikátní indexy a základní btree indexy jsou v repu:
+
+`packages/db/migrations/termination_module_2026-04-07.sql`
+
+Skript je idempotentní (`IF NOT EXISTS`). Spusť ho celý v Supabase SQL editoru (nebo psql) na databázi, kde už existují `contacts`, `contracts`, `documents`, `assistant_conversations`.
+
+Alternativa pro lokální vývoj: po sladění schématu lze znovu použít `drizzle-kit generate`, ale zdroj pravdy pro produkci může zůstat tento soubor, dokud nebude migrační historie sjednocená.
