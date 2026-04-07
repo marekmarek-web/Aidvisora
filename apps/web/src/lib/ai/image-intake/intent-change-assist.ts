@@ -16,12 +16,14 @@
  * - Short prompt, focused only on intent disambiguation
  * - Not used for stable/clear-change cases (wasted cost)
  * - Returns ambiguity if model confidence is still low
+ * - Phase 8: in-process cache (30 min TTL, 200 entries) avoids repeated model calls
  */
 
 import { createResponseStructured } from "@/lib/openai";
 import { isFeatureEnabled } from "@/lib/admin/feature-flags";
 import type { IntentChangeFinding, MergedThreadFact } from "./types";
 import { getImageIntakeConfig } from "./image-intake-config";
+import { lookupIntentAssistCache, storeIntentAssistCache } from "./intent-assist-cache";
 
 // ---------------------------------------------------------------------------
 // Schema for model assist
@@ -181,6 +183,12 @@ export async function runIntentChangeAssist(
     return null;
   }
 
+  // Phase 8: cache lookup — skip model call if we have a fresh result
+  const cacheResult = lookupIntentAssistCache(finding, mergedFacts);
+  if (cacheResult.cacheStatus === "cache_hit" && cacheResult.finding) {
+    return cacheResult.finding;
+  }
+
   const prompt = buildIntentAssistPrompt(priorFacts, currentFacts);
 
   try {
@@ -201,6 +209,9 @@ export async function runIntentChangeAssist(
     if (normalized.status === "ambiguous" && normalized.confidence < 0.4) {
       return finding;
     }
+
+    // Phase 8: store non-ambiguous result in cache
+    storeIntentAssistCache(mergedFacts, normalized);
 
     return normalized;
   } catch {

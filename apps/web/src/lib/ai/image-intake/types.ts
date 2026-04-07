@@ -649,6 +649,108 @@ export type CrossSessionReconstructionResult = {
 };
 
 // ---------------------------------------------------------------------------
+// Phase 8: AI Review handoff lifecycle status
+// ---------------------------------------------------------------------------
+
+/**
+ * Lifecycle status of an AI Review handoff after queue submit.
+ * Maps onto `ContractProcessingStatus` from the review pipeline
+ * plus image-intake-specific states.
+ */
+export type HandoffLifecycleStatus =
+  | "prepared"       // Payload built, not yet submitted
+  | "submitted"      // Row created in contractUploadReviews (uploaded)
+  | "queued"         // Row picked up by worker (processing)
+  | "processing"     // Worker is extracting / running pipeline
+  | "done"           // Processing complete (extracted / review_required)
+  | "failed"         // Pipeline failed
+  | "unavailable"    // Status cannot be determined (safe degradation)
+  | "unknown";       // reviewRowId not available / no DB lookup possible
+
+export type HandoffLifecycleFeedback = {
+  status: HandoffLifecycleStatus;
+  /** The review row ID in contractUploadReviews, if available. */
+  reviewRowId: string | null;
+  /** Human-readable status label for preview display. */
+  statusLabel: string;
+  /** Optional processing stage hint (from processingStage column). */
+  processingStageHint: string | null;
+  /** Whether to show a refresh/poll suggestion in the UI. */
+  suggestRefresh: boolean;
+  /** ISO timestamp of last status check. */
+  checkedAt: string;
+};
+
+// ---------------------------------------------------------------------------
+// Phase 8: Intent-assist cache
+// ---------------------------------------------------------------------------
+
+export type IntentAssistCacheStatus =
+  | "cache_hit"
+  | "cache_miss"
+  | "cache_stale"
+  | "cache_bypassed";
+
+export type IntentAssistCacheResult = {
+  cacheStatus: IntentAssistCacheStatus;
+  finding: import("./types").IntentChangeFinding | null;
+  cachedAt: string | null;
+  cacheKey: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// Phase 8: Household / multi-client binding
+// ---------------------------------------------------------------------------
+
+export type HouseholdBindingState =
+  | "single_client"          // Unambiguous single client
+  | "household_detected"     // Multiple related clients found; active context takes priority
+  | "household_ambiguous"    // Multiple clients, no clear priority — ambiguity outcome
+  | "no_household";          // No household relation found
+
+export type HouseholdMember = {
+  clientId: string;
+  clientLabel: string;
+  role: string | null;
+  householdId: string;
+  householdName: string | null;
+};
+
+export type HouseholdBindingResult = {
+  state: HouseholdBindingState;
+  /** Primary resolved client (if unambiguous or active context wins). */
+  primaryClientId: string | null;
+  primaryClientLabel: string | null;
+  /** All household members found. */
+  householdMembers: HouseholdMember[];
+  confidence: number;
+  /** Hint for preview — why ambiguity was kept. */
+  ambiguityNote: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// Phase 8: Document multi-image set result
+// ---------------------------------------------------------------------------
+
+export type DocumentSetDecision =
+  | "consolidated_document_facts"  // Related pages merged into one fact bundle
+  | "review_handoff_candidate"     // Review-like document set → handoff recommended
+  | "supporting_reference_set"     // Supporting/reference multi-image → no structured intake
+  | "mixed_document_set"           // Mixed types; process independently
+  | "insufficient_for_merge";      // Not enough confidence to merge
+
+export type DocumentMultiImageResult = {
+  decision: DocumentSetDecision;
+  /** Merged facts (when consolidated). */
+  mergedFactBundle: import("./types").ExtractedFactBundle | null;
+  /** Summary of detected document set context. */
+  documentSetSummary: string | null;
+  confidence: number;
+  /** Asset IDs included in this set. */
+  assetIds: string[];
+};
+
+// ---------------------------------------------------------------------------
 // Phase 6: Handoff submit result
 // ---------------------------------------------------------------------------
 

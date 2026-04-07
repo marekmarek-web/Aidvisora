@@ -11,6 +11,7 @@ Samostatná asistentní “lane” pro obrázky v chatu (mimo AI Review PDF pipe
 | 5 | [image-intake-phase5.md](./image-intake-phase5.md) |
 | 6 | [image-intake-phase6.md](./image-intake-phase6.md) |
 | 7 | [image-intake-phase7.md](./image-intake-phase7.md) |
+| 8 | [image-intake-phase8.md](./image-intake-phase8.md) — lifecycle, cache, admin UI, document sets, cleanup, household scope |
 
 ## Testy (web)
 
