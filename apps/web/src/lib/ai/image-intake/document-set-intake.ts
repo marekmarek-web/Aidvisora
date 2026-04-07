@@ -119,21 +119,25 @@ function mergeFactBundles(
   const missingFields = [...new Set(bundles.flatMap((b) => b.missingFields))];
   const ambiguityReasons = [...new Set(bundles.flatMap((b) => b.ambiguityReasons))];
 
+  const facts: ExtractedImageFact[] =
+    mergedFacts.length === 0
+      ? mergedFacts
+      : mergedFacts.map((f) => ({
+          ...f,
+          evidence: f.evidence
+            ? {
+                ...f.evidence,
+                evidenceText:
+                  `${f.evidence.evidenceText ?? ""} [merged from ${groupAssetIds.length} pages]`.trim(),
+              }
+            : null,
+        }));
+
   return {
-    facts: mergedFacts,
+    facts,
     missingFields,
     ambiguityReasons,
     extractionSource: "multimodal_pass",
-    // Overwrite evidence source to reflect all asset IDs
-    ...(mergedFacts.length > 0 && {
-      facts: mergedFacts.map((f) => ({
-        ...f,
-        evidence: {
-          ...f.evidence,
-          evidenceText: `${f.evidence?.evidenceText ?? ""} [merged from ${groupAssetIds.length} pages]`.trim(),
-        },
-      })),
-    }),
   };
 }
 
