@@ -747,9 +747,11 @@ describe("Regression coverage summary", () => {
     expect(redFlags.has("missing_required_fields")).toBe(true);
     expect(redFlags.has("multi_action_order_violation")).toBe(true);
 
-    console.log(`=== REGRESSION COVERAGE ===`);
-    console.log(`Total fixtures: ${replayFixtures.length}`);
-    console.log(`Categories: ${[...testedCategories].join(", ")}`);
-    console.log(`Red flags covered: ${[...redFlags].join(", ")}`);
+    if (process.env.DEBUG_ASSISTANT_TESTS === "true") {
+      console.log(`=== REGRESSION COVERAGE ===`);
+      console.log(`Total fixtures: ${replayFixtures.length}`);
+      console.log(`Categories: ${[...testedCategories].join(", ")}`);
+      console.log(`Red flags covered: ${[...redFlags].join(", ")}`);
+    }
   });
 });

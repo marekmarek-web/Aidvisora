@@ -243,7 +243,9 @@ describe("Assistant release gate (Phase 3)", () => {
     );
 
     const report = formatGateReport(gateResult, "PHASE 3 RELEASE GATE REPORT");
-    console.log(report);
+    if (process.env.DEBUG_ASSISTANT_TESTS === "true") {
+      console.log(report);
+    }
 
     // ── Assert gate passes ──
     for (const check of gateResult.checks) {
