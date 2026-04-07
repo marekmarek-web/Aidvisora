@@ -1,10 +1,11 @@
 "use server";
 
+import { cache } from "react";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { contracts, partners, products, documents, contacts } from "db";
-import { eq, and, asc, or, isNull, inArray } from "db";
+import { contracts, partners, products, documents, contacts, contractUploadReviews } from "db";
+import { eq, and, asc, or, isNull, inArray, desc, sql } from "db";
 import { contractSegments } from "db";
 import { logActivity } from "./activity";
 import { createPortalNotification } from "./portal-notifications";
@@ -697,4 +698,129 @@ export async function approveContractForClientPortal(contractId: string) {
   try {
     await logActivity("contract", contractId, "publish_portfolio", {});
   } catch {}
+}
+
+// ─── Fáze 16: Contract-level AI provenance ────────────────────────────────────
+
+/**
+ * Fáze 16: Contract-level AI provenance.
+ * Najde applied review, které vytvořilo daný contract (createdContractId).
+ * Vrací per-field provenance pro contract a payment scope.
+ */
+export type ContractAiProvenanceResult = {
+  reviewId: string;
+  appliedAt: string | null;
+  /** Pole potvrzená poradcem (scope="contract") */
+  confirmedContractFields: string[];
+  /** Pole auto-aplikovaná z AI Review (contractEnforcement.autoAppliedFields) */
+  autoAppliedContractFields: string[];
+  /** Contract pole čekající na potvrzení (prefill_confirm policy) */
+  pendingContractFields: string[];
+  /** Contract pole vyžadující ruční doplnění */
+  manualRequiredContractFields: string[];
+  /** Pole potvrzená poradcem (scope="payment") */
+  confirmedPaymentFields: string[];
+  /** Payment pole čekající na potvrzení */
+  pendingPaymentFields: string[];
+  /** Payment pole vyžadující ruční doplnění */
+  manualRequiredPaymentFields: string[];
+  /** True pokud review pochází z supporting dokumentu (výplatní lístek apod.) */
+  supportingDocumentGuard: boolean;
+} | null;
+
+async function loadContractAiProvenance(contractId: string): Promise<ContractAiProvenanceResult> {
+  try {
+    const auth = await requireAuthInAction();
+    if (!hasPermission(auth.roleName, "contacts:read")) return null;
+
+    const rows = await db
+      .select({
+        id: contractUploadReviews.id,
+        appliedAt: contractUploadReviews.appliedAt,
+        applyResultPayload: contractUploadReviews.applyResultPayload,
+      })
+      .from(contractUploadReviews)
+      .where(
+        and(
+          eq(contractUploadReviews.tenantId, auth.tenantId),
+          eq(contractUploadReviews.reviewStatus, "applied"),
+          sql`${contractUploadReviews.applyResultPayload}->>'createdContractId' = ${contractId}`,
+        )
+      )
+      .orderBy(desc(contractUploadReviews.appliedAt))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) return null;
+
+    const payload = row.applyResultPayload as Record<string, unknown> | null | undefined;
+    const confirmedFieldsTrace = payload?.confirmedFieldsTrace as
+      | Record<string, { scope?: string }>
+      | null
+      | undefined;
+
+    const confirmedContractFields: string[] = [];
+    const confirmedPaymentFields: string[] = [];
+    if (confirmedFieldsTrace) {
+      for (const [fieldKey, meta] of Object.entries(confirmedFieldsTrace)) {
+        if (meta?.scope === "contract") confirmedContractFields.push(fieldKey);
+        if (meta?.scope === "payment") confirmedPaymentFields.push(fieldKey);
+      }
+    }
+
+    const policyTrace = payload?.policyEnforcementTrace as Record<string, unknown> | null | undefined;
+    const contractEnf = policyTrace?.contractEnforcement as {
+      autoAppliedFields?: string[];
+      pendingConfirmationFields?: string[];
+      manualRequiredFields?: string[];
+    } | null | undefined;
+    const paymentEnf = policyTrace?.paymentEnforcement as {
+      pendingConfirmationFields?: string[];
+      manualRequiredFields?: string[];
+    } | null | undefined;
+
+    return {
+      reviewId: row.id,
+      appliedAt: row.appliedAt ? row.appliedAt.toISOString() : null,
+      confirmedContractFields,
+      autoAppliedContractFields: contractEnf?.autoAppliedFields ?? [],
+      pendingContractFields: contractEnf?.pendingConfirmationFields ?? [],
+      manualRequiredContractFields: contractEnf?.manualRequiredFields ?? [],
+      confirmedPaymentFields,
+      pendingPaymentFields: paymentEnf?.pendingConfirmationFields ?? [],
+      manualRequiredPaymentFields: paymentEnf?.manualRequiredFields ?? [],
+      supportingDocumentGuard: Boolean((policyTrace as Record<string, unknown> | null | undefined)?.supportingDocumentGuard),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export const getContractAiProvenance = cache(loadContractAiProvenance);
+
+// ─── Fáze 16: Inline Pending Confirm z contract detailu ───────────────────────
+
+export type ConfirmContractPendingFieldResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Fáze 16: Thin wrapper přes confirmPendingField pro inline potvrzení
+ * pending AI polí přímo z detailu smlouvy.
+ *
+ * scope musí být "contract" nebo "payment" — nikdy "contact".
+ * Supporting document guard zůstává tvrdý.
+ * Idempotentní: druhé potvrzení je bezpečně ignorováno.
+ */
+export async function confirmContractPendingFieldAction(
+  reviewId: string,
+  fieldKey: string,
+  scope: "contract" | "payment",
+): Promise<ConfirmContractPendingFieldResult> {
+  const { confirmPendingField } = await import("./contract-review");
+  const result = await confirmPendingField(reviewId, fieldKey, scope);
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
+  return { ok: true };
 }

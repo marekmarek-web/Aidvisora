@@ -9,8 +9,10 @@ import {
   updateContract,
   deleteContract,
   approveContractForClientPortal,
+  getContractAiProvenance,
 } from "@/app/actions/contracts";
-import type { ContractRow } from "@/app/actions/contracts";
+import type { ContractRow, ContractAiProvenanceResult } from "@/app/actions/contracts";
+import { ContractPendingFieldsGuard } from "./ContractPendingFieldsGuard";
 import {
   getPotentialDuplicateContractPairs,
   mergeDuplicateContracts,
@@ -77,6 +79,22 @@ export function ContractsSection({ contactId }: { contactId: string }) {
     void queryClient.invalidateQueries({ queryKey: bundleQK });
     void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.contractDupPairs(contactId) });
   }, [queryClient, bundleQK, contactId]);
+  const [provenanceMap, setProvenanceMap] = useState<Record<string, ContractAiProvenanceResult>>({});
+
+  // Načítáme provenance lazy pro AI Review smlouvy (jen jednou per contract)
+  useEffect(() => {
+    const aiContracts = list.filter(
+      (c) => c.sourceKind === "ai_review" && c.sourceContractReviewId,
+    );
+    for (const c of aiContracts) {
+      if (provenanceMap[c.id] !== undefined) continue;
+      void getContractAiProvenance(c.id).then((prov) => {
+        setProvenanceMap((prev) => ({ ...prev, [c.id]: prov }));
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -279,68 +297,76 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               return (
               <li
                 key={c.id}
-                className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
+                className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm"
               >
-                <span className="min-w-0">
-                  {c.contractNumber ? (
-                    <>
-                      <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
-                      <span className="text-[color:var(--wp-text-muted)]"> · </span>
-                    </>
-                  ) : null}
-                  {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
-                  {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
-                    ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
-                    : ""}
-                  {c.partnerName && (
-                    <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />
-                  )}
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                    {aiProvenanceKind ? (
-                      <AiReviewProvenanceBadge
-                        kind={aiProvenanceKind}
-                        reviewId={c.sourceContractReviewId}
-                        confirmedAt={c.advisorConfirmedAt}
-                      />
-                    ) : (
-                      <span>Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
-                    )}
-                    {c.sourceDocumentId && c.sourceKind !== "ai_review" ? (
-                      <a
-                        href={`/api/documents/${c.sourceDocumentId}/download`}
-                        className="text-[var(--wp-accent)] underline font-medium inline-flex items-center gap-0.5"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Dokument <ExternalLink className="w-3 h-3" aria-hidden />
-                      </a>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <span className="min-w-0">
+                    {c.contractNumber ? (
+                      <>
+                        <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
+                        <span className="text-[color:var(--wp-text-muted)]"> · </span>
+                      </>
                     ) : null}
+                    {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
+                    {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
+                      ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
+                      : ""}
+                    {c.partnerName && (
+                      <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />
+                    )}
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
+                      {aiProvenanceKind ? (
+                        <AiReviewProvenanceBadge
+                          kind={aiProvenanceKind}
+                          reviewId={c.sourceContractReviewId}
+                          confirmedAt={c.advisorConfirmedAt}
+                        />
+                      ) : (
+                        <span>Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
+                      )}
+                      {c.sourceDocumentId && c.sourceKind !== "ai_review" ? (
+                        <a
+                          href={`/api/documents/${c.sourceDocumentId}/download`}
+                          className="text-[var(--wp-accent)] underline font-medium inline-flex items-center gap-0.5"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Dokument <ExternalLink className="w-3 h-3" aria-hidden />
+                        </a>
+                      ) : null}
+                    </span>
                   </span>
-                </span>
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => void handleApproveForClient(c.id)}
-                    disabled={publishBusyId === c.id}
-                    className="rounded-[var(--wp-radius)] bg-emerald-600 text-white px-3 py-2 text-sm font-semibold min-h-[44px] hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    {publishBusyId === c.id ? "Zveřejňuji…" : "Schválit pro klienta"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(c)}
-                    className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] border border-[color:var(--wp-border)]"
-                  >
-                    Upravit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirmId(c.id)}
-                    className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]"
-                  >
-                    Smazat
-                  </button>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => void handleApproveForClient(c.id)}
+                      disabled={publishBusyId === c.id}
+                      className="rounded-[var(--wp-radius)] bg-emerald-600 text-white px-3 py-2 text-sm font-semibold min-h-[44px] hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {publishBusyId === c.id ? "Zveřejňuji…" : "Schválit pro klienta"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(c)}
+                      className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] border border-[color:var(--wp-border)]"
+                    >
+                      Upravit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmId(c.id)}
+                      className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]"
+                    >
+                      Smazat
+                    </button>
+                  </div>
                 </div>
+                {provenanceMap[c.id] !== undefined && (
+                  <ContractPendingFieldsGuard
+                    contractId={c.id}
+                    provenance={provenanceMap[c.id]}
+                  />
+                )}
               </li>
               );
             })}
@@ -353,56 +379,64 @@ export function ContractsSection({ contactId }: { contactId: string }) {
           return (
           <li
             key={c.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm min-h-[44px]"
+            className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm"
           >
-            <span className="min-w-0">
-              {c.contractNumber ? (
-                <>
-                  <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
-                  <span className="text-[color:var(--wp-text-muted)]"> · </span>
-                </>
-              ) : null}
-              {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
-              {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
-                ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
-                : ""}
-              {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                <span>
-                  {c.visibleToClient === false ? "Skryto v klientské zóně" : "V klientské zóně"}
-                  {c.portfolioStatus && c.portfolioStatus !== "active" ? ` · ${c.portfolioStatus}` : ""}
-                </span>
-                {aiProvenanceKind ? (
-                  <AiReviewProvenanceBadge
-                    kind={aiProvenanceKind}
-                    reviewId={c.sourceContractReviewId}
-                    confirmedAt={c.advisorConfirmedAt}
-                  />
-                ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 min-h-[44px]">
+              <span className="min-w-0">
+                {c.contractNumber ? (
                   <>
-                    <span>· Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
-                    {c.sourceDocumentId ? (
-                      <a
-                        href={`/api/documents/${c.sourceDocumentId}/download`}
-                        className="text-[var(--wp-accent)] underline font-medium inline-flex items-center gap-0.5"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Dokument <ExternalLink className="w-3 h-3" aria-hidden />
-                      </a>
-                    ) : null}
+                    <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
+                    <span className="text-[color:var(--wp-text-muted)]"> · </span>
                   </>
-                )}
+                ) : null}
+                {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
+                {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
+                  ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
+                  : ""}
+                {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
+                  <span>
+                    {c.visibleToClient === false ? "Skryto v klientské zóně" : "V klientské zóně"}
+                    {c.portfolioStatus && c.portfolioStatus !== "active" ? ` · ${c.portfolioStatus}` : ""}
+                  </span>
+                  {aiProvenanceKind ? (
+                    <AiReviewProvenanceBadge
+                      kind={aiProvenanceKind}
+                      reviewId={c.sourceContractReviewId}
+                      confirmedAt={c.advisorConfirmedAt}
+                    />
+                  ) : (
+                    <>
+                      <span>· Zdroj: {contractSourceKindLabel(c.sourceKind)}</span>
+                      {c.sourceDocumentId ? (
+                        <a
+                          href={`/api/documents/${c.sourceDocumentId}/download`}
+                          className="text-[var(--wp-accent)] underline font-medium inline-flex items-center gap-0.5"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Dokument <ExternalLink className="w-3 h-3" aria-hidden />
+                        </a>
+                      ) : null}
+                    </>
+                  )}
+                </span>
               </span>
-            </span>
-            <div className="flex gap-2 shrink-0">
-              <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
-                Upravit
-              </button>
-              <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]">
-                Smazat
-              </button>
+              <div className="flex gap-2 shrink-0">
+                <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
+                  Upravit
+                </button>
+                <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]">
+                  Smazat
+                </button>
+              </div>
             </div>
+            {provenanceMap[c.id] !== undefined && (
+              <ContractPendingFieldsGuard
+                contractId={c.id}
+                provenance={provenanceMap[c.id]}
+              />
+            )}
           </li>
           );
         })}
