@@ -434,7 +434,7 @@ describe("EXTRACTION PHILOSOPHY: unsupported subtype / supporting doc / proposal
 describe("EXTRACTION PHILOSOPHY: buildManualReviewStubEnvelope — never empty, always has advisor metadata", () => {
   function makeClassification(primaryType: string) {
     return {
-      primaryType: primaryType as import("../document-review-types").ContractDocumentType,
+      primaryType: primaryType as import("../document-classification").ContractDocumentType,
       subtype: "unknown" as const,
       lifecycleStatus: "unknown" as const,
       documentIntent: "manual_review_required" as const,

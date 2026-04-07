@@ -1,5 +1,5 @@
-import type { ClassificationResult } from "./document-classification";
-import type { ContractDocumentType, DocumentReviewEnvelope } from "./document-review-types";
+import type { ClassificationResult, ContractDocumentType } from "./document-classification";
+import type { DocumentReviewEnvelope } from "./document-review-types";
 import type { ExtractionRoute, PipelineNormalizedClassification } from "./pipeline-extraction-routing";
 
 /**
