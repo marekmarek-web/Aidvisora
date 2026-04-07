@@ -14,6 +14,14 @@ import {
   type CanonicalPaymentPayload,
 } from "./payment-field-contract";
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
+import {
+  enforceContactPayload,
+  enforceContractPayload,
+  enforcePaymentPayload,
+  isSupportingDocumentOnly,
+  buildApplyEnforcementTrace,
+  type ApplyPolicyEnforcementTrace,
+} from "@/lib/ai/apply-policy-enforcement";
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
 
@@ -170,6 +178,17 @@ export async function applyContractReview(
 
   const resultPayload: ApplyResultPayload = {};
 
+  // Fáze 9: Resolve extractedPayload pro enforcement engine
+  const extractedPayloadForEnforcement = (row.extractedPayload as Record<string, unknown>) ?? {};
+
+  // Supporting document guard — payslip, daňové přiznání, výpis z účtu nesmí generovat contract apply
+  const isSupporting = isSupportingDocumentOnly(extractedPayloadForEnforcement);
+
+  // Kolektory pro enforcement trace
+  let contactEnforcementResult: ReturnType<typeof enforceContactPayload> | undefined;
+  let contractEnforcementResult: ReturnType<typeof enforceContractPayload> | undefined;
+  let paymentEnforcementResult: ReturnType<typeof enforcePaymentPayload> | undefined;
+
   try {
     await db.transaction(async (tx) => {
         if (!effectiveContactId && createNewConfirmed) {
@@ -182,21 +201,31 @@ export async function applyContractReview(
             effectiveContactId = existing;
             resultPayload.linkedClientId = existing;
           } else {
+            // Fáze 9: Enforce contact payload před DB write
+            const contactEnforce = enforceContactPayload(
+              createClientAction.payload,
+              extractedPayloadForEnforcement,
+            );
+            contactEnforcementResult = contactEnforce;
+            const ep = contactEnforce.enforcedPayload;
+
+            // firstName/lastName jsou povinné pro vytvoření kontaktu — fallback i při manual_required
             const firstName =
-              String(createClientAction.payload.firstName ?? "").trim() || "Klient";
+              String(ep.firstName ?? createClientAction.payload.firstName ?? "").trim() || "Klient";
             const lastName =
-              String(createClientAction.payload.lastName ?? "").trim() || "ze smlouvy";
+              String(ep.lastName ?? createClientAction.payload.lastName ?? "").trim() || "ze smlouvy";
             const [inserted] = await tx
               .insert(contacts)
               .values({
                 tenantId,
                 firstName,
                 lastName,
-                email: (createClientAction.payload.email as string)?.trim() || null,
-                phone: (createClientAction.payload.phone as string)?.trim() || null,
-                birthDate: normalizeDateToISO(createClientAction.payload.birthDate as string) || null,
-                personalId: (createClientAction.payload.personalId as string)?.trim() || null,
-                street: (createClientAction.payload.address as string)?.trim() || null,
+                // Pole s prefill_confirm jdou jako null (needsHumanReview) — nebo jako hodnota pokud prošla enforcement
+                email: (ep.email as string)?.trim() || null,
+                phone: (ep.phone as string)?.trim() || null,
+                birthDate: normalizeDateToISO(ep.birthDate as string) || null,
+                personalId: (ep.personalId as string)?.trim() || null,
+                street: (ep.address as string)?.trim() || null,
               })
               .returning({ id: contacts.id });
             if (inserted?.id) {
@@ -219,7 +248,22 @@ export async function applyContractReview(
             action.type === "create_or_update_contract_production") &&
           effectiveContactId
         ) {
-          const contractNumber = (action.payload.contractNumber as string)?.trim() || null;
+          // Fáze 9: Supporting document guard — blocking contract apply for payslip/tax/bank statement
+          if (isSupporting) {
+            // Supporting doc nesmí vytvořit contract-like DB apply — přeskočíme
+            continue;
+          }
+
+          // Fáze 9: Enforce contract payload před DB write
+          const contractEnforce = enforceContractPayload(
+            action.payload,
+            extractedPayloadForEnforcement,
+          );
+          contractEnforcementResult = contractEnforce;
+          const ep = contractEnforce.enforcedPayload;
+
+          // contractNumber: manual_required → null (nesmí se tvářit jako potvrzené)
+          const contractNumber = (ep.contractNumber as string)?.trim() || null;
           const institutionName = (action.payload.institutionName as string)?.trim() || null;
           const segment = validateSegment(action.payload.segment as string);
           const existingContractId = await findExistingContractId(
@@ -260,9 +304,10 @@ export async function applyContractReview(
             resultPayload.createdContractId = existingContractId;
             continue;
           }
-          const premiumAmountRaw = (action.payload.premiumAmount as string | undefined)?.trim() || null;
-          const premiumAnnualRaw = (action.payload.premiumAnnual as string | undefined)?.trim() || null;
-          const productName = (action.payload.productName as string)?.trim() || null;
+          // premiumAmount: manual_required nebo do_not_apply → null (nesmí se zapsat jako finální)
+          const premiumAmountRaw = (ep.premiumAmount as string | undefined)?.trim() || null;
+          const premiumAnnualRaw = (ep.premiumAnnual as string | undefined)?.trim() || null;
+          const productName = (ep.productName as string)?.trim() || null;
           const docType = (action.payload.documentType as string)?.trim() || null;
           const noteParts = [productName, docType].filter(Boolean);
           const [inserted] = await tx
@@ -276,7 +321,7 @@ export async function applyContractReview(
               partnerName: institutionName,
               productName,
               contractNumber,
-              startDate: normalizeDateToISO((action.payload.effectiveDate as string)?.trim()) || null,
+              startDate: normalizeDateToISO((ep.effectiveDate as string)?.trim()) || null,
               premiumAmount: premiumAmountRaw,
               premiumAnnual: premiumAnnualRaw,
               note: noteParts.length ? noteParts.join(" · ") : null,
@@ -310,13 +355,43 @@ export async function applyContractReview(
           action.type === "create_payment" ||
           action.type === "create_payment_setup_for_portal"
         ) {
+          // Fáze 9: Supporting document guard — payslip/daňové přiznání nesmí vytvořit payment setup
+          if (isSupporting) {
+            continue;
+          }
+
+          // Fáze 9: Enforce payment payload před DB write
+          const paymentEnforce = enforcePaymentPayload(
+            action.payload,
+            extractedPayloadForEnforcement,
+          );
+          paymentEnforcementResult = paymentEnforce;
+
+          // Pokud jsou všechna citlivá platební pole excluded/manual_required, přeskočíme payment create
+          const hasUsablePaymentData =
+            paymentEnforce.autoAppliedFields.length > 0 ||
+            paymentEnforce.pendingConfirmationFields.length > 0;
+
+          if (!hasUsablePaymentData) {
+            // Žádná použitelná platební data — payment setup se nevytvoří
+            continue;
+          }
+
+          // Akce pro applyPaymentSetupAction s enforcovaným payloadem
+          const enforcedPaymentAction = {
+            ...action,
+            payload: paymentEnforce.enforcedPayload,
+          };
+
           const paymentSetupResult = await applyPaymentSetupAction(tx as unknown as typeof db, {
             tenantId,
             reviewId,
             effectiveContactId,
-            action,
+            action: enforcedPaymentAction,
             row,
             createdContractId: resultPayload.createdContractId ?? null,
+            // Fáze 9: prefill_confirm pole → needsHumanReview=true v DB
+            hasPrefillConfirmFields: paymentEnforce.pendingConfirmationFields.length > 0,
           });
           if (paymentSetupResult.paymentSetup) {
             resultPayload.paymentSetup = paymentSetupResult.paymentSetup;
@@ -334,6 +409,45 @@ export async function applyContractReview(
       }
     });
 
+    // Fáze 9: Build enforcement trace pro audit a resultPayload
+    const enforcementTrace = buildApplyEnforcementTrace(
+      contactEnforcementResult,
+      contractEnforcementResult,
+      paymentEnforcementResult,
+      extractedPayloadForEnforcement,
+    );
+
+    // Přidej trace do resultPayload (viditelný v applyResultPayload v DB)
+    resultPayload.policyEnforcementTrace = {
+      supportingDocumentGuard: enforcementTrace.supportingDocumentGuard,
+      outputMode: enforcementTrace.outputMode,
+      summary: enforcementTrace.summary,
+      contactEnforcement: contactEnforcementResult
+        ? {
+            autoAppliedFields: contactEnforcementResult.autoAppliedFields,
+            pendingConfirmationFields: contactEnforcementResult.pendingConfirmationFields,
+            manualRequiredFields: contactEnforcementResult.manualRequiredFields,
+            excludedFields: contactEnforcementResult.excludedFields,
+          }
+        : undefined,
+      contractEnforcement: contractEnforcementResult
+        ? {
+            autoAppliedFields: contractEnforcementResult.autoAppliedFields,
+            pendingConfirmationFields: contractEnforcementResult.pendingConfirmationFields,
+            manualRequiredFields: contractEnforcementResult.manualRequiredFields,
+            excludedFields: contractEnforcementResult.excludedFields,
+          }
+        : undefined,
+      paymentEnforcement: paymentEnforcementResult
+        ? {
+            autoAppliedFields: paymentEnforcementResult.autoAppliedFields,
+            pendingConfirmationFields: paymentEnforcementResult.pendingConfirmationFields,
+            manualRequiredFields: paymentEnforcementResult.manualRequiredFields,
+            excludedFields: paymentEnforcementResult.excludedFields,
+          }
+        : undefined,
+    };
+
     await db.insert(auditLog).values({
       tenantId,
       userId,
@@ -347,6 +461,9 @@ export async function applyContractReview(
         createdContractId: resultPayload.createdContractId ?? undefined,
         createdPaymentSetupId: resultPayload.createdPaymentSetupId ?? undefined,
         createdTaskId: resultPayload.createdTaskId ?? undefined,
+        // Fáze 9: enforcement summary v audit logu
+        policyEnforcementSummary: enforcementTrace.summary,
+        supportingDocumentGuard: enforcementTrace.supportingDocumentGuard,
       },
     });
   } catch (err) {
@@ -407,9 +524,13 @@ function buildPaymentSetupDbValues(
   reviewId: string,
   action: { payload: Record<string, unknown> },
   isApproved: boolean,
+  /** Fáze 9: true pokud platební pole mají prefill_confirm policy (needsHumanReview override) */
+  hasPrefillConfirmFields?: boolean,
 ) {
   const domainType = resolvePaymentDomainType(action);
   const amount = parsePaymentAmount(action.payload);
+  // Fáze 9: needsHumanReview=true pokud review není schválena NEBO má prefill_confirm pole
+  const needsHumanReview = !isApproved || (hasPrefillConfirmFields === true);
   return {
     tenantId,
     contactId,
@@ -441,14 +562,14 @@ function buildPaymentSetupDbValues(
       normalizeDateToISO((action.payload.firstPaymentDate as string)?.trim()) ||
       null,
     paymentInstructionsText: (action.payload.clientNote as string)?.trim() || null,
-    needsHumanReview: !isApproved,
+    needsHumanReview,
     updatedAt: new Date(),
   };
 }
 
 /**
- * Phase 3C: Hardened payment setup apply with idempotent upsert,
- * post-approval status, and modelation guard.
+ * Phase 3C + Fáze 9: Hardened payment setup apply with idempotent upsert,
+ * post-approval status, modelation guard, and apply policy enforcement.
  */
 async function applyPaymentSetupAction(
   tx: typeof db,
@@ -459,12 +580,14 @@ async function applyPaymentSetupAction(
     action: { type: string; payload: Record<string, unknown> };
     row: ContractReviewRow;
     createdContractId: string | null;
+    /** Fáze 9: true pokud platební pole mají prefill_confirm policy */
+    hasPrefillConfirmFields?: boolean;
   },
 ): Promise<{
   paymentSetup?: ApplyResultPayload["paymentSetup"];
   createdPaymentSetupId?: string;
 }> {
-  const { tenantId, reviewId, effectiveContactId, action, row } = params;
+  const { tenantId, reviewId, effectiveContactId, action, row, hasPrefillConfirmFields } = params;
   const preview = buildPaymentSetupPreview(action.payload);
 
   if (!effectiveContactId) {
@@ -487,7 +610,8 @@ async function applyPaymentSetupAction(
   }
 
   const isApproved = row.reviewStatus === "approved";
-  const dbValues = buildPaymentSetupDbValues(tenantId, effectiveContactId, reviewId, action, isApproved);
+  // Fáze 9: předej prefill_confirm flag pro needsHumanReview override
+  const dbValues = buildPaymentSetupDbValues(tenantId, effectiveContactId, reviewId, action, isApproved, hasPrefillConfirmFields);
 
   const existingPay = await tx
     .select({ id: clientPaymentSetups.id })

@@ -38,6 +38,20 @@ export type ApplyResultPayload = {
     href: string;
     type: "analysis" | "service_action";
   }>;
+  /** Fáze 9: Apply policy enforcement trace — audit log toho, co se skutečně zapsalo. */
+  policyEnforcementTrace?: {
+    supportingDocumentGuard: boolean;
+    outputMode?: string;
+    summary: {
+      totalAutoApplied: number;
+      totalPendingConfirmation: number;
+      totalManualRequired: number;
+      totalExcluded: number;
+    };
+    contactEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
+    contractEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
+    paymentEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
+  };
 };
 
 /** Extraction trace stored in DB (no document content). */
