@@ -161,6 +161,26 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
+  // §1b Payslip / income / tax — explicit family routing so these NEVER fall to bank_statement lane
+  const PAYSLIP_FAMILIES = new Set(["payslip", "income_document", "payroll", "income", "employment"]);
+  const TAX_FAMILIES = new Set(["tax", "tax_return", "corporate_tax", "self_employed", "accounting"]);
+  if (PAYSLIP_FAMILIES.has(fam) || dt === "payslip_document" || dt === "income_proof_document" || dt === "income_confirmation") {
+    return { outcome: "extract", promptKey: "supportingDocumentExtraction", reasonCodes: extendReasons("payslip_income_explicit") };
+  }
+  if (TAX_FAMILIES.has(fam) || dt === "corporate_tax_return" || dt === "self_employed_tax_or_income_document") {
+    return { outcome: "extract", promptKey: "supportingDocumentExtraction", reasonCodes: extendReasons("tax_return_explicit") };
+  }
+  // Also catch supporting_document with explicit payslip/tax subtypes
+  if (dt === "supporting_document" || dt === "statement") {
+    const subAndFam = sub + " " + fam;
+    if (subAndFam.includes("payslip") || subAndFam.includes("mzda") || subAndFam.includes("salary") || subAndFam.includes("income_proof") || subAndFam.includes("vyplatni") || subAndFam.includes("payroll")) {
+      return { outcome: "extract", promptKey: "supportingDocumentExtraction", reasonCodes: extendReasons("payslip_subtype_explicit") };
+    }
+    if (subAndFam.includes("tax_return") || subAndFam.includes("danove") || subAndFam.includes("corporate_tax") || subAndFam.includes("self_employed") || subAndFam.includes("priznani")) {
+      return { outcome: "extract", promptKey: "supportingDocumentExtraction", reasonCodes: extendReasons("tax_return_subtype_explicit") };
+    }
+  }
+
   // §2 Non-life (also handle family aliases: property_insurance, liability, motor, etc.)
   const isNonLife =
     fam === "non_life_insurance" ||
@@ -194,7 +214,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     if (dt === "proposal" || dt === "offer" || dt === "modelation") {
       return { outcome: "extract", promptKey: "insuranceProposalModelation", reasonCodes: extendReasons("nonlife_proposal_modelation") };
     }
-    if (dt === "amendment") {
+    if (dt === "amendment" || dt === "insurance_policy_change_or_service_doc" || dt === "life_insurance_change_request") {
       if (sub === "car_insurance" || isCarFam) {
         const rc = [...reasonCodes];
         if (!amendmentConfidenceOk(input.confidence, amendTh)) {

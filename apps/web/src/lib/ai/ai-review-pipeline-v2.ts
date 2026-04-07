@@ -1028,6 +1028,8 @@ export async function runAiReviewV2Pipeline(
     "consentIdentificationExtraction",
     "confirmationDocumentExtraction",
     "terminationDocumentExtraction",
+    // Supporting docs (payslip, tax, bank statement) — always extract to get at least a summary
+    "supportingDocumentExtraction",
   ]);
 
   if (ai.supportedForDirectExtraction === false && !ALWAYS_EXTRACT_PROMPT_KEYS.has(promptKey)) {

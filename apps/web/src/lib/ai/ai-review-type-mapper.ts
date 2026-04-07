@@ -116,8 +116,9 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
     if (dt === "corporate_tax_return" || dt === "self_employed_tax_or_income_document") return "corporate_tax_return";
     if (dt === "payslip_document" || dt === "income_proof_document" || dt === "income_confirmation") return "payslip_document";
     if (dt === "bank_statement" || dt === "statement" || dt === "supporting_document") {
-      if (sub.includes("payslip") || sub.includes("mzda") || sub.includes("salary") || sub.includes("income_proof") || sub.includes("vyplatni")) return "payslip_document";
-      if (sub.includes("tax_return") || sub.includes("tax_declaration") || sub.includes("danove") || sub.includes("corporate_tax") || sub.includes("priznani")) return "corporate_tax_return";
+      const subAndFam = sub + " " + fam;
+      if (subAndFam.includes("payslip") || subAndFam.includes("mzda") || subAndFam.includes("salary") || subAndFam.includes("income_proof") || subAndFam.includes("vyplatni") || subAndFam.includes("income_document") || subAndFam.includes("payroll")) return "payslip_document";
+      if (subAndFam.includes("tax_return") || subAndFam.includes("tax_declaration") || subAndFam.includes("danove") || subAndFam.includes("corporate_tax") || subAndFam.includes("priznani") || subAndFam.includes("self_employed")) return "corporate_tax_return";
       return "bank_statement";
     }
     // Service agreements detected via compliance path
@@ -125,9 +126,11 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
     return "consent_or_declaration";
   }
   if (dt === "statement" || dt === "supporting_document") {
-    if (sub.includes("payslip") || sub.includes("mzda") || sub.includes("salary") || sub.includes("income_proof") || sub.includes("vyplatni")) return "payslip_document";
-    if (sub.includes("tax_return") || sub.includes("tax_declaration") || sub.includes("danove") || sub.includes("corporate_tax") || sub.includes("priznani")) return "corporate_tax_return";
-    return "bank_statement";
+    const subAndFam = sub + " " + fam;
+    if (subAndFam.includes("payslip") || subAndFam.includes("mzda") || subAndFam.includes("salary") || subAndFam.includes("income_proof") || subAndFam.includes("vyplatni") || subAndFam.includes("income_document") || subAndFam.includes("payroll")) return "payslip_document";
+    if (subAndFam.includes("tax_return") || subAndFam.includes("tax_declaration") || subAndFam.includes("danove") || subAndFam.includes("corporate_tax") || subAndFam.includes("priznani") || subAndFam.includes("tax_document") || subAndFam.includes("self_employed")) return "corporate_tax_return";
+    if (fam === "banking" || fam === "bank" || subAndFam.includes("bank_statement")) return "bank_statement";
+    return "generic_financial_document";
   }
   if (fam === "legacy_financial_product") return "generic_financial_document";
   if (dt === "termination_document") return "generic_financial_document";

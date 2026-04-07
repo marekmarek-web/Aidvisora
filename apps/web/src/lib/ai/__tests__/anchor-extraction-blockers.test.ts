@@ -1022,3 +1022,162 @@ describe("ANCHOR: AMUNDI DIP — productType=DIP inferred from productName", () 
     }
   });
 });
+
+// ─── 19. GČP change/service doc — router routes to insuranceAmendment ─────────
+
+describe("ANCHOR: GČP change/service document — insuranceAmendment routing", () => {
+  it("non_life_insurance + amendment → insuranceAmendment (not manual_review)", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "amendment",
+      productFamily: "non_life_insurance",
+      productSubtype: "liability_insurance",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.82,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("insuranceAmendment");
+    expect(r.reasonCodes).not.toContain("confirmation_unsupported_subtype");
+  });
+
+  it("insurance_policy_change_or_service_doc documentType → insuranceAmendment", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "insurance_policy_change_or_service_doc",
+      productFamily: "non_life_insurance",
+      productSubtype: "liability_insurance",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.85,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("insuranceAmendment");
+  });
+
+  it("compliance family + amendment → insuranceAmendment", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "amendment",
+      productFamily: "compliance",
+      productSubtype: "insurance_amendment",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.78,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("insuranceAmendment");
+  });
+});
+
+// ─── 20. MAXIMA life proposal — must route to insuranceProposalModelation ─────
+
+describe("ANCHOR: Sebova MAXIMA — life proposal routing", () => {
+  it("life_insurance + proposal → insuranceProposalModelation (not manual_review)", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "proposal",
+      productFamily: "life_insurance",
+      productSubtype: "risk_life_insurance",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.90,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("insuranceProposalModelation");
+  });
+
+  it("life_insurance + offer → insuranceProposalModelation", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "offer",
+      productFamily: "life_insurance",
+      productSubtype: "risk_life_insurance",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.88,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("insuranceProposalModelation");
+  });
+});
+
+// ─── 21. Payslip / tax — explicit family routing, never bank_statement ────────
+
+describe("ANCHOR: Payslip / tax return — never bank_statement misrouting", () => {
+  it("payslip family → supportingDocumentExtraction", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "supporting_document",
+      productFamily: "payslip",
+      productSubtype: "monthly_payslip",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.88,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("supportingDocumentExtraction");
+  });
+
+  it("income_document family → supportingDocumentExtraction (not bank_statement path)", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "supporting_document",
+      productFamily: "income_document",
+      productSubtype: "payslip",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.85,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("supportingDocumentExtraction");
+  });
+
+  it("payslip_document documentType → supportingDocumentExtraction", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "payslip_document",
+      productFamily: "compliance",
+      productSubtype: "monthly_salary",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.87,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("supportingDocumentExtraction");
+  });
+
+  it("corporate_tax_return documentType → supportingDocumentExtraction", () => {
+    const r = resolveAiReviewExtractionRoute({
+      documentType: "corporate_tax_return",
+      productFamily: "compliance",
+      productSubtype: "tax_return",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.85,
+    });
+    expect(r.outcome).toBe("extract");
+    expect(r.promptKey).toBe("supportingDocumentExtraction");
+  });
+
+  it("statement with payslip sub → payslip_document (not bank_statement) in type mapper", () => {
+    // Already covered by prior test; this verifies the explicit payslip fam path too
+    const primaryType = mapAiClassifierToPrimaryType({
+      documentType: "supporting_document",
+      productFamily: "payslip",
+      productSubtype: "monthly_salary",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.88,
+      warnings: [],
+    });
+    // Should NOT be bank_statement
+    expect(primaryType).not.toBe("bank_statement");
+  });
+
+  it("statement with tax fam → corporate_tax_return (not bank_statement) in type mapper", () => {
+    const primaryType = mapAiClassifierToPrimaryType({
+      documentType: "statement",
+      productFamily: "tax_return",
+      productSubtype: "corporate_tax",
+      businessIntent: "standard",
+      recommendedRoute: "extract",
+      confidence: 0.88,
+      warnings: [],
+    });
+    expect(primaryType).not.toBe("bank_statement");
+    expect(primaryType).toBe("corporate_tax_return");
+  });
+});

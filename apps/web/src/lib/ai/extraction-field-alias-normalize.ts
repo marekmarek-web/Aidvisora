@@ -786,17 +786,28 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "cisloSmlouvy",
         "pojistnaSmlouvaCislo",
         "existingContractNumber",
+        "pojistnaSmlouvaC",
+        "smlouvaCislo",
+        "documentNumber",
+        "referenceNumber",
       ]);
       mergeFromAliases(ef, "contractNumber", [
         "existingPolicyNumber",
         "policyNumber",
         "pojistnaSmlouvaCislo",
       ]);
+      mergeFromAliases(ef, "insurer", [
+        "pojistitel",
+        "pojistovna",
+        "insuranceCompany",
+        "issuer",
+      ]);
       mergeFromAliases(ef, "fullName", [
         "policyholder",
         "pojistnik",
         "klient",
         "clientFullName",
+        "insuredPerson",
       ]);
       mergeFromAliases(ef, "effectiveDate", [
         "amendmentDate",
@@ -804,6 +815,8 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "datumZmeny",
         "datumPodani",
         "validFrom",
+        "changeDate",
+        "datumUcinnosti",
       ]);
       mergeFromAliases(ef, "requestedChanges", [
         "description",
@@ -811,6 +824,42 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "requestDescription",
         "changeDescription",
         "pozadovaneZmeny",
+      ]);
+      // Payment fields — change docs often contain full payment section (annual premium, installment, account)
+      mergeFromAliases(ef, "annualPremium", [
+        "rocniPojistne",
+        "annualInsurancePremium",
+        "celkoveRocniPojistne",
+        "totalAnnualPremium",
+        "premiumAnnual",
+        "rocnePojistne",
+      ]);
+      mergeFromAliases(ef, "totalMonthlyPremium", [
+        "installmentAmount",
+        "vyseSplatky",
+        "splatka",
+        "mesicniSplatka",
+        "paymentAmount",
+        "premiumInstallment",
+        "monthlyInstallment",
+      ]);
+      mergeFromAliases(ef, "bankAccount", [
+        "cisloUctu",
+        "accountNumber",
+        "paymentAccountNumber",
+        "bankPaymentInfo",
+        "ucetCislo",
+      ]);
+      mergeFromAliases(ef, "variableSymbol", [
+        "variabilniSymbol",
+        "vs",
+        "variableCode",
+      ]);
+      mergeFromAliases(ef, "paymentFrequency", [
+        "frekvencePlaceni",
+        "platebniFrekvence",
+        "payFrequency",
+        "frequency",
       ]);
       break;
 

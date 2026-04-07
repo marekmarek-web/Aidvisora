@@ -539,22 +539,36 @@ KRITICKÉ: Toto je změna/servisní dokument k EXISTUJÍCÍ pojistné smlouvě, 
 - lifecycleStatus = "policy_change_request" nebo "endorsement_request"
 
 DODATEK / ZMĚNA SMLOUVY — povinná extrakce:
-- existingPolicyNumber / contractNumber (číslo EXISTUJÍCÍ smlouvy, ke které se vztahuje — hledej "ke smlouvě č.", "na pojistnou smlouvu č.", "číslo smlouvy")
-- insurer (pojišťovna — z hlavičky dokumentu nebo z bloku pojistitele)
-- productName, productType (pojistný produkt, pokud je uveden)
-- fullName / policyholder (pojistník — z bloku pojistník/klient/žadatel, NIKDY z hlavičky pojistitele)
-- birthDate, personalId (z bloku pojistníka pokud jsou přítomné)
-- amendmentDate / effectiveDate (datum účinnosti změny, datum podání žádosti)
-- requestedChanges / description (co se mění — pojistné, krytí, pojistník, beneficiář, adresa, zdravotní stav...)
-- changedFields[]: {"field": "...", "oldValue": "...", "newValue": "..."} (pokud jsou staré/nové hodnoty explicitní)
-- healthQuestionnaireAttached (true pokud je přiložen zdravotní dotazník nebo zdravotní prohlášení)
+- existingPolicyNumber / contractNumber (číslo EXISTUJÍCÍ smlouvy — hledej "číslo", "smlouvy č.", "pojistná smlouva č.", číslo v záhlaví dokumentu jako "4989131283")
+- insurer (pojišťovna — VÝHRADNĚ z bloku POJISTITEL, hlavičky nebo zápatí — NIKDY z bloku POJISTNÍK nebo pojišťovacích zprostředkovatelů)
+- productName, productType (pojistný produkt — např. "Pojištění odpovědnosti při výkonu povolání")
+- insuredObject (předmět pojištění — co je pojištěno, pokud explicitní; např. "Odpovědnost při výkonu povolání", limit plnění)
+- fullName / policyholder (pojistník — VÝHRADNĚ z bloku POJISTNÍK/KLIENT — NIKDY z bloku POJISTITEL nebo záhlaví pojišťovny)
+- birthDate, personalId (z bloku POJISTNÍK pokud přítomné)
+- amendmentDate / effectiveDate (datum účinnosti změny — hledej "ke dni", "s účinností od", "aktualizované znění … sjednané s účinností")
+- requestedChanges / description (co se mění — pojistné, krytí, pojistník, beneficiář...)
+- changedFields[]: {"field": "...", "oldValue": "...", "newValue": "..."} pokud jsou staré/nové hodnoty explicitní
+- healthQuestionnaireAttached (true pokud přiložen zdravotní dotazník)
 - parties[] — kdo podepisuje změnu
-- summaryText (krátké shrnutí požadované změny, max 3 věty)
+- summaryText (krátké shrnutí změny, max 3 věty)
+
+PLATEBNÍ ÚDAJE — vždy extrahuj pokud přítomné v dokumentu (sekce "Informace k pojistnému", "Platební údaje", "Pojistné"):
+- annualPremium (roční pojistné — hledej "Celkové roční pojistné po slevě", "roční pojistné", "roční pojistné po slevě")
+- totalMonthlyPremium / premiumAmount (výše splátky — hledej "Výše splátky", "měsíční splátka", "výše pojistného")
+- paymentFrequency (frekvence placení — hledej "Frekvence placení": měsíčně/čtvrtletně/ročně)
+- bankAccount (číslo účtu — hledej "Číslo účtu", "bankovní spojení")
+- variableSymbol (variabilní symbol)
+- paymentType (způsob placení — hledej "Způsob placení", "Bankovní převod")
 
 HLEDEJ PŘESNĚ:
-- "ke smlouvě č." → existingPolicyNumber
-- "Pojistník:" nebo "Klient:" → fullName (ne "Pojistitel:" nebo "Pojišťovna:")
-- "platnost od", "účinnost od", "ke dni" → effectiveDate
+- číslo v záhlaví nebo zápatí (např. "4989131283") → existingPolicyNumber
+- "POJISTNÍK:" nebo blok "POJISTNÍK" → fullName (NIKDY "POJISTITEL:")
+- "s účinností od", "ke dni", "aktualizované znění" → effectiveDate
+- "Generali", "pojišťovna" v bloku POJISTITEL → insurer
+- "Celkové roční pojistné po slevě" → annualPremium
+- "Výše splátky" → totalMonthlyPremium
+- "Číslo účtu" → bankAccount
+- "Variabilní symbol" → variableSymbol
 
 TEXT DOKUMENTU:
 {{extracted_text}}
