@@ -15,8 +15,11 @@ import {
   Tag,
   CheckCheck,
   ExternalLink,
+  Sparkles,
+  Clock,
+  Pencil,
 } from "lucide-react";
-import { getContact, type ContactRow } from "@/app/actions/contacts";
+import { getContact, getContactAiProvenance, confirmContactPendingFieldAction, type ContactRow } from "@/app/actions/contacts";
 import { getHouseholdForContact, type HouseholdForContact } from "@/app/actions/households";
 import { getTasksByContactId, completeTask, reopenTask, type TaskRow } from "@/app/actions/tasks";
 import { getPipelineByContact, type StageWithOpportunities } from "@/app/actions/pipeline";
@@ -28,14 +31,45 @@ import {
   MobileCard,
   MobileSection,
   StatusBadge,
+  Toast,
+  useToast,
 } from "@/app/shared/mobile-ui/primitives";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+const CONTACT_FIELD_LABELS: Record<string, string> = {
+  firstName: "Jméno",
+  lastName: "Příjmení",
+  fullName: "Jméno a příjmení",
+  email: "E-mail",
+  phone: "Telefon",
+  birthDate: "Datum narození",
+  personalId: "Rodné číslo",
+  address: "Adresa",
+  permanentAddress: "Trvalé bydliště",
+  city: "Město",
+  zip: "PSČ",
+  street: "Ulice",
+  occupation: "Povolání",
+};
+
+function contactFieldLabel(key: string): string {
+  return CONTACT_FIELD_LABELS[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ");
+}
+
 type ContactDetail = ContactRow & { referralContactName?: string | null };
 type ProfileTab = "overview" | "tasks" | "pipeline" | "documents";
+
+type ContactAiProvenance = {
+  reviewId: string;
+  appliedAt: string | null;
+  confirmedFields: string[];
+  autoAppliedFields: string[];
+  pendingFields: string[];
+  manualRequiredFields: string[];
+} | null;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -88,6 +122,94 @@ function formatDate(dateStr?: string | null): string | null {
 }
 
 /* ------------------------------------------------------------------ */
+/*  AI Provenance section                                              */
+/* ------------------------------------------------------------------ */
+
+function AiProvenanceMobileSection({
+  provenance,
+  onConfirm,
+}: {
+  provenance: ContactAiProvenance;
+  onConfirm: (fieldKey: string) => void;
+}) {
+  if (!provenance) return null;
+
+  const hasPending = provenance.pendingFields.length > 0;
+  const hasManual = provenance.manualRequiredFields.length > 0;
+  const hasAutoApplied = provenance.autoAppliedFields.length > 0;
+
+  if (!hasPending && !hasManual && !hasAutoApplied) return null;
+
+  return (
+    <MobileSection title="AI Review — stav polí">
+      <MobileCard className="p-3.5">
+        <div className="flex items-center gap-2 mb-2.5">
+          <Sparkles size={14} className="text-indigo-400 shrink-0" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+            Převzato z AI Review
+          </p>
+        </div>
+
+        {/* Auto-applied fields */}
+        {hasAutoApplied ? (
+          <div className="mb-2.5">
+            <p className="text-[10px] font-bold text-emerald-700 mb-1.5 flex items-center gap-1">
+              <CheckCheck size={10} /> Převzato z AI Review
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {provenance.autoAppliedFields.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-emerald-800 bg-emerald-100 rounded px-1.5 py-0.5">
+                  {contactFieldLabel(f)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Pending confirmation fields */}
+        {hasPending ? (
+          <div className="mb-2.5">
+            <p className="text-[10px] font-black text-amber-800 mb-1.5 flex items-center gap-1">
+              <Clock size={10} /> Předvyplněno k potvrzení
+            </p>
+            <div className="space-y-1.5">
+              {provenance.pendingFields.map((fieldKey) => (
+                <div key={fieldKey} className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-amber-800 truncate">{contactFieldLabel(fieldKey)}</span>
+                  <button
+                    type="button"
+                    onClick={() => onConfirm(fieldKey)}
+                    className="shrink-0 min-h-[32px] px-2.5 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-wide"
+                  >
+                    Potvrdit z AI Review
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Manual required fields */}
+        {hasManual ? (
+          <div>
+            <p className="text-[10px] font-bold text-rose-700 mb-1.5 flex items-center gap-1">
+              <Pencil size={10} /> Vyžaduje ruční doplnění
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {provenance.manualRequiredFields.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-rose-700 bg-rose-100 rounded px-1.5 py-0.5">
+                  {contactFieldLabel(f)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </MobileCard>
+    </MobileSection>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Tab: Přehled                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -97,14 +219,18 @@ function OverviewTab({
   pipeline,
   documents,
   household,
+  provenance,
   onOpenHousehold,
+  onConfirmProvenance,
 }: {
   contact: ContactDetail;
   tasks: TaskRow[];
   pipeline: StageWithOpportunities[];
   documents: DocumentRow[];
   household: HouseholdForContact | null;
+  provenance: ContactAiProvenance;
   onOpenHousehold: (id: string) => void;
+  onConfirmProvenance: (fieldKey: string) => void;
 }) {
   const totalOpportunities = pipeline.reduce((sum, s) => sum + s.opportunities.length, 0);
 
@@ -164,6 +290,14 @@ function OverviewTab({
             ))}
           </div>
         </MobileSection>
+      ) : null}
+
+      {/* AI Provenance — pending fields and confirmed provenance */}
+      {provenance ? (
+        <AiProvenanceMobileSection
+          provenance={provenance}
+          onConfirm={onConfirmProvenance}
+        />
       ) : null}
 
       {/* Household */}
@@ -427,9 +561,11 @@ export function ClientProfileScreen({
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [pipeline, setPipeline] = useState<StageWithOpportunities[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
+  const [provenance, setProvenance] = useState<ContactAiProvenance>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<ProfileTab>("overview");
+  const { toast, showToast, dismissToast } = useToast();
 
   useEffect(() => {
     startTransition(async () => {
@@ -440,6 +576,7 @@ export function ClientProfileScreen({
         getTasksByContactId(contactId),
         getPipelineByContact(contactId),
         getDocumentsForContact(contactId),
+        getContactAiProvenance(contactId),
       ]);
 
       const contactRes = results[0];
@@ -466,8 +603,26 @@ export function ClientProfileScreen({
 
       if (results[4].status === "fulfilled") setDocuments(results[4].value);
       else setDocuments([]);
+
+      if (results[5].status === "fulfilled") setProvenance(results[5].value as ContactAiProvenance);
+      else setProvenance(null);
     });
   }, [contactId]);
+
+  async function handleConfirmProvenance(fieldKey: string) {
+    if (!provenance) return;
+    startTransition(async () => {
+      const result = await confirmContactPendingFieldAction(provenance.reviewId, fieldKey);
+      if (!result.ok) {
+        showToast(result.error, "error");
+      } else {
+        showToast(`Pole "${contactFieldLabel(fieldKey)}" potvrzeno z AI Review.`, "success");
+        // Refresh provenance
+        const updated = await getContactAiProvenance(contactId);
+        setProvenance(updated as ContactAiProvenance);
+      }
+    });
+  }
 
   if (pending && !contact) {
     return (
@@ -502,6 +657,7 @@ export function ClientProfileScreen({
 
   return (
     <div className="space-y-0 pb-4">
+      {toast ? <Toast message={toast.message} variant={toast.variant} onDismiss={dismissToast} /> : null}
       {/* Hero card */}
       <div className="bg-gradient-to-br from-[#0a0f29] to-indigo-900 p-4 pb-5 mx-0">
         <div className="flex items-start gap-3">
@@ -604,7 +760,9 @@ export function ClientProfileScreen({
             pipeline={pipeline}
             documents={documents}
             household={household}
+            provenance={provenance}
             onOpenHousehold={onOpenHousehold}
+            onConfirmProvenance={handleConfirmProvenance}
           />
         ) : null}
         {tab === "tasks" ? (

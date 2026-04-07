@@ -18,18 +18,20 @@ import {
   FileText,
   Eye,
   Download,
+  Pencil,
+  Sparkles,
 } from "lucide-react";
 import {
   approveContractReview,
   approveAndApplyContractReview,
   applyContractReviewDrafts,
   confirmCreateNewClient,
+  confirmPendingField,
   rejectContractReview,
   selectMatchedClient,
 } from "@/app/actions/contract-review";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import {
-  BottomSheet,
   EmptyState,
   ErrorState,
   FilterChips,
@@ -45,6 +47,7 @@ import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { confidenceToPercentForUi } from "@/lib/ai/review-ui-confidence";
 import { mapApiToExtractionDocument, hasMeaningfulReviewContent } from "@/lib/ai-review/mappers";
 import { aiReviewPdfFileName, buildAiReviewPdfBlob } from "@/lib/ai-review/build-ai-review-pdf";
+import type { ApplyResultPayload } from "@/lib/ai-review/types";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -77,93 +80,16 @@ type ReviewDetail = {
   matchedClientId?: string;
   createNewClientConfirmed?: string | null;
   createdAt: string;
+  applyResultPayload?: ApplyResultPayload | null;
+  [key: string]: unknown;
 };
 
 type StatusFilter = "all" | "pending" | "done" | "failed";
 
-type ExtractedFieldCell = { value?: unknown; status?: string; confidence?: number };
-
-const TECHNICAL_PAYLOAD_KEYS = new Set([
-  "extractedFields",
-  "documentClassification",
-  "documentMeta",
-  "parties",
-  "evidence",
-  "contentFlags",
-  "serviceTerms",
-  "financialTerms",
-  "reviewWarnings",
-  "candidateMatches",
-  "dataCompleteness",
-  "suggestedActions",
-  "sectionSensitivity",
-  "relationshipInference",
-]);
 
 function humanizeFieldKey(key: string): string {
   const s = key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function formatExtractedCellValue(value: unknown): string {
-  if (value == null) return "—";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "—";
-    if (value.every((x) => x != null && (typeof x === "string" || typeof x === "number"))) {
-      return value.map(String).join(", ");
-    }
-    return `${value.length} položek`;
-  }
-  if (typeof value === "object") {
-    const o = value as Record<string, unknown>;
-    if ("value" in o) return formatExtractedCellValue(o.value);
-    const keys = Object.keys(o);
-    if (keys.length <= 5) {
-      return keys
-        .slice(0, 5)
-        .map((k) => `${humanizeFieldKey(k)}: ${formatExtractedCellValue(o[k])}`)
-        .join(" · ");
-    }
-    return "Složitý objekt (detail na desktopu)";
-  }
-  return String(value);
-}
-
-function buildMobileExtractedRows(payload: Record<string, unknown> | null | undefined): {
-  rows: Array<{ key: string; label: string; value: string; status?: string }>;
-  technicalTopLevelCount: number;
-} {
-  if (!payload || typeof payload !== "object") return { rows: [], technicalTopLevelCount: 0 };
-
-  const rows: Array<{ key: string; label: string; value: string; status?: string }> = [];
-  const ef = payload.extractedFields;
-  if (ef && typeof ef === "object" && !Array.isArray(ef)) {
-    for (const [key, cell] of Object.entries(ef as Record<string, unknown>)) {
-      if (key.startsWith("_")) continue;
-      const c = cell as ExtractedFieldCell;
-      const display = formatExtractedCellValue(c?.value);
-      if (display === "—") continue;
-      rows.push({
-        key,
-        label: humanizeFieldKey(key),
-        value: display,
-        status: typeof c?.status === "string" ? c.status : undefined,
-      });
-    }
-  }
-
-  let technicalTopLevelCount = 0;
-  for (const k of Object.keys(payload)) {
-    if (k.startsWith("_") || k === "extractedFields") continue;
-    if (TECHNICAL_PAYLOAD_KEYS.has(k)) continue;
-    const v = payload[k];
-    if (v != null && v !== "") technicalTopLevelCount += 1;
-  }
-
-  return { rows, technicalTopLevelCount };
 }
 
 function parseDraftActionRow(action: unknown): { label: string; type?: string } | null {
@@ -206,14 +132,6 @@ function collectDraftActionsForMobile(detail: ReviewDetail): Array<{ label: stri
   }
 
   return out;
-}
-
-function fieldStatusTone(status: string | undefined): "success" | "warning" | "danger" | "neutral" {
-  const s = (status ?? "").toLowerCase();
-  if (s.includes("fail") || s.includes("invalid") || s.includes("error")) return "danger";
-  if (s.includes("warn") || s.includes("uncertain") || s.includes("low")) return "warning";
-  if (s.includes("ok") || s.includes("success") || s.includes("valid")) return "success";
-  return "neutral";
 }
 
 /* ------------------------------------------------------------------ */
@@ -340,6 +258,7 @@ function ReviewDetailPanel({
   onApply,
   onSelectClient,
   onCreateNewClient,
+  onConfirmPendingField,
   onDownloadPdf,
   pdfExportBusy,
 }: {
@@ -351,6 +270,7 @@ function ReviewDetailPanel({
   onApply: () => void;
   onSelectClient: (clientId: string) => void;
   onCreateNewClient: () => void;
+  onConfirmPendingField: (reviewId: string, fieldKey: string, scope: "contact" | "contract" | "payment") => void;
   onDownloadPdf?: () => void;
   pdfExportBusy?: boolean;
 }) {
@@ -365,7 +285,11 @@ function ReviewDetailPanel({
   const isApplied = detail.reviewStatus === "applied";
 
   const confidencePct = confidenceToPercentForUi(detail.confidence);
-  const { rows: extractedRows, technicalTopLevelCount } = buildMobileExtractedRows(detail.extractedPayload);
+
+  // Map raw API detail through desktop mapper to get proper evidence display
+  const mappedDoc = mapApiToExtractionDocument(detail as Record<string, unknown>, "");
+  const mappedGroups = mappedDoc.groups;
+
   const draftActionRows = collectDraftActionsForMobile(detail);
 
   return (
@@ -494,62 +418,210 @@ function ReviewDetailPanel({
         </MobileCard>
       ) : null}
 
-      {/* Extracted data (envelope extractedFields, not raw JSON keys) */}
-      {extractedRows.length > 0 ? (
-        <MobileCard className="p-3.5">
-          <div className="flex items-center gap-2 mb-2.5">
-            <Zap size={14} className="text-[color:var(--wp-text-tertiary)]" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
-              Extrahovaná data ({extractedRows.length} polí)
-            </p>
-          </div>
-          <div className="divide-y divide-[color:var(--wp-surface-card-border)]">
-            {extractedRows.slice(0, 18).map((row) => {
-              const tone = fieldStatusTone(row.status);
-              return (
-                <div key={row.key} className="flex flex-col gap-0.5 py-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">{row.label}</span>
-                    {row.status ? (
-                      <StatusBadge
-                        tone={
-                          tone === "success"
-                            ? "success"
-                            : tone === "warning"
-                              ? "warning"
-                              : tone === "danger"
-                                ? "danger"
-                                : "neutral"
-                        }
-                      >
-                        {row.status}
-                      </StatusBadge>
+      {/* Evidence display — grouped fields with displayStatus / displaySource parity */}
+      {mappedGroups.length > 0 ? (
+        mappedGroups.map((group) => (
+          <MobileCard key={group.id} className="p-3.5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Zap size={14} className="text-[color:var(--wp-text-tertiary)]" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                {group.name} ({group.fields.length})
+              </p>
+            </div>
+            <div className="divide-y divide-[color:var(--wp-surface-card-border)]">
+              {group.fields.slice(0, 20).map((field) => {
+                const dsStatus = field.displayStatus;
+                const dsSource = field.displaySource;
+                const tone =
+                  dsStatus === "Chybí"
+                    ? ("danger" as const)
+                    : dsStatus === "Odvozeno"
+                      ? ("warning" as const)
+                      : field.status === "warning"
+                        ? ("warning" as const)
+                        : field.status === "error"
+                          ? ("danger" as const)
+                          : ("success" as const);
+                const displayLabel = dsStatus ?? (field.status === "error" ? "Chybí" : field.status === "warning" ? "Odvozeno" : "Nalezeno");
+                return (
+                  <div key={field.id} className="flex flex-col gap-0.5 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] truncate">{field.label}</span>
+                      <StatusBadge tone={tone}>{displayLabel}</StatusBadge>
+                    </div>
+                    <p className="text-xs font-semibold text-[color:var(--wp-text)] leading-snug break-words">
+                      {field.value}
+                    </p>
+                    {dsSource ? (
+                      <p className="text-[10px] text-[color:var(--wp-text-tertiary)] leading-none mt-0.5">{dsSource}</p>
+                    ) : null}
+                    {field.applyPolicyLabel && field.applyPolicy !== "auto_apply" ? (
+                      <p className={cx(
+                        "text-[10px] leading-none mt-0.5 font-semibold",
+                        field.applyPolicy === "manual_required" ? "text-rose-500" :
+                        field.applyPolicy === "do_not_apply" ? "text-slate-400" :
+                        "text-amber-600"
+                      )}>
+                        {field.applyPolicyLabel}
+                      </p>
                     ) : null}
                   </div>
-                  <p className="text-xs font-semibold text-[color:var(--wp-text)] leading-snug break-words">
-                    {row.value}
-                  </p>
-                </div>
-              );
-            })}
-            {extractedRows.length > 18 ? (
-              <p className="text-[10px] text-[color:var(--wp-text-tertiary)] pt-2">
-                …a dalších {extractedRows.length - 18} polí
-              </p>
-            ) : null}
-          </div>
-          {technicalTopLevelCount > 0 ? (
-            <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-2 pt-2 border-t border-[color:var(--wp-surface-card-border)]">
-              V dokumentu je navíc {technicalTopLevelCount} technických polí (metadata) — upravte na desktopu.
-            </p>
-          ) : null}
-        </MobileCard>
+                );
+              })}
+              {group.fields.length > 20 ? (
+                <p className="text-[10px] text-[color:var(--wp-text-tertiary)] pt-2">
+                  …a dalších {group.fields.length - 20} polí
+                </p>
+              ) : null}
+            </div>
+          </MobileCard>
+        ))
       ) : detail.extractedPayload && Object.keys(detail.extractedPayload).length > 0 ? (
         <MobileCard className="p-3.5 border-amber-200 bg-amber-50/40">
           <p className="text-xs font-bold text-amber-900">Extrahovaná pole zatím nejsou ve čitelné podobě</p>
           <p className="text-[11px] text-amber-800/90 mt-1">
             Zkuste otevřít revizi na desktopu, nebo počkejte na dokončení extrakce.
           </p>
+        </MobileCard>
+      ) : null}
+
+      {/* Apply result parity — enforcement trace summary */}
+      {isApplied && detail.applyResultPayload?.policyEnforcementTrace ? (() => {
+        const trace = detail.applyResultPayload.policyEnforcementTrace!;
+        const s = trace.summary;
+        const isSupporting = trace.supportingDocumentGuard;
+        const pendingFields: string[] = [
+          ...(trace.contactEnforcement?.pendingConfirmationFields ?? []),
+          ...(trace.contractEnforcement?.pendingConfirmationFields ?? []),
+          ...(trace.paymentEnforcement?.pendingConfirmationFields ?? []),
+        ];
+        const manualFields: string[] = [
+          ...(trace.contactEnforcement?.manualRequiredFields ?? []),
+          ...(trace.contractEnforcement?.manualRequiredFields ?? []),
+          ...(trace.paymentEnforcement?.manualRequiredFields ?? []),
+        ];
+        return (
+          <MobileCard className="p-3.5 bg-emerald-50/60 border-emerald-200">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Shield size={14} className="text-emerald-600" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">
+                {isSupporting ? "Výsledek zpracování" : "Výsledek zápisu do CRM"}
+              </p>
+            </div>
+            {isSupporting ? (
+              <p className="text-xs font-semibold text-amber-800 leading-snug">
+                Podpůrný dokument — žádný automatický zápis smluvních ani platebních dat.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {s.totalAutoApplied > 0 ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-emerald-100 px-2.5 py-1.5">
+                    <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-800">{s.totalAutoApplied} — Zapsáno automaticky</span>
+                  </div>
+                ) : null}
+                {s.totalPendingConfirmation > 0 ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-amber-100 px-2.5 py-1.5">
+                    <Clock size={13} className="text-amber-600 shrink-0" />
+                    <span className="text-xs font-bold text-amber-800">{s.totalPendingConfirmation} — Předvyplněno k potvrzení</span>
+                  </div>
+                ) : null}
+                {s.totalManualRequired > 0 ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-rose-100 px-2.5 py-1.5">
+                    <Pencil size={13} className="text-rose-600 shrink-0" />
+                    <span className="text-xs font-bold text-rose-800">{s.totalManualRequired} — Vyžaduje ruční doplnění</span>
+                  </div>
+                ) : null}
+                {s.totalExcluded > 0 ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-2.5 py-1.5">
+                    <XCircle size={13} className="text-slate-500 shrink-0" />
+                    <span className="text-xs font-bold text-slate-600">{s.totalExcluded} — Nezapsáno</span>
+                  </div>
+                ) : null}
+              </div>
+            )}
+            {/* Pending confirmation fields — with human labels, inline confirm CTA */}
+            {pendingFields.length > 0 ? (
+              <div className="mt-2.5 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-2 flex items-center gap-1">
+                  <Clock size={10} /> Čeká na potvrzení poradcem
+                </p>
+                <div className="space-y-1.5">
+                  {pendingFields.map((fieldKey) => {
+                    const scope =
+                      (trace.contactEnforcement?.pendingConfirmationFields ?? []).includes(fieldKey)
+                        ? "contact" as const
+                        : (trace.contractEnforcement?.pendingConfirmationFields ?? []).includes(fieldKey)
+                          ? "contract" as const
+                          : "payment" as const;
+                    const humanLabel = humanizeFieldKey(fieldKey);
+                    return (
+                      <div key={fieldKey} className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-amber-800 truncate">{humanLabel}</span>
+                        <button
+                          type="button"
+                          onClick={() => onConfirmPendingField(detail.id, fieldKey, scope)}
+                          disabled={pending}
+                          className="shrink-0 min-h-[32px] px-2.5 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
+                        >
+                          Potvrdit
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {/* Manual required fields */}
+            {manualFields.length > 0 ? (
+              <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50/70 px-2.5 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-rose-800 mb-1.5 flex items-center gap-1">
+                  <Pencil size={10} /> Vyžaduje ruční doplnění
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {manualFields.map((f) => (
+                    <span key={f} className="text-[10px] font-bold text-rose-700 bg-rose-100 rounded px-1.5 py-0.5">
+                      {humanizeFieldKey(f)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </MobileCard>
+        );
+      })() : null}
+
+      {/* Advisor summary (from advisorReview model) */}
+      {mappedDoc.advisorReview ? (
+        <MobileCard className="p-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Sparkles size={14} className="text-indigo-400" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+              Souhrn pro poradce
+            </p>
+          </div>
+          <div className="space-y-2">
+            {mappedDoc.advisorReview.client ? (
+              <p className="text-xs text-[color:var(--wp-text)] leading-snug">
+                <span className="font-bold text-[color:var(--wp-text-secondary)]">Klient: </span>{mappedDoc.advisorReview.client}
+              </p>
+            ) : null}
+            {mappedDoc.advisorReview.product ? (
+              <p className="text-xs text-[color:var(--wp-text)] leading-snug">
+                <span className="font-bold text-[color:var(--wp-text-secondary)]">Produkt: </span>{mappedDoc.advisorReview.product}
+              </p>
+            ) : null}
+            {mappedDoc.advisorReview.payments ? (
+              <p className="text-xs text-[color:var(--wp-text)] leading-snug">
+                <span className="font-bold text-[color:var(--wp-text-secondary)]">Platby: </span>{mappedDoc.advisorReview.payments}
+              </p>
+            ) : null}
+            {mappedDoc.advisorReview.llmExecutiveBrief ? (
+              <p className="text-xs text-[color:var(--wp-text-secondary)] leading-snug italic mt-1">
+                {mappedDoc.advisorReview.llmExecutiveBrief}
+              </p>
+            ) : null}
+          </div>
         </MobileCard>
       ) : null}
 
@@ -573,9 +645,6 @@ function ReviewDetailPanel({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-[color:var(--wp-text)] leading-snug">{row.label}</p>
-                  {row.type ? (
-                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] font-mono mt-0.5 truncate">{row.type}</p>
-                  ) : null}
                 </div>
               </li>
             ))}
@@ -825,6 +894,23 @@ export function ContractsReviewScreen({
     });
   }
 
+  async function handleConfirmPendingField(
+    reviewId: string,
+    fieldKey: string,
+    scope: "contact" | "contract" | "payment",
+  ) {
+    startTransition(async () => {
+      const result = await confirmPendingField(reviewId, fieldKey, scope);
+      if (!result.ok) {
+        showToast(result.error, "error");
+      } else {
+        showToast(`Pole "${fieldKey}" potvrzeno.`, "success");
+      }
+      await fetchList();
+      await fetchDetail(reviewId);
+    });
+  }
+
   async function handleDownloadPdf() {
     if (!detail) return;
     setPdfExportBusy(true);
@@ -961,6 +1047,7 @@ export function ContractsReviewScreen({
                 onApply={handleApply}
                 onSelectClient={(id) => startTransition(async () => { await selectMatchedClient(detail.id, id); await fetchDetail(detail.id); })}
                 onCreateNewClient={() => startTransition(async () => { await confirmCreateNewClient(detail.id); await fetchDetail(detail.id); })}
+                onConfirmPendingField={handleConfirmPendingField}
                 onDownloadPdf={() => void handleDownloadPdf()}
                 pdfExportBusy={pdfExportBusy}
               />
@@ -996,6 +1083,7 @@ export function ContractsReviewScreen({
               onApply={handleApply}
               onSelectClient={(id) => startTransition(async () => { await selectMatchedClient(detail.id, id); await fetchDetail(detail.id); })}
               onCreateNewClient={() => startTransition(async () => { await confirmCreateNewClient(detail.id); await fetchDetail(detail.id); })}
+              onConfirmPendingField={handleConfirmPendingField}
               onDownloadPdf={() => void handleDownloadPdf()}
               pdfExportBusy={pdfExportBusy}
             />
