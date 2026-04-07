@@ -10,6 +10,7 @@
  * no re-parsing of the image is performed.
  */
 
+import type { ExecutionPlan } from "../assistant-domain-model";
 import type { AssistantSession } from "../assistant-session";
 import { lockAssistantClient, clearPendingImageIntakeResolution } from "../assistant-session";
 import type { PendingImageIntakeResolution } from "../assistant-session";
@@ -17,6 +18,8 @@ import type { AssistantResponse } from "../assistant-tool-router";
 import { searchContactsForAssistant } from "../assistant-contact-search";
 import { buildFactsSummaryLines } from "./extractor";
 import { isPendingImageIntakeResolutionExpired } from "./pending-resolution-metadata";
+import { buildExecutionPlanAfterIntakeResume } from "./resume-intake-execution-plan";
+import { mapToPreviewItems } from "./intake-execution-plan-mapper";
 
 // ---------------------------------------------------------------------------
 // Detect whether a text message looks like a client name attempt
@@ -136,7 +139,25 @@ export async function resumeImageIntakeWithClientResolution(
   lockAssistantClient(session, resolution.clientId);
   clearPendingImageIntakeResolution(session);
 
-  return buildResumedResponse(session.sessionId, resolution.clientId, resolution.clientLabel, pending);
+  // Zahoď případný starý plán z jiného tahu (jinak by se v UI sloučil s touto odpovědí).
+  session.lastExecutionPlan = undefined;
+  const executionPlan = buildExecutionPlanAfterIntakeResume(
+    pending.intakeId,
+    pending,
+    resolution.clientId,
+    resolution.clientLabel,
+  );
+  if (executionPlan) {
+    session.lastExecutionPlan = executionPlan;
+  }
+
+  return buildResumedResponse(
+    session.sessionId,
+    resolution.clientId,
+    resolution.clientLabel,
+    pending,
+    executionPlan,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -222,49 +243,87 @@ function multipleMatchesResponse(
   } as AssistantResponse;
 }
 
+function buildUnderstandingSummaryLine(
+  pending: PendingImageIntakeResolution,
+  factLines: string[],
+): string | null {
+  if (factLines.length > 0) {
+    const snippet = factLines
+      .slice(0, 3)
+      .map((l) => l.replace(/^[^:]+:\s*/, "").trim())
+      .filter(Boolean)
+      .join(" ");
+    if (snippet) {
+      return `Ze screenshotu chápu zejména toto: ${snippet.slice(0, 280)}${snippet.length > 280 ? "…" : ""}`;
+    }
+  }
+  if (pending.inputType === "screenshot_client_communication") {
+    return "Jde o klientskou komunikaci — níže jsou body k uložení a navrhované kroky v CRM.";
+  }
+  if (pending.inputType === "screenshot_payment_details" || pending.inputType === "screenshot_bank_or_finance_info") {
+    return "Jde o platební nebo bankovní údaje — ověřte částky a údaje proti dokladům.";
+  }
+  if (pending.inputType === "photo_or_scan_document") {
+    return "Jde o dokument nebo sken — zkontrolujte přepis proti originálu.";
+  }
+  return null;
+}
+
 function buildResumedResponse(
   sessionId: string,
   clientId: string,
   clientLabel: string,
   pending: PendingImageIntakeResolution,
+  executionPlan: ExecutionPlan | null,
 ): AssistantResponse {
   const factLines = buildFactsSummaryLines(pending.factBundle, 5);
-  const factText =
-    factLines.length > 0
-      ? `\n\nExtrahovaná fakta ze screenshotu:\n${factLines.map((l) => `• ${l}`).join("\n")}`
-      : "";
+  const understanding = buildUnderstandingSummaryLine(pending, factLines);
 
-  const inputTypeLabel =
-    pending.inputType === "screenshot_client_communication"
-      ? "screenshot klientské komunikace"
-      : pending.inputType === "screenshot_payment_details"
-        ? "platební screenshot"
-        : pending.inputType === "screenshot_bank_or_finance_info"
-          ? "bankovní screenshot"
-          : "obrázek";
+  const parts: string[] = [`Klient přiřazen: **${clientLabel}**.`];
+  if (understanding) {
+    parts.push("", understanding);
+  }
+  if (factLines.length > 0) {
+    parts.push("", "Co z obrázku vyplynulo:", ...factLines.map((l) => `• ${l}`));
+  }
+  if (executionPlan && executionPlan.steps.length > 0) {
+    parts.push("", "Níže vyberte navrhované kroky a potvrďte je — bez dalšího psaní příkazů.");
+  } else {
+    parts.push("", "Automatický návrh CRM kroků není k dispozici — uložte prosím informace ručně z karty klienta.");
+  }
 
-  const message =
-    `Klient **${clientLabel}** identifikován. Navazuji na předchozí zpracování — rozpoznal jsem ${inputTypeLabel}.${factText}\n\nNavrhuji zaznamenat obsah a případně vytvořit úkol nebo poznámku.`;
+  const message = parts.join("\n");
 
   const suggestedNextSteps: string[] = [
-    `Potvrďte přiřazení k ${clientLabel}.`,
-    "Zkontrolujte extrahovaná fakta a potvrďte kroky.",
+    "Potvrďte návrh akcí zaškrtnutím a tlačítkem (pokud je zobrazen).",
+    "Nebo upravte znění poznámky či úkolu před potvrzením.",
+    "Zkontrolujte, že jde skutečně o správného klienta.",
   ];
   if (pending.factBundle.missingFields.length > 0) {
-    suggestedNextSteps.push(
-      `Chybějící údaje: ${pending.factBundle.missingFields.slice(0, 3).join(", ")}.`,
-    );
+    suggestedNextSteps.push("Ověřte, zda v obrázku nechybí důležité údaje pro váš další postup.");
   }
+
+  const executionState: AssistantResponse["executionState"] =
+    executionPlan && executionPlan.steps.length > 0
+      ? {
+          status: "awaiting_confirmation",
+          planId: executionPlan.planId,
+          totalSteps: executionPlan.steps.length,
+          pendingSteps: executionPlan.steps.filter((s) => s.status === "requires_confirmation").length,
+          stepPreviews: mapToPreviewItems(executionPlan),
+          clientLabel,
+        }
+      : null;
 
   return {
     message,
     referencedEntities: [{ type: "contact", id: clientId, label: clientLabel }],
     suggestedActions: [],
     warnings: [],
-    confidence: 0.8,
+    confidence: 0.85,
     sourcesSummary: [`image_intake_resume (${pending.intakeId})`],
     sessionId,
-    executionState: null,
+    executionState,
     contextState: {
       channel: null,
       lockedClientId: clientId,

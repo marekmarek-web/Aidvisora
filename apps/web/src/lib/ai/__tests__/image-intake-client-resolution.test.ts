@@ -167,18 +167,22 @@ describe("resumeImageIntakeWithClientResolution — successful resume", () => {
     const session = makeSession({ pendingImageIntakeResolution: makePending() });
     const result = await resumeImageIntakeWithClientResolution("Lucie Opalecká", session, "tenant-1");
 
-    // Must confirm the client
+    expect(result.message).toContain("Klient přiřazen");
     expect(result.message).toContain("Lucie Opalecká");
-    // Must reuse extracted facts (extractor mock returns ["Datum: 15. 3. 2025", ...])
+    expect(result.message).toContain("Co z obrázku vyplynulo");
     expect(result.message).toContain("Datum: 15. 3. 2025");
-    // Must NOT be a generic greeting
     expect(result.message).not.toMatch(/Dobrý den.*jak vám mohu pomoci/i);
-    // Sources must indicate resume
+    expect(result.message).not.toMatch(
+      /createTaskDraft|createEmailDraft|createInternalNote|createTask|Image intake:|listBlockedReviews|prepare_termination/i,
+    );
     expect(result.sourcesSummary?.[0]).toContain("image_intake_resume");
-    // Session must be locked on the resolved client
     expect(session.lockedClientId).toBe("contact-123");
-    // Pending state must be cleared
     expect(session.pendingImageIntakeResolution).toBeNull();
+    expect(session.lastExecutionPlan?.steps.length).toBeGreaterThan(0);
+    expect(result.executionState?.status).toBe("awaiting_confirmation");
+    expect((result.executionState?.stepPreviews?.length ?? 0) > 0).toBe(true);
+    const desc = (result.executionState?.stepPreviews ?? []).map((s) => s.description).join(" ");
+    expect(desc).not.toMatch(/Image intake:|createTask|createInternalNote/i);
   });
 
   it("picks from existing candidates when user message matches label substring", async () => {
@@ -197,9 +201,11 @@ describe("resumeImageIntakeWithClientResolution — successful resume", () => {
 
     // Should not need CRM lookup at all (candidates already loaded)
     expect(searchContactsForAssistant).not.toHaveBeenCalled();
+    expect(result.message).toContain("Klient přiřazen");
     expect(result.message).toContain("Lucie Opalecká");
     expect(session.lockedClientId).toBe("contact-123");
     expect(session.pendingImageIntakeResolution).toBeNull();
+    expect(result.executionState?.stepPreviews?.length).toBeGreaterThan(0);
   });
 });
 

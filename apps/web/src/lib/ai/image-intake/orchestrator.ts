@@ -19,8 +19,7 @@
  */
 
 import { randomUUID } from "crypto";
-import type { StepPreviewItem } from "../assistant-execution-ui";
-import type { ExecutionPlan, ExecutionStep, CanonicalIntentType } from "../assistant-domain-model";
+import type { ExecutionPlan } from "../assistant-domain-model";
 import type { AssistantSession, ActiveContext } from "../assistant-session";
 
 import type {
@@ -45,7 +44,7 @@ import { emptyFactBundle, emptyActionPlan } from "./types";
 import { runBatchPreflight } from "./preflight";
 import { enforceImageIntakeGuardrails } from "./guardrails";
 import { classifyBatch } from "./classifier";
-import { buildActionPlanV3 } from "./planner";
+import { buildActionPlanV3, buildActionPlanV4 } from "./planner";
 import {
   shouldRunMultimodalPass,
   runCombinedMultimodalPass,
@@ -81,6 +80,7 @@ import { runIntentChangeAssist } from "./intent-change-assist";
 import { getImageIntakeConfig } from "./image-intake-config";
 import { buildDocumentSetPreviewNote } from "./document-set-intake";
 import { buildHandoffLifecycleNote } from "./handoff-lifecycle";
+import { mapToExecutionPlan, mapToPreviewItems } from "./intake-execution-plan-mapper";
 import type {
   ThreadReconstructionResult,
   ReviewHandoffPayload,
@@ -107,65 +107,7 @@ function decideLane(_assets: NormalizedImageAsset[]): LaneDecisionResult {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Execution plan / preview mapping (unchanged from Phase 2)
-// ---------------------------------------------------------------------------
-
-const INTENT_TO_WRITE: Partial<Record<CanonicalIntentType, string>> = {
-  create_task: "createTask",
-  create_followup: "createFollowUp",
-  schedule_meeting: "scheduleCalendarEvent",
-  create_note: "createMeetingNote",
-  create_internal_note: "createInternalNote",
-  create_client_request: "createClientRequest",
-  attach_document: "attachDocumentToClient",
-  draft_portal_message: "draftClientPortalMessage",
-};
-
-export function mapToExecutionPlan(
-  intakeId: string,
-  actionPlan: ImageIntakeActionPlan,
-  clientId: string | null,
-  opportunityId: string | null,
-): ExecutionPlan {
-  const steps: ExecutionStep[] = actionPlan.recommendedActions.map((action, idx) => ({
-    stepId: `${intakeId}_s${idx}`,
-    action: (action.writeAction ?? INTENT_TO_WRITE[action.intentType] ?? "createInternalNote") as any,
-    params: {
-      ...action.params,
-      contactId: clientId,
-      opportunityId,
-      _imageIntakeSource: intakeId,
-    },
-    label: action.label,
-    requiresConfirmation: true,
-    isReadOnly: false,
-    dependsOn: [],
-    status: "requires_confirmation" as const,
-    result: null,
-  }));
-
-  return {
-    planId: intakeId,
-    intentType: actionPlan.recommendedActions[0]?.intentType ?? "general_chat",
-    productDomain: null,
-    contactId: clientId,
-    opportunityId,
-    steps,
-    status: steps.length > 0 ? "awaiting_confirmation" : "completed",
-    createdAt: new Date(),
-  };
-}
-
-export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
-  return plan.steps.map((step) => ({
-    stepId: step.stepId,
-    label: step.label,
-    action: step.label,
-    description: `Image intake: ${step.action}`,
-    preflightStatus: "ready" as const,
-  }));
-}
+export { mapToExecutionPlan, mapToPreviewItems };
 
 // ---------------------------------------------------------------------------
 // Preview payload
@@ -274,7 +216,14 @@ export type ImageIntakeOrchestratorResult = {
   householdBinding: import("./types").HouseholdBindingResult | null;
   /** Phase 9: document multi-image set evaluator result (null when not applicable). */
   documentSetResult: import("./types").DocumentMultiImageResult | null;
-  /** Phase 9: AI Review handoff lifecycle feedback (null when no reviewRowId known). */
+  /**
+   * Phase 9: AI Review handoff lifecycle feedback (null when no reviewRowId known).
+   *
+   * NOTE: This field is always null as returned by processImageIntake().
+   * The route-handler injects lifecycle feedback AFTER the orchestrator run,
+   * once the session reviewRowId is available from a prior submit.
+   * See: confirm-flow-lifecycle.ts → getLifecycleFeedbackForSession()
+   */
   lifecycleFeedback: import("./types").HandoffLifecycleFeedback | null;
   /** Phase 9: intent-assist cache status from last assist call. */
   intentAssistCacheStatus: import("./types").IntentAssistCacheStatus | null;
@@ -678,8 +627,16 @@ export async function processImageIntake(
     multimodalResult?.draftReplyIntent ?? null,
   );
 
-  // 11. Action planning v3 (Phase 4 — uses extracted facts + handoff recommendation)
-  const actionPlan = buildActionPlanV3(classification, clientBinding, factBundle, draftReplyText, reviewHandoff);
+  // 11. Action planning v4 (Phase 10 — adds document-set outcome awareness)
+  // documentSetResult already computed above (Phase 9 block); v4 uses it for conservative plan shaping
+  const actionPlan = buildActionPlanV4(
+    classification,
+    clientBinding,
+    factBundle,
+    draftReplyText,
+    reviewHandoff,
+    documentSetResult,
+  );
 
   // 12. Guardrails (unchanged from Phase 1)
   const guardrailVerdict = enforceImageIntakeGuardrails(
