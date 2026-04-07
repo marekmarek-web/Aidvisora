@@ -16,9 +16,11 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoadError(null);
     getContractsByContact(contactId)
-      .then((list) => setContracts(list.slice(0, PREVIEW_COUNT)))
+      .then((list) => {
+        setLoadError(null);
+        setContracts(list.slice(0, PREVIEW_COUNT));
+      })
       .catch(() => {
         setContracts([]);
         setLoadError("Nepodařilo se načíst smlouvy.");

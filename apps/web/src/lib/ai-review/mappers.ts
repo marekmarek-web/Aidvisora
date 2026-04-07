@@ -28,6 +28,7 @@ import {
 } from "../ai/field-quality-gate";
 import { buildAdvisorReviewViewModel } from "./advisor-review-view-model";
 import { deriveFieldApplyPolicy } from "./field-apply-policy";
+import { isAiReviewPipelineDebug } from "@/lib/ai/ai-review-debug";
 
 type ApiReviewDetail = Record<string, unknown>;
 
@@ -1118,8 +1119,8 @@ function pickClientNameFromPayload(extracted: Record<string, unknown>): string |
 
 function buildSummary(
   detail: ApiReviewDetail,
-  groups: ExtractedGroup[],
-  diagnostics: ExtractionDiagnostics
+  _groups: ExtractedGroup[],
+  _diagnostics: ExtractionDiagnostics
 ): string {
   const extracted = (detail.extractedPayload ?? {}) as Record<string, unknown>;
   const dc = extracted.documentClassification as Record<string, unknown> | undefined;
@@ -1391,8 +1392,7 @@ function appendSyntheticEnvelopeGroups(
     });
   }
 
-  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
-     
+  if (typeof process !== "undefined" && isAiReviewPipelineDebug()) {
     console.debug("[ai-review-ui] synthetic_envelope_groups", {
       groupCount: out.length - base.length,
       totalGroups: out.length,
