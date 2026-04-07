@@ -35,12 +35,14 @@ import {
   Target,
   User,
   Command,
+  FileX2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePortalBadgeCounts } from "@/app/portal/PortalBadgeCountsContext";
 import clsx from "clsx";
 import { displayNameFromUserMetadata, getUserMenuInitials } from "@/lib/user-initials";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
+import { isTerminationsModuleEnabled } from "@/lib/terminations/terminations-feature-flag";
 
 /** Zarovnáno s main banner txt (expanded 300px, collapsed 88px). */
 export const PORTAL_SIDEBAR_WIDTH_PX = 300;
@@ -56,6 +58,8 @@ interface NavItemConfig {
   isAi?: boolean;
   isHighlighted?: boolean;
   hoverAnim?: string;
+  /** Aktivní stav i na podcestách (např. detail žádosti). */
+  activePathPrefix?: string;
 }
 
 interface SectionConfig {
@@ -126,6 +130,13 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     specialBg: true,
     items: [
       { href: "/portal/contracts/review", label: "AI Review smluv", Icon: AiAssistantBrandIcon, isAi: true },
+      {
+        href: "/portal/terminations/new",
+        label: "Výpověď smlouvy",
+        Icon: FileX2,
+        activePathPrefix: "/portal/terminations",
+        hoverAnim: "group-hover:-translate-y-0.5 group-hover:scale-110",
+      },
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
       { href: "/portal/mindmap", label: "Mindmap", Icon: Network, hoverAnim: "group-hover:-translate-y-1" },
@@ -200,11 +211,19 @@ function getOrderFromSections(sections: SectionConfig[]): { sectionId: string; h
   return sections.map((s) => ({ sectionId: s.id, hrefs: s.items.map((i) => i.href) }));
 }
 
-function isItemActive(pathname: string, href: string): boolean {
+function isItemActive(
+  pathname: string,
+  item: Pick<NavItemConfig, "href" | "activePathPrefix">
+): boolean {
+  if (item.activePathPrefix) {
+    const p = item.activePathPrefix;
+    if (pathname === p || pathname.startsWith(`${p}/`)) return true;
+  }
+  const href = item.href;
   const hrefPath = href.split("?")[0]?.split("#")[0] ?? href;
   if (pathname === hrefPath) return true;
   if (hrefPath === "/portal/today") return false;
-  return pathname.startsWith(hrefPath + "/");
+  return pathname.startsWith(`${hrefPath}/`);
 }
 
 interface PortalSidebarProps {
@@ -225,6 +244,15 @@ function filterSectionsByRole(sections: SectionConfig[], showTeamOverview: boole
   return sections;
 }
 
+function filterTerminationNavItem(sections: SectionConfig[], terminationsEnabled: boolean): SectionConfig[] {
+  if (terminationsEnabled) return sections;
+  return sections.map((sec) =>
+    sec.id === "sec-nastroje"
+      ? { ...sec, items: sec.items.filter((i) => i.href !== "/portal/terminations/new") }
+      : sec
+  );
+}
+
 export function PortalSidebar({
   showTeamOverview,
   width = PORTAL_SIDEBAR_WIDTH_PX,
@@ -238,7 +266,14 @@ export function PortalSidebar({
 }: PortalSidebarProps = {}) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
-  const baseSections = useMemo(() => filterSectionsByRole(DEFAULT_SECTIONS, showTeamOverview), [showTeamOverview]);
+  const baseSections = useMemo(
+    () =>
+      filterTerminationNavItem(
+        filterSectionsByRole(DEFAULT_SECTIONS, showTeamOverview),
+        isTerminationsModuleEnabled()
+      ),
+    [showTeamOverview]
+  );
   const [menuSections, setMenuSections] = useState<SectionConfig[]>(baseSections);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -571,7 +606,7 @@ export function PortalSidebar({
               )}
               <ul className="relative z-10 space-y-1.5">
                 {group.items.map((item, itemIdx) => {
-                  const isActive = isItemActive(pathname, item.href);
+                  const isActive = isItemActive(pathname, item);
                   const Icon = item.Icon;
                   const badge =
                     item.badgeKey === "tasks" && openTasksCount != null && openTasksCount > 0
