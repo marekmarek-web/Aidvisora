@@ -18,6 +18,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { CreateResponseResult } from "@/lib/openai";
 import type { AiReviewPromptKey } from "./prompt-model-registry";
 import { getPromptTemplateContent } from "./ai-review-prompt-templates-content";
+import { isAiReviewDevOrDebugFlags } from "./ai-review-debug";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ export function logAnthropicCall(params: {
   inputMode?: string;
   error?: string;
 }): void {
+  if (!isAiReviewDevOrDebugFlags()) return;
   console.info("[Anthropic]", JSON.stringify({
     endpoint: params.endpoint,
     model: params.model,

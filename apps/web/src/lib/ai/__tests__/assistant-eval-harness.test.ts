@@ -324,7 +324,7 @@ describe("Phase 2E: Assistant Eval Harness", () => {
     const summary = aggregateEvalRun(allResults);
     expect(summary.totalScenarios).toBeGreaterThan(0);
     expect(summary.passed + summary.failed).toBe(summary.totalScenarios);
-    if (process.env.DEBUG_ASSISTANT_TESTS === "true") {
+    if (process.env.VERBOSE_TESTS === "1" || process.env.DEBUG_ASSISTANT_TESTS === "true") {
       console.log("=== EVAL SUMMARY ===");
       console.log(`Total: ${summary.totalScenarios}, Passed: ${summary.passed}, Failed: ${summary.failed}`);
       for (const [domain, stats] of Object.entries(summary.byDomain)) {

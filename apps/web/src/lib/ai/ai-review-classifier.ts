@@ -9,6 +9,7 @@ import {
 } from "./review-llm-provider";
 import { selectExcerptForExtraction } from "./extraction-schemas-by-type";
 import { getAiReviewPromptId, getAiReviewPromptVersion } from "./prompt-model-registry";
+import { isAiReviewDevOrDebugFlags } from "./ai-review-debug";
 
 export const aiClassifierOutputSchema = z.object({
   documentType: z.string(),
@@ -103,7 +104,7 @@ function logClassifierPromptInputShape(payload: {
   source_channel: string;
   fallbacks_applied: string[];
 }): void {
-  if (process.env.NODE_ENV === "production") return;
+  if (!isAiReviewDevOrDebugFlags()) return;
   console.info("[ai-review-classifier] prompt_input_shape", JSON.stringify(payload));
 }
 

@@ -20,6 +20,7 @@ import {
   renderTeamAiPromptVariables,
 } from "@/lib/ai/context";
 import { computeCompleteness, type ContextCompleteness } from "@/lib/ai/context/completeness";
+import { isAiReviewDevOrDebugFlags } from "@/lib/ai/ai-review-debug";
 
 const SAFE_ERROR = "Generování se nepovedlo. Zkuste to později.";
 const NOT_CONFIGURED = "Tato funkce není nakonfigurována (chybí prompt ID v nastavení).";
@@ -48,7 +49,7 @@ function auditLog(params: {
   success: boolean;
   error?: string;
 }): void {
-  if (process.env.NODE_ENV === "production") return;
+  if (!isAiReviewDevOrDebugFlags()) return;
   console.info("[AI]", {
     userId: params.userId,
     entityType: params.entityType,

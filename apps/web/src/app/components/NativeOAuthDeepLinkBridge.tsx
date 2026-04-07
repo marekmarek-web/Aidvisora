@@ -7,6 +7,11 @@ import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 import { getNativeWebAppBaseUrl } from "@/lib/url/native-web-app-base";
 
+function logNativeOAuthDebug(...args: unknown[]) {
+  if (process.env.NODE_ENV !== "development") return;
+  console.log(...args);
+}
+
 /**
  * Listens for deep-link events on native platforms and handles:
  *
@@ -32,15 +37,15 @@ export function NativeOAuthDeepLinkBridge() {
       if (disposed) return;
       const now = Date.now();
       if (rawUrl === lastHandledUrl && now - lastHandledAt < DEDUPE_MS) {
-        console.log("[NativeOAuthDeepLinkBridge] skip duplicate URL within window");
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] skip duplicate URL within window");
         return;
       }
       if (handlerInFlight) {
-        console.log("[NativeOAuthDeepLinkBridge] skip; previous handler still running");
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] skip; previous handler still running");
         return;
       }
       handlerInFlight = true;
-      console.log("[NativeOAuthDeepLinkBridge] received URL:", rawUrl);
+      logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] received URL:", rawUrl);
 
       let parsed: URL;
       try {
@@ -70,25 +75,25 @@ export function NativeOAuthDeepLinkBridge() {
         }
 
         const origin = getNativeWebAppBaseUrl();
-        console.log("[NativeOAuthDeepLinkBridge] resolved origin:", origin, "| window.location.origin:", typeof window !== "undefined" ? window.location.origin : "N/A");
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] resolved origin:", origin, "| window.location.origin:", typeof window !== "undefined" ? window.location.origin : "N/A");
 
         // ── Auth callback with code → exchange client-side ──
         if (parsed.host === "auth" && parsed.pathname.startsWith("/callback")) {
           const code = parsed.searchParams.get("code");
           if (code) {
-            console.log("[NativeOAuthDeepLinkBridge] exchanging auth code…");
+            logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] exchanging auth code…");
             try {
               const supabase = createClient();
               const { error } = await supabase.auth.exchangeCodeForSession(code);
               if (error) {
                 console.error("[NativeOAuthDeepLinkBridge] exchangeCodeForSession error:", error.message);
                 const target = `${origin}/prihlaseni?error=${encodeURIComponent(error.message)}`;
-                console.log("[NativeOAuthDeepLinkBridge] navigating to error page:", target);
+                logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] navigating to error page:", target);
                 window.location.replace(target);
                 return;
               }
               const target = `${origin}/register/complete?next=%2Fportal%2Ftoday`;
-              console.log("[NativeOAuthDeepLinkBridge] session exchanged OK, navigating to:", target);
+              logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] session exchanged OK, navigating to:", target);
               window.location.replace(target);
             } catch (e) {
               const msg = e instanceof Error ? e.message : "session_exchange_failed";
@@ -98,7 +103,7 @@ export function NativeOAuthDeepLinkBridge() {
             }
             return;
           }
-          console.log("[NativeOAuthDeepLinkBridge] auth/callback without code, navigating to portal");
+          logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] auth/callback without code, navigating to portal");
           window.location.replace(`${origin}/portal/today`);
           return;
         }
@@ -111,7 +116,7 @@ export function NativeOAuthDeepLinkBridge() {
         }
 
         if (parsed.host === "auth" && (parsed.pathname === "/done" || parsed.pathname === "/done/")) {
-          console.log("[NativeOAuthDeepLinkBridge] auth/done, navigating to portal");
+          logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] auth/done, navigating to portal");
           window.location.replace(`${origin}/portal/today`);
           return;
         }
@@ -120,7 +125,7 @@ export function NativeOAuthDeepLinkBridge() {
         const path = `${hostPart}${parsed.pathname}`.replace(/\/{2,}/g, "/");
         const normalized = path.startsWith("/") ? path : `/${path}`;
         const target = `${origin}${normalized}${parsed.search}${parsed.hash}`;
-        console.log("[NativeOAuthDeepLinkBridge] generic deep link, navigating to:", target);
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] generic deep link, navigating to:", target);
         if (window.location.href !== target) {
           window.location.replace(target);
         }
@@ -132,7 +137,7 @@ export function NativeOAuthDeepLinkBridge() {
     (async () => {
       try {
         const launchUrl = await App.getLaunchUrl();
-        console.log("[NativeOAuthDeepLinkBridge] launch URL:", launchUrl?.url ?? "(none)");
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] launch URL:", launchUrl?.url ?? "(none)");
         if (launchUrl?.url) await handleOpenUrl(launchUrl.url);
 
         const listener = await App.addListener("appUrlOpen", (event) => {
