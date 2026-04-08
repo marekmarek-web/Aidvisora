@@ -213,7 +213,7 @@ function missingRequiredFields(envelope: DocumentReviewEnvelope): string[] {
 }
 
 // ─── Semantic quality gate ─────────────────────────────────────────────────────
-function semanticQualityIssues(envelope: DocumentReviewEnvelope): string[] {
+function semanticQualityIssues(envelope: DocumentReviewEnvelope, docText: string | null): string[] {
   const issues: string[] = [];
   const ef = envelope.extractedFields as Record<string, { value?: unknown }> | undefined;
   if (!ef) return issues;
@@ -240,6 +240,44 @@ function semanticQualityIssues(envelope: DocumentReviewEnvelope): string[] {
   const vsVal = String(ef.variableSymbol?.value ?? "");
   if (/[X*]{4,}/.test(vsVal)) {
     issues.push(`variableSymbol je maskované: "${vsVal}"`);
+  }
+
+  if (docText) {
+    const text = docText;
+    const primaryType = envelope.documentClassification?.primaryType ?? "";
+    const isSupportingDoc = primaryType === "payslip_document" || primaryType === "corporate_tax_return" || primaryType === "bank_statement";
+
+    if (!isSupportingDoc) {
+      // POLICYHOLDER PRESENCE
+      const hasPolicyholderBlock = /pojistník|pojistníka|policyholder/i.test(text);
+      const clientPresent = !!(ef.fullName?.value || ef.clientFullName?.value || ef.borrowerName?.value || ef.investorFullName?.value);
+      if (hasPolicyholderBlock && !clientPresent) {
+        issues.push("Dokument obsahuje blok 'Pojistník', ale export nemá fullName/clientFullName");
+      }
+
+      // PAYMENT BLOCK PRESENCE
+      const hasPaymentBlock = /platební údaje|způsob placení|frekvence placen|bankovní spojení|údaje o smlouvě a platební/i.test(text);
+      const paymentPresent = !!(
+        ef.totalMonthlyPremium?.value ||
+        ef.annualPremium?.value ||
+        ef.premiumAmount?.value ||
+        ef.installmentAmount?.value ||
+        ef.loanAmount?.value ||
+        ef.bankAccount?.value ||
+        ef.variableSymbol?.value
+      );
+      if (hasPaymentBlock && !paymentPresent) {
+        issues.push("Dokument obsahuje platební sekci, ale export nemá žádné payment fields");
+      }
+
+      // COVERAGE TABLE PRESENCE
+      const hasCoverageTable = /rozsah pojistného krytí|přehled pojistného krytí|pojistné krytí|sjednaná rizika|připojištění/i.test(text);
+      const coveragesVal = String(ef.coverages?.value ?? ef.insuredRisks?.value ?? ef.insuredPersons?.value ?? "");
+      const coveragesPresent = coveragesVal.length > 2 && coveragesVal !== "[]" && coveragesVal !== "null";
+      if (hasCoverageTable && !coveragesPresent) {
+        issues.push("Dokument obsahuje tabulku rizik/krytí, ale export nemá coverages/insuredRisks");
+      }
+    }
   }
 
   return issues;
@@ -471,7 +509,7 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("VALIDATION SET RUNNER — blocker te
           if (!paymentsOk && !isSupportingDoc) lossPoints.push("payments stále chybí ve final export payload");
 
           // ── Semantic quality gate ──────────────────────────────────────────────
-          const semanticIssues = semanticQualityIssues(envelope);
+          const semanticIssues = semanticQualityIssues(envelope, textHint ?? null);
           for (const s of semanticIssues) lossPoints.push(`[SEMANTIC] ${s}`);
 
           const docPass = isSupportingDoc
