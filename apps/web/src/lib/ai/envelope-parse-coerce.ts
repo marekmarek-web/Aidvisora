@@ -12,6 +12,9 @@ const SCANNED_VS_DIGITAL_VALUES = new Set(["scanned", "digital", "unknown"]);
 
 /** Lowercase/normalized keys; map to canonical primaryType enum values. */
 const PRIMARY_TYPE_ALIASES: Record<string, string> = {
+  // general insurance → best guess
+  insurance_contract: "life_insurance_contract",
+  insurance: "life_insurance_contract",
   // life insurance variants
   life_insurance: "life_insurance_contract",
   life_insurance_final: "life_insurance_final_contract",
@@ -71,6 +74,19 @@ const PRIMARY_TYPE_ALIASES: Record<string, string> = {
   navrh_smlouvy: "life_insurance_proposal",
   návrh_smlouvy: "life_insurance_proposal",
   proposal: "life_insurance_proposal",
+  // insurance offer / proposal short forms
+  insurance_offer: "life_insurance_proposal",
+  nabidka_pojisteni: "life_insurance_proposal",
+  nabídka_pojistění: "life_insurance_proposal",
+  offer: "life_insurance_proposal",
+  // tax return variants
+  tax_return_corporate_income: "corporate_tax_return",
+  corporate_income_tax_return: "corporate_tax_return",
+  danove_priznani_po: "corporate_tax_return",
+  dppo: "corporate_tax_return",
+  // payslip variants
+  pay_slip: "payslip_document",
+  pay_stub: "payslip_document",
   // nonlife / vehicle / property insurance short forms
   car_insurance: "nonlife_insurance_contract",
   vehicle_insurance: "nonlife_insurance_contract",
@@ -116,6 +132,14 @@ const LIFECYCLE_ALIASES: Record<string, string> = {
   nezavazna_projekce: "non_binding_projection",
   non_binding: "non_binding_projection",
   nezávazné: "non_binding_projection",
+  // Status-like values that models sometimes return for active documents
+  active: "final_contract",
+  in_force: "final_contract",
+  signed: "final_contract",
+  platná: "final_contract",
+  platna: "final_contract",
+  aktuální: "final_contract",
+  aktualni: "final_contract",
   // Additional Czech/short form aliases
   smlouva: "final_contract",
   finální_smlouva: "final_contract",
@@ -146,6 +170,9 @@ const LIFECYCLE_ALIASES: Record<string, string> = {
 const FIELD_STATUS_ALIASES: Record<string, string> = {
   nalezeno: "extracted",
   found: "extracted",
+  filled: "extracted",
+  set: "extracted",
+  provided: "extracted",
   extracted_value: "extracted",
   extracted_field: "extracted",
   low_confidence: "inferred_low_confidence",
@@ -211,11 +238,18 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
   const dc = { ...(dcIn as Record<string, unknown>) };
   const exp = options.expectedPrimaryType;
 
-  // Model sometimes emits classification fields at the top level instead of nested in documentClassification.
-  // Recover primaryType, lifecycleStatus, documentIntent, confidence, reasons from root if missing in dc.
+  // Model sometimes emits classification fields at the top level instead of nested in documentClassification,
+  // or uses alternative key names (type / documentType) inside documentClassification.
   if (dc.primaryType == null) {
-    // Try common alternative keys at root level
-    dc.primaryType = root.primaryType ?? root.documentType ?? root.type ?? root.docType ?? root.document_type;
+    dc.primaryType =
+      dc.type ??
+      dc.documentType ??        // model uses "documentType" key inside documentClassification
+      dc.doc_type ??
+      root.primaryType ??
+      root.documentType ??
+      root.type ??
+      root.docType ??
+      root.document_type;
   }
   if (dc.lifecycleStatus == null) {
     dc.lifecycleStatus = root.lifecycleStatus ?? root.lifecycle_status;
@@ -234,15 +268,33 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
     if (typeof raw !== "string" || !raw.trim()) return null;
     const trimmed = raw.trim();
     if (PRIMARY_SET.has(trimmed)) return trimmed;
-    const normalized = trimmed.toLowerCase().replace(/[\s-]/g, "_");
+    const normalized = trimmed.toLowerCase().replace(/[\s\-\/,;:]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
     if (PRIMARY_SET.has(normalized)) return normalized;
-    const aliased = PRIMARY_TYPE_ALIASES[normalized] ?? PRIMARY_TYPE_ALIASES[trimmed.toLowerCase()];
+    const aliased = PRIMARY_TYPE_ALIASES[normalized] ?? PRIMARY_TYPE_ALIASES[normalized.replace(/_/g, "")] ?? PRIMARY_TYPE_ALIASES[trimmed.toLowerCase()];
     if (aliased && PRIMARY_SET.has(aliased)) return aliased;
     // Substring match: find a canonical type that is contained in the raw value or vice versa
     for (const candidate of PRIMARY_DOCUMENT_TYPES) {
       if (candidate === "unsupported_or_unknown") continue;
       if (normalized.includes(candidate) || candidate.includes(normalized)) return candidate;
     }
+    // Keyword-based fuzzy match for common Czech long-form descriptions
+    const lower = normalized;
+    if (lower.includes("zivotni") || lower.includes("životní") || lower.includes("pojistna_smlouva") || lower.includes("pojistná_smlouva")) {
+      if (lower.includes("dodatek") || lower.includes("zmena") || lower.includes("změna") || lower.includes("servis")) return "insurance_policy_change_or_service_doc";
+      if (lower.includes("investicni") || lower.includes("investiční") || lower.includes("dip") || lower.includes("dps")) return "life_insurance_investment_contract";
+      if (lower.includes("navrh") || lower.includes("návrh") || lower.includes("nabidka") || lower.includes("nabídka") || lower.includes("offer")) return "life_insurance_proposal";
+      return "life_insurance_contract";
+    }
+    if (lower.includes("uverova") || lower.includes("úvěrová") || lower.includes("uver") || lower.includes("úvěr") || lower.includes("spotrebitelsky") || lower.includes("spotřebitelský")) return "consumer_loan_contract";
+    if (lower.includes("hypoteka") || lower.includes("hypotéka") || lower.includes("hypotecni") || lower.includes("hypoteční")) return "mortgage_document";
+    if (lower.includes("pojisteni") || lower.includes("pojistění") || lower.includes("pojistna") || lower.includes("pojistná") || lower.includes("insurance")) {
+      if (lower.includes("odpoved") || lower.includes("odpověd") || lower.includes("majet") || lower.includes("vozidl") || lower.includes("ruceni") || lower.includes("ručení") || lower.includes("podnikat")) return "nonlife_insurance_contract";
+      return "nonlife_insurance_contract";
+    }
+    if (lower.includes("danove") || lower.includes("daňové") || lower.includes("dan") || lower.includes("daň") || lower.includes("tax_return")) return "corporate_tax_return";
+    if (lower.includes("vyplatni") || lower.includes("výplatní") || lower.includes("payslip") || lower.includes("mzda") || lower.includes("payroll")) return "payslip_document";
+    if (lower.includes("investicni") || lower.includes("investiční") || lower.includes("upis") || lower.includes("úpis") || lower.includes("investment")) return "investment_subscription_document";
+    if (lower.includes("penzijni") || lower.includes("penzijní") || lower.includes("pension") || lower.includes("dps") || lower.includes("dip")) return "pension_contract";
     return null;
   };
 
@@ -290,9 +342,24 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
     dc.lifecycleStatus = "unknown";
   }
 
-  // Fix documentIntent enum if it's invalid or missing
+  // Fix documentIntent enum — map common model-invented values to canonical
+  const INTENT_ALIASES: Record<string, string> = {
+    insurance: "creates_new_product",
+    "create_product": "creates_new_product",
+    "new_contract": "creates_new_product",
+    "modification": "modifies_existing_product",
+    "change": "modifies_existing_product",
+    "support": "supports_underwriting_or_bonita",
+    "income": "supports_income_verification",
+    "income_verification": "supports_income_verification",
+    "financial_analysis": "supports_financial_analysis",
+    "illustrative": "illustrative_only",
+    "reference": "reference_only",
+    "manual": "manual_review_required",
+  };
   if (dc.documentIntent == null || typeof dc.documentIntent !== "string" || !INTENT_SET.has(dc.documentIntent)) {
-    dc.documentIntent = "reference_only";
+    const rawIntent = typeof dc.documentIntent === "string" ? dc.documentIntent.trim().toLowerCase().replace(/[\s-]/g, "_") : "";
+    dc.documentIntent = (INTENT_ALIASES[rawIntent] ?? (INTENT_SET.has(rawIntent) ? rawIntent : "reference_only"));
   }
 
   // Ensure confidence is present and valid (required by Zod schema)
@@ -326,7 +393,44 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
         efOut[key] = { value: fieldVal, status: "inferred_low_confidence", confidence: 0.45 };
         continue;
       }
-      const fObj = { ...(fieldVal as Record<string, unknown>) };
+      const rawObj = fieldVal as Record<string, unknown>;
+      // Detect "nested data object" pattern: model emitted { fullName: "...", birthDate: "..." }
+      // instead of { value: "...", status: "extracted", confidence: 0.9 }
+      // Heuristic: if the object has NO "value" key AND has no "status" key but has other non-standard keys,
+      // treat the whole object as the value.
+      const hasValueKey = "value" in rawObj;
+      const hasStatusKey = "status" in rawObj;
+      const isNestedDataObject = !hasValueKey && !hasStatusKey && Object.keys(rawObj).length > 0;
+      let fObj: Record<string, unknown>;
+      if (isNestedDataObject) {
+        // Wrap nested object as value; also try to extract a "primary" scalar value if possible.
+        // Hoist canonical sub-fields (insurer, contractNumber, etc.) to the top-level extractedFields.
+        const nestedEntriesToHoist: [string, unknown][] = [];
+        const CANONICAL_NESTED_KEYS = new Set([
+          "insurer", "fullName", "contractNumber", "proposalNumber", "totalMonthlyPremium",
+          "annualPremium", "bankAccount", "variableSymbol", "productName", "lender",
+          "borrowerName", "loanAmount", "installmentAmount", "institutionName",
+        ]);
+        for (const [nestedKey, nestedVal] of Object.entries(rawObj)) {
+          if (CANONICAL_NESTED_KEYS.has(nestedKey) && (typeof nestedVal === "string" || typeof nestedVal === "number")) {
+            nestedEntriesToHoist.push([nestedKey, nestedVal]);
+          }
+        }
+        // After main loop, these will be added as canonical extracted fields (see below)
+        (efOut as Record<string, unknown>).__pendingHoists = (efOut as Record<string, unknown>).__pendingHoists
+          ? [...((efOut as Record<string, unknown>).__pendingHoists as unknown[]), ...nestedEntriesToHoist]
+          : nestedEntriesToHoist;
+
+        const primaryScalar = rawObj.fullName ?? rawObj.name ?? rawObj.value ?? rawObj.amount ?? rawObj.number ?? rawObj.contractNumber ?? rawObj.insurer;
+        fObj = {
+          value: typeof primaryScalar === "string" || typeof primaryScalar === "number" ? primaryScalar : rawObj,
+          status: "inferred_low_confidence",
+          confidence: 0.5,
+          evidenceSnippet: JSON.stringify(rawObj).slice(0, 400),
+        };
+      } else {
+        fObj = { ...rawObj };
+      }
       // Fix confidence
       if (typeof fObj.confidence === "number" && Number.isFinite(fObj.confidence)) {
         if (fObj.confidence > 1) {
@@ -362,6 +466,20 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
         fObj.value = null;
       }
       efOut[key] = fObj;
+    }
+    // Apply pending hoists from nested data objects
+    const pendingHoists = efOut.__pendingHoists as [string, unknown][] | undefined;
+    delete efOut.__pendingHoists;
+    if (pendingHoists) {
+      for (const [hoistKey, hoistVal] of pendingHoists) {
+        if (!(hoistKey in efOut) || (efOut[hoistKey] as Record<string, unknown> | undefined)?.value == null) {
+          efOut[hoistKey] = {
+            value: hoistVal,
+            status: "inferred_low_confidence",
+            confidence: 0.5,
+          };
+        }
+      }
     }
     root.extractedFields = efOut;
   }
@@ -432,6 +550,33 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
     if (typeof root.reviewWarnings === "object") {
       root.reviewWarnings = [];
     }
+  }
+
+  // Fix parties — model sometimes returns an array instead of record
+  if (Array.isArray(root.parties)) {
+    // Convert array of party objects to a record keyed by role or index
+    const partiesArr = root.parties as Record<string, unknown>[];
+    const partiesRecord: Record<string, unknown> = {};
+    for (let i = 0; i < partiesArr.length; i++) {
+      const p = partiesArr[i];
+      if (p && typeof p === "object") {
+        const role = typeof p.role === "string" ? p.role : `party_${i}`;
+        partiesRecord[role] = p;
+      }
+    }
+    root.parties = partiesRecord;
+  } else if (root.parties != null && typeof root.parties !== "object") {
+    root.parties = {};
+  }
+
+  // Fix productsOrObligations — must be array
+  if (root.productsOrObligations != null && !Array.isArray(root.productsOrObligations)) {
+    root.productsOrObligations = [];
+  }
+
+  // Fix evidence — must be array
+  if (root.evidence != null && !Array.isArray(root.evidence)) {
+    root.evidence = [];
   }
 
   return root;
