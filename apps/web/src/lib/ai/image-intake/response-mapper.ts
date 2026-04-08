@@ -197,7 +197,7 @@ export function mapImageIntakeToAssistantResponse(
   result: ImageIntakeOrchestratorResult,
   sessionId: string,
 ): AssistantResponse {
-  const { response, executionPlan, previewPayload } = result;
+  const { response, executionPlan, previewPayload, parsedIntent } = result;
   const plan = executionPlan;
 
   const message = buildIntakeMessage(result);
@@ -268,10 +268,17 @@ export function mapImageIntakeToAssistantResponse(
   const suggestedNextStepItems: NonNullable<AssistantResponse["suggestedNextStepItems"]> = [];
 
   if (response.actionPlan.outputMode === "ambiguous_needs_input") {
-    suggestedNextStepItems.push(
-      { label: "Otevřete kartu klienta a nahrajte obrázek znovu.", kind: "hint" },
-      { label: "Nebo sdělte jméno klienta v textovém poli.", kind: "focus_composer" },
-    );
+    if (parsedIntent?.operation === "create_contact") {
+      suggestedNextStepItems.push(
+        { label: "Sdělte jméno a příjmení nového klienta v textovém poli.", kind: "focus_composer" },
+        { label: "Nebo otevřete formulář pro nového klienta.", kind: "hint" },
+      );
+    } else {
+      suggestedNextStepItems.push(
+        { label: "Otevřete kartu klienta a nahrajte obrázek znovu.", kind: "hint" },
+        { label: "Nebo sdělte jméno klienta v textovém poli.", kind: "focus_composer" },
+      );
+    }
   }
 
   // weak_candidate: contextual hint, not a sendable message

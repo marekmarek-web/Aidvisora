@@ -108,6 +108,10 @@ export type { ClassifierDecision } from "./classifier";
 // --- Planner v1 + v2 + v3 ---
 export { buildActionPlanV1, buildActionPlanV2, buildActionPlanV3, buildActionPlanV4 } from "./planner";
 
+// --- Identity contact intake ---
+export { detectIdentityContactIntakeSignals, mapFactBundleToCreateContactDraft } from "./identity-contact-intake";
+export type { CreateContactDraftFromIdDoc } from "./identity-contact-intake";
+
 // --- Multi-image stitching v1 (Phase 4) ---
 export {
   computeStitchingGroups,

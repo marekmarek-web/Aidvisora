@@ -176,6 +176,14 @@ function buildFactInstructions(inputTypeHint: ImageInputType | null): string {
         "- id_doc_personal_id: rodné číslo / číslo dokladu jen pokud čitelné (nebo null)",
         "- id_doc_email, id_doc_phone, id_doc_title: jen pokud na dokladu viditelné (nebo null)",
         "- id_doc_extra_notes: platnost dokladu, státní příslušnost, místo narození — text do poznámky (nebo null)",
+        "Pokud obrázek vypadá jako screenshot CRM, portálu nebo administrativního systému s kontaktními / klientskými údaji, extrahuj navíc:",
+        "- crm_first_name, crm_last_name: jméno a příjmení (nebo null)",
+        "- crm_birth_date: datum narození ve formátu YYYY-MM-DD nebo DD.MM.YYYY (nebo null)",
+        "- crm_personal_id: rodné číslo (nebo null)",
+        "- crm_street, crm_city, crm_zip: adresa (nebo null)",
+        "- crm_phone, crm_email: telefon a e-mail (nebo null)",
+        "- crm_title: titul (nebo null)",
+        "- crm_document_number: číslo dokladu (nebo null)",
       ].join("\n");
 
     case "supporting_reference_image":
@@ -189,6 +197,12 @@ function buildFactInstructions(inputTypeHint: ImageInputType | null): string {
       return [
         "Extrahuj libovolná relevantní fakta s klíči popisujícími jejich typ.",
         "Pokud typ vstup je nejasný, extrahuj maximálně 3 klíčová fakta.",
+        "Pokud obrázek vypadá jako screenshot CRM, portálu nebo administrativního systému s kontaktními údaji, extrahuj:",
+        "- crm_first_name, crm_last_name: jméno a příjmení (nebo null)",
+        "- crm_birth_date: datum narození (nebo null)",
+        "- crm_personal_id: rodné číslo (nebo null)",
+        "- crm_street, crm_city, crm_zip: adresa (nebo null)",
+        "- crm_phone, crm_email: kontaktní údaje (nebo null)",
       ].join("\n");
   }
 }

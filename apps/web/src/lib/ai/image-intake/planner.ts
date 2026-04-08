@@ -93,6 +93,10 @@ function resolveOutputMode(
     binding.state === "multiple_candidates" ||
     binding.state === "weak_candidate"
   ) {
+    // Explicit "create new client" intent works without an existing client binding
+    if (intent?.operation === "create_contact") {
+      return "identity_contact_intake";
+    }
     // Communication screenshots and explicit note/task intents still get their mode
     if (intent?.operation === "create_note" || intent?.operation === "create_task" || intent?.operation === "create_followup") {
       return "client_message_update";

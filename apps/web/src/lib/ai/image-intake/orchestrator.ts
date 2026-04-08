@@ -236,6 +236,8 @@ export type ImageIntakeOrchestratorResult = {
   lifecycleFeedback: import("./types").HandoffLifecycleFeedback | null;
   /** Phase 9: intent-assist cache status from last assist call. */
   intentAssistCacheStatus: import("./types").IntentAssistCacheStatus | null;
+  /** Parsed intent from accompanying text (null when no text provided). */
+  parsedIntent: ParsedExplicitIntent | null;
 };
 
 export async function processImageIntake(
@@ -734,6 +736,7 @@ export async function processImageIntake(
     classification,
     factBundle,
     documentSetResult,
+    parsedIntent,
   );
   if (identityIntakeEligible) {
     const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
@@ -858,5 +861,6 @@ export async function processImageIntake(
     documentSetResult,
     lifecycleFeedback: null,
     intentAssistCacheStatus,
+    parsedIntent: parsedIntent ?? null,
   };
 }
