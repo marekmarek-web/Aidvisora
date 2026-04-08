@@ -202,25 +202,32 @@ export function mapImageIntakeToAssistantResponse(
     response.classification?.confidence ??
     (response.actionPlan.outputMode === "no_action_archive_only" ? 0.9 : 0.5);
 
-  const suggestedNextSteps: string[] = [];
+  // All contextual information goes into suggestedNextStepItems as hints — never into
+  // suggestedNextSteps (string[]), because those are rendered as send_message buttons.
+  // Only items that the advisor should actively send as a message use kind: "send_message".
+  const suggestedNextSteps: string[] = []; // kept for API shape compatibility; stays empty
   const suggestedNextStepItems: NonNullable<AssistantResponse["suggestedNextStepItems"]> = [];
+
   if (response.actionPlan.outputMode === "ambiguous_needs_input") {
     suggestedNextStepItems.push(
       { label: "Otevřete kartu klienta a nahrajte obrázek znovu.", kind: "hint" },
       { label: "Nebo sdělte jméno klienta v textovém poli.", kind: "focus_composer" },
     );
   }
+
+  // weak_candidate: contextual hint, not a sendable message
   if (response.clientBinding.state === "weak_candidate") {
-    suggestedNextSteps.push(
-      `Potvrďte, zda obrázek patří klientovi: ${response.clientBinding.clientLabel ?? "nalezený kandidát"}.`,
-    );
+    suggestedNextStepItems.push({
+      label: `Potvrďte, zda obrázek patří klientovi: ${response.clientBinding.clientLabel ?? "nalezený kandidát"}.`,
+      kind: "hint",
+    });
   }
 
   // Thread reconstruction summary (Phase 5)
   if (result.threadReconstruction) {
     const threadLines = buildThreadSummaryLines(result.threadReconstruction);
-    if (threadLines.length > 0) {
-      suggestedNextSteps.unshift(...threadLines);
+    for (const line of threadLines) {
+      suggestedNextStepItems.unshift({ label: line, kind: "hint" });
     }
   }
 
@@ -229,25 +236,25 @@ export function mapImageIntakeToAssistantResponse(
     ? buildStitchingSummary(result.stitchingResult)
     : null;
   if (stitchingSummary) {
-    suggestedNextSteps.unshift(stitchingSummary);
+    suggestedNextStepItems.unshift({ label: stitchingSummary, kind: "hint" });
   }
 
   // Handoff payload note (Phase 5)
   if (result.handoffPayload) {
     const handoffNote = buildHandoffPreviewNote(result.handoffPayload);
-    suggestedNextSteps.push(handoffNote);
+    suggestedNextStepItems.push({ label: handoffNote, kind: "hint" });
   }
 
   // Case signals summary (Phase 5)
   if (result.caseSignals?.summary) {
-    suggestedNextSteps.push(`Signály k příležitosti: ${result.caseSignals.summary}`);
+    suggestedNextStepItems.push({ label: `Signály k příležitosti: ${result.caseSignals.summary}`, kind: "hint" });
   }
 
   // Intent change detection summary (Phase 6)
   if (result.intentChange && result.intentChange.status !== "stable") {
     const intentNote = buildIntentChangeSummary(result.intentChange);
     if (intentNote) {
-      suggestedNextSteps.push(intentNote);
+      suggestedNextStepItems.push({ label: intentNote, kind: "hint" });
     }
   }
 
@@ -255,18 +262,22 @@ export function mapImageIntakeToAssistantResponse(
   if (result.crossSessionReconstruction?.hasPriorContext) {
     const cs = result.crossSessionReconstruction;
     const delta = cs.priorVsLatestDelta ?? "Navazuje na předchozí session.";
-    suggestedNextSteps.push(`Cross-session kontext (jistota ${Math.round(cs.crossSessionConfidence * 100)}%): ${delta}`);
+    suggestedNextStepItems.push({
+      label: `Cross-session kontext: ${delta}`,
+      kind: "hint",
+    });
   }
 
-  // Case binding v2 warning (Phase 4)
+  // Case binding v2 (Phase 4)
   if (result.caseBindingV2) {
     const cbv2 = result.caseBindingV2;
     if (cbv2.state === "multiple_case_candidates") {
-      suggestedNextSteps.push("Vyberte správný case/příležitost — nalezeno více kandidátů.");
+      suggestedNextStepItems.push({ label: "Vyberte správný case/příležitost — nalezeno více kandidátů.", kind: "hint" });
     } else if (cbv2.state === "weak_case_candidate") {
-      suggestedNextSteps.push(
-        `Potvrďte příslušnost ke case: ${cbv2.caseLabel ?? "nalezený kandidát"}.`,
-      );
+      suggestedNextStepItems.push({
+        label: `Potvrďte příslušnost ke case: ${cbv2.caseLabel ?? "nalezený kandidát"}.`,
+        kind: "hint",
+      });
     }
   }
 
@@ -274,11 +285,12 @@ export function mapImageIntakeToAssistantResponse(
   if (result.householdBinding) {
     const hh = result.householdBinding;
     if (hh.state === "household_ambiguous") {
-      suggestedNextSteps.push(
-        `⚠ Domácnost více klientů: ${hh.ambiguityNote ?? "Upřesněte, ke kterému klientovi obrázek patří."}`,
-      );
+      suggestedNextStepItems.push({
+        label: `Domácnost více klientů: ${hh.ambiguityNote ?? "Upřesněte, ke kterému klientovi obrázek patří."}`,
+        kind: "hint",
+      });
     } else if (hh.state === "household_detected" && hh.ambiguityNote) {
-      suggestedNextSteps.push(`Domácnost: ${hh.ambiguityNote}`);
+      suggestedNextStepItems.push({ label: `Domácnost: ${hh.ambiguityNote}`, kind: "hint" });
     }
   }
 
@@ -286,13 +298,13 @@ export function mapImageIntakeToAssistantResponse(
   if (result.documentSetResult) {
     const ds = result.documentSetResult;
     if (ds.documentSetSummary) {
-      suggestedNextSteps.push(`Dokumentový set: ${ds.documentSetSummary}`);
+      suggestedNextStepItems.push({ label: `Dokumentový set: ${ds.documentSetSummary}`, kind: "hint" });
     }
   }
 
   // Phase 9: AI Review handoff lifecycle note
   if (result.previewPayload.lifecycleStatusNote) {
-    suggestedNextSteps.push(result.previewPayload.lifecycleStatusNote);
+    suggestedNextStepItems.push({ label: result.previewPayload.lifecycleStatusNote, kind: "hint" });
   }
 
   const sourceLabel = result.multimodalUsed

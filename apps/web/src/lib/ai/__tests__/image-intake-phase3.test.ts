@@ -334,13 +334,16 @@ describe("resolveClientBindingV2", () => {
 
     const result = await resolveClientBindingV2(makeRequest(), null, "Karel Novotný");
     expect(result.state).toBe("weak_candidate");
-    // weak_candidate → planning v2 should produce ambiguous_needs_input output mode
+    // Fix 1 (resolveOutputMode): communication screenshots now get client_message_update
+    // regardless of binding; attach_document excluded for non-confident binding.
     const classification = makeClassification("screenshot_client_communication", 0.85);
     const factBundle = extractFactsFromMultimodalPass(makeCommunicationPassResult(), "a1");
     const plan = buildActionPlanV2(classification, result, factBundle, null);
 
-    expect(plan.outputMode).toBe("ambiguous_needs_input");
-    expect(plan.recommendedActions).toHaveLength(0);
+    expect(plan.outputMode).toBe("client_message_update");
+    // note + task always proposed; attach only for bound_client_confident
+    expect(plan.recommendedActions.some((a) => a.writeAction === "createInternalNote")).toBe(true);
+    expect(plan.recommendedActions.some((a) => a.writeAction === "attachDocumentToClient")).toBe(false);
   });
 });
 
@@ -494,7 +497,9 @@ describe("buildActionPlanV2", () => {
     expect(plan.draftReplyText).toBe("Navrhovaná odpověď...");
   });
 
-  it("no write-ready plan without confident binding", () => {
+  it("no write-ready plan without confident binding — note+task offered, attach excluded", () => {
+    // Fix 1: communication screenshots get client_message_update even without binding.
+    // Write-readiness is determined by binding, not outputMode — advisor must confirm.
     const classification = makeClassification("screenshot_client_communication", 0.85);
     const noBinding: ClientBindingResult = {
       state: "insufficient_binding",
@@ -508,8 +513,10 @@ describe("buildActionPlanV2", () => {
     const bundle = extractFactsFromMultimodalPass(makeCommunicationPassResult(), "a1");
     const plan = buildActionPlanV2(classification, noBinding, bundle, null);
 
-    expect(plan.outputMode).toBe("ambiguous_needs_input");
-    expect(plan.recommendedActions).toHaveLength(0);
+    expect(plan.outputMode).toBe("client_message_update");
+    expect(plan.needsAdvisorInput).toBe(true); // insufficient_binding → needsAdvisorInput=true
+    expect(plan.recommendedActions.some((a) => a.writeAction === "createInternalNote")).toBe(true);
+    expect(plan.recommendedActions.some((a) => a.writeAction === "attachDocumentToClient")).toBe(false);
   });
 
   it("supporting/reference stays as supporting_reference_image", () => {

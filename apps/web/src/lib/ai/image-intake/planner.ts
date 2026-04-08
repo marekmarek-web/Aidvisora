@@ -58,6 +58,14 @@ function resolveOutputMode(
     return "no_action_archive_only";
   }
 
+  // Fix 1: communication screenshots get their specialized mode even without a client.
+  // Binding state is checked later (in planClientMessageUpdate) to decide which actions
+  // to include — attach_document only when bound, but note/task always available.
+  if (classification.inputType === "screenshot_client_communication") {
+    if (classification.confidence < 0.65) return "ambiguous_needs_input";
+    return "client_message_update";
+  }
+
   if (
     binding.state === "insufficient_binding" ||
     binding.state === "multiple_candidates" ||
@@ -72,10 +80,6 @@ function resolveOutputMode(
 
   if (classification.inputType === "supporting_reference_image") {
     return "supporting_reference_image";
-  }
-
-  if (classification.inputType === "screenshot_client_communication") {
-    return classification.confidence >= 0.65 ? "client_message_update" : "ambiguous_needs_input";
   }
 
   if (
@@ -363,6 +367,19 @@ export function buildActionPlanV1(
       recommendedActions = planSupportingReference(binding);
       break;
     case "ambiguous_needs_input":
+      // Fix 2: always offer create_internal_note as a safe fallback so the advisor
+      // has at least one actionable button even when the client is unknown.
+      // No contactId required — the note is unlinked until the advisor resolves the client.
+      recommendedActions = [
+        makeAction(
+          "create_internal_note",
+          "createInternalNote",
+          "Uložit obrázek jako poznámku",
+          "Archivovat obsah obrázku jako interní poznámku — ke klientovi lze přiřadit později.",
+          { _imageIntakeOutputMode: "ambiguous_needs_input", _unlinked: true },
+        ),
+      ];
+      break;
     case "no_action_archive_only":
       recommendedActions = [];
       break;
@@ -416,22 +433,21 @@ export function buildActionPlanV4(
 
   switch (documentSetResult.decision) {
     case "supporting_reference_set":
-      // Strip any structured fact/note actions; reduce to archive only
+      // Fix 3: keep attachDocumentToClient when present, and always include
+      // createInternalNote so the advisor has both options regardless of binding.
       base.outputMode = "supporting_reference_image";
       base.recommendedActions = base.recommendedActions.filter(
         (a) => a.writeAction === "attachDocumentToClient",
       );
-      if (base.recommendedActions.length === 0) {
-        base.recommendedActions = [
-          makeAction(
-            "create_internal_note",
-            "createInternalNote",
-            "Uložit skupinu referenčních podkladů jako poznámku",
-            "Skupina referenčních obrázků — archivováno.",
-            { _imageIntakeOutputMode: "supporting_reference_image", _documentSetDecision: "supporting_reference_set" },
-          ),
-        ];
-      }
+      base.recommendedActions.push(
+        makeAction(
+          "create_internal_note",
+          "createInternalNote",
+          "Uložit skupinu referenčních podkladů jako poznámku",
+          "Skupina referenčních obrázků — archivováno.",
+          { _imageIntakeOutputMode: "supporting_reference_image", _documentSetDecision: "supporting_reference_set" },
+        ),
+      );
       base.whyThisAction = documentSetResult.documentSetSummary ?? base.whyThisAction;
       break;
 
