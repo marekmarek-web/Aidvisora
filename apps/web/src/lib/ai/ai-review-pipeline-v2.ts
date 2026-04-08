@@ -410,7 +410,47 @@ function finalizeContractPayload(params: {
     allReasons.push("supporting_document_review");
   }
 
+  const FIELD_CHECKPOINT_KEYS = [
+    "insurer",
+    "institutionName",
+    "provider",
+    "fullName",
+    "clientFullName",
+    "contractNumber",
+    "proposalNumber",
+    "proposalNumber_or_contractNumber",
+    "totalMonthlyPremium",
+    "annualPremium",
+    "bankAccount",
+    "variableSymbol",
+    "productName",
+    "investmentStrategy",
+  ] as const;
+
+  function snapshotFieldCheckpoint(
+    extracted: DocumentReviewEnvelope["extractedFields"]
+  ): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const k of FIELD_CHECKPOINT_KEYS) {
+      const cell = extracted[k];
+      out[k] = cell?.value ?? null;
+    }
+    return out;
+  }
+
+  if (isAiReviewPipelineDebug()) {
+    (trace as Record<string, unknown>).fieldCheckpoint_beforeAliasNormalize = snapshotFieldCheckpoint(
+      data.extractedFields
+    );
+  }
+
   applyExtractedFieldAliasNormalizations(data);
+
+  if (isAiReviewPipelineDebug()) {
+    (trace as Record<string, unknown>).fieldCheckpoint_afterAliasNormalize = snapshotFieldCheckpoint(
+      data.extractedFields
+    );
+  }
 
   // Build evidence summary trace for debugging and advisor UI
   const evidenceSummaries = buildFieldEvidenceSummaries(data);
@@ -476,6 +516,7 @@ function finalizeContractPayload(params: {
       "monthlyPremium",
       "regularAmount",
       "installmentAmount",
+      "annualPremium",
       "loanAmount",
       "oneOffAmount",
     ] as const;
@@ -506,10 +547,12 @@ function finalizeContractPayload(params: {
       : Math.max(0, Math.min(1, rawExtractionConfidence));
   data.documentMeta.overallConfidence = extractionConfidence;
   const fieldConfidenceMap = Object.fromEntries(
-    Object.entries(data.extractedFields).map(([key, field]) => [
-      key,
-      typeof field.confidence === "number" ? field.confidence : 0,
-    ])
+    Object.entries(data.extractedFields).map(([key, field]) => {
+      const raw = typeof field.confidence === "number" ? field.confidence : 0;
+      const clamped =
+        raw > 1 ? Math.min(1, raw / 100) : Math.max(0, Math.min(1, raw));
+      return [key, clamped];
+    })
   );
 
   const envelopeValidation = validateDocumentEnvelope(data);

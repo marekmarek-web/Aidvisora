@@ -117,11 +117,29 @@ function deriveInvestmentStrategyFromNested(ef: Record<string, ExtractedField>):
     "fundDetails",
     "portfolioAllocation",
     "proposedFunds",
+    "investmentFundName",
+    "fundName",
+    "selectedFund",
+    "recommendedFund",
+    "fondFondu",
+    "investmentOption",
   ];
   for (const nk of nestedKeys) {
     const cell = ef[nk];
     if (!cell || cell.value == null) continue;
     const raw = cell.value;
+    if (typeof raw === "string") {
+      const text = raw.trim();
+      if (text) {
+        ef.investmentStrategy = {
+          value: text,
+          status: cell.status === "inferred_low_confidence" ? "inferred_low_confidence" : "extracted",
+          confidence: cell.confidence ?? 0.72,
+          evidenceSnippet: cell.evidenceSnippet,
+        };
+        return;
+      }
+    }
     if (typeof raw === "object") {
       const text = formatUnknownValue(raw).trim();
       if (text) {
@@ -150,7 +168,7 @@ function salvageCanonicalFieldsFromTextishCells(
 
   if (!valuePresent(ef.insurer)) {
     const insurerMatch = blob.match(
-      /\b(Generali Česká pojišťovna(?:\s+a\.s\.)?|Generali|Kooperativa|UNIQA|Allianz|NN Životní pojišťovna|ČSOB Pojišťovna|ČPP|Simplea)\b/i
+      /\b(Generali Česká pojišťovna(?:\s+a\.s\.)?|Generali|Kooperativa|UNIQA|Allianz|NN Životní pojišťovna|ČSOB Pojišťovna|ČPP|Simplea|MAXIMA pojišťovna(?:,?\s+a\.s\.)?|Pillow pojišťovna(?:,?\s+a\.s\.)?|Pillow)\b/i
     );
     if (insurerMatch) {
       ef.insurer = {
@@ -214,6 +232,15 @@ function salvageCanonicalFieldsFromTextishCells(
         status: "inferred_low_confidence",
         confidence: 0.6,
       };
+    } else {
+      const fondFonduMatch = blob.match(/\b(Fond\s+fondů[^\n]{3,120})/i);
+      if (fondFonduMatch?.[1]) {
+        ef.investmentStrategy = {
+          value: fondFonduMatch[1].trim(),
+          status: "inferred_low_confidence",
+          confidence: 0.58,
+        };
+      }
     }
   }
 }

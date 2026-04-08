@@ -24,13 +24,18 @@ function str(v: unknown): string {
 
 function formatMoneyLine(env: DocumentReviewEnvelope): string {
   const parts: string[] = [];
+  const annual = str(fv(env, "annualPremium"));
   const amt =
     str(fv(env, "totalMonthlyPremium")) ||
     str(fv(env, "premiumAmount")) ||
     str(fv(env, "monthlyPremium")) ||
     str(fv(env, "regularAmount")) ||
-    str(fv(env, "installmentAmount"));
-  const freq = str(fv(env, "paymentFrequency")) || str(fv(env, "premiumFrequency"));
+    str(fv(env, "installmentAmount")) ||
+    annual;
+  let freq = str(fv(env, "paymentFrequency")) || str(fv(env, "premiumFrequency"));
+  if (annual && !freq) {
+    freq = "ročně";
+  }
   if (amt) {
     parts.push(freq ? `${amt} (${freq})` : amt);
   }
@@ -64,7 +69,11 @@ function productLine(env: DocumentReviewEnvelope): string {
   const prod = str(fv(env, "productName"));
   const inst =
     str(fv(env, "institutionName")) || str(fv(env, "insurer")) || str(fv(env, "provider"));
-  const cn = str(fv(env, "contractNumber")) || str(fv(env, "existingPolicyNumber"));
+  const cn =
+    str(fv(env, "contractNumber")) ||
+    str(fv(env, "existingPolicyNumber")) ||
+    str(fv(env, "proposalNumber_or_contractNumber")) ||
+    str(fv(env, "proposalNumber"));
   const parts = [prod, inst].filter(Boolean);
   if (cn) parts.push(`ref. ${cn}`);
   return parts.length ? parts.join(" · ") : "—";

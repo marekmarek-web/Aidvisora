@@ -125,6 +125,28 @@ describe("coerce-partial-review-envelope", () => {
     expect(stub.parties.policyholder).toEqual({ fullName: "Hanna Havdan" });
   });
 
+  it("merges parties array from partial parse into manual-review stub", () => {
+    const parsed = {
+      insurer: "UNIQA pojišťovna, a.s.",
+      proposalNumber: "5516778551",
+      parties: [{ role: "policyholder", fullName: "Roman Koloburda" }],
+    };
+    const stub = buildManualReviewStubEnvelope({
+      classification: {
+        ...classification,
+        primaryType: "life_insurance_proposal",
+      },
+      inputMode: "text_pdf",
+      extractionMode: "text",
+      pageCount: 1,
+      norm: "insurance_proposal",
+      route: "contract_intake",
+    });
+    const { mergedPartyKeys } = mergePartialParsedIntoManualStub(stub, parsed, 256);
+    expect(mergedPartyKeys).toContain("policyholder");
+    expect(stub.parties.policyholder).toEqual({ role: "policyholder", fullName: "Roman Koloburda" });
+  });
+
   it("lifts stored-prompt AMUNDI DIP legacy JSON into envelope (productType, client, payments)", () => {
     const legacy = {
       document_family: "dip",

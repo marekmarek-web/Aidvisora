@@ -100,6 +100,11 @@ function clamp01(n: unknown, fallback: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+function normalizeConfidence01(raw: unknown, fallback: number): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback;
+  return raw > 1 ? Math.min(1, raw / 100) : Math.max(0, Math.min(1, raw));
+}
+
 function normalizeExtractedFieldCell(key: string, v: unknown): Record<string, unknown> {
   if (v != null && typeof v === "object" && !Array.isArray(v)) {
     const o = { ...(v as Record<string, unknown>) };
@@ -108,7 +113,7 @@ function normalizeExtractedFieldCell(key: string, v: unknown): Record<string, un
       o.status = "inferred_low_confidence";
     }
     if (o.confidence != null) {
-      o.confidence = clamp01(o.confidence, 0.5);
+      o.confidence = normalizeConfidence01(o.confidence, 0.5);
     }
     return o;
   }
@@ -704,7 +709,20 @@ export function mergePartialParsedIntoManualStub(
   }
 
   const parties = parsed.parties;
-  if (parties && typeof parties === "object" && !Array.isArray(parties)) {
+  if (Array.isArray(parties)) {
+    for (let i = 0; i < parties.length; i++) {
+      const p = parties[i];
+      if (!p || typeof p !== "object" || Array.isArray(p)) continue;
+      const rec = p as Record<string, unknown>;
+      const roleRaw = typeof rec.role === "string" ? rec.role.trim() : "";
+      const key = roleRaw
+        ? roleRaw.toLowerCase().replace(/\s+/g, "_")
+        : `party_${i}`;
+      if (key.startsWith("_")) continue;
+      stub.parties[key] = rec;
+      mergedPartyKeys.push(key);
+    }
+  } else if (parties && typeof parties === "object") {
     for (const [k, v] of Object.entries(parties as Record<string, unknown>)) {
       if (k.startsWith("_")) continue;
       stub.parties[k] = v;

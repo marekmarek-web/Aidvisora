@@ -164,14 +164,16 @@ describe("applyExtractedFieldAliasNormalizations", () => {
       contractNumber: { value: "U-123", status: "extracted", confidence: 0.88, evidenceSnippet: "ref" },
       principal: { value: 500000, status: "extracted", confidence: 0.87, evidenceSnippet: "jistina" },
       monthlyInstallment: { value: "6 200 Kč", status: "extracted", confidence: 0.86, evidenceSnippet: "splátka" },
+      numberOfInstallments: { value: 120, status: "extracted", confidence: 0.85, evidenceSnippet: "počet splátek" },
     };
     applyExtractedFieldAliasNormalizations(env);
     expect(env.extractedFields.lender?.value).toBe("ČSOB");
     expect(env.extractedFields.loanAmount?.value).toBe(500000);
     expect(env.extractedFields.installmentAmount?.value).toBe("6 200 Kč");
+    expect(env.extractedFields.installmentCount?.value).toBe(120);
     const schema = selectSchemaForType("consumer_loan_contract");
     const { completeness, warnings } = runVerificationPass(env, schema);
-    expect(completeness.requiredSatisfied).toBe(4);
+    expect(completeness.requiredSatisfied).toBe(schema.extractionRules.required.length);
     expect(warnings.filter((w) => w.code === "MISSING_REQUIRED_FIELD")).toHaveLength(0);
   });
 
