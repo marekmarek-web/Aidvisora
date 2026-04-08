@@ -41,6 +41,10 @@ import {
 } from "@/lib/ai/assistant-chat-client";
 import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
 import {
+  mergePendingImageAssets,
+  removePendingImageAssetAt,
+} from "@/lib/ai/assistant-composer-pending-images";
+import {
   extractImageFilesFromClipboardData,
   logAssistantImagePipelineClient,
 } from "@/lib/ai/assistant-clipboard-image-paste";
@@ -70,8 +74,6 @@ import type { AdvisorAssistantHistoryMessageDto } from "@/lib/ai/assistant-histo
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
-const MAX_ASSISTANT_CHAT_IMAGES = 4;
-
 function imageMimeForAssistantFile(file: File): string {
   if (file.type && file.type.startsWith("image/")) return file.type;
   const n = file.name.toLowerCase();
@@ -88,6 +90,27 @@ function isLikelyAssistantImageFile(file: File): boolean {
   if (file.type && file.type.startsWith("image/")) return true;
   const n = file.name.toLowerCase();
   return /\.(heic|heif|jpg|jpeg|png|webp|gif)$/i.test(n);
+}
+
+function readImageFilesAsPayloads(files: File[]): Promise<ImageAssetPayload[]> {
+  return Promise.all(
+    files.map(
+      (file) =>
+        new Promise<ImageAssetPayload>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              url: reader.result as string,
+              mimeType: imageMimeForAssistantFile(file),
+              filename: file.name || null,
+              sizeBytes: file.size,
+            });
+          };
+          reader.onerror = () => reject(new Error("read_failed"));
+          reader.readAsDataURL(file);
+        }),
+    ),
+  );
 }
 
 type DraftAction = { type: string; label: string; payload: Record<string, unknown> };
@@ -214,6 +237,7 @@ export function AiAssistantDrawer() {
   const [conversationPickerLoading, setConversationPickerLoading] = useState(false);
   const [historyHydrationLoading, setHistoryHydrationLoading] = useState(false);
   const [input, setInput] = useState("");
+  const [pendingImageAssets, setPendingImageAssets] = useState<ImageAssetPayload[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   /** Drží panel s „Potvrdit“ viditelný během API volání (6J). */
   const [confirmExecuteBusy, setConfirmExecuteBusy] = useState(false);
@@ -313,6 +337,7 @@ export function AiAssistantDrawer() {
 
   const startNewAssistantConversation = useCallback(() => {
     setMessages([]);
+    setPendingImageAssets([]);
     setAssistantSessionId(undefined);
     setActiveReviewId(null);
     try {
@@ -410,6 +435,7 @@ export function AiAssistantDrawer() {
     if (prev == null || routeContactId == null) return;
     if (prev !== routeContactId) {
       setMessages([]);
+      setPendingImageAssets([]);
       setAssistantSessionId(undefined);
       setActiveReviewId(null);
       try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
@@ -492,11 +518,13 @@ export function AiAssistantDrawer() {
           }
           return next;
         });
+        setPendingImageAssets([]);
       } catch (e) {
         const detail = e instanceof Error ? e.message : "";
         toast.showToast(detail || "Odeslání zprávy selhalo.", "error");
         setMessages((prev) => prev.slice(0, -2));
         setInput(msg);
+        if (hasImages) setPendingImageAssets(imageAssets ?? []);
       } finally {
         setChatLoading(false);
         chatSubmitLockRef.current = false;
@@ -677,15 +705,11 @@ export function AiAssistantDrawer() {
 
   const handleSendChat = () => {
     const msg = input.trim();
-    if (!msg) return;
+    const imgs = pendingImageAssets;
+    if (!msg && imgs.length === 0) return;
     setInput("");
-    void sendChatMessage(msg);
+    void sendChatMessage(msg, imgs.length ? imgs : undefined);
   };
-
-  // Stable ref so reader.onload closure always has the latest sendChatMessage,
-  // even if chatLoading / other deps caused a rebuild between attach and async fire.
-  const sendChatMessageRef = useRef(sendChatMessage);
-  sendChatMessageRef.current = sendChatMessage;
 
   const handlePasteOnInput = useCallback((e: React.ClipboardEvent<HTMLElement>) => {
     const cd = e.clipboardData;
@@ -693,7 +717,7 @@ export function AiAssistantDrawer() {
       targetTag: (e.target as HTMLElement).tagName,
       activeElementTag: document.activeElement?.tagName,
     });
-    const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: MAX_ASSISTANT_CHAT_IMAGES });
+    const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: 32 });
     logAssistantImagePipelineClient("paste_clipboard", {
       itemCount: cd.items.length,
       fileCount: cd.files.length,
@@ -704,36 +728,27 @@ export function AiAssistantDrawer() {
     if (files.length === 0) return;
     e.preventDefault();
     if (truncated) {
-      toast.showToast("Vloženo více než 4 obrázky — zpracují se jen první čtyři.", "error");
+      toast.showToast("Ve schránce bylo hodně obrázků — načte se jen prvních 32.", "error");
     }
 
     const accompanyingText = inputRef.current?.value.trim() ?? "";
 
-    void Promise.all(
-      files.map(
-        (file) =>
-          new Promise<ImageAssetPayload>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              resolve({
-                url: reader.result as string,
-                mimeType: imageMimeForAssistantFile(file),
-                filename: file.name || null,
-                sizeBytes: file.size,
-              });
-            };
-            reader.onerror = () => reject(new Error("read_failed"));
-            reader.readAsDataURL(file);
-          }),
-      ),
-    )
+    void readImageFilesAsPayloads(files)
       .then((assets) => {
-        logAssistantImagePipelineClient("paste_invoke_send", {
+        logAssistantImagePipelineClient("paste_pending", {
           accompanyingLen: accompanyingText.length,
           assetCount: assets.length,
         });
-        setInput("");
-        void sendChatMessageRef.current(accompanyingText, assets);
+        setPendingImageAssets((prev) => {
+          const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, assets);
+          if (truncatedFromIncoming) {
+            toast.showToast(
+              "Do fronty se vejde nejvýše 4 obrázky — zbytek byl vynechán.",
+              "error",
+            );
+          }
+          return next;
+        });
       })
       .catch(() => {
         toast.showToast("Obrázky z schránky se nepodařilo načíst.", "error");
@@ -853,7 +868,6 @@ export function AiAssistantDrawer() {
         toast.showToast("Počkejte na dokončení aktuální zprávy.", "error");
         return;
       }
-      const accompanyingText = inputRef.current?.value.trim() ?? "";
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
@@ -863,8 +877,16 @@ export function AiAssistantDrawer() {
           filename: file.name || null,
           sizeBytes: file.size,
         };
-        setInput("");
-        void sendChatMessageRef.current(accompanyingText, [asset]);
+        setPendingImageAssets((prev) => {
+          const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, [asset]);
+          if (truncatedFromIncoming) {
+            toast.showToast(
+              "Do fronty se vejde nejvýše 4 obrázky — tento obrázek se nepřidal.",
+              "error",
+            );
+          }
+          return next;
+        });
       };
       reader.onerror = () => {
         toast.showToast("Soubor se nepodařilo načíst.", "error");
@@ -1029,37 +1051,22 @@ export function AiAssistantDrawer() {
       return;
     }
     const rawList = Array.from(files).filter((f) => isLikelyAssistantImageFile(f));
-    const capped = rawList.length > MAX_ASSISTANT_CHAT_IMAGES;
-    const list = rawList.slice(0, MAX_ASSISTANT_CHAT_IMAGES);
-    if (capped) {
-      toast.showToast("Vybráno více než 4 obrázky — odešlou se jen první čtyři.", "error");
-    }
-    if (list.length === 0) {
+    if (rawList.length === 0) {
       toast.showToast("Vyberte obrázek (JPEG, PNG, HEIC…).", "error");
       return;
     }
-    const accompanyingText = inputRef.current?.value.trim() ?? "";
-    void Promise.all(
-      list.map(
-        (file) =>
-          new Promise<ImageAssetPayload>((resolve, reject) => {
-            const r = new FileReader();
-            r.onload = () => {
-              resolve({
-                url: r.result as string,
-                mimeType: imageMimeForAssistantFile(file),
-                filename: file.name || null,
-                sizeBytes: file.size,
-              });
-            };
-            r.onerror = () => reject(new Error("read_failed"));
-            r.readAsDataURL(file);
-          }),
-      ),
-    )
+    void readImageFilesAsPayloads(rawList)
       .then((assets) => {
-        setInput("");
-        void sendChatMessageRef.current(accompanyingText, assets);
+        setPendingImageAssets((prev) => {
+          const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, assets);
+          if (truncatedFromIncoming) {
+            toast.showToast(
+              "Do fronty se vejde nejvýše 4 obrázky — zbytek byl vynechán.",
+              "error",
+            );
+          }
+          return next;
+        });
       })
       .catch(() => {
         toast.showToast("Soubory se nepodařilo načíst.", "error");
@@ -1162,8 +1169,37 @@ export function AiAssistantDrawer() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+    const list = Array.from(e.dataTransfer.files ?? []);
+    if (list.length === 0) return;
+    const images = list.filter(isLikelyAssistantImageFile);
+    const nonImages = list.filter((f) => !isLikelyAssistantImageFile(f));
+    if (images.length > 0) {
+      void readImageFilesAsPayloads(images)
+        .then((assets) => {
+          setPendingImageAssets((prev) => {
+            const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, assets);
+            if (truncatedFromIncoming) {
+              toast.showToast(
+                "Do fronty se vejde nejvýše 4 obrázky — zbytek byl vynechán.",
+                "error",
+              );
+            }
+            return next;
+          });
+        })
+        .catch(() => {
+          toast.showToast("Obrázky se nepodařilo načíst.", "error");
+        });
+    }
+    if (nonImages.length > 0) {
+      void handleFile(nonImages[0]);
+      if (nonImages.length > 1) {
+        toast.showToast(
+          "Najednou lze přetáhnout jen jeden dokument (např. PDF). Obrázky lze přidat více.",
+          "error",
+        );
+      }
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -1697,6 +1733,33 @@ export function AiAssistantDrawer() {
                 </button>
               </div>
             ) : null}
+            {pendingImageAssets.length > 0 ? (
+              <div className="mb-2 flex flex-wrap gap-2 items-start">
+                {pendingImageAssets.map((a, i) => (
+                  <div
+                    key={`${i}-${a.filename ?? "img"}-${a.sizeBytes}`}
+                    className="relative shrink-0"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={a.url}
+                      alt=""
+                      className="h-14 w-14 rounded-lg object-cover border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingImageAssets((prev) => removePendingImageAssetAt(prev, i))
+                      }
+                      className="absolute -top-1.5 -right-1.5 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-600 text-xs font-bold text-white shadow"
+                      aria-label="Odebrat obrázek z fronty"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {/* onPaste on the wrapper catches image paste even when the browser
                 suppresses clipboard events on <input type="text"> for non-text content */}
             <div className="flex gap-2" onPaste={handlePasteOnInput}>
@@ -1712,7 +1775,7 @@ export function AiAssistantDrawer() {
               <button
                 type="button"
                 onClick={handleSendChat}
-                disabled={chatLoading || !input.trim()}
+                disabled={chatLoading || (!input.trim() && pendingImageAssets.length === 0)}
                 className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all"
                 aria-label="Odeslat"
               >

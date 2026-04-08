@@ -58,7 +58,14 @@ export function mapToExecutionPlan(
       ...action.params,
       _imageIntakeSource: intakeId,
     };
-    if (!isIdentityIntake || writeAction !== "createContact") {
+    const rawPlanParams = action.params as Record<string, unknown>;
+    const isIdentityIntakeAttach =
+      isIdentityIntake &&
+      writeAction === "attachDocumentToClient" &&
+      Boolean(rawPlanParams._identityIntakeAttach);
+    const skipContactId =
+      (isIdentityIntake && writeAction === "createContact") || isIdentityIntakeAttach;
+    if (!skipContactId) {
       baseParams.contactId = clientId;
     }
     baseParams.opportunityId = opportunityId;

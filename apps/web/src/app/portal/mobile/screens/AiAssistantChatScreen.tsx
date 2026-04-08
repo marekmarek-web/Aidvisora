@@ -31,6 +31,10 @@ import {
 } from "@/lib/ai/assistant-chat-client";
 import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
 import {
+  mergePendingImageAssets,
+  removePendingImageAssetAt,
+} from "@/lib/ai/assistant-composer-pending-images";
+import {
   extractImageFilesFromClipboardData,
   logAssistantImagePipelineClient,
 } from "@/lib/ai/assistant-clipboard-image-paste";
@@ -72,6 +76,33 @@ function imageMimeForAssistantFile(file: File): string {
   if (n.endsWith(".webp")) return "image/webp";
   if (n.endsWith(".gif")) return "image/gif";
   return file.type || "application/octet-stream";
+}
+
+function isLikelyAssistantImageFile(file: File): boolean {
+  if (file.type && file.type.startsWith("image/")) return true;
+  const n = file.name.toLowerCase();
+  return /\.(heic|heif|jpg|jpeg|png|webp|gif)$/i.test(n);
+}
+
+function readImageFilesAsPayloads(files: File[]): Promise<ImageAssetPayload[]> {
+  return Promise.all(
+    files.map(
+      (file) =>
+        new Promise<ImageAssetPayload>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              url: reader.result as string,
+              mimeType: imageMimeForAssistantFile(file),
+              filename: file.name || null,
+              sizeBytes: file.size,
+            });
+          };
+          reader.onerror = () => reject(new Error("read_failed"));
+          reader.readAsDataURL(file);
+        }),
+    ),
+  );
 }
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -470,6 +501,7 @@ export function AiAssistantChatScreen() {
   const [planConfirmBusy, setPlanConfirmBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [pendingImageAssets, setPendingImageAssets] = useState<ImageAssetPayload[]>([]);
   const [draftEmail, setDraftEmail] = useState<string | null>(null);
   const [draftCopied, setDraftCopied] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
@@ -528,6 +560,7 @@ export function AiAssistantChatScreen() {
     if (prev == null || routeContactId == null) return;
     if (prev !== routeContactId) {
       setMessages([]);
+      setPendingImageAssets([]);
       setAssistantSessionId(undefined);
       try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
     }
@@ -644,7 +677,7 @@ export function AiAssistantChatScreen() {
         targetTag: (e.target as HTMLElement).tagName,
         activeElementTag: document.activeElement?.tagName,
       });
-      const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: MAX_ASSISTANT_CHAT_IMAGES });
+      const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: 32 });
       logAssistantImagePipelineClient("paste_clipboard", {
         itemCount: cd.items.length,
         fileCount: cd.files.length,
@@ -654,40 +687,38 @@ export function AiAssistantChatScreen() {
       });
       if (files.length === 0) return;
       e.preventDefault();
+      if (isTyping || chatSubmitLockRef.current) {
+        toast.showToast("Počkejte na dokončení aktuální zprávy.", "error");
+        return;
+      }
       if (truncated) {
-        toast.showToast("Vloženo více než 4 obrázky — zpracují se jen první čtyři.", "error");
+        toast.showToast("Ve schránce bylo hodně obrázků — načte se jen prvních 32.", "error");
       }
 
       const accompanying = inputRef.current?.value.trim() ?? "";
 
-      void Promise.all(
-        files.map(
-          (file) =>
-            new Promise<ImageAssetPayload>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                resolve({
-                  url: reader.result as string,
-                  mimeType: imageMimeForAssistantFile(file),
-                  filename: file.name || null,
-                  sizeBytes: file.size,
-                });
-              };
-              reader.onerror = () => reject(new Error("read_failed"));
-              reader.readAsDataURL(file);
-            }),
-        ),
-      )
+      void readImageFilesAsPayloads(files)
         .then((assets) => {
-          logAssistantImagePipelineClient("paste_invoke_send", { accompanyingLen: accompanying.length, assetCount: assets.length });
-          setInput("");
-          void sendMessageRef.current?.(accompanying, assets);
+          logAssistantImagePipelineClient("paste_pending", {
+            accompanyingLen: accompanying.length,
+            assetCount: assets.length,
+          });
+          setPendingImageAssets((prev) => {
+            const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, assets);
+            if (truncatedFromIncoming) {
+              toast.showToast(
+                "Do fronty se vejde nejvýše 4 obrázky — zbytek byl vynechán.",
+                "error",
+              );
+            }
+            return next;
+          });
         })
         .catch(() => {
           toast.showToast("Obrázky z schránky se nepodařilo načíst.", "error");
         });
     },
-    [toast],
+    [toast, isTyping],
   );
 
   /** "Upravit zadání": předvyplní input textem poslední uživatelské zprávy a přesune fokus. */
@@ -799,9 +830,12 @@ export function AiAssistantChatScreen() {
               : m
           )
         );
+        setPendingImageAssets([]);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Nepodařilo se kontaktovat asistenta.");
-        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId && m.id !== userMsg.id));
+        setInput(trimmed);
+        if (hasImages) setPendingImageAssets(imageAssets ?? []);
         const errMsg: ChatMessage = {
           id: nextId(),
           role: "assistant",
@@ -1124,12 +1158,15 @@ export function AiAssistantChatScreen() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void sendMessage(input);
+      const t = input.trim();
+      if (!t && pendingImageAssets.length === 0) return;
+      void sendMessage(t, pendingImageAssets.length ? pendingImageAssets : undefined);
     }
   }
 
   const startNewAssistantConversation = useCallback(() => {
     setMessages([]);
+    setPendingImageAssets([]);
     setStepSelectionByPlanId({});
     setAssistantSessionId(undefined);
     setError(null);
@@ -1387,6 +1424,34 @@ export function AiAssistantChatScreen() {
           </div>
         ) : null}
 
+        {pendingImageAssets.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {pendingImageAssets.map((a, i) => (
+              <div
+                key={`${i}-${a.filename ?? "img"}-${a.sizeBytes}`}
+                className="relative shrink-0"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={a.url}
+                  alt=""
+                  className="h-12 w-12 rounded-lg object-cover border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPendingImageAssets((prev) => removePendingImageAssetAt(prev, i))
+                  }
+                  className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow"
+                  aria-label="Odebrat obrázek z fronty"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {files.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {files.map((f, i) => (
@@ -1449,8 +1514,31 @@ export function AiAssistantChatScreen() {
             accept=".pdf,.doc,.docx,image/*,.csv"
             onChange={(e) => {
               const added = Array.from(e.target.files ?? []);
-              setFiles((prev) => prev.concat(added));
               e.target.value = "";
+              const images = added.filter(isLikelyAssistantImageFile);
+              const docs = added.filter((f) => !isLikelyAssistantImageFile(f));
+              if (docs.length > 0) setFiles((prev) => prev.concat(docs));
+              if (images.length === 0) return;
+              if (isTyping || chatSubmitLockRef.current) {
+                toast.showToast("Počkejte na dokončení aktuální zprávy.", "error");
+                return;
+              }
+              void readImageFilesAsPayloads(images)
+                .then((assets) => {
+                  setPendingImageAssets((prev) => {
+                    const { next, truncatedFromIncoming } = mergePendingImageAssets(prev, assets);
+                    if (truncatedFromIncoming) {
+                      toast.showToast(
+                        "Do fronty se vejde nejvýše 4 obrázky — zbytek byl vynechán.",
+                        "error",
+                      );
+                    }
+                    return next;
+                  });
+                })
+                .catch(() => {
+                  toast.showToast("Obrázky se nepodařilo načíst.", "error");
+                });
             }}
           />
           <button
@@ -1482,8 +1570,12 @@ export function AiAssistantChatScreen() {
           />
           <button
             type="button"
-            onClick={() => void sendMessage(input)}
-            disabled={!input.trim() || isTyping}
+            onClick={() => {
+              const t = input.trim();
+              if (!t && pendingImageAssets.length === 0) return;
+              void sendMessage(t, pendingImageAssets.length ? pendingImageAssets : undefined);
+            }}
+            disabled={(!input.trim() && pendingImageAssets.length === 0) || isTyping}
             className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             <Send size={18} className="text-white" />

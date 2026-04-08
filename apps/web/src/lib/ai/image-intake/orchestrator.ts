@@ -45,7 +45,12 @@ import { runBatchPreflight } from "./preflight";
 import { enforceImageIntakeGuardrails } from "./guardrails";
 import { classifyBatch } from "./classifier";
 import { buildActionPlanV4, buildIdentityContactIntakeActionPlan } from "./planner";
-import { detectIdentityContactIntakeSignals } from "./identity-contact-intake";
+import {
+  detectIdentityContactIntakeSignals,
+  mapFactBundleToCreateContactDraft,
+} from "./identity-contact-intake";
+import { identityDocumentLikelyMatchesActiveContact } from "./identity-active-context-mismatch";
+import { loadContactDisplayLabelForIntake } from "./load-contact-display-label-for-intake";
 import { materializeIntakeImagesAsDocuments } from "./materialize-intake-documents";
 import {
   shouldRunMultimodalPass,
@@ -476,11 +481,11 @@ export async function processImageIntake(
 
   // 7. CRM-aware binding v2 (uses name signal from multimodal if available)
   const nameSignal = multimodalResult?.possibleClientNameSignal ?? null;
-  const clientBinding = await resolveClientBindingV2(effectiveRequest, session, nameSignal);
+  let clientBinding = await resolveClientBindingV2(effectiveRequest, session, nameSignal);
 
   // 8. Case/opportunity binding v2 (Phase 4 — DB lookup when client is known)
-  const resolvedClientId = clientBinding.clientId;
-  const caseBindingV2 = await resolveCaseBindingV2(effectiveRequest, session, resolvedClientId);
+  let resolvedClientId = clientBinding.clientId;
+  let caseBindingV2 = await resolveCaseBindingV2(effectiveRequest, session, resolvedClientId);
   const caseBinding = toCaseBindingResult(caseBindingV2);
 
   // 9. Review handoff recommendation (Phase 4 — no model call)
@@ -543,7 +548,7 @@ export async function processImageIntake(
       caseSignals,
     );
   }
-  const finalCaseBinding = toCaseBindingResult(finalCaseBindingV2);
+  let finalCaseBinding = toCaseBindingResult(finalCaseBindingV2);
 
   if (
     batchDecision &&
@@ -717,6 +722,42 @@ export async function processImageIntake(
       intakeId,
     );
     actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+  }
+
+  const bindingFromRouteOrSession =
+    clientBinding.source === "session_context" || clientBinding.source === "ui_context";
+  if (identityIntakeEligible && clientBinding.clientId && bindingFromRouteOrSession) {
+    const draft = mapFactBundleToCreateContactDraft(factBundle);
+    const activeLabel = await loadContactDisplayLabelForIntake(
+      effectiveRequest.tenantId,
+      clientBinding.clientId,
+    );
+    const cmp = identityDocumentLikelyMatchesActiveContact({
+      extractedFirstName: draft.params.firstName,
+      extractedLastName: draft.params.lastName,
+      activeContactDisplayLabel: activeLabel,
+    });
+    if (cmp.verdict === "mismatch") {
+      const suppressedId = clientBinding.clientId;
+      clientBinding = {
+        state: "insufficient_binding",
+        clientId: null,
+        clientLabel: activeLabel,
+        confidence: 0.25,
+        candidates: [],
+        source: "identity_context_mismatch",
+        warnings: [
+          `Údaje na dokladu nesedí s otevřeným kontaktem v CRM${activeLabel ? ` (${activeLabel})` : ""}.`,
+        ],
+        suppressedActiveClientId: suppressedId,
+        suppressedActiveClientLabel: activeLabel,
+      };
+      resolvedClientId = null;
+      const recomputedCase = await resolveCaseBindingV2(effectiveRequest, session, null);
+      caseBindingV2 = recomputedCase;
+      finalCaseBindingV2 = recomputedCase;
+      finalCaseBinding = toCaseBindingResult(recomputedCase);
+    }
   }
 
   // 12. Guardrails (unchanged from Phase 1)

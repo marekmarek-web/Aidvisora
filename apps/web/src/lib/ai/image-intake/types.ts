@@ -151,8 +151,20 @@ export type ClientBindingResult = {
   confidence: number;
   /** When multiple_candidates, list of possible matches. */
   candidates: Array<{ id: string; label: string; score: number }>;
-  source: "session_context" | "ui_context" | "image_signal" | "crm_match" | "none";
+  source:
+    | "session_context"
+    | "ui_context"
+    | "image_signal"
+    | "crm_match"
+    | "none"
+    | "identity_context_mismatch";
   warnings: string[];
+  /**
+   * When the document identity disagrees with the CRM route context, binding is cleared
+   * but we keep the open contact id for optional CTAs (e.g. open client card).
+   */
+  suppressedActiveClientId?: string | null;
+  suppressedActiveClientLabel?: string | null;
 };
 
 export type CaseBindingResult = {

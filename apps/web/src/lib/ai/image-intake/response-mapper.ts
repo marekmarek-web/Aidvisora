@@ -35,6 +35,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
     case "identity_contact_intake": {
       const draft = mapFactBundleToCreateContactDraft(result.response.factBundle);
       const p = draft.params;
+      const routeMismatch = Boolean(response.clientBinding.suppressedActiveClientId);
       const pre: string[] = [];
       const push = (label: string, v: string | undefined) => {
         const t = v?.trim();
@@ -64,9 +65,17 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         ? need.slice(0, 10).join("\n")
         : "Údaje prosím před uložením ještě jednou zkontrolujte v náhledu kroků.";
 
+      const head = routeMismatch
+        ? [
+            "Doklad vypadá na jinou osobu než kontakt, který máte právě otevřený v CRM — automaticky ho k němu nepřiřazuji.",
+            "",
+            "Z údajů na dokladu můžete přesto založit nového klienta a podklady uložit podle plánu níže.",
+            "",
+          ]
+        : ["Připravil jsem návrh nového klienta z nahraných dokladů.", ""];
+
       return [
-        "Připravil jsem návrh nového klienta z nahraných dokladů.",
-        "",
+        ...head,
         "Předvyplněné údaje",
         preBlock,
         "",
@@ -170,6 +179,7 @@ export function mapImageIntakeToAssistantResponse(
 
   const warnings: string[] = [
     ...previewPayload.warnings,
+    ...(response.clientBinding.warnings ?? []),
     ...response.trace.guardrailsTriggered
       .filter((v) => {
         if (identityMode && v.startsWith("BINDING_VIOLATION")) return false;
@@ -302,6 +312,18 @@ export function mapImageIntakeToAssistantResponse(
       requiresConfirmation: false,
       executionMode: "manual_only",
     });
+    const sup = response.clientBinding.suppressedActiveClientId;
+    if (sup) {
+      suggestedActions.push({
+        actionType: "open_portal_path",
+        label: "Otevřít kartu otevřeného klienta",
+        entityType: "portal",
+        entityId: sup,
+        payload: { path: `/portal/contacts/${sup}` },
+        requiresConfirmation: false,
+        executionMode: "manual_only",
+      });
+    }
   }
 
   return {
