@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
+import { useToast } from "@/app/components/Toast";
 import {
   postAssistantChatStreaming,
   buildAssistantChatRequestBody,
@@ -30,7 +31,7 @@ import {
 } from "@/lib/ai/assistant-chat-client";
 import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
 import {
-  extractImageBlobFromClipboardData,
+  extractImageFilesFromClipboardData,
   logAssistantImagePipelineClient,
 } from "@/lib/ai/assistant-clipboard-image-paste";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
@@ -57,6 +58,20 @@ import {
 import type { AdvisorAssistantHistoryMessageDto } from "@/lib/ai/assistant-history-mapper";
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
+
+const MAX_ASSISTANT_CHAT_IMAGES = 4;
+
+function imageMimeForAssistantFile(file: File): string {
+  if (file.type && file.type.startsWith("image/")) return file.type;
+  const n = file.name.toLowerCase();
+  if (n.endsWith(".heif")) return "image/heif";
+  if (n.endsWith(".heic")) return "image/heic";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".gif")) return "image/gif";
+  return file.type || "application/octet-stream";
+}
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -421,6 +436,7 @@ function loadSession(): ChatMessage[] {
 }
 
 export function AiAssistantChatScreen() {
+  const toast = useToast();
   const pathname = usePathname();
   const router = useRouter();
   const routeContactId = parsePortalContactIdFromPathname(pathname) ?? null;
@@ -590,6 +606,11 @@ export function AiAssistantChatScreen() {
         router.push(`/portal/contracts/review/${action.payload.reviewId}`);
         return;
       }
+      if (action.type === "open_portal_path" && typeof action.payload.path === "string") {
+        const p = action.payload.path;
+        if (p.startsWith("/portal/")) router.push(p);
+        return;
+      }
       if (action.type === "view_client" && typeof action.payload.clientId === "string") {
         router.push(`/portal/contacts/${action.payload.clientId}`);
         return;
@@ -603,6 +624,60 @@ export function AiAssistantChatScreen() {
       }
     },
     [router, runDraftEmailForClient],
+  );
+
+  const handlePasteOnComposer = useCallback(
+    (e: React.ClipboardEvent<HTMLElement>) => {
+      const cd = e.clipboardData;
+      logAssistantImagePipelineClient("paste_fired", {
+        surface: "AiAssistantChatScreen",
+        targetTag: (e.target as HTMLElement).tagName,
+        activeElementTag: document.activeElement?.tagName,
+      });
+      const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: MAX_ASSISTANT_CHAT_IMAGES });
+      logAssistantImagePipelineClient("paste_clipboard", {
+        itemCount: cd.items.length,
+        fileCount: cd.files.length,
+        types: Array.from(cd.types),
+        imageFiles: files.length,
+        truncated,
+      });
+      if (files.length === 0) return;
+      e.preventDefault();
+      if (truncated) {
+        toast.showToast("Vloženo více než 4 obrázky — zpracují se jen první čtyři.", "error");
+      }
+
+      const accompanying = inputRef.current?.value.trim() ?? "";
+
+      void Promise.all(
+        files.map(
+          (file) =>
+            new Promise<ImageAssetPayload>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                resolve({
+                  url: reader.result as string,
+                  mimeType: imageMimeForAssistantFile(file),
+                  filename: file.name || null,
+                  sizeBytes: file.size,
+                });
+              };
+              reader.onerror = () => reject(new Error("read_failed"));
+              reader.readAsDataURL(file);
+            }),
+        ),
+      )
+        .then((assets) => {
+          logAssistantImagePipelineClient("paste_invoke_send", { accompanyingLen: accompanying.length, assetCount: assets.length });
+          setInput("");
+          void sendMessageRef.current?.(accompanying, assets);
+        })
+        .catch(() => {
+          toast.showToast("Obrázky z schránky se nepodařilo načíst.", "error");
+        });
+    },
+    [toast],
   );
 
   /** "Upravit zadání": předvyplní input textem poslední uživatelské zprávy a přesune fokus. */
@@ -732,40 +807,6 @@ export function AiAssistantChatScreen() {
   }
 
   sendMessageRef.current = sendMessage;
-
-  const handlePasteOnComposer = useCallback((e: React.ClipboardEvent<HTMLElement>) => {
-    const cd = e.clipboardData;
-    logAssistantImagePipelineClient("paste_fired", {
-      surface: "AiAssistantChatScreen",
-      targetTag: (e.target as HTMLElement).tagName,
-      activeElementTag: document.activeElement?.tagName,
-    });
-    const blob = extractImageBlobFromClipboardData(cd);
-    logAssistantImagePipelineClient("paste_clipboard", {
-      itemCount: cd.items.length,
-      fileCount: cd.files.length,
-      types: Array.from(cd.types),
-      blob: blob ? `${blob.type} ${blob.size}b` : null,
-    });
-    if (!blob) return;
-    e.preventDefault();
-    const captured = blob;
-    const accompanying = inputRef.current?.value.trim() ?? "";
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const asset: ImageAssetPayload = {
-        url: dataUrl,
-        mimeType: captured.type,
-        filename: (captured as File).name || null,
-        sizeBytes: captured.size,
-      };
-      logAssistantImagePipelineClient("paste_invoke_send", { accompanyingLen: accompanying.length });
-      setInput("");
-      void sendMessageRef.current?.(accompanying, [asset]);
-    };
-    reader.readAsDataURL(captured);
-  }, []);
 
   /** 6F / 6C — potvrdit plán bez psaní „ano"; provede jen zaškrtnuté kroky. */
   const submitPlanConfirmation = useCallback(async () => {

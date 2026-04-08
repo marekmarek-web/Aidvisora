@@ -225,6 +225,7 @@ export { mapImageIntakeToAssistantResponse } from "./response-mapper";
 // --- Route handler ---
 export {
   parseImageAssetsFromBody,
+  parseImageAssetsFromBodyResult,
   handleImageIntakeFromChatRoute,
 } from "./route-handler";
 export type { ImageAssetInput } from "./route-handler";

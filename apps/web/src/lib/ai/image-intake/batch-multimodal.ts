@@ -34,10 +34,10 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Maximum assets to combine into a single multimodal pass. */
-const MAX_COMBINED_PASS_ASSETS = 3;
+/** Maximum assets to combine into a single multimodal pass (matches assistant max images). */
+const MAX_COMBINED_PASS_ASSETS = 4;
 /** Hard cap on vision calls per grouped-thread batch. */
-const MAX_VISION_CALLS_PER_BATCH = 2;
+const MAX_VISION_CALLS_PER_BATCH = 4;
 
 const NEVER_MULTIMODAL_TYPES = new Set([
   "general_unusable_image",

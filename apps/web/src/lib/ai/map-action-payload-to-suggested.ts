@@ -8,6 +8,11 @@ export function mapActionPayloadToSuggestedAction(a: ActionPayload): SuggestedAc
   const basePayload = { ...a.payload };
 
   switch (a.actionType as ActionType) {
+    case "open_portal_path": {
+      const path = typeof basePayload.path === "string" ? basePayload.path.trim() : "";
+      if (!path.startsWith("/portal/")) return null;
+      return { type: "open_portal_path", label, payload: { path, ...basePayload } };
+    }
     case "open_review":
     case "prepare_contract_apply":
     case "prepare_payment_apply":

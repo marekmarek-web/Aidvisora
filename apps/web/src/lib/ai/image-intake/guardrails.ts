@@ -59,6 +59,10 @@ function checkClientBinding(
   const violations: string[] = [];
   let shouldDowngrade = false;
 
+  if (plan.outputMode === "identity_contact_intake") {
+    return { violations, shouldDowngrade: false };
+  }
+
   const hasWriteActions = plan.recommendedActions.some((a) => a.writeAction !== null);
   const isWriteReady = hasWriteActions && !plan.needsAdvisorInput;
 
@@ -182,7 +186,11 @@ export function enforceImageIntakeGuardrails(
   }
 
   // Downgrade to ambiguous_needs_input when binding fails
-  if (bindingCheck.shouldDowngrade && plan.outputMode !== "no_action_archive_only") {
+  if (
+    bindingCheck.shouldDowngrade &&
+    plan.outputMode !== "no_action_archive_only" &&
+    plan.outputMode !== "identity_contact_intake"
+  ) {
     modeDowngraded = true;
     downgradedTo = "ambiguous_needs_input";
   }
@@ -204,6 +212,7 @@ export function isValidTerminalOutputMode(mode: ImageOutputMode): boolean {
   return [
     "client_message_update",
     "structured_image_fact_intake",
+    "identity_contact_intake",
     "supporting_reference_image",
     "ambiguous_needs_input",
     "no_action_archive_only",

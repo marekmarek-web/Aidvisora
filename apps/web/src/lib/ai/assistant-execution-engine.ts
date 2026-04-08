@@ -205,11 +205,19 @@ export function mergeWriteStepParamsFromCompletedDependencies(
   for (const depId of step.dependsOn) {
     const dep = allSteps.find((s) => s.stepId === depId);
     if (!dep?.result?.ok || !dep.result.entityId) continue;
-    if (dep.action !== "createOpportunity") continue;
-    if (dep.result.entityType && dep.result.entityType !== "opportunity") continue;
-    const cur = merged.opportunityId;
-    if (cur != null && cur !== "") continue;
-    merged.opportunityId = dep.result.entityId;
+    if (dep.action === "createOpportunity") {
+      if (dep.result.entityType && dep.result.entityType !== "opportunity") continue;
+      const cur = merged.opportunityId;
+      if (cur != null && cur !== "") continue;
+      merged.opportunityId = dep.result.entityId;
+      continue;
+    }
+    if (dep.action === "createContact") {
+      if (dep.result.entityType && dep.result.entityType !== "contact") continue;
+      const cur = merged.contactId;
+      if (cur != null && cur !== "") continue;
+      merged.contactId = dep.result.entityId;
+    }
   }
   return merged;
 }

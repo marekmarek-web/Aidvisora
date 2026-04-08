@@ -35,6 +35,7 @@ import {
   linkContractReviewFileToContactDocuments,
 } from "@/app/actions/contract-review";
 import { createDraft } from "@/app/actions/communication-drafts";
+import { createContact as createContactAction } from "@/app/actions/contacts";
 import { approveContractForClientPortal, updateContract, createContract as createContractAction } from "@/app/actions/contracts";
 import { upsertCoverageItem } from "@/app/actions/coverage";
 import { sendMessage } from "@/app/actions/messages";
@@ -142,6 +143,49 @@ export function registerAssistantWriteAdapters(): void {
       return okResult(id, "opportunity", warnings);
     } catch (e) {
       return safeErr(e, "createOpportunity");
+    }
+  });
+
+  registerWriteAdapter("createContact", async (params, ctx) => {
+    try {
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "contacts:write")) {
+        return errResult("Nemáte oprávnění vytvářet kontakty.");
+      }
+      const firstName = strParam(params, "firstName");
+      const lastName = strParam(params, "lastName");
+      if (!firstName || !lastName) {
+        return errResult("Chybí jméno nebo příjmení — doplňte je v náhledu kroků.");
+      }
+      const tagsRaw = params.tags;
+      const tags =
+        Array.isArray(tagsRaw) && tagsRaw.length > 0 && tagsRaw.every((t) => typeof t === "string")
+          ? (tagsRaw as string[])
+          : undefined;
+      const res = await createContactAction({
+        firstName,
+        lastName,
+        email: strParam(params, "email"),
+        phone: strParam(params, "phone"),
+        title: strParam(params, "title"),
+        referralSource: strParam(params, "referralSource"),
+        referralContactId: strParam(params, "referralContactId"),
+        birthDate: strParam(params, "birthDate"),
+        personalId: strParam(params, "personalId"),
+        street: strParam(params, "street"),
+        city: strParam(params, "city"),
+        zip: strParam(params, "zip"),
+        tags,
+        lifecycleStage: strParam(params, "lifecycleStage"),
+        leadSource: strParam(params, "leadSource"),
+        leadSourceUrl: strParam(params, "leadSourceUrl"),
+        priority: strParam(params, "priority"),
+        notes: strParam(params, "notes"),
+      });
+      if (!res.ok) return errResult(res.message);
+      return okResult(res.id, "contact");
+    } catch (e) {
+      return safeErr(e, "createContact");
     }
   });
 

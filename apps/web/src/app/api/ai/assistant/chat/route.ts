@@ -32,7 +32,7 @@ import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
 import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "@/lib/ai/assistant-message-sanitizer";
 import {
   isImageIntakeEnabled,
-  parseImageAssetsFromBody,
+  parseImageAssetsFromBodyResult,
   handleImageIntakeFromChatRoute,
 } from "@/lib/ai/image-intake";
 import {
@@ -266,7 +266,7 @@ export async function POST(request: Request) {
           // --- Image Intake lane detection ---
           // Cheap-first: parse assets from body before any model call.
           // Text-only requests are completely unaffected (imageAssets absent → 0 assets).
-          const rawImageAssets = parseImageAssetsFromBody(body);
+          const { assets: rawImageAssets, truncated: imageAssetsTruncated } = parseImageAssetsFromBodyResult(body);
           const imageIntakeEnvOn = isImageIntakeEnabled();
           const isImageRequest = rawImageAssets.length > 0 && imageIntakeEnvOn;
 
@@ -332,6 +332,7 @@ export async function POST(request: Request) {
                     userId,
                     channel,
                     accompanyingText: message || null,
+                    assetsTruncated: imageAssetsTruncated,
                   },
                 );
               } else {
@@ -377,6 +378,7 @@ export async function POST(request: Request) {
                 userId,
                 channel,
                 accompanyingText: message || null,
+                assetsTruncated: imageAssetsTruncated,
               },
             );
           } else if (orchestration === "canonical" && (confirmExecution || cancelExecution)) {

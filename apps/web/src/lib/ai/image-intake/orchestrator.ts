@@ -44,7 +44,9 @@ import { emptyFactBundle, emptyActionPlan } from "./types";
 import { runBatchPreflight } from "./preflight";
 import { enforceImageIntakeGuardrails } from "./guardrails";
 import { classifyBatch } from "./classifier";
-import { buildActionPlanV4 } from "./planner";
+import { buildActionPlanV4, buildIdentityContactIntakeActionPlan } from "./planner";
+import { detectIdentityContactIntakeSignals } from "./identity-contact-intake";
+import { materializeIntakeImagesAsDocuments } from "./materialize-intake-documents";
 import {
   shouldRunMultimodalPass,
   runCombinedMultimodalPass,
@@ -340,19 +342,116 @@ export async function processImageIntake(
     };
   }
 
-  // 6. Multimodal combined pass (escalation — Phase 3)
-  // One call: classification upgrade + fact extraction + client name signal
+  // 6. Multimodal — multi-page dokument (grouped_related + photo_or_scan) nebo single primary
   const primaryAsset = primaryAssets.find(
-    (a) => batchPreflight.assetResults.find((r) => r.assetId === a.assetId && r.result.eligible)
+    (a) => batchPreflight.assetResults.find((r) => r.assetId === a.assetId && r.result.eligible),
   );
-  const hasStorageUrl = Boolean(primaryAsset?.storageUrl);
   const multimodalEnabled = isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId);
+  const combinedMultimodalEnabled = isImageIntakeCombinedMultimodalEnabledForUser(
+    effectiveRequest.userId ?? "",
+    effectiveRequest.tenantId,
+  );
 
   let multimodalResult: MultimodalCombinedPassResult | null = null;
   let multimodalUsed = false;
   let factBundle: ExtractedFactBundle = emptyFactBundle();
+  let batchDecision: BatchMultimodalDecision | null = null;
+  let combinedMultimodalResult: import("./combined-multimodal-execution").CombinedMultimodalExecutionResult | null = null;
+  let documentSetResult: DocumentMultiImageResult | null = null;
+  let docGroupPerAssetBundles: Map<string, ExtractedFactBundle> | null = null;
 
-  if (shouldRunMultimodalPass(classification.inputType, classification.confidence, earlyExit, primaryAsset?.storageUrl ?? null, multimodalEnabled)) {
+  const relatedDocGroup =
+    stitchingResult?.groups.find(
+      (g) =>
+        g.decision === "grouped_related" &&
+        g.assetIds.length >= 2 &&
+        g.assetIds.every((id) => {
+          const c = stitchingClassMap.get(id);
+          return c?.inputType === "photo_or_scan_document";
+        }),
+    ) ?? null;
+
+  if (relatedDocGroup && multimodalEnabled) {
+    batchDecision = decideBatchMultimodalStrategy(
+      relatedDocGroup,
+      request.assets,
+      stitchingClassMap,
+      new Map(),
+      multimodalEnabled,
+    );
+    const bundleMap = new Map<string, ExtractedFactBundle>();
+    const primaryIds = relatedDocGroup.assetIds.filter((id) => !relatedDocGroup.duplicateAssetIds.includes(id));
+    let docGroupVisionDone = false;
+
+    if (batchDecision.strategy === "combined_pass" && combinedMultimodalEnabled) {
+      combinedMultimodalResult = await executeBatchMultimodalStrategy(
+        batchDecision,
+        request.assets,
+        request.accompanyingText ?? null,
+        classification.inputType,
+      );
+      if (combinedMultimodalResult.strategy === "combined_pass" && combinedMultimodalResult.groupFactBundle) {
+        const fb = combinedMultimodalResult.groupFactBundle;
+        multimodalResult = combinedMultimodalResult.multimodalResult;
+        for (const id of primaryIds) {
+          bundleMap.set(id, fb);
+        }
+        docGroupVisionDone = true;
+      }
+    }
+
+    if (!docGroupVisionDone && batchDecision.perAssetIds.length > 0) {
+      for (const id of batchDecision.perAssetIds) {
+        const asset =
+          primaryAssets.find((a) => a.assetId === id) ?? request.assets.find((a) => a.assetId === id);
+        if (!asset?.storageUrl) continue;
+        const pass = await runCombinedMultimodalPass(
+          asset.storageUrl,
+          classification.inputType,
+          request.accompanyingText,
+        );
+        if (pass.result) {
+          bundleMap.set(id, extractFactsFromMultimodalPass(pass.result, id));
+          multimodalResult = pass.result;
+          docGroupVisionDone = true;
+        }
+      }
+    }
+
+    if (bundleMap.size >= 2) {
+      docGroupPerAssetBundles = bundleMap;
+      const { evaluateDocumentMultiImageSet } = await import("./document-set-intake");
+      documentSetResult = evaluateDocumentMultiImageSet(relatedDocGroup, stitchingClassMap, bundleMap);
+      if (documentSetResult.decision === "consolidated_document_facts" && documentSetResult.mergedFactBundle) {
+        factBundle = documentSetResult.mergedFactBundle;
+      } else {
+        const { mergeFactBundlesForDocumentGroup } = await import("./document-set-intake");
+        factBundle = mergeFactBundlesForDocumentGroup([...bundleMap.values()], relatedDocGroup.assetIds);
+      }
+      multimodalUsed = true;
+      if (multimodalResult && multimodalResult.confidence > classification.confidence + 0.1) {
+        classification = {
+          ...classification,
+          inputType: multimodalResult.inputType,
+          confidence: multimodalResult.confidence,
+          uncertaintyFlags: multimodalResult.ambiguityReasons.length > 0 ? ["multimodal_uncertain"] : [],
+        };
+      }
+    }
+  }
+
+  const skipPrimaryMultimodal = docGroupPerAssetBundles !== null && factBundle.facts.length > 0;
+
+  if (
+    !skipPrimaryMultimodal &&
+    shouldRunMultimodalPass(
+      classification.inputType,
+      classification.confidence,
+      earlyExit,
+      primaryAsset?.storageUrl ?? null,
+      multimodalEnabled,
+    )
+  ) {
     const passDecision = await runCombinedMultimodalPass(
       primaryAsset!.storageUrl!,
       classification.inputType,
@@ -361,7 +460,6 @@ export async function processImageIntake(
     multimodalResult = passDecision.result;
     multimodalUsed = true;
 
-    // Upgrade classification if multimodal is more confident
     if (multimodalResult.confidence > classification.confidence + 0.1) {
       classification = {
         ...classification,
@@ -371,13 +469,8 @@ export async function processImageIntake(
       };
     }
 
-    // Extract facts from multimodal output (no extra call)
-    factBundle = extractFactsFromMultimodalPass(
-      multimodalResult,
-      primaryAsset?.assetId ?? intakeId,
-    );
+    factBundle = extractFactsFromMultimodalPass(multimodalResult, primaryAsset?.assetId ?? intakeId);
   } else if (classification.inputType === "supporting_reference_image") {
-    // Template facts for supporting/reference (no model call)
     factBundle = buildSupportingReferenceFacts(primaryAsset?.assetId ?? intakeId);
   }
 
@@ -399,32 +492,37 @@ export async function processImageIntake(
 
   // Phase 5: Thread reconstruction (for grouped threads when flag enabled)
   let threadReconstruction: ThreadReconstructionResult | null = null;
-  let batchDecision: BatchMultimodalDecision | null = null;
 
   if (stitchingResult && threadReconstructionEnabled) {
     const groupedGroup = stitchingResult.groups.find(
       (g) => g.decision === "grouped_thread" || g.decision === "grouped_related",
     );
     if (groupedGroup && groupedGroup.assetIds.length >= 2) {
-      // Per-asset fact bundles (current run only has one primary asset)
       const perAssetBundles = new Map<string, ExtractedFactBundle>();
-      if (primaryAsset) perAssetBundles.set(primaryAsset.assetId, factBundle);
+      if (
+        docGroupPerAssetBundles &&
+        relatedDocGroup &&
+        groupedGroup.groupId === relatedDocGroup.groupId
+      ) {
+        for (const [k, v] of docGroupPerAssetBundles) perAssetBundles.set(k, v);
+      } else if (primaryAsset) {
+        perAssetBundles.set(primaryAsset.assetId, factBundle);
+      }
       threadReconstruction = reconstructThread(groupedGroup, request.assets, perAssetBundles);
     }
 
-    // Phase 5: Batch multimodal decision
     const existingMultimodalResults = new Map<string, MultimodalCombinedPassResult | null>();
     if (primaryAsset && multimodalResult) {
       existingMultimodalResults.set(primaryAsset.assetId, multimodalResult);
     }
     const firstGroup = stitchingResult.groups[0];
-    if (firstGroup) {
+    if (firstGroup && !batchDecision) {
       batchDecision = decideBatchMultimodalStrategy(
         firstGroup,
         request.assets,
         stitchingClassMap,
         existingMultimodalResults,
-        isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId),
+        multimodalEnabled,
       );
     }
   }
@@ -447,19 +545,18 @@ export async function processImageIntake(
   }
   const finalCaseBinding = toCaseBindingResult(finalCaseBindingV2);
 
-  // Phase 6: Combined multimodal execution (when decision says combined_pass + flag enabled)
-  let combinedMultimodalResult: import("./combined-multimodal-execution").CombinedMultimodalExecutionResult | null = null;
-  const combinedMultimodalEnabled = isImageIntakeCombinedMultimodalEnabledForUser(
-    effectiveRequest.userId ?? "",
-    effectiveRequest.tenantId,
-  );
-  if (batchDecision && batchDecision.strategy === "combined_pass" && combinedMultimodalEnabled) {
+  if (
+    batchDecision &&
+    batchDecision.strategy === "combined_pass" &&
+    combinedMultimodalEnabled &&
+    combinedMultimodalResult == null
+  ) {
     combinedMultimodalResult = await executeBatchMultimodalStrategy(
       batchDecision,
       request.assets,
       request.accompanyingText ?? null,
+      classification.inputType,
     );
-    // Merge combined pass facts into main factBundle if execution succeeded
     if (combinedMultimodalResult.strategy === "combined_pass" && combinedMultimodalResult.groupFactBundle) {
       factBundle = combinedMultimodalResult.groupFactBundle;
     }
@@ -564,37 +661,6 @@ export async function processImageIntake(
     }
   }
 
-  // Phase 9: Document multi-image set evaluation (for grouped_related document assets)
-  let documentSetResult: DocumentMultiImageResult | null = null;
-  if (stitchingResult && stitchingResult.hasGroupedAssets) {
-    const relatedDocGroup = stitchingResult.groups.find(
-      (g) =>
-        g.decision === "grouped_related" &&
-        g.assetIds.length >= 2,
-    );
-    if (relatedDocGroup) {
-      try {
-        const { evaluateDocumentMultiImageSet } = await import("./document-set-intake");
-        const perAssetBundles = new Map<string, ExtractedFactBundle>();
-        perAssetBundles.set(relatedDocGroup.primaryAssetId, factBundle);
-        documentSetResult = evaluateDocumentMultiImageSet(
-          relatedDocGroup,
-          stitchingClassMap,
-          perAssetBundles,
-        );
-        // If consolidated facts available, merge them into factBundle
-        if (
-          documentSetResult.decision === "consolidated_document_facts" &&
-          documentSetResult.mergedFactBundle
-        ) {
-          factBundle = documentSetResult.mergedFactBundle;
-        }
-      } catch {
-        // Non-blocking
-      }
-    }
-  }
-
   // Phase 9: Track intent-assist cache status (from last assist call context)
   let intentAssistCacheStatus: IntentAssistCacheStatus | null = null;
   if (intentChange && threadReconstruction) {
@@ -629,7 +695,7 @@ export async function processImageIntake(
 
   // 11. Action planning v4 (Phase 10 — adds document-set outcome awareness)
   // documentSetResult already computed above (Phase 9 block); v4 uses it for conservative plan shaping
-  const actionPlan = buildActionPlanV4(
+  let actionPlan = buildActionPlanV4(
     classification,
     clientBinding,
     factBundle,
@@ -637,6 +703,21 @@ export async function processImageIntake(
     reviewHandoff,
     documentSetResult,
   );
+
+  const identityIntakeEligible = detectIdentityContactIntakeSignals(
+    classification,
+    factBundle,
+    documentSetResult,
+  );
+  if (identityIntakeEligible) {
+    const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+      request.assets,
+      request.tenantId,
+      request.userId,
+      intakeId,
+    );
+    actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+  }
 
   // 12. Guardrails (unchanged from Phase 1)
   const guardrailVerdict = enforceImageIntakeGuardrails(

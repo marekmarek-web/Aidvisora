@@ -111,7 +111,8 @@ function mergeFacts(bundles: ExtractedFactBundle[]): ExtractedImageFact[] {
   return Array.from(byKey.values());
 }
 
-function mergeFactBundles(
+/** Exported for orchestrator when building merged facts outside evaluateDocumentMultiImageSet. */
+export function mergeFactBundlesForDocumentGroup(
   bundles: ExtractedFactBundle[],
   groupAssetIds: string[],
 ): ExtractedFactBundle {
@@ -245,7 +246,7 @@ export function evaluateDocumentMultiImageSet(
   }
 
   // All clear — merge fact bundles
-  const mergedBundle = mergeFactBundles(bundles, assetIds);
+  const mergedBundle = mergeFactBundlesForDocumentGroup(bundles, assetIds);
 
   return {
     decision: "consolidated_document_facts",

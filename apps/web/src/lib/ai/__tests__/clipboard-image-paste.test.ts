@@ -15,7 +15,10 @@
 import { describe, it, expect } from "vitest";
 import { buildAssistantChatRequestBody } from "../assistant-chat-request";
 import type { ImageAssetPayload } from "../assistant-chat-request";
-import { extractImageBlobFromClipboardData } from "../assistant-clipboard-image-paste";
+import {
+  extractImageBlobFromClipboardData,
+  extractImageFilesFromClipboardData,
+} from "../assistant-clipboard-image-paste";
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal ClipboardEvent-like items array
@@ -53,6 +56,19 @@ function extractImageItemFromClipboard(items: DataTransferItem[]): DataTransferI
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("extractImageFilesFromClipboardData", () => {
+  it("returns up to max files and truncated when over cap", () => {
+    const items = Array.from({ length: 5 }, (_, i) => makeImageItem("image/png", 8 + i));
+    const dt = {
+      items,
+      files: [],
+    } as unknown as DataTransfer;
+    const r = extractImageFilesFromClipboardData(dt, { max: 4 });
+    expect(r.files).toHaveLength(4);
+    expect(r.truncated).toBe(true);
+  });
+});
 
 describe("extractImageBlobFromClipboardData", () => {
   it("returns blob from items when present", () => {

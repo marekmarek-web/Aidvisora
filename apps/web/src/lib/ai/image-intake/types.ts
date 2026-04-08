@@ -51,6 +51,7 @@ export type ImageInputSubtype = (typeof IMAGE_INPUT_SUBTYPES)[number];
 export const IMAGE_OUTPUT_MODES = [
   "client_message_update",
   "structured_image_fact_intake",
+  "identity_contact_intake",
   "supporting_reference_image",
   "ambiguous_needs_input",
   "no_action_archive_only",
@@ -832,8 +833,8 @@ export const SUPPORTED_IMAGE_MIMES = new Set([
 /** Max single image size in bytes (20 MB). */
 export const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
 
-/** Max images per single intake batch. */
-export const MAX_IMAGES_PER_INTAKE = 10;
+/** Max images per single intake batch (assistant paste/picker; document set + identity flow). */
+export const MAX_IMAGES_PER_INTAKE = 4;
 
 /**
  * Canonical intents that image intake can propose.
@@ -849,6 +850,7 @@ export const IMAGE_INTAKE_ALLOWED_INTENTS: ReadonlySet<CanonicalIntentType> = ne
   "attach_document",
   "draft_portal_message",
   "general_chat",
+  "create_contact",
 ]);
 
 /**
@@ -862,6 +864,7 @@ export const IMAGE_INTAKE_ALLOWED_WRITE_ACTIONS: ReadonlySet<WriteActionType> = 
   "createMeetingNote",
   "createInternalNote",
   "createClientRequest",
+  "createContact",
   "attachDocumentToClient",
   "attachDocumentToOpportunity",
   "draftClientPortalMessage",

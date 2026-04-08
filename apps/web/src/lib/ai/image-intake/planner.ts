@@ -22,6 +22,7 @@ import type {
   DocumentMultiImageResult,
 } from "./types";
 import { safeOutputModeForUncertainInput } from "./guardrails";
+import { mapFactBundleToCreateContactDraft } from "./identity-contact-intake";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -190,6 +191,8 @@ function planSupportingReference(binding: ClientBindingResult): ImageIntakeActio
 
 function whyThisAction(outputMode: ImageOutputMode, classification: InputClassificationResult): string {
   switch (outputMode) {
+    case "identity_contact_intake":
+      return "Rozpoznán osobní doklad — připravíme návrh nového klienta z extrahovaných údajů.";
     case "client_message_update":
       return `Obrázek byl rozpoznán jako screenshot klientské komunikace (confidence ${(classification.confidence * 100).toFixed(0)}%). Navrhujeme zaznamenat obsah a případně vytvořit úkol.`;
     case "structured_image_fact_intake":
@@ -353,6 +356,9 @@ export function buildActionPlanV1(
     case "structured_image_fact_intake":
       recommendedActions = planStructuredFactIntake(binding);
       break;
+    case "identity_contact_intake":
+      recommendedActions = [];
+      break;
     case "supporting_reference_image":
       recommendedActions = planSupportingReference(binding);
       break;
@@ -463,4 +469,55 @@ export function buildActionPlanV4(
   }
 
   return base;
+}
+
+/**
+ * Plán pro rozpoznaný osobní doklad → createContact + attach nahraných stran (documentId z materializace).
+ */
+export function buildIdentityContactIntakeActionPlan(
+  factBundle: ExtractedFactBundle,
+  materializedDocumentIds: string[],
+): ImageIntakeActionPlan {
+  const draft = mapFactBundleToCreateContactDraft(factBundle);
+  const p = draft.params;
+
+  const actions: ImageIntakeActionCandidate[] = [
+    makeAction(
+      "create_contact",
+      "createContact",
+      "Založit klienta",
+      "Návrh kontaktu z rozpoznaného dokladu — před uložením zkontrolujte údaje v náhledu.",
+      {
+        ...p,
+        _imageIntakeOutputMode: "identity_contact_intake",
+      },
+    ),
+  ];
+
+  materializedDocumentIds.forEach((docId, i) => {
+    actions.push(
+      makeAction(
+        "attach_document",
+        "attachDocumentToClient",
+        i === 0 ? "Uložit doklady jako podklad" : `Přiložit stránku ${i + 1}`,
+        "Přiřadí nahrané strany dokladu ke kartě nového klienta po jeho založení.",
+        {
+          documentId: docId,
+          _identityIntakeAttach: true,
+          _imageIntakeOutputMode: "identity_contact_intake",
+        },
+      ),
+    );
+  });
+
+  return {
+    outputMode: "identity_contact_intake",
+    recommendedActions: actions,
+    draftReplyText: null,
+    whyThisAction:
+      "Rozpoznán osobní doklad (občanka, pas nebo povolení k pobytu). Připravili jsme návrh nového klienta a přiložení podkladů.",
+    whyNotOtherActions: null,
+    needsAdvisorInput: true,
+    safetyFlags: [],
+  };
 }

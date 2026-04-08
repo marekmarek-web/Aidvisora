@@ -41,7 +41,7 @@ import {
 } from "@/lib/ai/assistant-chat-client";
 import type { ImageAssetPayload } from "@/lib/ai/assistant-chat-client";
 import {
-  extractImageBlobFromClipboardData,
+  extractImageFilesFromClipboardData,
   logAssistantImagePipelineClient,
 } from "@/lib/ai/assistant-clipboard-image-paste";
 import type { AssistantResponse } from "@/lib/ai/assistant-tool-router";
@@ -70,7 +70,7 @@ import type { AdvisorAssistantHistoryMessageDto } from "@/lib/ai/assistant-histo
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
-const MAX_ASSISTANT_CHAT_IMAGES = 10;
+const MAX_ASSISTANT_CHAT_IMAGES = 4;
 
 function imageMimeForAssistantFile(file: File): string {
   if (file.type && file.type.startsWith("image/")) return file.type;
@@ -146,6 +146,10 @@ type UploadPhase = "idle" | "uploading" | "processing";
 function getHref(action: SuggestedAction): string | null {
   if (action.type === "open_review" && action.payload.reviewId) {
     return `/portal/contracts/review/${action.payload.reviewId}`;
+  }
+  if (action.type === "open_portal_path" && typeof action.payload.path === "string") {
+    const p = action.payload.path;
+    return p.startsWith("/portal/") ? p : null;
   }
   if (action.type === "view_client" && action.payload.clientId) {
     return `/portal/contacts/${action.payload.clientId}`;
@@ -685,36 +689,52 @@ export function AiAssistantDrawer() {
       targetTag: (e.target as HTMLElement).tagName,
       activeElementTag: document.activeElement?.tagName,
     });
-    const blob = extractImageBlobFromClipboardData(cd);
+    const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: MAX_ASSISTANT_CHAT_IMAGES });
     logAssistantImagePipelineClient("paste_clipboard", {
       itemCount: cd.items.length,
       fileCount: cd.files.length,
       types: Array.from(cd.types),
-      blob: blob ? `${blob.type} ${blob.size}b` : null,
+      imageFiles: files.length,
+      truncated,
     });
-    if (!blob) return;
+    if (files.length === 0) return;
     e.preventDefault();
+    if (truncated) {
+      toast.showToast("Vloženo více než 4 obrázky — zpracují se jen první čtyři.", "error");
+    }
 
-    const capturedBlob = blob;
     const accompanyingText = inputRef.current?.value.trim() ?? "";
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const asset: ImageAssetPayload = {
-        url: dataUrl,
-        mimeType: capturedBlob.type,
-        filename: (capturedBlob as File).name || null,
-        sizeBytes: capturedBlob.size,
-      };
-      logAssistantImagePipelineClient("paste_invoke_send", {
-        accompanyingLen: accompanyingText.length,
+    void Promise.all(
+      files.map(
+        (file) =>
+          new Promise<ImageAssetPayload>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({
+                url: reader.result as string,
+                mimeType: imageMimeForAssistantFile(file),
+                filename: file.name || null,
+                sizeBytes: file.size,
+              });
+            };
+            reader.onerror = () => reject(new Error("read_failed"));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    )
+      .then((assets) => {
+        logAssistantImagePipelineClient("paste_invoke_send", {
+          accompanyingLen: accompanyingText.length,
+          assetCount: assets.length,
+        });
+        setInput("");
+        void sendChatMessageRef.current(accompanyingText, assets);
+      })
+      .catch(() => {
+        toast.showToast("Obrázky z schránky se nepodařilo načíst.", "error");
       });
-      setInput("");
-      void sendChatMessageRef.current(accompanyingText, [asset]);
-    };
-    reader.readAsDataURL(capturedBlob);
-  }, []);
+  }, [toast]);
 
   const handleUrgent = async () => {
     if (chatLoading || chatSubmitLockRef.current) return;
@@ -1004,9 +1024,12 @@ export function AiAssistantDrawer() {
       toast.showToast("Počkejte na dokončení aktuální zprávy.", "error");
       return;
     }
-    const list = Array.from(files)
-      .filter((f) => isLikelyAssistantImageFile(f))
-      .slice(0, MAX_ASSISTANT_CHAT_IMAGES);
+    const rawList = Array.from(files).filter((f) => isLikelyAssistantImageFile(f));
+    const capped = rawList.length > MAX_ASSISTANT_CHAT_IMAGES;
+    const list = rawList.slice(0, MAX_ASSISTANT_CHAT_IMAGES);
+    if (capped) {
+      toast.showToast("Vybráno více než 4 obrázky — odešlou se jen první čtyři.", "error");
+    }
     if (list.length === 0) {
       toast.showToast("Vyberte obrázek (JPEG, PNG, HEIC…).", "error");
       return;

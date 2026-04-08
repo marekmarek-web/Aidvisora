@@ -30,12 +30,15 @@ export type { ImageAssetInput } from "./image-asset-input";
 // Parse and normalize imageAssets from request body
 // ---------------------------------------------------------------------------
 
-export function parseImageAssetsFromBody(body: unknown): ImageAssetInput[] {
-  if (!body || typeof body !== "object") return [];
+export function parseImageAssetsFromBodyResult(body: unknown): {
+  assets: ImageAssetInput[];
+  truncated: boolean;
+} {
+  if (!body || typeof body !== "object") return { assets: [], truncated: false };
   const raw = (body as Record<string, unknown>).imageAssets;
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(raw)) return { assets: [], truncated: false };
 
-  return raw
+  const filtered = raw
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     .map((item) => ({
       assetId: typeof item.assetId === "string" ? item.assetId : undefined,
@@ -47,8 +50,16 @@ export function parseImageAssetsFromBody(body: unknown): ImageAssetInput[] {
       height: typeof item.height === "number" ? item.height : null,
       contentHash: typeof item.contentHash === "string" ? item.contentHash : null,
     }))
-    .filter((a) => a.url.length > 0)
-    .slice(0, MAX_IMAGES_PER_INTAKE);
+    .filter((a) => a.url.length > 0);
+  const truncated = filtered.length > MAX_IMAGES_PER_INTAKE;
+  return {
+    assets: filtered.slice(0, MAX_IMAGES_PER_INTAKE),
+    truncated,
+  };
+}
+
+export function parseImageAssetsFromBody(body: unknown): ImageAssetInput[] {
+  return parseImageAssetsFromBodyResult(body).assets;
 }
 
 function normalizeAsset(input: ImageAssetInput): NormalizedImageAsset {
@@ -135,6 +146,8 @@ export async function handleImageIntakeFromChatRoute(
     userId: string;
     channel: string | null;
     accompanyingText: string | null;
+    /** Více než MAX_IMAGES_PER_INTAKE v těle — zbytek byl oříznut. */
+    assetsTruncated?: boolean;
   },
 ): Promise<AssistantResponse> {
   const runStore = getAssistantRunStore();
@@ -242,5 +255,10 @@ export async function handleImageIntakeFromChatRoute(
     },
   });
 
-  return mapImageIntakeToAssistantResponse(result, session.sessionId);
+  const out = mapImageIntakeToAssistantResponse(result, session.sessionId);
+  if (opts.assetsTruncated) {
+    const w = "Nahráno více než 4 obrázky — zpracovány jsou jen první čtyři.";
+    out.warnings = out.warnings.includes(w) ? out.warnings : [...out.warnings, w];
+  }
+  return out;
 }

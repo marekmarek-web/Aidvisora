@@ -11,12 +11,14 @@
  */
 
 import type { AssistantResponse } from "../assistant-tool-router";
+import type { ActionPayload } from "../action-catalog";
 import type { ImageIntakeOrchestratorResult } from "./orchestrator";
 import { buildFactsSummaryLines } from "./extractor";
 import { buildStitchingSummary } from "./stitching";
 import { buildThreadSummaryLines } from "./thread-reconstruction";
 import { buildHandoffPreviewNote } from "./handoff-payload";
 import { buildIntentChangeSummary } from "./intent-change-detection";
+import { buildContactNewPrefillQuery, mapFactBundleToCreateContactDraft } from "./identity-contact-intake";
 
 // ---------------------------------------------------------------------------
 // Message templates by output mode
@@ -30,6 +32,52 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
   const binding = response.clientBinding.state;
 
   switch (mode) {
+    case "identity_contact_intake": {
+      const draft = mapFactBundleToCreateContactDraft(result.response.factBundle);
+      const p = draft.params;
+      const pre: string[] = [];
+      const push = (label: string, v: string | undefined) => {
+        const t = v?.trim();
+        if (t) pre.push(`${label}: ${t}`);
+      };
+      push("Jméno", p.firstName);
+      push("Příjmení", p.lastName);
+      push("Datum narození", p.birthDate);
+      const addrParts = [p.street, p.city, p.zip].filter((x) => x?.trim());
+      if (addrParts.length) pre.push(`Adresa: ${addrParts.join(", ")}`);
+      push("E-mail", p.email);
+      push("Telefon", p.phone);
+      push("Titul", p.title);
+      const preBlock = pre.length
+        ? pre.join("\n")
+        : "Žádné spolehlivé údaje nebyly z dokladu přečteny — vyplňte ručně v náhledu kroků.";
+
+      const need: string[] = [];
+      for (const line of draft.missingAdvisorLines) {
+        need.push(`${line} — doplněte podle potřeby`);
+      }
+      if (!p.email?.trim()) need.push("E-mail — na dokladu často chybí nebo není čitelný");
+      if (!p.phone?.trim()) need.push("Telefon — na dokladu často chybí nebo není čitelný");
+      for (const line of draft.needsConfirmationLines) need.push(line);
+
+      const needBlock = need.length
+        ? need.slice(0, 10).join("\n")
+        : "Údaje prosím před uložením ještě jednou zkontrolujte v náhledu kroků.";
+
+      return [
+        "Připravil jsem návrh nového klienta z nahraných dokladů.",
+        "",
+        "Předvyplněné údaje",
+        preBlock,
+        "",
+        "Je potřeba doplnit nebo potvrdit",
+        needBlock,
+        "",
+        "Další krok",
+        "Ověřte údaje a pokračujte potvrzením plánu nebo tlačítkem pro úpravu ve formuláři.",
+      ].join("\n");
+    }
+
     case "no_action_archive_only": {
       // Check for review handoff recommendation
       const handoff = result.reviewHandoff;
@@ -82,6 +130,9 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         : "";
       return `Rozpoznal jsem obrázek s ${typeLabel}. Navrhuji uložit klíčové informace${client}.${factText}${missing}`;
     }
+
+    default:
+      return "Obrázek byl zpracován v režimu image intake.";
   }
 }
 
@@ -115,15 +166,22 @@ export function mapImageIntakeToAssistantResponse(
         }
       : null;
 
+  const identityMode = response.actionPlan.outputMode === "identity_contact_intake";
+
   const warnings: string[] = [
     ...previewPayload.warnings,
-    ...response.trace.guardrailsTriggered.map((v) =>
-      v.startsWith("BINDING_VIOLATION")
-        ? "Bez jistého klienta nelze připravit write-ready plán."
-        : v.startsWith("LANE_VIOLATION")
-          ? "Tato zpráva patří do image intake lane, ne AI Review."
-          : v,
-    ),
+    ...response.trace.guardrailsTriggered
+      .filter((v) => {
+        if (identityMode && v.startsWith("BINDING_VIOLATION")) return false;
+        return true;
+      })
+      .map((v) =>
+        v.startsWith("BINDING_VIOLATION")
+          ? "Bez jistého klienta nelze připravit write-ready plán."
+          : v.startsWith("LANE_VIOLATION")
+            ? "Tato zpráva patří do image intake lane, ne AI Review."
+            : v,
+      ),
     // Surface missing fields as warnings
     ...response.factBundle.missingFields
       .slice(0, 2)
@@ -228,12 +286,27 @@ export function mapImageIntakeToAssistantResponse(
     ? `Image intake v4 (multimodal, ${response.actionPlan.outputMode})`
     : `Image intake (${response.actionPlan.outputMode})`;
 
+  const suggestedActions: ActionPayload[] = [];
+  if (identityMode) {
+    const draft = mapFactBundleToCreateContactDraft(response.factBundle);
+    const q = buildContactNewPrefillQuery(draft);
+    suggestedActions.push({
+      actionType: "open_portal_path",
+      label: "Upravit údaje",
+      entityType: "portal",
+      entityId: "contacts_new_prefill",
+      payload: { path: `/portal/contacts/new${q}` },
+      requiresConfirmation: false,
+      executionMode: "manual_only",
+    });
+  }
+
   return {
     message,
     referencedEntities: response.clientBinding.clientId
       ? [{ type: "contact", id: response.clientBinding.clientId, label: response.clientBinding.clientLabel ?? undefined }]
       : [],
-    suggestedActions: [],
+    suggestedActions,
     warnings: [...new Set(warnings)],
     confidence,
     sourcesSummary: [sourceLabel],

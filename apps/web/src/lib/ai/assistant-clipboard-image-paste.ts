@@ -21,13 +21,58 @@ export function logAssistantImagePipelineClient(step: string, payload: Record<st
   console.log(`[assistant-image-pipeline][client:${step}]`, payload);
 }
 
+const DEFAULT_MAX_CLIPBOARD_IMAGES = 4;
+
+function isImageFileLike(f: File): boolean {
+  if (f.type && f.type.startsWith("image/")) return true;
+  const n = f.name.toLowerCase();
+  return /\.(heic|heif|jpg|jpeg|png|webp|gif|bmp|tiff?)$/i.test(n);
+}
+
 /** Try items first, then files (Safari). Only image/* MIME. */
 export function extractImageBlobFromClipboardData(dataTransfer: DataTransfer): Blob | File | null {
-  const items = Array.from(dataTransfer.items);
-  let blob: File | Blob | null =
-    items.find((item) => item.kind === "file" && item.type.startsWith("image/"))?.getAsFile() ?? null;
-  if (!blob) {
-    blob = Array.from(dataTransfer.files).find((f) => f.type.startsWith("image/")) ?? null;
+  const multi = extractImageFilesFromClipboardData(dataTransfer, { max: 1 });
+  return multi.files[0] ?? null;
+}
+
+export type ExtractClipboardImagesResult = {
+  files: File[];
+  /** True when more than `max` image files were present and list was capped. */
+  truncated: boolean;
+};
+
+/**
+ * All image files from the clipboard, up to `max` (default 4).
+ * Order: clipboard items in sequence, then `files` not already included.
+ */
+export function extractImageFilesFromClipboardData(
+  dataTransfer: DataTransfer,
+  opts?: { max?: number },
+): ExtractClipboardImagesResult {
+  const max = opts?.max ?? DEFAULT_MAX_CLIPBOARD_IMAGES;
+  const seen = new Set<string>();
+  const all: File[] = [];
+
+  const tryAdd = (f: File | null) => {
+    if (!f || !isImageFileLike(f)) return;
+    const key = `${f.name}:${f.size}:${f.type}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    all.push(f);
+  };
+
+  for (const item of Array.from(dataTransfer.items)) {
+    if (item.kind !== "file") continue;
+    const t = item.type || "";
+    const f = item.getAsFile();
+    if (!f) continue;
+    if (t.startsWith("image/") || isImageFileLike(f)) tryAdd(f);
   }
-  return blob;
+
+  for (const f of Array.from(dataTransfer.files)) {
+    tryAdd(f);
+  }
+
+  const truncated = all.length > max;
+  return { files: all.slice(0, max), truncated };
 }

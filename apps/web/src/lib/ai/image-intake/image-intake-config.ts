@@ -57,7 +57,7 @@ const CONFIG_DEFINITIONS: Record<ImageIntakeConfigKey, ConfigDefinition> = {
   },
   combined_pass_max_images: {
     envVar: "IMAGE_INTAKE_COMBINED_PASS_MAX_IMAGES",
-    defaultValue: 3,
+    defaultValue: 4,
     min: 2,
     max: 5,
     type: "number",

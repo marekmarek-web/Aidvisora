@@ -26,6 +26,7 @@ export interface BlockedItem {
 
 export type SuggestedActionType =
   | "open_review"
+  | "open_portal_path"
   | "view_client"
   | "create_task"
   | "draft_email"

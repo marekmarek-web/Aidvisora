@@ -214,6 +214,40 @@ describe("mergeWriteStepParamsFromCompletedDependencies", () => {
     const merged = mergeWriteStepParamsFromCompletedDependencies(taskStep, [oppStep, taskStep]);
     expect(merged.opportunityId).toBe(OPP_ID);
   });
+
+  it("injects contactId from succeeded createContact", () => {
+    const createStep = {
+      stepId: "c1",
+      action: "createContact" as const,
+      params: { firstName: "A", lastName: "B" },
+      label: "C",
+      requiresConfirmation: true,
+      isReadOnly: false,
+      dependsOn: [],
+      status: "succeeded" as const,
+      result: {
+        ok: true,
+        outcome: "executed" as const,
+        entityId: CONTACT_ID,
+        entityType: "contact",
+        warnings: [],
+        error: null,
+      },
+    };
+    const attachStep = {
+      stepId: "a1",
+      action: "attachDocumentToClient" as const,
+      params: { documentId: "doc-1" },
+      label: "A",
+      requiresConfirmation: true,
+      isReadOnly: false,
+      dependsOn: ["c1"],
+      status: "confirmed" as const,
+      result: null,
+    };
+    const merged = mergeWriteStepParamsFromCompletedDependencies(attachStep, [createStep, attachStep]);
+    expect(merged.contactId).toBe(CONTACT_ID);
+  });
 });
 
 describe("buildVerifiedResult — partial failure a varování", () => {

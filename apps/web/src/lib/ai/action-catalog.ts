@@ -5,6 +5,7 @@
 
 export type ActionType =
   | "open_review"
+  | "open_portal_path"
   | "select_client_candidate"
   | "confirm_create_new_client"
   | "create_task_draft"
@@ -46,6 +47,14 @@ export const ACTION_DEFINITIONS: ActionDefinition[] = [
     requiresConfirmation: false,
     executionMode: "manual_only",
     entityTypes: ["review"],
+  },
+  {
+    type: "open_portal_path",
+    label: "Otevřít stránku portálu",
+    description: "Přejde na zadanou cestu v poradenském portálu.",
+    requiresConfirmation: false,
+    executionMode: "manual_only",
+    entityTypes: ["portal"],
   },
   {
     type: "select_client_candidate",

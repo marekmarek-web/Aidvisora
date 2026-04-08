@@ -165,10 +165,17 @@ function buildFactInstructions(inputTypeHint: ImageInputType | null): string {
     case "photo_or_scan_document":
       return [
         "Pro sken/foto dokumentu extrahuj fakta s klíči:",
-        "- document_type: typ dokumentu (smlouva, formulář, dopis, atd.) nebo null",
+        "- document_type: typ dokumentu (OP, pas, povolení k pobytu, smlouva, dopis…) nebo null",
         "- document_summary: krátké shrnutí obsahu (max 200 znaků) nebo null",
         "- key_fact_1 až key_fact_3: klíčová fakta viditelná v dokumentu (nebo null)",
         "- looks_like_contract: 'yes'/'no' — zda vypadá jako finanční smlouva",
+        "- id_doc_is_identity_document: 'yes'/'no' — zda jde o občanský průkaz, pas nebo povolení k pobytu",
+        "- id_doc_first_name, id_doc_last_name: jméno a příjmení z dokladu (nebo null)",
+        "- id_doc_birth_date: datum narození ve formátu YYYY-MM-DD nebo DD.MM.YYYY (nebo null)",
+        "- id_doc_street, id_doc_city, id_doc_zip: adresa z dokladu (nebo null)",
+        "- id_doc_personal_id: rodné číslo / číslo dokladu jen pokud čitelné (nebo null)",
+        "- id_doc_email, id_doc_phone, id_doc_title: jen pokud na dokladu viditelné (nebo null)",
+        "- id_doc_extra_notes: platnost dokladu, státní příslušnost, místo narození — text do poznámky (nebo null)",
       ].join("\n");
 
     case "supporting_reference_image":

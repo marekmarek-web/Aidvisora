@@ -86,8 +86,8 @@ describe("Image Intake — type contracts", () => {
     expect(MAX_IMAGE_SIZE_BYTES).toBe(20 * 1024 * 1024);
   });
 
-  it("MAX_IMAGES_PER_INTAKE is 10", () => {
-    expect(MAX_IMAGES_PER_INTAKE).toBe(10);
+  it("MAX_IMAGES_PER_INTAKE is 4", () => {
+    expect(MAX_IMAGES_PER_INTAKE).toBe(4);
   });
 
   it("allowed intents are subset of canonical intents and exclude AI Review", () => {

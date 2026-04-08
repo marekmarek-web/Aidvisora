@@ -21,6 +21,7 @@ import type {
   MultimodalCombinedPassResult,
   BatchMultimodalDecision,
   ExtractedFactBundle,
+  ImageInputType,
 } from "./types";
 import { runMultiImageCombinedPass } from "./multimodal";
 import { extractFactsFromMultimodalPass } from "./extractor";
@@ -67,6 +68,7 @@ export async function executeBatchMultimodalStrategy(
   decision: BatchMultimodalDecision,
   assets: NormalizedImageAsset[],
   accompanyingText: string | null,
+  inputTypeHint: ImageInputType | null = null,
 ): Promise<CombinedMultimodalExecutionResult> {
   const config = getImageIntakeConfig();
 
@@ -123,7 +125,7 @@ export async function executeBatchMultimodalStrategy(
     // Phase 7: use runMultiImageCombinedPass to send all images in one call
     const passDecision = await runMultiImageCombinedPass(
       imageUrls,
-      "screenshot_client_communication",
+      inputTypeHint ?? "photo_or_scan_document",
       accompanyingText,
       config.combinedPassMaxImages,
     );

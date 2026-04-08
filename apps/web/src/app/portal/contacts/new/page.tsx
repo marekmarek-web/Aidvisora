@@ -10,6 +10,7 @@ import { User, Flag } from "lucide-react";
 export default function NewContactPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const q = (k: string) => searchParams.get(k) ?? "";
   const referralContactIdFromUrl = searchParams.get("referralContactId") ?? "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -48,6 +49,7 @@ export default function NewContactPage() {
         lifecycleStage: lifecycleStage || undefined,
         priority: priority || undefined,
         referralContactId: referralContactId || undefined,
+        notes: (fd.get("notes") as string) || undefined,
       });
       if (result.ok) router.push(`/portal/contacts/${result.id}`);
       else setError(result.message);
@@ -66,23 +68,23 @@ export default function NewContactPage() {
       <form onSubmit={onSubmit} className="max-w-md space-y-4 rounded-lg border border-monday-border bg-monday-surface p-6">
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">Jméno *</label>
-          <input name="firstName" required className={inputCls} />
+          <input name="firstName" required className={inputCls} defaultValue={q("firstName")} />
         </div>
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">Příjmení *</label>
-          <input name="lastName" required className={inputCls} />
+          <input name="lastName" required className={inputCls} defaultValue={q("lastName")} />
         </div>
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">E-mail</label>
-          <input name="email" type="email" className={inputCls} />
+          <input name="email" type="email" className={inputCls} defaultValue={q("email")} />
         </div>
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">Telefon</label>
-          <input name="phone" className={inputCls} />
+          <input name="phone" className={inputCls} defaultValue={q("phone")} />
         </div>
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">Titul</label>
-          <input name="title" className={inputCls} />
+          <input name="title" className={inputCls} defaultValue={q("title")} />
         </div>
         <div>
           <label className="block text-xs font-semibold text-monday-text-muted mb-1">Doporučil / zdroj</label>
@@ -90,25 +92,29 @@ export default function NewContactPage() {
         </div>
         <div>
           <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Datum narození</label>
-          <input name="birthDate" type="date" className={inputCls} />
+          <input name="birthDate" type="date" className={inputCls} defaultValue={q("birthDate")} />
         </div>
         <div>
           <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Rodné číslo / osobní ID</label>
-          <input name="personalId" className={inputCls} />
+          <input name="personalId" className={inputCls} defaultValue={q("personalId")} />
         </div>
         <div>
           <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Ulice</label>
-          <input name="street" className={inputCls} />
+          <input name="street" className={inputCls} defaultValue={q("street")} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Město</label>
-            <input name="city" className={inputCls} />
+            <input name="city" className={inputCls} defaultValue={q("city")} />
           </div>
           <div>
             <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">PSČ</label>
-            <input name="zip" className={inputCls} />
+            <input name="zip" className={inputCls} defaultValue={q("zip")} />
           </div>
+        </div>
+        <div>
+          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Poznámky</label>
+          <textarea name="notes" rows={4} className={inputCls} defaultValue={q("notes")} />
         </div>
         <div>
           <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Štítky (oddělené čárkou)</label>

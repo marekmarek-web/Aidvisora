@@ -62,6 +62,7 @@ const INTENT_TO_WRITE_ACTION: Partial<Record<CanonicalIntentType, WriteActionTyp
   schedule_meeting: "scheduleCalendarEvent",
   create_note: "createMeetingNote",
   create_internal_note: "createInternalNote",
+  create_contact: "createContact",
   append_note: "appendMeetingNote",
   attach_document: "attachDocumentToClient",
   attach_document_to_opportunity: "attachDocumentToOpportunity",
@@ -124,7 +125,7 @@ function buildStepParams(
   const params: Record<string, unknown> = {};
   const contactId = resolution.client?.entityId;
 
-  if (contactId) params.contactId = contactId;
+  if (contactId && action !== "createContact") params.contactId = contactId;
   if (resolution.opportunity?.entityId) params.opportunityId = resolution.opportunity.entityId;
   if (resolution.document?.entityId) params.documentId = resolution.document.entityId;
 
@@ -311,6 +312,7 @@ const REQUIRED_FIELDS: Record<string, FieldRequirement[]> = {
   createMeetingNote: ["contactId"],
   appendMeetingNote: ["meetingNoteId"],
   createInternalNote: ["contactId"],
+  createContact: ["firstName", "lastName"],
   attachDocumentToClient: ["contactId", "documentId"],
   attachDocumentToOpportunity: ["opportunityId", "documentId"],
   classifyDocument: ["documentId", ["documentType", "classification"]],
@@ -512,6 +514,21 @@ export function computeWriteStepPreflight(
     }
   }
 
+  if (action === "createContact") {
+    const fn = strParamFromRecord(params, "firstName");
+    const ln = strParamFromRecord(params, "lastName");
+    if (!fn?.trim() || !ln?.trim()) {
+      const mf = [...missingFields];
+      if (!fn?.trim() && !mf.includes("firstName")) mf.push("firstName");
+      if (!ln?.trim() && !mf.includes("lastName")) mf.push("lastName");
+      return {
+        preflightStatus: "needs_input",
+        missingFields: mf,
+        advisorMessage: "Pro založení klienta doplněte jméno a příjmení.",
+      };
+    }
+  }
+
   if (missingFields.length > 0) {
     return { preflightStatus: "needs_input", missingFields };
   }
@@ -659,6 +676,7 @@ function buildStepLabel(action: WriteActionType, _params: Record<string, unknown
     updateClientRequest: "Aktualizovat požadavek",
     createMaterialRequest: "Vyžádat podklady",
     createInternalNote: "Vytvořit interní poznámku",
+    createContact: "Založit klienta",
     publishPortfolioItem: "Publikovat do portfolia",
     updatePortfolioItem: "Aktualizovat portfolio",
     createReminder: "Vytvořit připomínku",
@@ -688,6 +706,7 @@ const STEP_DESCRIPTIONS: Partial<Record<WriteActionType, string>> = {
   createMeetingNote: "Zapíše poznámku ze schůzky",
   appendMeetingNote: "Doplní existující poznámku",
   createInternalNote: "Uloží interní poznámku ke klientovi",
+  createContact: "Vytvoří nový kontakt v CRM",
   attachDocumentToClient: "Přiřadí dokument ke kartě klienta",
   attachDocumentToOpportunity: "Přiřadí dokument k obchodu",
   classifyDocument: "Nastaví typ dokumentu pro správné zařazení",
@@ -739,6 +758,13 @@ export function buildStepDescription(action: WriteActionType, params: Record<str
           : null;
     if (date && title) return `${date} · ${title}`;
     if (date) return date;
+  }
+
+  if (action === "createContact") {
+    const fn = typeof params.firstName === "string" ? params.firstName.trim() : "";
+    const ln = typeof params.lastName === "string" ? params.lastName.trim() : "";
+    if (fn && ln) return `${fn} ${ln}`;
+    if (fn || ln) return `${fn}${ln}`.trim();
   }
 
   if (action === "upsertContactCoverage") {

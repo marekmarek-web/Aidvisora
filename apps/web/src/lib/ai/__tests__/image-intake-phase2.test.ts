@@ -28,6 +28,7 @@ import {
   processImageIntake,
   isImageIntakeEnabled,
   parseImageAssetsFromBody,
+  parseImageAssetsFromBodyResult,
   buildActionPlanV1,
   resolveClientBindingV2,
   mapImageIntakeToAssistantResponse,
@@ -141,7 +142,19 @@ describe("parseImageAssetsFromBody", () => {
       })),
     };
     const result = parseImageAssetsFromBody(body);
-    expect(result.length).toBeLessThanOrEqual(10);
+    expect(result.length).toBeLessThanOrEqual(4);
+  });
+
+  it("parseImageAssetsFromBodyResult reports truncation", () => {
+    const body = {
+      imageAssets: Array.from({ length: 6 }, (_, i) => ({
+        url: `https://storage.example.com/img${i}.jpg`,
+        mimeType: "image/jpeg",
+      })),
+    };
+    const { assets, truncated } = parseImageAssetsFromBodyResult(body);
+    expect(assets).toHaveLength(4);
+    expect(truncated).toBe(true);
   });
 });
 
