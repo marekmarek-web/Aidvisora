@@ -59,6 +59,8 @@ const PRIMARY_TYPE_ALIASES: Record<string, string> = {
   investment: "investment_subscription_document",
   investment_subscription: "investment_subscription_document",
   investicni_smlouva: "investment_subscription_document",
+  investicni_smlouva_dip: "investment_subscription_document",
+  dip_smlouva: "investment_subscription_document",
   investiční_smlouva: "investment_subscription_document",
   dip: "investment_subscription_document",
   // payslip
@@ -253,12 +255,17 @@ export function coerceReviewEnvelopeParsedJson(input: unknown, options: CoerceEn
     dc.primaryType =
       dc.type ??
       dc.documentType ??        // model uses "documentType" key inside documentClassification
+      dc.category ??            // model sometimes uses "category" key
       dc.doc_type ??
+      dc.docType ??
+      dc.document_type ??
+      dc.classification ??
       root.primaryType ??
       root.documentType ??
       root.type ??
       root.docType ??
-      root.document_type;
+      root.document_type ??
+      root.category;
   }
   if (dc.lifecycleStatus == null) {
     dc.lifecycleStatus = root.lifecycleStatus ?? root.lifecycle_status;
