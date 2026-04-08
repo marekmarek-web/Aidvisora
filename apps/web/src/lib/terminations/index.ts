@@ -45,6 +45,7 @@ export {
   terminationDeliveryChannelLabel,
   terminationDispatchStatusLabel,
 } from "./termination-delivery-labels";
+export { formatTerminationRegistryMailingOneLine } from "./termination-registry-mail";
 
 // --- Fáze 6: document builder (termination_letter) ---
 export type {

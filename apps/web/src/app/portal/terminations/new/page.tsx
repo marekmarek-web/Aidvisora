@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -78,7 +79,12 @@ export default async function TerminationNewPage({
   };
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 space-y-3">
+      <p className="text-sm">
+        <Link href="/portal/terminations/registry" className="font-semibold text-[var(--wp-accent)] underline">
+          Registr pojišťoven — adresy a kanály (celý seznam)
+        </Link>
+      </p>
       <Suspense fallback={<p className="text-sm text-[color:var(--wp-text-secondary)]">Načítání průvodce…</p>}>
         <TerminationIntakeWizard
           prefill={prefill}

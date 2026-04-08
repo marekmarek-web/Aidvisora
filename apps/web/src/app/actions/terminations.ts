@@ -19,7 +19,12 @@ import {
   reminders,
 } from "db";
 import { and, asc, desc, eq, isNull, or, sql } from "db";
-import { evaluateTerminationRules, getReasonsForSegment, terminationDeliveryChannelLabel } from "@/lib/terminations";
+import {
+  evaluateTerminationRules,
+  formatTerminationRegistryMailingOneLine,
+  getReasonsForSegment,
+  terminationDeliveryChannelLabel,
+} from "@/lib/terminations";
 import type {
   TerminationManualInput,
   TerminationRulesInput,
@@ -193,16 +198,6 @@ export async function listTerminationReasonsAction(
   }));
 }
 
-function formatRegistryMailingOneLine(m: Record<string, unknown> | null | undefined): string | null {
-  if (!m || typeof m !== "object") return null;
-  const street = typeof m.street === "string" ? m.street : "";
-  const city = typeof m.city === "string" ? m.city : "";
-  const zip = typeof m.zip === "string" ? m.zip : "";
-  const tail = [zip, city].filter(Boolean).join(" ");
-  const line = [street, tail].filter(Boolean).join(", ");
-  return line.trim() || null;
-}
-
 function formatTerminationChannelHint(
   allowed: string[] | null | undefined,
   email: string | null | undefined,
@@ -263,11 +258,77 @@ export async function searchTerminationInsurerRegistryAction(
     items: rows.map((r) => ({
       id: r.id,
       insurerName: r.insurerName,
-      addressLine: formatRegistryMailingOneLine((r.mailingAddress as Record<string, unknown> | null) ?? null),
+      addressLine: formatTerminationRegistryMailingOneLine((r.mailingAddress as Record<string, unknown> | null) ?? null),
       channelHint: formatTerminationChannelHint(
         r.allowedChannels as string[] | null | undefined,
         r.email,
       ),
+    })),
+  };
+}
+
+export type TerminationInsurerRegistryDirectoryRow = {
+  id: string;
+  catalogKey: string;
+  insurerName: string;
+  addressLine: string | null;
+  email: string | null;
+  webFormUrl: string | null;
+  clientPortalUrl: string | null;
+  allowedChannels: string[] | null;
+  officialFormNotes: string | null;
+  requiresOfficialForm: boolean;
+  freeformLetterAllowed: boolean;
+};
+
+/** Kompletní adresář registru (globální + případný tenant override) pro portál. */
+export async function listTerminationInsurerRegistryDirectoryAction(): Promise<
+  { ok: true; rows: TerminationInsurerRegistryDirectoryRow[] } | { ok: false; error: string }
+> {
+  const auth = await requireAuthInAction();
+  if (!isTerminationsModuleEnabledOnServer()) {
+    return { ok: false, error: "Modul výpovědí je vypnutý." };
+  }
+  if (auth.roleName === "Client") return { ok: false, error: "Nepovoleno." };
+  if (!hasPermission(auth.roleName, "contacts:read")) return { ok: false, error: "Forbidden" };
+
+  const rows = await db
+    .select({
+      id: insurerTerminationRegistry.id,
+      catalogKey: insurerTerminationRegistry.catalogKey,
+      insurerName: insurerTerminationRegistry.insurerName,
+      mailingAddress: insurerTerminationRegistry.mailingAddress,
+      email: insurerTerminationRegistry.email,
+      webFormUrl: insurerTerminationRegistry.webFormUrl,
+      clientPortalUrl: insurerTerminationRegistry.clientPortalUrl,
+      allowedChannels: insurerTerminationRegistry.allowedChannels,
+      officialFormNotes: insurerTerminationRegistry.officialFormNotes,
+      requiresOfficialForm: insurerTerminationRegistry.requiresOfficialForm,
+      freeformLetterAllowed: insurerTerminationRegistry.freeformLetterAllowed,
+    })
+    .from(insurerTerminationRegistry)
+    .where(
+      and(
+        eq(insurerTerminationRegistry.active, true),
+        or(isNull(insurerTerminationRegistry.tenantId), eq(insurerTerminationRegistry.tenantId, auth.tenantId)),
+      ),
+    )
+    .orderBy(asc(insurerTerminationRegistry.insurerName));
+
+  return {
+    ok: true,
+    rows: rows.map((r) => ({
+      id: r.id,
+      catalogKey: r.catalogKey,
+      insurerName: r.insurerName,
+      addressLine: formatTerminationRegistryMailingOneLine((r.mailingAddress as Record<string, unknown> | null) ?? null),
+      email: r.email,
+      webFormUrl: r.webFormUrl,
+      clientPortalUrl: r.clientPortalUrl,
+      allowedChannels: (r.allowedChannels as string[] | null) ?? null,
+      officialFormNotes: r.officialFormNotes,
+      requiresOfficialForm: r.requiresOfficialForm,
+      freeformLetterAllowed: r.freeformLetterAllowed,
     })),
   };
 }

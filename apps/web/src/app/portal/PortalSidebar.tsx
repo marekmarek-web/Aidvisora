@@ -36,6 +36,7 @@ import {
   User,
   Command,
   FileX2,
+  ClipboardList,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePortalBadgeCounts } from "@/app/portal/PortalBadgeCountsContext";
@@ -60,6 +61,8 @@ interface NavItemConfig {
   hoverAnim?: string;
   /** Aktivní stav i na podcestách (např. detail žádosti). */
   activePathPrefix?: string;
+  /** Nepovažovat za aktivní na této přesné cestě (např. registr vedle průvodce). */
+  activePathPrefixExclude?: string;
 }
 
 interface SectionConfig {
@@ -135,7 +138,14 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
         label: "Výpověď smlouvy",
         Icon: FileX2,
         activePathPrefix: "/portal/terminations",
+        activePathPrefixExclude: "/portal/terminations/registry",
         hoverAnim: "group-hover:-translate-y-0.5 group-hover:scale-110",
+      },
+      {
+        href: "/portal/terminations/registry",
+        label: "Registr pojišťoven",
+        Icon: ClipboardList,
+        hoverAnim: "group-hover:scale-105",
       },
       { href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3, isHighlighted: true, hoverAnim: "group-hover:scale-110 group-hover:rotate-6" },
       { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator, hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
@@ -213,11 +223,14 @@ function getOrderFromSections(sections: SectionConfig[]): { sectionId: string; h
 
 function isItemActive(
   pathname: string,
-  item: Pick<NavItemConfig, "href" | "activePathPrefix">
+  item: Pick<NavItemConfig, "href" | "activePathPrefix" | "activePathPrefixExclude">
 ): boolean {
   if (item.activePathPrefix) {
-    const p = item.activePathPrefix;
-    if (pathname === p || pathname.startsWith(`${p}/`)) return true;
+    const ex = item.activePathPrefixExclude;
+    if (!ex || pathname !== ex) {
+      const p = item.activePathPrefix;
+      if (pathname === p || pathname.startsWith(`${p}/`)) return true;
+    }
   }
   const href = item.href;
   const hrefPath = href.split("?")[0]?.split("#")[0] ?? href;
@@ -246,9 +259,10 @@ function filterSectionsByRole(sections: SectionConfig[], showTeamOverview: boole
 
 function filterTerminationNavItem(sections: SectionConfig[], terminationsEnabled: boolean): SectionConfig[] {
   if (terminationsEnabled) return sections;
+  const termHrefs = new Set(["/portal/terminations/new", "/portal/terminations/registry"]);
   return sections.map((sec) =>
     sec.id === "sec-nastroje"
-      ? { ...sec, items: sec.items.filter((i) => i.href !== "/portal/terminations/new") }
+      ? { ...sec, items: sec.items.filter((i) => !termHrefs.has(i.href)) }
       : sec
   );
 }
