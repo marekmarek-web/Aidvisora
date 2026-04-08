@@ -223,24 +223,17 @@ function buildMainBodyIntro(vm: TerminationLetterViewModel): string {
 }
 
 function buildLetterSignatureBlock(vm: TerminationLetterViewModel): string {
-  const emailLine = vm.policyholderEmail ? `E-mail: ${vm.policyholderEmail}` : "";
-  const phoneLine = vm.policyholderPhone ? `Telefon: ${vm.policyholderPhone}` : "";
   if (vm.policyholderKind === "company") {
-    const cn = (vm.policyholderCompanyName ?? vm.policyholderName).trim();
-    const lines = [
-      vm.policyholderAuthorizedPersonName?.trim(),
-      vm.policyholderAuthorizedPersonRole?.trim(),
-      cn || undefined,
-      vm.policyholderAddressLine1,
-      vm.policyholderAddressLine2,
-      emailLine,
-      phoneLine,
-    ].filter((x) => x && String(x).trim());
-    return `S pozdravem\n\n${lines.join("\n")}\n\n---\nPodpis oprávněné osoby / razítko společnosti\n---`;
+    const cn = (vm.policyholderCompanyName ?? vm.policyholderName).trim() || "………………";
+    const ap = vm.policyholderAuthorizedPersonName?.trim();
+    const role = vm.policyholderAuthorizedPersonRole?.trim();
+    const rep = ap ? `${ap}${role ? `, ${role}` : ""}` : "";
+    const body = rep ? `${cn}\n${rep}` : cn;
+    return `S pozdravem\n\n${body}\n\n---\nPodpis oprávněné osoby / razítko společnosti\n---`;
   }
   const titleBefore = vm.policyholderTitleBefore ? `${vm.policyholderTitleBefore} ` : "";
   const phName = `${titleBefore}${vm.policyholderName}`.trim();
-  return `S pozdravem\n\n${phName}\n${vm.policyholderAddressLine1}\n${vm.policyholderAddressLine2}\n${emailLine}\n${phoneLine}\n\n---\nPodpis pojistníka\n---`;
+  return `S pozdravem\n\n${phName}\n\n---\nPodpis pojistníka\n---`;
 }
 
 function buildDistanceWithdrawalBody(vm: TerminationLetterViewModel): string {
@@ -310,9 +303,6 @@ export function buildPolicyholderAddressBlock(vm: TerminationLetterViewModel): s
     const titleBefore = vm.policyholderTitleBefore ? `${vm.policyholderTitleBefore} ` : "";
     const phName = `${titleBefore}${vm.policyholderName}`.trim();
     if (phName) lines.push(phName);
-    if (vm.policyholderBirthDate?.trim()) {
-      lines.push(`Datum narození: ${vm.policyholderBirthDate.trim()}`);
-    }
   }
   if (vm.policyholderAddressLine1?.trim()) lines.push(vm.policyholderAddressLine1.trim());
   if (vm.policyholderAddressLine2?.trim()) lines.push(vm.policyholderAddressLine2.trim());
@@ -321,9 +311,10 @@ export function buildPolicyholderAddressBlock(vm: TerminationLetterViewModel): s
 }
 
 export function buildInsurerAddressBlock(vm: TerminationLetterViewModel): string {
-  const inner = [vm.insurerName, vm.insurerDepartment, vm.insurerAddressLine1, vm.insurerAddressLine2, vm.insurerAddressLine3]
-    .filter((x) => x && String(x).trim())
-    .join("\n");
+  const lines = [vm.insurerName?.trim(), vm.insurerDepartment?.trim(), vm.insurerAddressLine2?.trim(), vm.insurerAddressLine3?.trim()].filter(
+    (x): x is string => Boolean(x && String(x).trim())
+  );
+  const inner = lines.join("\n");
   return inner.trim() ? `Pojišťovna\n${inner}` : "Pojišťovna\n………………";
 }
 

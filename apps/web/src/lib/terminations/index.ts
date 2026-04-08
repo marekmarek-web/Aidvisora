@@ -40,6 +40,12 @@ export {
 // --- Rules engine ---
 export { evaluateTerminationRules } from "./rules-engine";
 
+export { modeToReasonCode } from "./mode-to-reason-code";
+export {
+  terminationDeliveryChannelLabel,
+  terminationDispatchStatusLabel,
+} from "./termination-delivery-labels";
+
 // --- Fáze 6: document builder (termination_letter) ---
 export type {
   TerminationLetterViewModel,

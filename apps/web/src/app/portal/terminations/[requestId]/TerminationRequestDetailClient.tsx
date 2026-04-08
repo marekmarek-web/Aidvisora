@@ -12,6 +12,7 @@ import { TerminationLetterPreviewPanel } from "../new/TerminationLetterPreviewPa
 import { TerminationRequestFieldsForm } from "./TerminationRequestFieldsForm";
 import type { TerminationDeliveryChannel, TerminationRequestStatus } from "@/lib/db/schema-for-client";
 import { terminationDeliveryChannels, terminationRequestStatuses } from "@/lib/db/schema-for-client";
+import { terminationDeliveryChannelLabel, terminationDispatchStatusLabel } from "@/lib/terminations";
 
 type Props = {
   requestId: string;
@@ -152,7 +153,7 @@ export function TerminationRequestDetailClient({
           </div>
           <div>
             <dt className="font-semibold text-[color:var(--wp-text)]">Kanál doručení</dt>
-            <dd>{r.deliveryChannel}</dd>
+            <dd>{terminationDeliveryChannelLabel(r.deliveryChannel)}</dd>
           </div>
         </dl>
         {r.reviewRequiredReason ? (
@@ -172,10 +173,7 @@ export function TerminationRequestDetailClient({
       ) : null}
 
       <section className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 space-y-3">
-        <h2 className="text-sm font-bold text-[color:var(--wp-text)]">Změna stavu (review)</h2>
-        <p className="text-xs text-[color:var(--wp-text-secondary)]">
-          Fáze 8/9 masterplanu: ruční posun workflow + poznámka do auditu událostí.
-        </p>
+        <h2 className="text-sm font-bold text-[color:var(--wp-text)]">Stav žádosti</h2>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Stav</label>
@@ -219,7 +217,7 @@ export function TerminationRequestDetailClient({
       </section>
 
       <section className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 space-y-3">
-        <h2 className="text-sm font-bold text-[color:var(--wp-text)]">Záznam odeslání (dispatch log)</h2>
+        <h2 className="text-sm font-bold text-[color:var(--wp-text)]">Odeslání</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Kanál</label>
@@ -230,7 +228,7 @@ export function TerminationRequestDetailClient({
             >
               {terminationDeliveryChannels.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {terminationDeliveryChannelLabel(c)}
                 </option>
               ))}
             </select>
@@ -244,7 +242,7 @@ export function TerminationRequestDetailClient({
             >
               {DISPATCH_STATUS.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {terminationDispatchStatusLabel(s)}
                 </option>
               ))}
             </select>
@@ -281,7 +279,8 @@ export function TerminationRequestDetailClient({
           <ul className="text-xs space-y-2 border-t border-[color:var(--wp-border)] pt-3">
             {dispatchLog.map((d) => (
               <li key={d.id} className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/50 px-3 py-2">
-                <span className="font-semibold">{d.createdAt}</span> · {d.channel} · {d.status}
+                <span className="font-semibold">{d.createdAt}</span> · {terminationDeliveryChannelLabel(d.channel)} ·{" "}
+                {terminationDispatchStatusLabel(d.status)}
                 {d.trackingReference ? ` · ${d.trackingReference}` : ""}
                 {d.error ? ` · chyba: ${d.error}` : ""}
               </li>

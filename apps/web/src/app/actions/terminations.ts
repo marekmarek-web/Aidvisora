@@ -19,7 +19,7 @@ import {
   reminders,
 } from "db";
 import { and, asc, desc, eq, isNull, or, sql } from "db";
-import { evaluateTerminationRules, getReasonsForSegment } from "@/lib/terminations";
+import { evaluateTerminationRules, getReasonsForSegment, terminationDeliveryChannelLabel } from "@/lib/terminations";
 import type {
   TerminationManualInput,
   TerminationRulesInput,
@@ -208,7 +208,7 @@ function formatTerminationChannelHint(
   email: string | null | undefined,
 ): string | null {
   const parts: string[] = [];
-  if (allowed?.length) parts.push(allowed.join(" · "));
+  if (allowed?.length) parts.push(allowed.map((ch) => terminationDeliveryChannelLabel(ch)).join(" · "));
   if (email?.trim()) parts.push(`e-mail: ${email.trim()}`);
   return parts.length ? parts.join(" · ") : null;
 }

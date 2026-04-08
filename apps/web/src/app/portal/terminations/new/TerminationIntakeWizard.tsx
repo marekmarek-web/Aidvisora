@@ -18,7 +18,6 @@ import {
 import { segmentLabel } from "@/app/lib/segment-labels";
 import {
   createTerminationDraft,
-  listTerminationReasonsAction,
   saveTerminationIntakePartialAction,
   searchContactsForTerminationWizardAction,
   searchTerminationInsurerRegistryAction,
@@ -27,7 +26,17 @@ import {
   type TerminationWizardPrefill,
 } from "@/app/actions/terminations";
 import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "@/lib/db/schema-for-client";
-import type { TerminationRulesResult } from "@/lib/terminations";
+import { modeToReasonCode, terminationDeliveryChannelLabel, type TerminationRulesResult } from "@/lib/terminations";
+
+function insurerSearchItemMeta(addressLine: string | null | undefined, channelHint: string | null | undefined): string | null {
+  const addr = addressLine?.trim() || "";
+  const rawCh = channelHint?.trim() || "";
+  const chLabel = rawCh ? terminationDeliveryChannelLabel(rawCh) : "";
+  if (addr && chLabel) return `${addr} · ${chLabel}`;
+  if (addr) return addr;
+  if (chLabel) return chLabel;
+  return null;
+}
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { formatCzDate } from "@/lib/forms/cz-date";
 import { FriendlyDateInput } from "@/components/forms/FriendlyDateInput";
@@ -46,17 +55,9 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
 
 const STEP_LABELS = ["Pojišťovna a smlouva", "Režim a termín", "Dokončit výstup"] as const;
 
-export type WizardReasonOption = {
-  id: string;
-  reasonCode: string;
-  labelCs: string;
-  defaultDateComputation: string;
-};
-
 type Props = {
   prefill: TerminationWizardPrefill;
   segments: string[];
-  initialReasons: WizardReasonOption[];
   canWrite: boolean;
   sourceQuick: boolean;
   sourceFromAi: boolean;
@@ -93,7 +94,6 @@ function cx(...parts: (string | false | undefined | null)[]): string {
 export function TerminationIntakeWizard({
   prefill,
   segments,
-  initialReasons,
   canWrite,
   sourceQuick,
   sourceFromAi,
@@ -157,15 +157,11 @@ export function TerminationIntakeWizard({
   const [attachmentsDeclared, setAttachmentsDeclared] = useState(
     () => loadedDraft?.documentBuilderExtras?.attachmentsDeclared ?? "",
   );
-  const [reasons, setReasons] = useState<WizardReasonOption[]>(initialReasons);
-  const [terminationReasonCode, setTerminationReasonCode] = useState<TerminationReasonCode>(
-    () =>
-      (loadedDraft?.terminationReasonCode as TerminationReasonCode) ??
-      (initialReasons[0]?.reasonCode as TerminationReasonCode) ??
-      "end_of_period_6_weeks",
-  );
   const [terminationMode, setTerminationMode] = useState<TerminationMode>(
     () => loadedDraft?.terminationMode ?? "end_of_insurance_period",
+  );
+  const [terminationReasonCode, setTerminationReasonCode] = useState<TerminationReasonCode>(() =>
+    modeToReasonCode(loadedDraft?.terminationMode ?? "end_of_insurance_period"),
   );
   const [policyholderKind, setPolicyholderKind] = useState<TerminationPolicyholderKind>(
     () => loadedDraft?.documentBuilderExtras?.policyholderKind ?? "person",
@@ -201,21 +197,12 @@ export function TerminationIntakeWizard({
   }, [loadedDraft?.sourceKind, prefill.mode, sourceFromAi, sourceQuick, sourceCard]);
 
   useEffect(() => {
-    if (!loadedDraft?.productSegment) return;
-    void listTerminationReasonsAction(loadedDraft.productSegment).then(setReasons);
-  }, [loadedDraft?.productSegment]);
+    setTerminationReasonCode(modeToReasonCode(terminationMode));
+  }, [terminationMode]);
 
-  const onSegmentChange = useCallback(
-    async (seg: string) => {
-      setProductSegment(seg);
-      const next = await listTerminationReasonsAction(seg);
-      setReasons(next);
-      if (next.length && !next.some((r) => r.reasonCode === terminationReasonCode)) {
-        setTerminationReasonCode(next[0].reasonCode as TerminationReasonCode);
-      }
-    },
-    [terminationReasonCode],
-  );
+  const onSegmentChange = useCallback((seg: string) => {
+    setProductSegment(seg);
+  }, []);
 
   const buildBasePayload = useCallback((): CreateTerminationDraftPayload => {
     return {
@@ -290,7 +277,7 @@ export function TerminationIntakeWizard({
           r.items.map((row) => ({
             id: row.id,
             label: row.insurerName,
-            meta: [row.addressLine, row.channelHint].filter(Boolean).join(" · ") || null,
+            meta: insurerSearchItemMeta(row.addressLine, row.channelHint),
             insurerAddressLine: row.addressLine,
             insurerChannelHint: row.channelHint,
           })),
@@ -789,7 +776,7 @@ export function TerminationIntakeWizard({
                     </div>
                     {registryDeliveryMeta?.channelHint ? (
                       <div className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">
-                        Kanál: {registryDeliveryMeta.channelHint}
+                        Kanál: {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
                       </div>
                     ) : null}
                   </div>
@@ -830,7 +817,7 @@ export function TerminationIntakeWizard({
               <div>
                 <h2 className="text-lg font-semibold text-[color:var(--wp-text)]">Režim a termín ukončení</h2>
                 <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
-                  Zvolte segment, důvod a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
+                  Zvolte segment a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
                 </p>
               </div>
 
@@ -871,22 +858,6 @@ export function TerminationIntakeWizard({
                   onChange={setRequestedEffectiveDate}
                 />
                 <FriendlyDateInput label="Výroční den" value={contractAnniversaryDate} onChange={setContractAnniversaryDate} />
-                <div className="lg:col-span-2">
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
-                    Důvod výpovědi
-                  </label>
-                  <select
-                    value={terminationReasonCode}
-                    onChange={(e) => setTerminationReasonCode(e.target.value as TerminationReasonCode)}
-                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
-                  >
-                    {reasons.map((r) => (
-                      <option key={r.id} value={r.reasonCode}>
-                        {r.labelCs}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div className="lg:col-span-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[var(--wp-accent)]/5 p-4">
                   <div className="flex items-start gap-3">
                     <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wp-accent)]" />
@@ -949,7 +920,8 @@ export function TerminationIntakeWizard({
                   </div>
                   {registryDeliveryMeta?.channelHint ? (
                     <div>
-                      <span className="font-medium">Kanál:</span> {registryDeliveryMeta.channelHint}
+                      <span className="font-medium">Kanál:</span>{" "}
+                      {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
                     </div>
                   ) : null}
                 </div>
@@ -1012,7 +984,7 @@ export function TerminationIntakeWizard({
                   />
                 </div>
 
-                {terminationReasonCode === "after_claim_event" ? (
+                {terminationMode === "after_claim" ? (
                   <FriendlyDateInput
                     label="Datum oznámení / pojistné události (volitelné)"
                     value={claimEventDate}
@@ -1062,8 +1034,8 @@ export function TerminationIntakeWizard({
           </p>
         ) : null}
 
-        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-5 py-4 shadow-md">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--wp-text-secondary)]">
+        <div className="sticky bottom-0 z-10 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-5 py-4 shadow-md">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-[color:var(--wp-text-secondary)]">
             <span className="rounded-full bg-[var(--wp-accent)]/10 px-3 py-1 font-medium text-[var(--wp-accent)]">
               {sourceFooterLabel}
             </span>
@@ -1071,55 +1043,62 @@ export function TerminationIntakeWizard({
               {wizardStep === 2 ? "Finální náhled před odesláním pravidel." : "Vyplňte údaje a pokračujte na další krok."}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              disabled={wizardStep === 0}
-              onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-              className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-medium min-h-[44px] disabled:opacity-40"
-            >
-              Zpět
-            </button>
-            <button
-              type="button"
-              disabled={wizardStep >= STEP_LABELS.length - 1}
-              onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
-              className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-40"
-            >
-              Další krok
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              disabled={!canWrite || isPending}
-              onClick={() => void onSavePartial()}
-              className="h-11 rounded-[var(--wp-radius)] border border-[var(--wp-accent)]/40 bg-[var(--wp-accent)]/10 px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px] disabled:opacity-50"
-            >
-              {isPending ? "Ukládám…" : "Uložit rozepsané"}
-            </button>
-            <button
-              type="submit"
-              disabled={!canWrite || isPending || wizardStep < STEP_LABELS.length - 1}
-              className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[color:var(--wp-text)] px-5 text-sm font-semibold text-[color:var(--wp-surface)] min-h-[44px] disabled:opacity-50"
-            >
-              Dokončit a vyhodnotit pravidla
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            {contactId ? (
-              <Link
-                href={`/portal/contacts/${contactId}`}
-                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-semibold min-h-[44px] inline-flex items-center"
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={wizardStep === 0}
+                onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
+                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-medium text-[color:var(--wp-text)] min-h-[44px] disabled:opacity-40"
               >
-                Zrušit
-              </Link>
-            ) : (
-              <Link
-                href="/portal/today"
-                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-semibold min-h-[44px] inline-flex items-center"
+                Zpět
+              </button>
+              {contactId ? (
+                <Link
+                  href={`/portal/contacts/${contactId}`}
+                  className="inline-flex h-11 items-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px]"
+                >
+                  Zrušit
+                </Link>
+              ) : (
+                <Link
+                  href="/portal/today"
+                  className="inline-flex h-11 items-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px]"
+                >
+                  Zrušit
+                </Link>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                disabled={!canWrite || isPending}
+                onClick={() => void onSavePartial()}
+                className="h-11 rounded-[var(--wp-radius)] border border-[var(--wp-accent)] bg-transparent px-4 text-sm font-semibold text-[var(--wp-accent)] min-h-[44px] disabled:opacity-50"
               >
-                Zrušit
-              </Link>
-            )}
+                {isPending ? "Ukládám…" : "Uložit rozepsané"}
+              </button>
+              {wizardStep < STEP_LABELS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
+                  className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px]"
+                >
+                  Další krok
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : null}
+              {wizardStep === STEP_LABELS.length - 1 ? (
+                <button
+                  type="submit"
+                  disabled={!canWrite || isPending}
+                  className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
+                >
+                  Dokončit a vyhodnotit pravidla
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </form>

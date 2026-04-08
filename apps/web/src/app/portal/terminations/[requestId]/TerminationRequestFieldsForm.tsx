@@ -1,15 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { segmentLabel } from "@/app/lib/segment-labels";
 import {
-  listTerminationReasonsAction,
   updateTerminationRequestFieldsAndReevaluateAction,
   type TerminationRequestDetail,
 } from "@/app/actions/terminations";
-import type { TerminationMode, TerminationReasonCode } from "@/lib/db/schema-for-client";
+import type { TerminationMode } from "@/lib/db/schema-for-client";
+import { modeToReasonCode } from "@/lib/terminations";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { parseDocumentBuilderExtras } from "@/lib/terminations/termination-document-extras";
+import { FriendlyDateInput } from "@/components/forms/FriendlyDateInput";
 
 const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "end_of_insurance_period", label: "Ke konci pojistného období / výročnímu dni" },
@@ -20,8 +21,6 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "mutual_agreement", label: "Dohodou" },
   { value: "manual_review_other", label: "Jiný důvod / ruční posouzení" },
 ];
-
-type ReasonOpt = { id: string; reasonCode: string; labelCs: string };
 
 type Props = {
   requestId: string;
@@ -45,9 +44,7 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
   const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(r.requestedEffectiveDate ?? "");
   const [sourceDocumentId, setSourceDocumentId] = useState(r.sourceDocumentId ?? "");
   const [terminationMode, setTerminationMode] = useState<TerminationMode>(r.terminationMode);
-  const [terminationReasonCode, setTerminationReasonCode] = useState<TerminationReasonCode>(
-    r.terminationReasonCode as TerminationReasonCode
-  );
+  const terminationReasonCode = useMemo(() => modeToReasonCode(terminationMode), [terminationMode]);
   const [uncertainInsurer, setUncertainInsurer] = useState(extras0.uncertainInsurer === true);
   const [policyholderKind, setPolicyholderKind] = useState<TerminationPolicyholderKind>(
     extras0.policyholderKind === "company" ? "company" : "person"
@@ -58,22 +55,9 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
   const [advisorNoteForReview, setAdvisorNoteForReview] = useState(extras0.advisorNoteForReview ?? "");
   const [claimEventDate, setClaimEventDate] = useState(extras0.claimEventDate ?? "");
   const [placeOverride, setPlaceOverride] = useState(extras0.placeOverride ?? "");
-  const [reasons, setReasons] = useState<ReasonOpt[]>([]);
-
-  useEffect(() => {
-    void listTerminationReasonsAction(productSegment).then((rows) =>
-      setReasons(rows.map((x) => ({ id: x.id, reasonCode: x.reasonCode, labelCs: x.labelCs })))
-    );
-  }, [productSegment]);
-
-  const onSegmentPick = useCallback(async (seg: string) => {
+  const onSegmentPick = useCallback((seg: string) => {
     setProductSegment(seg);
-    const next = await listTerminationReasonsAction(seg);
-    setReasons(next.map((x) => ({ id: x.id, reasonCode: x.reasonCode, labelCs: x.labelCs })));
-    if (next.length && !next.some((x) => x.reasonCode === terminationReasonCode)) {
-      setTerminationReasonCode(next[0]!.reasonCode as TerminationReasonCode);
-    }
-  }, [terminationReasonCode]);
+  }, []);
 
   const onSave = useCallback(() => {
     setError(null);
@@ -191,35 +175,13 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Počátek smlouvy</label>
-          <input
-            type="date"
-            value={contractStartDate}
-            onChange={(e) => setContractStartDate(e.target.value)}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Výroční den</label>
-          <input
-            type="date"
-            value={contractAnniversaryDate}
-            onChange={(e) => setContractAnniversaryDate(e.target.value)}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-            Požadované datum účinnosti
-          </label>
-          <input
-            type="date"
-            value={requestedEffectiveDate}
-            onChange={(e) => setRequestedEffectiveDate(e.target.value)}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-          />
-        </div>
+        <FriendlyDateInput label="Počátek smlouvy" value={contractStartDate} onChange={setContractStartDate} />
+        <FriendlyDateInput label="Výroční den" value={contractAnniversaryDate} onChange={setContractAnniversaryDate} />
+        <FriendlyDateInput
+          label="Požadované datum účinnosti"
+          value={requestedEffectiveDate}
+          onChange={setRequestedEffectiveDate}
+        />
         <div>
           <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
             ID zdrojového dokumentu
@@ -231,25 +193,7 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Důvod výpovědi</label>
-          <select
-            value={terminationReasonCode}
-            onChange={(e) => setTerminationReasonCode(e.target.value as TerminationReasonCode)}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-          >
-            {reasons.length === 0 ? (
-              <option value={terminationReasonCode}>{terminationReasonCode}</option>
-            ) : (
-              reasons.map((x) => (
-                <option key={x.id} value={x.reasonCode}>
-                  {x.labelCs}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-        <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Režim</label>
+          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Způsob ukončení</label>
           <select
             value={terminationMode}
             onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
@@ -316,17 +260,13 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
           className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
         />
       </div>
-      <div>
-        <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-          Datum PU / oznámení (volitelné)
-        </label>
-        <input
-          type="date"
+      {terminationMode === "after_claim" ? (
+        <FriendlyDateInput
+          label="Datum PU / oznámení (volitelné)"
           value={claimEventDate}
-          onChange={(e) => setClaimEventDate(e.target.value)}
-          className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+          onChange={setClaimEventDate}
         />
-      </div>
+      ) : null}
       <div>
         <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
           Interní poznámka pro kontrolu

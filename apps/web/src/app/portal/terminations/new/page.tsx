@@ -8,8 +8,7 @@ import {
   getTerminationWizardPrefill,
   type TerminationIntakeDraftWizardState,
 } from "@/app/actions/terminations";
-import { getReasonsForSegment } from "@/lib/terminations";
-import { TerminationIntakeWizard, type WizardReasonOption } from "./TerminationIntakeWizard";
+import { TerminationIntakeWizard } from "./TerminationIntakeWizard";
 import { isTerminationsModuleEnabledOnServer } from "@/lib/terminations/terminations-feature-flag";
 
 export const metadata: Metadata = {
@@ -70,15 +69,6 @@ export default async function TerminationNewPage({
   const effectiveContractId = loadedDraft?.contractId ?? contractId;
   const prefill = await getTerminationWizardPrefill(effectiveContactId, effectiveContractId);
   const segments = await getContractSegments();
-  const seg =
-    loadedDraft?.productSegment?.trim() || prefill.productSegment || segments[0] || "ZP";
-  const reasonRows = await getReasonsForSegment(auth.tenantId, seg);
-  const initialReasons: WizardReasonOption[] = reasonRows.map((r) => ({
-    id: r.id,
-    reasonCode: r.reasonCode,
-    labelCs: r.labelCs,
-    defaultDateComputation: r.defaultDateComputation,
-  }));
   const canWrite = hasPermission(auth.roleName, "contacts:write");
 
   const urlPrefill = {
@@ -93,7 +83,6 @@ export default async function TerminationNewPage({
         <TerminationIntakeWizard
           prefill={prefill}
           segments={segments.length ? segments : ["ZP"]}
-          initialReasons={initialReasons}
           canWrite={canWrite}
           sourceQuick={sourceQuick}
           sourceFromAi={sourceFromAi}

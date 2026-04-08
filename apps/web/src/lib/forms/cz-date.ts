@@ -14,36 +14,82 @@ function displayPart(n: string): string {
   return Number.isNaN(x) ? n : String(x);
 }
 
+function isFourDigitYear(s: string): boolean {
+  return s.length === 4 && /^(19|20)\d{2}$/.test(s);
+}
+
+/** True if `s` is a prefix of some year 1900–2099 (partial typing of yyyy). */
+function isYearPrefix(s: string): boolean {
+  if (s.length === 0) return true;
+  if (s.length > 4) return false;
+  for (let y = 1900; y <= 2099; y++) {
+    if (String(y).startsWith(s)) return true;
+  }
+  return false;
+}
+
+/** Délka dne (1 nebo 2 cifry) z řetězce číslic. */
+function dayDigitLength(d: string): number {
+  if (d.length === 0) return 0;
+  if (d.length === 1) return 1;
+  const f = d[0]!;
+  const n2 = parseInt(d.slice(0, 2), 10);
+  if (f >= "4") return 1;
+  if (n2 > 31) return 1;
+  if (d.length >= 6 && n2 <= 31) {
+    const after2 = d.slice(2);
+    if (after2.length === 4 && isFourDigitYear(after2)) {
+      const n1 = parseInt(f, 10);
+      if (n1 >= 1 && n1 <= 3 && d[1] !== "0") return 1;
+    }
+  }
+  return 2;
+}
+
 /**
- * Build "d. m. yyyy" display from digit sequence (max 8), using:
- * - day: first 2 digits
- * - month: next 1–2 digits (prefer 2 if value 01–12)
- * - year: remaining up to 4
+ * Build "d. m. yyyy" display from digit sequence (max 8).
+ * Den/měsíc: inteligentní šířka (např. 442026 → 4. 4. 2026, 1212029 → 12. 1. 2029).
  */
 export function formatCzDateFromDigits(digits: string): string {
   const d = digits.replace(/\D/g, "").slice(0, DIGIT_MAX);
   if (!d) return "";
-  const dd = d.slice(0, 2);
-  if (d.length <= 2) return dd;
-  const rest = d.slice(2);
-  if (rest.length === 0) return `${dd}. `;
+
+  const dayLen = dayDigitLength(d);
+  const dayRaw = d.slice(0, dayLen);
+  if (d.length <= dayLen) return displayPart(dayRaw);
+
+  let rest = d.slice(dayLen);
+  if (rest.length === 0) return `${displayPart(dayRaw)}. `;
+
   let monthRaw: string;
   let yearDigits: string;
+
   if (rest.length === 1) {
     monthRaw = rest;
     yearDigits = "";
+  } else if (rest[0]! > "1") {
+    monthRaw = rest.slice(0, 1);
+    yearDigits = rest.slice(1);
   } else {
     const m2 = rest.slice(0, 2);
-    const n2 = parseInt(m2, 10);
-    if (n2 >= 1 && n2 <= 12) {
+    const nM = parseInt(m2, 10);
+    const afterTwo = rest.slice(2);
+    if (
+      nM >= 1 &&
+      nM <= 12 &&
+      (afterTwo.length === 0 ||
+        afterTwo.length === 4 ||
+        (afterTwo.length < 4 && isYearPrefix(afterTwo)))
+    ) {
       monthRaw = m2;
-      yearDigits = rest.slice(2);
+      yearDigits = afterTwo;
     } else {
       monthRaw = rest.slice(0, 1);
       yearDigits = rest.slice(1);
     }
   }
-  let out = `${displayPart(dd)}. ${displayPart(monthRaw)}`;
+
+  let out = `${displayPart(dayRaw)}. ${displayPart(monthRaw)}`;
   if (!yearDigits) return out;
   return `${out}. ${yearDigits}`;
 }
