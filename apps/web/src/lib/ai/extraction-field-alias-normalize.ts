@@ -950,9 +950,68 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
  * Mutates `envelope.extractedFields` in place (and reads `financialTerms`).
  * Call early in finalize paths, before verification and legacy validation.
  */
+/**
+ * Maps descriptive/Czech/free-form field keys that LLMs sometimes emit
+ * onto their canonical extractedFields equivalents.
+ * These are applied BEFORE alias normalizations so downstream logic sees canonical keys.
+ */
+const DESCRIPTIVE_KEY_MAP: Record<string, string> = {
+  // Czech descriptive keys (common in combined extraction outputs)
+  "Klient / dlužník": "fullName",
+  "Klient/dlužník": "fullName",
+  "Klient": "fullName",
+  "Dlužník": "borrowerName",
+  "Pojistník": "fullName",
+  "Spoludlužník": "coBorrowerName",
+  "Smlouva / úvěr": "contractNumber",
+  "Smlouva": "contractNumber",
+  "Číslo smlouvy": "contractNumber",
+  "Číslo návrhu": "proposalNumber",
+  "Číslo úvěru": "contractNumber",
+  "Platby pojistné": "totalMonthlyPremium",
+  "Platby": "totalMonthlyPremium",
+  "Měsíční splátka": "installmentAmount",
+  "Výše úvěru": "loanAmount",
+  "Roční pojistné": "annualPremium",
+  "Pojistná smlouva": "contractNumber",
+  "Pojišťovna": "insurer",
+  "Pojistitel": "insurer",
+  "Banka / věřitel": "lender",
+  "Banka": "lender",
+  "Věřitel": "lender",
+  "Investiční smlouva / úpis": "contractNumber",
+  "Investiční strategie": "investmentStrategy",
+  "Produkt": "productName",
+  "Rizika a připojištění": "coverages",
+  // English descriptive keys
+  "client": "fullName",
+  "client_name": "fullName",
+  "borrower": "borrowerName",
+  "borrower_name": "borrowerName",
+  "insurer_name": "insurer",
+  "institution": "institutionName",
+  "contract": "contractNumber",
+  "contract_number": "contractNumber",
+  "policy_number": "contractNumber",
+  "payment": "totalMonthlyPremium",
+  "payments": "totalMonthlyPremium",
+  "monthly_payment": "installmentAmount",
+  "loan_amount": "loanAmount",
+  "annual_premium": "annualPremium",
+  "coverages": "coverages",
+  "risks": "coverages",
+};
+
 export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewEnvelope): void {
   const ef = envelope.extractedFields;
   if (!ef || typeof ef !== "object") return;
+
+  // Remap descriptive/Czech/free-form keys onto canonical keys (first-write wins)
+  for (const [descriptiveKey, canonicalKey] of Object.entries(DESCRIPTIVE_KEY_MAP)) {
+    if (descriptiveKey in ef && !(canonicalKey in ef)) {
+      (ef as Record<string, unknown>)[canonicalKey] = (ef as Record<string, unknown>)[descriptiveKey];
+    }
+  }
 
   const primary = envelope.documentClassification.primaryType;
 

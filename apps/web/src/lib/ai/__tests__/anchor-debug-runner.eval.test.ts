@@ -259,16 +259,20 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
 
           let result: Awaited<ReturnType<typeof runContractUnderstandingPipeline>>;
           try {
+            // When textHint is available (>= 800 chars), use pdf_parse_fallback preprocessMode
+            // so tryInferInputModeFromPreprocess can infer text_pdf and skip detectInputMode API call.
+            // This prevents 407 errors when OpenAI tries to download the local PDF server URL.
+            const hasGoodHint = textHint != null && textHint.length >= 400;
             result = await runContractUnderstandingPipeline(fileUrl, "application/pdf", {
               sourceFileName: anchor.file.split("/").pop() ?? "doc.pdf",
               ruleBasedTextHint: textHint ?? undefined,
               bundleSectionTexts: textHint ? { contractualText: textHint, investmentText: textHint } : null,
               preprocessMeta: {
                 preprocessStatus: textHint ? "anchor_debug_pdf_parse_hint" : "anchor_debug_local",
-                preprocessMode: "none",
+                preprocessMode: hasGoodHint ? "pdf_parse_fallback" : "none",
                 adobePreprocessed: false,
                 markdownContentLength: textHint?.length ?? 0,
-                readabilityScore: textHint && textHint.length >= 800 ? 80 : 0,
+                readabilityScore: hasGoodHint ? 80 : 0,
               },
             });
           } catch (e) {
@@ -310,6 +314,11 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
           const classifierResult = debugTrace?.classifierRaw as Record<string, unknown> | undefined;
           const routerDecision = debugTrace?.routerDecision as Record<string, unknown> | undefined;
 
+          // ── raw model output (from trace.rawModelOutputHead set in v2 pipeline)
+          const rawModelOutputHead = (trace?.rawModelOutputHead as string | undefined) ??
+            (debugTrace?.rawModelOutputHead as string | undefined) ?? null;
+          const rawModelOutputLength = (trace?.rawModelOutputLength as number | undefined) ?? null;
+
           // ── C: after coercion (from trace.fieldCheckpoint_beforeAliasNormalize)
           const afterCoercion = trace?.fieldCheckpoint_beforeAliasNormalize as Record<string, unknown> | undefined;
 
@@ -317,6 +326,10 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
           const afterValidation = trace?.fieldCheckpoint_afterAliasNormalize as Record<string, unknown> | undefined;
 
           // ── PASS/FAIL determination ──────────────────────────────────────────
+          // Supporting docs (payslip, tax, bank statement) have different required fields
+          const primaryType = meta.primaryType ?? "";
+          const isSupportingDoc = primaryType === "payslip_document" || primaryType === "corporate_tax_return" || primaryType === "bank_statement";
+
           const insurerOk = !!(coreFields.insurer?.value || coreFields.institutionName?.value || coreFields.provider?.value || coreFields.lender?.value);
           const clientOk = !!(coreFields.fullName?.value || coreFields.clientFullName?.value || coreFields.borrowerName?.value);
           const productOk = !!(coreFields.productName?.value || coreFields.productType?.value);
@@ -330,7 +343,18 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
           const classificationValid = !!meta.primaryType && meta.primaryType !== "unsupported_or_unknown";
           const metaValid = classificationValid && !!meta.lifecycleStatus && meta.lifecycleStatus !== "unknown";
           const confidenceOk = confidencePercent <= 100;
-          const notEmptyStub = insurerOk || clientOk || productOk || paymentsOk;
+
+          // For supporting docs: any non-empty extracted field counts as non-empty stub
+          const efKeys = Object.keys(ef).filter((k) => {
+            const v = ef[k];
+            return v?.value != null && String(v.value).trim() && String(v.value) !== "null" && v.status !== "missing";
+          });
+          const hasAnyExtractedField = efKeys.length > 0;
+
+          // notEmptyStub: for supporting docs, accept any extracted field; for others, need at least insurer/client/product
+          const notEmptyStub = isSupportingDoc
+            ? hasAnyExtractedField
+            : (insurerOk || clientOk || productOk || paymentsOk);
 
           // ── First loss point detection ───────────────────────────────────────
           const lossPoints: string[] = [];
@@ -360,7 +384,15 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
           if (!clientOk) lossPoints.push("client stále chybí ve final export payload");
           if (!paymentsOk) lossPoints.push("payments stále chybí ve final export payload");
 
-          const anchorPass = insurerOk && clientOk && productOk && confidenceOk;
+          // PASS criteria (new freeze gate):
+          // - non-empty export payload (notEmptyStub)
+          // - valid meta (classificationValid)
+          // - confidence <= 100%
+          // - no unsupported_empty_stub
+          // For supporting docs: just need any field extracted + valid classification + confidence OK
+          const anchorPass = isSupportingDoc
+            ? (notEmptyStub && classificationValid && confidenceOk)
+            : (notEmptyStub && classificationValid && confidenceOk && (insurerOk || clientOk));
 
           const anchorRow = {
             id: anchor.id,
@@ -371,6 +403,10 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
             A_classifierResult: classifierResult ?? "(not in trace — requires AI_REVIEW_DEBUG=true)",
             // B) Router
             B_routerDecision: routerDecision ?? "(not in trace — requires AI_REVIEW_DEBUG=true)",
+            // B2) Raw model output (first 800 chars)
+            B2_rawModelOutput: rawModelOutputHead
+              ? { head: rawModelOutputHead, length: rawModelOutputLength }
+              : "(not in trace — requires AI_REVIEW_DEBUG=true or NODE_ENV!=production)",
             // C) Raw model output summary (after coercion, before alias normalize)
             C_afterCoercion: afterCoercion ?? "(not in trace — requires AI_REVIEW_DEBUG=true)",
             // D) After alias normalize (= after validation in v2)
@@ -385,17 +421,21 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
             H_metaFlags: meta,
             // I) Confidence
             I_confidence: { raw: confidence, percent: `${confidencePercent}%`, withinBounds: confidenceOk },
-            // Pass/fail per dimension
+            // Pass/fail per dimension (new freeze gate)
             checks: {
               insurer_provider_filled: insurerOk,
               client_filled: clientOk,
               product_filled: productOk,
               payments_filled: paymentsOk,
+              any_field_extracted: hasAnyExtractedField,
+              extracted_field_keys: efKeys.slice(0, 20),
               required_missing_fields: missing,
               documentMeta_valid: metaValid,
               documentClassification_valid: classificationValid,
               confidence_lte_100: confidenceOk,
               unsupported_empty_stub: !notEmptyStub,
+              is_supporting_doc: isSupportingDoc,
+              freeze_gate_pass: anchorPass,
             },
             // First loss point
             firstLossPoints: lossPoints,

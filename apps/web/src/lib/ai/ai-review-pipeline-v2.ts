@@ -736,8 +736,12 @@ export async function runAiReviewV2Pipeline(
         ? options.preprocessMeta.ocrConfidenceEstimate
         : undefined;
 
+  // Lower threshold for pdf_parse_fallback: 400 chars sufficient when input mode is inferred from preprocess
+  const combinedMinHint = inputModeResult.extractionWarnings.includes("input_mode_inferred_from_pdf_parse_fallback")
+    ? 400
+    : COMBINED_CLASSIFY_AND_EXTRACT_MIN_HINT_CHARS;
   const allowCombinedSingleCall =
-    documentTextForExtraction.length >= COMBINED_CLASSIFY_AND_EXTRACT_MIN_HINT_CHARS &&
+    documentTextForExtraction.length >= combinedMinHint &&
     inputModeResult.inputMode === "text_pdf" &&
     inputModeResult.extractionMode === "text";
 
@@ -753,6 +757,14 @@ export async function runAiReviewV2Pipeline(
         sectionTexts: options?.bundleSectionTexts ?? null,
       });
       trace.extractionDurationMs = Date.now() - combinedStart;
+
+      // Store raw model output for debug trace (combined path)
+      if (isAiReviewPipelineDebug() || process.env.NODE_ENV !== "production") {
+        if (!trace.debugTrace) trace.debugTrace = {} as Record<string, unknown>;
+        (trace.debugTrace as Record<string, unknown>).rawModelOutputHead = combined.raw.slice(0, 800);
+        (trace as Record<string, unknown>).rawModelOutputHead = combined.raw.slice(0, 800);
+        (trace as Record<string, unknown>).rawModelOutputLength = combined.raw.length;
+      }
 
       const combinedClassification = classificationFromEnvelope(combined.envelope);
       const combinedDocumentType = combinedClassification.primaryType;
@@ -1102,7 +1114,13 @@ export async function runAiReviewV2Pipeline(
   }
 
   const modeEarly = inputModeResult.extractionMode as string;
-  const isScanFallbackEarly = modeEarly === "vision_fallback" || modeEarly === "ocr_enhanced";
+  // vision_fallback coming from a detectInputMode exception (inputMode=unsupported) is NOT a real scan.
+  // Only treat as scan/OCR gate when inputMode is an actual scan/image type, not when detection failed.
+  const inputModeIsActualScan =
+    inputModeResult.inputMode === "scanned_pdf" ||
+    inputModeResult.inputMode === "mixed_pdf" ||
+    inputModeResult.inputMode === "image_document";
+  const isScanFallbackEarly = (modeEarly === "vision_fallback" || modeEarly === "ocr_enhanced") && inputModeIsActualScan;
   if (
     promptKey !== "paymentInstructionsExtraction" &&
     shouldSkipContractLlmExtractionForScanOcr({
@@ -1247,7 +1265,10 @@ export async function runAiReviewV2Pipeline(
   let documentType = effectivePrimary;
   trace.selectedSchema = documentType;
   const mode = inputModeResult.extractionMode as string;
-  const isScanFallback = mode === "vision_fallback" || mode === "ocr_enhanced";
+  // Only treat as scan fallback when inputMode is an actual scan/image type.
+  // vision_fallback from a detectInputMode exception (inputMode=unsupported) must still attempt file-based extraction.
+  const isScanFallback =
+    (mode === "vision_fallback" || mode === "ocr_enhanced") && inputModeIsActualScan;
 
   // Build bundle context for schema-level extraction rules when section texts are available
   const schemaBundleContext: SchemaPromptBundleContext | null = options?.bundleHint?.isBundle
@@ -1424,6 +1445,12 @@ export async function runAiReviewV2Pipeline(
     };
   }
   trace.extractionDurationMs = Date.now() - extStart;
+
+  // Store raw model output in trace for anchor-debug-runner and diagnostics
+  if (isAiReviewPipelineDebug() || process.env.NODE_ENV !== "production") {
+    (trace as Record<string, unknown>).rawModelOutputHead = rawExtraction.slice(0, 800);
+    (trace as Record<string, unknown>).rawModelOutputLength = rawExtraction.length;
+  }
 
   rawExtraction = maybeRewriteInsuranceProposalExtractionRaw(rawExtraction, {
     promptKey,

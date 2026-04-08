@@ -564,6 +564,220 @@ const NONLIFE_PRIMARY_TYPES = new Set<string>([
   "precontract_information",
 ]);
 
+/** Amendment/change/service docs and proposal docs — all nested formats that can have insurer/client/ref */
+const AMENDMENT_PROPOSAL_PRIMARY_TYPES = new Set<string>([
+  "insurance_policy_change_or_service_doc",
+  "life_insurance_modelation",
+  "life_insurance_investment_contract",
+  "life_insurance_contract",
+  "life_insurance_proposal",
+  "nonlife_insurance_contract",
+  "liability_insurance_offer",
+  "precontract_information",
+]);
+
+/** Supporting documents: payslip, tax return, bank statement */
+const SUPPORTING_DOC_PRIMARY_TYPES = new Set<string>([
+  "payslip_document",
+  "corporate_tax_return",
+  "bank_statement",
+]);
+
+/**
+ * Flatten amendment/change/service/proposal responses that may use varied key names.
+ * Ensures insurer/provider, client fullName, contract/policy reference, and payment fields
+ * propagate into extractedFields regardless of how the LLM named them.
+ */
+function flattenAmendmentProposalFields(
+  parsed: Record<string, unknown>,
+  ef: Record<string, Record<string, unknown>>,
+): void {
+  // Insurer / provider aliases (many stored prompts use different keys)
+  const insurerAliases = [
+    "insurer", "institutionName", "provider", "pojistovna", "pojistitel",
+    "insurance_company", "insuranceCompany", "company", "contractingParty",
+  ];
+  if (!ef.insurer && !ef.institutionName && !ef.provider) {
+    for (const alias of insurerAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.insurer = normalizeExtractedFieldCell("insurer", v);
+        break;
+      } else if (v && typeof v === "object" && !Array.isArray(v)) {
+        const inner = (v as Record<string, unknown>).value ?? (v as Record<string, unknown>).name;
+        if (typeof inner === "string" && inner.trim()) {
+          ef.insurer = normalizeExtractedFieldCell("insurer", inner);
+          break;
+        }
+      }
+    }
+  }
+
+  // Client fullName aliases
+  const clientAliases = [
+    "fullName", "clientFullName", "clientName", "client_full_name",
+    "pojistník", "jméno", "name", "jmeno", "policyholder",
+  ];
+  if (!ef.fullName && !ef.clientFullName) {
+    for (const alias of clientAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.fullName = normalizeExtractedFieldCell("fullName", v);
+        break;
+      }
+    }
+    // Also check nested client block
+    const clientBlock = parsed.client ?? parsed.pojistnik;
+    if (!ef.fullName && !ef.clientFullName && clientBlock && typeof clientBlock === "object" && !Array.isArray(clientBlock)) {
+      const cb = clientBlock as Record<string, unknown>;
+      const name = cb.fullName ?? cb.full_name ?? cb.name ?? cb.jmeno;
+      if (typeof name === "string" && name.trim()) {
+        ef.fullName = normalizeExtractedFieldCell("fullName", name);
+      }
+    }
+  }
+
+  // Contract/policy/proposal reference aliases
+  const contractAliases = [
+    "contractNumber", "contract_number", "policyNumber", "policy_number",
+    "proposalNumber", "proposal_number", "cisloSmlouvy", "cisloPojistky",
+    "existingPolicyNumber", "existingContractNumber", "existingContract",
+    "referenceNumber", "cisloNavrhu",
+  ];
+  if (!ef.contractNumber && !ef.proposalNumber && !ef.existingPolicyNumber) {
+    for (const alias of contractAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.contractNumber = normalizeExtractedFieldCell("contractNumber", v);
+        break;
+      } else if (v && typeof v === "object" && !Array.isArray(v)) {
+        const inner = (v as Record<string, unknown>).value;
+        if (typeof inner === "string" && inner.trim()) {
+          ef.contractNumber = normalizeExtractedFieldCell("contractNumber", inner);
+          break;
+        }
+      }
+    }
+  }
+
+  // Payment / premium amount aliases
+  const paymentAliases = [
+    "totalMonthlyPremium", "total_monthly_premium", "monthlyPremium",
+    "annualPremium", "annual_premium", "premiumAmount", "premium_amount",
+    "mesicniPojistne", "pojistne", "castka",
+  ];
+  if (!ef.totalMonthlyPremium && !ef.annualPremium && !ef.premiumAmount) {
+    for (const alias of paymentAliases) {
+      const v = parsed[alias];
+      if (v != null && String(v).trim() && String(v) !== "null") {
+        ef.totalMonthlyPremium = normalizeExtractedFieldCell("totalMonthlyPremium", v);
+        break;
+      }
+    }
+  }
+
+  // productName aliases
+  const productAliases = [
+    "productName", "product_name", "nazevProduktu", "pojisteniNazev",
+    "insuranceName", "insuranceType", "changeType", "serviceType",
+  ];
+  if (!ef.productName) {
+    for (const alias of productAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.productName = normalizeExtractedFieldCell("productName", v);
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Flatten supporting doc responses (payslip, tax return, bank statement).
+ * These docs MUST return a best-effort summary with at least employer/employee name,
+ * income fields, or tax period — never empty.
+ */
+function flattenSupportingDocFields(
+  parsed: Record<string, unknown>,
+  ef: Record<string, Record<string, unknown>>,
+): void {
+  // Payslip specific
+  const employerAliases = ["employer", "employerName", "zamestnavatel", "company", "companyName", "employer_name"];
+  if (!ef.employer) {
+    for (const alias of employerAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.employer = normalizeExtractedFieldCell("employer", v);
+        break;
+      }
+    }
+  }
+  const employeeAliases = ["employee", "employeeName", "zamestnanec", "fullName", "workerName", "employee_name"];
+  if (!ef.employee && !ef.fullName) {
+    for (const alias of employeeAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.employee = normalizeExtractedFieldCell("employee", v);
+        break;
+      }
+    }
+  }
+  const grossAliases = ["grossIncome", "grossWage", "grossPay", "hrubazmda", "hrubaMzda", "gross_income", "gross_pay"];
+  if (!ef.grossIncome && !ef.grossWage) {
+    for (const alias of grossAliases) {
+      const v = parsed[alias];
+      if (v != null && String(v).trim() && String(v) !== "null") {
+        ef.grossIncome = normalizeExtractedFieldCell("grossIncome", v);
+        break;
+      }
+    }
+  }
+  const netAliases = ["netIncome", "netWage", "netPay", "cistaMzda", "cistamzda", "net_income", "net_pay"];
+  if (!ef.netIncome && !ef.netWage) {
+    for (const alias of netAliases) {
+      const v = parsed[alias];
+      if (v != null && String(v).trim() && String(v) !== "null") {
+        ef.netIncome = normalizeExtractedFieldCell("netIncome", v);
+        break;
+      }
+    }
+  }
+
+  // Tax return specific
+  const taxPeriodAliases = ["taxPeriod", "tax_period", "zdanovacíObdobí", "zdaňovacíObdobí", "obdobi", "taxYear", "year"];
+  if (!ef.taxPeriod && !ef.taxYear) {
+    for (const alias of taxPeriodAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.taxPeriod = normalizeExtractedFieldCell("taxPeriod", v);
+        break;
+      }
+    }
+  }
+  const taxPayerAliases = ["taxpayerName", "companyName", "nazevFirmy", "jmeno", "fullName", "taxpayer_name"];
+  if (!ef.taxpayerName && !ef.fullName) {
+    for (const alias of taxPayerAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.taxpayerName = normalizeExtractedFieldCell("taxpayerName", v);
+        break;
+      }
+    }
+  }
+
+  // Supporting doc summary — if LLM returned a summary field, always preserve it
+  const summaryAliases = ["summary", "documentSummary", "shrnutí", "popis", "description"];
+  if (!ef.documentSummary && !ef.summary) {
+    for (const alias of summaryAliases) {
+      const v = parsed[alias];
+      if (typeof v === "string" && v.trim()) {
+        ef.documentSummary = normalizeExtractedFieldCell("documentSummary", v);
+        break;
+      }
+    }
+  }
+}
+
 /**
  * Infer insuredObject for non-life insurance documents when model omitted it.
  * GČP odpovědnost case: if product/text clearly mentions liability/odpovědnost, infer from productName.
@@ -637,8 +851,23 @@ export function tryCoerceReviewEnvelopeAfterValidationFailure(
     flattenLegacyLeasingNestedFields(draft, mergedEf);
   }
 
+  // For amendment/change/proposal/service docs: flatten insurer, client, contract ref, payments
+  // This covers cases where LLM used different key names than canonical extractedFields.
+  if (
+    AMENDMENT_PROPOSAL_PRIMARY_TYPES.has(forcedPrimaryType) ||
+    forcedPrimaryType === "insurance_policy_change_or_service_doc"
+  ) {
+    flattenAmendmentProposalFields(draft, mergedEf);
+  }
+
+  // For supporting docs (payslip, tax return, bank statement): flatten to ensure non-empty export
+  if (SUPPORTING_DOC_PRIMARY_TYPES.has(forcedPrimaryType)) {
+    flattenSupportingDocFields(draft, mergedEf);
+  }
+
   // For non-life insurance: infer insuredObject when missing (GČP odpovědnost case)
   if (NONLIFE_PRIMARY_TYPES.has(forcedPrimaryType)) {
+    flattenAmendmentProposalFields(draft, mergedEf); // also run amendment flatten for GČP
     inferInsuredObjectForNonlife(mergedEf);
   }
 
@@ -693,19 +922,49 @@ export function mergePartialParsedIntoManualStub(
   }
 
   const rootCandidates = collectTopLevelFieldCandidates(parsed);
+  const mergedEf: Record<string, Record<string, unknown>> = {};
+
   for (const [k, v] of Object.entries(rootCandidates)) {
-    stub.extractedFields[k] = v as DocumentReviewEnvelope["extractedFields"][string];
-    mergedFieldKeys.push(k);
+    mergedEf[k] = v;
   }
 
   const ef = parsed.extractedFields;
   if (ef && typeof ef === "object" && !Array.isArray(ef)) {
     for (const [k, v] of Object.entries(ef as Record<string, unknown>)) {
       if (k.startsWith("_")) continue;
-      if (mergedFieldKeys.includes(k)) continue;
-      stub.extractedFields[k] = normalizeExtractedFieldCell(k, v) as DocumentReviewEnvelope["extractedFields"][string];
-      mergedFieldKeys.push(k);
+      if (mergedEf[k]) continue;
+      mergedEf[k] = normalizeExtractedFieldCell(k, v);
     }
+  }
+
+  // Apply domain-specific flatten based on stub's detected document type
+  const stubPrimary = stub.documentClassification?.primaryType ?? "";
+  if (AMENDMENT_PROPOSAL_PRIMARY_TYPES.has(stubPrimary) || stubPrimary === "insurance_policy_change_or_service_doc") {
+    flattenAmendmentProposalFields(parsed, mergedEf);
+  }
+  if (SUPPORTING_DOC_PRIMARY_TYPES.has(stubPrimary)) {
+    flattenSupportingDocFields(parsed, mergedEf);
+  }
+  if (LOAN_MORTGAGE_PRIMARY_TYPES.has(stubPrimary)) {
+    flattenLegacyLoanNestedFields(parsed, mergedEf);
+  }
+  if (
+    stubPrimary === "investment_subscription_document" ||
+    stubPrimary === "investment_service_agreement" ||
+    stubPrimary === "investment_modelation" ||
+    stubPrimary === "pension_contract"
+  ) {
+    flattenLegacyInvestmentNestedFields(parsed, mergedEf);
+  }
+  if (NONLIFE_PRIMARY_TYPES.has(stubPrimary)) {
+    flattenAmendmentProposalFields(parsed, mergedEf);
+    inferInsuredObjectForNonlife(mergedEf);
+  }
+
+  // Write merged fields into stub
+  for (const [k, v] of Object.entries(mergedEf)) {
+    stub.extractedFields[k] = v as DocumentReviewEnvelope["extractedFields"][string];
+    mergedFieldKeys.push(k);
   }
 
   const parties = parsed.parties;

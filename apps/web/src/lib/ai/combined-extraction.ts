@@ -452,7 +452,8 @@ export async function runCombinedClassifyAndExtract(params: {
     const efKeys = ef && typeof ef === "object" ? Object.keys(ef as object).slice(0, 5) : [];
     const topKeys = Object.keys(withMeta as object).slice(0, 10);
     const dcKeys = dc && typeof dc === "object" ? Object.keys(dc as object).slice(0, 10) : [];
-    console.info("[combined-extraction] raw model classification:", { primaryType: pt, dcKeys, efKeysHead: efKeys, topKeys, rawHead: rawText.slice(0, 600) });
+    const efSample = ef && typeof ef === "object" ? Object.fromEntries(Object.entries(ef as object).slice(0, 2)) : {};
+    console.info("[combined-extraction] raw model classification:", { primaryType: pt, dcKeys, efKeysHead: efKeys, efSample, topKeys, rawHead: rawText.slice(0, 300) });
   }
 
   // First attempt: strict Zod parse
