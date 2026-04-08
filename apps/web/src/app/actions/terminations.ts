@@ -1700,7 +1700,10 @@ export async function extractTerminationFieldsFromDocumentAction(
   if (!isTerminationsModuleEnabledOnServer()) {
     return { ok: false, error: "Modul výpovědí je vypnutý." };
   }
-  if (!hasPermission(auth.roleName as RoleName, "documents:read")) {
+  if (
+    !hasPermission(auth.roleName as RoleName, "documents:read") &&
+    !hasPermission(auth.roleName as RoleName, "documents:write")
+  ) {
     return { ok: false, error: "Forbidden" };
   }
 

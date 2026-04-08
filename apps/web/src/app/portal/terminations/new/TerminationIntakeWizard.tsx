@@ -55,7 +55,16 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "manual_review_other", label: "Jiný důvod / ruční posouzení" },
 ];
 
-const STEP_LABELS = ["Pojišťovna a smlouva", "Režim a termín", "Dokončit výstup"] as const;
+const STEP_LABELS = ["Instituce a smlouva", "Režim a termín", "Dokončit výstup"] as const;
+
+const TERMINATION_FIELD_CLASS =
+  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
+const TERMINATION_LABEL_CLASS = "mb-2 block text-xs font-medium text-slate-600";
+const TERMINATION_TEXTAREA_CLASS =
+  "min-h-[104px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
+const TERMINATION_DATE_INPUT_CLASS =
+  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
+const TERMINATION_DATE_LABEL_CLASS = "mb-2 block text-xs font-medium text-slate-600";
 
 type Props = {
   prefill: TerminationWizardPrefill;
@@ -400,28 +409,26 @@ export function TerminationIntakeWizard({
         return;
       }
       const updates: string[] = [];
-      if (extracted.contractNumber && !contractNumber.trim()) {
+      if (extracted.contractNumber) {
         setContractNumber(extracted.contractNumber);
         updates.push("číslo smlouvy");
       }
-      if (extracted.policyholderName && !clientQuery.trim()) {
+      if (extracted.policyholderName) {
         setClientQuery(extracted.policyholderName);
         updates.push("pojistník");
       }
       if (extracted.insurerNameOrAddressText) {
-        if (!insurerQuery.trim()) {
-          setInsurerQuery(extracted.insurerNameOrAddressText);
-        }
-        // Try registry search
+        setInsurerQuery(extracted.insurerNameOrAddressText);
+        updates.push("název instituce z dokumentu");
         const regRes = await searchTerminationInsurerRegistryAction(extracted.insurerNameOrAddressText);
         if (regRes.ok && regRes.items.length === 1) {
           const hit = regRes.items[0]!;
           setSelectedInsurerRegistryId(hit.id);
           setInsurerQuery(hit.insurerName);
           setRegistryDeliveryMeta({ addressLine: hit.addressLine, channelHint: hit.channelHint });
-          updates.push("pojišťovna z registru");
-        } else if (!insurerQuery.trim()) {
-          updates.push("název pojišťovny");
+          updates.push("adresa z registru");
+        } else if (regRes.ok && regRes.items.length > 1) {
+          updates.push("více shod v registru — vyberte instituci ručně");
         }
       }
       setAiExtractMsg(
@@ -470,7 +477,7 @@ export function TerminationIntakeWizard({
       return;
     }
     if (!insurerQuery.trim()) {
-      setError("Vyplňte název pojišťovny před dokončením, nebo použijte „Uložit rozepsané“.");
+      setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané“.");
       return;
     }
 
@@ -490,7 +497,7 @@ export function TerminationIntakeWizard({
   const contextBanner = useMemo(() => {
     if (prefill.mode === "crm") {
       return (
-        <p className="text-sm text-[color:var(--wp-text-secondary)]">
+        <p className="text-sm text-slate-500">
           Kontext: smlouva z CRM
           {prefill.contactLabel ? ` · klient ${prefill.contactLabel}` : ""}
           {prefill.contractId ? ` · smlouva ${prefill.contractId.slice(0, 8)}…` : ""}
@@ -499,14 +506,14 @@ export function TerminationIntakeWizard({
     }
     if (prefill.mode === "contact_only") {
       return (
-        <p className="text-sm text-[color:var(--wp-text-secondary)]">
+        <p className="text-sm text-slate-500">
           Kontext: klient bez vybrané smlouvy
           {prefill.contactLabel ? ` · ${prefill.contactLabel}` : ""} – doplňte údaje nebo nahrajte dokument.
         </p>
       );
     }
     return (
-      <p className="text-sm text-[color:var(--wp-text-secondary)]">
+      <p className="text-sm text-slate-500">
         Kontext: obecný intak – zvažte vybrat klienta v kontaktech pro předvyplnění.
       </p>
     );
@@ -514,7 +521,7 @@ export function TerminationIntakeWizard({
 
   const aiBanner =
     sourceFromAi ? (
-      <p className="text-sm text-indigo-900 bg-indigo-50 border border-indigo-200 rounded-[var(--wp-radius)] px-3 py-2">
+      <p className="text-sm text-indigo-900 bg-indigo-50 border border-indigo-200 rounded-2xl px-3 py-2">
         Otevřeno z AI asistenta – žádost bude označena zdrojem „ai_chat“. Ověřte údaje a výsledek pravidel.
       </p>
     ) : null;
@@ -536,9 +543,11 @@ export function TerminationIntakeWizard({
   const sourceFooterLabel =
     sourceKind === "crm_contract"
       ? "CRM smlouva"
-      : sourceDocumentId.trim()
-        ? "Nahraná / odkazovaná smlouva"
-        : sourceFromAi
+      : sourceCard === "upload" && sourceDocumentId.trim()
+        ? "Nahraná smlouva"
+        : sourceDocumentId.trim()
+          ? "Nahraná / odkazovaná smlouva"
+          : sourceFromAi
           ? "AI asistent"
           : sourceQuick
             ? "Rychlá akce"
@@ -547,14 +556,14 @@ export function TerminationIntakeWizard({
   if (result) {
     const { rules, requestId } = result;
     return (
-      <div className="mx-auto max-w-2xl space-y-6 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-[color:var(--wp-text)]">Žádost uložena</h1>
-        <p className="text-sm text-[color:var(--wp-text-secondary)]">
+      <div className="mx-auto max-w-2xl space-y-6 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <h1 className="text-xl font-semibold text-slate-900">Žádost uložena</h1>
+        <p className="text-sm text-slate-500">
           ID žádosti: <span className="font-mono">{requestId}</span>
         </p>
         <div
           className={cx(
-            "rounded-[var(--wp-radius)] border p-4 text-sm",
+            "rounded-2xl border p-4 text-sm",
             rules.outcome === "hard_fail" && "border-red-200 bg-red-50 text-red-900",
             rules.outcome === "review_required" && "border-amber-200 bg-amber-50 text-amber-950",
             rules.outcome === "awaiting_data" && "border-indigo-200 bg-indigo-50 text-indigo-950",
@@ -589,35 +598,35 @@ export function TerminationIntakeWizard({
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-[color:var(--wp-text)]">Náhled dokumentu</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Náhled dokumentu</h2>
           <TerminationLetterPreviewPanel requestId={requestId} />
         </div>
 
         <div className="flex flex-wrap gap-3">
           <Link
             href={`/portal/terminations/${requestId}`}
-            className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
+            className="rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
           >
             Detail žádosti
           </Link>
           {contactId ? (
             <Link
               href={`/portal/contacts/${contactId}`}
-              className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
+              className="rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
             >
               Zpět na kontakt
             </Link>
           ) : (
             <Link
               href="/portal/contacts"
-              className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
+              className="rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
             >
               Na kontakty
             </Link>
           )}
           <Link
             href="/portal/terminations/new"
-            className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 py-2.5 text-sm font-semibold min-h-[44px] inline-flex items-center"
+            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold min-h-[44px] inline-flex items-center"
           >
             Nová žádost
           </Link>
@@ -637,24 +646,24 @@ export function TerminationIntakeWizard({
             type="button"
             onClick={() => setWizardStep(index)}
             className={cx(
-              "rounded-[var(--wp-radius)] border px-4 py-3 text-left transition min-h-[44px]",
-              active && "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm",
+              "rounded-2xl border px-4 py-3 text-left transition min-h-[44px]",
+              active && "border-violet-200 bg-violet-50 shadow-sm",
               done && "border-emerald-200 bg-emerald-50",
-              !active && !done && "border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] hover:border-[var(--wp-accent)]/40",
+              !active && !done && "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
             )}
           >
             <div className="flex items-center gap-3">
               <div
                 className={cx(
                   "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shrink-0",
-                  active && "bg-[var(--wp-accent)] text-white",
+                  active && "bg-violet-600 text-white",
                   done && "bg-emerald-500 text-white",
-                  !active && !done && "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                  !active && !done && "bg-slate-100 text-slate-600",
                 )}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
               </div>
-              <div className="text-sm font-semibold text-[color:var(--wp-text)]">{label}</div>
+              <div className="text-sm font-semibold text-slate-900">{label}</div>
             </div>
           </button>
         );
@@ -665,14 +674,14 @@ export function TerminationIntakeWizard({
   const contactDocsHref = contactId ? `/portal/contacts/${contactId}?tab=dokumenty` : "/portal/contacts/new";
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-24">
+    <div className="mx-auto max-w-6xl space-y-6 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[color:var(--wp-text)] md:text-2xl">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
             Výpověď smlouvy
           </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[color:var(--wp-text-secondary)]">
-            Vyberte klienta, pojišťovnu a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Vyberte klienta, instituci a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
           </p>
           {contextBanner}
           {aiBanner}
@@ -695,23 +704,23 @@ export function TerminationIntakeWizard({
       ) : null}
 
       {partialRequestId ? (
-        <p className="text-xs text-[color:var(--wp-text-secondary)] font-mono">Koncept: {partialRequestId}</p>
+        <p className="text-xs text-slate-500 font-mono">Koncept: {partialRequestId}</p>
       ) : null}
 
       {partialSavedOk ? (
-        <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-[var(--wp-radius)] px-3 py-2">
+        <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2">
           {partialSavedOk}
         </p>
       ) : null}
 
       {!canWrite ? (
-        <p className="rounded-[var(--wp-radius)] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           Nemáte oprávnění vytvářet žádosti (potřebná role s úpravou kontaktů).
         </p>
       ) : null}
 
       {previewGapMessages.length > 0 ? (
-        <div className="rounded-[var(--wp-radius)] border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-xs font-semibold text-amber-900 mb-1">Chybějící údaje</p>
           <ul className="list-disc pl-4 space-y-0.5">
             {previewGapMessages.map((m) => (
@@ -721,10 +730,28 @@ export function TerminationIntakeWizard({
         </div>
       ) : null}
 
+      {uploadError ? (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          Nahrání dokumentu: {uploadError}
+        </p>
+      ) : null}
+      {aiExtractMsg ? (
+        <p
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            aiExtractMsg.startsWith("AI extrakce selhala")
+              ? "border-amber-200 bg-amber-50 text-amber-950"
+              : "border-emerald-200 bg-emerald-50 text-emerald-900"
+          }`}
+          role="status"
+        >
+          {aiExtractMsg}
+        </p>
+      ) : null}
+
       {stepper}
 
       <form onSubmit={onSubmit} className="space-y-6">
-        <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm sm:p-8">
+        <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
           {wizardStep === 0 ? (
             <div className="space-y-6">
               <div className="grid gap-3 md:grid-cols-3">
@@ -733,25 +760,25 @@ export function TerminationIntakeWizard({
                   disabled={prefill.mode !== "crm"}
                   onClick={() => setSourceCard("crm")}
                   className={cx(
-                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
                     sourceCard === "crm"
-                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
-                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                      ? "border-violet-200 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
                     prefill.mode !== "crm" && "opacity-50 cursor-not-allowed",
                   )}
                 >
                   <div
                     className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
                       sourceCard === "crm"
-                        ? "bg-[var(--wp-accent)] text-white"
-                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                        ? "bg-violet-600 text-white"
+                        : "bg-slate-50 text-slate-500",
                     )}
                   >
                     <FileText className="h-5 w-5" />
                   </div>
-                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Vybrat z CRM</div>
-                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+                  <div className="text-sm font-semibold text-slate-900">Vybrat z CRM</div>
+                  <div className="mt-1 text-sm leading-6 text-slate-500">
                     Nejrychlejší cesta s předvyplněním údajů.
                   </div>
                 </button>
@@ -759,49 +786,49 @@ export function TerminationIntakeWizard({
                   type="button"
                   onClick={() => setSourceCard("upload")}
                   className={cx(
-                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
                     sourceCard === "upload"
-                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
-                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                      ? "border-violet-200 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
                   )}
                 >
                   <div
                     className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
                       sourceCard === "upload"
-                        ? "bg-[var(--wp-accent)] text-white"
-                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                        ? "bg-violet-600 text-white"
+                        : "bg-slate-50 text-slate-500",
                     )}
                   >
                     <Upload className="h-5 w-5" />
                   </div>
-                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Nahrát smlouvu</div>
-                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
-                    AI přečte pojišťovnu, číslo smlouvy a pojistníka.
+                  <div className="text-sm font-semibold text-slate-900">Nahrát smlouvu</div>
+                  <div className="mt-1 text-sm leading-6 text-slate-500">
+                    AI přečte instituci, číslo smlouvy a pojistníka.
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSourceCard("manual")}
                   className={cx(
-                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
                     sourceCard === "manual"
-                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
-                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                      ? "border-violet-200 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
                   )}
                 >
                   <div
                     className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
                       sourceCard === "manual"
-                        ? "bg-[var(--wp-accent)] text-white"
-                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                        ? "bg-violet-600 text-white"
+                        : "bg-slate-50 text-slate-500",
                     )}
                   >
                     <Building2 className="h-5 w-5" />
                   </div>
-                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Vyplnit ručně</div>
-                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+                  <div className="text-sm font-semibold text-slate-900">Vyplnit ručně</div>
+                  <div className="mt-1 text-sm leading-6 text-slate-500">
                     Pro cizí smlouvy nebo nový případ.
                   </div>
                 </button>
@@ -809,8 +836,9 @@ export function TerminationIntakeWizard({
 
               <div className="grid gap-6 lg:grid-cols-2">
                 <SearchCombobox
-                  label="Pojišťovna"
-                  placeholder="Začněte psát název pojišťovny…"
+                  variant="termination"
+                  label="Instituce"
+                  placeholder="Začněte psát název instituce…"
                   query={insurerQuery}
                   onQueryChange={onInsurerQueryChange}
                   items={insurerItems}
@@ -819,6 +847,7 @@ export function TerminationIntakeWizard({
                   isLoading={insurerSearchBusy}
                 />
                 <SearchCombobox
+                  variant="termination"
                   label="Klient"
                   placeholder="Vyhledejte jméno klienta…"
                   helperText="Vyberte kontakt ze seznamu."
@@ -832,32 +861,33 @@ export function TerminationIntakeWizard({
                   isLoading={clientSearchBusy}
                 />
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
-                    Číslo smlouvy
-                  </label>
+                  <label className={TERMINATION_LABEL_CLASS}>Číslo smlouvy</label>
                   <input
                     value={contractNumber}
                     onChange={(e) => setContractNumber(e.target.value)}
-                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                    className={TERMINATION_FIELD_CLASS}
                   />
                 </div>
                 <FriendlyDateInput
                   label="Počátek pojištění"
                   value={contractStartDate}
                   onChange={setContractStartDate}
+                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
                 />
               </div>
 
-              <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/50 p-4">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wp-accent)]" />
+                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
                   <div>
-                    <div className="text-sm font-semibold text-[color:var(--wp-text)]">Adresa pro odeslání</div>
-                    <div className="mt-1 text-sm text-[color:var(--wp-text)]">
-                      {deliveryAddressLine ?? "Vyberte pojišťovnu ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
+                    <div className="text-sm font-semibold text-slate-900">Adresa pro odeslání</div>
+                    <div className="mt-1 text-sm text-slate-900">
+                      {deliveryAddressLine ??
+                        "Vyberte instituci ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
                     </div>
                     {registryDeliveryMeta?.channelHint ? (
-                      <div className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">
+                      <div className="mt-2 text-xs leading-5 text-slate-500">
                         Kanál: {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
                       </div>
                     ) : null}
@@ -879,7 +909,7 @@ export function TerminationIntakeWizard({
                     }}
                   />
                   <div
-                    className="flex flex-col items-center justify-center gap-3 rounded-[var(--wp-radius)] border-2 border-dashed border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/40 p-6 cursor-pointer hover:border-[var(--wp-accent)]/50 transition"
+                    className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-6 cursor-pointer hover:border-violet-300 transition"
                     onClick={() => fileInputRef.current?.click()}
                     onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
                     role="button"
@@ -891,8 +921,8 @@ export function TerminationIntakeWizard({
                       if (f) void onFileSelected(f);
                     }}
                   >
-                    <Upload className="h-8 w-8 text-[color:var(--wp-text-secondary)]" />
-                    <div className="text-sm font-medium text-[color:var(--wp-text)]">
+                    <Upload className="h-8 w-8 text-slate-500" />
+                    <div className="text-sm font-medium text-slate-900">
                       {uploadBusy || aiExtractBusy
                         ? uploadBusy
                           ? "Nahrávám soubor…"
@@ -901,57 +931,39 @@ export function TerminationIntakeWizard({
                           ? "Soubor nahrán — klikněte pro nový"
                           : "Přetáhněte soubor nebo klikněte pro výběr"}
                     </div>
-                    <div className="text-xs text-[color:var(--wp-text-secondary)]">PDF nebo obrázek, max 20 MB</div>
+                    <div className="text-xs text-slate-500">PDF nebo obrázek, max 20 MB</div>
                   </div>
-                  {aiExtractMsg ? (
-                    <p
-                      className={`text-xs rounded-[var(--wp-radius)] px-3 py-2 ${
-                        aiExtractMsg.startsWith("AI extrakce selhala")
-                          ? "bg-amber-50 text-amber-900 border border-amber-200"
-                          : "bg-emerald-50 text-emerald-900 border border-emerald-200"
-                      }`}
-                    >
-                      {aiExtractMsg}
-                    </p>
-                  ) : null}
-                  {uploadError ? (
-                    <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-[var(--wp-radius)] px-3 py-2">
-                      {uploadError}
-                    </p>
-                  ) : null}
                   {sourceDocumentId.trim() ? (
-                    <p className="text-xs text-[color:var(--wp-text-secondary)] font-mono">
+                    <p className="text-xs text-slate-500 font-mono">
                       Dok: {sourceDocumentId.slice(0, 16)}…
                     </p>
                   ) : null}
                 </div>
               ) : (
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
-                    Identifikátor dokumentu ve vašich souborech (volitelné)
-                  </label>
+                  <label className={TERMINATION_LABEL_CLASS}>Identifikátor dokumentu ve vašich souborech (volitelné)</label>
                   <input
                     value={sourceDocumentId}
                     onChange={(e) => setSourceDocumentId(e.target.value)}
-                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px] font-mono text-xs"
+                    className={`${TERMINATION_FIELD_CLASS} font-mono text-xs`}
                     placeholder="UUID dokumentu z CRM"
                   />
                   <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                    <Link href={contactDocsHref} className="font-semibold text-[var(--wp-accent)] underline">
+                    <Link href={contactDocsHref} className="font-semibold text-violet-600 underline">
                       Otevřít dokumenty klienta
                     </Link>
                   </div>
                 </div>
               )}
 
-              <label className="flex items-center gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/30 px-4 py-3 text-sm text-[color:var(--wp-text)] cursor-pointer min-h-[44px]">
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-900 cursor-pointer min-h-[44px]">
                 <input
                   type="checkbox"
                   checked={uncertainInsurer}
                   onChange={(e) => setUncertainInsurer(e.target.checked)}
-                  className="h-4 w-4 rounded border-[color:var(--wp-border)]"
+                  className="h-4 w-4 rounded border-slate-200"
                 />
-                Nejsem si jistý pojišťovnou nebo adresou, chci to poslat do kontroly
+                Nejsem si jistý institucí nebo adresou, chci to poslat do kontroly
               </label>
             </div>
           ) : null}
@@ -959,19 +971,19 @@ export function TerminationIntakeWizard({
           {wizardStep === 1 ? (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-[color:var(--wp-text)]">Režim a termín ukončení</h2>
-                <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
+                <h2 className="text-lg font-semibold text-slate-900">Režim a termín ukončení</h2>
+                <p className="mt-1 text-sm text-slate-500">
                   Zvolte segment a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
                 </p>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">Segment</label>
+                  <label className={TERMINATION_LABEL_CLASS}>Segment</label>
                   <select
                     value={productSegment}
                     onChange={(e) => void onSegmentChange(e.target.value)}
-                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                    className={TERMINATION_FIELD_CLASS}
                   >
                     {segments.map((s) => (
                       <option key={s} value={s}>
@@ -981,13 +993,11 @@ export function TerminationIntakeWizard({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
-                    Způsob ukončení
-                  </label>
+                  <label className={TERMINATION_LABEL_CLASS}>Způsob ukončení</label>
                   <select
                     value={terminationMode}
                     onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
-                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                    className={TERMINATION_FIELD_CLASS}
                   >
                     {MODE_OPTIONS.map((m) => (
                       <option key={m.value} value={m.value}>
@@ -1000,15 +1010,23 @@ export function TerminationIntakeWizard({
                   label="Požadované datum účinnosti (volitelné)"
                   value={requestedEffectiveDate}
                   onChange={setRequestedEffectiveDate}
+                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
                 />
-                <FriendlyDateInput label="Výroční den" value={contractAnniversaryDate} onChange={setContractAnniversaryDate} />
-                <div className="lg:col-span-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[var(--wp-accent)]/5 p-4">
+                <FriendlyDateInput
+                  label="Výroční den"
+                  value={contractAnniversaryDate}
+                  onChange={setContractAnniversaryDate}
+                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                />
+                <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-violet-50 p-4">
                   <div className="flex items-start gap-3">
-                    <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wp-accent)]" />
+                    <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
                     <div>
-                      <div className="text-sm font-semibold text-[color:var(--wp-text)]">Navržené datum účinnosti (náhled)</div>
-                      <div className="mt-1 text-sm text-[color:var(--wp-text)]">{effectivePreviewLabel}</div>
-                      <div className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">
+                      <div className="text-sm font-semibold text-slate-900">Navržené datum účinnosti (náhled)</div>
+                      <div className="mt-1 text-sm text-slate-900">{effectivePreviewLabel}</div>
+                      <div className="mt-2 text-xs leading-5 text-slate-500">
                         Po dokončení žádosti dopočítá pravidla definitivní datum; u režimu ke konci období ověřte výsledek v
                         souhrnu.
                       </div>
@@ -1016,13 +1034,13 @@ export function TerminationIntakeWizard({
                   </div>
                 </div>
                 <div className="lg:col-span-2">
-                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">Přílohy</label>
+                  <label className={TERMINATION_LABEL_CLASS}>Přílohy</label>
                   <textarea
                     value={attachmentsDeclared}
                     onChange={(e) => setAttachmentsDeclared(e.target.value)}
                     placeholder="Například: kopie technického průkazu, zelená karta…"
                     rows={4}
-                    className="min-h-[104px] w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm"
+                    className={TERMINATION_TEXTAREA_CLASS}
                   />
                 </div>
               </div>
@@ -1032,13 +1050,13 @@ export function TerminationIntakeWizard({
           {wizardStep === 2 ? (
             <div className="space-y-6">
               {/* Detail fields: policyholder, place, note */}
-              <details className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)]">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] select-none">
+              <details className="rounded-2xl border border-slate-200">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900 select-none">
                   Upřesnit pojistníka a poznámku
                 </summary>
                 <div className="space-y-4 p-4 pt-2">
-                  <fieldset className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] p-3 space-y-2">
-                    <legend className="text-xs font-medium text-[color:var(--wp-text-muted)] px-1">Pojistník v dopise</legend>
+                  <fieldset className="rounded-2xl border border-slate-200 p-3 space-y-2">
+                    <legend className="text-xs font-medium text-slate-600 px-1">Pojistník v dopise</legend>
                     <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
                       <input
                         type="radio"
@@ -1064,19 +1082,19 @@ export function TerminationIntakeWizard({
                         <input
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
-                          className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                          className={TERMINATION_FIELD_CLASS}
                           placeholder="Obchodní firma"
                         />
                         <input
                           value={authorizedPersonName}
                           onChange={(e) => setAuthorizedPersonName(e.target.value)}
-                          className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                          className={TERMINATION_FIELD_CLASS}
                           placeholder="Oprávněná osoba (podpis)"
                         />
                         <input
                           value={authorizedPersonRole}
                           onChange={(e) => setAuthorizedPersonRole(e.target.value)}
-                          className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                          className={TERMINATION_FIELD_CLASS}
                           placeholder="Role (volitelné)"
                         />
                       </div>
@@ -1084,13 +1102,11 @@ export function TerminationIntakeWizard({
                   </fieldset>
 
                   <div>
-                    <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                      Místo v záhlaví dopisu (volitelné)
-                    </label>
+                    <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Místo v záhlaví dopisu (volitelné)</label>
                     <input
                       value={placeOverride}
                       onChange={(e) => setPlaceOverride(e.target.value)}
-                      className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                      className={TERMINATION_FIELD_CLASS}
                       placeholder="např. Praha"
                     />
                   </div>
@@ -1100,26 +1116,28 @@ export function TerminationIntakeWizard({
                       label="Datum oznámení / pojistné události (volitelné)"
                       value={claimEventDate}
                       onChange={setClaimEventDate}
+                      inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                      labelClassName={TERMINATION_DATE_LABEL_CLASS}
                     />
                   ) : null}
 
                   <div>
-                    <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+                    <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>
                       Interní poznámka pro kontrolu (volitelné)
                     </label>
                     <textarea
                       value={advisorNoteForReview}
                       onChange={(e) => setAdvisorNoteForReview(e.target.value)}
                       rows={3}
-                      className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm"
-                      placeholder="Viditelné v náhledu, ne v textu dopisu vůči pojišťovně."
+                      className={TERMINATION_TEXTAREA_CLASS}
+                      placeholder="Viditelné v náhledu, ne v textu dopisu vůči instituci."
                     />
                   </div>
                 </div>
               </details>
 
               {previewSyncBusy ? (
-                <p className="text-xs text-[color:var(--wp-text-secondary)]">Aktualizuji náhled…</p>
+                <p className="text-xs text-slate-500">Aktualizuji náhled…</p>
               ) : null}
 
               {partialRequestId ? (
@@ -1140,7 +1158,7 @@ export function TerminationIntakeWizard({
                   }}
                 />
               ) : (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center text-sm text-[color:var(--wp-text-secondary)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
                   {previewSyncBusy ? "Připravuji koncept pro náhled…" : "Náhled bude k dispozici po uložení konceptu."}
                 </div>
               )}
@@ -1154,13 +1172,13 @@ export function TerminationIntakeWizard({
           </p>
         ) : null}
 
-        <div className="sticky bottom-0 z-10 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-5 py-4 shadow-md">
-          <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-[color:var(--wp-text-secondary)]">
-            <span className="rounded-full bg-[var(--wp-accent)]/10 px-3 py-1 font-medium text-[var(--wp-accent)]">
+        <div className="mt-6 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <span className="rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700">
               {sourceFooterLabel}
             </span>
             <span>
-              {wizardStep === 2 ? "Finální náhled před odesláním pravidel." : "Vyplňte údaje a pokračujte na další krok."}
+              {wizardStep === 2 ? "Toto je finální náhled před exportem." : "Vyplňte údaje a pokračujte na další krok."}
             </span>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1169,32 +1187,32 @@ export function TerminationIntakeWizard({
                 type="button"
                 disabled={wizardStep === 0}
                 onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-medium text-[color:var(--wp-text)] min-h-[44px] disabled:opacity-40"
+                className="h-11 min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
                 Zpět
               </button>
               {contactId ? (
                 <Link
                   href={`/portal/contacts/${contactId}`}
-                  className="inline-flex h-11 items-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px]"
+                  className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
                 >
                   Zrušit
                 </Link>
               ) : (
                 <Link
                   href="/portal/today"
-                  className="inline-flex h-11 items-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px]"
+                  className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
                 >
                   Zrušit
                 </Link>
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               <button
                 type="button"
                 disabled={!canWrite || isPending}
                 onClick={() => void onSavePartial()}
-                className="h-11 rounded-[var(--wp-radius)] border border-[var(--wp-accent)] bg-transparent px-4 text-sm font-semibold text-[var(--wp-accent)] min-h-[44px] disabled:opacity-50"
+                className="h-11 min-h-[44px] rounded-2xl border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 disabled:opacity-50"
               >
                 {isPending ? "Ukládám…" : "Uložit rozepsané"}
               </button>
@@ -1202,7 +1220,7 @@ export function TerminationIntakeWizard({
                 <button
                   type="button"
                   onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
-                  className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px]"
+                  className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20"
                 >
                   Další krok
                   <ChevronRight className="h-4 w-4" />
@@ -1212,9 +1230,9 @@ export function TerminationIntakeWizard({
                 <button
                   type="submit"
                   disabled={!canWrite || isPending}
-                  className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
+                  className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
                 >
-                  Dokončit a vyhodnotit pravidla
+                  Exportovat PDF
                   <ChevronRight className="h-4 w-4" />
                 </button>
               ) : null}

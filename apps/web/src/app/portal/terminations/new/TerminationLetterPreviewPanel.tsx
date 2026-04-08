@@ -52,6 +52,7 @@ export function TerminationLetterPreviewPanel({
   showPersistButtons = true,
   showPrintButton = true,
   suppressValidityBanner = false,
+  layout = "default",
   onBuildResult,
 }: {
   requestId: string;
@@ -61,6 +62,8 @@ export function TerminationLetterPreviewPanel({
   showPrintButton?: boolean;
   /** Skrýt žlutý seznam validityReasons uvnitř panelu (hlášky se pak posílají přes onBuildResult). */
   suppressValidityBanner?: boolean;
+  /** Režim dokončení wizardu: jen čistý dopis v kartě (bez badge, watermarku, souhrnu). */
+  layout?: "default" | "wizardFinish";
   /** Callback po úspěšném načtení výsledku buildu (pro banner nad wizardem). */
   onBuildResult?: (data: TerminationLetterBuildResult) => void;
 }) {
@@ -76,6 +79,8 @@ export function TerminationLetterPreviewPanel({
   const [coverSaved, setCoverSaved] = useState("");
   const [editSaveMsg, setEditSaveMsg] = useState<string | null>(null);
   const lastSeededRequestIdRef = useRef<string | null>(null);
+  const onBuildResultRef = useRef(onBuildResult);
+  onBuildResultRef.current = onBuildResult;
 
   useEffect(() => {
     lastSeededRequestIdRef.current = null;
@@ -95,7 +100,7 @@ export function TerminationLetterPreviewPanel({
         return;
       }
       setData(res.data);
-      onBuildResult?.(res.data);
+      onBuildResultRef.current?.(res.data);
     });
     return () => {
       cancelled = true;
@@ -117,7 +122,13 @@ export function TerminationLetterPreviewPanel({
 
   if (loading) {
     return (
-      <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)]">
+      <div
+        className={
+          layout === "wizardFinish"
+            ? "rounded-[26px] border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500"
+            : "rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)]"
+        }
+      >
         Načítám náhled dokumentu…
       </div>
     );
@@ -125,7 +136,13 @@ export function TerminationLetterPreviewPanel({
 
   if (error || !data) {
     return (
-      <div className="rounded-[var(--wp-radius)] border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <div
+        className={
+          layout === "wizardFinish"
+            ? "rounded-[26px] border border-red-200 bg-red-50 p-6 text-sm text-red-800"
+            : "rounded-[var(--wp-radius)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        }
+      >
         {error ?? "Náhled se nepodařilo načíst."}
       </div>
     );
@@ -174,6 +191,54 @@ export function TerminationLetterPreviewPanel({
     w.focus();
     w.print();
     w.close();
+  }
+
+  if (layout === "wizardFinish") {
+    const letterT = letterSaved.trim() || (letterPlainText ?? "").trim();
+    const primaryHtml = letterT ? plainTextToLetterHtml(letterT) : letterHtml ?? null;
+    const coverT = coverSaved.trim() || (coveringLetterPlainText ?? "").trim();
+    const secondaryHtml = coverT ? plainTextToLetterHtml(coverT) : coveringLetterHtml ?? null;
+    const htmlContent = primaryHtml || secondaryHtml;
+    const canPrint =
+      Boolean(htmlContent) ||
+      Boolean(officialForm) ||
+      Boolean(letterSaved.trim() && hasLetterPreview) ||
+      Boolean(letterHtml) ||
+      Boolean(coverSaved.trim() && hasCoverPreview) ||
+      Boolean(coveringLetterHtml);
+
+    return (
+      <div className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+        {htmlContent ? (
+          <div
+            className="termination-letter-html max-h-[min(640px,70vh)] overflow-y-auto text-sm leading-7 text-slate-700 [&_p]:mb-3"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
+          />
+        ) : officialForm ? (
+          <div className="space-y-3 text-sm text-slate-700">
+            <p className="text-base font-bold text-slate-950">{officialForm.title}</p>
+            <p className="whitespace-pre-wrap">{officialForm.body}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {officialForm.instructionLines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">Dopis bude vygenerován po dokončení žádosti.</p>
+        )}
+        {showPrintButton ? (
+          <button
+            type="button"
+            onClick={() => printCurrentPreview()}
+            disabled={!canPrint}
+            className="mt-4 text-xs text-slate-500 underline disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline"
+          >
+            Tisk / PDF
+          </button>
+        ) : null}
+      </div>
+    );
   }
 
   return (

@@ -58,7 +58,7 @@ export function TerminationFinishOutputLayout({ requestId, leftPanel, onBuildRes
           </div>
 
           <div className="rounded-2xl bg-slate-50 p-4">
-            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Pojišťovna</div>
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Instituce</div>
             <div className="mt-1 text-sm font-semibold text-slate-900">{leftPanel.insurerName || "—"}</div>
             {leftPanel.insurerAddress ? (
               <div className="mt-1 text-xs leading-5 text-slate-500">{leftPanel.insurerAddress}</div>
@@ -108,6 +108,7 @@ export function TerminationFinishOutputLayout({ requestId, leftPanel, onBuildRes
         <div className="min-w-0">
           <TerminationLetterPreviewPanel
             requestId={requestId}
+            layout="wizardFinish"
             suppressValidityBanner
             onBuildResult={onBuildResult}
             showPersistButtons={showPersistButtons}

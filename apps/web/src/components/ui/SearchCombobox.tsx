@@ -26,6 +26,8 @@ type Props = {
   /** Max items to show (default 4). */
   maxItems?: number;
   isLoading?: boolean;
+  /** Vizuál 1:1 s prototypem výpovědního wizardu (slate/violet). */
+  variant?: "portal" | "termination";
 };
 
 export function SearchCombobox({
@@ -40,6 +42,7 @@ export function SearchCombobox({
   disabled,
   maxItems = 4,
   isLoading,
+  variant = "portal",
 }: Props) {
   const listId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -70,14 +73,25 @@ export function SearchCombobox({
   }, [shown.length, query]);
 
   const inputClass =
-    "h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] pl-11 pr-4 text-sm text-[color:var(--wp-text)] outline-none transition placeholder:text-[color:var(--wp-text-muted)] focus:border-[var(--wp-accent)] focus:ring-2 focus:ring-[var(--wp-accent)]/20 min-h-[44px]";
+    variant === "termination"
+      ? "h-12 min-h-[44px] w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+      : "h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] pl-11 pr-4 text-sm text-[color:var(--wp-text)] outline-none transition placeholder:text-[color:var(--wp-text-muted)] focus:border-[var(--wp-accent)] focus:ring-2 focus:ring-[var(--wp-accent)]/20 min-h-[44px]";
+
+  const labelClass =
+    variant === "termination"
+      ? "mb-2 block text-sm font-medium text-slate-800"
+      : "mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]";
 
   return (
     <div ref={wrapperRef} className="relative">
-      <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">{label}</label>
+      <label className={labelClass}>{label}</label>
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wp-text-muted)]"
+          className={
+            variant === "termination"
+              ? "pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              : "pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wp-text-muted)]"
+          }
           aria-hidden
         />
         <input
@@ -126,17 +140,35 @@ export function SearchCombobox({
         />
       </div>
       {helperText ? (
-        <p className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">{helperText}</p>
+        <p
+          className={
+            variant === "termination"
+              ? "mt-2 text-xs leading-5 text-slate-500"
+              : "mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]"
+          }
+        >
+          {helperText}
+        </p>
       ) : null}
 
       {open && shown.length > 0 ? (
         <div
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[min(280px,40vh)] overflow-y-auto rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] shadow-lg"
+          className={
+            variant === "termination"
+              ? "absolute left-0 right-0 top-full z-20 mt-2 max-h-[min(280px,40vh)] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+              : "absolute left-0 right-0 top-full z-20 mt-2 max-h-[min(280px,40vh)] overflow-y-auto rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] shadow-lg"
+          }
         >
           {isLoading ? (
-            <div className="px-4 py-3 text-sm text-[color:var(--wp-text-secondary)]">Načítám…</div>
+            <div
+              className={
+                variant === "termination" ? "px-4 py-3 text-sm text-slate-500" : "px-4 py-3 text-sm text-[color:var(--wp-text-secondary)]"
+              }
+            >
+              Načítám…
+            </div>
           ) : null}
           {shown.map((item, index) => {
             const active = item.id === selectedId;
@@ -154,18 +186,49 @@ export function SearchCombobox({
                   inputRef.current?.blur();
                 }}
                 className={[
-                  "flex w-full items-start justify-between gap-3 border-b border-[color:var(--wp-border)] px-4 py-3 text-left last:border-b-0",
-                  hi ? "bg-[color:var(--wp-surface-muted)]" : "hover:bg-[color:var(--wp-surface-muted)]",
-                  active ? "bg-[var(--wp-accent)]/10" : "",
+                  "flex w-full items-start justify-between gap-3 border-b px-4 py-3 text-left last:border-b-0",
+                  variant === "termination" ? "border-slate-100" : "border-[color:var(--wp-border)]",
+                  variant === "termination"
+                    ? hi
+                      ? "bg-slate-50"
+                      : "hover:bg-slate-50"
+                    : hi
+                      ? "bg-[color:var(--wp-surface-muted)]"
+                      : "hover:bg-[color:var(--wp-surface-muted)]",
+                  active ? (variant === "termination" ? "bg-violet-50" : "bg-[var(--wp-accent)]/10") : "",
                 ].join(" ")}
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-[color:var(--wp-text)]">{item.label}</div>
+                  <div
+                    className={
+                      variant === "termination"
+                        ? "truncate text-sm font-semibold text-slate-900"
+                        : "truncate text-sm font-semibold text-[color:var(--wp-text)]"
+                    }
+                  >
+                    {item.label}
+                  </div>
                   {item.meta ? (
-                    <div className="mt-1 line-clamp-2 text-xs text-[color:var(--wp-text-secondary)]">{item.meta}</div>
+                    <div
+                      className={
+                        variant === "termination"
+                          ? "mt-1 line-clamp-2 text-xs text-slate-500"
+                          : "mt-1 line-clamp-2 text-xs text-[color:var(--wp-text-secondary)]"
+                      }
+                    >
+                      {item.meta}
+                    </div>
                   ) : null}
                 </div>
-                {active ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wp-accent)]" /> : null}
+                {active ? (
+                  <CheckCircle2
+                    className={
+                      variant === "termination"
+                        ? "mt-0.5 h-4 w-4 shrink-0 text-violet-600"
+                        : "mt-0.5 h-4 w-4 shrink-0 text-[var(--wp-accent)]"
+                    }
+                  />
+                ) : null}
               </button>
             );
           })}

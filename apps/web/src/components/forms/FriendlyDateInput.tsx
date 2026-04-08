@@ -15,6 +15,10 @@ type Props = {
   value: string;
   onChange: (iso: string) => void;
   className?: string;
+  /** Přepíše výchozí styl inputu (např. wizard výpovědi). */
+  inputClassName?: string;
+  /** Přepíše výchozí styl popisku. */
+  labelClassName?: string;
   disabled?: boolean;
   placeholder?: string;
 };
@@ -25,6 +29,8 @@ export function FriendlyDateInput({
   value,
   onChange,
   className = "",
+  inputClassName,
+  labelClassName,
   disabled,
   placeholder = "např. 13. 9. 2026",
 }: Props) {
@@ -80,12 +86,14 @@ export function FriendlyDateInput({
     }
   }
 
-  const inputClass =
+  const defaultInputClass =
     "w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px] text-[color:var(--wp-text)] bg-[color:var(--wp-surface)] outline-none transition focus:border-[var(--wp-accent)] focus:ring-2 focus:ring-[var(--wp-accent)]/20";
+  const inputClass = inputClassName ?? defaultInputClass;
+  const labelClass = labelClassName ?? "mb-1 block text-xs font-medium text-[color:var(--wp-text-muted)]";
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+      <label htmlFor={id} className={labelClass}>
         {label}
       </label>
       <input
