@@ -12,7 +12,7 @@ import { TerminationLetterPreviewPanel } from "../new/TerminationLetterPreviewPa
 import { TerminationRequestFieldsForm } from "./TerminationRequestFieldsForm";
 import type { TerminationDeliveryChannel, TerminationRequestStatus } from "@/lib/db/schema-for-client";
 import { terminationDeliveryChannels, terminationRequestStatuses } from "@/lib/db/schema-for-client";
-import { terminationDeliveryChannelLabel, terminationDispatchStatusLabel } from "@/lib/terminations";
+import { terminationDeliveryChannelLabel, terminationDispatchStatusLabel } from "@/lib/terminations/client";
 
 type Props = {
   requestId: string;

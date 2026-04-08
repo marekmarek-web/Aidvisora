@@ -26,7 +26,8 @@ import {
   type TerminationWizardPrefill,
 } from "@/app/actions/terminations";
 import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "@/lib/db/schema-for-client";
-import { modeToReasonCode, terminationDeliveryChannelLabel, type TerminationRulesResult } from "@/lib/terminations";
+import { modeToReasonCode, terminationDeliveryChannelLabel } from "@/lib/terminations/client";
+import type { TerminationRulesResult } from "@/lib/terminations/types";
 
 function insurerSearchItemMeta(addressLine: string | null | undefined, channelHint: string | null | undefined): string | null {
   const addr = addressLine?.trim() || "";

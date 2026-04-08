@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { TerminationInsurerRegistryDirectoryRow } from "@/app/actions/terminations";
-import { terminationDeliveryChannelLabel } from "@/lib/terminations";
+import { terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 
 type Props = {
   rows: TerminationInsurerRegistryDirectoryRow[];

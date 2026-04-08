@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { getTerminationLetterPreview, saveTerminationGeneratedDocumentAction } from "@/app/actions/terminations";
-import { terminationDeliveryChannelLabel } from "@/lib/terminations";
+import { terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 import type { TerminationLetterBuildResult } from "@/lib/terminations/termination-letter-types";
 import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
 

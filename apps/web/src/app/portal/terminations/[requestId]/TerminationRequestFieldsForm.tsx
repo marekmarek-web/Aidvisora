@@ -7,7 +7,7 @@ import {
   type TerminationRequestDetail,
 } from "@/app/actions/terminations";
 import type { TerminationMode } from "@/lib/db/schema-for-client";
-import { modeToReasonCode } from "@/lib/terminations";
+import { modeToReasonCode } from "@/lib/terminations/client";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { parseDocumentBuilderExtras } from "@/lib/terminations/termination-document-extras";
 import { FriendlyDateInput } from "@/components/forms/FriendlyDateInput";
