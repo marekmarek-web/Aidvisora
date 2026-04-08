@@ -36,7 +36,7 @@ export function TerminationFinishOutputLayout({ requestId, leftPanel, onBuildRes
           <div>
             <div className="text-lg font-semibold text-slate-950">Dokončit výstup</div>
             <div className="mt-1 text-sm text-slate-500">
-              Takto bude vypadat připravený výstup před exportem do PDF.
+              Zkontrolujte náhled dopisu. Tlačítkem „Tisk / PDF" v náhledu otevřete tiskový dialog prohlížeče.
             </div>
           </div>
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -86,19 +86,19 @@ export function TerminationFinishOutputLayout({ requestId, leftPanel, onBuildRes
           </div>
 
           <div className="rounded-2xl bg-slate-900 p-4 text-white">
-            <div className="text-sm font-semibold">Co se vytvoří</div>
+            <div className="text-sm font-semibold">Jak postupovat dál</div>
             <div className="mt-3 space-y-3 text-sm text-slate-300">
               <div className="flex gap-3">
                 <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                <span>PDF výpověď připravená k podpisu</span>
-              </div>
-              <div className="flex gap-3">
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                <span>Návrh průvodního e-mailu nebo textu k odeslání</span>
+                <span>Zkontrolujte dopis v náhledu vpravo</span>
               </div>
               <div className="flex gap-3">
                 <Printer className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                <span>Přehled pro rychlou kontrolu před exportem</span>
+                <span>Tisk / PDF otevře tiskový dialog prohlížeče — uložte jako PDF nebo vytiskněte</span>
+              </div>
+              <div className="flex gap-3">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
+                <span>Po dokončení bude žádost přesunuta ke kontrole nebo k odeslání</span>
               </div>
             </div>
           </div>
