@@ -23,6 +23,9 @@ type Props = {
   showPersistButtons?: boolean;
   letterPlainTextDraft: string;
   onLetterPlainTextDraftChange: (plain: string) => void;
+  /** ISO yyyy-mm-dd; prázdné = při generování dnešní datum. */
+  letterHeaderDateIso: string;
+  onLetterHeaderDateIsoChange: (iso: string) => void;
 };
 
 export function TerminationFinishOutputLayout({
@@ -32,6 +35,8 @@ export function TerminationFinishOutputLayout({
   showPersistButtons = true,
   letterPlainTextDraft,
   onLetterPlainTextDraftChange,
+  letterHeaderDateIso,
+  onLetterHeaderDateIsoChange,
 }: Props) {
   const deliveryLabel = leftPanel.deliveryChannelHint
     ? terminationDeliveryChannelLabel(leftPanel.deliveryChannelHint)
@@ -45,8 +50,8 @@ export function TerminationFinishOutputLayout({
           <div>
             <div className="text-lg font-semibold text-slate-950">Dokončit výstup</div>
             <div className="mt-1 text-sm text-slate-500">
-              Upravte text výpovědi v poli vpravo. „Náhled tisk / PDF“ ověří vzhled; úplné uložení je tlačítkem „Export
-              do PDF“ dole.
+              Upravte text výpovědi v poli vpravo. „Rychlý náhled tisku“ jen otevře okno tisku bez uložení žádosti;
+              finální krok je tlačítkem „Export do PDF“ dole (uloží žádost a nabídne PDF).
             </div>
           </div>
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -116,6 +121,25 @@ export function TerminationFinishOutputLayout({
 
         {/* Right column: letter preview */}
         <div className="min-w-0">
+          <div className="mb-4">
+            <label
+              htmlFor="termination-letter-header-date"
+              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Datum v záhlaví dopisu
+            </label>
+            <input
+              id="termination-letter-header-date"
+              type="date"
+              value={letterHeaderDateIso}
+              onChange={(e) => onLetterHeaderDateIsoChange(e.target.value)}
+              className="h-11 w-full max-w-xs rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Volitelné – kalendář v prohlížeči. Prázdné pole = v generovaném textu se použije dnešní datum; po výběru
+              se první řádek dopisu přepíše.
+            </p>
+          </div>
           <TerminationLetterPreviewPanel
             requestId={requestId}
             layout="wizardFinish"

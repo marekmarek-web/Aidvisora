@@ -31,6 +31,7 @@ import type { TerminationMode, TerminationReasonCode, TerminationRequestSource }
 import { modeToReasonCode, terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
+import { replaceTerminationLetterPlaceDateLine } from "@/lib/terminations/termination-letter-builder";
 import {
   computeTwoMonthDeadline,
   isTwoMonthWindowOpen,
@@ -142,6 +143,9 @@ export function TerminationIntakeWizard({
   const [letterPlainTextDraft, setLetterPlainTextDraft] = useState(
     () => loadedDraft?.documentBuilderExtras?.letterPlainTextDraft ?? "",
   );
+  const [letterHeaderDateIso, setLetterHeaderDateIso] = useState(
+    () => loadedDraft?.documentBuilderExtras?.letterHeaderDateIso?.trim() ?? "",
+  );
 
   const onLetterPlainTextDraftChange = useCallback((plain: string) => {
     setLetterPlainTextDraft(plain);
@@ -202,7 +206,6 @@ export function TerminationIntakeWizard({
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [previewNonce, setPreviewNonce] = useState(0);
   const [previewSyncBusy, setPreviewSyncBusy] = useState(false);
   const [previewGapMessages, setPreviewGapMessages] = useState<string[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -289,6 +292,7 @@ export function TerminationIntakeWizard({
         ...(placeOverride.trim() ? { placeOverride: placeOverride.trim() } : {}),
         ...(attachmentsDeclared.trim() ? { attachmentsDeclared: attachmentsDeclared.trim() } : {}),
         ...(letterPlainTextDraft.trim() ? { letterPlainTextDraft: letterPlainTextDraft.trim() } : {}),
+        ...(letterHeaderDateIso.trim() ? { letterHeaderDateIso: letterHeaderDateIso.trim() } : {}),
       },
     };
   }, [
@@ -315,6 +319,7 @@ export function TerminationIntakeWizard({
     attachmentsDeclared,
     selectedInsurerRegistryId,
     letterPlainTextDraft,
+    letterHeaderDateIso,
   ]);
 
   useEffect(() => {
@@ -389,7 +394,6 @@ export function TerminationIntakeWizard({
         setPreviewSyncBusy(false);
         if (res.ok) {
           setPartialRequestId(res.requestId);
-          setPreviewNonce((n) => n + 1);
         }
       });
     }, 450);
@@ -501,7 +505,6 @@ export function TerminationIntakeWizard({
         return;
       }
       setPartialRequestId(res.requestId);
-      setPreviewNonce((n) => n + 1);
       setPartialSavedOk("Koncept uložen. Můžete pokračovat později.");
       const next = new URLSearchParams(searchParams.toString());
       next.set("draftId", res.requestId);
@@ -1103,7 +1106,16 @@ export function TerminationIntakeWizard({
                     <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Místo v záhlaví dopisu (volitelné)</label>
                     <input
                       value={placeOverride}
-                      onChange={(e) => setPlaceOverride(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setPlaceOverride(v);
+                        const iso = letterHeaderDateIso.trim();
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+                          setLetterPlainTextDraft((prev) =>
+                            replaceTerminationLetterPlaceDateLine(prev, v, iso),
+                          );
+                        }
+                      }}
                       className={TERMINATION_FIELD_CLASS}
                       placeholder="např. Praha"
                     />
@@ -1140,10 +1152,20 @@ export function TerminationIntakeWizard({
 
               {partialRequestId ? (
                 <TerminationFinishOutputLayout
-                  key={previewNonce}
+                  key={partialRequestId}
                   requestId={partialRequestId}
                   letterPlainTextDraft={letterPlainTextDraft}
                   onLetterPlainTextDraftChange={onLetterPlainTextDraftChange}
+                  letterHeaderDateIso={letterHeaderDateIso}
+                  onLetterHeaderDateIsoChange={(iso) => {
+                    setLetterHeaderDateIso(iso);
+                    const t = iso.trim();
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+                      setLetterPlainTextDraft((prev) =>
+                        replaceTerminationLetterPlaceDateLine(prev, placeOverride, t),
+                      );
+                    }
+                  }}
                   leftPanel={{
                     clientName: clientQuery.trim() || null,
                     insurerName: insurerQuery.trim() || null,

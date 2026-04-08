@@ -22,10 +22,12 @@ export type TerminationDocumentBuilderExtras = {
   /** Volný text příloh zadaný poradcem ve wizardu (doplní odstavec v dopise). */
   attachmentsDeclared?: string;
   /**
-   * Uložený text hlavního dopisu z wizardu (úpravy poradce). Když je neprázdný, použije se místo
-   * automaticky generovaného dopisu (kromě režimu oficiálního formuláře).
+   * Uložený text hlavního dopisu z wizardu (úpravy poradce). Když je neprázdný, tělo od „Věc:“ dál bere z draftu;
+   * hlavička (místo/datum, pojistník, pojišťovna) se znovu skládá z aktuálních dat (kromě režimu oficiálního formuláře).
    */
   letterPlainTextDraft?: string;
+  /** ISO yyyy-mm-dd – datum v řádku „Místo, dne …“; prázdné = dnešní datum při generování. */
+  letterHeaderDateIso?: string;
 };
 
 export function parseDocumentBuilderExtras(raw: unknown): TerminationDocumentBuilderExtras {
@@ -45,6 +47,7 @@ export function parseDocumentBuilderExtras(raw: unknown): TerminationDocumentBui
   if (o.uncertainInsurer === true) out.uncertainInsurer = true;
   if (typeof o.attachmentsDeclared === "string") out.attachmentsDeclared = o.attachmentsDeclared;
   if (typeof o.letterPlainTextDraft === "string") out.letterPlainTextDraft = o.letterPlainTextDraft;
+  if (typeof o.letterHeaderDateIso === "string") out.letterHeaderDateIso = o.letterHeaderDateIso;
   return out;
 }
 
@@ -60,5 +63,6 @@ export function serializeDocumentBuilderExtras(e: TerminationDocumentBuilderExtr
   if (e.uncertainInsurer) out.uncertainInsurer = true;
   if (e.attachmentsDeclared?.trim()) out.attachmentsDeclared = e.attachmentsDeclared.trim();
   if (e.letterPlainTextDraft?.trim()) out.letterPlainTextDraft = e.letterPlainTextDraft.trim();
+  if (e.letterHeaderDateIso?.trim()) out.letterHeaderDateIso = e.letterHeaderDateIso.trim();
   return out;
 }

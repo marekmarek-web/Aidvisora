@@ -119,7 +119,11 @@ export function TerminationLetterPreviewPanel({
     const lp = data.letterPlainText ?? "";
     const cp = data.coveringLetterPlainText ?? "";
     if (layout === "wizardFinish" && onWizardLetterDraftChange) {
-      onWizardLetterDraftChange(lp);
+      const incoming = lp.trim();
+      const current = (wizardLetterDraft ?? "").trim();
+      if (incoming !== current) {
+        onWizardLetterDraftChange(lp);
+      }
       setLetterSaved(lp);
     } else {
       setLetterDraft(lp);
@@ -129,7 +133,7 @@ export function TerminationLetterPreviewPanel({
     setCoverSaved(cp);
     setEditSaveMsg(null);
     lastSeededRequestIdRef.current = requestId;
-  }, [data, loading, requestId, layout, onWizardLetterDraftChange]);
+  }, [data, loading, requestId, layout, onWizardLetterDraftChange]); // eslint-disable-line react-hooks/exhaustive-deps -- wizardLetterDraft jen při seedu při změně `data`
 
   if (loading) {
     return (
@@ -270,7 +274,7 @@ export function TerminationLetterPreviewPanel({
             disabled={!canPrint}
             className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Náhled tisk / PDF
+            Rychlý náhled tisku
           </button>
         ) : null}
       </div>

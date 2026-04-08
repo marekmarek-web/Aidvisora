@@ -143,11 +143,16 @@ export function legalBasisShortForReason(code: string): string | null {
   return map[code] ?? null;
 }
 
-function formatDateCs(iso: string | null | undefined): string {
+/** Datum v řádku „Místo, dne …“ v dopise (shodné s výstupem builderu). */
+export function formatTerminationLetterDateCs(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
+  if (isNaN(d.getTime())) return String(iso);
   return d.toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatDateCs(iso: string | null | undefined): string {
+  return formatTerminationLetterDateCs(iso);
 }
 
 /**
@@ -355,6 +360,44 @@ export function buildInsurerAddressBlock(vm: TerminationLetterViewModel): string
   ].filter((x): x is string => Boolean(x && String(x).trim()));
   const inner = lines.join("\n");
   return inner.trim() ? `Pojišťovna\n${inner}` : "Pojišťovna\n………………";
+}
+
+/** Řez hlavička vs. tělo – shodný marker ve standardním i distančním dopise. */
+const LETTER_BODY_SPLIT_MARKER = "\n\nVěc:";
+
+/**
+ * Spojí čerstvě vyrenderovanou hlavičku (do řádku Věc:) s tělem z uloženého draftu poradce.
+ */
+export function mergeTerminationLetterDraftWithComputed(computedLetter: string, draftOverride: string): string {
+  const draft = draftOverride.trim();
+  if (!draft) return computedLetter;
+  const idxC = computedLetter.indexOf(LETTER_BODY_SPLIT_MARKER);
+  const idxD = draft.indexOf(LETTER_BODY_SPLIT_MARKER);
+  if (idxC === -1 || idxD === -1) return computedLetter;
+  return computedLetter.slice(0, idxC) + draft.slice(idxD);
+}
+
+/**
+ * Přepíše první řádek dopisu na „{místo}, dne {datum}“ podle výběru z kalendáře / pole místo.
+ */
+export function replaceTerminationLetterPlaceDateLine(
+  plain: string,
+  placeHeader: string,
+  dateIso: string | null | undefined,
+): string {
+  const iso = dateIso?.trim() ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || isNaN(new Date(iso).getTime())) return plain;
+  const placeText = placeHeader.trim() || "………………";
+  const dateCs = formatTerminationLetterDateCs(iso);
+  const firstLine = `${placeText}, dne ${dateCs}`;
+  if (!plain.trim()) return firstLine;
+  const lines = plain.split("\n");
+  const first = lines[0] ?? "";
+  if (/,\s*dne\s+/.test(first) || /^\.+/.test(first)) {
+    lines[0] = firstLine;
+    return lines.join("\n");
+  }
+  return `${firstLine}\n\n${plain.trim()}`;
 }
 
 export function renderTerminationLetterPlainText(
@@ -637,11 +680,19 @@ export function buildTerminationLetterResult(input: TerminationLetterBuildInput)
   const distance =
     r.terminationReasonCode === "distance_contract_withdrawal" || r.terminationMode === "distance_withdrawal";
 
+  const letterHeaderIsoRaw = extras.letterHeaderDateIso?.trim() ?? "";
+  const letterHeaderIso =
+    /^\d{4}-\d{2}-\d{2}$/.test(letterHeaderIsoRaw) && !isNaN(new Date(letterHeaderIsoRaw).getTime())
+      ? letterHeaderIsoRaw
+      : null;
+
   const vm: TerminationLetterViewModel = {
     documentType: TERMINATION_DOCUMENT_TYPE,
     terminationModeLabel: modeLabels.title,
     terminationModeLabelLower: modeLabels.lower,
-    generatedAt: formatDateCs(new Date().toISOString().slice(0, 10)),
+    generatedAt: letterHeaderIso
+      ? formatDateCs(letterHeaderIso)
+      : formatDateCs(new Date().toISOString().slice(0, 10)),
     place: placeHeader,
     signatureRequired: true,
 
@@ -710,7 +761,8 @@ export function buildTerminationLetterResult(input: TerminationLetterBuildInput)
     letterPlainText = null;
     coveringLetterPlainText = buildCoveringLetter(vm);
   } else if (letterDraftOverride) {
-    letterPlainText = letterDraftOverride;
+    const computed = renderTerminationLetterPlainText(vm, effectiveConfirmed !== null);
+    letterPlainText = mergeTerminationLetterDraftWithComputed(computed, letterDraftOverride);
   } else {
     letterPlainText = renderTerminationLetterPlainText(vm, effectiveConfirmed !== null);
   }
