@@ -29,6 +29,7 @@ import { TerminationFinishOutputLayout } from "./TerminationFinishOutputLayout";
 import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "@/lib/db/schema-for-client";
 import { modeToReasonCode, terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 import type { TerminationRulesResult } from "@/lib/terminations/types";
+import { suggestedAnniversaryFromContractStart } from "@/lib/terminations/suggested-anniversary-from-contract-start";
 
 function insurerSearchItemMeta(addressLine: string | null | undefined, channelHint: string | null | undefined): string | null {
   const addr = addressLine?.trim() || "";
@@ -217,6 +218,26 @@ export function TerminationIntakeWizard({
   useEffect(() => {
     setTerminationReasonCode(modeToReasonCode(terminationMode));
   }, [terminationMode]);
+
+  /** Výroční den prázdný → dopočítat z počátku (nejbližší MD od dneška v akt./dalším roce). Jen při změně počátku, aby šlo výročí ručně vymazat. */
+  useEffect(() => {
+    const start = contractStartDate.trim();
+    if (!start) return;
+    setContractAnniversaryDate((curr) => {
+      if (curr.trim()) return curr;
+      const suggested = suggestedAnniversaryFromContractStart(start);
+      return suggested ?? curr;
+    });
+  }, [contractStartDate]);
+
+  /** Ke konci období: doplnit požadované datum z výročí, až když je výročí k dispozici a účinnost je prázdná. */
+  useEffect(() => {
+    if (terminationMode !== "end_of_insurance_period") return;
+    const ann = contractAnniversaryDate.trim();
+    if (!ann) return;
+    if (requestedEffectiveDate.trim()) return;
+    setRequestedEffectiveDate(ann);
+  }, [terminationMode, contractAnniversaryDate, requestedEffectiveDate]);
 
   const onSegmentChange = useCallback((seg: string) => {
     setProductSegment(seg);
@@ -996,7 +1017,14 @@ export function TerminationIntakeWizard({
                   <label className={TERMINATION_LABEL_CLASS}>Způsob ukončení</label>
                   <select
                     value={terminationMode}
-                    onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
+                    onChange={(e) => {
+                      const v = e.target.value as TerminationMode;
+                      setTerminationMode(v);
+                      if (v === "end_of_insurance_period") {
+                        const ann = contractAnniversaryDate.trim();
+                        if (ann) setRequestedEffectiveDate(ann);
+                      }
+                    }}
                     className={TERMINATION_FIELD_CLASS}
                   >
                     {MODE_OPTIONS.map((m) => (
