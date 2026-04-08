@@ -1,0 +1,112 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  digitsFromCzDateInput,
+  formatCzDate,
+  formatCzDateFromDigits,
+  validateCzDateComplete,
+} from "@/lib/forms/cz-date";
+
+type Props = {
+  id?: string;
+  label: string;
+  /** ISO yyyy-mm-dd or empty */
+  value: string;
+  onChange: (iso: string) => void;
+  className?: string;
+  disabled?: boolean;
+  placeholder?: string;
+};
+
+export function FriendlyDateInput({
+  id,
+  label,
+  value,
+  onChange,
+  className = "",
+  disabled,
+  placeholder = "např. 13. 9. 2026",
+}: Props) {
+  const [text, setText] = useState(() => formatCzDate(value) || "");
+  const [error, setError] = useState<string | null>(null);
+  const skipSyncRef = useRef(false);
+
+  useEffect(() => {
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync z prop ISO → zobrazení
+    setText(formatCzDate(value) || "");
+  }, [value]);
+
+  const applyDigitsAsIso = useCallback(
+    (digits: string) => {
+      const display = formatCzDateFromDigits(digits);
+      setText(display);
+      const v = validateCzDateComplete(display);
+      if (v.ok) {
+        setError(null);
+        skipSyncRef.current = true;
+        onChange(v.iso);
+      } else {
+        if (digits.length >= 8) setError(v.message || null);
+        else setError(null);
+        onChange("");
+      }
+    },
+    [onChange],
+  );
+
+  function handleChange(raw: string) {
+    const digits = digitsFromCzDateInput(raw);
+    applyDigitsAsIso(digits);
+  }
+
+  function handleBlur() {
+    if (!text.trim()) {
+      setError(null);
+      onChange("");
+      return;
+    }
+    const v = validateCzDateComplete(text);
+    if (v.ok) {
+      setError(null);
+      setText(formatCzDate(v.iso) || text);
+      onChange(v.iso);
+    } else if (text.replace(/\D/g, "").length > 0) {
+      setError(v.message || "Neúplné datum.");
+    }
+  }
+
+  const inputClass =
+    "w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px] text-[color:var(--wp-text)] bg-[color:var(--wp-surface)] outline-none transition focus:border-[var(--wp-accent)] focus:ring-2 focus:ring-[var(--wp-accent)]/20";
+
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        spellCheck={false}
+        disabled={disabled}
+        placeholder={placeholder}
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        className={inputClass}
+        aria-invalid={Boolean(error)}
+      />
+      {error ? (
+        <p className="mt-1 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}

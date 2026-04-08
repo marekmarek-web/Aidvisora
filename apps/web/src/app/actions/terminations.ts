@@ -18,7 +18,7 @@ import {
   terminationRequestStatuses,
   reminders,
 } from "db";
-import { and, desc, eq } from "db";
+import { and, asc, desc, eq, isNull, or, sql } from "db";
 import { evaluateTerminationRules, getReasonsForSegment } from "@/lib/terminations";
 import type {
   TerminationManualInput,
@@ -48,6 +48,8 @@ import {
   TERMINATION_PARTIAL_INSURER_PLACEHOLDER,
   type TerminationDocumentBuilderExtras,
 } from "@/lib/terminations/termination-document-extras";
+import { escapeIlikeLiteral } from "@/lib/ai/assistant-contact-search-normalize";
+import { searchContactsForAssistant } from "@/lib/ai/assistant-contact-search";
 import { isTerminationsModuleEnabledOnServer } from "@/lib/terminations/terminations-feature-flag";
 
 export type TerminationWizardPrefill = {
@@ -189,6 +191,113 @@ export async function listTerminationReasonsAction(
     labelCs: r.labelCs,
     defaultDateComputation: r.defaultDateComputation,
   }));
+}
+
+function formatRegistryMailingOneLine(m: Record<string, unknown> | null | undefined): string | null {
+  if (!m || typeof m !== "object") return null;
+  const street = typeof m.street === "string" ? m.street : "";
+  const city = typeof m.city === "string" ? m.city : "";
+  const zip = typeof m.zip === "string" ? m.zip : "";
+  const tail = [zip, city].filter(Boolean).join(" ");
+  const line = [street, tail].filter(Boolean).join(", ");
+  return line.trim() || null;
+}
+
+function formatTerminationChannelHint(
+  allowed: string[] | null | undefined,
+  email: string | null | undefined,
+): string | null {
+  const parts: string[] = [];
+  if (allowed?.length) parts.push(allowed.join(" · "));
+  if (email?.trim()) parts.push(`e-mail: ${email.trim()}`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+export type TerminationInsurerSearchHit = {
+  id: string;
+  insurerName: string;
+  addressLine: string | null;
+  channelHint: string | null;
+};
+
+/** Max 4 řádky pro autocomplete výpovědi (globální + tenant registry). */
+export async function searchTerminationInsurerRegistryAction(
+  rawQuery: string,
+): Promise<{ ok: true; items: TerminationInsurerSearchHit[] } | { ok: false; error: string }> {
+  const auth = await requireAuthInAction();
+  if (!isTerminationsModuleEnabledOnServer()) {
+    return { ok: false, error: "Modul výpovědí je vypnutý." };
+  }
+  if (auth.roleName === "Client") return { ok: false, error: "Nepovoleno." };
+  if (!hasPermission(auth.roleName, "contacts:read")) return { ok: false, error: "Forbidden" };
+
+  const q = rawQuery.trim();
+  if (!q) return { ok: true, items: [] };
+
+  const pattern = `%${escapeIlikeLiteral(q)}%`;
+
+  const rows = await db
+    .select({
+      id: insurerTerminationRegistry.id,
+      insurerName: insurerTerminationRegistry.insurerName,
+      mailingAddress: insurerTerminationRegistry.mailingAddress,
+      allowedChannels: insurerTerminationRegistry.allowedChannels,
+      email: insurerTerminationRegistry.email,
+    })
+    .from(insurerTerminationRegistry)
+    .where(
+      and(
+        eq(insurerTerminationRegistry.active, true),
+        or(isNull(insurerTerminationRegistry.tenantId), eq(insurerTerminationRegistry.tenantId, auth.tenantId)),
+        sql`(
+          ${insurerTerminationRegistry.insurerName} ILIKE ${pattern} ESCAPE '\\'
+          OR ${insurerTerminationRegistry.catalogKey} ILIKE ${pattern} ESCAPE '\\'
+        )`,
+      ),
+    )
+    .orderBy(asc(insurerTerminationRegistry.insurerName))
+    .limit(4);
+
+  return {
+    ok: true,
+    items: rows.map((r) => ({
+      id: r.id,
+      insurerName: r.insurerName,
+      addressLine: formatRegistryMailingOneLine((r.mailingAddress as Record<string, unknown> | null) ?? null),
+      channelHint: formatTerminationChannelHint(
+        r.allowedChannels as string[] | null | undefined,
+        r.email,
+      ),
+    })),
+  };
+}
+
+export type TerminationContactSearchHit = {
+  id: string;
+  displayName: string;
+  hint: string;
+};
+
+/** Max 4 kontakty pro autocomplete ve výpovědi. */
+export async function searchContactsForTerminationWizardAction(
+  rawQuery: string,
+): Promise<{ ok: true; items: TerminationContactSearchHit[] } | { ok: false; error: string }> {
+  const auth = await requireAuthInAction();
+  if (!isTerminationsModuleEnabledOnServer()) {
+    return { ok: false, error: "Modul výpovědí je vypnutý." };
+  }
+  if (auth.roleName === "Client") return { ok: false, error: "Nepovoleno." };
+  if (!hasPermission(auth.roleName, "contacts:read")) return { ok: false, error: "Forbidden" };
+
+  const rows = await searchContactsForAssistant(auth.tenantId, rawQuery, 4, { match: "all" });
+  return {
+    ok: true,
+    items: rows.map((r) => ({
+      id: r.id,
+      displayName: r.displayName,
+      hint: r.hint,
+    })),
+  };
 }
 
 function mapOutcomeToStatus(r: TerminationRulesResult): TerminationRequestStatus {

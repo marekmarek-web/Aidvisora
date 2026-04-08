@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { getTerminationLetterPreview, saveTerminationGeneratedDocumentAction } from "@/app/actions/terminations";
 import type { TerminationLetterBuildResult } from "@/lib/terminations/termination-letter-types";
+import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
 
 function badgeClasses(badge: TerminationLetterBuildResult["badge"]): string {
   switch (badge) {
@@ -65,10 +66,13 @@ type PreviewTab = "text" | "html";
 export function TerminationLetterPreviewPanel({
   requestId,
   showPersistButtons = true,
+  showPrintButton = true,
 }: {
   requestId: string;
   /** Uložení do CRM dokumentů (vyžaduje documents:write). */
   showPersistButtons?: boolean;
+  /** Tisk / uložení jako PDF přes dialog prohlížeče. */
+  showPrintButton?: boolean;
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,8 +83,10 @@ export function TerminationLetterPreviewPanel({
 
   useEffect(() => {
     let cancelled = false;
+    /* eslint-disable react-hooks/set-state-in-effect -- reset před async fetch náhledu */
     setLoading(true);
     setError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
     void getTerminationLetterPreview(requestId).then((res) => {
       if (cancelled) return;
       setLoading(false);
@@ -130,6 +136,27 @@ export function TerminationLetterPreviewPanel({
   const hasLetterPreview = Boolean(letterPlainText || letterHtml);
   const hasCoverPreview = Boolean(coveringLetterPlainText || coveringLetterHtml);
   const showTabSwitch = hasLetterPreview || hasCoverPreview;
+
+  function printCurrentPreview() {
+    let html: string | null = null;
+    if (previewTab === "html") {
+      html = letterHtml ?? coveringLetterHtml ?? null;
+    }
+    if (!html) {
+      const plain = letterPlainText ?? coveringLetterPlainText ?? null;
+      html = plain ? plainTextToLetterHtml(plain) : null;
+    }
+    if (!html) return;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(
+      `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Náhled výpovědi</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
+    );
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  }
 
   return (
     <div className="space-y-4 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/40 p-4">
@@ -274,30 +301,44 @@ export function TerminationLetterPreviewPanel({
         </div>
       ) : null}
 
-      {showTabSwitch ? (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setPreviewTab("text")}
-            className={`rounded-[var(--wp-radius)] px-3 py-1.5 text-xs font-semibold min-h-[36px] ${
-              previewTab === "text"
-                ? "bg-[var(--wp-accent)] text-white"
-                : "border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]"
-            }`}
-          >
-            Prostý text
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreviewTab("html")}
-            className={`rounded-[var(--wp-radius)] px-3 py-1.5 text-xs font-semibold min-h-[36px] ${
-              previewTab === "html"
-                ? "bg-[var(--wp-accent)] text-white"
-                : "border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]"
-            }`}
-          >
-            HTML náhled
-          </button>
+      {showTabSwitch || showPrintButton ? (
+        <div className="flex flex-wrap gap-2">
+          {showTabSwitch ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setPreviewTab("text")}
+                className={`rounded-[var(--wp-radius)] px-3 py-1.5 text-xs font-semibold min-h-[36px] ${
+                  previewTab === "text"
+                    ? "bg-[var(--wp-accent)] text-white"
+                    : "border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]"
+                }`}
+              >
+                Prostý text
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab("html")}
+                className={`rounded-[var(--wp-radius)] px-3 py-1.5 text-xs font-semibold min-h-[36px] ${
+                  previewTab === "html"
+                    ? "bg-[var(--wp-accent)] text-white"
+                    : "border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]"
+                }`}
+              >
+                HTML náhled
+              </button>
+            </>
+          ) : null}
+          {showPrintButton ? (
+            <button
+              type="button"
+              onClick={() => printCurrentPreview()}
+              disabled={!letterPlainText && !letterHtml && !coveringLetterPlainText && !coveringLetterHtml}
+              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-3 py-1.5 text-xs font-semibold min-h-[36px] disabled:opacity-40"
+            >
+              Tisk / PDF
+            </button>
+          ) : null}
         </div>
       ) : null}
 

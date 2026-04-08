@@ -1,13 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AlertTriangle,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  FileSignature,
+  FileText,
+  MapPin,
+  Upload,
+  UserRound,
+} from "lucide-react";
 import { segmentLabel } from "@/app/lib/segment-labels";
 import {
   createTerminationDraft,
   listTerminationReasonsAction,
   saveTerminationIntakePartialAction,
+  searchContactsForTerminationWizardAction,
+  searchTerminationInsurerRegistryAction,
   type CreateTerminationDraftPayload,
   type TerminationIntakeDraftWizardState,
   type TerminationWizardPrefill,
@@ -15,6 +29,9 @@ import {
 import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "@/lib/db/schema-for-client";
 import type { TerminationRulesResult } from "@/lib/terminations";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
+import { formatCzDate } from "@/lib/forms/cz-date";
+import { FriendlyDateInput } from "@/components/forms/FriendlyDateInput";
+import { SearchCombobox, type SearchComboboxItem } from "@/components/ui/SearchCombobox";
 import { TerminationLetterPreviewPanel } from "./TerminationLetterPreviewPanel";
 
 const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
@@ -26,6 +43,8 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "mutual_agreement", label: "Dohodou" },
   { value: "manual_review_other", label: "Jiný důvod / ruční posouzení" },
 ];
+
+const STEP_LABELS = ["Pojišťovna a smlouva", "Režim a termín", "Dokončit výstup"] as const;
 
 export type WizardReasonOption = {
   id: string;
@@ -39,20 +58,18 @@ type Props = {
   segments: string[];
   initialReasons: WizardReasonOption[];
   canWrite: boolean;
-  /** Otevřeno z rychlé akce „Výpověď“ – `source_kind` = quick_action. */
   sourceQuick: boolean;
-  /** Query z AI asistenta (`prepare_termination_request`) → `source_kind` = ai_chat. */
   sourceFromAi: boolean;
-  /** Předvyplnění z URL (asistent / externí odkaz). */
   urlPrefill?: {
     insurerName?: string;
     requestedEffectiveDate?: string;
     sourceDocumentId?: string;
   };
-  /** Načtený rozepsaný koncept (`?draftId=`). */
   loadedDraft?: TerminationIntakeDraftWizardState | null;
   draftLoadError?: string | null;
 };
+
+type SourceCard = "crm" | "upload" | "manual";
 
 function outcomeLabel(outcome: TerminationRulesResult["outcome"]): string {
   switch (outcome) {
@@ -67,6 +84,10 @@ function outcomeLabel(outcome: TerminationRulesResult["outcome"]): string {
     default:
       return outcome;
   }
+}
+
+function cx(...parts: (string | false | undefined | null)[]): string {
+  return parts.filter(Boolean).join(" ");
 }
 
 export function TerminationIntakeWizard({
@@ -85,72 +106,99 @@ export function TerminationIntakeWizard({
   const [wizardStep, setWizardStep] = useState(0);
   const [partialSavedOk, setPartialSavedOk] = useState<string | null>(null);
   const [partialRequestId, setPartialRequestId] = useState<string | null>(() => loadedDraft?.requestId ?? null);
+  const partialRequestIdRef = useRef<string | null>(partialRequestId);
+  useEffect(() => {
+    partialRequestIdRef.current = partialRequestId;
+  }, [partialRequestId]);
 
-  const [insurerName, setInsurerName] = useState(
-    () => loadedDraft?.insurerName || urlPrefill?.insurerName?.trim() || prefill.insurerName
+  const [contactId, setContactId] = useState<string | null>(() => loadedDraft?.contactId ?? prefill.contactId);
+  const [contractId, setContractId] = useState<string | null>(() => loadedDraft?.contractId ?? prefill.contractId);
+
+  const [sourceCard, setSourceCard] = useState<SourceCard>(() => {
+    if (loadedDraft?.sourceDocumentId?.trim()) return "upload";
+    if (prefill.mode === "crm") return "crm";
+    return "manual";
+  });
+
+  const [insurerQuery, setInsurerQuery] = useState(
+    () => loadedDraft?.insurerName || urlPrefill?.insurerName?.trim() || prefill.insurerName || "",
   );
+  const [selectedInsurerRegistryId, setSelectedInsurerRegistryId] = useState<string | null>(null);
+  const [registryDeliveryMeta, setRegistryDeliveryMeta] = useState<{
+    addressLine: string | null;
+    channelHint: string | null;
+  } | null>(null);
+
+  const [clientQuery, setClientQuery] = useState(() => prefill.contactLabel?.trim() ?? "");
+  const [insurerItems, setInsurerItems] = useState<SearchComboboxItem[]>([]);
+  const [clientItems, setClientItems] = useState<SearchComboboxItem[]>([]);
+  const [insurerSearchBusy, setInsurerSearchBusy] = useState(false);
+  const [clientSearchBusy, setClientSearchBusy] = useState(false);
+
   const [uncertainInsurer, setUncertainInsurer] = useState(() => loadedDraft?.uncertainInsurer ?? false);
   const [contractNumber, setContractNumber] = useState(
-    () => loadedDraft?.contractNumber ?? prefill.contractNumber ?? ""
+    () => loadedDraft?.contractNumber ?? prefill.contractNumber ?? "",
   );
   const [productSegment, setProductSegment] = useState(
-    () => loadedDraft?.productSegment ?? prefill.productSegment ?? segments[0] ?? "ZP"
+    () => loadedDraft?.productSegment ?? prefill.productSegment ?? segments[0] ?? "ZP",
   );
   const [contractStartDate, setContractStartDate] = useState(
-    () => loadedDraft?.contractStartDate ?? prefill.contractStartDate ?? ""
+    () => loadedDraft?.contractStartDate ?? prefill.contractStartDate ?? "",
   );
   const [contractAnniversaryDate, setContractAnniversaryDate] = useState(
-    () => loadedDraft?.contractAnniversaryDate ?? prefill.contractAnniversaryDate ?? ""
+    () => loadedDraft?.contractAnniversaryDate ?? prefill.contractAnniversaryDate ?? "",
   );
   const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(
-    () => loadedDraft?.requestedEffectiveDate ?? urlPrefill?.requestedEffectiveDate?.trim() ?? ""
+    () => loadedDraft?.requestedEffectiveDate ?? urlPrefill?.requestedEffectiveDate?.trim() ?? "",
   );
   const [sourceDocumentId, setSourceDocumentId] = useState(
-    () => loadedDraft?.sourceDocumentId ?? urlPrefill?.sourceDocumentId?.trim() ?? ""
+    () => loadedDraft?.sourceDocumentId ?? urlPrefill?.sourceDocumentId?.trim() ?? "",
+  );
+  const [attachmentsDeclared, setAttachmentsDeclared] = useState(
+    () => loadedDraft?.documentBuilderExtras?.attachmentsDeclared ?? "",
   );
   const [reasons, setReasons] = useState<WizardReasonOption[]>(initialReasons);
   const [terminationReasonCode, setTerminationReasonCode] = useState<TerminationReasonCode>(
     () =>
       (loadedDraft?.terminationReasonCode as TerminationReasonCode) ??
       (initialReasons[0]?.reasonCode as TerminationReasonCode) ??
-      "end_of_period_6_weeks"
+      "end_of_period_6_weeks",
   );
   const [terminationMode, setTerminationMode] = useState<TerminationMode>(
-    () => loadedDraft?.terminationMode ?? "end_of_insurance_period"
+    () => loadedDraft?.terminationMode ?? "end_of_insurance_period",
   );
   const [policyholderKind, setPolicyholderKind] = useState<TerminationPolicyholderKind>(
-    () => loadedDraft?.documentBuilderExtras?.policyholderKind ?? "person"
+    () => loadedDraft?.documentBuilderExtras?.policyholderKind ?? "person",
   );
   const [companyName, setCompanyName] = useState(() => loadedDraft?.documentBuilderExtras?.companyName ?? "");
   const [authorizedPersonName, setAuthorizedPersonName] = useState(
-    () => loadedDraft?.documentBuilderExtras?.authorizedPersonName ?? ""
+    () => loadedDraft?.documentBuilderExtras?.authorizedPersonName ?? "",
   );
   const [authorizedPersonRole, setAuthorizedPersonRole] = useState(
-    () => loadedDraft?.documentBuilderExtras?.authorizedPersonRole ?? ""
+    () => loadedDraft?.documentBuilderExtras?.authorizedPersonRole ?? "",
   );
   const [advisorNoteForReview, setAdvisorNoteForReview] = useState(
-    () => loadedDraft?.documentBuilderExtras?.advisorNoteForReview ?? ""
+    () => loadedDraft?.documentBuilderExtras?.advisorNoteForReview ?? "",
   );
   const [claimEventDate, setClaimEventDate] = useState(
-    () => loadedDraft?.documentBuilderExtras?.claimEventDate ?? ""
+    () => loadedDraft?.documentBuilderExtras?.claimEventDate ?? "",
   );
   const [placeOverride, setPlaceOverride] = useState(
-    () => loadedDraft?.documentBuilderExtras?.placeOverride ?? ""
+    () => loadedDraft?.documentBuilderExtras?.placeOverride ?? "",
   );
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    requestId: string;
-    rules: TerminationRulesResult;
-  } | null>(null);
+  const [result, setResult] = useState<{ requestId: string; rules: TerminationRulesResult } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [previewSyncBusy, setPreviewSyncBusy] = useState(false);
 
   const sourceKind: TerminationRequestSource = useMemo(() => {
     if (loadedDraft?.sourceKind) return loadedDraft.sourceKind;
     if (sourceFromAi) return "ai_chat";
-    if (prefill.mode === "crm") return "crm_contract";
     if (sourceQuick) return "quick_action";
+    if (sourceCard === "crm" && prefill.mode === "crm") return "crm_contract";
     return "manual_intake";
-  }, [loadedDraft?.sourceKind, prefill.mode, sourceFromAi, sourceQuick]);
+  }, [loadedDraft?.sourceKind, prefill.mode, sourceFromAi, sourceQuick, sourceCard]);
 
   useEffect(() => {
     if (!loadedDraft?.productSegment) return;
@@ -166,19 +214,17 @@ export function TerminationIntakeWizard({
         setTerminationReasonCode(next[0].reasonCode as TerminationReasonCode);
       }
     },
-    [terminationReasonCode]
+    [terminationReasonCode],
   );
 
-  const STEP_LABELS = ["Pojišťovna a smlouva", "Režim a termíny", "Doplnění a kontrola"];
-
-  function buildBasePayload(): CreateTerminationDraftPayload {
+  const buildBasePayload = useCallback((): CreateTerminationDraftPayload => {
     return {
       sourceKind,
-      contactId: loadedDraft?.contactId ?? prefill.contactId,
-      contractId: loadedDraft?.contractId ?? prefill.contractId,
+      contactId,
+      contractId,
       sourceDocumentId: sourceDocumentId.trim() || null,
       sourceConversationId: null,
-      insurerName: insurerName.trim(),
+      insurerName: insurerQuery.trim(),
       contractNumber: contractNumber.trim() || null,
       productSegment: productSegment.trim() || null,
       contractStartDate: contractStartDate.trim() || null,
@@ -189,9 +235,7 @@ export function TerminationIntakeWizard({
       uncertainInsurer,
       documentBuilderExtras: {
         ...(policyholderKind === "company" ? { policyholderKind: "company" as const } : {}),
-        ...(policyholderKind === "company" && companyName.trim()
-          ? { companyName: companyName.trim() }
-          : {}),
+        ...(policyholderKind === "company" && companyName.trim() ? { companyName: companyName.trim() } : {}),
         ...(policyholderKind === "company" && authorizedPersonName.trim()
           ? { authorizedPersonName: authorizedPersonName.trim() }
           : {}),
@@ -201,8 +245,138 @@ export function TerminationIntakeWizard({
         ...(advisorNoteForReview.trim() ? { advisorNoteForReview: advisorNoteForReview.trim() } : {}),
         ...(claimEventDate.trim() ? { claimEventDate: claimEventDate.trim() } : {}),
         ...(placeOverride.trim() ? { placeOverride: placeOverride.trim() } : {}),
+        ...(attachmentsDeclared.trim() ? { attachmentsDeclared: attachmentsDeclared.trim() } : {}),
       },
     };
+  }, [
+    sourceKind,
+    contactId,
+    contractId,
+    sourceDocumentId,
+    insurerQuery,
+    contractNumber,
+    productSegment,
+    contractStartDate,
+    contractAnniversaryDate,
+    requestedEffectiveDate,
+    terminationMode,
+    terminationReasonCode,
+    uncertainInsurer,
+    policyholderKind,
+    companyName,
+    authorizedPersonName,
+    authorizedPersonRole,
+    advisorNoteForReview,
+    claimEventDate,
+    placeOverride,
+    attachmentsDeclared,
+  ]);
+
+  useEffect(() => {
+    const q = insurerQuery.trim();
+    if (q.length < 2) {
+      /* eslint-disable react-hooks/set-state-in-effect -- vyčištění výsledků při krátkém dotazu */
+      setInsurerItems([]);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        setInsurerSearchBusy(true);
+        const r = await searchTerminationInsurerRegistryAction(q);
+        setInsurerSearchBusy(false);
+        if (!r.ok) return;
+        setInsurerItems(
+          r.items.map((row) => ({
+            id: row.id,
+            label: row.insurerName,
+            meta: [row.addressLine, row.channelHint].filter(Boolean).join(" · ") || null,
+            insurerAddressLine: row.addressLine,
+            insurerChannelHint: row.channelHint,
+          })),
+        );
+      })();
+    }, 280);
+    return () => clearTimeout(t);
+  }, [insurerQuery]);
+
+  useEffect(() => {
+    const q = clientQuery.trim();
+    if (q.length < 2) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setClientItems([]);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        setClientSearchBusy(true);
+        const r = await searchContactsForTerminationWizardAction(q);
+        setClientSearchBusy(false);
+        if (!r.ok) return;
+        setClientItems(
+          r.items.map((row) => ({
+            id: row.id,
+            label: row.displayName,
+            meta: row.hint || null,
+          })),
+        );
+      })();
+    }, 280);
+    return () => clearTimeout(t);
+  }, [clientQuery]);
+
+  useEffect(() => {
+    if (wizardStep !== 2 || !canWrite) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setPreviewSyncBusy(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
+    let cancelled = false;
+    setPreviewSyncBusy(true);
+    const tid = setTimeout(() => {
+      void saveTerminationIntakePartialAction({
+        ...buildBasePayload(),
+        partialRequestId: partialRequestIdRef.current,
+      }).then((res) => {
+        if (cancelled) return;
+        setPreviewSyncBusy(false);
+        if (res.ok) {
+          setPartialRequestId(res.requestId);
+          setPreviewNonce((n) => n + 1);
+        }
+      });
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(tid);
+    };
+  }, [wizardStep, canWrite, buildBasePayload]);
+
+  function onInsurerQueryChange(q: string) {
+    setInsurerQuery(q);
+    setSelectedInsurerRegistryId(null);
+    setRegistryDeliveryMeta(null);
+  }
+
+  function onInsurerPick(item: SearchComboboxItem) {
+    setInsurerQuery(item.label);
+    setSelectedInsurerRegistryId(item.id);
+    setRegistryDeliveryMeta({
+      addressLine: item.insurerAddressLine ?? null,
+      channelHint: item.insurerChannelHint ?? null,
+    });
+  }
+
+  function onClientPick(item: SearchComboboxItem) {
+    setContactId(item.id);
+    setClientQuery(item.label);
+    setContractId(null);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("contactId", item.id);
+    next.delete("contractId");
+    router.replace(`/portal/terminations/new?${next.toString()}`);
   }
 
   function onSavePartial() {
@@ -222,6 +396,7 @@ export function TerminationIntakeWizard({
         return;
       }
       setPartialRequestId(res.requestId);
+      setPreviewNonce((n) => n + 1);
       setPartialSavedOk("Koncept uložen. Můžete pokračovat později.");
       const next = new URLSearchParams(searchParams.toString());
       next.set("draftId", res.requestId);
@@ -236,7 +411,7 @@ export function TerminationIntakeWizard({
       setError("Nemáte oprávnění vytvořit žádost.");
       return;
     }
-    if (!insurerName.trim()) {
+    if (!insurerQuery.trim()) {
       setError("Vyplňte název pojišťovny před dokončením, nebo použijte „Uložit rozepsané“.");
       return;
     }
@@ -268,14 +443,13 @@ export function TerminationIntakeWizard({
       return (
         <p className="text-sm text-[color:var(--wp-text-secondary)]">
           Kontext: klient bez vybrané smlouvy
-          {prefill.contactLabel ? ` · ${prefill.contactLabel}` : ""} – vyplňte údaje ručně nebo nahrajte
-          dokument později.
+          {prefill.contactLabel ? ` · ${prefill.contactLabel}` : ""} – doplňte údaje nebo nahrajte dokument.
         </p>
       );
     }
     return (
       <p className="text-sm text-[color:var(--wp-text-secondary)]">
-        Kontext: obecný intak – není vázán na CRM smlouvu. Zvažte nejdřív vybrat klienta v kontaktech.
+        Kontext: obecný intak – zvažte vybrat klienta v kontaktech pro předvyplnění.
       </p>
     );
   }, [prefill]);
@@ -283,10 +457,34 @@ export function TerminationIntakeWizard({
   const aiBanner =
     sourceFromAi ? (
       <p className="text-sm text-indigo-900 bg-indigo-50 border border-indigo-200 rounded-[var(--wp-radius)] px-3 py-2">
-        Otevřeno z AI asistenta – po uložení bude žádost označena zdrojem „ai_chat“. Doplňte údaje a ověřte výsledek
-        rules engine.
+        Otevřeno z AI asistenta – žádost bude označena zdrojem „ai_chat“. Ověřte údaje a výsledek pravidel.
       </p>
     ) : null;
+
+  const effectivePreviewLabel = requestedEffectiveDate.trim()
+    ? formatCzDate(requestedEffectiveDate)
+    : "—";
+
+  const isComplete =
+    Boolean(insurerQuery.trim()) &&
+    Boolean(contractNumber.trim()) &&
+    Boolean(terminationMode) &&
+    Boolean(requestedEffectiveDate.trim() || terminationMode === "end_of_insurance_period");
+
+  const deliveryAddressLine =
+    registryDeliveryMeta?.addressLine ||
+    (insurerQuery.trim() && !registryDeliveryMeta ? `${insurerQuery.trim()} (adresa se doplní po párování s registrem)` : null);
+
+  const sourceFooterLabel =
+    sourceKind === "crm_contract"
+      ? "CRM smlouva"
+      : sourceDocumentId.trim()
+        ? "Nahraná / odkazovaná smlouva"
+        : sourceFromAi
+          ? "AI asistent"
+          : sourceQuick
+            ? "Rychlá akce"
+            : "Ruční zadání";
 
   if (result) {
     const { rules, requestId } = result;
@@ -297,23 +495,19 @@ export function TerminationIntakeWizard({
           ID žádosti: <span className="font-mono">{requestId}</span>
         </p>
         <div
-          className={`rounded-[var(--wp-radius)] border p-4 text-sm ${
-            rules.outcome === "hard_fail"
-              ? "border-red-200 bg-red-50 text-red-900"
-              : rules.outcome === "review_required"
-                ? "border-amber-200 bg-amber-50 text-amber-950"
-                : rules.outcome === "awaiting_data"
-                  ? "border-indigo-200 bg-indigo-50 text-indigo-950"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-950"
-          }`}
+          className={cx(
+            "rounded-[var(--wp-radius)] border p-4 text-sm",
+            rules.outcome === "hard_fail" && "border-red-200 bg-red-50 text-red-900",
+            rules.outcome === "review_required" && "border-amber-200 bg-amber-50 text-amber-950",
+            rules.outcome === "awaiting_data" && "border-indigo-200 bg-indigo-50 text-indigo-950",
+            rules.outcome === "ready" && "border-emerald-200 bg-emerald-50 text-emerald-950",
+          )}
         >
           <p className="font-semibold">{outcomeLabel(rules.outcome)}</p>
           {rules.computedEffectiveDate ? (
             <p className="mt-2">Navrhované datum účinnosti: {rules.computedEffectiveDate}</p>
           ) : null}
-          {rules.reviewRequiredReason ? (
-            <p className="mt-2">{rules.reviewRequiredReason}</p>
-          ) : null}
+          {rules.reviewRequiredReason ? <p className="mt-2">{rules.reviewRequiredReason}</p> : null}
           {rules.missingFields.length > 0 ? (
             <ul className="mt-2 list-disc pl-5">
               {rules.missingFields.map((m) => (
@@ -337,7 +531,7 @@ export function TerminationIntakeWizard({
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-[color:var(--wp-text)]">Náhled dokumentu (fáze 6)</h2>
+          <h2 className="text-sm font-semibold text-[color:var(--wp-text)]">Náhled dokumentu</h2>
           <TerminationLetterPreviewPanel requestId={requestId} />
         </div>
 
@@ -346,11 +540,11 @@ export function TerminationIntakeWizard({
             href={`/portal/terminations/${requestId}`}
             className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
           >
-            Detail žádosti (stav, odeslání, audit)
+            Detail žádosti
           </Link>
-          {prefill.contactId ? (
+          {contactId ? (
             <Link
-              href={`/portal/contacts/${prefill.contactId}`}
+              href={`/portal/contacts/${contactId}`}
               className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
             >
               Zpět na kontakt
@@ -374,12 +568,66 @@ export function TerminationIntakeWizard({
     );
   }
 
+  const stepper = (
+    <div className="grid gap-3 md:grid-cols-3">
+      {STEP_LABELS.map((label, index) => {
+        const active = index === wizardStep;
+        const done = index < wizardStep;
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => setWizardStep(index)}
+            className={cx(
+              "rounded-[var(--wp-radius)] border px-4 py-3 text-left transition min-h-[44px]",
+              active && "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm",
+              done && "border-emerald-200 bg-emerald-50",
+              !active && !done && "border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] hover:border-[var(--wp-accent)]/40",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cx(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shrink-0",
+                  active && "bg-[var(--wp-accent)] text-white",
+                  done && "bg-emerald-500 text-white",
+                  !active && !done && "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                )}
+              >
+                {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+              </div>
+              <div className="text-sm font-semibold text-[color:var(--wp-text)]">{label}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const contactDocsHref = contactId ? `/portal/contacts/${contactId}?tab=dokumenty` : "/portal/contacts/new";
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
-      <div>
-        <h1 className="text-xl font-semibold text-[color:var(--wp-text)]">Výpověď smlouvy</h1>
-        {contextBanner}
-        {aiBanner}
+    <div className="mx-auto max-w-6xl space-y-6 pb-24">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-[color:var(--wp-text)] md:text-2xl">
+            Výpověď smlouvy
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+            Vyberte klienta, pojišťovnu a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
+          </p>
+          {contextBanner}
+          {aiBanner}
+        </div>
+        <div
+          className={cx(
+            "inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-semibold",
+            isComplete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900",
+          )}
+        >
+          {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+          {isComplete ? "Připraveno k dokončení" : "Doplňte chybějící údaje"}
+        </div>
       </div>
 
       {draftLoadError ? (
@@ -389,9 +637,7 @@ export function TerminationIntakeWizard({
       ) : null}
 
       {partialRequestId ? (
-        <p className="text-xs text-[color:var(--wp-text-secondary)] font-mono">
-          Rozpracovaný koncept: {partialRequestId}
-        </p>
+        <p className="text-xs text-[color:var(--wp-text-secondary)] font-mono">Koncept: {partialRequestId}</p>
       ) : null}
 
       {partialSavedOk ? (
@@ -406,283 +652,409 @@ export function TerminationIntakeWizard({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 text-xs">
-        {STEP_LABELS.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setWizardStep(i)}
-            className={`rounded-full px-3 py-1.5 font-semibold min-h-[36px] border ${
-              wizardStep === i
-                ? "border-[var(--wp-accent)] bg-[var(--wp-accent)] text-white"
-                : "border-[color:var(--wp-border)] text-[color:var(--wp-text-secondary)]"
-            }`}
-          >
-            {i + 1}. {label}
-          </button>
-        ))}
-      </div>
+      {stepper}
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {wizardStep === 0 ? (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Pojišťovna (název)
-              </label>
-              <input
-                value={insurerName}
-                onChange={(e) => setInsurerName(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-                placeholder="např. Kooperativa — u rozepsaného konceptu můžete nechat prázdné a doplnit později"
-              />
-            </div>
-            <label className="flex items-center gap-3 min-h-[44px] cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={uncertainInsurer}
-                onChange={(e) => setUncertainInsurer(e.target.checked)}
-                className="h-5 w-5 rounded border-[color:var(--wp-border)]"
-              />
-              Nejsem si jistý/á pojišťovnou – poslat do review
-            </label>
-
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Číslo smlouvy
-              </label>
-              <input
-                value={contractNumber}
-                onChange={(e) => setContractNumber(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                ID zdrojového dokumentu (volitelné)
-              </label>
-              <input
-                value={sourceDocumentId}
-                onChange={(e) => setSourceDocumentId(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px] font-mono text-xs"
-                placeholder="UUID dokumentu z CRM (nahraná smlouva)"
-              />
-              <p className="text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                Fáze 5 masterplan: navázání na existující soubor ve vašem tenantu před doplněním kontaktu.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                {(loadedDraft?.contactId ?? prefill.contactId) ? (
-                  <Link
-                    href={`/portal/contacts/${loadedDraft?.contactId ?? prefill.contactId}?tab=dokumenty`}
-                    className="font-semibold text-[var(--wp-accent)] underline"
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm sm:p-8">
+          {wizardStep === 0 ? (
+            <div className="space-y-6">
+              <div className="grid gap-3 md:grid-cols-3">
+                <button
+                  type="button"
+                  disabled={prefill.mode !== "crm"}
+                  onClick={() => setSourceCard("crm")}
+                  className={cx(
+                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    sourceCard === "crm"
+                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
+                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                    prefill.mode !== "crm" && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <div
+                    className={cx(
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      sourceCard === "crm"
+                        ? "bg-[var(--wp-accent)] text-white"
+                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                    )}
                   >
-                    Nahrát smlouvu v dokumentech klienta
-                  </Link>
-                ) : (
-                  <Link href="/portal/contacts/new" className="font-semibold text-[var(--wp-accent)] underline">
-                    Založit lehký kontakt (nový záznam)
-                  </Link>
-                )}
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Vybrat z CRM</div>
+                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+                    Nejrychlejší cesta s předvyplněním údajů.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceCard("upload")}
+                  className={cx(
+                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    sourceCard === "upload"
+                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
+                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                  )}
+                >
+                  <div
+                    className={cx(
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      sourceCard === "upload"
+                        ? "bg-[var(--wp-accent)] text-white"
+                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                    )}
+                  >
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Nahrát smlouvu</div>
+                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+                    Propojte žádost se souborem v dokumentech (UUID).
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceCard("manual")}
+                  className={cx(
+                    "rounded-[var(--wp-radius)] border p-4 text-left transition min-h-[44px]",
+                    sourceCard === "manual"
+                      ? "border-[var(--wp-accent)] bg-[var(--wp-accent)]/10 shadow-sm"
+                      : "border-[color:var(--wp-border)] hover:border-[var(--wp-accent)]/30",
+                  )}
+                >
+                  <div
+                    className={cx(
+                      "mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--wp-radius)]",
+                      sourceCard === "manual"
+                        ? "bg-[var(--wp-accent)] text-white"
+                        : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]",
+                    )}
+                  >
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div className="text-sm font-semibold text-[color:var(--wp-text)]">Vyplnit ručně</div>
+                  <div className="mt-1 text-sm leading-6 text-[color:var(--wp-text-secondary)]">
+                    Pro cizí smlouvy nebo nový případ.
+                  </div>
+                </button>
               </div>
-            </div>
-          </>
-        ) : null}
 
-        {wizardStep === 1 ? (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Segment</label>
-              <select
-                value={productSegment}
-                onChange={(e) => void onSegmentChange(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {segments.map((s) => (
-                  <option key={s} value={s}>
-                    {segmentLabel(s)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                  Počátek smlouvy
-                </label>
-                <input
-                  type="date"
+              <div className="grid gap-6 lg:grid-cols-2">
+                <SearchCombobox
+                  label="Pojišťovna"
+                  placeholder="Začněte psát název pojišťovny…"
+                  query={insurerQuery}
+                  onQueryChange={onInsurerQueryChange}
+                  items={insurerItems}
+                  selectedId={selectedInsurerRegistryId}
+                  onSelect={(item) => onInsurerPick(item)}
+                  isLoading={insurerSearchBusy}
+                />
+                <SearchCombobox
+                  label="Klient"
+                  placeholder="Vyhledejte jméno klienta…"
+                  helperText="Vyberte kontakt ze seznamu."
+                  query={clientQuery}
+                  onQueryChange={(q) => {
+                    setClientQuery(q);
+                  }}
+                  items={clientItems}
+                  selectedId={contactId}
+                  onSelect={onClientPick}
+                  isLoading={clientSearchBusy}
+                />
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
+                    Číslo smlouvy
+                  </label>
+                  <input
+                    value={contractNumber}
+                    onChange={(e) => setContractNumber(e.target.value)}
+                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                  />
+                </div>
+                <FriendlyDateInput
+                  label="Počátek pojištění"
                   value={contractStartDate}
-                  onChange={(e) => setContractStartDate(e.target.value)}
-                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                  onChange={setContractStartDate}
                 />
               </div>
+
+              <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/50 p-4">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wp-accent)]" />
+                  <div>
+                    <div className="text-sm font-semibold text-[color:var(--wp-text)]">Adresa pro odeslání</div>
+                    <div className="mt-1 text-sm text-[color:var(--wp-text)]">
+                      {deliveryAddressLine ?? "Vyberte pojišťovnu ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
+                    </div>
+                    {registryDeliveryMeta?.channelHint ? (
+                      <div className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">
+                        Kanál: {registryDeliveryMeta.channelHint}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                  Výroční den
+                <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
+                  Identifikátor dokumentu ve vašich souborech (volitelné)
                 </label>
                 <input
-                  type="date"
-                  value={contractAnniversaryDate}
-                  onChange={(e) => setContractAnniversaryDate(e.target.value)}
-                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                  value={sourceDocumentId}
+                  onChange={(e) => setSourceDocumentId(e.target.value)}
+                  className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px] font-mono text-xs"
+                  placeholder="UUID dokumentu z CRM"
                 />
+                <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                  <Link href={contactDocsHref} className="font-semibold text-[var(--wp-accent)] underline">
+                    Otevřít dokumenty klienta
+                  </Link>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Požadované datum účinnosti (volitelné)
+              <label className="flex items-center gap-3 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/30 px-4 py-3 text-sm text-[color:var(--wp-text)] cursor-pointer min-h-[44px]">
+                <input
+                  type="checkbox"
+                  checked={uncertainInsurer}
+                  onChange={(e) => setUncertainInsurer(e.target.checked)}
+                  className="h-4 w-4 rounded border-[color:var(--wp-border)]"
+                />
+                Nejsem si jistý pojišťovnou nebo adresou, chci to poslat do kontroly
               </label>
-              <input
-                type="date"
-                value={requestedEffectiveDate}
-                onChange={(e) => setRequestedEffectiveDate(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              />
             </div>
+          ) : null}
 
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Důvod výpovědi
-              </label>
-              <select
-                value={terminationReasonCode}
-                onChange={(e) => setTerminationReasonCode(e.target.value as TerminationReasonCode)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {reasons.map((r) => (
-                  <option key={r.id} value={r.reasonCode}>
-                    {r.labelCs}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Režim / způsob ukončení (wizard)
-              </label>
-              <select
-                value={terminationMode}
-                onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {MODE_OPTIONS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        ) : null}
-
-        {wizardStep === 2 ? (
-          <>
-        <fieldset className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] p-3 space-y-2">
-          <legend className="text-xs font-medium text-[color:var(--wp-text-muted)] px-1">
-            Pojistník v dopise
-          </legend>
-          <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
-            <input
-              type="radio"
-              name="ph-kind"
-              checked={policyholderKind === "person"}
-              onChange={() => setPolicyholderKind("person")}
-              className="h-4 w-4"
-            />
-            Fyzická osoba (jméno z kontaktu)
-          </label>
-          <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
-            <input
-              type="radio"
-              name="ph-kind"
-              checked={policyholderKind === "company"}
-              onChange={() => setPolicyholderKind("company")}
-              className="h-4 w-4"
-            />
-            Právnická osoba / firma
-          </label>
-          {policyholderKind === "company" ? (
-            <div className="grid gap-2 pt-1 sm:grid-cols-1">
+          {wizardStep === 1 ? (
+            <div className="space-y-6">
               <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                  Obchodní firma
-                </label>
-                <input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-                  placeholder="např. Example s.r.o."
-                />
+                <h2 className="text-lg font-semibold text-[color:var(--wp-text)]">Režim a termín ukončení</h2>
+                <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
+                  Zvolte segment, důvod a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
+                </p>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                  Oprávněná osoba (podpis)
-                </label>
-                <input
-                  value={authorizedPersonName}
-                  onChange={(e) => setAuthorizedPersonName(e.target.value)}
-                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">Segment</label>
+                  <select
+                    value={productSegment}
+                    onChange={(e) => void onSegmentChange(e.target.value)}
+                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                  >
+                    {segments.map((s) => (
+                      <option key={s} value={s}>
+                        {segmentLabel(s)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
+                    Způsob ukončení
+                  </label>
+                  <select
+                    value={terminationMode}
+                    onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
+                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                  >
+                    {MODE_OPTIONS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <FriendlyDateInput
+                  label="Požadované datum účinnosti (volitelné)"
+                  value={requestedEffectiveDate}
+                  onChange={setRequestedEffectiveDate}
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                  Role (volitelné)
-                </label>
-                <input
-                  value={authorizedPersonRole}
-                  onChange={(e) => setAuthorizedPersonRole(e.target.value)}
-                  className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-                  placeholder="např. jednatel"
-                />
+                <FriendlyDateInput label="Výroční den" value={contractAnniversaryDate} onChange={setContractAnniversaryDate} />
+                <div className="lg:col-span-2">
+                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">
+                    Důvod výpovědi
+                  </label>
+                  <select
+                    value={terminationReasonCode}
+                    onChange={(e) => setTerminationReasonCode(e.target.value as TerminationReasonCode)}
+                    className="h-12 w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 text-sm min-h-[44px]"
+                  >
+                    {reasons.map((r) => (
+                      <option key={r.id} value={r.reasonCode}>
+                        {r.labelCs}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="lg:col-span-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[var(--wp-accent)]/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wp-accent)]" />
+                    <div>
+                      <div className="text-sm font-semibold text-[color:var(--wp-text)]">Navržené datum účinnosti (náhled)</div>
+                      <div className="mt-1 text-sm text-[color:var(--wp-text)]">{effectivePreviewLabel}</div>
+                      <div className="mt-2 text-xs leading-5 text-[color:var(--wp-text-secondary)]">
+                        Po dokončení žádosti dopočítá pravidla definitivní datum; u režimu ke konci období ověřte výsledek v
+                        souhrnu.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="lg:col-span-2">
+                  <label className="mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]">Přílohy</label>
+                  <textarea
+                    value={attachmentsDeclared}
+                    onChange={(e) => setAttachmentsDeclared(e.target.value)}
+                    placeholder="Například: kopie technického průkazu, zelená karta…"
+                    rows={4}
+                    className="min-h-[104px] w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm"
+                  />
+                </div>
               </div>
             </div>
           ) : null}
-        </fieldset>
 
-        <div>
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-            Místo v záhlaví dopisu (volitelné)
-          </label>
-          <input
-            value={placeOverride}
-            onChange={(e) => setPlaceOverride(e.target.value)}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-            placeholder="např. Praha"
-          />
+          {wizardStep === 2 ? (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[color:var(--wp-text)]">Souhrn</h2>
+                <div className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/60 p-4">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-[color:var(--wp-text-muted)]">
+                    Klient
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-[color:var(--wp-text)]">
+                    <UserRound className="h-4 w-4 text-[color:var(--wp-text-secondary)]" />
+                    {clientQuery.trim() || "—"}
+                  </div>
+                </div>
+                <div className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/60 p-4">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-[color:var(--wp-text-muted)]">
+                    Pojišťovna
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-[color:var(--wp-text)]">{insurerQuery.trim() || "—"}</div>
+                  {registryDeliveryMeta?.addressLine ? (
+                    <div className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">{registryDeliveryMeta.addressLine}</div>
+                  ) : null}
+                </div>
+                <div className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/60 p-4 space-y-2 text-sm text-[color:var(--wp-text)]">
+                  <div>
+                    <span className="font-medium">Číslo smlouvy:</span> {contractNumber.trim() || "—"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Typ ukončení:</span>{" "}
+                    {MODE_OPTIONS.find((m) => m.value === terminationMode)?.label ?? terminationMode}
+                  </div>
+                  <div>
+                    <span className="font-medium">Datum účinnosti (zadání):</span> {effectivePreviewLabel}
+                  </div>
+                  {registryDeliveryMeta?.channelHint ? (
+                    <div>
+                      <span className="font-medium">Kanál:</span> {registryDeliveryMeta.channelHint}
+                    </div>
+                  ) : null}
+                </div>
+
+                <fieldset className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] p-3 space-y-2">
+                  <legend className="text-xs font-medium text-[color:var(--wp-text-muted)] px-1">Pojistník v dopise</legend>
+                  <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ph-kind"
+                      checked={policyholderKind === "person"}
+                      onChange={() => setPolicyholderKind("person")}
+                      className="h-4 w-4"
+                    />
+                    Fyzická osoba (jméno z kontaktu)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ph-kind"
+                      checked={policyholderKind === "company"}
+                      onChange={() => setPolicyholderKind("company")}
+                      className="h-4 w-4"
+                    />
+                    Právnická osoba / firma
+                  </label>
+                  {policyholderKind === "company" ? (
+                    <div className="grid gap-2 pt-1">
+                      <input
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                        placeholder="Obchodní firma"
+                      />
+                      <input
+                        value={authorizedPersonName}
+                        onChange={(e) => setAuthorizedPersonName(e.target.value)}
+                        className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                        placeholder="Oprávněná osoba (podpis)"
+                      />
+                      <input
+                        value={authorizedPersonRole}
+                        onChange={(e) => setAuthorizedPersonRole(e.target.value)}
+                        className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                        placeholder="Role (volitelné)"
+                      />
+                    </div>
+                  ) : null}
+                </fieldset>
+
+                <div>
+                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+                    Místo v záhlaví dopisu (volitelné)
+                  </label>
+                  <input
+                    value={placeOverride}
+                    onChange={(e) => setPlaceOverride(e.target.value)}
+                    className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+                    placeholder="např. Praha"
+                  />
+                </div>
+
+                {terminationReasonCode === "after_claim_event" ? (
+                  <FriendlyDateInput
+                    label="Datum oznámení / pojistné události (volitelné)"
+                    value={claimEventDate}
+                    onChange={setClaimEventDate}
+                  />
+                ) : null}
+
+                <div>
+                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+                    Interní poznámka pro kontrolu (volitelné)
+                  </label>
+                  <textarea
+                    value={advisorNoteForReview}
+                    onChange={(e) => setAdvisorNoteForReview(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm"
+                    placeholder="Viditelné v náhledu, ne v textu dopisu vůči pojišťovně."
+                  />
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--wp-text)]">
+                    <FileSignature className="h-4 w-4 text-[var(--wp-accent)]" />
+                    Náhled dokumentu
+                  </div>
+                  {previewSyncBusy ? (
+                    <span className="text-xs text-[color:var(--wp-text-secondary)]">Aktualizuji náhled…</span>
+                  ) : null}
+                </div>
+                {partialRequestId ? (
+                  <TerminationLetterPreviewPanel key={previewNonce} requestId={partialRequestId} />
+                ) : (
+                  <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)]">
+                    {previewSyncBusy ? "Připravuji koncept pro náhled…" : "Náhled bude k dispozici po uložení konceptu."}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
-
-        {terminationReasonCode === "after_claim_event" ? (
-          <div>
-            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-              Datum oznámení / pojistné události (volitelné)
-            </label>
-            <input
-              type="date"
-              value={claimEventDate}
-              onChange={(e) => setClaimEventDate(e.target.value)}
-              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-            />
-          </div>
-        ) : null}
-
-        <div>
-          <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-            Interní poznámka pro kontrolu (volitelné)
-          </label>
-          <textarea
-            value={advisorNoteForReview}
-            onChange={(e) => setAdvisorNoteForReview(e.target.value)}
-            rows={3}
-            className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm"
-            placeholder="Viditelné v náhledu dokumentu, ne v textu dopisu vůči pojišťovně."
-          />
-        </div>
-          </>
-        ) : null}
 
         {error ? (
           <p className="text-sm text-red-600" role="alert">
@@ -690,53 +1062,65 @@ export function TerminationIntakeWizard({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="button"
-            disabled={wizardStep === 0}
-            onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-            className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 py-2.5 text-sm font-semibold min-h-[44px] disabled:opacity-40"
-          >
-            Předchozí krok
-          </button>
-          <button
-            type="button"
-            disabled={wizardStep >= STEP_LABELS.length - 1}
-            onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
-            className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 py-2.5 text-sm font-semibold min-h-[44px] disabled:opacity-40"
-          >
-            Další krok
-          </button>
-          <button
-            type="button"
-            disabled={!canWrite || isPending}
-            onClick={() => void onSavePartial()}
-            className="rounded-[var(--wp-radius)] border border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-950 min-h-[44px] disabled:opacity-50"
-          >
-            {isPending ? "Ukládám…" : "Uložit rozepsané (koncept)"}
-          </button>
-          <button
-            type="submit"
-            disabled={!canWrite || isPending}
-            className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
-          >
-            {isPending ? "Ukládám…" : "Dokončit a vyhodnotit pravidla"}
-          </button>
-          {loadedDraft?.contactId ?? prefill.contactId ? (
-            <Link
-              href={`/portal/contacts/${loadedDraft?.contactId ?? prefill.contactId}`}
-              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 py-2.5 text-sm font-semibold min-h-[44px] inline-flex items-center"
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-5 py-4 shadow-md">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--wp-text-secondary)]">
+            <span className="rounded-full bg-[var(--wp-accent)]/10 px-3 py-1 font-medium text-[var(--wp-accent)]">
+              {sourceFooterLabel}
+            </span>
+            <span>
+              {wizardStep === 2 ? "Finální náhled před odesláním pravidel." : "Vyplňte údaje a pokračujte na další krok."}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={wizardStep === 0}
+              onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
+              className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-medium min-h-[44px] disabled:opacity-40"
             >
-              Zrušit
-            </Link>
-          ) : (
-            <Link
-              href="/portal/today"
-              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 py-2.5 text-sm font-semibold min-h-[44px] inline-flex items-center"
+              Zpět
+            </button>
+            <button
+              type="button"
+              disabled={wizardStep >= STEP_LABELS.length - 1}
+              onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
+              className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-40"
             >
-              Zrušit
-            </Link>
-          )}
+              Další krok
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={!canWrite || isPending}
+              onClick={() => void onSavePartial()}
+              className="h-11 rounded-[var(--wp-radius)] border border-[var(--wp-accent)]/40 bg-[var(--wp-accent)]/10 px-4 text-sm font-semibold text-[color:var(--wp-text)] min-h-[44px] disabled:opacity-50"
+            >
+              {isPending ? "Ukládám…" : "Uložit rozepsané"}
+            </button>
+            <button
+              type="submit"
+              disabled={!canWrite || isPending || wizardStep < STEP_LABELS.length - 1}
+              className="inline-flex h-11 items-center gap-2 rounded-[var(--wp-radius)] bg-[color:var(--wp-text)] px-5 text-sm font-semibold text-[color:var(--wp-surface)] min-h-[44px] disabled:opacity-50"
+            >
+              Dokončit a vyhodnotit pravidla
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            {contactId ? (
+              <Link
+                href={`/portal/contacts/${contactId}`}
+                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-semibold min-h-[44px] inline-flex items-center"
+              >
+                Zrušit
+              </Link>
+            ) : (
+              <Link
+                href="/portal/today"
+                className="h-11 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-4 text-sm font-semibold min-h-[44px] inline-flex items-center"
+              >
+                Zrušit
+              </Link>
+            )}
+          </div>
         </div>
       </form>
     </div>

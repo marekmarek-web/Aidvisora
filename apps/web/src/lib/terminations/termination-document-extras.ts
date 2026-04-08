@@ -19,6 +19,8 @@ export type TerminationDocumentBuilderExtras = {
   placeOverride?: string;
   /** Uloženo u rozepsaného konceptu (wizard). */
   uncertainInsurer?: boolean;
+  /** Volný text příloh zadaný poradcem ve wizardu (doplní odstavec v dopise). */
+  attachmentsDeclared?: string;
 };
 
 export function parseDocumentBuilderExtras(raw: unknown): TerminationDocumentBuilderExtras {
@@ -36,6 +38,7 @@ export function parseDocumentBuilderExtras(raw: unknown): TerminationDocumentBui
   if (typeof o.claimEventDate === "string") out.claimEventDate = o.claimEventDate;
   if (typeof o.placeOverride === "string") out.placeOverride = o.placeOverride;
   if (o.uncertainInsurer === true) out.uncertainInsurer = true;
+  if (typeof o.attachmentsDeclared === "string") out.attachmentsDeclared = o.attachmentsDeclared;
   return out;
 }
 
@@ -49,5 +52,6 @@ export function serializeDocumentBuilderExtras(e: TerminationDocumentBuilderExtr
   if (e.claimEventDate?.trim()) out.claimEventDate = e.claimEventDate.trim();
   if (e.placeOverride?.trim()) out.placeOverride = e.placeOverride.trim();
   if (e.uncertainInsurer) out.uncertainInsurer = true;
+  if (e.attachmentsDeclared?.trim()) out.attachmentsDeclared = e.attachmentsDeclared.trim();
   return out;
 }

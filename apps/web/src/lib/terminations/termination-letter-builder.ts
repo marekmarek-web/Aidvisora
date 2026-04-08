@@ -297,6 +297,36 @@ function buildAttachmentsParagraph(vm: TerminationLetterViewModel): string {
   return `Přílohou této žádosti zasílám následující dokumenty: ${vm.attachmentsSummaryText}.`;
 }
 
+/** Adresní blok odesílatele (pojistník) před blokem pojišťovny — formální struktura dopisu. */
+export function buildPolicyholderAddressBlock(vm: TerminationLetterViewModel): string {
+  const lines: string[] = ["Pojistník"];
+  if (vm.policyholderKind === "company") {
+    const cn = (vm.policyholderCompanyName ?? vm.policyholderName).trim();
+    if (cn) lines.push(cn);
+    const ap = vm.policyholderAuthorizedPersonName?.trim();
+    const role = vm.policyholderAuthorizedPersonRole?.trim();
+    if (ap) lines.push(role ? `${ap}, ${role}` : ap);
+  } else {
+    const titleBefore = vm.policyholderTitleBefore ? `${vm.policyholderTitleBefore} ` : "";
+    const phName = `${titleBefore}${vm.policyholderName}`.trim();
+    if (phName) lines.push(phName);
+    if (vm.policyholderBirthDate?.trim()) {
+      lines.push(`Datum narození: ${vm.policyholderBirthDate.trim()}`);
+    }
+  }
+  if (vm.policyholderAddressLine1?.trim()) lines.push(vm.policyholderAddressLine1.trim());
+  if (vm.policyholderAddressLine2?.trim()) lines.push(vm.policyholderAddressLine2.trim());
+  if (lines.length <= 1) lines.push("………………");
+  return lines.join("\n");
+}
+
+export function buildInsurerAddressBlock(vm: TerminationLetterViewModel): string {
+  const inner = [vm.insurerName, vm.insurerDepartment, vm.insurerAddressLine1, vm.insurerAddressLine2, vm.insurerAddressLine3]
+    .filter((x) => x && String(x).trim())
+    .join("\n");
+  return inner.trim() ? `Pojišťovna\n${inner}` : "Pojišťovna\n………………";
+}
+
 export function renderTerminationLetterPlainText(
   vm: TerminationLetterViewModel,
   hasConfirmedEffectiveDate: boolean
@@ -306,9 +336,8 @@ export function renderTerminationLetterPlainText(
   }
 
   const placeDate = `${vm.place}, dne ${vm.generatedAt}`;
-  const addrInsurer = [vm.insurerName, vm.insurerDepartment, vm.insurerAddressLine1, vm.insurerAddressLine2, vm.insurerAddressLine3]
-    .filter((x) => x && String(x).trim())
-    .join("\n");
+  const addrPolicyholder = buildPolicyholderAddressBlock(vm);
+  const addrInsurer = buildInsurerAddressBlock(vm);
 
   const reasonParagraph = buildReasonParagraph(vm, hasConfirmedEffectiveDate);
   const att = buildAttachmentsParagraph(vm);
@@ -316,6 +345,8 @@ export function renderTerminationLetterPlainText(
   const sign = buildLetterSignatureBlock(vm);
 
   return `${placeDate}
+
+${addrPolicyholder}
 
 ${addrInsurer}
 
@@ -337,9 +368,15 @@ ${sign}
 
 function renderDistanceWithdrawalLetter(vm: TerminationLetterViewModel): string {
   const placeDate = `${vm.place}, dne ${vm.generatedAt}`;
+  const addrPolicyholder = buildPolicyholderAddressBlock(vm);
+  const addrInsurer = buildInsurerAddressBlock(vm);
   const body = buildDistanceWithdrawalBody(vm);
   const sign = buildLetterSignatureBlock(vm);
   return `${placeDate}
+
+${addrPolicyholder}
+
+${addrInsurer}
 
 Věc: Odstoupení od pojistné smlouvy č. ${vm.contractNumber}
 
@@ -353,9 +390,8 @@ ${sign}
 
 function buildCoveringLetter(vm: TerminationLetterViewModel): string {
   const placeDate = `${vm.place}, dne ${vm.generatedAt}`;
-  const addrInsurer = [vm.insurerName, vm.insurerDepartment, vm.insurerAddressLine1, vm.insurerAddressLine2, vm.insurerAddressLine3]
-    .filter((x) => x && String(x).trim())
-    .join("\n");
+  const addrPolicyholder = buildPolicyholderAddressBlock(vm);
+  const addrInsurer = buildInsurerAddressBlock(vm);
   const intro =
     vm.policyholderKind === "company"
       ? `Společnost ${(vm.policyholderCompanyName ?? vm.policyholderName).trim() || "………………"} zasílá v příloze vyplněný formulář k žádosti o ukončení pojistné smlouvy č. ${vm.contractNumber}.`
@@ -364,6 +400,8 @@ function buildCoveringLetter(vm: TerminationLetterViewModel): string {
   const sign = buildLetterSignatureBlock(vm);
   const closingAsk = vm.policyholderKind === "company" ? "Žádáme" : "Žádám";
   return `${placeDate}
+
+${addrPolicyholder}
 
 ${addrInsurer}
 
@@ -524,7 +562,17 @@ export function buildTerminationLetterResult(input: TerminationLetterBuildInput)
   const requiresOfficialForm = r.requiresInsurerForm === true;
   const freeform = r.freeformLetterAllowed !== false;
 
-  const { list: attachments, summaryText } = buildAttachmentsSummary(input.attachmentLabels);
+  const declaredRaw = extras.attachmentsDeclared?.trim();
+  const declaredParts = declaredRaw
+    ? declaredRaw
+        .split(/[,;\n]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const { list: attachments, summaryText } = buildAttachmentsSummary([
+    ...input.attachmentLabels,
+    ...declaredParts,
+  ]);
 
   const modeLabels = terminationModeToLabels(r.terminationMode);
   const productName = ct?.productName ?? ct?.partnerName ?? null;
