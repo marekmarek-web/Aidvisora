@@ -48,7 +48,8 @@ import { isTerminationsModuleEnabled } from "@/lib/terminations/terminations-fea
 export const PORTAL_SIDEBAR_WIDTH_PX = 300;
 export const PORTAL_SIDEBAR_COLLAPSED_PX = 88;
 
-const SIDEBAR_ORDER_KEY = "portal-sidebar-order";
+/** Bump when default section order changes so users get the new layout (e.g. Nástroje pod Přehled). */
+const SIDEBAR_ORDER_KEY = "portal-sidebar-order-v2";
 
 interface NavItemConfig {
   href: string;
