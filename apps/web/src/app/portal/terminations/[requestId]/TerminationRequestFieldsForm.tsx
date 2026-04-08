@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { segmentLabel } from "@/app/lib/segment-labels";
 import {
   updateTerminationRequestFieldsAndReevaluateAction,
@@ -11,6 +11,26 @@ import { modeToReasonCode } from "@/lib/terminations/client";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { parseDocumentBuilderExtras } from "@/lib/terminations/termination-document-extras";
 import { FriendlyDateInput } from "@/components/forms/FriendlyDateInput";
+import { suggestedAnniversaryFromContractStart } from "@/lib/terminations/suggested-anniversary-from-contract-start";
+
+function localIsoDateToday(): string {
+  const t = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+}
+
+function initialSubmissionFromRequest(
+  row: TerminationRequestDetail["request"],
+): string {
+  if (row.requestedSubmissionDate?.trim()) return row.requestedSubmissionDate.trim();
+  if (
+    row.terminationMode === "within_two_months_from_inception" &&
+    row.requestedEffectiveDate?.trim()
+  ) {
+    return row.requestedEffectiveDate.trim();
+  }
+  return "";
+}
 
 const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
   { value: "end_of_insurance_period", label: "Ke konci pojistného období / výročnímu dni" },
@@ -41,7 +61,22 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
   const [productSegment, setProductSegment] = useState(r.productSegment ?? segments[0] ?? "ZP");
   const [contractStartDate, setContractStartDate] = useState(r.contractStartDate ?? "");
   const [contractAnniversaryDate, setContractAnniversaryDate] = useState(r.contractAnniversaryDate ?? "");
-  const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(r.requestedEffectiveDate ?? "");
+  const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(
+    () => (r.terminationMode === "within_two_months_from_inception" ? "" : (r.requestedEffectiveDate ?? "")),
+  );
+  const [requestedSubmissionDate, setRequestedSubmissionDate] = useState(() =>
+    initialSubmissionFromRequest(r),
+  );
+  const [anniversaryManual, setAnniversaryManual] = useState(() => Boolean(r.contractAnniversaryDate?.trim()));
+  const [effectiveManual, setEffectiveManual] = useState(() => {
+    const eff = r.requestedEffectiveDate?.trim();
+    if (!eff || r.terminationMode === "within_two_months_from_inception") return false;
+    if (r.terminationMode !== "end_of_insurance_period") return true;
+    return eff !== (r.contractAnniversaryDate ?? "").trim();
+  });
+  const [submissionManual, setSubmissionManual] = useState(() =>
+    Boolean(initialSubmissionFromRequest(r).trim()),
+  );
   const [sourceDocumentId, setSourceDocumentId] = useState(r.sourceDocumentId ?? "");
   const [terminationMode, setTerminationMode] = useState<TerminationMode>(r.terminationMode);
   const terminationReasonCode = useMemo(() => modeToReasonCode(terminationMode), [terminationMode]);
@@ -59,6 +94,25 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
     setProductSegment(seg);
   }, []);
 
+  useEffect(() => {
+    const start = contractStartDate.trim();
+    if (!start || anniversaryManual) return;
+    const suggested = suggestedAnniversaryFromContractStart(start);
+    if (suggested) setContractAnniversaryDate(suggested);
+  }, [contractStartDate, anniversaryManual]);
+
+  useEffect(() => {
+    if (terminationMode !== "end_of_insurance_period" || effectiveManual) return;
+    const ann = contractAnniversaryDate.trim();
+    if (!ann) return;
+    setRequestedEffectiveDate(ann);
+  }, [terminationMode, contractAnniversaryDate, effectiveManual]);
+
+  useEffect(() => {
+    if (terminationMode !== "within_two_months_from_inception" || submissionManual) return;
+    setRequestedSubmissionDate(localIsoDateToday());
+  }, [terminationMode, submissionManual]);
+
   const onSave = useCallback(() => {
     setError(null);
     setOkMsg(null);
@@ -71,6 +125,10 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
         contractStartDate: contractStartDate.trim() || null,
         contractAnniversaryDate: contractAnniversaryDate.trim() || null,
         requestedEffectiveDate: requestedEffectiveDate.trim() || null,
+        requestedSubmissionDate:
+          terminationMode === "within_two_months_from_inception"
+            ? requestedSubmissionDate.trim() || null
+            : null,
         sourceDocumentId: sourceDocumentId.trim() || null,
         terminationMode,
         terminationReasonCode,
@@ -104,6 +162,7 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
     contractStartDate,
     contractAnniversaryDate,
     requestedEffectiveDate,
+    requestedSubmissionDate,
     sourceDocumentId,
     terminationMode,
     terminationReasonCode,
@@ -175,13 +234,38 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
             ))}
           </select>
         </div>
-        <FriendlyDateInput label="Počátek smlouvy" value={contractStartDate} onChange={setContractStartDate} />
-        <FriendlyDateInput label="Výroční den" value={contractAnniversaryDate} onChange={setContractAnniversaryDate} />
         <FriendlyDateInput
-          label="Požadované datum účinnosti"
-          value={requestedEffectiveDate}
-          onChange={setRequestedEffectiveDate}
+          label="Počátek smlouvy"
+          value={contractStartDate}
+          onChange={setContractStartDate}
         />
+        <FriendlyDateInput
+          label="Výroční den"
+          value={contractAnniversaryDate}
+          onChange={(v) => {
+            setAnniversaryManual(true);
+            setContractAnniversaryDate(v);
+          }}
+        />
+        {terminationMode === "within_two_months_from_inception" ? (
+          <FriendlyDateInput
+            label="Datum podání výpovědi"
+            value={requestedSubmissionDate}
+            onChange={(v) => {
+              setSubmissionManual(true);
+              setRequestedSubmissionDate(v);
+            }}
+          />
+        ) : (
+          <FriendlyDateInput
+            label="Požadované datum účinnosti"
+            value={requestedEffectiveDate}
+            onChange={(v) => {
+              setEffectiveManual(true);
+              setRequestedEffectiveDate(v);
+            }}
+          />
+        )}
         <div>
           <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
             ID zdrojového dokumentu
@@ -196,7 +280,12 @@ export function TerminationRequestFieldsForm({ requestId, detail, segments, onAp
           <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Způsob ukončení</label>
           <select
             value={terminationMode}
-            onChange={(e) => setTerminationMode(e.target.value as TerminationMode)}
+            onChange={(e) => {
+              const v = e.target.value as TerminationMode;
+              setTerminationMode(v);
+              if (v === "end_of_insurance_period") setEffectiveManual(false);
+              if (v === "within_two_months_from_inception") setSubmissionManual(false);
+            }}
             className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
           >
             {MODE_OPTIONS.map((m) => (

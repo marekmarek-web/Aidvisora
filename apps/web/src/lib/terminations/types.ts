@@ -39,6 +39,11 @@ export interface TerminationCrmInput {
   contractAnniversaryDate: string | null;
   /** Datum požadovaný poradcem / klientem; může být null při prvotním spuštění. */
   requestedEffectiveDate: string | null;
+  /**
+   * Datum podání / doručení výpovědi (zejm. režim do 2 měsíců od sjednání).
+   * Legacy řádky: pokud null, rules engine u two_months použije requestedEffectiveDate jako fallback.
+   */
+  requestedSubmissionDate?: string | null;
   terminationMode: TerminationMode;
   terminationReasonCode: TerminationReasonCode;
   /** Volitelný odkaz na zdroj – dokument, konverzace. */
@@ -58,6 +63,7 @@ export interface TerminationManualInput {
   contractStartDate: string | null;
   contractAnniversaryDate: string | null;
   requestedEffectiveDate: string | null;
+  requestedSubmissionDate?: string | null;
   terminationMode: TerminationMode;
   terminationReasonCode: TerminationReasonCode;
   sourceDocumentId?: string | null;

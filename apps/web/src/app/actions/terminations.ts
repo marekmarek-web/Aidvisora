@@ -74,6 +74,17 @@ function canWriteContacts(roleName: RoleName): boolean {
   return hasPermission(roleName, "contacts:write");
 }
 
+/** Stavy, ve kterých nelze pokračovat v průvodci (dokončená / odeslaná žádost). */
+const TERMINATION_WIZARD_BLOCKED_STATUSES = new Set<TerminationRequestStatus>([
+  "completed",
+  "cancelled",
+  "dispatched",
+]);
+
+function isTerminationWizardResumableStatus(status: string): boolean {
+  return !TERMINATION_WIZARD_BLOCKED_STATUSES.has(status as TerminationRequestStatus);
+}
+
 /** Výběr instituce z registru ve wizardu — doplní mailing pro koncept i náhled před rules. */
 async function resolveInsurerRegistryRowForHint(
   hintId: string | null | undefined,
@@ -418,6 +429,7 @@ export type CreateTerminationDraftPayload = {
   contractStartDate: string | null;
   contractAnniversaryDate: string | null;
   requestedEffectiveDate: string | null;
+  requestedSubmissionDate: string | null;
   terminationMode: TerminationMode;
   terminationReasonCode: TerminationReasonCode;
   /** Fáze 5: uživatel označí nejistou identifikaci pojišťovny → vždy review. */
@@ -433,11 +445,9 @@ export type CreateTerminationDraftPayload = {
   insurerRegistryIdHint?: string | null;
 };
 
-export type CreateTerminationDraftResult = {
-  ok: true;
-  requestId: string;
-  rules: TerminationRulesResult;
-} | { ok: false; error: string };
+export type CreateTerminationDraftResult =
+  | { ok: true; requestId: string; rules: TerminationRulesResult; status: TerminationRequestStatus }
+  | { ok: false; error: string };
 
 /**
  * Vytvoří záznam `termination_requests`, vyhodnotí pravidla a uloží výsledek + řádky příloh.
@@ -466,10 +476,10 @@ export async function createTerminationDraft(
     if (!existingResume) {
       return { ok: false, error: "Koncept nenalezen." };
     }
-    if (existingResume.status !== "intake") {
+    if (!isTerminationWizardResumableStatus(existingResume.status)) {
       return {
         ok: false,
-        error: "Tuto žádost už nelze z průvodce dokončit jako koncept (změnil se stav).",
+        error: "Tuto žádost z průvodce v tomto stavu uložit nelze.",
       };
     }
   }
@@ -531,6 +541,7 @@ export async function createTerminationDraft(
       contractStartDate: payload.contractStartDate,
       contractAnniversaryDate: payload.contractAnniversaryDate,
       requestedEffectiveDate: payload.requestedEffectiveDate,
+      requestedSubmissionDate: payload.requestedSubmissionDate ?? null,
       terminationMode: payload.terminationMode,
       terminationReasonCode: payload.terminationReasonCode,
       sourceDocumentId: payload.sourceDocumentId,
@@ -553,6 +564,7 @@ export async function createTerminationDraft(
       contractStartDate: payload.contractStartDate,
       contractAnniversaryDate: payload.contractAnniversaryDate,
       requestedEffectiveDate: payload.requestedEffectiveDate,
+      requestedSubmissionDate: payload.requestedSubmissionDate ?? null,
       terminationMode: payload.terminationMode,
       terminationReasonCode: payload.terminationReasonCode,
       sourceDocumentId: payload.sourceDocumentId,
@@ -608,6 +620,7 @@ export async function createTerminationDraft(
     terminationReasonCode: payload.terminationReasonCode,
     reasonCatalogId: rules.reasonCatalogId,
     requestedEffectiveDate: payload.requestedEffectiveDate ?? undefined,
+    requestedSubmissionDate: payload.requestedSubmissionDate ?? undefined,
     computedEffectiveDate: rules.computedEffectiveDate ?? undefined,
     contractStartDate: payload.contractStartDate ?? undefined,
     contractAnniversaryDate: payload.contractAnniversaryDate ?? undefined,
@@ -697,7 +710,7 @@ export async function createTerminationDraft(
       return id;
     });
 
-    return { ok: true, requestId, rules };
+    return { ok: true, requestId, rules, status };
   } catch (e) {
     console.error("createTerminationDraft", e);
     return {
@@ -803,6 +816,7 @@ export async function saveTerminationIntakePartialAction(
             terminationMode: payload.terminationMode,
             terminationReasonCode: payload.terminationReasonCode,
             requestedEffectiveDate: payload.requestedEffectiveDate ?? undefined,
+            requestedSubmissionDate: payload.requestedSubmissionDate ?? undefined,
             contractStartDate: payload.contractStartDate ?? undefined,
             contractAnniversaryDate: payload.contractAnniversaryDate ?? undefined,
             sourceKind: payload.sourceKind,
@@ -841,6 +855,7 @@ export async function saveTerminationIntakePartialAction(
           terminationMode: payload.terminationMode,
           terminationReasonCode: payload.terminationReasonCode,
           requestedEffectiveDate: payload.requestedEffectiveDate ?? undefined,
+          requestedSubmissionDate: payload.requestedSubmissionDate ?? undefined,
           contractStartDate: payload.contractStartDate ?? undefined,
           contractAnniversaryDate: payload.contractAnniversaryDate ?? undefined,
           sourceKind: payload.sourceKind,
@@ -892,10 +907,13 @@ export type TerminationIntakeDraftWizardState = {
   contractStartDate: string | null;
   contractAnniversaryDate: string | null;
   requestedEffectiveDate: string | null;
+  requestedSubmissionDate: string | null;
   terminationMode: TerminationMode;
   terminationReasonCode: TerminationReasonCode;
   uncertainInsurer: boolean;
   documentBuilderExtras: TerminationDocumentBuilderExtras;
+  /** Stav žádosti (načtení průvodce i po dokončení z konceptu). */
+  status: TerminationRequestStatus;
   /** Odvozeno z registru při načtení konceptu (levý panel / konzistence s dopisem). */
   insurerRegistryOneLine: string | null;
   insurerRegistryChannelHint: string | null;
@@ -921,8 +939,8 @@ export async function getTerminationIntakeDraftForWizard(
     .where(and(eq(terminationRequests.id, requestId), eq(terminationRequests.tenantId, auth.tenantId)))
     .limit(1);
   if (!row) return { ok: false, error: "Koncept nenalezen." };
-  if (row.status !== "intake") {
-    return { ok: false, error: "Žádost není rozepsaným konceptem." };
+  if (!isTerminationWizardResumableStatus(row.status)) {
+    return { ok: false, error: "Tuto žádost z průvodce nadále upravovat nelze (stav se změnil)." };
   }
 
   const extras = parseDocumentBuilderExtras(row.documentBuilderExtras);
@@ -976,10 +994,12 @@ export async function getTerminationIntakeDraftForWizard(
       contractStartDate: row.contractStartDate,
       contractAnniversaryDate: row.contractAnniversaryDate,
       requestedEffectiveDate: row.requestedEffectiveDate,
+      requestedSubmissionDate: row.requestedSubmissionDate ?? null,
       terminationMode: row.terminationMode,
       terminationReasonCode: row.terminationReasonCode as TerminationReasonCode,
       uncertainInsurer,
       documentBuilderExtras: restExtras,
+      status: row.status as TerminationRequestStatus,
       insurerRegistryOneLine,
       insurerRegistryChannelHint,
     },
@@ -998,6 +1018,7 @@ export type UpdateTerminationFieldsPayload = {
   contractStartDate?: string | null;
   contractAnniversaryDate?: string | null;
   requestedEffectiveDate?: string | null;
+  requestedSubmissionDate?: string | null;
   terminationMode: TerminationMode;
   terminationReasonCode: TerminationReasonCode;
   uncertainInsurer: boolean;
@@ -1088,6 +1109,7 @@ export async function updateTerminationRequestFieldsAndReevaluateAction(
       contractStartDate: payload.contractStartDate ?? null,
       contractAnniversaryDate: payload.contractAnniversaryDate ?? null,
       requestedEffectiveDate: payload.requestedEffectiveDate ?? null,
+      requestedSubmissionDate: payload.requestedSubmissionDate ?? null,
       terminationMode: payload.terminationMode,
       terminationReasonCode: payload.terminationReasonCode,
       sourceDocumentId,
@@ -1110,6 +1132,7 @@ export async function updateTerminationRequestFieldsAndReevaluateAction(
       contractStartDate: payload.contractStartDate ?? null,
       contractAnniversaryDate: payload.contractAnniversaryDate ?? null,
       requestedEffectiveDate: payload.requestedEffectiveDate ?? null,
+      requestedSubmissionDate: payload.requestedSubmissionDate ?? null,
       terminationMode: payload.terminationMode,
       terminationReasonCode: payload.terminationReasonCode,
       sourceDocumentId,
@@ -1155,6 +1178,7 @@ export async function updateTerminationRequestFieldsAndReevaluateAction(
     terminationReasonCode: payload.terminationReasonCode,
     reasonCatalogId: rules.reasonCatalogId,
     requestedEffectiveDate: payload.requestedEffectiveDate ?? undefined,
+    requestedSubmissionDate: payload.requestedSubmissionDate ?? undefined,
     computedEffectiveDate: rules.computedEffectiveDate ?? undefined,
     contractStartDate: payload.contractStartDate ?? undefined,
     contractAnniversaryDate: payload.contractAnniversaryDate ?? undefined,
@@ -1224,7 +1248,7 @@ export async function updateTerminationRequestFieldsAndReevaluateAction(
       }
     });
 
-    return { ok: true, requestId: payload.requestId, rules };
+    return { ok: true, requestId: payload.requestId, rules, status };
   } catch (e) {
     console.error("updateTerminationRequestFieldsAndReevaluateAction", e);
     return {
@@ -1338,6 +1362,7 @@ async function loadTerminationLetterBuildResult(
       terminationMode: req.terminationMode,
       terminationReasonCode: req.terminationReasonCode,
       requestedEffectiveDate: req.requestedEffectiveDate,
+      requestedSubmissionDate: req.requestedSubmissionDate ?? null,
       computedEffectiveDate: req.computedEffectiveDate,
       contractStartDate: req.contractStartDate,
       contractAnniversaryDate: req.contractAnniversaryDate,

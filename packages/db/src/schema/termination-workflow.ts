@@ -48,6 +48,8 @@ export const terminationRequests = pgTable("termination_requests", {
     onDelete: "set null",
   }),
   requestedEffectiveDate: date("requested_effective_date", { mode: "string" }),
+  /** Datum podání / doručení výpovědi (např. režim do 2 měsíců od sjednání). */
+  requestedSubmissionDate: date("requested_submission_date", { mode: "string" }),
   computedEffectiveDate: date("computed_effective_date", { mode: "string" }),
   contractStartDate: date("contract_start_date", { mode: "string" }),
   contractAnniversaryDate: date("contract_anniversary_date", { mode: "string" }),

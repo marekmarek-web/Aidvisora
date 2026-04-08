@@ -63,6 +63,8 @@ interface DateComputeInput {
   contractStartDate: string | null;
   contractAnniversaryDate: string | null;
   requestedEffectiveDate: string | null;
+  /** Den podání; u two_months, pokud null → legacy fallback na requestedEffectiveDate. */
+  requestedSubmissionDate: string | null;
   today: Date;
 }
 
@@ -112,10 +114,10 @@ function computeEffectiveDate(input: DateComputeInput): DateComputeResult {
           error: `Lhůta pro výpověď do 2 měsíců od sjednání uplynula (limit byl ${toISODate(deadline)}).`,
         };
       }
-      // Datum účinnosti = den doručení (= today nebo requested, musí být před deadline)
-      const effectiveDate = input.requestedEffectiveDate
-        ? parseDate(input.requestedEffectiveDate)
-        : today;
+      // Účinnost = den podání/doručení: explicitní requestedSubmissionDate, jinak legacy requestedEffectiveDate, jinak dnes.
+      const submissionIso =
+        input.requestedSubmissionDate?.trim() || input.requestedEffectiveDate?.trim() || null;
+      const effectiveDate = submissionIso ? parseDate(submissionIso) : today;
       if (!effectiveDate || effectiveDate > deadline) {
         return {
           computedDate: toISODate(deadline),
@@ -260,6 +262,7 @@ export async function evaluateTerminationRules(
   const catalogFieldToInput: Record<string, keyof TerminationRulesInput> = {
     contract_anniversary_date: "contractAnniversaryDate",
     requested_effective_date: "requestedEffectiveDate",
+    requested_submission_date: "requestedSubmissionDate",
     contract_start_date: "contractStartDate",
   };
   for (const field of reason.requiredFields) {
@@ -269,6 +272,7 @@ export async function evaluateTerminationRules(
       const labelMap: Record<string, string> = {
         contract_anniversary_date: "Datum výročí smlouvy",
         requested_effective_date: "Požadované datum účinnosti",
+        requested_submission_date: "Datum podání výpovědi",
         contract_start_date: "Datum počátku smlouvy",
       };
       missingFields.push({ field, labelCs: labelMap[field] ?? field });
@@ -285,6 +289,7 @@ export async function evaluateTerminationRules(
     contractStartDate: input.contractStartDate,
     contractAnniversaryDate: input.contractAnniversaryDate,
     requestedEffectiveDate: input.requestedEffectiveDate,
+    requestedSubmissionDate: input.requestedSubmissionDate ?? null,
     today,
   });
 

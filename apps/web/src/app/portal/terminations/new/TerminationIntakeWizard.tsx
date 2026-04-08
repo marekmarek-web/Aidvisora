@@ -27,7 +27,12 @@ import {
 } from "@/app/actions/terminations";
 import type { TerminationLetterBuildResult } from "@/lib/terminations/termination-letter-types";
 import { TerminationFinishOutputLayout } from "./TerminationFinishOutputLayout";
-import type { TerminationMode, TerminationReasonCode, TerminationRequestSource } from "@/lib/db/schema-for-client";
+import type {
+  TerminationMode,
+  TerminationReasonCode,
+  TerminationRequestSource,
+  TerminationRequestStatus,
+} from "@/lib/db/schema-for-client";
 import { modeToReasonCode, terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 import type { TerminationPolicyholderKind } from "@/lib/terminations/termination-document-extras";
 import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
@@ -82,6 +87,7 @@ type Props = {
   urlPrefill?: {
     insurerName?: string;
     requestedEffectiveDate?: string;
+    requestedSubmissionDate?: string;
     sourceDocumentId?: string;
   };
   loadedDraft?: TerminationIntakeDraftWizardState | null;
@@ -92,6 +98,39 @@ type SourceCard = "crm" | "upload" | "manual";
 
 function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
+}
+
+function localIsoDateToday(): string {
+  const t = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+}
+
+function initialWizardSubmissionDate(
+  loadedDraft: TerminationIntakeDraftWizardState | null | undefined,
+  urlPrefill: Props["urlPrefill"],
+): string {
+  const sub = loadedDraft?.requestedSubmissionDate?.trim();
+  if (sub) return sub;
+  if (loadedDraft?.terminationMode === "within_two_months_from_inception") {
+    const legacy = loadedDraft.requestedEffectiveDate?.trim();
+    if (legacy) return legacy;
+  }
+  const urlSub = urlPrefill?.requestedSubmissionDate?.trim();
+  if (urlSub) return urlSub;
+  return "";
+}
+
+function initialWizardEffectiveDate(
+  loadedDraft: TerminationIntakeDraftWizardState | null | undefined,
+  urlPrefill: Props["urlPrefill"],
+): string {
+  if (loadedDraft?.terminationMode === "within_two_months_from_inception") return "";
+  return (
+    loadedDraft?.requestedEffectiveDate?.trim() ??
+    urlPrefill?.requestedEffectiveDate?.trim() ??
+    ""
+  );
 }
 
 export function TerminationIntakeWizard({
@@ -108,6 +147,10 @@ export function TerminationIntakeWizard({
   const searchParams = useSearchParams();
   const [wizardStep, setWizardStep] = useState(0);
   const [partialSavedOk, setPartialSavedOk] = useState<string | null>(null);
+  const [finalizeOkMsg, setFinalizeOkMsg] = useState<string | null>(null);
+  const [requestStatus, setRequestStatus] = useState<TerminationRequestStatus>(
+    () => loadedDraft?.status ?? "intake",
+  );
   const [partialRequestId, setPartialRequestId] = useState<string | null>(() => loadedDraft?.requestId ?? null);
   const partialRequestIdRef = useRef<string | null>(partialRequestId);
   useEffect(() => {
@@ -170,8 +213,23 @@ export function TerminationIntakeWizard({
   const [contractAnniversaryDate, setContractAnniversaryDate] = useState(
     () => loadedDraft?.contractAnniversaryDate ?? prefill.contractAnniversaryDate ?? "",
   );
-  const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(
-    () => loadedDraft?.requestedEffectiveDate ?? urlPrefill?.requestedEffectiveDate?.trim() ?? "",
+  const [requestedEffectiveDate, setRequestedEffectiveDate] = useState(() =>
+    initialWizardEffectiveDate(loadedDraft, urlPrefill),
+  );
+  const [requestedSubmissionDate, setRequestedSubmissionDate] = useState(() =>
+    initialWizardSubmissionDate(loadedDraft, urlPrefill),
+  );
+  const [anniversaryManual, setAnniversaryManual] = useState(
+    () => Boolean(loadedDraft?.contractAnniversaryDate?.trim()),
+  );
+  const [effectiveManual, setEffectiveManual] = useState(() => {
+    const eff = loadedDraft?.requestedEffectiveDate?.trim();
+    if (!eff) return false;
+    if (loadedDraft?.terminationMode !== "end_of_insurance_period") return true;
+    return eff !== (loadedDraft?.contractAnniversaryDate ?? "").trim();
+  });
+  const [submissionManual, setSubmissionManual] = useState(
+    () => Boolean(initialWizardSubmissionDate(loadedDraft, urlPrefill).trim()),
   );
   const [sourceDocumentId, setSourceDocumentId] = useState(
     () => loadedDraft?.sourceDocumentId ?? urlPrefill?.sourceDocumentId?.trim() ?? "",
@@ -208,6 +266,7 @@ export function TerminationIntakeWizard({
   const [isPending, startTransition] = useTransition();
   const [previewSyncBusy, setPreviewSyncBusy] = useState(false);
   const [previewGapMessages, setPreviewGapMessages] = useState<string[]>([]);
+  const [finishLetterVm, setFinishLetterVm] = useState<TerminationLetterBuildResult["viewModel"] | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [aiExtractBusy, setAiExtractBusy] = useState(false);
@@ -227,35 +286,27 @@ export function TerminationIntakeWizard({
     setTerminationReasonCode(modeToReasonCode(terminationMode));
   }, [terminationMode]);
 
-  /** Výroční den prázdný → dopočítat z počátku (nejbližší MD od dneška v akt./dalším roce). Jen při změně počátku, aby šlo výročí ručně vymazat. */
+  /** Při změně počátku přepočítat výročí, dokud uživatel výročí ručně neupravil. */
   useEffect(() => {
     const start = contractStartDate.trim();
-    if (!start) return;
-    setContractAnniversaryDate((curr) => {
-      if (curr.trim()) return curr;
-      const suggested = suggestedAnniversaryFromContractStart(start);
-      return suggested ?? curr;
-    });
-  }, [contractStartDate]);
+    if (!start || anniversaryManual) return;
+    const suggested = suggestedAnniversaryFromContractStart(start);
+    if (suggested) setContractAnniversaryDate(suggested);
+  }, [contractStartDate, anniversaryManual]);
 
-  /** Ke konci období: doplnit požadované datum z výročí, až když je výročí k dispozici a účinnost je prázdná. */
+  /** Ke konci období: držet účinnost synchronně s výročím, dokud uživatel účinnost ručně neupravil. */
   useEffect(() => {
-    if (terminationMode !== "end_of_insurance_period") return;
+    if (terminationMode !== "end_of_insurance_period" || effectiveManual) return;
     const ann = contractAnniversaryDate.trim();
     if (!ann) return;
-    if (requestedEffectiveDate.trim()) return;
     setRequestedEffectiveDate(ann);
-  }, [terminationMode, contractAnniversaryDate, requestedEffectiveDate]);
+  }, [terminationMode, contractAnniversaryDate, effectiveManual]);
 
-  /** Do 2 měsíců od sjednání: předvyplnit dnešní datum jako navrhované datum odeslání, pokud je prázdné. */
+  /** Do 2 měsíců: výchozí datum podání = dnes, dokud ho uživatel ručně neupravil. */
   useEffect(() => {
-    if (terminationMode !== "within_two_months_from_inception") return;
-    if (requestedEffectiveDate.trim()) return;
-    const today = new Date();
-    const pad2 = (n: number) => String(n).padStart(2, "0");
-    const iso = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
-    setRequestedEffectiveDate(iso);
-  }, [terminationMode, requestedEffectiveDate]);
+    if (terminationMode !== "within_two_months_from_inception" || submissionManual) return;
+    setRequestedSubmissionDate(localIsoDateToday());
+  }, [terminationMode, submissionManual]);
 
   const onSegmentChange = useCallback((seg: string) => {
     setProductSegment(seg);
@@ -274,6 +325,10 @@ export function TerminationIntakeWizard({
       contractStartDate: contractStartDate.trim() || null,
       contractAnniversaryDate: contractAnniversaryDate.trim() || null,
       requestedEffectiveDate: requestedEffectiveDate.trim() || null,
+      requestedSubmissionDate:
+        terminationMode === "within_two_months_from_inception"
+          ? requestedSubmissionDate.trim() || null
+          : null,
       terminationMode,
       terminationReasonCode,
       uncertainInsurer,
@@ -306,6 +361,7 @@ export function TerminationIntakeWizard({
     contractStartDate,
     contractAnniversaryDate,
     requestedEffectiveDate,
+    requestedSubmissionDate,
     terminationMode,
     terminationReasonCode,
     uncertainInsurer,
@@ -377,7 +433,7 @@ export function TerminationIntakeWizard({
   }, [clientQuery]);
 
   useEffect(() => {
-    if (wizardStep !== 2 || !canWrite) {
+    if (wizardStep !== 2 || !canWrite || requestStatus !== "intake") {
       /* eslint-disable react-hooks/set-state-in-effect */
       setPreviewSyncBusy(false);
       /* eslint-enable react-hooks/set-state-in-effect */
@@ -401,7 +457,7 @@ export function TerminationIntakeWizard({
       cancelled = true;
       clearTimeout(tid);
     };
-  }, [wizardStep, canWrite, buildBasePayload]);
+  }, [wizardStep, canWrite, requestStatus, buildBasePayload]);
 
   function onInsurerQueryChange(q: string) {
     setInsurerQuery(q);
@@ -491,6 +547,10 @@ export function TerminationIntakeWizard({
   function onSavePartial() {
     setError(null);
     setPartialSavedOk(null);
+    if (requestStatus !== "intake") {
+      setError("Rozepsaný koncept lze ukládat jen ve stavu „intake“. Použijte Dokončit žádost.");
+      return;
+    }
     if (!canWrite) {
       setError("Nemáte oprávnění uložit koncept.");
       return;
@@ -512,9 +572,48 @@ export function TerminationIntakeWizard({
     });
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function printLetterPreviewForRequest(requestId: string) {
+    const preview = await getTerminationLetterPreview(requestId);
+    if (!preview.ok) {
+      setError(preview.error);
+      return;
+    }
+    const plain = preview.data.letterPlainText?.trim();
+    if (!plain) {
+      setError("Náhled dopisu zatím není k dispozici.");
+      return;
+    }
+    const html = plainTextToLetterHtml(plain);
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(
+        `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Výpověď – PDF</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
+      );
+      w.document.close();
+      w.focus();
+      w.print();
+      w.close();
+    }
+  }
+
+  function onExportPdf() {
     setError(null);
+    if (!partialRequestId) {
+      setError("Nejdřív přejděte na krok 3 a počkejte na uložení konceptu pro náhled.");
+      return;
+    }
+    if (!insurerQuery.trim()) {
+      setError("Vyplňte název instituce.");
+      return;
+    }
+    startTransition(async () => {
+      await printLetterPreviewForRequest(partialRequestId);
+    });
+  }
+
+  function onCompleteRequest() {
+    setError(null);
+    setFinalizeOkMsg(null);
     if (!canWrite) {
       setError("Nemáte oprávnění vytvořit žádost.");
       return;
@@ -523,7 +622,6 @@ export function TerminationIntakeWizard({
       setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané“.");
       return;
     }
-
     startTransition(async () => {
       const res = await createTerminationDraft({
         ...buildBasePayload(),
@@ -533,24 +631,14 @@ export function TerminationIntakeWizard({
         setError(res.error);
         return;
       }
-      const preview = await getTerminationLetterPreview(res.requestId);
-      if (preview.ok) {
-        const plain = preview.data.letterPlainText?.trim();
-        if (plain) {
-          const html = plainTextToLetterHtml(plain);
-          const w = window.open("", "_blank");
-          if (w) {
-            w.document.write(
-              `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Výpověď – PDF</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
-            );
-            w.document.close();
-            w.focus();
-            w.print();
-            w.close();
-          }
-        }
-      }
-      router.push(`/portal/terminations/${res.requestId}`);
+      setPartialRequestId(res.requestId);
+      setRequestStatus(res.status);
+      setFinalizeOkMsg(
+        "Žádost je uložená. Můžete exportovat PDF níže, nebo otevřít detail žádosti.",
+      );
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("draftId", res.requestId);
+      router.replace(`/portal/terminations/new?${next.toString()}`);
     });
   }
 
@@ -586,8 +674,16 @@ export function TerminationIntakeWizard({
       </p>
     ) : null;
 
-  const effectivePreviewLabel = requestedEffectiveDate.trim()
-    ? formatCzDate(requestedEffectiveDate)
+  const effectivePreviewLabel =
+    terminationMode === "within_two_months_from_inception"
+      ? finishLetterVm?.computedEffectiveDate
+        ? formatCzDate(finishLetterVm.computedEffectiveDate)
+        : "— (po uložení žádosti)"
+      : requestedEffectiveDate.trim()
+        ? formatCzDate(requestedEffectiveDate)
+        : "—";
+  const submissionPreviewLabel = requestedSubmissionDate.trim()
+    ? formatCzDate(requestedSubmissionDate)
     : "—";
 
   const twoMonthDeadline = contractStartDate.trim()
@@ -597,11 +693,18 @@ export function TerminationIntakeWizard({
     ? isTwoMonthWindowOpen(contractStartDate)
     : null;
 
+  const hasTermComplete =
+    terminationMode === "within_two_months_from_inception"
+      ? Boolean(requestedSubmissionDate.trim())
+      : terminationMode === "end_of_insurance_period"
+        ? Boolean(requestedEffectiveDate.trim() || contractAnniversaryDate.trim())
+        : Boolean(requestedEffectiveDate.trim());
+
   const isComplete =
     Boolean(insurerQuery.trim()) &&
     Boolean(contractNumber.trim()) &&
     Boolean(terminationMode) &&
-    Boolean(requestedEffectiveDate.trim() || terminationMode === "end_of_insurance_period");
+    hasTermComplete;
 
   const deliveryAddressLine =
     registryDeliveryMeta?.addressLine ||
@@ -698,6 +801,20 @@ export function TerminationIntakeWizard({
         </p>
       ) : null}
 
+      {finalizeOkMsg ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 space-y-2">
+          <p>{finalizeOkMsg}</p>
+          {partialRequestId ? (
+            <Link
+              href={`/portal/terminations/${partialRequestId}`}
+              className="inline-flex font-semibold text-violet-700 underline"
+            >
+              Otevřít detail žádosti
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       {!canWrite ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           Nemáte oprávnění vytvářet žádosti (potřebná role s úpravou kontaktů).
@@ -735,7 +852,12 @@ export function TerminationIntakeWizard({
 
       {stepper}
 
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+        className="space-y-6"
+      >
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
           {wizardStep === 0 ? (
             <div className="space-y-6">
@@ -984,10 +1106,8 @@ export function TerminationIntakeWizard({
                     onChange={(e) => {
                       const v = e.target.value as TerminationMode;
                       setTerminationMode(v);
-                      if (v === "end_of_insurance_period") {
-                        const ann = contractAnniversaryDate.trim();
-                        if (ann) setRequestedEffectiveDate(ann);
-                      }
+                      if (v === "end_of_insurance_period") setEffectiveManual(false);
+                      if (v === "within_two_months_from_inception") setSubmissionManual(false);
                     }}
                     className={TERMINATION_FIELD_CLASS}
                   >
@@ -998,17 +1118,36 @@ export function TerminationIntakeWizard({
                     ))}
                   </select>
                 </div>
-                <FriendlyDateInput
-                  label="Požadované datum účinnosti (volitelné)"
-                  value={requestedEffectiveDate}
-                  onChange={setRequestedEffectiveDate}
-                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                />
+                {terminationMode === "within_two_months_from_inception" ? (
+                  <FriendlyDateInput
+                    label="Datum podání výpovědi (den doručení)"
+                    value={requestedSubmissionDate}
+                    onChange={(v) => {
+                      setSubmissionManual(true);
+                      setRequestedSubmissionDate(v);
+                    }}
+                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                  />
+                ) : (
+                  <FriendlyDateInput
+                    label="Požadované datum účinnosti (volitelné)"
+                    value={requestedEffectiveDate}
+                    onChange={(v) => {
+                      setEffectiveManual(true);
+                      setRequestedEffectiveDate(v);
+                    }}
+                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                  />
+                )}
                 <FriendlyDateInput
                   label="Výroční den"
                   value={contractAnniversaryDate}
-                  onChange={setContractAnniversaryDate}
+                  onChange={(v) => {
+                    setAnniversaryManual(true);
+                    setContractAnniversaryDate(v);
+                  }}
                   inputClassName={TERMINATION_DATE_INPUT_CLASS}
                   labelClassName={TERMINATION_DATE_LABEL_CLASS}
                 />
@@ -1016,15 +1155,32 @@ export function TerminationIntakeWizard({
                   <div className="flex items-start gap-3">
                     <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
                     <div className="flex-1">
-                      <div className="text-sm font-semibold text-slate-900">Navržené datum účinnosti (náhled)</div>
-                      <div className="mt-1 text-sm text-slate-900">{effectivePreviewLabel}</div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        {terminationMode === "within_two_months_from_inception"
+                          ? "Termíny (náhled)"
+                          : "Navržené datum účinnosti (náhled)"}
+                      </div>
+                      {terminationMode === "within_two_months_from_inception" ? (
+                        <div className="mt-1 space-y-1 text-sm text-slate-900">
+                          <div>
+                            <span className="font-medium text-slate-600">Datum podání: </span>
+                            {submissionPreviewLabel}
+                          </div>
+                          <div>
+                            <span className="font-medium text-slate-600">Účinnost (pravidla): </span>
+                            {effectivePreviewLabel}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-sm text-slate-900">{effectivePreviewLabel}</div>
+                      )}
                       <div className="mt-2 text-xs leading-5 text-slate-500">
                         {terminationMode === "end_of_insurance_period" && contractAnniversaryDate.trim()
                           ? `Doplněno automaticky z výročního dne smlouvy. Po dokončení žádosti pravidla ověří přesné datum s ohledem na 6týdenní výpovědní lhůtu.`
                           : terminationMode === "within_two_months_from_inception"
                             ? twoMonthDeadline
                               ? twoMonthOpen
-                                ? `Zákonná lhůta pro výpověď do 2 měsíců od sjednání platí do ${formatIsoDateForUiCs(twoMonthDeadline)}. Datum účinnosti je den doručení — doplněno dnešním datem.`
+                                ? `Zákonná lhůta pro výpověď do 2 měsíců od sjednání platí do ${formatIsoDateForUiCs(twoMonthDeadline)}. Účinnost je typicky den doručení (datum podání) — po uložení žádosti ji dopočítají pravidla.`
                                 : `Zákonná lhůta pro výpověď do 2 měsíců od sjednání pravděpodobně uplynula (limit byl ${formatIsoDateForUiCs(twoMonthDeadline)}). Pravidla to potvrdí po odeslání.`
                               : "Zadejte počátek pojištění v kroku 1 — pak se automaticky vypočítá lhůta."
                             : terminationMode === "fixed_calendar_date"
@@ -1172,11 +1328,21 @@ export function TerminationIntakeWizard({
                     insurerAddress: registryDeliveryMeta?.addressLine ?? null,
                     contractNumber: contractNumber.trim() || null,
                     terminationModeLabel: MODE_OPTIONS.find((m) => m.value === terminationMode)?.label ?? terminationMode,
-                    effectiveDateLabel: effectivePreviewLabel,
+                    effectiveDateLabel:
+                      finishLetterVm?.computedEffectiveDate || finishLetterVm?.requestedEffectiveDate
+                        ? formatCzDate(
+                            finishLetterVm.computedEffectiveDate ?? finishLetterVm.requestedEffectiveDate ?? "",
+                          )
+                        : effectivePreviewLabel,
+                    submissionDateLabel:
+                      terminationMode === "within_two_months_from_inception"
+                        ? submissionPreviewLabel
+                        : null,
                     deliveryChannelHint: registryDeliveryMeta?.channelHint ?? null,
                   }}
                   onBuildResult={(data: TerminationLetterBuildResult) => {
                     setPreviewGapMessages(data.validityReasons);
+                    setFinishLetterVm(data.viewModel);
                   }}
                 />
               ) : (
@@ -1249,14 +1415,25 @@ export function TerminationIntakeWizard({
                 </button>
               ) : null}
               {wizardStep === STEP_LABELS.length - 1 ? (
-                <button
-                  type="submit"
-                  disabled={!canWrite || isPending}
-                  className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
-                >
-                  Export do PDF
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={!canWrite || isPending || !partialRequestId}
+                    onClick={() => onExportPdf()}
+                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50"
+                  >
+                    Exportovat PDF
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canWrite || isPending}
+                    onClick={() => onCompleteRequest()}
+                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
+                  >
+                    Dokončit žádost
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
               ) : null}
             </div>
           </div>

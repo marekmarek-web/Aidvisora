@@ -19,6 +19,7 @@ export type TerminationRequestRowLike = {
   terminationMode: string;
   terminationReasonCode: string;
   requestedEffectiveDate: string | null;
+  requestedSubmissionDate: string | null;
   computedEffectiveDate: string | null;
   contractStartDate: string | null;
   contractAnniversaryDate: string | null;
@@ -661,6 +662,7 @@ export function buildTerminationLetterResult(input: TerminationLetterBuildInput)
     internalWarnings.push("Chybí vstupní data – dokument pouze jako koncept.");
   }
   if (
+    r.terminationMode !== "within_two_months_from_inception" &&
     r.requestedEffectiveDate &&
     r.computedEffectiveDate &&
     r.requestedEffectiveDate !== r.computedEffectiveDate
@@ -729,6 +731,7 @@ export function buildTerminationLetterResult(input: TerminationLetterBuildInput)
     terminationReasonCode: r.terminationReasonCode,
     terminationReasonLabel: input.reasonLabel,
     requestedEffectiveDate: r.requestedEffectiveDate,
+    requestedSubmissionDate: r.requestedSubmissionDate ?? null,
     computedEffectiveDate: r.computedEffectiveDate,
     legalBasisShort: legalBasisShortForReason(r.terminationReasonCode),
     customReasonText: input.customReasonText ?? null,

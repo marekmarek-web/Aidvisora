@@ -59,6 +59,8 @@ export interface TerminationLetterViewModel {
   terminationReasonCode: string;
   terminationReasonLabel: string;
   requestedEffectiveDate: string | null;
+  /** Datum podání výpovědi (DB); u režimu do 2 měsíců od sjednání. */
+  requestedSubmissionDate: string | null;
   computedEffectiveDate: string | null;
   /** Interní / poznámka – nepovinně do patičky dokumentu. */
   legalBasisShort: string | null;

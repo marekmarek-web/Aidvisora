@@ -54,6 +54,8 @@ export function TerminationLetterPreviewPanel({
   showPrintButton = true,
   suppressValidityBanner = false,
   layout = "default",
+  /** advisor = jen finální HTML náhled + tisk; full = text/HTML záložky a souhrnný blok. */
+  surface = "full",
   onBuildResult,
   wizardLetterDraft,
   onWizardLetterDraftChange,
@@ -67,6 +69,7 @@ export function TerminationLetterPreviewPanel({
   suppressValidityBanner?: boolean;
   /** Režim dokončení wizardu: jen čistý dopis v kartě (bez badge, watermarku, souhrnu). */
   layout?: "default" | "wizardFinish";
+  surface?: "advisor" | "full";
   /** Callback po úspěšném načtení výsledku buildu (pro banner nad wizardem). */
   onBuildResult?: (data: TerminationLetterBuildResult) => void;
   /** Wizard: řízený text dopisu z rodiče (editovatelný výstup před PDF). */
@@ -176,12 +179,14 @@ export function TerminationLetterPreviewPanel({
     previewWatermark,
   } = data;
   const eff = formatIsoDateForUiCs(vm.computedEffectiveDate ?? vm.requestedEffectiveDate ?? null);
+  const subEff = formatIsoDateForUiCs(vm.requestedSubmissionDate ?? null);
   const attachmentsUi =
     vm.attachments.length > 0 ? vm.attachmentsSummaryText : "Bez příloh";
 
   const hasLetterPreview = Boolean(letterPlainText || letterHtml);
   const hasCoverPreview = Boolean(coveringLetterPlainText || coveringLetterHtml);
-  const showTabSwitch = hasLetterPreview || hasCoverPreview;
+  const advisorSurface = surface === "advisor";
+  const showTabSwitch = !advisorSurface && (hasLetterPreview || hasCoverPreview);
 
   const letterDirty = letterDraft !== letterSaved;
   const coverDirty = coverDraft !== coverSaved;
@@ -281,16 +286,20 @@ export function TerminationLetterPreviewPanel({
     );
   }
 
+  const showPersistUi = showPersistButtons && !advisorSurface;
+
   return (
     <div className="space-y-4 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/40 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClasses(badge)}`}
-        >
-          {badgeLabel(badge)}
-        </span>
-        <span className="text-xs text-[color:var(--wp-text-secondary)]">{publishLabel(publishState)}</span>
-      </div>
+      {!advisorSurface ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClasses(badge)}`}
+          >
+            {badgeLabel(badge)}
+          </span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)]">{publishLabel(publishState)}</span>
+        </div>
+      ) : null}
 
       {previewWatermark ? (
         <p className="text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-[var(--wp-radius)] px-3 py-2">
@@ -305,6 +314,7 @@ export function TerminationLetterPreviewPanel({
         </div>
       ) : null}
 
+      {!advisorSurface ? (
       <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-3 text-xs space-y-1.5 text-[color:var(--wp-text-secondary)]">
         <p>
           <span className="font-semibold text-[color:var(--wp-text)]">Pojistník (dopis):</span>{" "}
@@ -330,6 +340,11 @@ export function TerminationLetterPreviewPanel({
         <p>
           <span className="font-semibold text-[color:var(--wp-text)]">Režim:</span> {vm.terminationModeLabel}
         </p>
+        {vm.requestedSubmissionDate?.trim() ? (
+          <p>
+            <span className="font-semibold text-[color:var(--wp-text)]">Datum podání:</span> {subEff}
+          </p>
+        ) : null}
         <p>
           <span className="font-semibold text-[color:var(--wp-text)]">Datum účinnosti (zobrazení):</span>{" "}
           {eff}
@@ -347,6 +362,7 @@ export function TerminationLetterPreviewPanel({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       {!suppressValidityBanner && validityReasons.length > 0 ? (
         <ul className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-[var(--wp-radius)] px-3 py-2 list-disc pl-5">
@@ -371,7 +387,7 @@ export function TerminationLetterPreviewPanel({
         </div>
       ) : null}
 
-      {showPersistButtons ? (
+      {showPersistUi ? (
         <div className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-3 space-y-2">
           <p className="text-xs font-semibold text-[color:var(--wp-text-muted)]">Uložit do dokumentů (CRM)</p>
           <div className="flex flex-wrap gap-2">
@@ -464,7 +480,7 @@ export function TerminationLetterPreviewPanel({
               </button>
             ) : null}
           </div>
-          {hasLetterPreview || hasCoverPreview ? (
+          {!advisorSurface && (hasLetterPreview || hasCoverPreview) ? (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -491,7 +507,15 @@ export function TerminationLetterPreviewPanel({
       {hasCoverPreview ? (
         <div>
           <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] mb-2">Průvodní dopis</p>
-          {previewTab === "text" && coveringLetterPlainText ? (
+          {advisorSurface ? (
+            <div
+              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] max-h-[min(520px,60vh)] overflow-y-auto [&_.termination-letter-html_p]:mb-3"
+              dangerouslySetInnerHTML={{
+                __html: coveringLetterHtml ?? plainTextToLetterHtml(coverSaved),
+              }}
+            />
+          ) : null}
+          {!advisorSurface && previewTab === "text" && coveringLetterPlainText ? (
             <textarea
               value={coverDraft}
               onChange={(e) => {
@@ -502,7 +526,7 @@ export function TerminationLetterPreviewPanel({
               className="min-h-[min(520px,60vh)] w-full resize-y rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] font-mono"
             />
           ) : null}
-          {previewTab === "html" && coveringLetterPlainText ? (
+          {!advisorSurface && previewTab === "html" && coveringLetterPlainText ? (
             <div
               className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] max-h-[min(520px,60vh)] overflow-y-auto [&_.termination-letter-html_p]:mb-3"
               dangerouslySetInnerHTML={{ __html: plainTextToLetterHtml(coverSaved) }}
@@ -513,8 +537,20 @@ export function TerminationLetterPreviewPanel({
 
       {hasLetterPreview ? (
         <div>
-          <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] mb-2">Náhled dopisu</p>
-          {previewTab === "text" && letterPlainText ? (
+          {!advisorSurface ? (
+            <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] mb-2">Náhled dopisu</p>
+          ) : (
+            <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] mb-2">Dopis</p>
+          )}
+          {advisorSurface ? (
+            <div
+              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] max-h-[min(720px,80vh)] overflow-y-auto [&_.termination-letter-html_p]:mb-3"
+              dangerouslySetInnerHTML={{
+                __html: letterHtml ?? plainTextToLetterHtml(letterSaved),
+              }}
+            />
+          ) : null}
+          {!advisorSurface && previewTab === "text" && letterPlainText ? (
             <textarea
               value={letterDraft}
               onChange={(e) => {
@@ -525,7 +561,7 @@ export function TerminationLetterPreviewPanel({
               className="min-h-[min(520px,60vh)] w-full resize-y rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] font-mono"
             />
           ) : null}
-          {previewTab === "html" && letterPlainText ? (
+          {!advisorSurface && previewTab === "html" && letterPlainText ? (
             <div
               className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] p-4 text-sm text-[color:var(--wp-text)] max-h-[min(520px,60vh)] overflow-y-auto [&_.termination-letter-html_p]:mb-3"
               dangerouslySetInnerHTML={{ __html: plainTextToLetterHtml(letterSaved) }}

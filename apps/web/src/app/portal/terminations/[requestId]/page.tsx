@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
+import type { RoleName } from "@/shared/rolePermissions";
 import { getContractSegments } from "@/app/actions/contracts";
 import { getTerminationRequestDetail } from "@/app/actions/terminations";
 import { isTerminationsModuleEnabledOnServer } from "@/lib/terminations/terminations-feature-flag";
@@ -13,6 +14,10 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+function terminationPreviewSurfaceForRole(role: RoleName): "advisor" | "full" {
+  return role === "Advisor" || role === "Viewer" ? "advisor" : "full";
+}
 
 export default async function TerminationRequestDetailPage({
   params,
@@ -48,6 +53,7 @@ export default async function TerminationRequestDetailPage({
         initial={initial}
         segments={segments.length ? segments : ["ZP"]}
         canWriteFields={canWriteFields}
+        previewSurface={terminationPreviewSurfaceForRole(auth.roleName as RoleName)}
       />
     </div>
   );

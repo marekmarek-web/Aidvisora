@@ -118,6 +118,67 @@ describe("evaluateTerminationRules", () => {
     expect(r.reasonCatalogId).toBe("rc-1");
   });
 
+  it("two_months: uses requestedSubmissionDate for computed effective inside window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-15T12:00:00.000Z"));
+    vi.mocked(findInsurerByName).mockResolvedValue({ ...baseInsurer });
+    vi.mocked(findReasonByCode).mockResolvedValue({
+      ...baseReason,
+      reasonCode: "within_2_months_from_inception",
+      defaultDateComputation: "two_months_from_inception",
+      requiredFields: ["contract_start_date"],
+    });
+
+    const r = await evaluateTerminationRules("tenant-1", {
+      source: "manual_intake",
+      contactId: null,
+      advisorId: "u1",
+      contractNumber: null,
+      productSegment: "ZP",
+      insurerName: "Test PV",
+      contractStartDate: "2026-01-01",
+      contractAnniversaryDate: null,
+      requestedEffectiveDate: null,
+      requestedSubmissionDate: "2026-01-20",
+      terminationMode: "within_two_months_from_inception",
+      terminationReasonCode: "within_2_months_from_inception",
+    });
+
+    expect(r.outcome).toBe("ready");
+    expect(r.computedEffectiveDate).toBe("2026-01-20");
+    vi.useRealTimers();
+  });
+
+  it("two_months: legacy fallback uses requestedEffectiveDate when submission missing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-15T12:00:00.000Z"));
+    vi.mocked(findInsurerByName).mockResolvedValue({ ...baseInsurer });
+    vi.mocked(findReasonByCode).mockResolvedValue({
+      ...baseReason,
+      reasonCode: "within_2_months_from_inception",
+      defaultDateComputation: "two_months_from_inception",
+      requiredFields: ["contract_start_date"],
+    });
+
+    const r = await evaluateTerminationRules("tenant-1", {
+      source: "manual_intake",
+      contactId: null,
+      advisorId: "u1",
+      contractNumber: null,
+      productSegment: "ZP",
+      insurerName: "Test PV",
+      contractStartDate: "2026-01-01",
+      contractAnniversaryDate: null,
+      requestedEffectiveDate: "2026-01-18",
+      requestedSubmissionDate: null,
+      terminationMode: "within_two_months_from_inception",
+      terminationReasonCode: "within_2_months_from_inception",
+    });
+
+    expect(r.computedEffectiveDate).toBe("2026-01-18");
+    vi.useRealTimers();
+  });
+
   it("golden: registryNeedsVerification forces review when otherwise ready", async () => {
     vi.mocked(findInsurerByName).mockResolvedValue({ ...baseInsurer, registryNeedsVerification: true });
     vi.mocked(findReasonByCode).mockResolvedValue({ ...baseReason });

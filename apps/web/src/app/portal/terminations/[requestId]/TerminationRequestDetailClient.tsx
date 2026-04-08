@@ -20,11 +20,12 @@ type Props = {
   initial: TerminationRequestDetail;
   segments: string[];
   canWriteFields: boolean;
+  previewSurface: "advisor" | "full";
 };
 
 const DISPATCH_STATUS = ["pending", "sent", "delivered", "failed", "bounced", "cancelled"] as const;
 
-const EDITABLE_STATUSES = new Set(["draft", "intake", "awaiting_data"]);
+const WIZARD_CONTINUE_BLOCKED = new Set(["completed", "cancelled", "dispatched"]);
 
 function statusLabelCs(s: string): string {
   const map: Record<string, string> = {
@@ -50,6 +51,7 @@ export function TerminationRequestDetailClient({
   initial,
   segments,
   canWriteFields,
+  previewSurface,
 }: Props) {
   const [detail, setDetail] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +109,175 @@ export function TerminationRequestDetailClient({
   }, [carrier, dispatchChannel, dispatchOutcome, requestId, refresh, trackingRef]);
 
   const { request: r, events, dispatchLog } = detail;
+  const advisorLike = previewSurface === "advisor";
+  const submissionDisplayIso =
+    r.requestedSubmissionDate?.trim() ||
+    (r.terminationMode === "within_two_months_from_inception"
+      ? r.requestedEffectiveDate?.trim()
+      : undefined);
+
+  const statusPanel = (
+    <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
+      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)]">
+        Změna stavu žádosti
+      </summary>
+      <div className="px-4 pb-4 space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Stav</label>
+            <select
+              value={detail.request.status}
+              onChange={(e) => {
+                setDetail((d) => ({
+                  ...d,
+                  request: { ...d.request, status: e.target.value as TerminationRequestStatus },
+                }));
+              }}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+            >
+              {terminationRequestStatuses.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabelCs(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-[2]">
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+              Poznámka k změně (volitelné)
+            </label>
+            <input
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+              placeholder="např. schváleno klientem"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => void onStatusSave()}
+            className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
+          >
+            Uložit stav
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+
+  const dispatchPanel = (
+    <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
+      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)]">
+        Záznam odeslání
+        {dispatchLog.length > 0 ? ` (${dispatchLog.length})` : ""}
+      </summary>
+      <div className="px-4 pb-4 space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Kanál</label>
+            <select
+              value={dispatchChannel}
+              onChange={(e) => setDispatchChannel(e.target.value as TerminationDeliveryChannel)}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+            >
+              {terminationDeliveryChannels.map((c) => (
+                <option key={c} value={c}>
+                  {terminationDeliveryChannelLabel(c)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Výsledek</label>
+            <select
+              value={dispatchOutcome}
+              onChange={(e) => setDispatchOutcome(e.target.value as (typeof DISPATCH_STATUS)[number])}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+            >
+              {DISPATCH_STATUS.map((s) => (
+                <option key={s} value={s}>
+                  {terminationDispatchStatusLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+              Tracking / číslo zásilky
+            </label>
+            <input
+              value={trackingRef}
+              onChange={(e) => setTrackingRef(e.target.value)}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Dopravce</label>
+            <input
+              value={carrier}
+              onChange={(e) => setCarrier(e.target.value)}
+              className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void onDispatchSave()}
+          className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
+        >
+          Zapsat pokus o odeslání
+        </button>
+        {dispatchLog.length > 0 ? (
+          <ul className="text-xs space-y-2 border-t border-[color:var(--wp-border)] pt-3">
+            {dispatchLog.map((d) => (
+              <li key={d.id} className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/50 px-3 py-2">
+                <span className="font-semibold">
+                  {new Date(d.createdAt ?? "").toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}
+                </span>{" "}
+                · {terminationDeliveryChannelLabel(d.channel)} · {terminationDispatchStatusLabel(d.status)}
+                {d.trackingReference ? ` · ${d.trackingReference}` : ""}
+                {d.error ? ` · chyba: ${d.error}` : ""}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">Zatím žádný záznam odeslání.</p>
+        )}
+      </div>
+    </details>
+  );
+
+  const historyPanel =
+    events.length > 0 ? (
+      <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
+        <summary className="cursor-pointer select-none px-4 py-3 text-xs font-semibold text-[color:var(--wp-text-muted)]">
+          Historie změn ({events.length})
+        </summary>
+        <ul className="text-xs space-y-1 px-4 pb-4 max-h-48 overflow-y-auto">
+          {events.map((e) => {
+            const date = new Date(e.createdAt).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" });
+            const label: Record<string, string> = {
+              created: "Žádost vytvořena",
+              status_changed: "Změna stavu",
+              rules_result: "Vyhodnocení pravidel",
+              note: "Poznámka",
+              document_linked: "Dokument přiřazen",
+              dispatch_attempt: "Pokus o odeslání",
+              reminder: "Připomenutí",
+              review_assignment: "Přiřazení ke kontrole",
+            };
+            return (
+              <li key={e.id} className="py-1.5 border-b border-[color:var(--wp-border)] last:border-0 flex gap-2">
+                <span className="text-[color:var(--wp-text-muted)] shrink-0">{date}</span>
+                <span>{label[e.eventType] ?? e.eventType}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
+    ) : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -116,7 +287,7 @@ export function TerminationRequestDetailClient({
           <p className="text-sm text-[color:var(--wp-text-secondary)] font-mono">{requestId}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {EDITABLE_STATUSES.has(r.status) ? (
+          {!WIZARD_CONTINUE_BLOCKED.has(r.status) ? (
             <Link
               href={`/portal/terminations/new?draftId=${requestId}`}
               className="rounded-[var(--wp-radius)] bg-violet-600 px-3 py-2 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
@@ -166,11 +337,29 @@ export function TerminationRequestDetailClient({
             <dt className="font-semibold text-[color:var(--wp-text)]">Kanál doručení</dt>
             <dd>{terminationDeliveryChannelLabel(r.deliveryChannel)}</dd>
           </div>
-          {(r.computedEffectiveDate ?? r.requestedEffectiveDate) ? (
+          {submissionDisplayIso ? (
+            <div className="sm:col-span-2">
+              <dt className="font-semibold text-[color:var(--wp-text)]">Datum podání</dt>
+              <dd>
+                {formatIsoDateForUiCs(submissionDisplayIso)}
+                {!r.requestedSubmissionDate?.trim() && r.requestedEffectiveDate?.trim()
+                  ? " (dříve uloženo v účinnosti – migrace)"
+                  : null}
+              </dd>
+            </div>
+          ) : null}
+          {r.computedEffectiveDate ||
+          (r.terminationMode !== "within_two_months_from_inception" && r.requestedEffectiveDate) ? (
             <div className="sm:col-span-2">
               <dt className="font-semibold text-[color:var(--wp-text)]">Datum účinnosti</dt>
               <dd>
-                {formatIsoDateForUiCs(r.computedEffectiveDate ?? r.requestedEffectiveDate ?? null)}
+                {formatIsoDateForUiCs(
+                  r.computedEffectiveDate ??
+                    (r.terminationMode !== "within_two_months_from_inception"
+                      ? r.requestedEffectiveDate
+                      : null) ??
+                    null,
+                )}
                 {r.computedEffectiveDate
                   ? " (dopočítáno pravidly)"
                   : " (požadované)"}
@@ -199,168 +388,29 @@ export function TerminationRequestDetailClient({
         />
       ) : null}
 
-      <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
-        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)]">
-          Změna stavu žádosti
-        </summary>
-        <div className="px-4 pb-4 space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Stav</label>
-              <select
-                value={detail.request.status}
-                onChange={(e) => {
-                  setDetail((d) => ({
-                    ...d,
-                    request: { ...d.request, status: e.target.value as TerminationRequestStatus },
-                  }));
-                }}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {terminationRequestStatuses.map((s) => (
-                  <option key={s} value={s}>
-                    {statusLabelCs(s)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-[2]">
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Poznámka k změně (volitelné)
-              </label>
-              <input
-                value={statusNote}
-                onChange={(e) => setStatusNote(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-                placeholder="např. schváleno klientem"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => void onStatusSave()}
-              className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
-            >
-              Uložit stav
-            </button>
-          </div>
-        </div>
-      </details>
-
-      <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
-        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)]">
-          Záznam odeslání
-          {dispatchLog.length > 0 ? ` (${dispatchLog.length})` : ""}
-        </summary>
-        <div className="px-4 pb-4 space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Kanál</label>
-              <select
-                value={dispatchChannel}
-                onChange={(e) => setDispatchChannel(e.target.value as TerminationDeliveryChannel)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {terminationDeliveryChannels.map((c) => (
-                  <option key={c} value={c}>
-                    {terminationDeliveryChannelLabel(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Výsledek</label>
-              <select
-                value={dispatchOutcome}
-                onChange={(e) => setDispatchOutcome(e.target.value as (typeof DISPATCH_STATUS)[number])}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              >
-                {DISPATCH_STATUS.map((s) => (
-                  <option key={s} value={s}>
-                    {terminationDispatchStatusLabel(s)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
-                Tracking / číslo zásilky
-              </label>
-              <input
-                value={trackingRef}
-                onChange={(e) => setTrackingRef(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Dopravce</label>
-              <input
-                value={carrier}
-                onChange={(e) => setCarrier(e.target.value)}
-                className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm min-h-[44px]"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => void onDispatchSave()}
-            className="rounded-[var(--wp-radius)] bg-[var(--wp-accent)] px-4 py-2.5 text-sm font-semibold text-white min-h-[44px] disabled:opacity-50"
-          >
-            Zapsat pokus o odeslání
-          </button>
-          {dispatchLog.length > 0 ? (
-            <ul className="text-xs space-y-2 border-t border-[color:var(--wp-border)] pt-3">
-              {dispatchLog.map((d) => (
-                <li key={d.id} className="rounded-[var(--wp-radius)] bg-[color:var(--wp-surface-muted)]/50 px-3 py-2">
-                  <span className="font-semibold">
-                    {new Date(d.createdAt ?? "").toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}
-                  </span>{" "}
-                  · {terminationDeliveryChannelLabel(d.channel)} · {terminationDispatchStatusLabel(d.status)}
-                  {d.trackingReference ? ` · ${d.trackingReference}` : ""}
-                  {d.error ? ` · chyba: ${d.error}` : ""}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-[color:var(--wp-text-secondary)]">Zatím žádný záznam odeslání.</p>
-          )}
-        </div>
-      </details>
-
       <section className="space-y-2">
         <h2 className="text-sm font-bold text-[color:var(--wp-text)]">Náhled dokumentu</h2>
-        <TerminationLetterPreviewPanel requestId={requestId} />
+        <TerminationLetterPreviewPanel requestId={requestId} surface={previewSurface} />
       </section>
 
-      {events.length > 0 ? (
+      {advisorLike ? (
         <details className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)]">
-          <summary className="cursor-pointer select-none px-4 py-3 text-xs font-semibold text-[color:var(--wp-text-muted)]">
-            Historie změn ({events.length})
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)]">
+            Provozní a interní nástroje
           </summary>
-          <ul className="text-xs space-y-1 px-4 pb-4 max-h-48 overflow-y-auto">
-            {events.map((e) => {
-              const date = new Date(e.createdAt).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" });
-              const label: Record<string, string> = {
-                created: "Žádost vytvořena",
-                status_changed: "Změna stavu",
-                rules_result: "Vyhodnocení pravidel",
-                note: "Poznámka",
-                document_linked: "Dokument přiřazen",
-                dispatch_attempt: "Pokus o odeslání",
-                reminder: "Připomenutí",
-                review_assignment: "Přiřazení ke kontrole",
-              };
-              return (
-                <li key={e.id} className="py-1.5 border-b border-[color:var(--wp-border)] last:border-0 flex gap-2">
-                  <span className="text-[color:var(--wp-text-muted)] shrink-0">{date}</span>
-                  <span>{label[e.eventType] ?? e.eventType}</span>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-4 border-t border-[color:var(--wp-border)] px-2 py-4">
+            {statusPanel}
+            {dispatchPanel}
+            {historyPanel}
+          </div>
         </details>
-      ) : null}
+      ) : (
+        <>
+          {statusPanel}
+          {dispatchPanel}
+          {historyPanel}
+        </>
+      )}
     </div>
   );
 }

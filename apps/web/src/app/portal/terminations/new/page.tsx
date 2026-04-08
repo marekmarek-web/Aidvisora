@@ -26,6 +26,7 @@ export default async function TerminationNewPage({
     source?: string;
     insurerName?: string;
     requestedEffectiveDate?: string;
+    requestedSubmissionDate?: string;
     sourceDocumentId?: string;
     draftId?: string;
   }>;
@@ -74,6 +75,7 @@ export default async function TerminationNewPage({
   const urlPrefill = {
     insurerName: sp.insurerName?.trim(),
     requestedEffectiveDate: sp.requestedEffectiveDate?.trim(),
+    requestedSubmissionDate: sp.requestedSubmissionDate?.trim(),
     sourceDocumentId: sp.sourceDocumentId?.trim(),
   };
 

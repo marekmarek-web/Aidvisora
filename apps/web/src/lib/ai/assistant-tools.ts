@@ -202,6 +202,8 @@ async function handlePrepareTerminationRequest(
   const insurerName = typeof params.insurerName === "string" ? params.insurerName.trim() : "";
   const requestedEffectiveDate =
     typeof params.requestedEffectiveDate === "string" ? params.requestedEffectiveDate.trim() : "";
+  const requestedSubmissionDate =
+    typeof params.requestedSubmissionDate === "string" ? params.requestedSubmissionDate.trim() : "";
   const sourceDocumentId = typeof params.sourceDocumentId === "string" ? params.sourceDocumentId.trim() : "";
 
   if (!contactId && !contractId && !insurerName) {
@@ -222,6 +224,7 @@ async function handlePrepareTerminationRequest(
   if (contractId) qs.set("contractId", contractId);
   if (insurerName) qs.set("insurerName", insurerName);
   if (requestedEffectiveDate) qs.set("requestedEffectiveDate", requestedEffectiveDate);
+  if (requestedSubmissionDate) qs.set("requestedSubmissionDate", requestedSubmissionDate);
   if (sourceDocumentId) qs.set("sourceDocumentId", sourceDocumentId);
   qs.set("source", "ai_chat");
 
@@ -236,6 +239,7 @@ async function handlePrepareTerminationRequest(
         contractId: contractId || null,
         insurerName: insurerName || null,
         requestedEffectiveDate: requestedEffectiveDate || null,
+        requestedSubmissionDate: requestedSubmissionDate || null,
         sourceDocumentId: sourceDocumentId || null,
       },
     },
@@ -302,6 +306,10 @@ async function handleCreateTerminationIntakeDraft(
     requestedEffectiveDate:
       typeof params.requestedEffectiveDate === "string" && params.requestedEffectiveDate.trim()
         ? params.requestedEffectiveDate.trim()
+        : null,
+    requestedSubmissionDate:
+      typeof params.requestedSubmissionDate === "string" && params.requestedSubmissionDate.trim()
+        ? params.requestedSubmissionDate.trim()
         : null,
     terminationMode,
     terminationReasonCode,
@@ -443,6 +451,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
       contractId: { type: "string", description: "UUID smlouvy z CRM (volitelné)" },
       insurerName: { type: "string", description: "Název pojišťovny pro manuální intak (volitelné)" },
       requestedEffectiveDate: { type: "string", description: "Požadované datum účinnosti YYYY-MM-DD (volitelné)" },
+      requestedSubmissionDate: {
+        type: "string",
+        description: "Datum podání výpovědi YYYY-MM-DD (volitelné, např. režim do 2 měsíců od sjednání)",
+      },
       sourceDocumentId: { type: "string", description: "UUID nahraného dokumentu ve stejném tenantu (volitelné)" },
     },
     handler: handlePrepareTerminationRequest,
@@ -460,6 +472,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
       contractStartDate: { type: "string", description: "YYYY-MM-DD (volitelné)" },
       contractAnniversaryDate: { type: "string", description: "YYYY-MM-DD (volitelné)" },
       requestedEffectiveDate: { type: "string", description: "YYYY-MM-DD (volitelné)" },
+      requestedSubmissionDate: { type: "string", description: "Datum podání YYYY-MM-DD (volitelné)" },
       terminationMode: { type: "string", description: "Režim wizardu (volitelné, výchozí end_of_insurance_period)" },
       terminationReasonCode: { type: "string", description: "Kód důvodu z katalogu (volitelné)" },
       uncertainInsurer: { type: "boolean", description: "Nejistá pojišťovna → review" },

@@ -13,6 +13,8 @@ type LeftPanelData = {
   contractNumber: string | null;
   terminationModeLabel: string | null;
   effectiveDateLabel: string | null;
+  /** Režim do 2 měsíců – datum podání výpovědi. */
+  submissionDateLabel?: string | null;
   deliveryChannelHint?: string | null;
 };
 
@@ -50,8 +52,9 @@ export function TerminationFinishOutputLayout({
           <div>
             <div className="text-lg font-semibold text-slate-950">Dokončit výstup</div>
             <div className="mt-1 text-sm text-slate-500">
-              Upravte text výpovědi v poli vpravo. „Rychlý náhled tisku“ jen otevře okno tisku bez uložení žádosti;
-              finální krok je tlačítkem „Export do PDF“ dole (uloží žádost a nabídne PDF).
+              Upravte text výpovědi v poli vpravo. „Rychlý náhled tisku“ otevře okno tisku z aktuálního náhledu. Tlačítkem
+              „Dokončit žádost“ dole uložíte žádost přes pravidla; „Exportovat PDF“ jen vytiskne / uloží PDF bez změny
+              stavu žádosti.
             </div>
           </div>
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -89,8 +92,14 @@ export function TerminationFinishOutputLayout({
               <div>
                 <span className="font-medium">Typ ukončení:</span> {leftPanel.terminationModeLabel || "—"}
               </div>
+              {leftPanel.submissionDateLabel ? (
+                <div>
+                  <span className="font-medium">Datum podání:</span> {leftPanel.submissionDateLabel}
+                </div>
+              ) : null}
               <div>
-                <span className="font-medium">Datum účinnosti:</span> {leftPanel.effectiveDateLabel || "—"}
+                <span className="font-medium">Datum účinnosti / podle pravidel:</span>{" "}
+                {leftPanel.effectiveDateLabel || "—"}
               </div>
               {deliveryLabel ? (
                 <div>
@@ -109,7 +118,7 @@ export function TerminationFinishOutputLayout({
               </div>
               <div className="flex gap-3">
                 <Printer className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                <span>Export do PDF uloží žádost a otevře tisk / uložení jako PDF</span>
+                <span>Export PDF vytiskne aktuální náhled; dokončení žádosti je samostatné tlačítko</span>
               </div>
               <div className="flex gap-3">
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
