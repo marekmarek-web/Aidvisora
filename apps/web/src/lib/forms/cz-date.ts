@@ -94,9 +94,56 @@ export function formatCzDateFromDigits(digits: string): string {
   return `${out}. ${yearDigits}`;
 }
 
-/** Extract digit sequence from a possibly partially formatted CZ date string. */
+/**
+ * Extract digit sequence for progressive formatting.
+ * If the user typed dot separators (d. m. yyyy), groups are taken per segment so
+ * "1.1" stays day 1 + month 1, not eleven.
+ */
 export function digitsFromCzDateInput(raw: string): string {
+  if (raw.includes(".")) {
+    const segments = raw.split(".");
+    const day = (segments[0]?.replace(/\D/g, "") ?? "").slice(0, 2);
+    const month = (segments[1]?.replace(/\D/g, "") ?? "").slice(0, 2);
+    const year = (segments[2]?.replace(/\D/g, "") ?? "").slice(0, 4);
+    return (day + month + year).slice(0, DIGIT_MAX);
+  }
   return raw.replace(/\D/g, "").slice(0, DIGIT_MAX);
+}
+
+/**
+ * Rozpracované zadání do kanonického "d. m. yyyy" mezerami.
+ * Bez teček: chytré dělení číslic (formatCzDateFromDigits).
+ * S tečkami: "1." → "1. ", "1.1." → "1. 1. ", "01.01.2026" → "1. 1. 2026".
+ */
+export function formatCzDateTyping(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (!trimmed.includes(".")) {
+    return formatCzDateFromDigits(digitsFromCzDateInput(trimmed));
+  }
+  const digitGroups = trimmed.split(".").map((s) => s.replace(/\D/g, ""));
+  const d = (digitGroups[0] ?? "").slice(0, 2);
+  const m = (digitGroups[1] ?? "").slice(0, 2);
+  const y = (digitGroups[2] ?? "").slice(0, 4);
+  const dotGroups = trimmed.split(".").length - 1;
+
+  let result = "";
+  if (d.length > 0) {
+    result = displayPart(d);
+  }
+  if (dotGroups >= 1) {
+    result += ". ";
+    if (m.length > 0) {
+      result += displayPart(m);
+    }
+  }
+  if (dotGroups >= 2) {
+    result += ". ";
+    if (y.length > 0) {
+      result += y;
+    }
+  }
+  return result;
 }
 
 /** ISO yyyy-mm-dd → "d. m. yyyy" for display. */

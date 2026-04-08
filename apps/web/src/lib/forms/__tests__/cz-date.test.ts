@@ -3,6 +3,7 @@ import {
   digitsFromCzDateInput,
   formatCzDate,
   formatCzDateFromDigits,
+  formatCzDateTyping,
   normalizeDateForApi,
   parseCzDateToIso,
   validateCzDateComplete,
@@ -50,6 +51,30 @@ describe("formatCzDateFromDigits", () => {
 describe("digitsFromCzDateInput", () => {
   it("strips non-digits", () => {
     expect(digitsFromCzDateInput("4. 5. 2026")).toBe("452026");
+  });
+
+  it("groups by dots so 1.1 is not eleven", () => {
+    expect(digitsFromCzDateInput("1.1")).toBe("11");
+    expect(formatCzDateFromDigits(digitsFromCzDateInput("1.1"))).toBe("11");
+    expect(formatCzDateTyping("1.1")).toBe("1. 1");
+  });
+});
+
+describe("formatCzDateTyping", () => {
+  it("keeps dot after day and month while typing", () => {
+    expect(formatCzDateTyping("1.")).toBe("1. ");
+    expect(formatCzDateTyping("1.1")).toBe("1. 1");
+    expect(formatCzDateTyping("1.1.")).toBe("1. 1. ");
+    expect(formatCzDateTyping("01.01.")).toBe("1. 1. ");
+  });
+
+  it("falls back to digit stream without dots", () => {
+    expect(formatCzDateTyping("0405")).toBe("4. 5");
+  });
+
+  it("completes full date with dots", () => {
+    expect(formatCzDateTyping("13.9.2026")).toBe("13. 9. 2026");
+    expect(validateCzDateComplete(formatCzDateTyping("13.9.2026")).ok).toBe(true);
   });
 });
 

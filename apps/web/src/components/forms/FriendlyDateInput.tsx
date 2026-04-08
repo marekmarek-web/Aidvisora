@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  digitsFromCzDateInput,
-  formatCzDate,
-  formatCzDateFromDigits,
-  validateCzDateComplete,
-} from "@/lib/forms/cz-date";
+import { formatCzDate, formatCzDateTyping, validateCzDateComplete } from "@/lib/forms/cz-date";
 
 type Props = {
   id?: string;
@@ -47,17 +42,17 @@ export function FriendlyDateInput({
     setText(formatCzDate(value) || "");
   }, [value]);
 
-  const applyDigitsAsIso = useCallback(
-    (digits: string) => {
-      const display = formatCzDateFromDigits(digits);
+  const commitDisplay = useCallback(
+    (display: string) => {
       setText(display);
-      const v = validateCzDateComplete(display);
+      const v = validateCzDateComplete(display.trim());
+      const digitLen = display.replace(/\D/g, "").length;
       if (v.ok) {
         setError(null);
         skipSyncRef.current = true;
         onChange(v.iso);
       } else {
-        if (digits.length >= 8) setError(v.message || null);
+        if (digitLen >= 8) setError(v.message || null);
         else setError(null);
         onChange("");
       }
@@ -66,8 +61,7 @@ export function FriendlyDateInput({
   );
 
   function handleChange(raw: string) {
-    const digits = digitsFromCzDateInput(raw);
-    applyDigitsAsIso(digits);
+    commitDisplay(formatCzDateTyping(raw));
   }
 
   function handleBlur() {
@@ -99,7 +93,7 @@ export function FriendlyDateInput({
       <input
         id={id}
         type="text"
-        inputMode="numeric"
+        inputMode="text"
         autoComplete="off"
         spellCheck={false}
         disabled={disabled}
