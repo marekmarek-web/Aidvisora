@@ -1,5 +1,9 @@
 import OpenAI from "openai";
 import { withOpenAIRateLimitRetry } from "@/lib/openai-rate-limit";
+import {
+  clipForLangfuse,
+  OpenAiResponsesLangfuseObservation,
+} from "@/lib/observability/langfuse-openai";
 import { buildAiReviewResponsesCreateExtras } from "./openai-ai-review-params";
 import {
   coerceNonEmptyAiReviewVariables,
@@ -123,6 +127,14 @@ export function resolveOpenAIModel(options?: {
 
 let clientInstance: OpenAI | null = null;
 
+function observabilityUrlHost(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "invalid_url";
+  }
+}
+
 /** Lazy singleton. Never expose API key. */
 function getClient(): OpenAI | null {
   if (clientInstance) return clientInstance;
@@ -190,28 +202,19 @@ export async function createResponse(
   });
   const store = options?.store ?? false;
   const start = Date.now();
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create",
+    model: primaryModel,
+    input,
+    routingCategory: options?.routing?.category,
+  });
 
-  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
-  let usedModel = primaryModel;
   try {
-    const createBody = buildResponsesCreateBody({
-      model: primaryModel,
-      input,
-      store,
-      routing: options?.routing,
-    });
-    response = await withOpenAIRateLimitRetry(
-      () =>
-        client.responses.create(
-          createBody as Parameters<OpenAI["responses"]["create"]>[0],
-          buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
-        ),
-      { label: "responses.create", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
-    );
-  } catch (err) {
-    if (isModelError(err) && primaryModel !== fallbackModel) {
-      const fallbackBody = buildResponsesCreateBody({
-        model: fallbackModel,
+    let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
+    let usedModel = primaryModel;
+    try {
+      const createBody = buildResponsesCreateBody({
+        model: primaryModel,
         input,
         store,
         routing: options?.routing,
@@ -219,58 +222,89 @@ export async function createResponse(
       response = await withOpenAIRateLimitRetry(
         () =>
           client.responses.create(
-            fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+            createBody as Parameters<OpenAI["responses"]["create"]>[0],
             buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
           ),
-        {
-          label: "responses.create(fallback_model)",
-          maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
-        }
+        { label: "responses.create", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
       );
-      usedModel = fallbackModel;
-    } else {
-      const latencyMs = Date.now() - start;
-      const message = err instanceof Error ? err.message : String(err);
-      const code = (err as { code?: string })?.code;
-      logOpenAICall({
-        endpoint: "responses.create",
-        model: primaryModel,
-        latencyMs,
-        success: false,
-        error: message,
-      });
-      throw err instanceof Error ? err : new Error(message, { cause: code });
+    } catch (err) {
+      if (isModelError(err) && primaryModel !== fallbackModel) {
+        lfObs.setModel(fallbackModel);
+        const fallbackBody = buildResponsesCreateBody({
+          model: fallbackModel,
+          input,
+          store,
+          routing: options?.routing,
+        });
+        response = await withOpenAIRateLimitRetry(
+          () =>
+            client.responses.create(
+              fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+              buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
+            ),
+          {
+            label: "responses.create(fallback_model)",
+            maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
+          }
+        );
+        usedModel = fallbackModel;
+      } else {
+        const latencyMs = Date.now() - start;
+        const message = err instanceof Error ? err.message : String(err);
+        const code = (err as { code?: string })?.code;
+        logOpenAICall({
+          endpoint: "responses.create",
+          model: primaryModel,
+          latencyMs,
+          success: false,
+          error: message,
+        });
+        throw err instanceof Error ? err : new Error(message, { cause: code });
+      }
     }
-  }
 
-  const latencyMs = Date.now() - start;
-  logOpenAICall({
-    endpoint: "responses.create",
-    model: usedModel,
-    latencyMs,
-    success: true,
-  });
+    const latencyMs = Date.now() - start;
+    logOpenAICall({
+      endpoint: "responses.create",
+      model: usedModel,
+      latencyMs,
+      success: true,
+    });
 
-  const text = (response as { output_text?: string }).output_text;
-  if (typeof text === "string" && text.trim()) return text.trim();
+    const text = (response as { output_text?: string }).output_text;
+    if (typeof text === "string" && text.trim()) {
+      const t = text.trim();
+      lfObs.endSuccess(response, t);
+      return t;
+    }
 
-  const output = (response as { output?: unknown[] }).output;
-  if (Array.isArray(output)) {
-    const parts: string[] = [];
-    for (const item of output) {
-      const msg = item as { content?: Array<{ type?: string; text?: string }> };
-      if (Array.isArray(msg?.content)) {
-        for (const block of msg.content) {
-          if (block?.type === "output_text" && typeof block.text === "string") {
-            parts.push(block.text);
+    const output = (response as { output?: unknown[] }).output;
+    if (Array.isArray(output)) {
+      const parts: string[] = [];
+      for (const item of output) {
+        const msg = item as { content?: Array<{ type?: string; text?: string }> };
+        if (Array.isArray(msg?.content)) {
+          for (const block of msg.content) {
+            if (block?.type === "output_text" && typeof block.text === "string") {
+              parts.push(block.text);
+            }
           }
         }
       }
+      if (parts.length) {
+        const joined = parts.join("\n").trim();
+        lfObs.endSuccess(response, joined);
+        return joined;
+      }
     }
-    if (parts.length) return parts.join("\n").trim();
-  }
 
-  throw new Error("Prázdná odpověď od OpenAI.");
+    throw new Error("Prázdná odpověď od OpenAI.");
+  } catch (err) {
+    lfObs.endFailure(err);
+    throw err;
+  } finally {
+    await lfObs.flush();
+  }
 }
 
 /**
@@ -321,36 +355,19 @@ export async function createResponseStructured<T>(
   const store = options?.store ?? false;
   const start = Date.now();
   const schemaName = options?.schemaName?.trim() || "extraction";
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create_structured",
+    model: primaryModel,
+    input,
+    routingCategory: options?.routing?.category,
+  });
 
-  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
-  let usedModel = primaryModel;
   try {
-    const createBody = buildResponsesCreateBody({
-      model: primaryModel,
-      input,
-      store,
-      routing: options?.routing,
-      textFormat: {
-        type: "json_schema",
-        name: schemaName,
-        schema: jsonSchema,
-      },
-    });
-    response = await withOpenAIRateLimitRetry(
-      () =>
-        client.responses.create(
-          createBody as Parameters<OpenAI["responses"]["create"]>[0],
-          buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
-        ),
-      {
-        label: "responses.create_structured",
-        maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
-      }
-    );
-  } catch (err) {
-    if (isModelError(err) && primaryModel !== fallbackModel) {
-      const fallbackBody = buildResponsesCreateBody({
-        model: fallbackModel,
+    let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
+    let usedModel = primaryModel;
+    try {
+      const createBody = buildResponsesCreateBody({
+        model: primaryModel,
         input,
         store,
         routing: options?.routing,
@@ -363,47 +380,81 @@ export async function createResponseStructured<T>(
       response = await withOpenAIRateLimitRetry(
         () =>
           client.responses.create(
-            fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+            createBody as Parameters<OpenAI["responses"]["create"]>[0],
             buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
           ),
         {
-          label: "responses.create_structured(fallback_model)",
+          label: "responses.create_structured",
           maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
         }
       );
-      usedModel = fallbackModel;
-    } else {
-      const latencyMs = Date.now() - start;
-      const message = err instanceof Error ? err.message : String(err);
-      logOpenAICall({
-        endpoint: "responses.create_structured",
-        model: primaryModel,
-        latencyMs,
-        success: false,
-        error: message,
-      });
-      throw err instanceof Error ? err : new Error(message);
+    } catch (err) {
+      if (isModelError(err) && primaryModel !== fallbackModel) {
+        lfObs.setModel(fallbackModel);
+        const fallbackBody = buildResponsesCreateBody({
+          model: fallbackModel,
+          input,
+          store,
+          routing: options?.routing,
+          textFormat: {
+            type: "json_schema",
+            name: schemaName,
+            schema: jsonSchema,
+          },
+        });
+        response = await withOpenAIRateLimitRetry(
+          () =>
+            client.responses.create(
+              fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+              buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
+            ),
+          {
+            label: "responses.create_structured(fallback_model)",
+            maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
+          }
+        );
+        usedModel = fallbackModel;
+      } else {
+        const latencyMs = Date.now() - start;
+        const message = err instanceof Error ? err.message : String(err);
+        logOpenAICall({
+          endpoint: "responses.create_structured",
+          model: primaryModel,
+          latencyMs,
+          success: false,
+          error: message,
+        });
+        throw err instanceof Error ? err : new Error(message);
+      }
     }
-  }
 
-  const latencyMs = Date.now() - start;
-  logOpenAICall({
-    endpoint: "responses.create_structured",
-    model: usedModel,
-    latencyMs,
-    success: true,
-  });
+    const latencyMs = Date.now() - start;
+    logOpenAICall({
+      endpoint: "responses.create_structured",
+      model: usedModel,
+      latencyMs,
+      success: true,
+    });
 
-  const parsedDirect = (response as { output_parsed?: T }).output_parsed;
-  const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
-  if (parsedDirect !== undefined) {
-    return { text, parsed: parsedDirect, model: usedModel };
+    const parsedDirect = (response as { output_parsed?: T }).output_parsed;
+    const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
+    if (parsedDirect !== undefined) {
+      lfObs.endSuccess(response, text);
+      return { text, parsed: parsedDirect, model: usedModel };
+    }
+    const parsed = JSON.parse(text) as T;
+    lfObs.endSuccess(response, text);
+    return {
+      text,
+      parsed,
+      model: usedModel,
+    };
+  } catch (err) {
+    lfObs.endFailure(err);
+    throw err;
+  } finally {
+    await lfObs.flush();
   }
-  return {
-    text,
-    parsed: JSON.parse(text) as T,
-    model: usedModel,
-  };
 }
 
 /** Extract text from Responses API response (shared by createResponse and createResponseFromPrompt). */
@@ -476,6 +527,17 @@ export async function createResponseFromPrompt(
     promptPayload.version = params.version.trim();
   }
 
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create_prompt",
+    model: primaryModel,
+    input: {
+      promptId: trimmedId,
+      ...(params.version?.trim() ? { version: params.version.trim() } : {}),
+      variableKeys: Object.keys(sanitizedVariables),
+    },
+    routingCategory: options?.routing?.category,
+  });
+
   try {
     const promptBody = buildResponsesCreateBody({
       model: primaryModel,
@@ -499,6 +561,7 @@ export async function createResponseFromPrompt(
       success: true,
     });
     const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
+    lfObs.endSuccess(response, text);
     return { ok: true, text };
   } catch (err) {
     const latencyMs = Date.now() - start;
@@ -510,7 +573,10 @@ export async function createResponseFromPrompt(
       success: false,
       error: message,
     });
+    lfObs.endFailure(err);
     return { ok: false, error: message, code: (err as { code?: string })?.code };
+  } finally {
+    await lfObs.flush();
   }
 }
 
@@ -620,27 +686,22 @@ export async function createResponseWithFile(
     },
   ];
 
-  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
-  let usedModel = primaryModel;
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create_with_file",
+    model: primaryModel,
+    input: {
+      fileUrlHost: observabilityUrlHost(fileUrl),
+      textPrompt: clipForLangfuse(textPrompt),
+    },
+    routingCategory: options?.routing?.category,
+  });
+
   try {
-    const fileBody = buildResponsesCreateBody({
-      model: primaryModel,
-      input,
-      store,
-      routing: options?.routing,
-    });
-    response = await withOpenAIRateLimitRetry(
-      () =>
-        client.responses.create(
-          fileBody as Parameters<OpenAI["responses"]["create"]>[0],
-          buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
-        ),
-      { label: "responses.create_with_file", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
-    );
-  } catch (err) {
-    if (isModelError(err) && primaryModel !== fallbackModel) {
-      const fileFallbackBody = buildResponsesCreateBody({
-        model: fallbackModel,
+    let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
+    let usedModel = primaryModel;
+    try {
+      const fileBody = buildResponsesCreateBody({
+        model: primaryModel,
         input,
         store,
         routing: options?.routing,
@@ -648,57 +709,88 @@ export async function createResponseWithFile(
       response = await withOpenAIRateLimitRetry(
         () =>
           client.responses.create(
-            fileFallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+            fileBody as Parameters<OpenAI["responses"]["create"]>[0],
             buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
           ),
-        {
-          label: "responses.create_with_file(fallback_model)",
-          maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
-        }
+        { label: "responses.create_with_file", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
       );
-      usedModel = fallbackModel;
-    } else {
-      const latencyMs = Date.now() - start;
-      const message = err instanceof Error ? err.message : String(err);
-      logOpenAICall({
-        endpoint: "responses.create_with_file",
-        model: primaryModel,
-        latencyMs,
-        success: false,
-        error: message,
-      });
-      throw err instanceof Error ? err : new Error(message);
+    } catch (err) {
+      if (isModelError(err) && primaryModel !== fallbackModel) {
+        lfObs.setModel(fallbackModel);
+        const fileFallbackBody = buildResponsesCreateBody({
+          model: fallbackModel,
+          input,
+          store,
+          routing: options?.routing,
+        });
+        response = await withOpenAIRateLimitRetry(
+          () =>
+            client.responses.create(
+              fileFallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+              buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
+            ),
+          {
+            label: "responses.create_with_file(fallback_model)",
+            maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
+          }
+        );
+        usedModel = fallbackModel;
+      } else {
+        const latencyMs = Date.now() - start;
+        const message = err instanceof Error ? err.message : String(err);
+        logOpenAICall({
+          endpoint: "responses.create_with_file",
+          model: primaryModel,
+          latencyMs,
+          success: false,
+          error: message,
+        });
+        throw err instanceof Error ? err : new Error(message);
+      }
     }
-  }
 
-  const latencyMs = Date.now() - start;
-  logOpenAICall({
-    endpoint: "responses.create_with_file",
-    model: usedModel,
-    latencyMs,
-    success: true,
-  });
+    const latencyMs = Date.now() - start;
+    logOpenAICall({
+      endpoint: "responses.create_with_file",
+      model: usedModel,
+      latencyMs,
+      success: true,
+    });
 
-  const text = (response as { output_text?: string }).output_text;
-  if (typeof text === "string" && text.trim()) return text.trim();
+    const text = (response as { output_text?: string }).output_text;
+    if (typeof text === "string" && text.trim()) {
+      const t = text.trim();
+      lfObs.endSuccess(response, t);
+      return t;
+    }
 
-  const output = (response as { output?: unknown[] }).output;
-  if (Array.isArray(output)) {
-    const parts: string[] = [];
-    for (const item of output) {
-      const msg = item as { content?: Array<{ type?: string; text?: string }> };
-      if (Array.isArray(msg?.content)) {
-        for (const block of msg.content) {
-          if (block?.type === "output_text" && typeof block.text === "string") {
-            parts.push(block.text);
+    const output = (response as { output?: unknown[] }).output;
+    if (Array.isArray(output)) {
+      const parts: string[] = [];
+      for (const item of output) {
+        const msg = item as { content?: Array<{ type?: string; text?: string }> };
+        if (Array.isArray(msg?.content)) {
+          for (const block of msg.content) {
+            if (block?.type === "output_text" && typeof block.text === "string") {
+              parts.push(block.text);
+            }
           }
         }
       }
+      if (parts.length) {
+        const joined = parts.join("\n").trim();
+        lfObs.endSuccess(response, joined);
+        return joined;
+      }
     }
-    if (parts.length) return parts.join("\n").trim();
-  }
 
-  throw new Error("Prázdná odpověď od OpenAI.");
+    throw new Error("Prázdná odpověď od OpenAI.");
+  } catch (err) {
+    lfObs.endFailure(err);
+    throw err;
+  } finally {
+    await lfObs.flush();
+  }
 }
 
 /**
@@ -743,34 +835,24 @@ export async function createResponseStructuredWithImage<T>(
     },
   ];
 
-  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
-  let usedModel = primaryModel;
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create_structured_image",
+    model: primaryModel,
+    input: {
+      imageUrlHost: observabilityUrlHost(imageUrl),
+      textPrompt: clipForLangfuse(textPrompt),
+      schemaName,
+    },
+    routingCategory: options?.routing?.category,
+  });
 
   try {
-    const body = buildResponsesCreateBody({
-      model: primaryModel,
-      input,
-      store,
-      routing: options?.routing,
-      textFormat: {
-        type: "json_schema",
-        name: schemaName,
-        schema: jsonSchema,
-        strict: false,
-      },
-    });
-    response = await withOpenAIRateLimitRetry(
-      () =>
-        client.responses.create(
-          body as Parameters<OpenAI["responses"]["create"]>[0],
-          buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
-        ),
-      { label: "responses.create_structured_image", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
-    );
-  } catch (err) {
-    if (isModelError(err) && primaryModel !== fallbackModel) {
-      const fallbackBody = buildResponsesCreateBody({
-        model: fallbackModel,
+    let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
+    let usedModel = primaryModel;
+
+    try {
+      const body = buildResponsesCreateBody({
+        model: primaryModel,
         input,
         store,
         routing: options?.routing,
@@ -784,47 +866,78 @@ export async function createResponseStructuredWithImage<T>(
       response = await withOpenAIRateLimitRetry(
         () =>
           client.responses.create(
-            fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+            body as Parameters<OpenAI["responses"]["create"]>[0],
             buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
           ),
-        {
-          label: "responses.create_structured_image(fallback_model)",
-          maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
-        }
+        { label: "responses.create_structured_image", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
       );
-      usedModel = fallbackModel;
-    } else {
-      const latencyMs = Date.now() - start;
-      const message = err instanceof Error ? err.message : String(err);
-      logOpenAICall({
-        endpoint: "responses.create_structured_image",
-        model: primaryModel,
-        latencyMs,
-        success: false,
-        error: message,
-      });
-      throw err instanceof Error ? err : new Error(message);
+    } catch (err) {
+      if (isModelError(err) && primaryModel !== fallbackModel) {
+        lfObs.setModel(fallbackModel);
+        const fallbackBody = buildResponsesCreateBody({
+          model: fallbackModel,
+          input,
+          store,
+          routing: options?.routing,
+          textFormat: {
+            type: "json_schema",
+            name: schemaName,
+            schema: jsonSchema,
+            strict: false,
+          },
+        });
+        response = await withOpenAIRateLimitRetry(
+          () =>
+            client.responses.create(
+              fallbackBody as Parameters<OpenAI["responses"]["create"]>[0],
+              buildOpenAIRequestOptions(options?.routing) as Parameters<OpenAI["responses"]["create"]>[1]
+            ),
+          {
+            label: "responses.create_structured_image(fallback_model)",
+            maxAttempts: resolveOpenAIRetryAttempts(options?.routing),
+          }
+        );
+        usedModel = fallbackModel;
+      } else {
+        const latencyMs = Date.now() - start;
+        const message = err instanceof Error ? err.message : String(err);
+        logOpenAICall({
+          endpoint: "responses.create_structured_image",
+          model: primaryModel,
+          latencyMs,
+          success: false,
+          error: message,
+        });
+        throw err instanceof Error ? err : new Error(message);
+      }
     }
-  }
 
-  const latencyMs = Date.now() - start;
-  logOpenAICall({
-    endpoint: "responses.create_structured_image",
-    model: usedModel,
-    latencyMs,
-    success: true,
-  });
+    const latencyMs = Date.now() - start;
+    logOpenAICall({
+      endpoint: "responses.create_structured_image",
+      model: usedModel,
+      latencyMs,
+      success: true,
+    });
 
-  const parsedDirect = (response as { output_parsed?: T }).output_parsed;
-  const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
-  if (parsedDirect !== undefined) {
-    return { text, parsed: parsedDirect, model: usedModel };
+    const parsedDirect = (response as { output_parsed?: T }).output_parsed;
+    const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
+    if (parsedDirect !== undefined) {
+      lfObs.endSuccess(response, text);
+      return { text, parsed: parsedDirect, model: usedModel };
+    }
+    lfObs.endSuccess(response, text);
+    return {
+      text,
+      parsed: JSON.parse(text) as T,
+      model: usedModel,
+    };
+  } catch (err) {
+    lfObs.endFailure(err);
+    throw err;
+  } finally {
+    await lfObs.flush();
   }
-  return {
-    text,
-    parsed: JSON.parse(text) as T,
-    model: usedModel,
-  };
 }
 
 /**
@@ -889,8 +1002,17 @@ export async function createResponseStructuredWithImages<T>(
     },
   ];
 
-  let response: Awaited<ReturnType<OpenAI["responses"]["create"]>>;
   const usedModel = primaryModel;
+  const lfObs = new OpenAiResponsesLangfuseObservation({
+    operation: "responses.create_structured_images",
+    model: usedModel,
+    input: {
+      imageCount: cappedUrls.length,
+      textPrompt: clipForLangfuse(textPrompt),
+      schemaName,
+    },
+    routingCategory: options?.routing?.category,
+  });
 
   const body = buildResponsesCreateBody({
     model: primaryModel,
@@ -906,7 +1028,7 @@ export async function createResponseStructuredWithImages<T>(
   });
 
   try {
-    response = await withOpenAIRateLimitRetry(
+    const response = await withOpenAIRateLimitRetry(
       () =>
         client.responses.create(
           body as Parameters<OpenAI["responses"]["create"]>[0],
@@ -914,21 +1036,32 @@ export async function createResponseStructuredWithImages<T>(
         ),
       { label: "responses.create_structured_images", maxAttempts: resolveOpenAIRetryAttempts(options?.routing) }
     );
+
+    const latencyMs = Date.now() - start;
+    logOpenAICall({ endpoint: "responses.create_structured_images", model: usedModel, latencyMs, success: true });
+
+    const parsedDirect = (response as { output_parsed?: T }).output_parsed;
+    const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
+    if (parsedDirect !== undefined) {
+      lfObs.endSuccess(response, text);
+      return { text, parsed: parsedDirect, model: usedModel };
+    }
+    lfObs.endSuccess(response, text);
+    return { text, parsed: JSON.parse(text) as T, model: usedModel };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    logOpenAICall({ endpoint: "responses.create_structured_images", model: usedModel, latencyMs: Date.now() - start, success: false, error: message });
+    logOpenAICall({
+      endpoint: "responses.create_structured_images",
+      model: usedModel,
+      latencyMs: Date.now() - start,
+      success: false,
+      error: message,
+    });
+    lfObs.endFailure(err);
     throw err instanceof Error ? err : new Error(message);
+  } finally {
+    await lfObs.flush();
   }
-
-  const latencyMs = Date.now() - start;
-  logOpenAICall({ endpoint: "responses.create_structured_images", model: usedModel, latencyMs, success: true });
-
-  const parsedDirect = (response as { output_parsed?: T }).output_parsed;
-  const text = extractResponseText(response as { output_text?: string; output?: unknown[] });
-  if (parsedDirect !== undefined) {
-    return { text, parsed: parsedDirect, model: usedModel };
-  }
-  return { text, parsed: JSON.parse(text) as T, model: usedModel };
 }
 
 export function hasOpenAIKey(): boolean {

@@ -27,6 +27,14 @@ const serverSchema = z
   SENTRY_DSN: optionalNonEmptyString(),
   NEXT_PUBLIC_SENTRY_DSN: optionalNonEmptyString(),
   NEXT_PUBLIC_SENTRY_ENVIRONMENT: optionalNonEmptyString(),
+  /** Volitelné LLM observability (Langfuse cloud / self-hosted). */
+  LANGFUSE_SECRET_KEY: optionalNonEmptyString(),
+  LANGFUSE_PUBLIC_KEY: optionalNonEmptyString(),
+  LANGFUSE_HOST: optionalNonEmptyString(),
+  /** Vynutit prostředí v Langfuse (jinak VERCEL_ENV / NODE_ENV). */
+  LANGFUSE_ENVIRONMENT: optionalNonEmptyString(),
+  /** Nastav na `false` pro vypnutí odesílání i když jsou klíče v env. */
+  LANGFUSE_ENABLED: z.enum(["true", "false", ""]).optional(),
   INTEGRATIONS_ENCRYPTION_KEY: optionalStringMin(16),
   RESEND_API_KEY: optionalNonEmptyString(),
   /** Odpovědi na tento e-mail (např. firemní poradce); From zůstane z ověřené domény. */
