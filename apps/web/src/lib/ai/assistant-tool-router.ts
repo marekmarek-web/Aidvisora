@@ -25,6 +25,7 @@ import {
 } from "./assistant-intent";
 import { executeMortgageDealAndFollowUpTask } from "./assistant-crm-writes";
 import { searchContactsForAssistant } from "./assistant-contact-search";
+import type { SuggestedNextStepItem } from "./suggested-next-step-types";
 import type { RoleName } from "@/shared/rolePermissions";
 import type { AssistantIntent } from "./assistant-intent";
 import type { CanonicalIntent, ExecutionPlan, ExecutionStep, VerifiedAssistantResult } from "./assistant-domain-model";
@@ -124,6 +125,8 @@ function ratingSourcesSummaryFromReply(reply: string): string[] {
     : ["Top seznamy (seed v2)"];
 }
 
+export type { SuggestedNextStepItem, SuggestedNextStepItemKind } from "./suggested-next-step-types";
+
 export type AssistantResponse = {
   message: string;
   referencedEntities: { type: string; id: string; label?: string }[];
@@ -150,6 +153,8 @@ export type AssistantResponse = {
   } | null;
   stepOutcomes?: StepOutcomeSummary[];
   suggestedNextSteps?: string[];
+  /** Strukturované kroky (hint / focus / send). Když jsou přítomné, UI je preferuje vedle `suggestedNextSteps`. */
+  suggestedNextStepItems?: SuggestedNextStepItem[];
   hasPartialFailure?: boolean;
 };
 

@@ -27,6 +27,10 @@ import {
   type StepPreviewItem,
   type ExecutionStatus,
 } from "@/lib/ai/assistant-execution-ui";
+import type { SuggestedNextStepItem } from "@/lib/ai/suggested-next-step-types";
+import { dispatchSuggestedNextStepItem } from "@/lib/ai/suggested-next-step-dispatch";
+
+export { dispatchSuggestedNextStepItem } from "@/lib/ai/suggested-next-step-dispatch";
 
 // ─── UTILITY ─────────────────────────────────────────────────────────────────
 
@@ -318,28 +322,67 @@ export function StepOutcomeCard({ outcomes, hasPartialFailure }: StepOutcomeCard
 
 // ─── SUGGESTED NEXT STEPS CHIPS ───────────────────────────────────────────────
 
-interface SuggestedNextStepsChipsProps {
-  steps: string[];
-  onSend: (msg: string) => void;
+function truncateChipLabel(label: string): string {
+  return label.length > 50 ? label.slice(0, 48) + "…" : label;
 }
 
-export function SuggestedNextStepsChips({ steps, onSend }: SuggestedNextStepsChipsProps) {
-  if (steps.length === 0) return null;
+export type SuggestedNextStepsChipsProps = {
+  /** Legacy: každý řádek se odešle jako zpráva. */
+  steps?: string[];
+  /** Strukturované kroky (hint = jen text, focus_composer = fokus pole, send_message = odeslání). */
+  stepItems?: SuggestedNextStepItem[];
+  onSend?: (msg: string) => void;
+  onFocusComposer?: () => void;
+};
+
+export function SuggestedNextStepsChips({
+  steps = [],
+  stepItems,
+  onSend,
+  onFocusComposer,
+}: SuggestedNextStepsChipsProps) {
+  const hasItems = (stepItems?.length ?? 0) > 0;
+  const hasSteps = steps.length > 0;
+  if (!hasItems && !hasSteps) return null;
+
   return (
     <div className="mt-2 space-y-1">
       <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
         Doporučené kroky
       </p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 items-center">
+        {stepItems?.map((item, i) => {
+          if (item.kind === "hint") {
+            return (
+              <div
+                key={`hint-${i}`}
+                className="w-full text-[11px] text-[color:var(--wp-text-secondary)] font-medium leading-snug pl-0.5"
+              >
+                {item.label}
+              </div>
+            );
+          }
+          return (
+            <button
+              key={`step-${i}-${item.kind}`}
+              type="button"
+              onClick={() => dispatchSuggestedNextStepItem(item, { onSend, onFocusComposer })}
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-800 font-semibold hover:bg-indigo-100 active:bg-indigo-100 transition-colors text-left min-h-[32px]"
+            >
+              <Sparkles size={10} className="shrink-0 text-indigo-400" />
+              {truncateChipLabel(item.label)}
+            </button>
+          );
+        })}
         {steps.map((s, i) => (
           <button
-            key={i}
+            key={`legacy-${i}`}
             type="button"
-            onClick={() => onSend(s)}
+            onClick={() => onSend?.(s)}
             className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-800 font-semibold hover:bg-indigo-100 active:bg-indigo-100 transition-colors text-left min-h-[32px]"
           >
             <Sparkles size={10} className="shrink-0 text-indigo-400" />
-            {s.length > 50 ? s.slice(0, 48) + "…" : s}
+            {truncateChipLabel(s)}
           </button>
         ))}
       </div>

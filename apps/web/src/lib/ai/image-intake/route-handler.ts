@@ -11,7 +11,7 @@
 
 import { randomUUID } from "crypto";
 import type { AssistantSession } from "../assistant-session";
-import { lockAssistantClient } from "../assistant-session";
+import { clearPendingImageIntakeResolution, lockAssistantClient } from "../assistant-session";
 import type { ActiveContext } from "../assistant-session";
 import type { AssistantResponse } from "../assistant-tool-router";
 import { getAssistantRunStore } from "../assistant-run-context";
@@ -23,6 +23,7 @@ import { mapImageIntakeToAssistantResponse } from "./response-mapper";
 import { getImageIntakeFlagState } from "./feature-flag";
 import { inferMimeTypeForIntakeAsset, normalizeIntakeImageAssetsForVision } from "./normalize-intake-image-input";
 import type { ImageAssetInput } from "./image-asset-input";
+import { buildPendingImageIntakeResolutionFromOrchestratorResult } from "./pending-resolution-metadata";
 
 export type { ImageAssetInput } from "./image-asset-input";
 
@@ -260,5 +261,13 @@ export async function handleImageIntakeFromChatRoute(
     const w = "Nahráno více než 4 obrázky — zpracovány jsou jen první čtyři.";
     out.warnings = out.warnings.includes(w) ? out.warnings : [...out.warnings, w];
   }
+
+  const pending = buildPendingImageIntakeResolutionFromOrchestratorResult(result);
+  if (pending) {
+    session.pendingImageIntakeResolution = pending;
+  } else {
+    clearPendingImageIntakeResolution(session);
+  }
+
   return out;
 }

@@ -7,7 +7,7 @@
  * - missing fields / ambiguity reasons surfaced in warnings
  * - multimodal flag state in sourcesSummary
  *
- * Reuses the existing AssistantResponse type — no frontend changes needed.
+ * Reuses AssistantResponse; ambiguous_needs_input používá suggestedNextStepItems (hint / focus).
  */
 
 import type { AssistantResponse } from "../assistant-tool-router";
@@ -193,9 +193,12 @@ export function mapImageIntakeToAssistantResponse(
     (response.actionPlan.outputMode === "no_action_archive_only" ? 0.9 : 0.5);
 
   const suggestedNextSteps: string[] = [];
+  const suggestedNextStepItems: NonNullable<AssistantResponse["suggestedNextStepItems"]> = [];
   if (response.actionPlan.outputMode === "ambiguous_needs_input") {
-    suggestedNextSteps.push("Otevřete kartu klienta a nahrajte obrázek znovu.");
-    suggestedNextSteps.push("Nebo sdělte jméno klienta v textovém poli.");
+    suggestedNextStepItems.push(
+      { label: "Otevřete kartu klienta a nahrajte obrázek znovu.", kind: "hint" },
+      { label: "Nebo sdělte jméno klienta v textovém poli.", kind: "focus_composer" },
+    );
   }
   if (response.clientBinding.state === "weak_candidate") {
     suggestedNextSteps.push(
@@ -318,6 +321,8 @@ export function mapImageIntakeToAssistantResponse(
       lockedClientLabel: response.clientBinding.clientLabel ?? null,
     },
     suggestedNextSteps,
+    suggestedNextStepItems:
+      suggestedNextStepItems.length > 0 ? suggestedNextStepItems : undefined,
     hasPartialFailure: false,
   };
 }

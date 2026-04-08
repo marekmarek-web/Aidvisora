@@ -119,6 +119,7 @@ type ChatMessage =
       } | null;
       stepOutcomes?: StepOutcomeSummary[];
       suggestedNextSteps?: string[];
+      suggestedNextStepItems?: AssistantResponse["suggestedNextStepItems"];
       hasPartialFailure?: boolean;
     };
 
@@ -485,6 +486,7 @@ export function AiAssistantDrawer() {
               contextState: complete.contextState ?? null,
               stepOutcomes: complete.stepOutcomes ?? undefined,
               suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+              suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
               hasPartialFailure: complete.hasPartialFailure ?? undefined,
             };
           }
@@ -571,6 +573,7 @@ export function AiAssistantDrawer() {
             contextState: complete.contextState ?? null,
             stepOutcomes: complete.stepOutcomes ?? undefined,
             suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+            suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
             hasPartialFailure: complete.hasPartialFailure ?? undefined,
           };
         }
@@ -650,6 +653,7 @@ export function AiAssistantDrawer() {
             contextState: complete.contextState ?? null,
             stepOutcomes: complete.stepOutcomes ?? undefined,
             suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+            suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
             hasPartialFailure: complete.hasPartialFailure ?? undefined,
           };
         }
@@ -1591,9 +1595,18 @@ export function AiAssistantDrawer() {
                       ))}
                     </div>
                   )}
-                  {m.role === "assistant" && (m.suggestedNextSteps?.length ?? 0) > 0 && (
-                    <SuggestedNextStepsChips steps={m.suggestedNextSteps!} onSend={(msg) => { setInput(""); void sendChatMessage(msg); }} />
-                  )}
+                  {m.role === "assistant" &&
+                    ((m.suggestedNextStepItems?.length ?? 0) > 0 || (m.suggestedNextSteps?.length ?? 0) > 0) && (
+                      <SuggestedNextStepsChips
+                        stepItems={m.suggestedNextStepItems}
+                        steps={m.suggestedNextSteps}
+                        onSend={(msg) => {
+                          setInput("");
+                          void sendChatMessage(msg);
+                        }}
+                        onFocusComposer={() => inputRef.current?.focus()}
+                      />
+                    )}
                   {m.role === "assistant" && m.reviewId && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       <button

@@ -4,6 +4,7 @@
  */
 
 import type { AssistantSession, PendingImageIntakeResolution } from "../assistant-session";
+import type { ImageIntakeOrchestratorResult } from "./orchestrator";
 import type { EvidenceReference, ExtractedFactBundle, ExtractedImageFact, ImageIntakeActionPlan } from "./types";
 import { FACT_TYPES, IMAGE_OUTPUT_MODES } from "./types";
 
@@ -178,4 +179,27 @@ export function applyPendingImageIntakeFromConversationMetadata(
   if (!parsed) return;
 
   session.pendingImageIntakeResolution = parsed;
+}
+
+/**
+ * Vytvoří pending stav po ambiguous image intake — další textová zpráva jde do resume větve.
+ */
+export function buildPendingImageIntakeResolutionFromOrchestratorResult(
+  result: ImageIntakeOrchestratorResult,
+): PendingImageIntakeResolution | null {
+  const { response } = result;
+  if (response.actionPlan.outputMode !== "ambiguous_needs_input") {
+    return null;
+  }
+  const binding = response.clientBinding;
+  return {
+    intakeId: response.intakeId,
+    factBundle: response.factBundle,
+    actionPlan: response.actionPlan,
+    bindingState: binding.state,
+    candidates: binding.candidates.map(({ id, label }) => ({ id, label })),
+    imageNameSignal: null,
+    inputType: response.classification?.inputType ?? null,
+    createdAt: new Date().toISOString(),
+  };
 }

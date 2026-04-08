@@ -20,20 +20,9 @@ import { buildFactsSummaryLines } from "./extractor";
 import { isPendingImageIntakeResolutionExpired } from "./pending-resolution-metadata";
 import { buildExecutionPlanAfterIntakeResume } from "./resume-intake-execution-plan";
 import { mapToPreviewItems } from "./intake-execution-plan-mapper";
+import { looksLikeClientNameInput } from "./client-name-input-heuristic";
 
-// ---------------------------------------------------------------------------
-// Detect whether a text message looks like a client name attempt
-// ---------------------------------------------------------------------------
-
-/** Messages up to 80 chars with no "?" or verb-heavy structure are treated as name candidates. */
-function looksLikeClientNameInput(text: string): boolean {
-  const t = text.trim();
-  if (t.length === 0 || t.length > 80) return false;
-  // Avoid question marks and sentences that look like commands/questions (case-insensitive)
-  const lower = t.toLowerCase();
-  if (lower.includes("?") || lower.includes("vytvoř") || lower.includes("přidej") || lower.includes("smaž")) return false;
-  return true;
-}
+export { looksLikeClientNameInput } from "./client-name-input-heuristic";
 
 // ---------------------------------------------------------------------------
 // CRM lookup for resolution input

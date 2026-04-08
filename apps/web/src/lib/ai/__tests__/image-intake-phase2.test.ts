@@ -424,4 +424,19 @@ describe("mapImageIntakeToAssistantResponse", () => {
     const response = mapImageIntakeToAssistantResponse(result, SESSION_ID);
     expect(response.executionState).toBeNull();
   });
+
+  it("ambiguous_needs_input uses suggestedNextStepItems (hint + focus_composer), not sendable strings for the two base hints", async () => {
+    mockModel("mixed_or_uncertain_image", 0.3);
+    const result = await processImageIntake(makeRequest(), null);
+    expect(result.response.actionPlan.outputMode).toBe("ambiguous_needs_input");
+    const response = mapImageIntakeToAssistantResponse(result, SESSION_ID);
+    expect(response.suggestedNextStepItems).toBeDefined();
+    expect(response.suggestedNextStepItems!.length).toBe(2);
+    expect(response.suggestedNextStepItems![0].kind).toBe("hint");
+    expect(response.suggestedNextStepItems![1].kind).toBe("focus_composer");
+    const joined = response.suggestedNextStepItems!.map((x) => x.label).join(" ");
+    expect(joined).toContain("Otevřete kartu");
+    expect(joined).toContain("textovém poli");
+    expect(response.suggestedNextSteps.some((s) => s.includes("textovém poli"))).toBe(false);
+  });
 });

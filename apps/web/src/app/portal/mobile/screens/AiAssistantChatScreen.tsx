@@ -34,6 +34,7 @@ import {
   extractImageFilesFromClipboardData,
   logAssistantImagePipelineClient,
 } from "@/lib/ai/assistant-clipboard-image-paste";
+import type { AssistantResponse } from "@/lib/ai/assistant-tool-router";
 import { mapActionPayloadsToSuggestedActions } from "@/lib/ai/map-action-payload-to-suggested";
 import {
   ExecutionBadge,
@@ -106,6 +107,7 @@ interface ChatMessage {
   } | null;
   stepOutcomes?: StepOutcomeSummary[];
   suggestedNextSteps?: string[];
+  suggestedNextStepItems?: AssistantResponse["suggestedNextStepItems"];
   hasPartialFailure?: boolean;
 }
 
@@ -165,6 +167,7 @@ function MessageBubble({
   msg,
   onSuggestedAction,
   onNextStep,
+  onFocusComposer,
   stepSelectionByPlanId,
   onToggleStepForPlan,
   stickyLockedClientId,
@@ -172,6 +175,7 @@ function MessageBubble({
   msg: ChatMessage;
   onSuggestedAction?: (action: SuggestedAction) => void;
   onNextStep?: (text: string) => void;
+  onFocusComposer?: () => void;
   stepSelectionByPlanId?: Record<string, Record<string, boolean>>;
   onToggleStepForPlan?: (planId: string, stepId: string) => void;
   /** Stejný klient jako horní sticky badge — duplicitní chip v bublině neukazujeme (6E). */
@@ -303,8 +307,14 @@ function MessageBubble({
         ) : null}
 
         {/* Suggested next steps */}
-        {(msg.suggestedNextSteps ?? []).length > 0 && onNextStep ? (
-          <SuggestedNextStepsChips steps={msg.suggestedNextSteps!} onSend={onNextStep} />
+        {((msg.suggestedNextStepItems?.length ?? 0) > 0 || (msg.suggestedNextSteps ?? []).length > 0) &&
+        (onNextStep || onFocusComposer) ? (
+          <SuggestedNextStepsChips
+            stepItems={msg.suggestedNextStepItems}
+            steps={msg.suggestedNextSteps}
+            onSend={onNextStep}
+            onFocusComposer={onFocusComposer}
+          />
         ) : null}
 
         {/* Referenced entities */}
@@ -783,6 +793,7 @@ export function AiAssistantChatScreen() {
                   contextState: complete.contextState ?? null,
                   stepOutcomes: complete.stepOutcomes ?? undefined,
                   suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                  suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
                   hasPartialFailure: complete.hasPartialFailure ?? undefined,
                 }
               : m
@@ -877,6 +888,7 @@ export function AiAssistantChatScreen() {
                 contextState: complete.contextState ?? null,
                 stepOutcomes: complete.stepOutcomes ?? undefined,
                 suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
                 hasPartialFailure: complete.hasPartialFailure ?? undefined,
               }
             : m,
@@ -957,6 +969,7 @@ export function AiAssistantChatScreen() {
                 contextState: complete.contextState ?? null,
                 stepOutcomes: complete.stepOutcomes ?? undefined,
                 suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
                 hasPartialFailure: complete.hasPartialFailure ?? undefined,
               }
             : m,
@@ -1072,6 +1085,7 @@ export function AiAssistantChatScreen() {
                 contextState: complete.contextState ?? null,
                 stepOutcomes: complete.stepOutcomes ?? undefined,
                 suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
+                suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
                 hasPartialFailure: complete.hasPartialFailure ?? undefined,
               }
             : m
@@ -1242,7 +1256,11 @@ export function AiAssistantChatScreen() {
             msg={msg}
             stickyLockedClientId={latestContextState?.lockedClientId ?? null}
             onSuggestedAction={handleSuggestedAction}
-            onNextStep={(text) => void sendMessage(text)}
+            onNextStep={(text) => {
+              setInput("");
+              void sendMessage(text);
+            }}
+            onFocusComposer={() => inputRef.current?.focus()}
             stepSelectionByPlanId={stepSelectionByPlanId}
             onToggleStepForPlan={(planId, stepId) => {
               setStepSelectionByPlanId((prev) => {
