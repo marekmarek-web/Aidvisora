@@ -20,7 +20,7 @@ export async function generateClientInviteTemporaryPassword() {
   return `Aidv-${randomPart(4)}-${randomPart(4)}-${randomPart(2)}!`;
 }
 
-async function findAuthUserByEmail(email: string): Promise<User | null> {
+export async function findAuthUserByEmail(email: string): Promise<User | null> {
   const admin = createAdminClient();
   const normalized = email.trim().toLowerCase();
 

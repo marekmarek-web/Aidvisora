@@ -437,6 +437,13 @@ export function TeamOverviewView({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/portal/setup?tab=tym"
+              className="inline-flex items-center gap-2 min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-800 hover:bg-indigo-100 transition-colors"
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              Pozvat člena
+            </Link>
             <TeamCalendarButtons
               canCreate={canCreateTeamCalendar}
               onOpenEvent={() => setTeamCalendarModal("event")}

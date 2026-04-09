@@ -33,3 +33,24 @@ export const memberships = pgTable(
   },
   (t) => [unique("memberships_tenant_user").on(t.tenantId, t.userId)]
 );
+
+/** Pozvánka poradce / člena týmu do existujícího tenantu (odkaz s tokenem). */
+export const staffInvitations = pgTable("staff_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  roleId: uuid("role_id")
+    .notNull()
+    .references(() => roles.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  authUserId: text("auth_user_id"),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  invitedByUserId: text("invited_by_user_id"),
+  emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
+  lastEmailError: text("last_email_error"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});

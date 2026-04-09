@@ -36,7 +36,7 @@ import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uplo
 import { getWorkspaceBirthdayEmailTheme, setWorkspaceBirthdayEmailTheme } from "@/app/actions/birthday-greetings";
 import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
 import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
-import { listTenantMembers } from "@/app/actions/team";
+import { listTenantMembers, sendTeamMemberInvitation } from "@/app/actions/team";
 import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
@@ -263,7 +263,10 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       const fd = new FormData();
       fd.set("file", file);
       const url = await uploadAdvisorAvatar(fd);
-      if (url) setAdvisorAvatarUrl(url);
+      if (url) {
+        setAdvisorAvatarUrl(url);
+        router.refresh();
+      }
     } catch (err) {
       setAdvisorAvatarError(err instanceof Error ? err.message : "Nahrání se nezdařilo");
     } finally {
@@ -1378,10 +1381,25 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   if (!inviteEmail.trim()) return;
                   setInviteSending(true);
                   try {
-                    toast.showToast(`Pozvánka odeslána na ${inviteEmail}`);
+                    const result = await sendTeamMemberInvitation(inviteEmail.trim(), inviteRole);
+                    if (!result.ok) {
+                      toast.showToast(result.error, "error");
+                      return;
+                    }
+                    if (result.emailSent) {
+                      toast.showToast(`Pozvánka odeslána na ${inviteEmail.trim()}`);
+                    } else {
+                      toast.showToast(
+                        result.emailError
+                          ? `Pozvánka uložena, ale e-mail se nepodařilo odeslat (${result.emailError}). Odkaz: ${result.inviteLink}`
+                          : `Pozvánka uložena. Odkaz: ${result.inviteLink}`,
+                        "error",
+                      );
+                    }
                     setInviteEmail("");
+                    void listTenantMembers().then(setTeamMembers).catch(() => {});
                   } catch {
-                    toast.showToast("Pozvánku se nepodařilo odeslat.", "error");
+                    toast.showToast("Pozvánku se nepodařilo vytvořit.", "error");
                   } finally {
                     setInviteSending(false);
                   }
@@ -1401,7 +1419,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   onChange={setInviteRole}
                   options={[
                     { id: "Advisor", label: "Poradce" },
-                    { id: "Assistant", label: "Asistent" },
+                    { id: "Manager", label: "Manažer" },
+                    { id: "Viewer", label: "Prohlížeč" },
                     { id: "Admin", label: "Admin" },
                   ]}
                   placeholder="Role"

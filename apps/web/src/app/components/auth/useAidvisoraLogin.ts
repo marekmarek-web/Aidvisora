@@ -11,6 +11,11 @@ import {
   parseClientInviteTokenFromUrl,
   buildClientInvitePasswordSetupSearch,
 } from "@/lib/auth/client-invite-url";
+import {
+  STAFF_INVITE_QUERY_PARAM,
+  parseStaffInviteTokenFromUrl,
+  buildStaffInviteRegisterCompletePath,
+} from "@/lib/auth/staff-invite-url";
 
 export type LoginRole = "advisor" | "client";
 
@@ -48,11 +53,14 @@ export function useAidvisoraLogin() {
   const advisorNextPath = normalizeNextParam(nextParam, "/portal/today");
   const clientNextPath = normalizeNextParam(nextParam, "/client");
   const clientInviteToken = parseClientInviteTokenFromUrl(searchParams);
+  const staffInviteToken = clientInviteToken ? null : parseStaffInviteTokenFromUrl(searchParams);
   const registerParam = searchParams.get("register");
   const errorParam = searchParams.get("error");
 
   const [role, setRole] = useState<LoginRole>(() => (clientInviteToken ? "client" : "advisor"));
-  const [isLogin, setIsLogin] = useState(() => (clientInviteToken ? true : !searchParams.get("register")));
+  const [isLogin, setIsLogin] = useState(
+    () => (clientInviteToken || staffInviteToken ? true : !searchParams.get("register")),
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -73,9 +81,11 @@ export function useAidvisoraLogin() {
   }, [clientInviteToken]);
 
   useEffect(() => {
-    if (!clientInviteToken) return;
+    const tok = clientInviteToken ?? staffInviteToken;
+    const param = clientInviteToken ? CLIENT_INVITE_QUERY_PARAM : STAFF_INVITE_QUERY_PARAM;
+    if (!tok) return;
     let cancelled = false;
-    void fetch(`/api/invite/metadata?${CLIENT_INVITE_QUERY_PARAM}=${encodeURIComponent(clientInviteToken)}`)
+    void fetch(`/api/invite/metadata?${param}=${encodeURIComponent(tok)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { ok?: boolean; email?: string } | null) => {
         if (cancelled || !data?.ok || typeof data.email !== "string") return;
@@ -85,7 +95,7 @@ export function useAidvisoraLogin() {
     return () => {
       cancelled = true;
     };
-  }, [clientInviteToken]);
+  }, [clientInviteToken, staffInviteToken]);
 
   useEffect(() => {
     if (!forceNative || typeof document === "undefined") return;
@@ -131,6 +141,39 @@ export function useAidvisoraLogin() {
           return;
         }
         window.location.href = "/client";
+        return;
+      }
+
+      if (staffInviteToken) {
+        if (isLogin) {
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          setIsLoading(false);
+          if (error) {
+            setMessage(error.message);
+            return;
+          }
+        } else {
+          if (!advisorLegalConsent) {
+            setIsLoading(false);
+            setMessage("Před vytvořením účtu potvrďte souhlas s právními dokumenty níže.");
+            return;
+          }
+          const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name } },
+          });
+          setIsLoading(false);
+          if (error) {
+            if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
+              setMessage("Příliš mnoho pokusů. Zkuste to za 10–15 minut.");
+            } else {
+              setMessage(error.message);
+            }
+            return;
+          }
+        }
+        window.location.href = buildStaffInviteRegisterCompletePath(staffInviteToken, advisorNextPath);
         return;
       }
 
@@ -186,18 +229,34 @@ export function useAidvisoraLogin() {
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       }
     },
-    [clientInviteToken, email, password, advisorLegalConsent, role, isLogin, name, clientNextPath, advisorNextPath]
+    [
+      clientInviteToken,
+      staffInviteToken,
+      email,
+      password,
+      advisorLegalConsent,
+      role,
+      isLogin,
+      name,
+      clientNextPath,
+      advisorNextPath,
+    ]
   );
 
   const handleOAuthSignIn = useCallback(
     async (provider: "google" | "apple") => {
-      if (role !== "client" && !isLogin && !clientInviteToken && !advisorLegalConsent) {
+      if (role !== "client" && !isLogin && !clientInviteToken && !staffInviteToken && !advisorLegalConsent) {
         setMessage("Před pokračováním přes Google nebo Apple potvrďte souhlas s právními dokumenty.");
         return;
       }
       const supabase = createClient();
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-      const nextPath = role === "client" ? clientNextPath : advisorNextPath;
+      const nextPath =
+        role === "client"
+          ? clientNextPath
+          : staffInviteToken
+            ? buildStaffInviteRegisterCompletePath(staffInviteToken, advisorNextPath)
+            : advisorNextPath;
       const encodedNext = encodeURIComponent(nextPath);
       const isNative = forceNative || isNativeRuntime();
 
@@ -231,12 +290,13 @@ export function useAidvisoraLogin() {
         },
       });
     },
-    [forceNative, role, isLogin, clientInviteToken, advisorLegalConsent, clientNextPath, advisorNextPath]
+    [forceNative, role, isLogin, clientInviteToken, staffInviteToken, advisorLegalConsent, clientNextPath, advisorNextPath]
   );
 
   return {
     forceNative,
     token: clientInviteToken,
+    staffInviteToken,
     registerParam,
     advisorNextPath,
     clientNextPath,

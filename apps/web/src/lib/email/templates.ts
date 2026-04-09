@@ -398,6 +398,47 @@ export function clientPortalInviteTemplate(params: {
   };
 }
 
+/** Pozvánka člena týmu (poradce) do workspace — odkaz na přihlášení / registraci se stejným e-mailem. */
+export function staffTeamInviteTemplate(params: {
+  loginUrl: string;
+  tenantName?: string;
+  inviteeEmail: string;
+  roleLabel: string;
+  expiresInDays: number;
+}) {
+  const org = escapeHtmlText(params.tenantName?.trim() ? params.tenantName.trim() : "váš tým");
+  const role = escapeHtmlText(params.roleLabel);
+  const em = escapeHtmlText(params.inviteeEmail);
+  const loginHref = escapeHtmlText(params.loginUrl);
+  const days = escapeHtmlText(String(params.expiresInDays));
+  const html = layout(`
+    <h2 style="font-size: 16px; margin: 0 0 12px;">Pozvánka do Aidvisora</h2>
+    <p style="font-size: 14px; line-height: 1.5;">
+      Byli jste pozváni do workspace <strong>${org}</strong> v roli <strong>${role}</strong>.
+    </p>
+    <p style="font-size: 14px; line-height: 1.5;">
+      Odkaz je platný <strong>${days} dní</strong>. Použijte prosím stejný e-mail jako v této zprávě:
+      <strong>${em}</strong>
+    </p>
+    <ol style="font-size: 14px; line-height: 1.6; padding-left: 20px; margin: 0 0 16px;">
+      <li>Otevřete tlačítko níže</li>
+      <li>Přihlaste se nebo si založte účet (záložka podle potřeby)</li>
+      <li>Použijte výše uvedený e-mail</li>
+    </ol>
+    <p style="margin: 20px 0;">
+      <a href="${loginHref}" style="display: inline-block; padding: 12px 24px; background: #0073ea; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Přijmout pozvánku</a>
+    </p>
+    <p style="font-size: 12px; line-height: 1.5; color: #676879;">
+      Pokud tlačítko nefunguje, zkopírujte odkaz do prohlížeče:<br />
+      <span style="word-break: break-all;">${loginHref}</span>
+    </p>
+  `);
+  return {
+    subject: `Pozvánka do týmu — ${org} — Aidvisora`,
+    html,
+  };
+}
+
 export function internalSummaryTemplate(params: {
   advisorName: string;
   summaryDate: string;
