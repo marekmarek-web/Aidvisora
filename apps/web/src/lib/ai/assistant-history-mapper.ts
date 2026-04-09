@@ -7,6 +7,8 @@ import type { StepPreviewItem } from "./assistant-execution-ui";
 /** Namespace import avoids duplicate named bindings if merges duplicate lines in `{ … }`. */
 import * as assistantExecutionPlan from "./assistant-execution-plan";
 import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "./assistant-message-sanitizer";
+import type { ImageAssetPayload } from "./assistant-chat-request";
+import { parseImageAssetsFromMessageMeta } from "./assistant-user-message-images-meta";
 
 export type AssistantConversationRow = {
   id: string;
@@ -29,6 +31,10 @@ export type AdvisorAssistantHistoryUserMessage = {
   stableKey: string;
   content: string;
   createdAtIso: string;
+  /** Náhledy z nahraných fotek — drží se v meta zprávy, dokud konverzace existuje. */
+  imageAssets?: ImageAssetPayload[];
+  /** Část náhledů mohla být vynechána kvůli limitu velikosti meta. */
+  chatImagesTruncatedForStorage?: boolean;
 };
 
 export type AdvisorAssistantHistoryAssistantMessage = {
@@ -121,11 +127,15 @@ export function mapAssistantHistoryRowsToClientPayload(
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]!;
     if (r.role === "user") {
+      const meta = (r.meta as Record<string, unknown> | null) ?? null;
+      const { imageAssets, truncatedFlag } = parseImageAssetsFromMessageMeta(meta);
       out.push({
         kind: "user",
         stableKey: r.id,
         content: r.content,
         createdAtIso: r.createdAt.toISOString(),
+        ...(imageAssets.length > 0 ? { imageAssets } : {}),
+        ...(truncatedFlag ? { chatImagesTruncatedForStorage: true } : {}),
       });
       continue;
     }

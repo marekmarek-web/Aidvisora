@@ -71,6 +71,7 @@ import {
   ASSISTANT_CONVERSATION_DISPLAY_TITLE_MAX_LEN,
 } from "@/lib/ai/assistant-conversation-label";
 import type { AdvisorAssistantHistoryMessageDto } from "@/lib/ai/assistant-history-mapper";
+import { AssistantUserMessageImages } from "@/app/components/AssistantUserMessageImages";
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
@@ -117,7 +118,13 @@ type DraftAction = { type: string; label: string; payload: Record<string, unknow
 type ClientCandidate = { clientId: string; displayName?: string };
 
 type ChatMessage =
-  | { role: "user"; content: string; stableKey?: string }
+  | {
+      role: "user";
+      content: string;
+      stableKey?: string;
+      imageAssets?: ImageAssetPayload[];
+      chatImagesTruncatedForStorage?: boolean;
+    }
   | {
       role: "assistant";
       content: string;
@@ -149,7 +156,13 @@ type ChatMessage =
 function historyDtoToChatMessages(dtos: AdvisorAssistantHistoryMessageDto[]): ChatMessage[] {
   return dtos.map((d) => {
     if (d.kind === "user") {
-      return { role: "user", content: d.content, stableKey: d.stableKey };
+      return {
+        role: "user",
+        content: d.content,
+        stableKey: d.stableKey,
+        ...(d.imageAssets?.length ? { imageAssets: d.imageAssets } : {}),
+        ...(d.chatImagesTruncatedForStorage ? { chatImagesTruncatedForStorage: true } : {}),
+      };
     }
     return {
       role: "assistant",
@@ -456,7 +469,13 @@ export function AiAssistantDrawer() {
       const displayMsg = msg || (hasImages ? "📎 obrázek" : "");
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: displayMsg },
+        {
+          role: "user",
+          content: displayMsg,
+          ...(hasImages && imageAssets?.length
+            ? { imageAssets: imageAssets.map((a) => ({ ...a })) }
+            : {}),
+        },
         { role: "assistant", content: "", suggestedActions: [], warnings: [] },
       ]);
       setChatLoading(true);
@@ -1569,6 +1588,17 @@ export function AiAssistantDrawer() {
                   }`}
                 >
                   <p className={`whitespace-pre-wrap ${m.role === "user" ? "text-white" : "text-[color:var(--wp-text-secondary)]"}`}>{m.content}</p>
+                  {m.role === "user" &&
+                    ((m.imageAssets?.length ?? 0) > 0 || m.chatImagesTruncatedForStorage) && (
+                      <AssistantUserMessageImages
+                        imageAssets={m.imageAssets ?? []}
+                        truncatedNote={
+                          m.chatImagesTruncatedForStorage
+                            ? "Část náhledů se nevešla do úložiště konverzace — původní soubory mějte případně u sebe."
+                            : null
+                        }
+                      />
+                    )}
                   {m.role === "assistant" && m.executionState && (
                     <>
                       <ExecutionBadge

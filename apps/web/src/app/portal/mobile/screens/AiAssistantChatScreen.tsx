@@ -61,6 +61,7 @@ import {
   ASSISTANT_CONVERSATION_DISPLAY_TITLE_MAX_LEN,
 } from "@/lib/ai/assistant-conversation-label";
 import type { AdvisorAssistantHistoryMessageDto } from "@/lib/ai/assistant-history-mapper";
+import { AssistantUserMessageImages } from "@/app/components/AssistantUserMessageImages";
 
 const AI_ASSISTANT_API_SESSION_KEY = "aidvisora_ai_assistant_api_session_id";
 
@@ -120,6 +121,8 @@ interface ChatMessage {
   role: MessageRole;
   text: string;
   timestamp: Date;
+  imageAssets?: ImageAssetPayload[];
+  chatImagesTruncatedForStorage?: boolean;
   suggestedActions?: SuggestedAction[];
   referencedEntities?: ReferencedEntity[];
   warnings?: string[];
@@ -150,6 +153,8 @@ function historyDtoToMobileMessages(dtos: AdvisorAssistantHistoryMessageDto[]): 
         role: "user",
         text: d.content,
         timestamp: new Date(d.createdAtIso),
+        ...(d.imageAssets?.length ? { imageAssets: d.imageAssets } : {}),
+        ...(d.chatImagesTruncatedForStorage ? { chatImagesTruncatedForStorage: true } : {}),
       };
     }
     return {
@@ -276,6 +281,17 @@ function MessageBubble({
           <p className={cx("text-sm leading-relaxed whitespace-pre-wrap", isUser ? "text-white" : "text-[color:var(--wp-text)]")}>
             {msg.text}
           </p>
+          {isUser &&
+            ((msg.imageAssets?.length ?? 0) > 0 || msg.chatImagesTruncatedForStorage) && (
+              <AssistantUserMessageImages
+                imageAssets={msg.imageAssets ?? []}
+                truncatedNote={
+                  msg.chatImagesTruncatedForStorage
+                    ? "Část náhledů se nevešla do úložiště konverzace — původní soubory mějte případně u sebe."
+                    : null
+                }
+              />
+            )}
           {!isUser && msg.executionState ? (
             <>
               <ExecutionBadge
@@ -453,10 +469,13 @@ function nextId() {
 function persistSession(messages: ChatMessage[]) {
   try {
     migrateAiChatSession();
-    const serializable = messages.slice(-50).map((m) => ({
-      ...m,
-      timestamp: m.timestamp.toISOString(),
-    }));
+    const serializable = messages.slice(-50).map((m) => {
+      const { imageAssets: _drop, chatImagesTruncatedForStorage: _t, ...rest } = m;
+      return {
+        ...rest,
+        timestamp: m.timestamp.toISOString(),
+      };
+    });
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(serializable));
   } catch {}
 }
@@ -762,6 +781,9 @@ export function AiAssistantChatScreen() {
       role: "user",
       text: displayText,
       timestamp: new Date(),
+      ...(hasImages && imageAssets?.length
+        ? { imageAssets: imageAssets.map((a) => ({ ...a })) }
+        : {}),
     };
 
     const assistantId = nextId();

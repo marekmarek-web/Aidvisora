@@ -45,6 +45,7 @@ import {
   applyPendingImageIntakeFromConversationMetadata,
   PENDING_IMAGE_INTAKE_METADATA_KEY,
 } from "@/lib/ai/image-intake/pending-resolution-metadata";
+import { buildImageAssetsForUserMessageMeta } from "@/lib/ai/assistant-user-message-images-meta";
 
 export const dynamic = "force-dynamic";
 
@@ -518,6 +519,7 @@ export async function POST(request: Request) {
           // DB writes and audit happen after the response is sent — client gets the answer immediately.
           after(async () => {
             try {
+              const persistedUserImages = buildImageAssetsForUserMessageMeta(rawImageAssets);
               await upsertConversationFromSession(session, {
                 channel,
                 metadata: {
@@ -535,6 +537,12 @@ export async function POST(request: Request) {
                   activeContext,
                   traceId,
                   assistantRunId,
+                  ...(persistedUserImages.imageAssets.length > 0
+                    ? { imageAssets: persistedUserImages.imageAssets }
+                    : {}),
+                  ...(persistedUserImages.chatImagesTruncatedForStorage
+                    ? { chatImagesTruncatedForStorage: true }
+                    : {}),
                 },
               });
               await appendConversationMessage({
