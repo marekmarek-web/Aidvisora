@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
-  UsersRound,
   TrendingUp,
   Calendar,
   AlertTriangle,
@@ -32,6 +31,7 @@ import type { AiFeedbackVerdict, AiFeedbackActionTaken } from "@/app/actions/ai-
 import type { AiActionType } from "@/lib/ai/actions/action-suggestions";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { TeamCalendarModal, TeamCalendarButtons } from "./TeamCalendarModal";
+import { TeamStructurePanel } from "./TeamStructurePanel";
 import clsx from "clsx";
 import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
@@ -195,6 +195,7 @@ const KPI_THEMES = {
 
 interface TeamOverviewViewProps {
   teamId: string;
+  currentUserId: string;
   currentRole: string;
   initialScope: TeamOverviewScope;
   initialHierarchy: TeamTreeNode[];
@@ -222,6 +223,7 @@ function TrendIndicator({ trend }: { trend: number }) {
 
 export function TeamOverviewView({
   teamId,
+  currentUserId,
   currentRole,
   initialScope,
   initialHierarchy,
@@ -305,7 +307,7 @@ export function TeamOverviewView({
     setAiError(null);
     setAiLoading(true);
     try {
-      const result = await generateTeamSummaryAction(period);
+      const result = await generateTeamSummaryAction(period, scope);
       if (result.ok) {
         setAiSummary(result.text);
         if (result.generationId) setAiGenerationId(result.generationId);
@@ -318,7 +320,7 @@ export function TeamOverviewView({
     } finally {
       setAiLoading(false);
     }
-  }, [period]);
+  }, [period, scope]);
 
   const submitTeamSummaryFeedback = useCallback(
     async (verdict: AiFeedbackVerdict, actionTaken: AiFeedbackActionTaken) => {
@@ -382,7 +384,6 @@ export function TeamOverviewView({
     refresh();
   }, [refresh]);
 
-  const memberCount = members.length;
   const metricsByUser = new Map(metrics.map((m) => [m.userId, m]));
   const displayName = (m: TeamMemberInfo) => m.displayName || "Člen týmu";
   const newcomerSet = new Set(newcomers.map((n) => n.userId));
@@ -421,20 +422,49 @@ export function TeamOverviewView({
   const topMetric = rankedMetrics[0] ?? null;
   const bottomMetric = rankedMetrics.length > 0 ? rankedMetrics[rankedMetrics.length - 1] : null;
 
+  const attentionCount = kpis?.riskyMemberCount ?? new Set(alerts.map((a) => a.memberId)).size;
+  const topAttentionAlerts = alerts.slice(0, 5);
+  const briefingHeadline = scope === "me" ? "Váš přehled" : "Manažerský přehled";
+  const briefingLead =
+    scope === "me"
+      ? "Osobní pohled na vaše tempo a aktivity — využijte ho jako podklad k rozhovoru s vedením nebo k vlastnímu plánování."
+      : attentionCount === 0 && newcomers.length === 0
+        ? "Tým působí vyrovnaně — udržujte pravidelný kontakt a nechte prostor pro rozvoj i pochvalu."
+        : "Zaměřte se na podporu v adaptaci a na kolegy, kteří z vaší pozornosti teď nejvíc získají — ne na kontrolu, ale na vedení.";
+
+  const quickContextLines: string[] = [];
+  if (scope !== "me") {
+    if (attentionCount > 0) {
+      quickContextLines.push(
+        `${attentionCount} ${attentionCount === 1 ? "osoba" : "lidí"} v tomto rozsahu má signály, na které se vyplatí krátce reagovat (kontakt, 1:1).`
+      );
+    } else {
+      quickContextLines.push("V tomto rozsahu zatím nikdo nemá otevřené priority vyžadující okamžitou pozornost.");
+    }
+    if (newcomers.length > 0) {
+      quickContextLines.push(
+        `${newcomers.length} ${newcomers.length === 1 ? "nováček je" : newcomers.length >= 2 && newcomers.length <= 4 ? "nováčci jsou" : "nováčků je"} v adaptaci — krátký check-in pomůže.`
+      );
+    }
+    if (kpis) {
+      quickContextLines.push(`V CRM evidujete ${kpis.meetingsThisWeek} schůzek tento týden (v tomto rozsahu).`);
+    }
+  } else if (kpis) {
+    quickContextLines.push(
+      `Za ${kpis.periodLabel}: ${kpis.unitsThisPeriod} jednotek, produkce ${formatNumber(kpis.productionThisPeriod)}.`
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--wp-bg)]">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 md:mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5 md:mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[color:var(--wp-text)]">Týmový přehled</h1>
-            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">Výkon týmu, aktivita a adaptace nováčků na jednom místě.</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--wp-surface-muted)] px-3 py-1 text-xs font-semibold text-[color:var(--wp-text-secondary)]">
-                <UsersRound className="w-3.5 h-3.5" />
-                {memberCount} {memberCount === 1 ? "člen" : memberCount < 5 ? "členové" : "členů"} týmu
-              </span>
-            </div>
+            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
+              Přehled pro vedení — podpora, adaptace a struktura na jednom místě.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -474,6 +504,98 @@ export function TeamOverviewView({
             </button>
           </div>
         </div>
+
+        {/* Manažerský briefing — první fold */}
+        <section
+          className="mb-6 rounded-2xl border border-indigo-200/60 bg-gradient-to-br from-indigo-50/90 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] p-5 sm:p-6 shadow-sm"
+          aria-labelledby="team-briefing-heading"
+        >
+          <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+            <div className="lg:col-span-7 space-y-5">
+              <div>
+                <h2 id="team-briefing-heading" className="text-xl sm:text-2xl font-bold text-[color:var(--wp-text)]">
+                  {briefingHeadline}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">{briefingLead}</p>
+              </div>
+              {kpis ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 px-4 py-3 shadow-sm">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+                      {scope === "me" ? "V rozsahu" : "Členové"}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.memberCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-amber-200/70 bg-amber-50/50 px-4 py-3 shadow-sm">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800/80">Potřebují pozornost</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-900">{attentionCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-blue-200/70 bg-blue-50/50 px-4 py-3 shadow-sm">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-blue-800/80">V adaptaci</p>
+                    <p className="mt-1 text-2xl font-bold text-blue-900">{kpis.newcomersInAdaptation}</p>
+                  </div>
+                </div>
+              ) : loading ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <SkeletonBlock key={i} className="h-20 rounded-xl" />
+                  ))}
+                </div>
+              ) : null}
+              {quickContextLines.length > 0 && (
+                <ul className="space-y-1.5 text-sm text-[color:var(--wp-text-secondary)] border-t border-[color:var(--wp-surface-card-border)]/60 pt-4">
+                  {quickContextLines.map((line, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-indigo-500 font-bold shrink-0" aria-hidden>
+                        ·
+                      </span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="lg:col-span-5 flex flex-col rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 sm:p-5 shadow-sm min-h-[12rem]">
+              <h3 className="text-sm font-bold text-[color:var(--wp-text)] mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                Kam směřovat pozornost
+              </h3>
+              {topAttentionAlerts.length === 0 ? (
+                <p className="text-sm text-[color:var(--wp-text-secondary)] flex-1 flex items-center">
+                  {scope === "me"
+                    ? "Žádné otevřené priority z týmového pohledu — pokračujte v práci v CRM a domluvte si check-in, pokud potřebujete podporu."
+                    : "Skvělá zpráva — v tomto rozsahu neevidujeme urgentní signály. Udržujte pravidelný kontakt a sledujte nováčky v adaptaci."}
+                </p>
+              ) : (
+                <ul className="space-y-2 flex-1 overflow-y-auto max-h-56 pr-1">
+                  {topAttentionAlerts.map((a, i) => {
+                    const alertMember = members.find((m) => m.userId === a.memberId);
+                    const name = alertMember ? displayName(alertMember) : "Člen týmu";
+                    const tone =
+                      a.severity === "critical" ? ("Vyžaduje podporu" as const) : ("Potřebuje pozornost" as const);
+                    return (
+                      <li key={`${a.memberId}-${i}`}>
+                        <Link
+                          href={`/portal/team-overview/${a.memberId}`}
+                          className="block rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/40 transition"
+                        >
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--wp-text-tertiary)]">
+                            {tone}
+                          </span>
+                          <p className="font-medium text-[color:var(--wp-text)] text-sm mt-0.5">{name}</p>
+                          <p className="text-xs text-[color:var(--wp-text-secondary)] line-clamp-2">{a.title}</p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <TeamStructurePanel roots={hierarchy} currentUserId={currentUserId} scope={scope} />
+
         <div className="mb-4 flex flex-wrap gap-2">
           <CustomDropdown
             value={roleFilter}
@@ -492,8 +614,8 @@ export function TeamOverviewView({
             onChange={(id) => setPerformanceFilter(id as "all" | "top" | "bottom")}
             options={[
               { id: "all", label: "Všichni výkon" },
-              { id: "top", label: "Top výkon" },
-              { id: "bottom", label: "Bottom výkon" },
+              { id: "top", label: "Nejsilnější výkon" },
+              { id: "bottom", label: "Podpora ve výkonu" },
             ]}
             placeholder="Výkon"
             icon={BarChart3}
@@ -503,23 +625,16 @@ export function TeamOverviewView({
             onClick={() => setRiskOnly((v) => !v)}
             className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${riskOnly ? "border-amber-300 bg-amber-50 text-amber-700" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"}`}
           >
-            Jen rizikoví
+            Potřebují pozornost
           </button>
           <button
             type="button"
             onClick={() => setOnboardingOnly((v) => !v)}
             className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm ${onboardingOnly ? "border-blue-300 bg-blue-50 text-blue-700" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)]"}`}
           >
-            Jen nováčci
+            V adaptaci
           </button>
         </div>
-        {hierarchy.length > 0 && (
-          <div className="mb-6 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 text-sm text-[color:var(--wp-text-secondary)]">
-            Hierarchie:
-            {" "}
-            {hierarchy.slice(0, 5).map((node) => node.displayName || node.email || node.userId).join(" > ")}
-          </div>
-        )}
 
         <TeamCalendarModal
           open={teamCalendarModal != null}
@@ -531,9 +646,12 @@ export function TeamOverviewView({
           onSuccess={refresh}
         />
 
-        {/* KPI cards */}
-        <section className="mb-8">
-          <h2 className="sr-only">Klíčové ukazatele</h2>
+        {/* KPI cards — sekundární detail */}
+        <section className="mb-8" aria-labelledby="team-kpi-detail-heading">
+          <h2 id="team-kpi-detail-heading" className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">
+            Detailní ukazatele
+          </h2>
+          <p className="sr-only">Klíčové ukazatele a trendy za zvolené období.</p>
           {loading && !kpis ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
@@ -584,7 +702,7 @@ export function TeamOverviewView({
                   <AlertTriangle className={`w-5 h-5 ${KPI_THEMES.rose.subtitle}`} />
                 </div>
                 <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.riskyMemberCount}</p>
-                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Rizikoví členové</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Potřebují pozornost</p>
               </div>
               <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Hodnota obchodů</p>
@@ -722,12 +840,12 @@ export function TeamOverviewView({
           </div>
         </section>
 
-        {/* Rizika */}
+        {/* Upozornění — plný seznam */}
         <section className="mb-8">
-          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Rizika a upozornění</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3">Upozornění a priority</h2>
           {alerts.length === 0 ? (
             <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 text-center text-[color:var(--wp-text-secondary)]">
-              Žádná aktivní upozornění.
+              Žádná další upozornění — tým vypadá stabilně v tomto období.
             </div>
           ) : (
             <ul className="space-y-2">
@@ -840,7 +958,7 @@ export function TeamOverviewView({
                               met.riskLevel === "warning" ? "bg-amber-100 text-amber-700" :
                               "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                             }`}>
-                              {met.riskLevel === "critical" ? "Riziko" : met.riskLevel === "warning" ? "Pozor" : "OK"}
+                              {met.riskLevel === "critical" ? "Vyžaduje podporu" : met.riskLevel === "warning" ? "Potřebuje pozornost" : "Stabilní"}
                             </span>
                           )}
                         </td>
@@ -871,7 +989,7 @@ export function TeamOverviewView({
                         met?.riskLevel === "warning" ? "bg-amber-100 text-amber-700" :
                         "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"
                       }`}>
-                        {met?.riskLevel === "critical" ? "Riziko" : met?.riskLevel === "warning" ? "Pozor" : "OK"}
+                        {met?.riskLevel === "critical" ? "Vyžaduje podporu" : met?.riskLevel === "warning" ? "Potřebuje pozornost" : "Stabilní"}
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-sm text-[color:var(--wp-text-secondary)]">

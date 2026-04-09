@@ -43,6 +43,7 @@ export default async function TeamOverviewPage() {
   return (
     <TeamOverviewView
       teamId={auth.tenantId}
+      currentUserId={auth.userId}
       currentRole={auth.roleName}
       initialScope={defaultScope}
       initialHierarchy={hierarchy}

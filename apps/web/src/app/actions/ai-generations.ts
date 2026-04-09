@@ -21,6 +21,7 @@ import {
 } from "@/app/actions/ai-feedback";
 import { buildDebugContext, type AiContextDebugOutput } from "@/lib/ai/context/debug-context";
 import { buildOrchestratedOutput, collectGenerationErrors, type AiOrchestratedOutput } from "@/lib/ai/orchestration";
+import type { TeamOverviewScope } from "@/lib/team-hierarchy-types";
 
 /** RSC and Server Action responses must not include raw Date (serialization). */
 function serializeCreatedAt(value: Date | string): string {
@@ -251,12 +252,12 @@ export async function getLatestGenerationAction(
   }
 }
 
-/** Generate team summary for the current tenant. Manager/team leader/admin only. */
-export async function generateTeamSummaryAction(period: string): Promise<GenResult> {
+/** Generate team summary for the current tenant. Scope should match Team Overview UI (page / scope switcher). */
+export async function generateTeamSummaryAction(period: string, scope?: TeamOverviewScope): Promise<GenResult> {
   try {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "team_overview:read")) return { ok: false, error: "Forbidden" };
-    return await generateTeamSummary(auth.tenantId, auth.userId, period);
+    return await generateTeamSummary(auth.tenantId, auth.userId, period, scope);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message === "Forbidden") return { ok: false, error: message };

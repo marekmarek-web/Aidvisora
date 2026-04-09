@@ -21,6 +21,7 @@ import {
 } from "@/lib/ai/context";
 import { computeCompleteness, type ContextCompleteness } from "@/lib/ai/context/completeness";
 import { isAiReviewDevOrDebugFlags } from "./ai-review-debug";
+import type { TeamOverviewScope } from "@/lib/team-hierarchy-types";
 
 const SAFE_ERROR = "Generování se nepovedlo. Zkuste to později.";
 const NOT_CONFIGURED = "Tato funkce není nakonfigurována (chybí prompt ID v nastavení).";
@@ -334,7 +335,8 @@ export async function generatePostMeetingFollowup(
 export async function generateTeamSummary(
   teamId: string,
   userId: string,
-  period: string
+  period: string,
+  scope?: TeamOverviewScope
 ): Promise<GenerationResult> {
   try {
     const auth = await requireAuthInAction();
@@ -342,7 +344,7 @@ export async function generateTeamSummary(
     if (teamId !== auth.tenantId) return { ok: false, error: "Forbidden" };
 
     const promptType: PromptType = "teamSummary";
-    const raw = await buildTeamAiContextRaw(teamId, userId, period);
+    const raw = await buildTeamAiContextRaw(teamId, userId, period, scope);
     const variables = await renderTeamAiPromptVariables(raw);
 
     return await runPromptGeneration({
