@@ -1012,5 +1012,6 @@ export function buildIdentityContactIntakeActionPlan(
     whyNotOtherActions: null,
     needsAdvisorInput: true,
     safetyFlags: [],
+    actionAuthority: "preview_only",
   };
 }

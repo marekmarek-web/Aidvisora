@@ -5,8 +5,14 @@
 
 import type { AssistantSession, PendingImageIntakeResolution } from "../assistant-session";
 import type { ImageIntakeOrchestratorResult } from "./orchestrator";
-import type { EvidenceReference, ExtractedFactBundle, ExtractedImageFact, ImageIntakeActionPlan } from "./types";
-import { FACT_TYPES, IMAGE_OUTPUT_MODES } from "./types";
+import type {
+  EvidenceReference,
+  ExtractedFactBundle,
+  ExtractedImageFact,
+  ImageActionAuthorityLevel,
+  ImageIntakeActionPlan,
+} from "./types";
+import { FACT_TYPES, IMAGE_ACTION_AUTHORITY_LEVELS, IMAGE_OUTPUT_MODES } from "./types";
 
 export const PENDING_IMAGE_INTAKE_METADATA_KEY = "pendingImageIntakeResolution" as const;
 
@@ -110,6 +116,11 @@ function parseActionPlan(x: unknown): ImageIntakeActionPlan | null {
   if (x.whyNotOtherActions !== null && typeof x.whyNotOtherActions !== "string") return null;
   if (typeof x.needsAdvisorInput !== "boolean") return null;
   if (!Array.isArray(x.safetyFlags) || !x.safetyFlags.every((s) => typeof s === "string")) return null;
+  const aa = x.actionAuthority;
+  const actionAuthority: ImageActionAuthorityLevel =
+    typeof aa === "string" && (IMAGE_ACTION_AUTHORITY_LEVELS as readonly string[]).includes(aa)
+      ? (aa as ImageActionAuthorityLevel)
+      : "preview_only";
   return {
     outputMode: x.outputMode as ImageIntakeActionPlan["outputMode"],
     recommendedActions: x.recommendedActions as ImageIntakeActionPlan["recommendedActions"],
@@ -118,6 +129,7 @@ function parseActionPlan(x: unknown): ImageIntakeActionPlan | null {
     whyNotOtherActions: x.whyNotOtherActions,
     needsAdvisorInput: x.needsAdvisorInput,
     safetyFlags: x.safetyFlags,
+    actionAuthority,
   };
 }
 

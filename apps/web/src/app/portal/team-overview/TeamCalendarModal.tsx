@@ -5,7 +5,8 @@ import { CalendarPlus, CheckSquare, X } from "lucide-react";
 import clsx from "clsx";
 import { createTeamEvent, createTeamTask } from "@/app/actions/team-events";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
-import type { TeamMemberInfo, TeamMemberMetrics, NewcomerAdaptation } from "@/app/actions/team-overview";
+import type { TeamMemberInfo, NewcomerAdaptation } from "@/app/actions/team-overview";
+import type { TeamMemberMetrics } from "@/lib/team-overview-alerts";
 
 type ModalType = "event" | "task" | null;
 

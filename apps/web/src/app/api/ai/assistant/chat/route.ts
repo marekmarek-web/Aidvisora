@@ -116,7 +116,10 @@ function buildResolvedAssistantContext(params: {
   return {
     activeClientId: typeof params.activeContext?.clientId === "string" ? params.activeContext.clientId : null,
     lockedClientId: params.session.lockedClientId ?? null,
-    recentMessages: params.recentMessages.slice(-8).map((m) => ({ role: m.role, content: m.content })),
+    recentMessages: params.recentMessages
+      .slice(-8)
+      .filter((m): m is { role: "user" | "assistant"; content: string } => m.role === "user" || m.role === "assistant")
+      .map((m) => ({ role: m.role, content: m.content })),
     conversationDigest: params.session.conversationDigest ?? null,
     pendingImageIntent: Boolean(params.session.pendingImageIntakeResolution),
     lastUserGoal: lastUserMessage?.content ?? null,

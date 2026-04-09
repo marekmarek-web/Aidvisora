@@ -1,4 +1,5 @@
-import type { TeamMemberInfo, TeamMemberMetrics, NewcomerAdaptation } from "@/app/actions/team-overview";
+import type { TeamMemberInfo, NewcomerAdaptation } from "@/app/actions/team-overview";
+import type { TeamMemberMetrics } from "@/lib/team-overview-alerts";
 import type { TeamCoachingAttentionItem } from "@/lib/career/career-coaching";
 import { classifyInternalTeamTitle, type InternalRhythmCategory } from "./internal-classification";
 import { lastPersonalTouchByUser } from "./last-touch";

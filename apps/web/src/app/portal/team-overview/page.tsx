@@ -6,13 +6,13 @@ import type { TeamOverviewScope } from "@/lib/team-hierarchy-types";
 import {
   getTeamOverviewKpis,
   getTeamMemberMetrics,
-  buildTeamAlertsFromMemberMetrics,
   getNewcomerAdaptation,
   listTeamMembersWithNames,
   getTeamPerformanceOverTime,
   getTeamHierarchy,
   getTeamRhythmCalendarData,
 } from "@/app/actions/team-overview";
+import { buildTeamAlertsFromMemberMetrics } from "@/lib/team-overview-alerts";
 
 export const dynamic = "force-dynamic";
 

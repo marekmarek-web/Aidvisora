@@ -10,17 +10,16 @@ import {
   Activity,
 } from "lucide-react";
 import {
-  buildTeamAlertsFromMemberMetrics,
   getTeamHierarchy,
   getTeamMemberMetrics,
   getTeamOverviewKpis,
   listTeamMembersWithNames,
-  type TeamAlert,
   type TeamMemberInfo,
-  type TeamMemberMetrics,
   type TeamOverviewKpis,
   type TeamOverviewPeriod,
 } from "@/app/actions/team-overview";
+import type { TeamAlert, TeamMemberMetrics } from "@/lib/team-overview-alerts";
+import { buildTeamAlertsFromMemberMetrics } from "@/lib/team-overview-alerts";
 import { createTeamEvent, createTeamTask } from "@/app/actions/team-events";
 import type { TeamOverviewScope, TeamTreeNode } from "@/lib/team-hierarchy-types";
 import {

@@ -9,10 +9,10 @@ import { resolveScopeForRole, type TeamOverviewScope } from "@/lib/team-hierarch
 import {
   getTeamOverviewKpis,
   getTeamMemberMetrics,
-  buildTeamAlertsFromMemberMetrics,
   getNewcomerAdaptation,
   listTeamMembersWithNames,
 } from "@/app/actions/team-overview";
+import { buildTeamAlertsFromMemberMetrics } from "@/lib/team-overview-alerts";
 import type { TeamOverviewPeriod } from "@/app/actions/team-overview";
 
 export const dynamic = "force-dynamic";

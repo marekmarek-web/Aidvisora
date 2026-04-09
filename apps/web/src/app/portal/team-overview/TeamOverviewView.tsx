@@ -28,18 +28,17 @@ import {
 import type {
   TeamOverviewKpis,
   TeamMemberInfo,
-  TeamMemberMetrics,
-  TeamAlert,
   NewcomerAdaptation,
   TeamPerformancePoint,
   TeamOverviewPeriod,
   TeamRhythmCalendarData,
 } from "@/app/actions/team-overview";
+import type { TeamMemberMetrics, TeamAlert } from "@/lib/team-overview-alerts";
 import type { TeamOverviewScope, TeamTreeNode } from "@/lib/team-hierarchy-types";
+import { buildTeamAlertsFromMemberMetrics } from "@/lib/team-overview-alerts";
 import {
   getTeamOverviewKpis,
   getTeamMemberMetrics,
-  buildTeamAlertsFromMemberMetrics,
   getNewcomerAdaptation,
   getTeamPerformanceOverTime,
   listTeamMembersWithNames,

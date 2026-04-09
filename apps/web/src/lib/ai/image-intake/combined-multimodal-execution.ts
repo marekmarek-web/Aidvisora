@@ -127,6 +127,7 @@ export async function executeBatchMultimodalStrategy(
       imageUrls,
       inputTypeHint ?? "photo_or_scan_document",
       accompanyingText,
+      null,
       config.combinedPassMaxImages,
     );
 

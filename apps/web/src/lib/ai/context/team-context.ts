@@ -6,11 +6,11 @@ import type { RoleName } from "@/shared/rolePermissions";
 import {
   getTeamOverviewKpis,
   getTeamMemberMetrics,
-  buildTeamAlertsFromMemberMetrics,
   getNewcomerAdaptation,
   listTeamMembersWithNames,
   type TeamOverviewPeriod,
 } from "@/app/actions/team-overview";
+import { buildTeamAlertsFromMemberMetrics } from "@/lib/team-overview-alerts";
 import { resolveScopeForRole, type TeamOverviewScope } from "@/lib/team-hierarchy-types";
 import type { TeamAiContextRaw } from "./team-context-render";
 
