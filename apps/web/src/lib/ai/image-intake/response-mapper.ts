@@ -50,9 +50,14 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       push("E-mail", p.email);
       push("Telefon", p.phone);
       push("Titul", p.title);
+      // Fallback: show raw extracted facts if mapped params are empty but factBundle has data
+      if (pre.length === 0 && result.response.factBundle.facts.length > 0) {
+        const rawLines = buildFactsSummaryLines(result.response.factBundle, 8);
+        for (const line of rawLines) pre.push(line);
+      }
       const preBlock = pre.length
         ? pre.join("\n")
-        : "Žádné spolehlivé údaje nebyly z dokladu přečteny — vyplňte ručně v náhledu kroků.";
+        : "Údaje z dokladu nebyly přečteny — vyplňte ručně v náhledu kroků.";
 
       const need: string[] = [];
       for (const line of draft.missingAdvisorLines) {
@@ -148,9 +153,29 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
 
     case "contact_update_from_image": {
       const client = clientLabel ? ` klienta **${clientLabel}**` : "";
-      const factLines = buildFactsSummaryLines(result.response.factBundle, 8);
-      const factText = factLines.length > 0 ? `\n\nÚdaje k aktualizaci:\n${factLines.map((l) => `• ${l}`).join("\n")}` : "";
-      const confirmNote = "\n\nCitlivé údaje (rodné číslo, datum narození) vyžadují vaše potvrzení.";
+      const diffFacts = result.response.factBundle.facts.filter(
+        (f) => f.targetCrmField && f.value != null && String(f.value).trim(),
+      );
+      const lines: string[] = [];
+      for (const f of diffFacts.slice(0, 12)) {
+        const label = factKeyLabelForDiff(f.factKey);
+        const val = String(f.value).slice(0, 80);
+        const tag =
+          f.diffStatus === "new" ? " 🆕"
+          : f.diffStatus === "conflict" ? ` ⚠ (CRM: ${f.existingCrmValue ?? "–"})`
+          : f.diffStatus === "same" ? " ✓"
+          : "";
+        lines.push(`• ${label}: ${val}${tag}`);
+      }
+      const fallbackLines = lines.length === 0 ? buildFactsSummaryLines(result.response.factBundle, 8) : [];
+      const factText = lines.length > 0
+        ? `\n\nÚdaje k aktualizaci:\n${lines.join("\n")}`
+        : fallbackLines.length > 0
+          ? `\n\nRozpoznané údaje:\n${fallbackLines.map((l) => `• ${l}`).join("\n")}`
+          : "";
+      const confirmNote = diffFacts.some((f) => f.needsConfirmation)
+        ? "\n\nCitlivé údaje (rodné číslo, datum narození) vyžadují vaše potvrzení."
+        : "\n\nPo potvrzení zapíšu změny do CRM.";
       return `Připravil jsem návrh aktualizace údajů${client} na základě nahraných obrázků.${factText}${confirmNote}`;
     }
 
@@ -453,4 +478,20 @@ export function mapImageIntakeToAssistantResponse(
       suggestedNextStepItems.length > 0 ? suggestedNextStepItems : undefined,
     hasPartialFailure: false,
   };
+}
+
+function factKeyLabelForDiff(key: string): string {
+  const labels: Record<string, string> = {
+    first_name: "Jméno", last_name: "Příjmení", client_name: "Jméno klienta",
+    birth_date: "Datum narození", birth_number: "Rodné číslo",
+    street: "Ulice", city: "Město", zip: "PSČ", phone: "Telefon", email: "E-mail",
+    id_doc_first_name: "Jméno", id_doc_last_name: "Příjmení",
+    id_doc_birth_date: "Datum narození", id_doc_personal_id: "Rodné číslo",
+    id_doc_street: "Ulice", id_doc_city: "Město", id_doc_zip: "PSČ",
+    id_doc_email: "E-mail", id_doc_phone: "Telefon", id_doc_title: "Titul",
+    document_number: "Číslo dokladu", gender: "Pohlaví", citizenship: "Občanství",
+    amount: "Částka", account_number: "Číslo účtu", variable_symbol: "VS",
+    iban: "IBAN", due_date: "Splatnost",
+  };
+  return labels[key] ?? key;
 }

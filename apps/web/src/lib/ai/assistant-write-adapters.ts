@@ -35,7 +35,7 @@ import {
   linkContractReviewFileToContactDocuments,
 } from "@/app/actions/contract-review";
 import { createDraft } from "@/app/actions/communication-drafts";
-import { createContact as createContactAction } from "@/app/actions/contacts";
+import { createContact as createContactAction, updateContact as updateContactAction } from "@/app/actions/contacts";
 import { approveContractForClientPortal, updateContract, createContract as createContractAction } from "@/app/actions/contracts";
 import { upsertCoverageItem } from "@/app/actions/coverage";
 import { sendMessage } from "@/app/actions/messages";
@@ -186,6 +186,37 @@ export function registerAssistantWriteAdapters(): void {
       return okResult(res.id, "contact");
     } catch (e) {
       return safeErr(e, "createContact");
+    }
+  });
+
+  registerWriteAdapter("updateContact", async (params, ctx) => {
+    try {
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "contacts:write")) {
+        return errResult("Nemáte oprávnění upravovat kontakty.");
+      }
+      const contactId = strParam(params, "contactId");
+      if (!contactId) return errResult("Chybí contactId — nelze aktualizovat kontakt.");
+      const firstName = strParam(params, "firstName");
+      const lastName = strParam(params, "lastName");
+      if (!firstName || !lastName) {
+        return errResult("Chybí jméno nebo příjmení — doplňte je v náhledu kroků.");
+      }
+      await updateContactAction(contactId, {
+        firstName,
+        lastName,
+        email: strParam(params, "email"),
+        phone: strParam(params, "phone"),
+        title: strParam(params, "title"),
+        birthDate: strParam(params, "birthDate"),
+        personalId: strParam(params, "personalId"),
+        street: strParam(params, "street"),
+        city: strParam(params, "city"),
+        zip: strParam(params, "zip"),
+      });
+      return okResult(contactId, "contact");
+    } catch (e) {
+      return safeErr(e, "updateContact");
     }
   });
 

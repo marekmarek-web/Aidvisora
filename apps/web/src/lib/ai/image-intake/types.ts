@@ -211,6 +211,8 @@ export const FACT_TYPES = [
 ] as const;
 export type FactType = (typeof FACT_TYPES)[number];
 
+export type FieldDiffStatus = "new" | "same" | "conflict" | "unreadable" | "missing";
+
 export type ExtractedImageFact = {
   factType: FactType;
   value: string | number | boolean | null;
@@ -223,6 +225,12 @@ export type ExtractedImageFact = {
   observedVsInferred: "observed" | "inferred";
   /** Phase 3: raw key from model output (e.g. "what_client_said", "amount"). */
   factKey: string;
+  /** Existing CRM value for diff preview (null when not compared yet). */
+  existingCrmValue?: string | null;
+  /** Diff status against existing CRM (null when comparison not performed). */
+  diffStatus?: FieldDiffStatus | null;
+  /** Target CRM field name (null when no mapping). */
+  targetCrmField?: string | null;
 };
 
 export type ExtractedFactBundle = {

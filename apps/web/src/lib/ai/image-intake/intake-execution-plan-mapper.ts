@@ -21,6 +21,7 @@ const INTENT_TO_WRITE: Partial<Record<CanonicalIntentType, string>> = {
   create_internal_note: "createInternalNote",
   create_client_request: "createClientRequest",
   create_contact: "createContact",
+  update_contact: "updateContact",
   attach_document: "attachDocumentToClient",
   draft_portal_message: "draftClientPortalMessage",
 };
@@ -103,6 +104,7 @@ const WRITE_ACTION_ADVISOR_DESCRIPTION: Partial<Record<WriteActionType, string>>
   createTask: "Úkol přidáte do úkolů u klienta — před potvrzením zkontrolujte znění.",
   createFollowUp: "Následná aktivita se zaznamená u klienta.",
   createContact: "Vytvoří nový kontakt podle předvyplněných údajů z dokladu.",
+  updateContact: "Aktualizuje existující kontakt — rozpoznané údaje se zapíší do CRM.",
   attachDocumentToClient: "Podklad přiložíte k dokumentům klienta.",
   draftEmail: "Připraví se koncept e-mailu (nic se neodešle bez dalšího kroku).",
   draftClientPortalMessage: "Připraví se koncept zprávy do portálu klienta.",

@@ -133,6 +133,50 @@ function resolveOutputMode(
   return safeOutputModeForUncertainInput(classification, binding);
 }
 
+/**
+ * Post-extraction output mode upgrade: when facts contain contact-patchable fields
+ * and client binding is confident, boost to contact_update_from_image.
+ * Called after multimodal extraction in orchestrator.
+ */
+export function maybeUpgradeToContactUpdate(
+  currentMode: ImageOutputMode,
+  factBundle: ExtractedFactBundle,
+  binding: ClientBindingResult,
+  intent?: ParsedExplicitIntent | null,
+): ImageOutputMode {
+  if (currentMode === "contact_update_from_image") return currentMode;
+  if (currentMode === "identity_contact_intake") return currentMode;
+  if (currentMode === "no_action_archive_only") return currentMode;
+  if (currentMode === "payment_details_portal_update") return currentMode;
+
+  if (
+    binding.state !== "bound_client_confident" &&
+    binding.state !== "bound_case_confident"
+  ) {
+    return currentMode;
+  }
+
+  const contactFieldCount = factBundle.facts.filter(
+    (f) =>
+      CONTACT_PATCH_FACT_KEYS.has(f.factKey) &&
+      f.value !== null &&
+      String(f.value).trim().length > 0,
+  ).length;
+
+  const explicitCrmIntent =
+    intent?.operation === "update_contact" ||
+    intent?.verb === "assign" ||
+    intent?.verb === "fill" ||
+    intent?.verb === "save" ||
+    intent?.verb === "update";
+
+  if (contactFieldCount >= 3 || (contactFieldCount >= 1 && explicitCrmIntent)) {
+    return "contact_update_from_image";
+  }
+
+  return currentMode;
+}
+
 // ---------------------------------------------------------------------------
 // Action planning by output mode
 // ---------------------------------------------------------------------------
@@ -264,8 +308,8 @@ function planContactUpdateFromImage(
 
     actions.push(
       makeAction(
-        "create_internal_note",
-        "createInternalNote",
+        "update_contact",
+        "updateContact",
         "Aktualizovat údaje klienta",
         `Rozpoznáno ${contactFields.length} polí k aktualizaci v CRM.`,
         {
@@ -374,6 +418,39 @@ const FACT_KEY_TO_CONTACT_FIELD: Record<string, string> = {
 };
 
 const CONTACT_PATCH_FACT_KEYS = new Set(Object.keys(FACT_KEY_TO_CONTACT_FIELD));
+
+/**
+ * Enriches fact bundle with diff status against existing CRM contact values.
+ * Pure function — no DB calls; existing values passed in as a flat map.
+ */
+export function enrichFactsWithCrmDiff(
+  factBundle: ExtractedFactBundle,
+  existingValues: Record<string, string | null | undefined>,
+): ExtractedFactBundle {
+  const enriched = factBundle.facts.map((f) => {
+    const targetField = FACT_KEY_TO_CONTACT_FIELD[f.factKey];
+    if (!targetField) return f;
+    const existing = existingValues[targetField];
+    const extracted = f.value != null ? String(f.value).trim() : "";
+    let diffStatus: import("./types").FieldDiffStatus;
+    if (!extracted) {
+      diffStatus = "missing";
+    } else if (existing == null || existing.trim() === "") {
+      diffStatus = "new";
+    } else if (existing.trim().toLowerCase() === extracted.toLowerCase()) {
+      diffStatus = "same";
+    } else {
+      diffStatus = "conflict";
+    }
+    return {
+      ...f,
+      existingCrmValue: existing ?? null,
+      diffStatus,
+      targetCrmField: targetField,
+    };
+  });
+  return { ...factBundle, facts: enriched };
+}
 
 const PAYMENT_FACT_KEYS = new Set([
   "amount",

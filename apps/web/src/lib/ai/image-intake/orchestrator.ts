@@ -44,13 +44,13 @@ import { emptyFactBundle, emptyActionPlan } from "./types";
 import { runBatchPreflight } from "./preflight";
 import { enforceImageIntakeGuardrails } from "./guardrails";
 import { classifyBatch } from "./classifier";
-import { buildActionPlanV4, buildIdentityContactIntakeActionPlan } from "./planner";
+import { buildActionPlanV4, buildIdentityContactIntakeActionPlan, maybeUpgradeToContactUpdate, enrichFactsWithCrmDiff } from "./planner";
 import {
   detectIdentityContactIntakeSignals,
   mapFactBundleToCreateContactDraft,
 } from "./identity-contact-intake";
 import { identityDocumentLikelyMatchesActiveContact } from "./identity-active-context-mismatch";
-import { loadContactDisplayLabelForIntake } from "./load-contact-display-label-for-intake";
+import { loadContactDisplayLabelForIntake, loadContactFieldsForDiff } from "./load-contact-display-label-for-intake";
 import { materializeIntakeImagesAsDocuments } from "./materialize-intake-documents";
 import {
   shouldRunMultimodalPass,
@@ -733,25 +733,41 @@ export async function processImageIntake(
     parsedIntent,
   );
 
+  // 11b. Post-extraction output mode upgrade: when extraction found enough contact fields
+  // and client is bound, upgrade from generic fact-intake to actual contact update mode.
+  const upgradedMode = maybeUpgradeToContactUpdate(
+    actionPlan.outputMode,
+    factBundle,
+    clientBinding,
+    parsedIntent,
+  );
+  if (upgradedMode !== actionPlan.outputMode) {
+    const boostedIntent = parsedIntent
+      ? { ...parsedIntent, operation: "update_contact" as const }
+      : { clientName: null, verb: "update" as const, destination: "crm" as const, operation: "update_contact" as const, requestedFields: [], hasExplicitTarget: true, raw: "" };
+    actionPlan = buildActionPlanV4(
+      classification,
+      clientBinding,
+      factBundle,
+      draftReplyText,
+      reviewHandoff,
+      documentSetResult,
+      boostedIntent,
+    );
+  }
+
   const identityIntakeEligible = detectIdentityContactIntakeSignals(
     classification,
     factBundle,
     documentSetResult,
     parsedIntent,
   );
-  if (identityIntakeEligible) {
-    const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
-      request.assets,
-      request.tenantId,
-      request.userId,
-      intakeId,
-    );
-    actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
-  }
 
-  const bindingFromRouteOrSession =
-    clientBinding.source === "session_context" || clientBinding.source === "ui_context";
-  if (identityIntakeEligible && clientBinding.clientId && bindingFromRouteOrSession) {
+  let identityMatchedExistingClient = false;
+
+  if (identityIntakeEligible && clientBinding.clientId) {
+    const bindingFromRouteOrSession =
+      clientBinding.source === "session_context" || clientBinding.source === "ui_context";
     const draft = mapFactBundleToCreateContactDraft(factBundle);
     const activeLabel = await loadContactDisplayLabelForIntake(
       effectiveRequest.tenantId,
@@ -762,7 +778,8 @@ export async function processImageIntake(
       extractedLastName: draft.params.lastName,
       activeContactDisplayLabel: activeLabel,
     });
-    if (cmp.verdict === "mismatch") {
+
+    if (cmp.verdict === "mismatch" && bindingFromRouteOrSession) {
       const suppressedId = clientBinding.clientId;
       clientBinding = {
         state: "insufficient_binding",
@@ -782,6 +799,60 @@ export async function processImageIntake(
       caseBindingV2 = recomputedCase;
       finalCaseBindingV2 = recomputedCase;
       finalCaseBinding = toCaseBindingResult(recomputedCase);
+      // No existing client → create contact flow
+      const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+        request.assets, request.tenantId, request.userId, intakeId,
+      );
+      actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+    } else if (cmp.verdict === "match") {
+      // Identity doc matches existing client → update existing client, NOT create new
+      identityMatchedExistingClient = true;
+      const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+        request.assets, request.tenantId, request.userId, intakeId,
+      );
+      const boostedIntent = parsedIntent
+        ? { ...parsedIntent, operation: "update_contact" as const }
+        : { clientName: null, verb: "update" as const, destination: "crm" as const, operation: "update_contact" as const, requestedFields: [], hasExplicitTarget: true, raw: "" };
+      actionPlan = buildActionPlanV4(
+        classification, clientBinding, factBundle, draftReplyText,
+        reviewHandoff, documentSetResult, boostedIntent,
+      );
+      // Add attach steps for document images
+      for (const docId of materializedDocumentIds) {
+        actionPlan.recommendedActions.push({
+          intentType: "attach_document",
+          writeAction: "attachDocumentToClient",
+          label: "Přiložit doklad ke klientovi",
+          reason: "Archivovat zdrojový doklad u klienta.",
+          confidence: 0.9,
+          requiresConfirmation: true,
+          params: { documentId: docId, contactId: clientBinding.clientId, _imageIntakeOutputMode: "contact_update_from_image" },
+        });
+      }
+    } else {
+      // uncertain → create contact as before
+      const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+        request.assets, request.tenantId, request.userId, intakeId,
+      );
+      actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+    }
+  } else if (identityIntakeEligible) {
+    // No binding at all → create contact
+    const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+      request.assets, request.tenantId, request.userId, intakeId,
+    );
+    actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+  }
+
+  // 11c. Enrich facts with CRM diff when doing contact update
+  if (
+    actionPlan.outputMode === "contact_update_from_image" &&
+    clientBinding.clientId &&
+    factBundle.facts.length > 0
+  ) {
+    const existing = await loadContactFieldsForDiff(effectiveRequest.tenantId, clientBinding.clientId);
+    if (Object.keys(existing).length > 0) {
+      factBundle = enrichFactsWithCrmDiff(factBundle, existing);
     }
   }
 

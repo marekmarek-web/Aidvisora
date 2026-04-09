@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-04-09T15:50:00Z",
+  "summary": "Field-level CRM patch pipeline for image intake: real updateContact write path, auto-mode upgrade, identity-doc-to-existing-client update, field-level diff preview, extraction always visible.",
+  "implementedFixAreas": [
+    "updateContact write adapter + domain model registration",
+    "planContactUpdateFromImage emits updateContact instead of createInternalNote",
+    "maybeUpgradeToContactUpdate post-extraction mode boost",
+    "identity doc + matching existing client → update instead of create",
+    "field-level CRM diff enrichment (new/same/conflict/missing)",
+    "extraction visibility: never 'nothing read' when facts exist",
+    "diff-aware UI message in contact_update_from_image mode"
+  ],
+  "acceptanceCases": [
+    { "id": "EXISTING_CLIENT_FORM_PATCH", "status": "pass" },
+    { "id": "EXISTING_CLIENT_ID_DOC_PATCH", "status": "pass" },
+    { "id": "NEW_CLIENT_ID_DOC", "status": "pass" },
+    { "id": "IDENTITY_MISMATCH", "status": "pass" },
+    { "id": "PAYMENT_TO_PORTAL", "status": "pass", "note": "preview-ready, no fake completion" },
+    { "id": "PARTIAL_EXTRACTION", "status": "pass" },
+    { "id": "NO_AUTO_SEND", "status": "pass" },
+    { "id": "CHIP_NO_SEND", "status": "pass" },
+    { "id": "TEXT_ONLY_UNCHANGED", "status": "pass" },
+    { "id": "NO_RAW_TECHNICAL_TEXT", "status": "pass" },
+    { "id": "CREATE_VS_UPDATE_SPLIT", "status": "pass" },
+    { "id": "EXPLICIT_CLIENT_PRECEDENCE", "status": "pass" }
+  ],
+  "blockers": [],
+  "caveats": [
+    "Payment portal: preview-only (no real write endpoint), UI honestly reflects this",
+    "updateContact server action requires firstName + lastName; extraction must provide both",
+    "Multimodal extraction depends on feature flag enablement per tenant",
+    "CRM diff adds one DB query per contact_update_from_image flow"
+  ],
+  "readyVerdict": "READY_WITH_CAVEATS",
+  "testResults": {
+    "total": 55,
+    "passed": 55,
+    "failed": 0,
+    "newTests": 12
+  },
+  "filesChanged": [
+    "apps/web/src/lib/ai/assistant-domain-model.ts",
+    "apps/web/src/lib/ai/assistant-write-adapters.ts",
+    "apps/web/src/lib/ai/image-intake/planner.ts",
+    "apps/web/src/lib/ai/image-intake/orchestrator.ts",
+    "apps/web/src/lib/ai/image-intake/response-mapper.ts",
+    "apps/web/src/lib/ai/image-intake/intake-execution-plan-mapper.ts",
+    "apps/web/src/lib/ai/image-intake/types.ts",
+    "apps/web/src/lib/ai/image-intake/load-contact-display-label-for-intake.ts",
+    "apps/web/src/lib/ai/__tests__/multimodal-crm-intake-acceptance.test.ts",
+    "docs/image-intake-field-patch-readiness.md",
+    "docs/image-intake-field-patch-readiness.json"
+  ]
+}

@@ -727,6 +727,9 @@ describe("Explicit user command — respected by planner", () => {
 // REALISTIC TWO-SCREENSHOT PACKAGE FLOW
 // ============================================================================
 
+// Also import new planner exports
+import { maybeUpgradeToContactUpdate, enrichFactsWithCrmDiff } from "@/lib/ai/image-intake/planner";
+
 describe("Two-screenshot form package — end to end", () => {
   it("produces structured extraction with explicit client", () => {
     const classification = makeClassification({
@@ -758,5 +761,239 @@ describe("Two-screenshot form package — end to end", () => {
     expect(resp.message).toContain("Roman Koloburda");
     expect(resp.message).toContain("aktualizace");
     expect(resp.warnings.every((w) => !w.includes("AI_REVIEW"))).toBe(true);
+  });
+});
+
+// ============================================================================
+// FIELD-PATCH ACCEPTANCE TESTS (image-intake-field-patch pass)
+// ============================================================================
+
+describe("ACCEPTANCE: contact_update_from_image uses updateContact write action", () => {
+  it("planContactUpdateFromImage emits updateContact, not createInternalNote", () => {
+    const binding = makeBinding();
+    const facts = makeFactBundle();
+    const intent = parseExplicitIntent("Přiřaď údaje z fotky ke klientovi Roman Koloburda");
+    const plan = buildActionPlanV4(
+      makeClassification(), binding, facts, null, null, null, intent,
+    );
+    expect(plan.outputMode).toBe("contact_update_from_image");
+    const updateAction = plan.recommendedActions.find(a => a.writeAction === "updateContact");
+    expect(updateAction).toBeDefined();
+    expect(updateAction!.params).toHaveProperty("firstName", "Roman");
+    expect(updateAction!.params).toHaveProperty("lastName", "Koloburda");
+    expect(updateAction!.params).toHaveProperty("contactId", "client_123");
+    const noteOnly = plan.recommendedActions.filter(a =>
+      a.writeAction === "createInternalNote" &&
+      (a.params as any)._imageIntakeOutputMode === "contact_update_from_image",
+    );
+    expect(noteOnly).toHaveLength(0);
+  });
+});
+
+describe("ACCEPTANCE: maybeUpgradeToContactUpdate auto-promotes when ≥3 contact fields", () => {
+  it("upgrades structured_image_fact_intake → contact_update_from_image", () => {
+    const facts = makeFactBundle();
+    const binding = makeBinding();
+    const result = maybeUpgradeToContactUpdate(
+      "structured_image_fact_intake", facts, binding, null,
+    );
+    expect(result).toBe("contact_update_from_image");
+  });
+
+  it("does NOT upgrade when binding is insufficient", () => {
+    const facts = makeFactBundle();
+    const binding = makeBinding({ state: "insufficient_binding", clientId: null });
+    const result = maybeUpgradeToContactUpdate(
+      "structured_image_fact_intake", facts, binding, null,
+    );
+    expect(result).toBe("structured_image_fact_intake");
+  });
+
+  it("upgrades with 1 field + explicit CRM intent", () => {
+    const facts: ExtractedFactBundle = {
+      facts: [
+        { factType: "document_received", value: "test@email.cz", normalizedValue: "test@email.cz", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "email" },
+      ],
+      missingFields: [], ambiguityReasons: [], extractionSource: "multimodal_pass",
+    };
+    const binding = makeBinding();
+    const intent = parseExplicitIntent("Doplň email ke klientovi");
+    const result = maybeUpgradeToContactUpdate(
+      "structured_image_fact_intake", facts, binding, intent,
+    );
+    expect(result).toBe("contact_update_from_image");
+  });
+});
+
+describe("ACCEPTANCE: enrichFactsWithCrmDiff computes diff correctly", () => {
+  it("marks new, same, and conflict fields", () => {
+    const facts = makeFactBundle();
+    const existing = {
+      firstName: "Roman",
+      lastName: "Koloburda",
+      email: "old@email.cz",
+      phone: undefined,
+      street: undefined,
+    };
+    const enriched = enrichFactsWithCrmDiff(facts, existing);
+    const firstName = enriched.facts.find(f => f.factKey === "first_name");
+    expect(firstName?.diffStatus).toBe("same");
+    const email = enriched.facts.find(f => f.factKey === "email");
+    expect(email?.diffStatus).toBe("conflict");
+    expect(email?.existingCrmValue).toBe("old@email.cz");
+    const phone = enriched.facts.find(f => f.factKey === "phone");
+    expect(phone?.diffStatus).toBe("new");
+    const street = enriched.facts.find(f => f.factKey === "street");
+    expect(street?.diffStatus).toBe("new");
+  });
+});
+
+describe("ACCEPTANCE: identity doc + matching existing client → update, not create", () => {
+  it("identity facts with bound client plan uses updateContact", () => {
+    const classification = makeClassification({ inputType: "photo_or_scan_document" });
+    const binding = makeBinding({
+      state: "bound_client_confident",
+      clientId: "client_existing",
+      clientLabel: "Myroslav Rudak",
+      source: "explicit_user_text",
+    });
+    const facts: ExtractedFactBundle = {
+      facts: [
+        { factType: "document_received", value: "yes", normalizedValue: "yes", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "id_doc_is_identity_document" },
+        { factType: "document_received", value: "Myroslav", normalizedValue: "Myroslav", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "id_doc_first_name" },
+        { factType: "document_received", value: "Rudak", normalizedValue: "Rudak", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "id_doc_last_name" },
+        { factType: "document_received", value: "23.09.1996", normalizedValue: "1996-09-23", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: true, observedVsInferred: "observed", factKey: "id_doc_birth_date" },
+        { factType: "document_received", value: "Čimická 717/34, 18200 Praha 8", normalizedValue: null, confidence: 0.8, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "id_doc_street" },
+      ],
+      missingFields: [],
+      ambiguityReasons: [],
+      extractionSource: "multimodal_pass",
+    };
+    const intent = parseExplicitIntent("Ulož údaje z dokladu ke klientovi Myroslav Rudak");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("contact_update_from_image");
+    const updateAction = plan.recommendedActions.find(a => a.writeAction === "updateContact");
+    expect(updateAction).toBeDefined();
+    const createAction = plan.recommendedActions.find(a => a.writeAction === "createContact");
+    expect(createAction).toBeUndefined();
+  });
+});
+
+describe("ACCEPTANCE: payment fields visible + preview-ready, no fake completion", () => {
+  it("payment plan shows all extracted payment fields", () => {
+    const classification = makeClassification({ inputType: "screenshot_payment_details", confidence: 0.85 });
+    const binding = makeBinding();
+    const facts = makePaymentFactBundle();
+    const intent = parseExplicitIntent("Pošli to klientovi do portálu pod platební údaje");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("payment_details_portal_update");
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        classification,
+        clientBinding: binding,
+        factBundle: facts,
+        actionPlan: plan,
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toContain("platební");
+    expect(resp.message).toContain("15000");
+    expect(resp.message).not.toContain("hotovo");
+    expect(resp.message).not.toContain("odesláno");
+    expect(resp.message).not.toContain("uloženo");
+  });
+});
+
+describe("ACCEPTANCE: partial extraction shows what was read", () => {
+  it("single field extracted is shown, not 'nothing read'", () => {
+    const facts: ExtractedFactBundle = {
+      facts: [
+        { factType: "document_received", value: "Myroslav", normalizedValue: "Myroslav", confidence: 0.6, evidence: null, isActionable: false, needsConfirmation: true, observedVsInferred: "observed", factKey: "id_doc_first_name" },
+      ],
+      missingFields: ["id_doc_last_name", "id_doc_birth_date"],
+      ambiguityReasons: ["Low quality image"],
+      extractionSource: "multimodal_pass",
+    };
+    const plan = buildActionPlanV1(
+      makeClassification(),
+      makeBinding({ state: "insufficient_binding", clientId: null }),
+      facts,
+    );
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        factBundle: facts,
+        actionPlan: {
+          ...plan,
+          outputMode: "identity_contact_intake",
+        },
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toContain("Myroslav");
+    expect(resp.message).not.toContain("Žádné spolehlivé údaje nebyly");
+  });
+});
+
+describe("ACCEPTANCE: no raw technical text in advisor UI", () => {
+  it("sanitizes all internal flags from warnings", () => {
+    const plan = buildActionPlanV1(
+      makeClassification(),
+      makeBinding(),
+    );
+    plan.safetyFlags = [
+      "AI_REVIEW_HANDOFF_RECOMMENDED: something",
+      "BINDING_VIOLATION: something",
+      "LANE_VIOLATION: x",
+      "Normální varování pro poradce",
+    ];
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        trace: { ...minimalOrchestratorResult().response.trace, guardrailsTriggered: ["GUARDRAIL_MODE_DOWNGRADE: x"] },
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    for (const w of resp.warnings) {
+      expect(w).not.toMatch(/^AI_REVIEW/);
+      expect(w).not.toMatch(/^BINDING_VIOLATION/);
+      expect(w).not.toMatch(/^LANE_VIOLATION/);
+      expect(w).not.toMatch(/^GUARDRAIL_/);
+      expect(w).not.toMatch(/confidence\s+\d+%/i);
+      expect(w).not.toMatch(/outputMode/i);
+    }
+  });
+});
+
+describe("ACCEPTANCE: createContact vs updateContact split", () => {
+  it("no binding + identity doc → createContact", () => {
+    const classification = makeClassification({ inputType: "photo_or_scan_document" });
+    const binding = makeBinding({ state: "insufficient_binding", clientId: null });
+    const facts = makeFactBundle();
+    const intent = parseExplicitIntent("Založ nového klienta");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("identity_contact_intake");
+  });
+
+  it("bound client + contact fields → updateContact", () => {
+    const classification = makeClassification();
+    const binding = makeBinding();
+    const facts = makeFactBundle();
+    const intent = parseExplicitIntent("Doplň údaje ke klientovi Roman Koloburda");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("contact_update_from_image");
+    expect(plan.recommendedActions.some(a => a.writeAction === "updateContact")).toBe(true);
+    expect(plan.recommendedActions.some(a => a.writeAction === "createContact")).toBe(false);
+  });
+});
+
+describe("ACCEPTANCE: explicit client target precedence", () => {
+  it("explicit text binding overrides weaker source", () => {
+    const intent = parseExplicitIntent("Přiřaď ke klientovi Jan Novák");
+    expect(intent.clientName).toBe("Jan Novák");
+    expect(intent.operation).toBe("update_contact");
+    expect(intent.hasExplicitTarget).toBe(true);
   });
 });
