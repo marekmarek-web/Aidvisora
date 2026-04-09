@@ -64,7 +64,9 @@ const FACT_KEY_TO_TYPE: Record<string, FactType> = {
 };
 
 function resolveFactType(factKey: string): FactType {
-  return FACT_KEY_TO_TYPE[factKey] ?? "unknown_unusable";
+  if (FACT_KEY_TO_TYPE[factKey]) return FACT_KEY_TO_TYPE[factKey];
+  if (/^(crm_|contact_)/.test(factKey)) return "document_received";
+  return "unknown_unusable";
 }
 
 // ---------------------------------------------------------------------------
@@ -214,6 +216,7 @@ export function buildFactsSummaryLines(bundle: ExtractedFactBundle, limit = 6): 
 }
 
 function factKeyLabel(key: string): string {
+  const stripped = key.replace(/^(crm_|contact_)/, "");
   const labels: Record<string, string> = {
     what_client_said: "Klient napsal",
     what_client_wants: "Klient požaduje",
@@ -259,5 +262,5 @@ function factKeyLabel(key: string): string {
     specific_symbol: "Specifický symbol",
     payment_note: "Poznámka k platbě",
   };
-  return labels[key] ?? key;
+  return labels[key] ?? labels[stripped] ?? stripped.replace(/_/g, " ");
 }

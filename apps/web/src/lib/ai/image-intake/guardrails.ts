@@ -75,7 +75,11 @@ function checkClientBinding(
     shouldDowngrade = true;
   }
 
-  if (binding.state === "multiple_candidates" && hasWriteActions) {
+  if (
+    binding.state === "multiple_candidates" &&
+    hasWriteActions &&
+    !plan.needsAdvisorInput
+  ) {
     violations.push("BINDING_VIOLATION: více kandidátů na klienta — write akce blokována.");
     shouldDowngrade = true;
   }

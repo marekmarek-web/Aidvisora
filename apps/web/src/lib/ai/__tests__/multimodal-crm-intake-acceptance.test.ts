@@ -62,6 +62,7 @@ import { classifyBatch } from "@/lib/ai/image-intake/classifier";
 import {
   buildActionPlanV1,
   buildActionPlanV4,
+  buildIdentityContactIntakeActionPlan,
   maybeUpgradeToContactUpdate,
   enrichFactsWithCrmDiff,
 } from "@/lib/ai/image-intake/planner";
@@ -1223,5 +1224,157 @@ describe("RUNTIME FIX: no AI Review wording for CRM update modes", () => {
     for (const w of resp.warnings) {
       expect(w).not.toMatch(/AI_REVIEW/);
     }
+  });
+});
+
+describe("PLAN: create/update routing (image intake)", () => {
+  it("update_contact + insufficient_binding + patchable facts → structured_image_fact_intake", () => {
+    const classification = makeClassification({ inputType: "photo_or_scan_document", confidence: 0.85 });
+    const binding = makeBinding({ state: "insufficient_binding", clientId: null, clientLabel: null, source: "none" });
+    const facts = makeFactBundle({
+      facts: [
+        {
+          factType: "document_received",
+          value: "Pod Křížkem 113",
+          normalizedValue: "Pod Křížkem 113",
+          confidence: 0.85,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_street",
+        },
+        {
+          factType: "document_received",
+          value: "Hoštka",
+          normalizedValue: "Hoštka",
+          confidence: 0.85,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_city",
+        },
+      ],
+    });
+    const intent = parseExplicitIntent("Přiřaď mi údaje ke klientovi Jan Novák");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("structured_image_fact_intake");
+    expect(plan.needsAdvisorInput).toBe(true);
+  });
+
+  it("update_contact + multiple_candidates + patchable facts → structured and needsAdvisorInput", () => {
+    const classification = makeClassification();
+    const binding = makeBinding({
+      state: "multiple_candidates",
+      clientId: null,
+      clientLabel: null,
+      candidates: [
+        { id: "c1", label: "Jan Novák" },
+        { id: "c2", label: "Jan Novák ml." },
+      ],
+      source: "explicit_user_text",
+    });
+    const facts = makeFactBundle({
+      facts: [
+        {
+          factType: "document_received",
+          value: "+420777",
+          normalizedValue: "+420777",
+          confidence: 0.9,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_phone",
+        },
+      ],
+    });
+    const intent = parseExplicitIntent("Přiřaď údaje ke klientovi Jan Novák");
+    const plan = buildActionPlanV4(classification, binding, facts, null, null, null, intent);
+    expect(plan.outputMode).toBe("structured_image_fact_intake");
+    expect(plan.needsAdvisorInput).toBe(true);
+  });
+
+  it("identity CRM draft message avoids doklad-only empty copy", () => {
+    const facts = makeFactBundle({
+      facts: [
+        {
+          factType: "document_received",
+          value: "Bohuslav",
+          normalizedValue: "Bohuslav",
+          confidence: 0.9,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_first_name",
+        },
+        {
+          factType: "document_received",
+          value: "Plachý",
+          normalizedValue: "Plachý",
+          confidence: 0.9,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_last_name",
+        },
+      ],
+    });
+    const plan = buildIdentityContactIntakeActionPlan(facts, []);
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        factBundle: facts,
+        clientBinding: makeBinding({ state: "insufficient_binding", clientId: null, clientLabel: null }),
+      },
+      parsedIntent: parseExplicitIntent("Založ klienta z fotky"),
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toContain("obráz");
+    expect(resp.message).not.toContain("Údaje z dokladu nebyly přečteny");
+  });
+
+  it("structured + update intent + no client binding shows bind hint in message", () => {
+    const facts = makeFactBundle({
+      facts: [
+        {
+          factType: "document_received",
+          value: "A@b.cz",
+          normalizedValue: "A@b.cz",
+          confidence: 0.9,
+          evidence: null,
+          isActionable: false,
+          needsConfirmation: false,
+          observedVsInferred: "observed",
+          factKey: "crm_email",
+        },
+      ],
+    });
+    const plan = {
+      outputMode: "structured_image_fact_intake" as const,
+      recommendedActions: [
+        { intentType: "create_internal_note" as const, writeAction: "createInternalNote" as const, label: "Note", reason: "t", confidence: 0.8, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null,
+      whyThisAction: "test",
+      whyNotOtherActions: null,
+      needsAdvisorInput: true,
+      safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        factBundle: facts,
+        clientBinding: makeBinding({ state: "insufficient_binding", clientId: null, clientLabel: null }),
+      },
+      parsedIntent: parseExplicitIntent("Přiřaď ke klientovi Bohuslav Plachý"),
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toMatch(/CRM|klienta|jednoznačně/i);
   });
 });

@@ -109,8 +109,13 @@ export type { ClassifierDecision } from "./classifier";
 export { buildActionPlanV1, buildActionPlanV2, buildActionPlanV3, buildActionPlanV4 } from "./planner";
 
 // --- Identity contact intake ---
-export { detectIdentityContactIntakeSignals, mapFactBundleToCreateContactDraft } from "./identity-contact-intake";
-export type { CreateContactDraftFromIdDoc } from "./identity-contact-intake";
+export {
+  detectIdentityContactIntakeSignals,
+  inferCreateContactDraftSource,
+  mapFactBundleToCreateContactDraft,
+  shouldSkipIdentityVersusActiveContactMatch,
+} from "./identity-contact-intake";
+export type { CreateContactDraftFromIdDoc, CreateContactDraftSource } from "./identity-contact-intake";
 
 // --- Multi-image stitching v1 (Phase 4) ---
 export {

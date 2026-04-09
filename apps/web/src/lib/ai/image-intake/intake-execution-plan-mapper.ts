@@ -119,6 +119,10 @@ export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
       step.action === "attachDocumentToClient" &&
       step.dependsOn.some((depId) => plan.steps.some((s) => s.stepId === depId && s.action === "createContact"));
 
+    const createParams = step.params as Record<string, unknown> | undefined;
+    const createContactFromScreenshot =
+      step.action === "createContact" && createParams?._createContactDraftSource === "crm_form_screenshot";
+
     const pf = attachAfterCreate
       ? ({
           preflightStatus: "ready" as const,
@@ -127,13 +131,18 @@ export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
         })
       : computeWriteStepPreflight(step.action, step.params, plan.productDomain);
 
+    const baseDescription =
+      createContactFromScreenshot && step.action === "createContact"
+        ? "Vytvoří nový kontakt podle údajů rozpoznaných na screenshotu nebo ve formuláři."
+        : WRITE_ACTION_ADVISOR_DESCRIPTION[step.action];
+
     return {
       stepId: step.stepId,
       label: step.label,
       action: step.label,
       description: attachAfterCreate
         ? `${WRITE_ACTION_ADVISOR_DESCRIPTION[step.action] ?? ""} Kontakt bude doplněn automaticky po kroku „Založit klienta“.`.trim()
-        : WRITE_ACTION_ADVISOR_DESCRIPTION[step.action],
+        : baseDescription,
       preflightStatus: pf.preflightStatus,
       blockedReason: pf.preflightStatus === "blocked" ? pf.advisorMessage : undefined,
     };

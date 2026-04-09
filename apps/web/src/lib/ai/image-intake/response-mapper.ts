@@ -36,6 +36,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
     case "identity_contact_intake": {
       const draft = mapFactBundleToCreateContactDraft(result.response.factBundle);
       const p = draft.params;
+      const fromCrmScreenshot = draft.draftSource === "crm_form_screenshot";
       const routeMismatch = Boolean(response.clientBinding.suppressedActiveClientId);
       const pre: string[] = [];
       const push = (label: string, v: string | undefined) => {
@@ -57,14 +58,28 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       }
       const preBlock = pre.length
         ? pre.join("\n")
-        : "Údaje z dokladu nebyly přečteny — vyplňte ručně v náhledu kroků.";
+        : fromCrmScreenshot
+          ? "Údaje ze screenshotu nebyly přečteny — vyplňte ručně v náhledu kroků."
+          : "Údaje z dokladu nebyly přečteny — vyplňte ručně v náhledu kroků.";
 
       const need: string[] = [];
       for (const line of draft.missingAdvisorLines) {
         need.push(`${line} — doplněte podle potřeby`);
       }
-      if (!p.email?.trim()) need.push("E-mail — na dokladu často chybí nebo není čitelný");
-      if (!p.phone?.trim()) need.push("Telefon — na dokladu často chybí nebo není čitelný");
+      if (!p.email?.trim()) {
+        need.push(
+          fromCrmScreenshot
+            ? "E-mail — na screenshotu často chybí nebo není čitelný"
+            : "E-mail — na dokladu často chybí nebo není čitelný",
+        );
+      }
+      if (!p.phone?.trim()) {
+        need.push(
+          fromCrmScreenshot
+            ? "Telefon — na screenshotu často chybí nebo není čitelný"
+            : "Telefon — na dokladu často chybí nebo není čitelný",
+        );
+      }
       for (const line of draft.needsConfirmationLines) need.push(line);
 
       const needBlock = need.length
@@ -72,13 +87,22 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         : "Údaje prosím před uložením ještě jednou zkontrolujte v náhledu kroků.";
 
       const head = routeMismatch
-        ? [
-            "Doklad vypadá na jinou osobu než kontakt, který máte právě otevřený v CRM — automaticky ho k němu nepřiřazuji.",
-            "",
-            "Z údajů na dokladu můžete přesto založit nového klienta a podklady uložit podle plánu níže.",
-            "",
-          ]
-        : ["Připravil jsem návrh nového klienta z nahraných dokladů.", ""];
+        ? fromCrmScreenshot
+          ? [
+              "Údaje na screenshotu nesedí s kontaktem, který máte právě otevřený v CRM — automaticky ho k němu nepřiřazuji.",
+              "",
+              "Z rozpoznaných údajů můžete přesto založit nového klienta a podklady uložit podle plánu níže.",
+              "",
+            ]
+          : [
+              "Doklad vypadá na jinou osobu než kontakt, který máte právě otevřený v CRM — automaticky ho k němu nepřiřazuji.",
+              "",
+              "Z údajů na dokladu můžete přesto založit nového klienta a podklady uložit podle plánu níže.",
+              "",
+            ]
+        : fromCrmScreenshot
+          ? ["Připravil jsem návrh nového klienta z údajů na nahraných obrázcích.", ""]
+          : ["Připravil jsem návrh nového klienta z nahraných dokladů.", ""];
 
       return [
         ...head,
@@ -134,6 +158,13 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
 
     case "structured_image_fact_intake": {
       const client = clientLabel ? ` ke klientovi **${clientLabel}**` : "";
+      const parsedIntent = result.parsedIntent;
+      const bindHintForUpdate =
+        !clientLabel &&
+        parsedIntent?.operation === "update_contact" &&
+        (binding === "insufficient_binding" || binding === "multiple_candidates" || binding === "weak_candidate")
+          ? "\n\nZ textu se mi nepodařilo jednoznačně najít klienta v CRM — údaje z obrázku jsou v náhledu. Otevřete správnou kartu klienta nebo upřesněte jméno a zkuste znovu."
+          : "";
       const isForm = looksLikeStructuredFormScreenshot(result.response.factBundle);
       const typeLabel = isForm
         ? "formulářem s klientskými údaji"
@@ -150,7 +181,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       const intro = isForm
         ? `Našel jsem údaje z formuláře a připravil návrh k uložení do CRM${client}.`
         : `Rozpoznal jsem obrázek s ${typeLabel}. Navrhuji uložit klíčové informace${client}.`;
-      return `${intro}${factText}${missing}`;
+      return `${intro}${factText}${missing}${bindHintForUpdate}`;
     }
 
     case "contact_update_from_image": {

@@ -22,7 +22,10 @@ import type {
   DocumentMultiImageResult,
 } from "./types";
 import { safeOutputModeForUncertainInput } from "./guardrails";
-import { mapFactBundleToCreateContactDraft } from "./identity-contact-intake";
+import {
+  inferCreateContactDraftSource,
+  mapFactBundleToCreateContactDraft,
+} from "./identity-contact-intake";
 import { looksLikeStructuredFormScreenshot } from "./review-handoff";
 import type { ParsedExplicitIntent } from "./explicit-intent-parser";
 
@@ -56,6 +59,7 @@ function resolveOutputMode(
   classification: InputClassificationResult,
   binding: ClientBindingResult,
   intent?: ParsedExplicitIntent | null,
+  factBundle?: ExtractedFactBundle | null,
 ): ImageOutputMode {
   if (classification.inputType === "general_unusable_image") {
     return "no_action_archive_only";
@@ -97,6 +101,10 @@ function resolveOutputMode(
     if (intent?.operation === "create_contact") {
       return "identity_contact_intake";
     }
+    // Update contact + extrahovaná CRM pole — strukturovaný náhled místo matoucího ambiguous/note-only
+    if (intent?.operation === "update_contact" && countPatchableContactFields(factBundle) >= 1) {
+      return "structured_image_fact_intake";
+    }
     // Communication screenshots and explicit note/task intents still get their mode
     if (intent?.operation === "create_note" || intent?.operation === "create_task" || intent?.operation === "create_followup") {
       return "client_message_update";
@@ -105,6 +113,9 @@ function resolveOutputMode(
   }
 
   if (classification.inputType === "mixed_or_uncertain_image" || classification.confidence < 0.5) {
+    if (intent?.operation === "update_contact" && countPatchableContactFields(factBundle) >= 1) {
+      return "structured_image_fact_intake";
+    }
     if (intentBoost) return "structured_image_fact_intake";
     return "ambiguous_needs_input";
   }
@@ -441,6 +452,21 @@ const FACT_KEY_TO_CONTACT_FIELD: Record<string, string> = {
 
 const CONTACT_PATCH_FACT_KEYS = new Set(Object.keys(FACT_KEY_TO_CONTACT_FIELD));
 
+function countPatchableContactFields(factBundle: ExtractedFactBundle | null | undefined): number {
+  if (!factBundle?.facts?.length) return 0;
+  return factBundle.facts.filter(
+    (f) =>
+      CONTACT_PATCH_FACT_KEYS.has(f.factKey) &&
+      f.value != null &&
+      String(f.value).trim().length > 0,
+  ).length;
+}
+
+/** Exported for tests / orchestrator diagnostics. */
+export function countPatchableContactFieldsInBundle(factBundle: ExtractedFactBundle | null | undefined): number {
+  return countPatchableContactFields(factBundle);
+}
+
 /**
  * Enriches fact bundle with diff status against existing CRM contact values.
  * Pure function — no DB calls; existing values passed in as a flat map.
@@ -656,7 +682,7 @@ export function buildActionPlanV1(
   factBundle?: ExtractedFactBundle,
   intent?: ParsedExplicitIntent | null,
 ): ImageIntakeActionPlan {
-  const outputMode = resolveOutputMode(classification, binding, intent);
+  const outputMode = resolveOutputMode(classification, binding, intent, factBundle);
 
   let recommendedActions: ImageIntakeActionCandidate[] = [];
 
@@ -698,7 +724,9 @@ export function buildActionPlanV1(
   const needsAdvisorInput =
     outputMode === "ambiguous_needs_input" ||
     outputMode === "no_action_archive_only" ||
-    binding.state === "insufficient_binding";
+    binding.state === "insufficient_binding" ||
+    binding.state === "multiple_candidates" ||
+    binding.state === "weak_candidate";
 
   return {
     outputMode,
@@ -805,18 +833,30 @@ export function buildIdentityContactIntakeActionPlan(
   factBundle: ExtractedFactBundle,
   materializedDocumentIds: string[],
 ): ImageIntakeActionPlan {
-  const draft = mapFactBundleToCreateContactDraft(factBundle);
+  const source = inferCreateContactDraftSource(factBundle);
+  const draft = mapFactBundleToCreateContactDraft(factBundle, source);
   const p = draft.params;
+
+  const createReason =
+    source === "crm_form_screenshot"
+      ? "Návrh kontaktu z údajů na screenshotu — před uložením zkontrolujte pole v náhledu."
+      : "Návrh kontaktu z rozpoznaného dokladu — před uložením zkontrolujte údaje v náhledu.";
+  const attachReason =
+    source === "crm_form_screenshot"
+      ? "Přiřadí nahrané obrázky ke kartě nového klienta po jeho založení."
+      : "Přiřadí nahrané strany dokladu ke kartě nového klienta po jeho založení.";
+  const attachLabel0 = source === "crm_form_screenshot" ? "Uložit screenshoty jako podklad" : "Uložit doklady jako podklad";
 
   const actions: ImageIntakeActionCandidate[] = [
     makeAction(
       "create_contact",
       "createContact",
       "Založit klienta",
-      "Návrh kontaktu z rozpoznaného dokladu — před uložením zkontrolujte údaje v náhledu.",
+      createReason,
       {
         ...p,
         _imageIntakeOutputMode: "identity_contact_intake",
+        _createContactDraftSource: source,
       },
     ),
   ];
@@ -826,8 +866,8 @@ export function buildIdentityContactIntakeActionPlan(
       makeAction(
         "attach_document",
         "attachDocumentToClient",
-        i === 0 ? "Uložit doklady jako podklad" : `Přiložit stránku ${i + 1}`,
-        "Přiřadí nahrané strany dokladu ke kartě nového klienta po jeho založení.",
+        i === 0 ? attachLabel0 : `Přiložit stránku ${i + 1}`,
+        attachReason,
         {
           documentId: docId,
           _identityIntakeAttach: true,
@@ -837,12 +877,16 @@ export function buildIdentityContactIntakeActionPlan(
     );
   });
 
+  const why =
+    source === "crm_form_screenshot"
+      ? "Rozpoznány údaje z formuláře nebo administrativní obrazovky. Připravili jsme návrh nového klienta a přiložení podkladů."
+      : "Rozpoznán osobní doklad (občanka, pas nebo povolení k pobytu). Připravili jsme návrh nového klienta a přiložení podkladů.";
+
   return {
     outputMode: "identity_contact_intake",
     recommendedActions: actions,
     draftReplyText: null,
-    whyThisAction:
-      "Rozpoznán osobní doklad (občanka, pas nebo povolení k pobytu). Připravili jsme návrh nového klienta a přiložení podkladů.",
+    whyThisAction: why,
     whyNotOtherActions: null,
     needsAdvisorInput: true,
     safetyFlags: [],

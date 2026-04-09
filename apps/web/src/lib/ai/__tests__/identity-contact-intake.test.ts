@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   detectIdentityContactIntakeSignals,
+  inferCreateContactDraftSource,
   mapFactBundleToCreateContactDraft,
   buildContactNewPrefillQuery,
+  shouldSkipIdentityVersusActiveContactMatch,
 } from "../image-intake/identity-contact-intake";
+import { parseExplicitIntent } from "../image-intake/explicit-intent-parser";
 import { buildIdentityContactIntakeActionPlan } from "../image-intake/planner";
 import type {
   ExtractedFactBundle,
@@ -63,14 +66,47 @@ describe("identity contact intake", () => {
       fact("document_type", "OP", 0.7),
     ]);
     const d = mapFactBundleToCreateContactDraft(b);
+    expect(d.draftSource).toBe("identity_document");
     expect(d.params.firstName).toBe("Jan");
     expect(d.params.lastName).toBe("Novák");
     expect(d.params.notes).toMatch(/OP/);
   });
 
+  it("inferCreateContactDraftSource is crm_form_screenshot for crm_* facts without id doc", () => {
+    const b = bundle([
+      fact("crm_first_name", "Bohuslav", 0.9),
+      fact("crm_last_name", "Plachý", 0.9),
+      fact("crm_street", "Pod Křížkem 113", 0.85),
+    ]);
+    expect(inferCreateContactDraftSource(b)).toBe("crm_form_screenshot");
+    const d = mapFactBundleToCreateContactDraft(b);
+    expect(d.draftSource).toBe("crm_form_screenshot");
+    expect(d.params.notes).toMatch(/formuláře|systému/);
+    expect(d.params.firstName).toBe("Bohuslav");
+  });
+
+  it("shouldSkipIdentityVersusActiveContactMatch for create_contact + CRM screenshot", () => {
+    const b = bundle([fact("crm_street", "X", 0.8), fact("crm_city", "Y", 0.8)]);
+    const intent = parseExplicitIntent("Založ mi z těchto údajů klienta");
+    expect(shouldSkipIdentityVersusActiveContactMatch(b, intent)).toBe(true);
+  });
+
+  it("buildIdentityContactIntakeActionPlan CRM wording for screenshot facts", () => {
+    const b = bundle([
+      fact("crm_street", "Pod Křížkem 113", 0.85),
+      fact("crm_city", "Hoštka", 0.85),
+      fact("crm_email", "a@b.cz", 0.9),
+    ]);
+    const plan = buildIdentityContactIntakeActionPlan(b, ["doc1"]);
+    expect(plan.whyThisAction).toContain("formuláře");
+    const exec = mapToExecutionPlan("i", plan, null, null);
+    expect((exec.steps[0]!.params as Record<string, unknown>)._createContactDraftSource).toBe("crm_form_screenshot");
+  });
+
   it("buildIdentityContactIntakeActionPlan + mapToExecutionPlan chains attach after create", () => {
     const b = bundle([fact("id_doc_first_name", "Jan", 0.9), fact("id_doc_last_name", "Test", 0.9)]);
     const plan = buildIdentityContactIntakeActionPlan(b, ["doc-a", "doc-b"]);
+    expect(plan.whyThisAction).toContain("doklad");
     const exec = mapToExecutionPlan("intake_x", plan, null, null);
     expect(exec.steps).toHaveLength(3);
     expect(exec.steps[0]!.action).toBe("createContact");

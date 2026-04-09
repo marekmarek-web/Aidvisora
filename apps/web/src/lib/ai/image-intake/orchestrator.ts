@@ -48,6 +48,7 @@ import { buildActionPlanV4, buildIdentityContactIntakeActionPlan, maybeUpgradeTo
 import {
   detectIdentityContactIntakeSignals,
   mapFactBundleToCreateContactDraft,
+  shouldSkipIdentityVersusActiveContactMatch,
 } from "./identity-contact-intake";
 import { identityDocumentLikelyMatchesActiveContact } from "./identity-active-context-mismatch";
 import { loadContactDisplayLabelForIntake, loadContactFieldsForDiff } from "./load-contact-display-label-for-intake";
@@ -765,7 +766,14 @@ export async function processImageIntake(
 
   let identityMatchedExistingClient = false;
 
-  if (identityIntakeEligible && clientBinding.clientId) {
+  const skipIdentityVsActiveMatch = shouldSkipIdentityVersusActiveContactMatch(factBundle, parsedIntent);
+
+  if (identityIntakeEligible && clientBinding.clientId && skipIdentityVsActiveMatch) {
+    const materializedDocumentIds = await materializeIntakeImagesAsDocuments(
+      request.assets, request.tenantId, request.userId, intakeId,
+    );
+    actionPlan = buildIdentityContactIntakeActionPlan(factBundle, materializedDocumentIds);
+  } else if (identityIntakeEligible && clientBinding.clientId) {
     const bindingFromRouteOrSession =
       clientBinding.source === "session_context" || clientBinding.source === "ui_context";
     const draft = mapFactBundleToCreateContactDraft(factBundle);
