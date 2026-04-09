@@ -193,4 +193,64 @@ describe("H7 handleAssistantAwaitingConfirmation", () => {
 
     await first;
   });
+
+  it("partial failure returns non-sendable hint items instead of legacy sendable chips", async () => {
+    const session = getOrCreateSession("sess-h7-partial", "t1", "u1");
+    lockAssistantClient(session, CONTACT_A);
+    session.lastExecutionPlan = minimalAwaitingPlan({
+      steps: [
+        ...minimalAwaitingPlan().steps,
+        {
+          stepId: "step-2",
+          action: "createTask",
+          params: { contactId: CONTACT_A, taskTitle: "t2" },
+          label: "Úkol 2",
+          requiresConfirmation: true,
+          isReadOnly: false,
+          dependsOn: ["step-1"],
+          status: "requires_confirmation",
+          result: null,
+        },
+      ],
+    });
+
+    h7ConfirmHoisted.executePlanMock.mockResolvedValueOnce({
+      ...session.lastExecutionPlan,
+      status: "partial_failure",
+      steps: [
+        {
+          ...session.lastExecutionPlan.steps[0]!,
+          status: "failed",
+          result: {
+            ok: false,
+            outcome: "failed" as const,
+            entityId: null,
+            entityType: null,
+            warnings: [],
+            error: "Kontakt se nepodařilo vytvořit.",
+            retryable: true,
+          },
+        },
+        {
+          ...session.lastExecutionPlan.steps[1]!,
+          status: "skipped",
+          result: {
+            ok: false,
+            outcome: "failed" as const,
+            entityId: null,
+            entityType: null,
+            warnings: [],
+            error: "Krok přeskočen kvůli selhání závislosti.",
+            retryable: false,
+          },
+        },
+      ],
+    });
+
+    const out = await handleAssistantAwaitingConfirmation(session, { cancel: false }, ctx);
+
+    expect(out?.suggestedNextSteps).toBeUndefined();
+    expect((out?.suggestedNextStepItems ?? []).length).toBeGreaterThan(0);
+    expect((out?.suggestedNextStepItems ?? []).every((i) => i.kind === "hint")).toBe(true);
+  });
 });

@@ -1282,6 +1282,11 @@ export async function routeAssistantMessageCanonical(
 }
 
 function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string): AssistantResponse {
+  const suggestedNextStepItems: SuggestedNextStepItem[] | undefined =
+    verified.suggestedNextSteps.length > 0
+      ? verified.suggestedNextSteps.map((label) => ({ label, kind: "hint" }))
+      : undefined;
+
   return {
     message: verified.message,
     referencedEntities: verified.referencedEntities,
@@ -1302,7 +1307,8 @@ function verifiedToResponse(verified: VerifiedAssistantResult, sessionId: string
       error: o.error,
       retryable: o.retryable,
     })),
-    suggestedNextSteps: verified.suggestedNextSteps.length > 0 ? verified.suggestedNextSteps : undefined,
+    suggestedNextSteps: undefined,
+    suggestedNextStepItems,
     hasPartialFailure: verified.hasPartialFailure || undefined,
     contextState: null,
   };
