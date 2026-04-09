@@ -20,6 +20,8 @@ export type AdvisorReportBranding = {
   logoUrl: string | null;
   phone: string | null;
   website: string | null;
+  /** Volitelný e-mail v PDF (ne přihlašovací). */
+  reportContactEmail: string | null;
 };
 
 /** Shape of quick-actions JSON; kept as ReturnType so Turbopack never emits a stray `QuickActionsConfig` identifier from this module. */
@@ -159,6 +161,7 @@ export async function getAdvisorReportBranding(): Promise<AdvisorReportBranding>
       .select({
         phone: advisorPreferences.phone,
         website: advisorPreferences.website,
+        reportContactEmail: advisorPreferences.reportContactEmail,
         reportLogoUrl: advisorPreferences.reportLogoUrl,
       })
       .from(advisorPreferences)
@@ -172,16 +175,25 @@ export async function getAdvisorReportBranding(): Promise<AdvisorReportBranding>
 
     const phone = row[0]?.phone?.trim() || "";
     const website = row[0]?.website?.trim() || "";
+    const reportContactEmail = row[0]?.reportContactEmail?.trim() || "";
     const logoUrl = row[0]?.reportLogoUrl?.trim() || null;
 
     const parts: string[] = [
       authorName ? `${authorName} – Privátní finanční plánování` : "",
       website,
       phone,
+      reportContactEmail,
     ].filter(Boolean);
     const footerLine = parts.length > 0 ? parts.join(" | ") : PDF_REPORT_FOOTER_FALLBACK;
 
-    return { authorName, footerLine, logoUrl, phone: phone || null, website: website || null };
+    return {
+      authorName,
+      footerLine,
+      logoUrl,
+      phone: phone || null,
+      website: website || null,
+      reportContactEmail: reportContactEmail || null,
+    };
   } catch {
     return {
       authorName: PDF_REPORT_AUTHOR_FALLBACK,
@@ -189,16 +201,25 @@ export async function getAdvisorReportBranding(): Promise<AdvisorReportBranding>
       logoUrl: null,
       phone: null,
       website: null,
+      reportContactEmail: null,
     };
   }
 }
 
-/** Vrátí pole pro záhlaví/zápatí PDF reportu (telefon, web). */
-export async function getAdvisorReportFields(): Promise<{ phone: string | null; website: string | null }> {
+/** Vrátí pole pro záhlaví/zápatí PDF reportu (telefon, web, volitelný e-mail). */
+export async function getAdvisorReportFields(): Promise<{
+  phone: string | null;
+  website: string | null;
+  reportContactEmail: string | null;
+}> {
   try {
     const auth = await requireAuthInAction();
     const row = await db
-      .select({ phone: advisorPreferences.phone, website: advisorPreferences.website })
+      .select({
+        phone: advisorPreferences.phone,
+        website: advisorPreferences.website,
+        reportContactEmail: advisorPreferences.reportContactEmail,
+      })
       .from(advisorPreferences)
       .where(
         and(
@@ -210,16 +231,18 @@ export async function getAdvisorReportFields(): Promise<{ phone: string | null; 
     return {
       phone: row[0]?.phone?.trim() || null,
       website: row[0]?.website?.trim() || null,
+      reportContactEmail: row[0]?.reportContactEmail?.trim() || null,
     };
   } catch {
-    return { phone: null, website: null };
+    return { phone: null, website: null, reportContactEmail: null };
   }
 }
 
-/** Aktualizuje telefon a web v advisor_preferences pro report. */
+/** Aktualizuje telefon, web a volitelný kontaktní e-mail v advisor_preferences pro report. */
 export async function updateAdvisorReportBranding(update: {
   phone?: string | null;
   website?: string | null;
+  reportContactEmail?: string | null;
 }): Promise<void> {
   const auth = await requireAuthInAction();
   const existing = await db
@@ -233,11 +256,19 @@ export async function updateAdvisorReportBranding(update: {
     )
     .limit(1);
 
-  const set: { phone?: string | null; website?: string | null; updatedAt: Date } = {
+  const set: {
+    phone?: string | null;
+    website?: string | null;
+    reportContactEmail?: string | null;
+    updatedAt: Date;
+  } = {
     updatedAt: new Date(),
   };
   if (Object.prototype.hasOwnProperty.call(update, "phone")) set.phone = update.phone ?? null;
   if (Object.prototype.hasOwnProperty.call(update, "website")) set.website = update.website ?? null;
+  if (Object.prototype.hasOwnProperty.call(update, "reportContactEmail")) {
+    set.reportContactEmail = update.reportContactEmail?.trim() || null;
+  }
 
   if (existing.length > 0) {
     await db.update(advisorPreferences).set(set).where(eq(advisorPreferences.id, existing[0].id));
@@ -247,6 +278,7 @@ export async function updateAdvisorReportBranding(update: {
       tenantId: auth.tenantId,
       phone: set.phone ?? null,
       website: set.website ?? null,
+      reportContactEmail: set.reportContactEmail ?? null,
     });
   }
 }

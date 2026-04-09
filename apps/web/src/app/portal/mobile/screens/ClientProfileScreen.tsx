@@ -19,6 +19,7 @@ import {
   Clock,
   Pencil,
 } from "lucide-react";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import { getContact, getContactAiProvenance, confirmContactPendingFieldAction, type ContactRow } from "@/app/actions/contacts";
 import { getHouseholdForContact, type HouseholdForContact } from "@/app/actions/households";
 import { getTasksByContactId, completeTask, reopenTask, type TaskRow } from "@/app/actions/tasks";
@@ -405,7 +406,8 @@ function TasksTab({
                   </p>
                   {task.dueDate ? (
                     <p className={cx("text-xs mt-0.5 font-semibold", isOverdue ? "text-rose-500" : "text-[color:var(--wp-text-secondary)]")}>
-                      {isOverdue ? "Prošlé · " : ""}{task.dueDate}
+                      {isOverdue ? "Prošlé · " : ""}
+                      {formatDisplayDateCs(task.dueDate) || task.dueDate}
                     </p>
                   ) : null}
                 </div>

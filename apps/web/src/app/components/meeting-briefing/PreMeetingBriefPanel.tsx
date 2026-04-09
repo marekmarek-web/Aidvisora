@@ -21,6 +21,7 @@ import { getPreMeetingBrief } from "@/app/actions/pre-meeting-brief";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import type { PreMeetingBrief } from "@/lib/meeting-briefing/types";
 import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 type Props = {
   contactId: string;
@@ -177,7 +178,11 @@ export function PreMeetingBriefPanel({ contactId, eventId, compact = false }: Pr
               {brief.openTasks.slice(0, 5).map((t) => (
                 <li key={t.id}>
                   {t.title}
-                  {t.dueDate && <span className="text-[color:var(--wp-text-muted)] ml-1">({t.dueDate})</span>}
+                  {t.dueDate && (
+                    <span className="text-[color:var(--wp-text-muted)] ml-1">
+                      ({formatDisplayDateCs(t.dueDate) || t.dueDate})
+                    </span>
+                  )}
                 </li>
               ))}
               {brief.openTasks.length > 5 && <li className="text-[color:var(--wp-text-muted)]">+{brief.openTasks.length - 5} dalších</li>}

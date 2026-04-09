@@ -23,6 +23,7 @@ import { submitAiFeedbackWithAction } from "@/app/actions/ai-actions";
 import clsx from "clsx";
 import type { PostMeetingSummary as PostMeetingSummaryType } from "@/lib/meeting-briefing/types";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 type Props = {
   contactId: string;
@@ -311,7 +312,10 @@ export function PostMeetingSummaryPanel({
           <ul className="space-y-2">
             {suggestedTasksDeduped.map((t, i) => (
               <li key={i} className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-sm text-[color:var(--wp-text)]">{t.title}{t.dueDate ? ` (${t.dueDate})` : ""}</span>
+                <span className="text-sm text-[color:var(--wp-text)]">
+                  {t.title}
+                  {t.dueDate ? ` (${formatDisplayDateCs(t.dueDate) || t.dueDate})` : ""}
+                </span>
                 <button
                   type="button"
                   onClick={() => handleCreateTask(t.title, t.dueDate)}

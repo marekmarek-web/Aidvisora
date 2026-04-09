@@ -10,7 +10,8 @@ export function renderPrintAdvisorChrome(branding: ReportBranding): string {
   const name = branding.advisorName?.trim();
   const web = branding.advisorWebsite?.trim();
   const tel = branding.advisorPhone?.trim();
-  const line = [name, web, tel].filter(Boolean).join(' · ');
+  const mail = branding.advisorEmail?.trim();
+  const line = [name, web, tel, mail].filter(Boolean).join(' · ');
   if (!line) return '';
   return `<div class="print-only print-advisor-footer" aria-hidden="true">${esc(line)}</div>`;
 }

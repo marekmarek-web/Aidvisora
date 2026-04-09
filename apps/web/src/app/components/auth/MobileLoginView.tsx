@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, ChevronLeft, Eye, EyeOff, Lock, Mail, ScanFace } from "lucide-react";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
 import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
+import { LoginMfaChallenge } from "./LoginMfaChallenge";
 import { AppleIcon, GoogleIcon } from "./loginIcons";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
@@ -38,6 +39,11 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
     formRef,
     handleSubmit,
     handleOAuthSignIn,
+    mfaPending,
+    mfaCode,
+    setMfaCode,
+    handleMfaVerify,
+    cancelMfaAndSignOut,
   } = login;
 
   const inputClass = `w-full pl-12 pr-12 py-4 bg-white/10 border border-white/10 rounded-[20px] text-base font-bold text-white outline-none focus:bg-white/15 focus:ring-4 transition-all placeholder:text-slate-400 placeholder:font-medium backdrop-blur-md ${
@@ -110,7 +116,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
             </button>
           )}
 
-          {!isInviteFlow && (
+          {!isInviteFlow && !mfaPending && (
             <div className="flex bg-white/10 p-1 rounded-full w-fit mx-auto mb-6 backdrop-blur-md border border-white/10 shadow-lg">
               <button
                 type="button"
@@ -164,6 +170,17 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
             </p>
           </div>
 
+          {mfaPending ? (
+            <LoginMfaChallenge
+              variant="mobile"
+              isLoading={isLoading}
+              message={message}
+              code={mfaCode}
+              setCode={setMfaCode}
+              onSubmit={handleMfaVerify}
+              onCancel={() => void cancelMfaAndSignOut()}
+            />
+          ) : (
           <form ref={formRef} onSubmit={handleSubmit} className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 flex flex-col">
             {!isLogin && !isClient && (
               <div>
@@ -361,6 +378,7 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
               </div>
             )}
           </form>
+          )}
         </div>
       )}
 

@@ -120,6 +120,27 @@
       "when": 1774900000000,
       "tag": "0020_fund_library_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1775000000000,
+      "tag": "0021_report_contact_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775100000000,
+      "tag": "0022_email_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775200000000,
+      "tag": "0023_email_campaigns_rls",
+      "breakpoints": true
     }
   ]
 }

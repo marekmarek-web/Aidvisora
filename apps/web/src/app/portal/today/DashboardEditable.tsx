@@ -80,6 +80,7 @@ import {
 import { useDashboardCalendarDrawer } from "./use-dashboard-calendar-drawer";
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 export type { BusinessPlanWidgetData, DashboardSecondaryBundle } from "./dashboard-secondary-types";
 
@@ -341,7 +342,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           if (due === tomorrow.toISOString().slice(0, 10)) return "Zítra";
-          return new Date(due).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" });
+          return formatDisplayDateCs(due) || due;
         };
         return all.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">

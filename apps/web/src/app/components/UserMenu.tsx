@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { revokeAllStoredPushTokens, revokeStoredPushToken } from "@/lib/push/usePushNotifications";
@@ -11,12 +12,14 @@ import { displayNameFromUserMetadata, getUserMenuInitials } from "@/lib/user-ini
 type UserMenuProps = {
   /** Kulatý trigger 48px jako main banner txt. */
   variant?: "default" | "portalHeader";
+  /** Profilová fotka z advisor_preferences (server); po nahrání refresh layoutu. */
+  advisorAvatarUrl?: string | null;
 };
 
 const itemClass =
   "flex w-full min-h-[44px] items-center px-4 py-3 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)]";
 
-export function UserMenu({ variant = "default" }: UserMenuProps) {
+export function UserMenu({ variant = "default", advisorAvatarUrl = null }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [initials, setInitials] = useState("?");
   const ref = useRef<HTMLDivElement>(null);
@@ -65,17 +68,19 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
     router.refresh();
   }
 
+  const avatarPx = variant === "portalHeader" ? 48 : 36;
+
   const triggerClass =
     variant === "portalHeader"
       ? clsx(
-          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all",
+          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all overflow-hidden",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--wp-focus-ring-color)] focus-visible:ring-offset-2",
           "border-[color:var(--wp-border-strong)] bg-[color:var(--wp-surface-raised)] text-[color:var(--wp-text-secondary)] shadow-sm",
           "hover:scale-105 hover:bg-[color:var(--wp-surface-muted)] dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/15",
           "ring-offset-2 ring-offset-[color:var(--wp-portal-header-bg)]",
           open && "ring-2 ring-[color:var(--wp-focus-ring-color)] ring-offset-2",
         )
-      : "flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-wp-surface-muted text-sm font-medium text-wp-text-secondary hover:bg-wp-surface-raised focus:outline-none focus:ring-2 focus:ring-[color:var(--wp-focus-ring-color)] focus:ring-offset-2 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
+      : "flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full overflow-hidden bg-wp-surface-muted text-sm font-medium text-wp-text-secondary hover:bg-wp-surface-raised focus:outline-none focus:ring-2 focus:ring-[color:var(--wp-focus-ring-color)] focus:ring-offset-2 dark:bg-white/10 dark:text-white dark:hover:bg-white/20";
 
   return (
     <div className="relative" ref={ref}>
@@ -87,7 +92,18 @@ export function UserMenu({ variant = "default" }: UserMenuProps) {
         aria-haspopup="true"
         aria-label="Profil a nastavení"
       >
-        {initials}
+        {advisorAvatarUrl ? (
+          <Image
+            src={advisorAvatarUrl}
+            alt=""
+            width={avatarPx}
+            height={avatarPx}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
+        ) : (
+          initials
+        )}
       </button>
       {open && (
         <div

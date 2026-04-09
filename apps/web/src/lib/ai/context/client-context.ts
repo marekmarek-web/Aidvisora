@@ -25,6 +25,7 @@ import {
   isServiceOverdue,
 } from "./freshness-rules";
 import { computeCompleteness, renderCompletenessHint } from "./completeness";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 const TIMELINE_MAX_ITEMS = 12;
 const MAX_VAR_LENGTH = 2500;
@@ -354,7 +355,8 @@ export async function renderClientAiPromptVariables(raw: ClientAiContextRaw): Pr
 
   const open_items_parts: string[] = [];
   for (const t of raw.openItems.tasks) {
-    open_items_parts.push(`Úkol: ${t.title}${t.dueDate ? " (do " + t.dueDate + ")" : ""}`);
+    const dueDisp = t.dueDate ? formatDisplayDateCs(t.dueDate) || t.dueDate : "";
+    open_items_parts.push(`Úkol: ${t.title}${dueDisp ? " (do " + dueDisp + ")" : ""}`);
   }
   for (const e of raw.openItems.events) {
     if (e.startAt && new Date(e.startAt) >= new Date()) {
@@ -369,20 +371,26 @@ export async function renderClientAiPromptVariables(raw: ClientAiContextRaw): Pr
   const qualityHint = renderCompletenessHint(completeness);
   const service_status = [
     svc.lastServiceDate
-      ? `Poslední servis: ${svc.lastServiceDate}${svc.daysSinceLastService != null ? ` (před ${svc.daysSinceLastService} dny)` : ""}${svc.noContactRisk ? " [!] Klient dlouho bez kontaktu" : ""}`
+      ? `Poslední servis: ${formatDisplayDateCs(svc.lastServiceDate) || svc.lastServiceDate}${svc.daysSinceLastService != null ? ` (před ${svc.daysSinceLastService} dny)` : ""}${svc.noContactRisk ? " [!] Klient dlouho bez kontaktu" : ""}`
       : "[!] Poslední servisní schůzka není k dispozici.",
     svc.nextServiceDue
-      ? `Plánovaná další servisní schůzka (evidence): ${svc.nextServiceDue}${svc.daysUntilNextService != null ? ` (za ${svc.daysUntilNextService} dní)` : ""}${svc.isOverdue ? " [!] overdue servisní revize" : ""}`
+      ? `Plánovaná další servisní schůzka (evidence): ${formatDisplayDateCs(svc.nextServiceDue) || svc.nextServiceDue}${svc.daysUntilNextService != null ? ` (za ${svc.daysUntilNextService} dní)` : ""}${svc.isOverdue ? " [!] overdue servisní revize" : ""}`
       : "[!] Další servis není v evidenci stanoven.",
     svc.serviceCycleMonths ? `Cyklus: ${svc.serviceCycleMonths} měsíců` : "",
     svc.upcomingAnniversaries.length
       ? `Blížící se výročí: ${svc.upcomingAnniversaries
-          .map((item) => `${SEGMENT_LABELS[item.segment] ?? item.segment} (${item.date}, za ${item.daysUntil} dní)`)
+          .map((item) => {
+            const d = formatDisplayDateCs(item.date) || item.date;
+            return `${SEGMENT_LABELS[item.segment] ?? item.segment} (${d}, za ${item.daysUntil} dní)`;
+          })
           .join("; ")}`
       : "Blížící se výročí: bez relevantních záznamů.",
     svc.upcomingFixations.length
       ? `Blížící se fixace: ${svc.upcomingFixations
-          .map((item) => `${SEGMENT_LABELS[item.segment] ?? item.segment} (${item.date}, za ${item.daysUntil} dní)`)
+          .map((item) => {
+            const d = formatDisplayDateCs(item.date) || item.date;
+            return `${SEGMENT_LABELS[item.segment] ?? item.segment} (${d}, za ${item.daysUntil} dní)`;
+          })
           .join("; ")}`
       : "[!] Fixace nelze spolehlivě vyhodnotit ze strukturovaných dat.",
     `Otevřené servisní akce: ${svc.openServiceTasks}`,
@@ -404,7 +412,7 @@ export async function renderClientAiPromptVariables(raw: ClientAiContextRaw): Pr
       `fáze: ${deal.stageName}`,
       `oblast: ${deal.caseType || "neuvedeno"}`,
       `hodnota: ${deal.expectedValue ?? "neuvedeno"}`,
-      `expected close: ${deal.expectedCloseDate ?? "neuvedeno"}`,
+      `expected close: ${deal.expectedCloseDate ? formatDisplayDateCs(deal.expectedCloseDate) || deal.expectedCloseDate : "neuvedeno"}`,
       deal.isNew ? "nový obchod (<14 dní)" : "",
       deal.isStale ? "[!] obchod bez posunu > 60 dní" : "",
       `vlastník: ${deal.assignedTo ?? "neuveden"}`,

@@ -5,6 +5,7 @@ import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db, tasks, contacts, opportunities, meetingNotes, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
 import { logActivity } from "./activity";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 export type TaskRow = {
   id: string;
@@ -445,7 +446,8 @@ export async function moveTaskToNotesBoard(taskId: string): Promise<{ noteId: st
   if (desc) obsahLines.push(desc);
   const obsah = obsahLines.join("\n\n");
   const dueStr = task.dueDate ? String(task.dueDate) : "";
-  const dalsi_kroky = dueStr ? `Termín z úkolu: ${dueStr}` : "";
+  const dueDisplay = dueStr ? formatDisplayDateCs(dueStr) || dueStr : "";
+  const dalsi_kroky = dueDisplay ? `Termín z úkolu: ${dueDisplay}` : "";
 
   const content: Record<string, unknown> = {
     title: task.title.trim(),

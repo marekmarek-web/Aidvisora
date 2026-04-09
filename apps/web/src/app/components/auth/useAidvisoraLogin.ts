@@ -66,6 +66,10 @@ export function useAidvisoraLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [mfaPending, setMfaPending] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
   /** Souhlas s OP / privacy / DPA + AI info při registraci poradce (e-mail i OAuth). */
   const [advisorLegalConsent, setAdvisorLegalConsent] = useState(false);
   const [message, setMessage] = useState(() => getInitialLoginMessage(errorParam));
@@ -200,11 +204,38 @@ export function useAidvisoraLogin() {
 
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        setIsLoading(false);
         if (error) {
+          setIsLoading(false);
           setMessage(error.message);
           return;
         }
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
+          const { data: fac, error: facErr } = await supabase.auth.mfa.listFactors();
+          if (facErr) {
+            setIsLoading(false);
+            setMessage(facErr.message);
+            await supabase.auth.signOut();
+            return;
+          }
+          const totp = fac?.totp?.find((f) => f.status === "verified");
+          if (totp) {
+            const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id });
+            if (chErr || !ch?.id) {
+              setIsLoading(false);
+              setMessage(chErr?.message ?? "Krok 2FA se nepodařilo zahájit.");
+              await supabase.auth.signOut();
+              return;
+            }
+            setMfaFactorId(totp.id);
+            setMfaChallengeId(ch.id);
+            setMfaCode("");
+            setMfaPending(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+        setIsLoading(false);
         window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
       } else {
         if (!advisorLegalConsent) {
@@ -241,6 +272,44 @@ export function useAidvisoraLogin() {
       clientNextPath,
       advisorNextPath,
     ]
+  );
+
+  const cancelMfaAndSignOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setMfaPending(false);
+    setMfaFactorId(null);
+    setMfaChallengeId(null);
+    setMfaCode("");
+    setMessage("");
+  }, []);
+
+  const handleMfaVerify = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!mfaFactorId || !mfaChallengeId) return;
+      const code = mfaCode.replace(/\s/g, "");
+      if (code.length < 6) return;
+      setIsLoading(true);
+      setMessage("");
+      const supabase = createClient();
+      const { error } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: mfaChallengeId,
+        code,
+      });
+      setIsLoading(false);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+      setMfaPending(false);
+      setMfaFactorId(null);
+      setMfaChallengeId(null);
+      setMfaCode("");
+      window.location.href = `/register/complete?next=${encodeURIComponent(advisorNextPath)}`;
+    },
+    [mfaFactorId, mfaChallengeId, mfaCode, advisorNextPath],
   );
 
   const handleOAuthSignIn = useCallback(
@@ -324,6 +393,11 @@ export function useAidvisoraLogin() {
     formRef,
     handleSubmit,
     handleOAuthSignIn,
+    mfaPending,
+    mfaCode,
+    setMfaCode,
+    handleMfaVerify,
+    cancelMfaAndSignOut,
   };
 }
 

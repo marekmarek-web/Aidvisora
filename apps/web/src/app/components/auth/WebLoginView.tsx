@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
 import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
+import { LoginMfaChallenge } from "./LoginMfaChallenge";
 import { AppleIcon, GoogleIcon } from "./loginIcons";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
@@ -34,6 +35,11 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
     formRef,
     handleSubmit,
     handleOAuthSignIn,
+    mfaPending,
+    mfaCode,
+    setMfaCode,
+    handleMfaVerify,
+    cancelMfaAndSignOut,
   } = login;
 
   return (
@@ -143,7 +149,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
             className="h-9 w-auto max-w-[200px] object-contain object-left shrink-0 brightness-0 invert"
           />
         </Link>
-        {!isInviteFlow && (
+        {!isInviteFlow && !mfaPending && (
           <div className="flex flex-wrap gap-4 sm:gap-6 text-sm font-bold justify-end">
             <button
               type="button"
@@ -165,7 +171,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
 
       {isMounted && (
         <div className="relative z-10 w-full max-w-[460px] px-2 sm:px-6 animate-card mt-16 sm:mt-12">
-          {!isInviteFlow && (
+          {!isInviteFlow && !mfaPending && (
             <div className="flex bg-white/5 border border-white/10 rounded-full p-1 mb-8 mx-auto w-fit backdrop-blur-md shadow-lg">
               <button
                 type="button"
@@ -219,6 +225,17 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               </p>
             </div>
 
+            {mfaPending ? (
+              <LoginMfaChallenge
+                variant="web"
+                isLoading={isLoading}
+                message={message}
+                code={mfaCode}
+                setCode={setMfaCode}
+                onSubmit={handleMfaVerify}
+                onCancel={() => void cancelMfaAndSignOut()}
+              />
+            ) : (
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
               {role === "advisor" && !isLogin && (
                 <div>
@@ -341,8 +358,9 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
                 )}
               </button>
             </form>
+            )}
 
-            {!token && (
+            {!mfaPending && !token && (
               <>
                 <div className="mt-8 mb-6 flex items-center gap-4 opacity-50">
                   <div className="h-[1px] bg-white flex-1" />
@@ -369,7 +387,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               </>
             )}
 
-            {token && (
+            {!mfaPending && token && (
               <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left text-xs text-emerald-50/90 space-y-2">
                 <p className="font-semibold text-emerald-200 flex items-center gap-2">
                   <ShieldCheck size={14} className="shrink-0 text-emerald-300" />
@@ -381,7 +399,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               </div>
             )}
 
-            {role === "advisor" && !isInviteFlow && (
+            {!mfaPending && role === "advisor" && !isInviteFlow && (
               <p className="mt-8 text-center text-sm font-medium text-slate-400">
                 {isLogin ? "Nemáte ještě účet?" : "Již máte účet?"}
                 <button
@@ -397,7 +415,7 @@ export function WebLoginView({ login }: { login: AidvisoraLoginState }) {
               </p>
             )}
 
-            {role === "client" && !isInviteFlow && (
+            {!mfaPending && role === "client" && !isInviteFlow && (
               <p className="mt-8 text-center text-xs font-medium text-slate-400 leading-relaxed">
                 Přístup do klientské zóny zakládá výhradně váš finanční poradce. Pokud účet nemáte, prosím kontaktujte ho.
               </p>

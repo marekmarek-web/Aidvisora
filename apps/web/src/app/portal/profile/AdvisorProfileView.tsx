@@ -52,6 +52,7 @@ export type AdvisorProfileInitial = {
   tenantName: string;
   phone?: string | null;
   website?: string | null;
+  reportContactEmail?: string | null;
   reportLogoUrl?: string | null;
   currentSupervisorId?: string | null;
   supervisorOptions?: SupervisorOption[];
@@ -140,6 +141,7 @@ export function AdvisorProfileView({
   const [lastName, setLastName] = useState(parsed.lastName);
   const [phone, setPhone] = useState(initial.phone ?? "");
   const [website, setWebsite] = useState(initial.website ?? "");
+  const [reportContactEmail, setReportContactEmail] = useState(initial.reportContactEmail ?? "");
   const [supervisorUserId, setSupervisorUserId] = useState(initial.currentSupervisorId ?? "");
   const [ico, setIco] = useState("");
   const [address, setAddress] = useState("");
@@ -239,7 +241,10 @@ export function AdvisorProfileView({
       const fd = new FormData();
       fd.set("file", file);
       const url = await uploadAdvisorAvatar(fd);
-      if (url) setAdvisorAvatarUrl(url);
+      if (url) {
+        setAdvisorAvatarUrl(url);
+        router.refresh();
+      }
     } catch (err) {
       setAdvisorAvatarError(err instanceof Error ? err.message : "Nahrání se nezdařilo");
     } finally {
@@ -274,7 +279,11 @@ export function AdvisorProfileView({
     setSaving(true);
     try {
       await updatePortalProfile(fullName ?? "", undefined, supervisorUserId || null);
-      await updateAdvisorReportBranding({ phone: phone.trim() || null, website: website.trim() || null });
+      await updateAdvisorReportBranding({
+        phone: phone.trim() || null,
+        website: website.trim() || null,
+        reportContactEmail: reportContactEmail.trim() || null,
+      });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Uložení selhalo.");
@@ -676,8 +685,21 @@ export function AdvisorProfileView({
               </div>
               <div className="p-6 space-y-4">
                 <p className="text-sm text-[color:var(--wp-text-secondary)]">
-                  Logo se zobrazí na titulní stránce finančního reportu. Telefon a web z této stránky se použijí v záhlaví a zápatí.
+                  Logo na titulní stránce finančního reportu. Telefon, web a volitelný kontaktní e-mail (níže) se použijí v záhlaví a zápatí — přihlašovací e-mail se do PDF nedává.
                 </p>
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 ml-1">
+                    E-mail do PDF (volitelné)
+                  </label>
+                  <input
+                    type="email"
+                    value={reportContactEmail}
+                    onChange={(e) => setReportContactEmail(e.target.value)}
+                    className={inputClass}
+                    placeholder="kontakt@vasa-domena.cz"
+                    autoComplete="email"
+                  />
+                </div>
                 <label className="block cursor-pointer">
                   <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-bold text-[color:var(--wp-text-secondary)] transition-colors min-h-[44px]">
                     {reportLogoUploading ? "Nahrávám…" : "Nahrát logo"}

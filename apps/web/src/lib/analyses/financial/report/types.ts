@@ -11,6 +11,8 @@ export interface ReportBranding {
   advisorPhone?: string;
   /** Web z profilu poradce — tisk/PDF. */
   advisorWebsite?: string;
+  /** Volitelný kontaktní e-mail v zápatí tisku/PDF. */
+  advisorEmail?: string;
 }
 
 export interface BuildPremiumReportOptions {

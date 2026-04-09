@@ -20,6 +20,7 @@ const FALLBACK_BRANDING = {
   logoUrl: null as string | null,
   phone: null as string | null,
   website: null as string | null,
+  reportContactEmail: null as string | null,
 };
 
 function ThemeSelector({ value, onChange }: { value: ReportTheme; onChange: (t: ReportTheme) => void }) {

@@ -7,6 +7,7 @@ import { listEvents } from "@/app/actions/events";
 import { getTasksByOpportunityId } from "@/app/actions/tasks";
 import type { EventRow } from "@/app/actions/events";
 import type { TaskRow } from "@/app/actions/tasks";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 export function OpportunityLinkedTab({
   opportunityId,
@@ -102,7 +103,10 @@ export function OpportunityLinkedTab({
               >
                 {t.title}
                 {t.dueDate ? (
-                  <span className="text-[color:var(--wp-text-secondary)] font-medium"> · {t.dueDate}</span>
+                  <span className="text-[color:var(--wp-text-secondary)] font-medium">
+                    {" "}
+                    · {formatDisplayDateCs(t.dueDate) || t.dueDate}
+                  </span>
                 ) : null}
                 {t.completedAt ? (
                   <span className="text-emerald-600 font-bold text-xs uppercase ml-1">dokončeno</span>

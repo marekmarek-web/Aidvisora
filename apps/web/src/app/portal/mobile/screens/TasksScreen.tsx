@@ -25,6 +25,7 @@ import {
 } from "@/app/shared/mobile-ui/primitives";
 import { VirtualizedColumn } from "@/app/shared/mobile-ui/VirtualizedColumn";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 const TASK_LIST_VIRTUAL_THRESHOLD = 25;
 
@@ -43,7 +44,7 @@ function getDateLabel(due: string | null, todayStr: string): { label: string; is
   if (due === todayStr) return { label: "Dnes", isOverdue: false, isToday: true };
   if (due === tomorrowStr) return { label: "Zítra", isOverdue: false, isToday: false };
   return {
-    label: new Date(due).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" }),
+    label: formatDisplayDateCs(due) || due,
     isOverdue: false,
     isToday: false,
   };

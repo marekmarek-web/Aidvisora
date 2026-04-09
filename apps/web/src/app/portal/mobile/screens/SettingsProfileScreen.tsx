@@ -29,6 +29,7 @@ import {
   setNotificationPrefs,
   setQuickActionsConfig,
   updateAdvisorReportBranding,
+  getAdvisorReportFields,
   uploadAdvisorAvatar,
   getAdvisorBirthdayEmailPrefs,
   updateAdvisorBirthdayEmailPrefs,
@@ -246,6 +247,7 @@ export function SettingsProfileScreen({
   const [quickSaving, setQuickSaving] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [reportPhone, setReportPhone] = useState("");
+  const [reportContactEmail, setReportContactEmail] = useState("");
   const [reportWebsite, setReportWebsite] = useState("");
   const [birthdayOpen, setBirthdayOpen] = useState(false);
   const [bdSigName, setBdSigName] = useState("");
@@ -386,7 +388,11 @@ export function SettingsProfileScreen({
     startTransition(async () => {
       setError(null);
       try {
-        await updateAdvisorReportBranding({ phone: reportPhone, website: reportWebsite });
+        await updateAdvisorReportBranding({
+          phone: reportPhone,
+          website: reportWebsite,
+          reportContactEmail: reportContactEmail.trim() || null,
+        });
         setReportOpen(false);
         showSuccess("Report branding byl uložen.");
       } catch (e) {
@@ -404,6 +410,7 @@ export function SettingsProfileScreen({
       try {
         const next = await uploadAdvisorAvatar(formData);
         setAvatarUrl(next);
+        router.refresh();
         showSuccess("Avatar byl aktualizován.");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Avatar se nepodařilo nahrát.");
@@ -537,8 +544,15 @@ export function SettingsProfileScreen({
         <SettingsRow
           icon={FileText}
           label="Report branding"
-          sublabel="Telefon a web v PDF reportech"
-          onClick={() => setReportOpen(true)}
+          sublabel="Telefon, web a e-mail v PDF"
+          onClick={() => {
+            void getAdvisorReportFields().then((f) => {
+              setReportPhone(f.phone ?? "");
+              setReportWebsite(f.website ?? "");
+              setReportContactEmail(f.reportContactEmail ?? "");
+            });
+            setReportOpen(true);
+          }}
         />
         <SettingsRow
           icon={Cake}
@@ -758,6 +772,13 @@ export function SettingsProfileScreen({
             className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
             placeholder="Web do reportu"
             type="url"
+          />
+          <input
+            value={reportContactEmail}
+            onChange={(e) => setReportContactEmail(e.target.value)}
+            className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-sm"
+            placeholder="E-mail do PDF (volitelné)"
+            type="email"
           />
           <button
             type="button"

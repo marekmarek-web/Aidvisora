@@ -41,6 +41,7 @@ import type {
   TaskDueItem,
   UrgentItem,
 } from "@/lib/ai/dashboard-types";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -332,7 +333,7 @@ function TasksWidget({ kpis }: { kpis: DashboardKpis }) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     if (due === tomorrow.toISOString().slice(0, 10)) return "Zítra";
-    return new Date(due).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" });
+    return formatDisplayDateCs(due) || due;
   };
 
   if (all.length === 0) {

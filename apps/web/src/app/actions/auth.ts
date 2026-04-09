@@ -794,6 +794,24 @@ export async function listSupervisorOptions(): Promise<SupervisorOption[]> {
   }));
 }
 
+function mapPortalPasswordUpdateError(err: { message: string; code?: string }): string {
+  const msg = err.message.toLowerCase();
+  const code = (err.code ?? "").toLowerCase();
+  if (msg.includes("same") || msg.includes("identical") || msg.includes("reuse")) {
+    return "Nové heslo se musí lišit od předchozího.";
+  }
+  if (msg.includes("weak") || msg.includes("strength") || msg.includes("too short") || code.includes("weak")) {
+    return "Heslo je příliš slabé. Použijte delší heslo nebo kombinaci znaků podle pravidel projektu.";
+  }
+  if (msg.includes("reauth") || msg.includes("recent login") || msg.includes("session")) {
+    return "Z bezpečnostních důvodů se znovu přihlaste a pak změňte heslo.";
+  }
+  if (msg.includes("rate limit") || msg.includes("too many")) {
+    return "Příliš mnoho pokusů. Zkuste to za chvíli znovu.";
+  }
+  return err.message;
+}
+
 /** Změna hesla přihlášeného uživatele (Supabase Auth). */
 export async function updatePortalPassword(newPassword: string): Promise<void> {
   await requireAuthInAction();
@@ -801,5 +819,5 @@ export async function updatePortalPassword(newPassword: string): Promise<void> {
   if (!trimmed || trimmed.length < 6) throw new Error("Heslo musí mít alespoň 6 znaků.");
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: trimmed });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mapPortalPasswordUpdateError(error));
 }

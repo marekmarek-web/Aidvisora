@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, type ComponentType } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -36,6 +37,7 @@ import {
   User,
   Command,
   FileX2,
+  Megaphone,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePortalBadgeCounts } from "@/app/portal/PortalBadgeCountsContext";
@@ -136,6 +138,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     items: [
       { href: "/portal/contacts", label: "Klienti", Icon: Users, hoverAnim: "group-hover:scale-110" },
       { href: "/portal/households", label: "Domácnosti", Icon: Building2, hoverAnim: "group-hover:-translate-y-1" },
+      { href: "/portal/email-campaigns", label: "E-mail kampaně", Icon: Megaphone, hoverAnim: "group-hover:scale-110" },
     ],
   },
   {
@@ -235,6 +238,8 @@ function isItemActive(
 
 interface PortalSidebarProps {
   showTeamOverview?: boolean;
+  /** Profilová fotka poradce (z layoutu / advisor_preferences). */
+  advisorAvatarUrl?: string | null;
   width?: number;
   collapsed?: boolean;
   /** Desktop 768–1099px: menu je překrývací drawer (hamburger), ne docked sidebar. */
@@ -263,6 +268,7 @@ function filterTerminationNavItem(sections: SectionConfig[], terminationsEnabled
 
 export function PortalSidebar({
   showTeamOverview,
+  advisorAvatarUrl = null,
   width = PORTAL_SIDEBAR_WIDTH_PX,
   collapsed = false,
   narrowDesktopOverlay = false,
@@ -777,8 +783,19 @@ export function PortalSidebar({
               title={contentCollapsed ? (userName ?? userEmail ?? "Profil") : undefined}
             >
               <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-aidv-dashboard-cta to-aidv-accent-purple flex items-center justify-center text-white font-black text-sm shrink-0 shadow-inner">
-                  {getUserMenuInitials({ displayName: userName, email: userEmail })}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-aidv-dashboard-cta to-aidv-accent-purple flex items-center justify-center text-white font-black text-sm shrink-0 shadow-inner overflow-hidden">
+                  {advisorAvatarUrl ? (
+                    <Image
+                      src={advisorAvatarUrl}
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    getUserMenuInitials({ displayName: userName, email: userEmail })
+                  )}
                 </div>
                 {!contentCollapsed && (
                   <div className="min-w-0">

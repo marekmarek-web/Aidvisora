@@ -56,3 +56,4 @@ export * from "./termination-enums";
 export * from "./termination-catalogs";
 export * from "./termination-workflow";
 export * from "./fund-add-requests";
+export * from "./email-campaigns";

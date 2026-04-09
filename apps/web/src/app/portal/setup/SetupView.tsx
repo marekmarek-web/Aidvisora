@@ -13,7 +13,6 @@ import {
   Phone,
   Building,
   MapPin,
-  Shield,
   Camera,
   ChevronRight,
   ChevronUp,
@@ -43,6 +42,7 @@ import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripe
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { PortalAdvisorMfaCard } from "@/app/components/auth/PortalAdvisorMfaCard";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
 import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
@@ -226,6 +226,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const [advisorAvatarError, setAdvisorAvatarError] = useState<string | null>(null);
   const [reportPhone, setReportPhone] = useState("");
   const [reportWebsite, setReportWebsite] = useState("");
+  const [reportContactEmail, setReportContactEmail] = useState("");
   const [reportSaving, setReportSaving] = useState(false);
   const [workspaceBirthdayTheme, setWorkspaceBirthdayTheme] = useState<"premium_dark" | "birthday_gif">("premium_dark");
   const [workspaceBirthdaySaving, setWorkspaceBirthdaySaving] = useState(false);
@@ -241,6 +242,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       getAdvisorReportFields().then((f) => {
         setReportPhone(f.phone ?? "");
         setReportWebsite(f.website ?? "");
+        setReportContactEmail(f.reportContactEmail ?? "");
       });
       getAdvisorBirthdayEmailPrefs().then((p) => {
         setBdSigName(p.birthdaySignatureName ?? "");
@@ -1123,16 +1125,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   </button>
                 </form>
               </div>
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-[24px] shadow-lg text-white">
-                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center mb-4">
-                  <Shield size={20} className="text-white" />
-                </div>
-                <h3 className="font-bold text-lg mb-2">Dvoufázové ověření</h3>
-                <p className="text-sm font-medium text-[color:var(--wp-text-tertiary)] leading-relaxed mb-5">Zvyšte bezpečnost svého účtu pomocí aplikace Authenticator.</p>
-                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="w-full bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors min-h-[44px]">
-                  Aktivovat 2FA
-                </button>
-              </div>
+              <PortalAdvisorMfaCard />
             </div>
           </div>
         )}
@@ -1219,16 +1212,28 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mt-1">Pro záhlaví a zápatí</p>
                 </div>
                 <div className="p-4 space-y-3">
-                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3">Do záhlaví a zápatí PDF se použijí: jméno a příjmení z vašeho profilu, e-mail z přihlášení a níže vyplněné pole.</p>
+                  <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3">
+                    Do záhlaví a zápatí PDF se použijí jméno a příjmení z profilu a níže uvedená pole. Přihlašovací e-mail se do reportu nedává — kontaktní e-mail do PDF je volitelný.
+                  </p>
                   <div className="grid grid-cols-1 gap-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-[color:var(--wp-surface-card-border)]">
                       <span className="text-[color:var(--wp-text-tertiary)]">Jméno, příjmení</span>
                       <span className="font-medium text-[color:var(--wp-text-secondary)]">{[firstName, lastName].filter(Boolean).join(" ") || "—"}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[color:var(--wp-surface-card-border)]">
-                      <span className="text-[color:var(--wp-text-tertiary)]">E-mail</span>
+                      <span className="text-[color:var(--wp-text-tertiary)]">E-mail (přihlášení)</span>
                       <span className="font-medium text-[color:var(--wp-text-secondary)]">{initial.email || "—"}</span>
                     </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>E-mail do zápatí PDF (volitelné)</label>
+                    <input
+                      type="email"
+                      value={reportContactEmail}
+                      onChange={(e) => setReportContactEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="např. kontakt@vasa-domena.cz"
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Telefon (do zápatí)</label>
@@ -1244,7 +1249,11 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                     onClick={async () => {
                       setReportSaving(true);
                       try {
-                        await updateAdvisorReportBranding({ phone: reportPhone.trim() || null, website: reportWebsite.trim() || null });
+                        await updateAdvisorReportBranding({
+                          phone: reportPhone.trim() || null,
+                          website: reportWebsite.trim() || null,
+                          reportContactEmail: reportContactEmail.trim() || null,
+                        });
                         toast.showToast("Údaje pro PDF uloženy.");
                       } catch {
                         toast.showToast("Uložení se nezdařilo.", "error");

@@ -28,6 +28,7 @@ const FALLBACK_INITIAL = {
   tenantName: "—",
   phone: "",
   website: "",
+  reportContactEmail: "",
   reportLogoUrl: null as string | null,
   currentSupervisorId: null as string | null,
   supervisorOptions: [] as SupervisorOption[],
@@ -72,6 +73,7 @@ export default async function ProfilePage() {
       .select({
         phone: advisorPreferences.phone,
         website: advisorPreferences.website,
+        reportContactEmail: advisorPreferences.reportContactEmail,
         reportLogoUrl: advisorPreferences.reportLogoUrl,
       })
       .from(advisorPreferences)
@@ -105,6 +107,7 @@ export default async function ProfilePage() {
       tenantName,
       phone: prefsRow?.phone ?? "",
       website: prefsRow?.website ?? "",
+      reportContactEmail: prefsRow?.reportContactEmail ?? "",
       reportLogoUrl: prefsRow?.reportLogoUrl ?? null,
       currentSupervisorId: membershipRow?.parentId ?? null,
       supervisorOptions,

@@ -643,6 +643,7 @@ ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_logo_url text;
 
 -- Fondová knihovna (FA): pořadí a zapnutí fondů na úrovni poradce
 ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS fund_library jsonb;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_contact_email text;
 
 CREATE TABLE IF NOT EXISTS fund_add_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -661,6 +662,35 @@ CREATE TABLE IF NOT EXISTS fund_add_requests (
 
 CREATE INDEX IF NOT EXISTS fund_add_requests_tenant_created_idx
   ON fund_add_requests (tenant_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS email_campaigns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  created_by_user_id text NOT NULL,
+  name text NOT NULL,
+  subject text NOT NULL,
+  body_html text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  sent_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS email_campaign_recipients (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  tenant_id uuid NOT NULL,
+  campaign_id uuid NOT NULL REFERENCES email_campaigns(id) ON DELETE CASCADE,
+  contact_id uuid NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  error_message text,
+  provider_message_id text,
+  sent_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS email_campaigns_tenant_id_idx ON email_campaigns (tenant_id);
+CREATE INDEX IF NOT EXISTS email_campaign_recipients_campaign_id_idx ON email_campaign_recipients (campaign_id);
 
 DO $$ BEGIN
   ALTER TABLE tasks

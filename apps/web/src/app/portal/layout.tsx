@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import Script from "next/script";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getAdvisorAvatarUrl } from "@/app/actions/preferences";
 import { getContactsCount } from "@/app/actions/contacts";
 import { PortalShell } from "./PortalShell";
 import { PortalAppProviders } from "./PortalAppProviders";
@@ -60,6 +61,12 @@ export default async function PortalLayout({
     }
   }
   const showTeamOverview = auth.roleName === "Admin" || auth.roleName === "Director" || auth.roleName === "Manager" || auth.roleName === "Advisor";
+  let initialAdvisorAvatarUrl: string | null = null;
+  try {
+    initialAdvisorAvatarUrl = await getAdvisorAvatarUrl();
+  } catch {
+    initialAdvisorAvatarUrl = null;
+  }
   const cookieStore = await cookies();
   const mobileUiEnabled = isMobileUiV1EnabledForRequest({
     userAgent: headerList.get("user-agent"),
@@ -99,6 +106,7 @@ export default async function PortalLayout({
           <PortalShell
             showTeamOverview={showTeamOverview}
             initialQuickActions={initialQuickActions}
+            initialAdvisorAvatarUrl={initialAdvisorAvatarUrl}
           >
             {children}
           </PortalShell>

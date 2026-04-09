@@ -1,4 +1,5 @@
 import type { AdvisorChatAiBundle } from "./advisor-chat-ai-types";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 /** Čitelný blok pro prompt — oddělený od instrukcí modelu. */
 export function formatAdvisorChatBundleForPrompt(bundle: AdvisorChatAiBundle): string {
@@ -24,7 +25,9 @@ export function formatAdvisorChatBundleForPrompt(bundle: AdvisorChatAiBundle): s
   if (bundle.openTasks.length) {
     lines.push("Otevřené úkoly (název, termín):");
     for (const t of bundle.openTasks) {
-      lines.push(`- ${t.title}${t.dueDate ? ` (do ${t.dueDate})` : ""}`);
+      lines.push(
+        `- ${t.title}${t.dueDate ? ` (do ${formatDisplayDateCs(t.dueDate) || t.dueDate})` : ""}`,
+      );
     }
   } else {
     lines.push("Otevřené úkoly: žádné v seznamu.");

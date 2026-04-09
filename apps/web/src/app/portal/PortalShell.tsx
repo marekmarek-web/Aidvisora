@@ -55,10 +55,12 @@ export function PortalShell({
   children,
   showTeamOverview,
   initialQuickActions,
+  initialAdvisorAvatarUrl,
 }: {
   children: React.ReactNode;
   showTeamOverview?: boolean;
   initialQuickActions?: QuickActionsConfig;
+  initialAdvisorAvatarUrl?: string | null;
 }) {
   const headerSearchRef = useRef<PortalHeaderSearchHandle>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
@@ -151,6 +153,7 @@ export function PortalShell({
         <PortalShellInner
           showTeamOverview={showTeamOverview}
           initialQuickActions={initialQuickActions}
+          initialAdvisorAvatarUrl={initialAdvisorAvatarUrl}
           isDesktop={isDesktop}
           isNarrowDesktop={isNarrowDesktop}
           headerSearchRef={headerSearchRef}
@@ -176,6 +179,7 @@ export function PortalShell({
 function PortalShellInner({
   showTeamOverview,
   initialQuickActions,
+  initialAdvisorAvatarUrl,
   isDesktop,
   isNarrowDesktop,
   headerSearchRef,
@@ -192,6 +196,7 @@ function PortalShellInner({
 }: {
   showTeamOverview?: boolean;
   initialQuickActions?: QuickActionsConfig;
+  initialAdvisorAvatarUrl?: string | null;
   isDesktop: boolean;
   isNarrowDesktop: boolean;
   headerSearchRef: React.RefObject<PortalHeaderSearchHandle | null>;
@@ -265,6 +270,7 @@ function PortalShellInner({
       </div>
       <PortalSidebar
           showTeamOverview={showTeamOverview}
+          advisorAvatarUrl={initialAdvisorAvatarUrl}
           width={sidebarWidth}
           collapsed={sidebarCollapsed}
           narrowDesktopOverlay={narrowDesktopOverlay}
@@ -324,7 +330,7 @@ function PortalShellInner({
               ) : null}
               <div className="hidden sm:flex items-center gap-2 md:gap-5">
                 <NotificationBell />
-                <UserMenu variant="portalHeader" />
+                <UserMenu variant="portalHeader" advisorAvatarUrl={initialAdvisorAvatarUrl} />
               </div>
               <div className="relative sm:hidden">
                 <button
@@ -348,7 +354,7 @@ function PortalShellInner({
                           <NotificationBell />
                         </div>
                         <div className="px-2">
-                          <UserMenu variant="portalHeader" />
+                          <UserMenu variant="portalHeader" advisorAvatarUrl={initialAdvisorAvatarUrl} />
                         </div>
                       </div>
                     </div>

@@ -17,6 +17,8 @@ export const advisorPreferences = pgTable(
     avatarUrl: text("avatar_url"),
     phone: text("phone"),
     website: text("website"),
+    /** Volitelný kontaktní e-mail v PDF reportu (ne přihlašovací). */
+    reportContactEmail: text("report_contact_email"),
     reportLogoUrl: text("report_logo_url"),
     publicBookingToken: text("public_booking_token"),
     publicBookingEnabled: boolean("public_booking_enabled").default(false).notNull(),

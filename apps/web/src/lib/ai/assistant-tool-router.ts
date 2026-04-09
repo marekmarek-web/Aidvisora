@@ -43,6 +43,7 @@ import {
   buildValidationWarnings,
   computeWriteStepPreflight,
 } from "./assistant-execution-plan";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import { executePlan, buildVerifiedResult } from "./assistant-execution-engine";
 import {
   verifyWriteContextSafety,
@@ -458,7 +459,7 @@ export async function routeAssistantMessage(
       "Záznam do CRM proběhl.",
       "✓ Obchod vytvořen",
       "✓ Úkol vytvořen",
-      write.dueDate ? `Termín: ${write.dueDate}` : "",
+      write.dueDate ? `Termín: ${formatDisplayDateCs(write.dueDate) || write.dueDate}` : "",
     ].filter(Boolean);
     if (intent.noEmail) {
       lines.push("E-mail nebyl generován (dle zadání).");
@@ -1059,7 +1060,7 @@ export async function routeAssistantMessageCanonical(
       "Záznam do CRM proběhl.",
       "✓ Obchod vytvořen",
       "✓ Úkol vytvořen",
-      write.dueDate ? `Termín: ${write.dueDate}` : "",
+      write.dueDate ? `Termín: ${formatDisplayDateCs(write.dueDate) || write.dueDate}` : "",
     ].filter(Boolean);
     if (legacyIntent.noEmail) lines.push("E-mail nebyl generován (dle zadání).");
     return {

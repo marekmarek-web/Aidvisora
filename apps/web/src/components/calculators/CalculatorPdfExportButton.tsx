@@ -18,6 +18,7 @@ const FALLBACK_ADVISOR: AdvisorReportBranding = {
   logoUrl: null,
   phone: null,
   website: null,
+  reportContactEmail: null,
 };
 
 function mapAdvisorToReportBranding(b: AdvisorReportBranding): ReportBranding {
@@ -27,6 +28,7 @@ function mapAdvisorToReportBranding(b: AdvisorReportBranding): ReportBranding {
     logoUrl: b.logoUrl ?? undefined,
     advisorPhone: b.phone?.trim() || undefined,
     advisorWebsite: b.website?.trim() || undefined,
+    advisorEmail: b.reportContactEmail?.trim() || undefined,
   };
 }
 

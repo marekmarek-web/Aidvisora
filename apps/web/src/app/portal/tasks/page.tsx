@@ -55,6 +55,7 @@ import {
   LayoutDashboard,
   FileText,
 } from "lucide-react";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 type Filter = "all" | "today" | "week" | "overdue" | "completed";
 
@@ -103,7 +104,7 @@ function formatDate(d: string | null) {
   if (diff >= 0 && diff < dayMs) return "Dnes";
   if (diff >= dayMs && diff < 2 * dayMs) return "Zítra";
   if (diff >= -dayMs && diff < 0) return "Včera";
-  return date.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+  return formatDisplayDateCs(d) || "—";
 }
 
 function isOverdue(dueDate: string | null, completedAt: Date | null) {

@@ -12,6 +12,7 @@ import {
 import { listEvents } from "@/app/actions/events";
 import { getTasksByOpportunityId } from "@/app/actions/tasks";
 import type { OpportunityDetail } from "@/app/actions/pipeline";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 function formatCurrencyCzk(val: number) {
   return new Intl.NumberFormat("cs-CZ", {
@@ -61,7 +62,9 @@ export function OpportunitySidebar({ opportunity }: { opportunity: OpportunityDe
             (t) => !t.completedAt && t.dueDate && t.dueDate >= nowStr.slice(0, 10),
           )[0];
           setNextActivity(
-            nextTask ? `${nextTask.title} (${nextTask.dueDate})` : null,
+            nextTask
+              ? `${nextTask.title} (${formatDisplayDateCs(nextTask.dueDate) || nextTask.dueDate})`
+              : null,
           );
         }
       })
@@ -71,6 +74,9 @@ export function OpportunitySidebar({ opportunity }: { opportunity: OpportunityDe
   const closeDateStr = (() => {
     const raw = opportunity.expectedCloseDate;
     if (raw == null || raw === "") return "—";
+    const ymd = String(raw).slice(0, 10);
+    const cs = formatDisplayDateCs(ymd);
+    if (cs) return cs;
     const d = new Date(raw);
     return Number.isNaN(d.getTime()) ? String(raw) : d.toLocaleDateString("cs-CZ");
   })();

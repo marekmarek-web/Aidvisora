@@ -15,6 +15,7 @@ import {
   Bell,
   Settings,
   Users,
+  Megaphone,
 } from "lucide-react";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { MobileCard, MobileSection } from "@/app/shared/mobile-ui/primitives";
@@ -56,6 +57,7 @@ const TOOL_SECTIONS: ToolSection[] = [
     items: [
       { label: "Domácnosti", href: "/portal/households", icon: Home },
       { label: "Studené kontakty", href: "/portal/cold-contacts", icon: Users },
+      { label: "E-mail kampaně", href: "/portal/email-campaigns", icon: Megaphone },
     ],
   },
   {
