@@ -24,6 +24,7 @@ import {
   roles,
 } from "db";
 import { buildCareerEvaluationViewModel } from "@/lib/career/career-evaluation-vm";
+import { buildCareerCoachingPackage, type CareerCoachingPackage } from "@/lib/career/career-coaching";
 import { buildCareerInsights } from "@/lib/career/career-insights";
 import type { CareerEvaluationViewModel } from "@/lib/career/career-evaluation-vm";
 import type { CareerInsight } from "@/lib/career/career-insights";
@@ -883,6 +884,8 @@ export type TeamMemberDetail = {
   careerEvaluation: CareerEvaluationViewModel;
   /** Krátké manažerské insighty odvozené z CRM + kariéry (ne řád) */
   careerInsights: CareerInsight[];
+  /** Coaching, 1:1 agenda, doporučená akce, CTA předvolby */
+  careerCoaching: CareerCoachingPackage;
 };
 
 export async function getTeamMemberDetail(
@@ -950,6 +953,35 @@ export async function getTeamMemberDetail(
       : null
   );
 
+  const coachingAdaptation =
+    adaptation != null
+      ? {
+          adaptationStatus: adaptation.adaptationStatus,
+          daysInTeam: adaptation.daysInTeam,
+          adaptationScore: adaptation.adaptationScore,
+          warnings: adaptation.warnings,
+          incompleteChecklistLabels: adaptation.checklist.filter((c) => !c.completed).map((c) => c.label),
+        }
+      : null;
+
+  const coachingMetrics =
+    metrics != null
+      ? {
+          meetingsThisPeriod: metrics.meetingsThisPeriod,
+          unitsThisPeriod: metrics.unitsThisPeriod,
+          activityCount: metrics.activityCount,
+          daysWithoutActivity: metrics.daysWithoutActivity,
+          directReportsCount: metrics.directReportsCount,
+        }
+      : null;
+
+  const careerCoaching = buildCareerCoachingPackage(
+    careerEvaluation,
+    coachingMetrics,
+    coachingAdaptation,
+    memberAlerts.map((a) => a.title)
+  );
+
   const advisorPoints: TeamPerformancePoint[] = [];
   const now = new Date();
   for (let i = 5; i >= 0; i--) {
@@ -993,6 +1025,7 @@ export async function getTeamMemberDetail(
     careerPositionCode: member.careerPositionCode,
     careerEvaluation,
     careerInsights,
+    careerCoaching,
   };
 }
 

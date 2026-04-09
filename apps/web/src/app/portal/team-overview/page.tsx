@@ -15,14 +15,20 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function TeamOverviewPage() {
+export default async function TeamOverviewPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ period?: string }>;
+}) {
   const auth = await requireAuth();
   if (!hasPermission(auth.roleName as RoleName, "team_overview:read")) {
     redirect("/portal");
   }
 
   const canCreateTeamCalendar = hasPermission(auth.roleName as RoleName, "team_calendar:write");
-  const period: "week" | "month" | "quarter" = "month";
+  const sp = (await searchParams) ?? {};
+  const period: "week" | "month" | "quarter" =
+    sp.period === "week" || sp.period === "month" || sp.period === "quarter" ? sp.period : "month";
   const defaultScope: TeamOverviewScope =
     auth.roleName === "Advisor" || auth.roleName === "Viewer"
       ? "me"

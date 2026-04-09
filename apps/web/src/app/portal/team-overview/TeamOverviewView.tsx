@@ -37,6 +37,7 @@ import clsx from "clsx";
 import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
+import { buildTeamCoachingAttentionList } from "@/lib/career/career-coaching";
 import { buildTeamCareerSummaryBlock } from "@/lib/career/team-career-aggregate";
 import type { EvaluationCompleteness, ProgressEvaluation } from "@/lib/career/types";
 
@@ -462,6 +463,41 @@ export function TeamOverviewView({
     return buildTeamCareerSummaryBlock(rows, nu);
   }, [members, metrics, newcomers]);
 
+  const coachingAttention = useMemo(() => {
+    if (scope === "me") return [];
+    const newcomerByUser = new Map(newcomers.map((n) => [n.userId, n]));
+    const rows = members
+      .map((m) => {
+        const met = metricsByUser.get(m.userId);
+        if (!met) return null;
+        const n = newcomerByUser.get(m.userId);
+        return {
+          userId: m.userId,
+          displayName: m.displayName,
+          email: m.email,
+          careerEvaluation: met.careerEvaluation,
+          metrics: {
+            meetingsThisPeriod: met.meetingsThisPeriod,
+            unitsThisPeriod: met.unitsThisPeriod,
+            activityCount: met.activityCount,
+            daysWithoutActivity: met.daysWithoutActivity,
+            directReportsCount: met.directReportsCount,
+          },
+          adaptation: n
+            ? {
+                adaptationStatus: n.adaptationStatus,
+                daysInTeam: n.daysInTeam,
+                adaptationScore: n.adaptationScore,
+                warnings: n.warnings,
+                incompleteChecklistLabels: n.checklist.filter((c) => !c.completed).map((c) => c.label),
+              }
+            : null,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r != null);
+    return buildTeamCoachingAttentionList(rows, 5);
+  }, [members, metrics, newcomers, scope]);
+
   const scopeOptions: { value: TeamOverviewScope; label: string }[] =
     currentRole === "Advisor" || currentRole === "Viewer"
       ? [{ value: "me", label: "Já" }]
@@ -548,11 +584,13 @@ export function TeamOverviewView({
               <UserPlus className="w-4 h-4 shrink-0" />
               Pozvat člena
             </Link>
-            <TeamCalendarButtons
-              canCreate={canCreateTeamCalendar}
-              onOpenEvent={() => setTeamCalendarModal("event")}
-              onOpenTask={() => setTeamCalendarModal("task")}
-            />
+            <div id="team-calendar-actions" className="flex flex-wrap gap-2">
+              <TeamCalendarButtons
+                canCreate={canCreateTeamCalendar}
+                onOpenEvent={() => setTeamCalendarModal("event")}
+                onOpenTask={() => setTeamCalendarModal("task")}
+              />
+            </div>
             <CustomDropdown
               value={scope}
               onChange={(id) => setScope(id as TeamOverviewScope)}
@@ -664,6 +702,43 @@ export function TeamOverviewView({
                   })}
                 </ul>
               )}
+              {scope !== "me" && coachingAttention.length > 0 ? (
+                <div className="mt-4 pt-4 border-t border-[color:var(--wp-surface-card-border)]">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-violet-800/90 mb-2 flex items-center gap-2">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    Růst — kdo potřebuje krok
+                  </h3>
+                  <p className="text-[11px] text-[color:var(--wp-text-secondary)] mb-2">
+                    Kombinace kariéry, adaptace a CRM signálů — doporučený typ akce, ne hodnocení člověka.
+                  </p>
+                  <ul className="space-y-2 overflow-y-auto max-h-52 pr-1">
+                    {coachingAttention.map((c) => {
+                      const mem = members.find((m) => m.userId === c.userId);
+                      const name = mem ? displayName(mem) : c.displayName || c.email || "Člen týmu";
+                      return (
+                        <li key={c.userId}>
+                          <Link
+                            href={memberDetailHref(c.userId)}
+                            className="block rounded-lg border border-violet-200/60 bg-violet-50/40 px-3 py-2 hover:bg-violet-50/70 transition"
+                          >
+                            <p className="font-medium text-[color:var(--wp-text)] text-sm">{name}</p>
+                            <p className="text-[11px] text-[color:var(--wp-text-secondary)] mt-0.5">{c.reasonCs}</p>
+                            <p className="text-[11px] font-semibold text-violet-900 mt-1">{c.recommendedActionLabelCs}</p>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {canCreateTeamCalendar ? (
+                    <a
+                      href="#team-calendar-actions"
+                      className="inline-block mt-2 text-xs font-medium text-indigo-600 hover:underline"
+                    >
+                      Týmová schůzka / úkol (výběr více lidí) — otevřít akce výše
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </section>

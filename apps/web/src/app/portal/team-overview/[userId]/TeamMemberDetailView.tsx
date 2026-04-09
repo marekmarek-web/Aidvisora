@@ -12,8 +12,10 @@ import {
   Check,
   X,
   Lightbulb,
+  Target,
 } from "lucide-react";
 import type { TeamMemberDetail } from "@/app/actions/team-overview";
+import { MemberCareerQuickActions } from "./MemberCareerQuickActions";
 import { formatCareerProgramLabel, formatCareerTrackLabel } from "@/lib/career/evaluate-career-progress";
 import type { EvaluationCompleteness, ProgressEvaluation } from "@/lib/career/types";
 
@@ -101,7 +103,28 @@ function buildCoachingSummary(detail: TeamMemberDetail): string[] {
   return bullets;
 }
 
-export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
+function agendaCategoryLabel(c: "evidenced" | "crm_signal" | "manual"): string {
+  switch (c) {
+    case "evidenced":
+      return "Evidované";
+    case "crm_signal":
+      return "CRM signál";
+    case "manual":
+      return "K ověření ručně";
+    default:
+      return c;
+  }
+}
+
+export function TeamMemberDetailView({
+  detail,
+  canCreateTeamCalendar,
+  canEditTeamCareer,
+}: {
+  detail: TeamMemberDetail;
+  canCreateTeamCalendar: boolean;
+  canEditTeamCareer: boolean;
+}) {
   const name = detail.displayName || "Člen týmu";
   const m = detail.metrics;
   const coachingBullets = buildCoachingSummary(detail);
@@ -241,6 +264,65 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
               </ul>
             </div>
           ) : null}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-3 flex items-center gap-2">
+          <Target className="w-5 h-5 text-indigo-500" />
+          Coaching a 1:1
+        </h2>
+        <div className="rounded-2xl border border-indigo-200/60 bg-[color:var(--wp-surface-card)] p-5 shadow-sm space-y-5">
+          <p className="text-xs text-[color:var(--wp-text-secondary)]">
+            Praktická příprava na rozhovor — podpůrný tón, bez dozoru a bez tvrzení o „oficiální připravenosti k postupu“. Rozlišujte evidované údaje,
+            CRM signály a ruční ověření řádu.
+          </p>
+          {detail.careerCoaching.adaptationGrowthLine ? (
+            <div className="rounded-xl bg-blue-50/60 border border-blue-200/50 px-3 py-2 text-sm text-[color:var(--wp-text)]">
+              <span className="text-xs font-bold uppercase tracking-wide text-blue-900/80">Růst a adaptace</span>
+              <p className="mt-1">{detail.careerCoaching.adaptationGrowthLine}</p>
+            </div>
+          ) : null}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-1">Další doporučený krok</p>
+            <p className="text-sm font-medium text-[color:var(--wp-text)]">{detail.careerCoaching.suggestedNextStepLine}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-900">
+              Doporučená akce: {detail.careerCoaching.recommendedActionLabelCs}
+            </span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--wp-text)] mb-2">Doporučení pro coaching</p>
+            <ul className="list-disc list-inside text-sm text-[color:var(--wp-text-secondary)] space-y-1.5">
+              {detail.careerCoaching.coachingFocusBullets.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--wp-text)] mb-2">Doporučená agenda na 1:1</p>
+            <ul className="space-y-2">
+              {detail.careerCoaching.oneOnOneAgenda.map((item, i) => (
+                <li key={i} className="flex gap-2 text-sm text-[color:var(--wp-text-secondary)]">
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[color:var(--wp-text-tertiary)] w-24 pt-0.5">
+                    {agendaCategoryLabel(item.category)}
+                  </span>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-3 py-2">
+            <p className="text-xs font-semibold text-[color:var(--wp-text)] mb-1">Doporučený follow-up po 1:1</p>
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">{detail.careerCoaching.followUpSuggestion}</p>
+          </div>
+          <MemberCareerQuickActions
+            memberUserId={detail.userId}
+            coaching={detail.careerCoaching}
+            canCreateTeamCalendar={canCreateTeamCalendar}
+            canEditTeamCareer={canEditTeamCareer}
+          />
         </div>
       </section>
 

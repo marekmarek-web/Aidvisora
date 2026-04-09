@@ -169,7 +169,43 @@ Na `TeamMemberMetrics` je navíc **`directReportsCount`** (počet přímých pod
 
 ---
 
-## 9. Co jde spočítat z dnešních dat (stručně)
+## 9. Fáze 4 — manažerský coaching a doporučené akce
+
+### Coaching summary a 1:1 agenda
+
+- **`buildCareerCoachingPackage`** (`apps/web/src/lib/career/career-coaching.ts`) skládá z: kariérního VM, CRM metrik, adaptačního řezu (včetně neuhájených kroků checklistu), titulků alertů u člena.
+- Výsledek je na `TeamMemberDetail` jako **`careerCoaching`**: doporučený typ akce, krátké body **Doporučení pro coaching** (odlišné podle **careerTrack**), **Doporučená agenda na 1:1** s kategoriemi *Evidované / CRM signál / K ověření ručně*, **Další doporučený krok**, **follow-up** po 1:1, případně řádek **Růst a adaptace** (nováček + start ve větvi).
+- UI: sekce **„Coaching a 1:1“** v `TeamMemberDetailView.tsx`.
+
+### Recommended action mapping
+
+- **`deriveRecommendedCareerAction`** mapuje stav na např. `adaptation_checkin`, `one_on_one`, `data_completion`, `performance_coaching`, `team_meeting_followup`, `monitor_only` — čistá derivační funkce, **ne** workflow engine; úpravy jen v jednom souboru.
+
+### Propojení s adaptací nováčků
+
+- Checklist adaptace (chybějící položky) a stav se promítají do agendy a do odstavce růst/adaptace; stejný zdroj dat jako přehled nováčků v Team Overview.
+
+### Team Overview — lehká akční vrstva
+
+- **`buildTeamCoachingAttentionList`** — v manažerském briefingu (pravý sloupec) blok **„Růst — kdo potřebuje krok“**: až 5 lidí, stručný důvod a doporučená akce; odkaz na detail; anchor **`#team-calendar-actions`** pro týmové schůzky/úkoly (více lidí přes existující modal).
+
+### CTA a existující create flow
+
+- **`MemberCareerQuickActions`**: volá **`createTeamEvent`** / **`createTeamTask`** z `apps/web/src/app/actions/team-events.ts` pro **jednoho** člena, s předvyplněným názvem a poznámkami z `careerCoaching.cta`.
+- Podmínka **`team_calendar:write`**. Odkaz **Nastavení → Tým** pro doplnění kariéry, pokud je doporučená akce `data_completion` a uživatel má **`team_members:write`**.
+- Stránka **`/portal/team-overview`** přijímá `?period=` pro shodu období s detailem člena.
+
+### Role / scope (beze změny matice oprávnění)
+
+- Coaching se počítá jen nad viditelnými členy v aktuálním scope (jako metriky). Advisor u rozsahu „Já“ vidí coaching pro sebe; bez kalendářového write nemá rychlé CTA.
+
+### Co zůstává manual / další fáze
+
+- Plný read model naplánovaných 1:1 v UI, hlubší AI follow-up, pokročilé šablony — mimo scope.
+
+---
+
+## 10. Co jde spočítat z dnešních dat (stručně)
 
 - Počet **přímých podřízených** (`parent_id`).
 - U **manažerské / call-centrum M*** větve: přítomnost **kariérního kódu** u podřízených (ne kvantifikace „6× M2“).
@@ -177,7 +213,7 @@ Na `TeamMemberMetrics` je navíc **`directReportsCount`** (počet přímých pod
 
 ---
 
-## 10. Co nejde spočítat / zůstává manual
+## 11. Co nejde spočítat / zůstává manual
 
 - **BJ, BJS, historický výkon** z PDF — `manual` / `unspecified` v `missingRequirements`.
 - **Licence, zkoušky, FT**, realitní podíly u postupu — manuálně nebo bez specifikace v configu.
@@ -188,7 +224,7 @@ Výstup evaluace: `progressEvaluation` (`on_track`, `data_missing`, `blocked`, `
 
 ---
 
-## 11. Rizika a otevřené otázky
+## 12. Rizika a otevřené otázky
 
 - **Legacy data** s `beplan_finance` bez tracku: dokud není vyplněn `career_track` nebo spolehlivý kód pozice, může zůstat `data_missing`.
 - **TP1–TP7**: názvy a počet stupňů musí odpovídat schválenému PDF; snadno doplnitelné v `beplan-top-poradce.ts`.
@@ -199,9 +235,9 @@ Výstup evaluace: `progressEvaluation` (`on_track`, `data_missing`, `blocked`, `
 
 ## Odkaz na kód
 
-- `apps/web/src/lib/career/` — `evaluate-career-progress.ts`, `career-evaluation-vm.ts`, `career-insights.ts`, `team-career-aggregate.ts`, `career-write-validation.ts`, registry
+- `apps/web/src/lib/career/` — `evaluate-career-progress.ts`, `career-evaluation-vm.ts`, `career-insights.ts`, `career-coaching.ts`, `team-career-aggregate.ts`, `career-write-validation.ts`, registry
 - `apps/web/src/app/actions/team.ts` (`updateMemberCareer`, tenant default)
 - `apps/web/src/app/actions/team-overview.ts` (`getTeamMemberMetrics`, `getTeamMemberDetail`, alerty)
 - `apps/web/src/app/portal/setup/SetupView.tsx`, `TeamMemberCareerFields.tsx`
-- `apps/web/src/app/portal/team-overview/TeamOverviewView.tsx`, `TeamStructurePanel.tsx`, `[userId]/TeamMemberDetailView.tsx`, `[userId]/page.tsx`
+- `apps/web/src/app/portal/team-overview/TeamOverviewView.tsx`, `TeamStructurePanel.tsx`, `[userId]/TeamMemberDetailView.tsx`, `[userId]/MemberCareerQuickActions.tsx`, `[userId]/page.tsx`
 - `packages/db/drizzle/0024_memberships_career.sql`

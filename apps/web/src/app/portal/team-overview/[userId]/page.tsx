@@ -26,16 +26,23 @@ export default async function TeamMemberDetailPage({
   const detail = await getTeamMemberDetail(userId, { period }).catch(() => null);
   if (!detail) notFound();
 
+  const canCreateTeamCalendar = hasPermission(auth.roleName as RoleName, "team_calendar:write");
+  const canEditTeamCareer = hasPermission(auth.roleName as RoleName, "team_members:write");
+
   return (
     <div className="min-h-screen bg-[var(--wp-bg)]">
       <div className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         <Link
-          href="/portal/team-overview"
+          href={`/portal/team-overview${period !== "month" ? `?period=${encodeURIComponent(period)}` : ""}`}
           className="inline-flex items-center gap-1 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:text-indigo-600 mb-6"
         >
           ← Zpět na Týmový přehled
         </Link>
-        <TeamMemberDetailView detail={detail} />
+        <TeamMemberDetailView
+          detail={detail}
+          canCreateTeamCalendar={canCreateTeamCalendar}
+          canEditTeamCareer={canEditTeamCareer}
+        />
       </div>
     </div>
   );

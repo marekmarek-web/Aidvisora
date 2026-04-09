@@ -5,3 +5,4 @@ export * from "./career-write-validation";
 export * from "./career-evaluation-vm";
 export * from "./career-insights";
 export * from "./team-career-aggregate";
+export * from "./career-coaching";
