@@ -62,3 +62,22 @@ describe("P3 computeWriteStepPreflight — upsertContactCoverage", () => {
     expect(r.advisorMessage).toMatch(/Neplatný|stav/i);
   });
 });
+
+describe("P3 computeWriteStepPreflight — updateContact", () => {
+  it("is ready for partial contact patch with phone only", () => {
+    const r = computeWriteStepPreflight("updateContact", {
+      contactId: CONTACT,
+      phone: "+420777123456",
+    });
+    expect(r.preflightStatus).toBe("ready");
+    expect(r.missingFields).toHaveLength(0);
+  });
+
+  it("needs input when no patchable field is present", () => {
+    const r = computeWriteStepPreflight("updateContact", {
+      contactId: CONTACT,
+    });
+    expect(r.preflightStatus).toBe("needs_input");
+    expect(r.advisorMessage).toMatch(/aktualizaci kontaktu/i);
+  });
+});

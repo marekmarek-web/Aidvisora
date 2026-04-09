@@ -313,6 +313,7 @@ const REQUIRED_FIELDS: Record<string, FieldRequirement[]> = {
   appendMeetingNote: ["meetingNoteId"],
   createInternalNote: ["contactId"],
   createContact: ["firstName", "lastName"],
+  updateContact: ["contactId"],
   attachDocumentToClient: ["contactId", "documentId"],
   attachDocumentToOpportunity: ["opportunityId", "documentId"],
   classifyDocument: ["documentId", ["documentType", "classification"]],
@@ -525,6 +526,20 @@ export function computeWriteStepPreflight(
         preflightStatus: "needs_input",
         missingFields: mf,
         advisorMessage: "Pro založení klienta doplněte jméno a příjmení.",
+      };
+    }
+  }
+
+  if (action === "updateContact") {
+    const hasPatchField = UPDATE_CONTACT_PATCH_FIELDS.some((field) => {
+      const value = params[field];
+      return typeof value === "string" ? value.trim().length > 0 : value != null;
+    });
+    if (!hasPatchField) {
+      return {
+        preflightStatus: "needs_input",
+        missingFields,
+        advisorMessage: "Pro aktualizaci kontaktu chybí alespoň jeden rozpoznaný údaj.",
       };
     }
   }
@@ -847,6 +862,19 @@ const FIELD_LABELS: Record<string, string> = {
   insuranceType: "typ pojištění",
   visibleToClient: "viditelnost pro klienta",
 };
+
+const UPDATE_CONTACT_PATCH_FIELDS = [
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "title",
+  "birthDate",
+  "personalId",
+  "street",
+  "city",
+  "zip",
+] as const;
 
 function humanizeFieldRef(fieldRef: string): string {
   const parts = fieldRef.split("|");

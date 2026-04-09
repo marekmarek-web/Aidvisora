@@ -90,6 +90,10 @@ function strParam(params: Record<string, unknown>, key: string): string | undefi
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
 
+function hasOwnParam(params: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(params, key);
+}
+
 function productDomainFromParams(params: Record<string, unknown>): string | null {
   const d = params.productDomain;
   return typeof d === "string" && d ? d : null;
@@ -197,23 +201,27 @@ export function registerAssistantWriteAdapters(): void {
       }
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId — nelze aktualizovat kontakt.");
-      const firstName = strParam(params, "firstName");
-      const lastName = strParam(params, "lastName");
-      if (!firstName || !lastName) {
-        return errResult("Chybí jméno nebo příjmení — doplňte je v náhledu kroků.");
+      const patch: Parameters<typeof updateContactAction>[1] = {};
+      const patchableFields = [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "title",
+        "birthDate",
+        "personalId",
+        "street",
+        "city",
+        "zip",
+      ] as const;
+      for (const field of patchableFields) {
+        if (!hasOwnParam(params, field)) continue;
+        patch[field] = strParam(params, field);
       }
-      await updateContactAction(contactId, {
-        firstName,
-        lastName,
-        email: strParam(params, "email"),
-        phone: strParam(params, "phone"),
-        title: strParam(params, "title"),
-        birthDate: strParam(params, "birthDate"),
-        personalId: strParam(params, "personalId"),
-        street: strParam(params, "street"),
-        city: strParam(params, "city"),
-        zip: strParam(params, "zip"),
-      });
+      if (Object.keys(patch).length === 0) {
+        return requiresInputResult("Chybí alespoň jeden údaj k aktualizaci kontaktu.");
+      }
+      await updateContactAction(contactId, patch);
       return okResult(contactId, "contact");
     } catch (e) {
       return safeErr(e, "updateContact");

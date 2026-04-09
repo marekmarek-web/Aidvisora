@@ -38,6 +38,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       const p = draft.params;
       const fromCrmScreenshot = draft.draftSource === "crm_form_screenshot";
       const routeMismatch = Boolean(response.clientBinding.suppressedActiveClientId);
+      const multimodalFailed = result.response.factBundle.ambiguityReasons.includes("multimodal_pass_failed");
       const pre: string[] = [];
       const push = (label: string, v: string | undefined) => {
         const t = v?.trim();
@@ -100,7 +101,14 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
               "Z údajů na dokladu můžete přesto založit nového klienta a podklady uložit podle plánu níže.",
               "",
             ]
-        : fromCrmScreenshot
+        : multimodalFailed
+          ? [
+              fromCrmScreenshot
+                ? "Ze screenshotu se mi nepodařilo spolehlivě přečíst údaje pro založení klienta."
+                : "Z nahraného dokladu se mi nepodařilo spolehlivě přečíst údaje pro založení klienta.",
+              "",
+            ]
+          : fromCrmScreenshot
           ? ["Připravil jsem návrh nového klienta z údajů na nahraných obrázcích.", ""]
           : ["Připravil jsem návrh nového klienta z nahraných dokladů.", ""];
 
@@ -159,6 +167,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
     case "structured_image_fact_intake": {
       const client = clientLabel ? ` ke klientovi **${clientLabel}**` : "";
       const parsedIntent = result.parsedIntent;
+      const multimodalFailed = result.response.factBundle.ambiguityReasons.includes("multimodal_pass_failed");
       const bindHintForUpdate =
         !clientLabel &&
         parsedIntent?.operation === "update_contact" &&
@@ -178,6 +187,12 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       const missing = result.response.factBundle.missingFields.length > 0
         ? `\n\nChybějící údaje: ${result.response.factBundle.missingFields.slice(0, 3).join(", ")}.`
         : "";
+      if (!factText && !missing) {
+        const intro = multimodalFailed
+          ? `Údaje z obrázku${client} se mi nepodařilo spolehlivě přečíst.`
+          : `Na obrázku${client} jsem zatím nenašel použitelné údaje pro zápis do CRM.`;
+        return `${intro}${bindHintForUpdate}\n\nZkuste nahrát ostřejší screenshot nebo přiložit další část formuláře.`;
+      }
       const intro = isForm
         ? `Našel jsem údaje z formuláře a připravil návrh k uložení do CRM${client}.`
         : `Rozpoznal jsem obrázek s ${typeLabel}. Navrhuji uložit klíčové informace${client}.`;
@@ -189,6 +204,7 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       const hasRealUpdateAction = response.actionPlan.recommendedActions.some(
         (a) => a.writeAction === "updateContact",
       );
+      const multimodalFailed = result.response.factBundle.ambiguityReasons.includes("multimodal_pass_failed");
       const diffFacts = result.response.factBundle.facts.filter(
         (f) => f.targetCrmField && f.value != null && String(f.value).trim(),
       );
@@ -216,9 +232,15 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         return `Připravil jsem návrh aktualizace údajů${client} na základě nahraných obrázků.${factText}${confirmNote}`;
       }
       // No real updateContact step — honest fallback
+      if (!factText) {
+        const reason = multimodalFailed
+          ? `Údaje z obrázku${client} se mi nepodařilo spolehlivě přečíst.`
+          : `Na obrázku${client} jsem zatím nenašel použitelné údaje pro zápis do CRM.`;
+        return `${reason}\n\nZkuste nahrát ostřejší screenshot nebo přiložit i část s identifikačními údaji klienta.`;
+      }
       const intro = factText
         ? `Rozpoznal jsem údaje z obrázku${client}.${factText}\n\nPro zápis do CRM doplňte nebo potvrďte údaje v náhledu kroků.`
-        : `Obrázek byl přijat${client}. Rozpoznané údaje naleznete v náhledu kroků.`;
+        : `Obrázek byl přijat${client}.`;
       return intro;
     }
 

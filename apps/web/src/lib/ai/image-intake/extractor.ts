@@ -199,7 +199,9 @@ export function buildUnusableFacts(): ExtractedFactBundle {
 export function buildFactsSummaryLines(bundle: ExtractedFactBundle, limit = 6): string[] {
   if (bundle.facts.length === 0) {
     if (bundle.ambiguityReasons.length > 0) {
-      return bundle.ambiguityReasons.slice(0, 2);
+      return bundle.ambiguityReasons
+        .filter((reason) => reason !== "multimodal_pass_failed")
+        .slice(0, 2);
     }
     return [];
   }

@@ -119,6 +119,82 @@ function decideLane(_assets: NormalizedImageAsset[]): LaneDecisionResult {
 
 export { mapToExecutionPlan, mapToPreviewItems };
 
+function shouldForceMultimodalForExplicitIntent(
+  classification: InputClassificationResult | null,
+  parsedIntent: ParsedExplicitIntent | null,
+): boolean {
+  if (!classification || !parsedIntent) return false;
+  if (!textSignalsCrmExtractionIntent(parsedIntent)) return false;
+  return !(
+    classification.inputType === "general_unusable_image" ||
+    classification.inputType === "supporting_reference_image"
+  );
+}
+
+/**
+ * Generic planner actions often add attachDocumentToClient as an archive step,
+ * but they do not know documentId yet. Hydrate these placeholders here so the
+ * preview/confirm flow never shows an invalid attach step.
+ */
+export async function hydrateAttachActionsWithMaterializedDocuments(
+  actionPlan: ImageIntakeActionPlan,
+  assets: NormalizedImageAsset[],
+  tenantId: string,
+  userId: string,
+  intakeId: string,
+): Promise<void> {
+  const placeholderAttach = actionPlan.recommendedActions.filter((action) => {
+    const params = action.params as Record<string, unknown>;
+    return action.writeAction === "attachDocumentToClient" && !params.documentId;
+  });
+
+  if (placeholderAttach.length === 0) return;
+
+  const documentIds = await materializeIntakeImagesAsDocuments(
+    assets,
+    tenantId,
+    userId,
+    intakeId,
+  );
+
+  if (documentIds.length === 0) {
+    actionPlan.recommendedActions = actionPlan.recommendedActions.filter((action) => {
+      const params = action.params as Record<string, unknown>;
+      return !(action.writeAction === "attachDocumentToClient" && !params.documentId);
+    });
+    const warning = "Zdrojový obrázek se nepodařilo připravit k přiložení.";
+    if (!actionPlan.safetyFlags.includes(warning)) {
+      actionPlan.safetyFlags.push(warning);
+    }
+    return;
+  }
+
+  let hydratedPrimaryAttach = false;
+  const nextActions: ImageIntakeActionPlan["recommendedActions"] = [];
+  for (const action of actionPlan.recommendedActions) {
+    const params = action.params as Record<string, unknown>;
+    const isPlaceholder = action.writeAction === "attachDocumentToClient" && !params.documentId;
+    if (!isPlaceholder) {
+      nextActions.push(action);
+      continue;
+    }
+    if (hydratedPrimaryAttach) continue;
+    hydratedPrimaryAttach = true;
+    documentIds.forEach((documentId, index) => {
+      nextActions.push({
+        ...action,
+        label: index === 0 ? action.label : `${action.label} ${index + 1}`,
+        params: {
+          ...params,
+          documentId,
+        },
+      });
+    });
+  }
+
+  actionPlan.recommendedActions = nextActions;
+}
+
 // ---------------------------------------------------------------------------
 // Preview payload
 // ---------------------------------------------------------------------------
@@ -303,6 +379,7 @@ export async function processImageIntake(
   let classification: InputClassificationResult | null = null;
   let classifierUsedModel = false;
   let earlyExit = false;
+  const parsedIntent = parseExplicitIntent(request.accompanyingText);
 
   if (batchPreflight.eligible) {
     const eligibleAssets = batchPreflight.assetResults
@@ -349,7 +426,7 @@ export async function processImageIntake(
       threadReconstruction: null, handoffPayload: null, caseSignals: null, batchDecision: null,
       combinedMultimodalResult: null, crossSessionReconstruction: null, intentChange: null,
       householdBinding: null, documentSetResult: null, lifecycleFeedback: null, intentAssistCacheStatus: null,
-      parsedIntent: parseExplicitIntent(request.accompanyingText) ?? null,
+      parsedIntent: parsedIntent ?? null,
     };
   }
 
@@ -357,7 +434,10 @@ export async function processImageIntake(
   const primaryAsset = primaryAssets.find(
     (a) => batchPreflight.assetResults.find((r) => r.assetId === a.assetId && r.result.eligible),
   );
-  const multimodalEnabled = isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId);
+  const multimodalEnabledByFlag = isImageIntakeMultimodalEnabledForUser(request.userId, request.tenantId);
+  const multimodalEnabled =
+    multimodalEnabledByFlag ||
+    shouldForceMultimodalForExplicitIntent(classification, parsedIntent);
   const combinedMultimodalEnabled = isImageIntakeCombinedMultimodalEnabledForUser(
     effectiveRequest.userId ?? "",
     effectiveRequest.tenantId,
@@ -485,10 +565,7 @@ export async function processImageIntake(
     factBundle = buildSupportingReferenceFacts(primaryAsset?.assetId ?? intakeId);
   }
 
-  // 6b. Parse explicit intent from accompanying text (structured, reusable)
-  const parsedIntent = parseExplicitIntent(request.accompanyingText);
-
-  // 6c. Intent-aware classification boost: when user explicitly asks for CRM extraction
+  // 6b. Intent-aware classification boost: when user explicitly asks for CRM extraction
   // and classifier was uncertain, upgrade to structured_image_fact_intake confidence
   if (
     classification &&
@@ -863,6 +940,14 @@ export async function processImageIntake(
       factBundle = enrichFactsWithCrmDiff(factBundle, existing);
     }
   }
+
+  await hydrateAttachActionsWithMaterializedDocuments(
+    actionPlan,
+    request.assets,
+    request.tenantId,
+    request.userId,
+    intakeId,
+  );
 
   // 12. Guardrails (unchanged from Phase 1)
   const guardrailVerdict = enforceImageIntakeGuardrails(

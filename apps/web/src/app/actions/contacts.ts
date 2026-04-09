@@ -502,8 +502,8 @@ export async function clientUpdateProfile(form: {
 export async function updateContact(
   id: string,
   form: {
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     phone?: string;
     title?: string;
@@ -530,38 +530,50 @@ export async function updateContact(
   try {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    const hasOwn = (key: string) => Object.prototype.hasOwnProperty.call(form, key);
+    const patch: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (hasOwn("firstName")) {
+      const value = form.firstName?.trim();
+      if (!value) throw new Error("Jméno nesmí být prázdné.");
+      patch.firstName = value;
+    }
+    if (hasOwn("lastName")) {
+      const value = form.lastName?.trim();
+      if (!value) throw new Error("Příjmení nesmí být prázdné.");
+      patch.lastName = value;
+    }
+    if (hasOwn("email")) patch.email = form.email?.trim() || null;
+    if (hasOwn("phone")) patch.phone = form.phone?.trim() || null;
+    if (hasOwn("title")) patch.title = form.title?.trim() || null;
+    if (hasOwn("referralSource")) patch.referralSource = form.referralSource?.trim() || null;
+    if (hasOwn("referralContactId")) patch.referralContactId = form.referralContactId || null;
+    if (hasOwn("birthDate")) patch.birthDate = form.birthDate || null;
+    if (hasOwn("personalId")) patch.personalId = form.personalId?.trim() || null;
+    if (hasOwn("street")) patch.street = form.street?.trim() || null;
+    if (hasOwn("city")) patch.city = form.city?.trim() || null;
+    if (hasOwn("zip")) patch.zip = form.zip?.trim() || null;
+    if (hasOwn("tags")) patch.tags = form.tags?.length ? form.tags : null;
+    if (hasOwn("lifecycleStage")) patch.lifecycleStage = form.lifecycleStage || null;
+    if (hasOwn("priority")) patch.priority = form.priority?.trim() || null;
+    if (hasOwn("serviceCycleMonths")) patch.serviceCycleMonths = form.serviceCycleMonths || null;
+    if (hasOwn("lastServiceDate")) patch.lastServiceDate = form.lastServiceDate || null;
+    if (hasOwn("nextServiceDue")) patch.nextServiceDue = form.nextServiceDue || null;
+    if (hasOwn("avatarUrl")) patch.avatarUrl = form.avatarUrl || null;
+    if (hasOwn("preferredSalutation")) patch.preferredSalutation = form.preferredSalutation?.trim() || null;
+    if (hasOwn("preferredGreetingName")) patch.preferredGreetingName = form.preferredGreetingName?.trim() || null;
+    if (hasOwn("greetingStyle")) patch.greetingStyle = form.greetingStyle?.trim() || null;
+    if (hasOwn("birthGreetingOptOut")) patch.birthGreetingOptOut = form.birthGreetingOptOut;
+
+    if (Object.keys(patch).length === 1) {
+      throw new Error("Nebylo předáno žádné pole k aktualizaci kontaktu.");
+    }
+
     await db
       .update(contacts)
-      .set({
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: form.email?.trim() || null,
-        phone: form.phone?.trim() || null,
-        title: form.title?.trim() || null,
-        referralSource: form.referralSource?.trim() || null,
-        referralContactId: form.referralContactId || null,
-        birthDate: form.birthDate || null,
-        personalId: form.personalId?.trim() || null,
-        street: form.street?.trim() || null,
-        city: form.city?.trim() || null,
-        zip: form.zip?.trim() || null,
-        tags: form.tags?.length ? form.tags : null,
-        lifecycleStage: form.lifecycleStage || null,
-        ...(form.priority !== undefined && { priority: form.priority?.trim() || null }),
-        ...(form.serviceCycleMonths != null && { serviceCycleMonths: form.serviceCycleMonths || null }),
-        ...(form.lastServiceDate != null && { lastServiceDate: form.lastServiceDate || null }),
-        ...(form.nextServiceDue != null && { nextServiceDue: form.nextServiceDue || null }),
-        ...(form.avatarUrl !== undefined && { avatarUrl: form.avatarUrl || null }),
-        ...(form.preferredSalutation !== undefined && {
-          preferredSalutation: form.preferredSalutation?.trim() || null,
-        }),
-        ...(form.preferredGreetingName !== undefined && {
-          preferredGreetingName: form.preferredGreetingName?.trim() || null,
-        }),
-        ...(form.greetingStyle !== undefined && { greetingStyle: form.greetingStyle?.trim() || null }),
-        ...(form.birthGreetingOptOut !== undefined && { birthGreetingOptOut: form.birthGreetingOptOut }),
-        updatedAt: new Date(),
-      })
+      .set(patch)
       .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
   } catch (e) {
     console.error("[updateContact]", e);

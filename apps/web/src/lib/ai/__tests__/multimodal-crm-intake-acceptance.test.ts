@@ -31,6 +31,38 @@ vi.mock("db", () => ({
     })),
   },
   opportunities: { id: "id", tenantId: "tenantId", contactId: "contactId", title: "title", archivedAt: "archivedAt", updatedAt: "updatedAt" },
+  contractUploadReviews: {
+    id: "id",
+    tenantId: "tenantId",
+    fileName: "fileName",
+    storagePath: "storagePath",
+    mimeType: "mimeType",
+    sizeBytes: "sizeBytes",
+    processingStatus: "processingStatus",
+    processingStage: "processingStage",
+    errorMessage: "errorMessage",
+    extractedPayload: "extractedPayload",
+    clientMatchCandidates: "clientMatchCandidates",
+    draftActions: "draftActions",
+    confidence: "confidence",
+    reasonsForReview: "reasonsForReview",
+    reviewStatus: "reviewStatus",
+    detectedDocumentType: "detectedDocumentType",
+    detectedDocumentSubtype: "detectedDocumentSubtype",
+    lifecycleStatus: "lifecycleStatus",
+    documentIntent: "documentIntent",
+    sensitivityProfile: "sensitivityProfile",
+    uploadedBy: "uploadedBy",
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+  },
+  contractReviewCorrections: {
+    reviewId: "reviewId",
+    fieldKey: "fieldKey",
+    correctedValue: "correctedValue",
+    createdBy: "createdBy",
+    createdAt: "createdAt",
+  },
   eq: vi.fn(), and: vi.fn(), isNull: vi.fn(), desc: vi.fn(),
   contacts: {}, or: vi.fn(), sql: vi.fn(),
 }));
@@ -66,6 +98,7 @@ import {
   maybeUpgradeToContactUpdate,
   enrichFactsWithCrmDiff,
 } from "@/lib/ai/image-intake/planner";
+import { hydrateAttachActionsWithMaterializedDocuments } from "@/lib/ai/image-intake/orchestrator";
 
 // --- Review handoff ---
 import { looksLikeStructuredFormScreenshot } from "@/lib/ai/image-intake/review-handoff";
@@ -99,6 +132,12 @@ import {
 } from "@/lib/ai/suggested-next-step-dispatch";
 
 import type { ImageIntakeOrchestratorResult } from "@/lib/ai/image-intake/orchestrator";
+
+vi.mock("@/lib/ai/image-intake/materialize-intake-documents", () => ({
+  materializeIntakeImagesAsDocuments: vi.fn(async () => []),
+}));
+
+import { materializeIntakeImagesAsDocuments } from "@/lib/ai/image-intake/materialize-intake-documents";
 
 // --- Helpers ---
 
@@ -1103,6 +1142,26 @@ describe("RUNTIME FIX: response text derives from executable plan", () => {
     expect(resp.message).not.toContain("aktualizace");
     expect(resp.message).not.toContain("zapíšu změny");
   });
+
+  it("says clearly when multimodal pass failed and no facts were extracted", () => {
+    const plan = {
+      outputMode: "contact_update_from_image" as const,
+      recommendedActions: [
+        { intentType: "attach_document" as const, writeAction: "attachDocumentToClient" as const, label: "Attach", reason: "test", confidence: 0.7, requiresConfirmation: true, params: { documentId: "doc_1" } },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: false, safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        factBundle: makeFactBundle({ facts: [], ambiguityReasons: ["multimodal_pass_failed"] }),
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toMatch(/nepodařilo spolehlivě přečíst/i);
+    expect(resp.message).not.toContain("náhledu kroků");
+  });
 });
 
 describe("RUNTIME FIX: extracted fields surfaced when fact bundle non-empty", () => {
@@ -1224,6 +1283,46 @@ describe("RUNTIME FIX: no AI Review wording for CRM update modes", () => {
     for (const w of resp.warnings) {
       expect(w).not.toMatch(/AI_REVIEW/);
     }
+  });
+});
+
+describe("RUNTIME FIX: attach action hydration", () => {
+  beforeEach(() => {
+    vi.mocked(materializeIntakeImagesAsDocuments).mockReset();
+  });
+
+  it("hydrates attachDocumentToClient placeholders with materialized document ids", async () => {
+    vi.mocked(materializeIntakeImagesAsDocuments).mockResolvedValueOnce(["doc_1", "doc_2"]);
+    const plan = {
+      outputMode: "contact_update_from_image" as const,
+      recommendedActions: [
+        {
+          intentType: "attach_document" as const,
+          writeAction: "attachDocumentToClient" as const,
+          label: "Přiložit zdrojový screenshot ke klientovi",
+          reason: "test",
+          confidence: 0.8,
+          requiresConfirmation: true,
+          params: { contactId: "client_123" },
+        },
+      ],
+      draftReplyText: null,
+      whyThisAction: "test",
+      whyNotOtherActions: null,
+      needsAdvisorInput: false,
+      safetyFlags: [],
+    };
+
+    await hydrateAttachActionsWithMaterializedDocuments(
+      plan,
+      [makeAsset("asset_1"), makeAsset("asset_2")],
+      "tenant_1",
+      "user_1",
+      "img_1",
+    );
+
+    expect(plan.recommendedActions).toHaveLength(2);
+    expect(plan.recommendedActions.every((action) => action.params.documentId)).toBe(true);
   });
 });
 
