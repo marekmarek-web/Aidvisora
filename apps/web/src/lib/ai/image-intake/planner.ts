@@ -405,6 +405,7 @@ const FACT_KEY_TO_CONTACT_FIELD: Record<string, string> = {
   zip: "zip",
   phone: "phone",
   email: "email",
+  // Identity document keys
   id_doc_first_name: "firstName",
   id_doc_last_name: "lastName",
   id_doc_birth_date: "birthDate",
@@ -415,6 +416,27 @@ const FACT_KEY_TO_CONTACT_FIELD: Record<string, string> = {
   id_doc_email: "email",
   id_doc_phone: "phone",
   id_doc_title: "title",
+  // CRM / admin form screenshot keys (multimodal extracts these for form screenshots)
+  crm_first_name: "firstName",
+  crm_last_name: "lastName",
+  crm_birth_date: "birthDate",
+  crm_personal_id: "personalId",
+  crm_street: "street",
+  crm_city: "city",
+  crm_zip: "zip",
+  crm_email: "email",
+  crm_phone: "phone",
+  crm_title: "title",
+  // Contact-prefixed keys (alternate extraction)
+  contact_first_name: "firstName",
+  contact_last_name: "lastName",
+  contact_birth_date: "birthDate",
+  contact_personal_id: "personalId",
+  contact_street: "street",
+  contact_city: "city",
+  contact_zip: "zip",
+  contact_email: "email",
+  contact_phone: "phone",
 };
 
 const CONTACT_PATCH_FACT_KEYS = new Set(Object.keys(FACT_KEY_TO_CONTACT_FIELD));

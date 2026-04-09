@@ -112,7 +112,9 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         !inputType || inputType === "mixed_or_uncertain_image"
           ? " Typ vstupu není jednoznačný."
           : "";
-      return `Obrázek jsem přijal, ale potřebuji doplnění.${bindingIssue}${classIssue} Vyberte klienta nebo upřesněte záměr.`;
+      const factLines = buildFactsSummaryLines(result.response.factBundle, 5);
+      const factText = factLines.length > 0 ? `\n\nRozpoznané údaje:\n${factLines.map((l) => `• ${l}`).join("\n")}` : "";
+      return `Obrázek jsem přijal, ale potřebuji doplnění.${bindingIssue}${classIssue} Vyberte klienta nebo upřesněte záměr.${factText}`;
     }
 
     case "supporting_reference_image":
@@ -153,6 +155,9 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
 
     case "contact_update_from_image": {
       const client = clientLabel ? ` klienta **${clientLabel}**` : "";
+      const hasRealUpdateAction = response.actionPlan.recommendedActions.some(
+        (a) => a.writeAction === "updateContact",
+      );
       const diffFacts = result.response.factBundle.facts.filter(
         (f) => f.targetCrmField && f.value != null && String(f.value).trim(),
       );
@@ -173,10 +178,17 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
         : fallbackLines.length > 0
           ? `\n\nRozpoznané údaje:\n${fallbackLines.map((l) => `• ${l}`).join("\n")}`
           : "";
-      const confirmNote = diffFacts.some((f) => f.needsConfirmation)
-        ? "\n\nCitlivé údaje (rodné číslo, datum narození) vyžadují vaše potvrzení."
-        : "\n\nPo potvrzení zapíšu změny do CRM.";
-      return `Připravil jsem návrh aktualizace údajů${client} na základě nahraných obrázků.${factText}${confirmNote}`;
+      if (hasRealUpdateAction) {
+        const confirmNote = diffFacts.some((f) => f.needsConfirmation)
+          ? "\n\nCitlivé údaje (rodné číslo, datum narození) vyžadují vaše potvrzení."
+          : "\n\nPo potvrzení zapíšu změny do CRM.";
+        return `Připravil jsem návrh aktualizace údajů${client} na základě nahraných obrázků.${factText}${confirmNote}`;
+      }
+      // No real updateContact step — honest fallback
+      const intro = factText
+        ? `Rozpoznal jsem údaje z obrázku${client}.${factText}\n\nPro zápis do CRM doplňte nebo potvrďte údaje v náhledu kroků.`
+        : `Obrázek byl přijat${client}. Rozpoznané údaje naleznete v náhledu kroků.`;
+      return intro;
     }
 
     case "payment_details_portal_update": {
@@ -260,6 +272,10 @@ export function mapImageIntakeToAssistantResponse(
     /safetyFlag/i,
     /outputMode/i,
     /imageIntakeOutputMode/i,
+    /AI.?Review/i,
+    /handoff/i,
+    /image.?intake.*lane/i,
+    /orientační přehled/i,
   ];
 
   function sanitizeWarning(w: string): string | null {
@@ -330,8 +346,14 @@ export function mapImageIntakeToAssistantResponse(
     suggestedNextStepItems.unshift({ label: stitchingSummary, kind: "hint" });
   }
 
-  // Handoff payload note (Phase 5)
-  if (result.handoffPayload) {
+  // Handoff payload note (Phase 5) — suppress for CRM update / contact update modes
+  const _om = response.actionPlan.outputMode;
+  const isCrmUpdateMode =
+    _om === "contact_update_from_image" ||
+    _om === "structured_image_fact_intake" ||
+    _om === "payment_details_portal_update" ||
+    _om === "identity_contact_intake";
+  if (result.handoffPayload && !isCrmUpdateMode) {
     const handoffNote = buildHandoffPreviewNote(result.handoffPayload);
     suggestedNextStepItems.push({ label: handoffNote, kind: "hint" });
   }
@@ -393,8 +415,8 @@ export function mapImageIntakeToAssistantResponse(
     }
   }
 
-  // Phase 9: AI Review handoff lifecycle note
-  if (result.previewPayload.lifecycleStatusNote) {
+  // Phase 9: AI Review handoff lifecycle note — suppress for CRM update modes
+  if (result.previewPayload.lifecycleStatusNote && !isCrmUpdateMode) {
     suggestedNextStepItems.push({ label: result.previewPayload.lifecycleStatusNote, kind: "hint" });
   }
 
@@ -489,6 +511,13 @@ function factKeyLabelForDiff(key: string): string {
     id_doc_birth_date: "Datum narození", id_doc_personal_id: "Rodné číslo",
     id_doc_street: "Ulice", id_doc_city: "Město", id_doc_zip: "PSČ",
     id_doc_email: "E-mail", id_doc_phone: "Telefon", id_doc_title: "Titul",
+    crm_first_name: "Jméno", crm_last_name: "Příjmení",
+    crm_birth_date: "Datum narození", crm_personal_id: "Rodné číslo",
+    crm_street: "Ulice", crm_city: "Město", crm_zip: "PSČ",
+    crm_email: "E-mail", crm_phone: "Telefon", crm_title: "Titul",
+    contact_first_name: "Jméno", contact_last_name: "Příjmení",
+    contact_street: "Ulice", contact_city: "Město", contact_zip: "PSČ",
+    contact_email: "E-mail", contact_phone: "Telefon",
     document_number: "Číslo dokladu", gender: "Pohlaví", citizenship: "Občanství",
     amount: "Částka", account_number: "Číslo účtu", variable_symbol: "VS",
     iban: "IBAN", due_date: "Splatnost",

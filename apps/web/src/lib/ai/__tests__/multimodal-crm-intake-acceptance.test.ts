@@ -62,7 +62,12 @@ import { classifyBatch } from "@/lib/ai/image-intake/classifier";
 import {
   buildActionPlanV1,
   buildActionPlanV4,
+  maybeUpgradeToContactUpdate,
+  enrichFactsWithCrmDiff,
 } from "@/lib/ai/image-intake/planner";
+
+// --- Review handoff ---
+import { looksLikeStructuredFormScreenshot } from "@/lib/ai/image-intake/review-handoff";
 
 // --- Response mapper ---
 import { mapImageIntakeToAssistantResponse } from "@/lib/ai/image-intake/response-mapper";
@@ -462,13 +467,13 @@ describe("Planner — communication screenshot note/task", () => {
 // ============================================================================
 
 describe("Response mapper — contact_update_from_image", () => {
-  it("generates advisory Czech message for contact update mode", () => {
+  it("generates advisory Czech message for contact update mode with real updateContact", () => {
     const result = minimalOrchestratorResult({
       response: {
         ...minimalOrchestratorResult().response,
         actionPlan: {
           outputMode: "contact_update_from_image",
-          recommendedActions: [{ intentType: "create_internal_note" as const, writeAction: "createInternalNote" as const, label: "Aktualizovat", reason: "test", confidence: 0.8, requiresConfirmation: true, params: {} }],
+          recommendedActions: [{ intentType: "update_contact" as const, writeAction: "updateContact" as const, label: "Aktualizovat", reason: "test", confidence: 0.8, requiresConfirmation: true, params: {} }],
           draftReplyText: null,
           whyThisAction: "test",
           whyNotOtherActions: null,
@@ -483,6 +488,28 @@ describe("Response mapper — contact_update_from_image", () => {
     expect(resp.message).toContain("Roman Koloburda");
     expect(resp.message).not.toContain("confidence");
     expect(resp.message).not.toContain("AI_REVIEW");
+  });
+
+  it("honest fallback when contact_update_from_image but no real updateContact step", () => {
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: {
+          outputMode: "contact_update_from_image",
+          recommendedActions: [{ intentType: "create_internal_note" as const, writeAction: "createInternalNote" as const, label: "Uložit", reason: "fallback", confidence: 0.5, requiresConfirmation: true, params: {} }],
+          draftReplyText: null,
+          whyThisAction: "test",
+          whyNotOtherActions: null,
+          needsAdvisorInput: false,
+          safetyFlags: [],
+        },
+      },
+    });
+
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).not.toContain("aktualizace");
+    expect(resp.message).not.toContain("zapíšu změny");
+    expect(resp.message).toContain("Rozpoznané údaje");
   });
 });
 
@@ -995,5 +1022,206 @@ describe("ACCEPTANCE: explicit client target precedence", () => {
     expect(intent.clientName).toBe("Jan Novák");
     expect(intent.operation).toBe("update_contact");
     expect(intent.hasExplicitTarget).toBe(true);
+  });
+});
+
+// ===================================================================
+// RUNTIME CHAIN FIX — acceptance tests
+// ===================================================================
+
+describe("RUNTIME FIX: parser no-false-positive nouns", () => {
+  it("does not capture 'adresu' as client name", () => {
+    const intent = parseExplicitIntent("Ne přiřaď ke klientovi údaje ze screenshotu, je tam adresa apod.");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("does not capture 'údaje' as client name", () => {
+    const intent = parseExplicitIntent("Přiřaď klientovi údaje z fotky");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("does not capture 'telefon' as client name", () => {
+    const intent = parseExplicitIntent("Ulož klientovi telefon z dokladu");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("does not capture 'screenshot' as client name", () => {
+    const intent = parseExplicitIntent("Přiřaď ke klientovi screenshot formuláře");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("does not capture 'fotku' as client name", () => {
+    const intent = parseExplicitIntent("Ulož pod klienta fotku dokladu");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("does not capture 'kontakt' as client name", () => {
+    const intent = parseExplicitIntent("Doplň ke klientovi kontakt z obrázku");
+    expect(intent.clientName).toBeNull();
+  });
+
+  it("still captures real name 'Bohuslav Plachý'", () => {
+    const intent = parseExplicitIntent("přiřaď mi tyto údaje ke klientovi Bohuslav Plachý");
+    expect(intent.clientName).toBe("Bohuslav Plachý");
+  });
+
+  it("still captures real name 'Roman Koloburda'", () => {
+    const intent = parseExplicitIntent("Přiřaď údaje z fotky ke klientovi Roman Koloburda");
+    expect(intent.clientName).toBe("Roman Koloburda");
+  });
+});
+
+describe("RUNTIME FIX: response text derives from executable plan", () => {
+  it("says 'aktualizace' only when updateContact action exists", () => {
+    const plan = {
+      outputMode: "contact_update_from_image" as const,
+      recommendedActions: [
+        { intentType: "update_contact" as const, writeAction: "updateContact" as const, label: "Update", reason: "test", confidence: 0.9, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: false, safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: { ...minimalOrchestratorResult().response, actionPlan: plan },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toContain("aktualizace");
+  });
+
+  it("does NOT say 'aktualizace' when plan only has attach action", () => {
+    const plan = {
+      outputMode: "contact_update_from_image" as const,
+      recommendedActions: [
+        { intentType: "attach_document" as const, writeAction: "attachDocumentToClient" as const, label: "Attach", reason: "test", confidence: 0.7, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: false, safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: { ...minimalOrchestratorResult().response, actionPlan: plan },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).not.toContain("aktualizace");
+    expect(resp.message).not.toContain("zapíšu změny");
+  });
+});
+
+describe("RUNTIME FIX: extracted fields surfaced when fact bundle non-empty", () => {
+  it("ambiguous_needs_input still shows facts if present", () => {
+    const plan = {
+      outputMode: "ambiguous_needs_input" as const,
+      recommendedActions: [
+        { intentType: "create_internal_note" as const, writeAction: "createInternalNote" as const, label: "Note", reason: "fallback", confidence: 0.5, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: true, safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        clientBinding: makeBinding({ state: "insufficient_binding", clientId: null }),
+        factBundle: makeFactBundle(),
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).toContain("Rozpoznané údaje");
+    expect(resp.message).not.toMatch(/nic.*přečteno/i);
+  });
+});
+
+describe("RUNTIME FIX: updateContact preferred over attach-only for patchable fields", () => {
+  it("CRM form facts (crm_* keys) trigger updateContact when client bound", () => {
+    const crmFacts = makeFactBundle({
+      facts: [
+        { factType: "document_received", value: "Bohuslav", normalizedValue: "Bohuslav", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_first_name" },
+        { factType: "document_received", value: "Plachý", normalizedValue: "Plachý", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_last_name" },
+        { factType: "document_received", value: "Pod Křížkem 113", normalizedValue: "Pod Křížkem 113", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_street" },
+        { factType: "document_received", value: "Hoštka – Kochovice", normalizedValue: "Hoštka – Kochovice", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_city" },
+        { factType: "document_received", value: "41172", normalizedValue: "41172", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_zip" },
+        { factType: "document_received", value: "+420777321210", normalizedValue: "+420777321210", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_phone" },
+        { factType: "document_received", value: "bohuslav.plachy@post.cz", normalizedValue: "bohuslav.plachy@post.cz", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_email" },
+      ],
+    });
+    const binding = makeBinding({ clientLabel: "Bohuslav Plachý" });
+    const intent = parseExplicitIntent("přiřaď mi tyto údaje ke klientovi Bohuslav Plachý");
+    const plan = buildActionPlanV4(makeClassification({ inputType: "screenshot_crm_admin_ui" }), binding, crmFacts, null, null, null, intent);
+    expect(plan.recommendedActions.some(a => a.writeAction === "updateContact")).toBe(true);
+  });
+
+  it("maybeUpgradeToContactUpdate promotes structured_image_fact_intake when crm_* patchable facts ≥ 3", () => {
+    const crmFacts = makeFactBundle({
+      facts: [
+        { factType: "document_received", value: "Bohuslav", normalizedValue: "Bohuslav", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_first_name" },
+        { factType: "document_received", value: "Pod Křížkem 113", normalizedValue: "Pod Křížkem 113", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_street" },
+        { factType: "document_received", value: "41172", normalizedValue: "41172", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_zip" },
+      ],
+    });
+    const binding = makeBinding();
+    const upgraded = maybeUpgradeToContactUpdate("structured_image_fact_intake", crmFacts, binding);
+    expect(upgraded).toBe("contact_update_from_image");
+  });
+});
+
+describe("RUNTIME FIX: crm_* keys recognized as structured form", () => {
+  it("looksLikeStructuredFormScreenshot matches crm_* fact keys", () => {
+    const crmFacts = makeFactBundle({
+      facts: [
+        { factType: "document_received", value: "Bohuslav", normalizedValue: "Bohuslav", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_first_name" },
+        { factType: "document_received", value: "Plachý", normalizedValue: "Plachý", confidence: 0.9, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_last_name" },
+        { factType: "document_received", value: "Pod Křížkem 113", normalizedValue: "Pod Křížkem 113", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_street" },
+        { factType: "document_received", value: "41172", normalizedValue: "41172", confidence: 0.85, evidence: null, isActionable: false, needsConfirmation: false, observedVsInferred: "observed", factKey: "crm_zip" },
+      ],
+    });
+    expect(looksLikeStructuredFormScreenshot(crmFacts)).toBe(true);
+  });
+});
+
+describe("RUNTIME FIX: no AI Review wording for CRM update modes", () => {
+  it("handoff hint suppressed in contact_update_from_image mode", () => {
+    const plan = {
+      outputMode: "contact_update_from_image" as const,
+      recommendedActions: [
+        { intentType: "update_contact" as const, writeAction: "updateContact" as const, label: "Update", reason: "test", confidence: 0.9, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: false, safetyFlags: [],
+    };
+    const result = minimalOrchestratorResult({
+      response: { ...minimalOrchestratorResult().response, actionPlan: plan },
+      handoffPayload: { summary: "AI Review handoff stuff", handoffReason: "test" } as any,
+      previewPayload: {
+        ...minimalOrchestratorResult().previewPayload,
+        lifecycleStatusNote: "AI Review by měl potvrdit kontext",
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    for (const action of resp.suggestedActions) {
+      expect(action.label).not.toMatch(/AI.?Review/i);
+      expect(action.label).not.toMatch(/handoff/i);
+      expect(action.label).not.toMatch(/orientační přehled/i);
+    }
+    for (const w of resp.warnings) {
+      expect(w).not.toMatch(/AI.?Review/i);
+      expect(w).not.toMatch(/handoff/i);
+    }
+  });
+
+  it("warnings sanitize AI Review patterns", () => {
+    const plan = {
+      outputMode: "structured_image_fact_intake" as const,
+      recommendedActions: [
+        { intentType: "create_internal_note" as const, writeAction: "createInternalNote" as const, label: "Note", reason: "test", confidence: 0.8, requiresConfirmation: true, params: {} },
+      ],
+      draftReplyText: null, whyThisAction: "test", whyNotOtherActions: null, needsAdvisorInput: false,
+      safetyFlags: ["AI_REVIEW_HANDOFF_RECOMMENDED"],
+    };
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        actionPlan: plan,
+        trace: { ...minimalOrchestratorResult().response.trace, guardrailsTriggered: [] },
+      },
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    for (const w of resp.warnings) {
+      expect(w).not.toMatch(/AI_REVIEW/);
+    }
   });
 });

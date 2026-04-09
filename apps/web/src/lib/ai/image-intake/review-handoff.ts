@@ -48,6 +48,12 @@ const STRUCTURED_FORM_FACT_KEYS = new Set([
   "contract_number", "product", "partner", "payment_frequency",
   "validity_from", "validity_to", "document_number", "document_type_id",
   "gender", "citizenship", "birth_place", "title",
+  // CRM / admin form screenshot keys
+  "crm_first_name", "crm_last_name", "crm_birth_date", "crm_personal_id",
+  "crm_street", "crm_city", "crm_zip", "crm_email", "crm_phone", "crm_title",
+  // Contact-prefixed keys
+  "contact_first_name", "contact_last_name", "contact_birth_date",
+  "contact_street", "contact_city", "contact_zip", "contact_email", "contact_phone",
 ]);
 
 export function looksLikeStructuredFormScreenshot(factBundle: ExtractedFactBundle): boolean {

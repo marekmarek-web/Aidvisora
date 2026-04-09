@@ -72,11 +72,55 @@ const CLIENT_NAME_PATTERNS = [
   /\bklientovi\s+([A-Za-zÁ-Žá-ž]{2,}(?:\s+[A-Za-zÁ-Žá-ž]{2,}){0,2})\b/u,
 ];
 
+const NOT_A_PERSON_NAME = new Set([
+  "údaje", "udaje", "adresu", "adresa", "adresy", "telefon", "telefonu",
+  "email", "emailu", "e-mail", "rodné", "rodne", "číslo", "cislo",
+  "screenshot", "screenshotu", "screenshoty", "fotku", "fotky", "foto",
+  "obrázek", "obrazek", "obrázku", "obrazku", "obrázky",
+  "smlouvu", "smlouvy", "smlouva", "doklad", "doklady", "dokladu",
+  "dokument", "dokumenty", "dokumentu", "soubor", "souboru",
+  "platbu", "platby", "platba", "fakturu", "faktura", "faktury",
+  "poznámku", "poznamku", "poznámka", "poznámky",
+  "úkol", "ukol", "úkoly", "ukoly",
+  "data", "dat", "informace", "informací", "info",
+  "kartu", "karta", "karty",
+  "formulář", "formular", "formuláře",
+  "systému", "systém", "crm",
+  "portál", "portal", "portálu",
+  "tabulku", "tabulka", "tabulky",
+  "pojištění", "pojisteni", "pojistku", "pojistka",
+  "kontakt", "kontaktu", "kontakty",
+  "jméno", "jmeno", "příjmení", "prijmeni",
+  "hodnotu", "hodnota", "hodnoty",
+  "změnu", "změny", "zmenu", "zmeny",
+  "návrh", "navrh", "náhled", "nahled",
+  "podklad", "podklady",
+]);
+
+function looksLikePersonName(candidate: string): boolean {
+  const tokens = candidate.trim().split(/\s+/);
+  if (tokens.length === 0) return false;
+  const first = tokens[0]!.toLowerCase()
+    .normalize("NFD").replace(/\p{M}/gu, "");
+  if (NOT_A_PERSON_NAME.has(tokens[0]!.toLowerCase())) return false;
+  if (NOT_A_PERSON_NAME.has(first)) return false;
+  if (tokens.length === 1) {
+    if (tokens[0]!.length < 3) return false;
+    if (/^\d/.test(tokens[0]!)) return false;
+  }
+  for (const t of tokens) {
+    if (NOT_A_PERSON_NAME.has(t.toLowerCase())) return false;
+  }
+  return true;
+}
+
 function extractClientName(text: string): string | null {
   for (const pattern of CLIENT_NAME_PATTERNS) {
     const match = text.match(pattern);
     if (match?.[1]?.trim() && match[1].trim().length >= 3) {
-      return match[1].trim();
+      const candidate = match[1].trim();
+      if (!looksLikePersonName(candidate)) continue;
+      return candidate;
     }
   }
   return null;
