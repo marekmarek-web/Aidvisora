@@ -169,7 +169,6 @@ function buildIntakeMessage(result: ImageIntakeOrchestratorResult): string {
       const parsedIntent = result.parsedIntent;
       const multimodalFailed = result.response.factBundle.ambiguityReasons.includes("multimodal_pass_failed");
       const bindHintForUpdate =
-        !clientLabel &&
         parsedIntent?.operation === "update_contact" &&
         (binding === "insufficient_binding" || binding === "multiple_candidates" || binding === "weak_candidate")
           ? "\n\nZ textu se mi nepodařilo jednoznačně najít klienta v CRM — údaje z obrázku jsou v náhledu. Otevřete správnou kartu klienta nebo upřesněte jméno a zkuste znovu."

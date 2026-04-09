@@ -7,7 +7,58 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn(), logAuditAction: vi.fn() }));
 vi.mock("@/lib/openai", () => ({ createResponseStructured: vi.fn(), createResponseSafe: vi.fn(), createResponseStructuredWithImage: vi.fn(), logOpenAICall: vi.fn() }));
 vi.mock("../assistant-contact-search", () => ({ searchContactsForAssistant: vi.fn(async () => []) }));
-vi.mock("db", () => ({ db: {}, contacts: {}, eq: vi.fn(), and: vi.fn(), or: vi.fn(), isNull: vi.fn(), sql: vi.fn(), desc: vi.fn() }));
+vi.mock("db", () => ({
+  db: {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(async () => [{ firstName: "Bohuslav", lastName: "Plachý" }]),
+          orderBy: vi.fn(() => ({ limit: vi.fn(async () => []) })),
+        })),
+      })),
+    })),
+  },
+  contacts: { firstName: "firstName", lastName: "lastName", tenantId: "tenantId", id: "id" },
+  opportunities: { id: "id", tenantId: "tenantId", contactId: "contactId", title: "title", archivedAt: "archivedAt", updatedAt: "updatedAt" },
+  contractUploadReviews: {
+    id: "id",
+    tenantId: "tenantId",
+    fileName: "fileName",
+    storagePath: "storagePath",
+    mimeType: "mimeType",
+    sizeBytes: "sizeBytes",
+    processingStatus: "processingStatus",
+    processingStage: "processingStage",
+    errorMessage: "errorMessage",
+    extractedPayload: "extractedPayload",
+    clientMatchCandidates: "clientMatchCandidates",
+    draftActions: "draftActions",
+    confidence: "confidence",
+    reasonsForReview: "reasonsForReview",
+    reviewStatus: "reviewStatus",
+    detectedDocumentType: "detectedDocumentType",
+    detectedDocumentSubtype: "detectedDocumentSubtype",
+    lifecycleStatus: "lifecycleStatus",
+    documentIntent: "documentIntent",
+    sensitivityProfile: "sensitivityProfile",
+    uploadedBy: "uploadedBy",
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+  },
+  contractReviewCorrections: {
+    reviewId: "reviewId",
+    fieldKey: "fieldKey",
+    correctedValue: "correctedValue",
+    createdBy: "createdBy",
+    createdAt: "createdAt",
+  },
+  eq: vi.fn(),
+  and: vi.fn(),
+  or: vi.fn(),
+  isNull: vi.fn(),
+  sql: vi.fn(),
+  desc: vi.fn(),
+}));
 import {
   processImageIntake,
   mapToExecutionPlan,
@@ -112,6 +163,22 @@ describe("processImageIntake", () => {
     expect(result.response.clientBinding.state).toBe("bound_client_confident");
     expect(result.response.clientBinding.clientId).toBe(CLIENT_ID);
     expect(result.response.clientBinding.source).toBe("ui_context");
+  });
+
+  it("keeps active client binding when message asks to fill personalId field", async () => {
+    mockModel("mixed_or_uncertain_image", 0.3);
+    const result = await processImageIntake(
+      makeRequest({
+        activeClientId: CLIENT_ID,
+        accompanyingText: "doplň klientovi rodné číslo",
+      }),
+      null,
+    );
+
+    expect(result.response.clientBinding.state).toBe("bound_client_confident");
+    expect(result.response.clientBinding.clientId).toBe(CLIENT_ID);
+    expect(result.response.clientBinding.source).toBe("ui_context");
+    expect(result.response.clientBinding.clientLabel).toBe("Bohuslav Plachý");
   });
 
   it("returns no_action for unsupported MIME", async () => {

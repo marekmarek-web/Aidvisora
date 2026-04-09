@@ -43,6 +43,38 @@ const CLIENT_NAME_PATTERNS = [
   /\bklientovi\s+([A-Za-zÁ-Žá-ž]{2,}(?:\s+[A-Za-zÁ-Žá-ž]{2,}){0,2})\b/u,
 ];
 
+const NON_NAME_TOKENS = new Set([
+  "rodne",
+  "cislo",
+  "datum",
+  "narozeni",
+  "telefon",
+  "email",
+  "mail",
+  "adresa",
+  "ulice",
+  "mesto",
+  "psc",
+  "ic",
+  "ico",
+]);
+
+function stripDiacritics(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function looksLikeRealClientName(value: string): boolean {
+  const normalized = stripDiacritics(value)
+    .toLowerCase()
+    .replace(/[^\p{L}\s-]+/gu, " ")
+    .trim();
+  if (!normalized) return false;
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 3) return false;
+  if (tokens.some((token) => NON_NAME_TOKENS.has(token))) return false;
+  return tokens.every((token) => token.length >= 2);
+}
+
 /**
  * Parses explicit client name from the user's accompanying text.
  * Matches Czech patterns: "ke klientovi Roman Koloburda", "pro klienta Jan Novák", etc.
@@ -54,7 +86,7 @@ export function parseExplicitClientNameFromText(text: string | null): string | n
     const match = text.match(pattern);
     if (match?.[1]?.trim()) {
       const name = match[1].trim();
-      if (name.length >= MIN_NAME_SIGNAL_LENGTH) return name;
+      if (name.length >= MIN_NAME_SIGNAL_LENGTH && looksLikeRealClientName(name)) return name;
     }
   }
   return null;

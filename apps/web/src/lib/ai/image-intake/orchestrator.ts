@@ -584,6 +584,16 @@ export async function processImageIntake(
   const nameSignal = multimodalResult?.possibleClientNameSignal ?? null;
   const nameFromText = parsedIntent.clientName ?? parseExplicitClientNameFromText(request.accompanyingText);
   let clientBinding = await resolveClientBindingV2(effectiveRequest, session, nameSignal, nameFromText);
+  if (clientBinding.clientId && !clientBinding.clientLabel) {
+    clientBinding = {
+      ...clientBinding,
+      clientLabel:
+        await loadContactDisplayLabelForIntake(
+          effectiveRequest.tenantId,
+          clientBinding.clientId,
+        ),
+    };
+  }
 
   // 8. Case/opportunity binding v2 (Phase 4 — DB lookup when client is known)
   let resolvedClientId = clientBinding.clientId;

@@ -272,6 +272,10 @@ describe("parseExplicitClientNameFromText", () => {
   it("parses najdi mi klienta with mixed case", () => {
     expect(parseExplicitClientNameFromText("Najdi mi klienta ROman koloburda")).toBe("ROman koloburda");
   });
+
+  it("does not treat requested field as client name", () => {
+    expect(parseExplicitClientNameFromText("doplň klientovi rodné číslo")).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

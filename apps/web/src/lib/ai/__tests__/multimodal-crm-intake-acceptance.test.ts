@@ -858,6 +858,26 @@ describe("ACCEPTANCE: contact_update_from_image uses updateContact write action"
   });
 });
 
+describe("ACCEPTANCE: bound client without label does not trigger false CRM lookup warning", () => {
+  it("does not claim client lookup failed when client is already bound from context", () => {
+    const binding = makeBinding({ clientLabel: null, source: "session_context" as const });
+    const facts = makeFactBundle();
+    const intent = parseExplicitIntent("doplň klientovi rodné číslo");
+    const plan = buildActionPlanV4(makeClassification(), binding, facts, null, null, null, intent);
+    const result = minimalOrchestratorResult({
+      response: {
+        ...minimalOrchestratorResult().response,
+        clientBinding: binding,
+        factBundle: facts,
+        actionPlan: plan,
+      },
+      parsedIntent: intent,
+    });
+    const resp = mapImageIntakeToAssistantResponse(result, "s1");
+    expect(resp.message).not.toContain("nepodařilo jednoznačně najít klienta v CRM");
+  });
+});
+
 describe("ACCEPTANCE: maybeUpgradeToContactUpdate auto-promotes when ≥3 contact fields", () => {
   it("upgrades structured_image_fact_intake → contact_update_from_image", () => {
     const facts = makeFactBundle();
