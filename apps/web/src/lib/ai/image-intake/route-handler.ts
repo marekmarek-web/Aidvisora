@@ -212,7 +212,7 @@ export async function handleImageIntakeFromChatRoute(
 
   // Clear stale execution plan from prior run — new image intake is a fresh request.
   // Prevents confirm/cancel flow from operating on a plan from a different run.
-  session.lastExecutionPlan = null;
+  session.lastExecutionPlan = undefined;
   clearPendingImageIntakeResolution(session);
 
   let result: Awaited<ReturnType<typeof processImageIntake>>;
