@@ -183,7 +183,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
 
       await tx.insert(events).values({
         tenantId: resolved.tenantId,
-        title: `Schůzka (web) — ${clientName}`,
+        title: `${clientName} — Schůzka (web)`,
         eventType: "schuzka",
         startAt,
         endAt,
