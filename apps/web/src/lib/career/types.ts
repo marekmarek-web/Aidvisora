@@ -101,6 +101,8 @@ export type CareerEvaluationResult = {
   sourceNotes: string[];
   /** Odvozené z aplikační role — jen pro zobrazení, neslučovat s kariérou */
   systemRoleName: string;
+  /** Proxy z CRM / hierarchie — vždy označené jako orientační */
+  proxySignals: CareerProxySignal[];
 };
 
 export type CareerEvaluationMetricsSlice = {
@@ -108,6 +110,15 @@ export type CareerEvaluationMetricsSlice = {
   productionThisPeriod: number;
   meetingsThisPeriod: number;
 } | null;
+
+/** Orientační signály z CRM — nesmí se tvářit jako splnění kariérního řádu */
+export type CareerProxySignalKind = "crm_activity" | "hierarchy" | "adaptation";
+
+export type CareerProxySignal = {
+  id: string;
+  labelCs: string;
+  kind: CareerProxySignalKind;
+};
 
 export type CareerEvaluationContext = {
   systemRoleName: string;
@@ -117,6 +128,11 @@ export type CareerEvaluationContext = {
   metrics: CareerEvaluationMetricsSlice;
   directReportsCount: number;
   directReportCareerPositionCodes: (string | null)[];
+  /** Volitelné CRM pole pro poctivé proxy (Team Overview / detail) */
+  activityCount?: number;
+  daysWithoutActivity?: number;
+  /** Popisek z přehledu adaptace nováčků — jen kontext */
+  newcomerAdaptationStatusLabel?: string | null;
 };
 
 export const CAREER_PROGRAM_LABELS: Record<CareerProgramId, string> = {

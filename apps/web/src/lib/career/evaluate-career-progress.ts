@@ -11,6 +11,7 @@ import {
   type CareerEvaluationContext,
   type CareerEvaluationResult,
   type CareerProgramId,
+  type CareerProxySignal,
   type CareerTrackId,
   type CareerRequirement,
   type EvaluationCompleteness,
@@ -90,6 +91,69 @@ function deriveEvaluationOutcome(
   }
 
   return { progressEvaluation: "on_track", evaluationCompleteness: "full" };
+}
+
+function buildCareerProxySignals(ctx: CareerEvaluationContext): CareerProxySignal[] {
+  const out: CareerProxySignal[] = [];
+
+  if (ctx.directReportsCount > 0) {
+    out.push({
+      id: "proxy_hierarchy_directs",
+      labelCs: `V hierarchii CRM má tento člen ${ctx.directReportsCount} přímých podřízených. Jde jen o strukturu v aplikaci — neříká nic o kvalifikaci týmu podle kariérního řádu ani o splnění manažerských kritérií.`,
+      kind: "hierarchy",
+    });
+  }
+
+  if (ctx.metrics) {
+    const { unitsThisPeriod, meetingsThisPeriod } = ctx.metrics;
+    const hasMeetingsOrUnits = unitsThisPeriod > 0 || meetingsThisPeriod > 0;
+    if (hasMeetingsOrUnits) {
+      out.push({
+        id: "proxy_crm_activity_positive",
+        labelCs: `V měřeném období jsou v CRM záznamy: schůzky ${meetingsThisPeriod}, jednotky ${unitsThisPeriod}. Orientační kontext — nejedná se o BJ/BJS ani o oficiální splnění kariérní podmínky.`,
+        kind: "crm_activity",
+      });
+    } else if ((ctx.activityCount ?? 0) === 0 && (ctx.daysWithoutActivity ?? 0) >= 7) {
+      out.push({
+        id: "proxy_crm_activity_low",
+        labelCs: `V CRM je ${ctx.daysWithoutActivity} dní bez zaznamenané aktivity (v tomto období). Slouží jen jako měkký signál — nesouvisí automaticky s kariérním postupem.`,
+        kind: "crm_activity",
+      });
+    }
+  }
+
+  if (ctx.newcomerAdaptationStatusLabel?.trim()) {
+    out.push({
+      id: "proxy_newcomer_adaptation",
+      labelCs: `Stav adaptace v přehledu týmu: „${ctx.newcomerAdaptationStatusLabel.trim()}“. Doprovodný kontext pro vedení — není součástí kariérního řádu.`,
+      kind: "adaptation",
+    });
+  }
+
+  return out;
+}
+
+/** Krátký text do tabulky Team Overview */
+export function careerListHintShort(r: CareerEvaluationResult): string {
+  switch (r.progressEvaluation) {
+    case "on_track":
+      return r.evaluationCompleteness === "manual_required"
+        ? "Na dobré cestě · doplnit detaily"
+        : "Na dobré cestě";
+    case "data_missing":
+      return "Vyžaduje doplnění";
+    case "not_configured":
+      return "Kariéra nenastavena";
+    case "unknown":
+      return "Nejasná data";
+    case "blocked":
+      return "Zkontrolovat údaje";
+    case "close_to_promotion":
+    case "promoted_ready":
+      return "Částečně vyhodnoceno";
+    default:
+      return "Částečně vyhodnoceno";
+  }
 }
 
 /**
@@ -236,6 +300,8 @@ export function evaluateCareerProgress(ctx: CareerEvaluationContext): CareerEval
       ? getCareerPositionDef(programId, trackId, nextCode)?.label ?? null
       : null;
 
+  const proxySignals = buildCareerProxySignals(ctx);
+
   return {
     progressEvaluation,
     evaluationCompleteness,
@@ -251,6 +317,7 @@ export function evaluateCareerProgress(ctx: CareerEvaluationContext): CareerEval
     missingRequirements: missing,
     sourceNotes,
     systemRoleName: ctx.systemRoleName,
+    proxySignals,
   };
 }
 

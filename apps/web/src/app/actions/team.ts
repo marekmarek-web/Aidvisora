@@ -10,11 +10,18 @@ import { staffTeamInviteTemplate } from "@/lib/email/templates";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { STAFF_INVITE_QUERY_PARAM } from "@/lib/auth/staff-invite-url";
 import { db } from "db";
-import { memberships, roles, userProfiles, staffInvitations, tenants } from "db";
+import { memberships, roles, userProfiles, staffInvitations, tenants, tenantSettings } from "db";
 import { eq, asc, and, isNull, sql } from "db";
 import { hasPermission, isRoleAtLeast, type RoleName } from "@/shared/rolePermissions";
+import { validateCareerFieldsForWrite } from "@/lib/career/career-write-validation";
+import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
 
 const STAFF_INVITE_EXPIRY_DAYS = 7;
+
+const TENANT_TEAM_CAREER_KEY = "team_career_defaults";
+const TENANT_TEAM_CAREER_DOMAIN = "team";
+
+type TeamCareerDefaultsJson = { defaultCareerProgram: string | null };
 
 const ROLE_LABEL_CS: Partial<Record<RoleName, string>> = {
   Admin: "Admin",
@@ -33,6 +40,11 @@ export type TenantMemberRow = {
   joinedAt: Date;
   displayName: string | null;
   email: string | null;
+  careerProgram: string | null;
+  careerTrack: string | null;
+  careerPositionCode: string | null;
+  /** true pokud v DB zůstala legacy hodnota career_program (beplan_finance, …) */
+  careerHasLegacyProgram: boolean;
 };
 
 /** List members of the current user's tenant (for Settings > Tým). */
@@ -47,21 +59,123 @@ export async function listTenantMembers(): Promise<TenantMemberRow[]> {
       joinedAt: memberships.joinedAt,
       displayName: userProfiles.fullName,
       email: userProfiles.email,
+      careerProgram: memberships.careerProgram,
+      careerTrack: memberships.careerTrack,
+      careerPositionCode: memberships.careerPositionCode,
     })
     .from(memberships)
     .innerJoin(roles, eq(memberships.roleId, roles.id))
     .leftJoin(userProfiles, eq(userProfiles.userId, memberships.userId))
     .where(eq(memberships.tenantId, auth.tenantId))
     .orderBy(asc(memberships.joinedAt));
-  return rows.map((r) => ({
-    membershipId: r.membershipId,
-    userId: r.userId,
-    parentId: r.parentId ?? null,
-    roleName: r.roleName,
-    joinedAt: r.joinedAt,
-    displayName: r.displayName?.trim() || null,
-    email: r.email?.trim() || null,
-  }));
+  return rows.map((r) => {
+    const norm = normalizeCareerProgramFromDb(r.careerProgram);
+    return {
+      membershipId: r.membershipId,
+      userId: r.userId,
+      parentId: r.parentId ?? null,
+      roleName: r.roleName,
+      joinedAt: r.joinedAt,
+      displayName: r.displayName?.trim() || null,
+      email: r.email?.trim() || null,
+      careerProgram: r.careerProgram ?? null,
+      careerTrack: r.careerTrack ?? null,
+      careerPositionCode: r.careerPositionCode ?? null,
+      careerHasLegacyProgram: norm.legacyRaw != null,
+    };
+  });
+}
+
+export async function getTenantTeamCareerDefaults(): Promise<{ defaultCareerProgram: string | null }> {
+  const auth = await requireAuthInAction();
+  const [row] = await db
+    .select({ value: tenantSettings.value })
+    .from(tenantSettings)
+    .where(and(eq(tenantSettings.tenantId, auth.tenantId), eq(tenantSettings.key, TENANT_TEAM_CAREER_KEY)))
+    .limit(1);
+  const raw = row?.value as TeamCareerDefaultsJson | undefined;
+  const p = raw?.defaultCareerProgram ?? null;
+  if (p === "beplan" || p === "premium_brokers") return { defaultCareerProgram: p };
+  return { defaultCareerProgram: null };
+}
+
+export async function setTenantTeamCareerDefaultProgram(
+  program: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "team_members:write")) {
+    return { ok: false, error: "Nemáte oprávnění upravit výchozí program." };
+  }
+  const defaultCareerProgram = program === "beplan" || program === "premium_brokers" ? program : null;
+  const value: TeamCareerDefaultsJson = { defaultCareerProgram };
+
+  const [existing] = await db
+    .select({ id: tenantSettings.id, version: tenantSettings.version })
+    .from(tenantSettings)
+    .where(and(eq(tenantSettings.tenantId, auth.tenantId), eq(tenantSettings.key, TENANT_TEAM_CAREER_KEY)))
+    .limit(1);
+
+  if (existing) {
+    await db
+      .update(tenantSettings)
+      .set({
+        value: value as unknown as Record<string, unknown>,
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+        version: (existing.version ?? 0) + 1,
+      })
+      .where(eq(tenantSettings.id, existing.id));
+  } else {
+    await db.insert(tenantSettings).values({
+      tenantId: auth.tenantId,
+      key: TENANT_TEAM_CAREER_KEY,
+      value: value as unknown as Record<string, unknown>,
+      domain: TENANT_TEAM_CAREER_DOMAIN,
+      updatedBy: auth.userId,
+      version: 1,
+    });
+  }
+  return { ok: true };
+}
+
+export async function updateMemberCareer(
+  membershipId: string,
+  input: { careerProgram: string | null; careerTrack: string | null; careerPositionCode: string | null }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "team_members:write")) {
+    return { ok: false, error: "Nemáte oprávnění upravovat kariérní údaje." };
+  }
+
+  const [target] = await db
+    .select({ tenantId: memberships.tenantId })
+    .from(memberships)
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+
+  if (!target || target.tenantId !== auth.tenantId) {
+    return { ok: false, error: "Člen nenalezen." };
+  }
+
+  const validated = validateCareerFieldsForWrite(
+    input.careerProgram,
+    input.careerTrack,
+    input.careerPositionCode
+  );
+  if (!validated.ok) {
+    return { ok: false, error: validated.error };
+  }
+
+  await db
+    .update(memberships)
+    .set({
+      careerProgram: validated.data.careerProgram,
+      careerTrack: validated.data.careerTrack,
+      careerPositionCode: validated.data.careerPositionCode,
+    })
+    .where(eq(memberships.id, membershipId));
+
+  return { ok: true };
 }
 
 export async function updateMemberRole(

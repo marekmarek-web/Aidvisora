@@ -35,7 +35,15 @@ import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uplo
 import { getWorkspaceBirthdayEmailTheme, setWorkspaceBirthdayEmailTheme } from "@/app/actions/birthday-greetings";
 import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
 import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
-import { listTenantMembers, sendTeamMemberInvitation } from "@/app/actions/team";
+import {
+  listTenantMembers,
+  sendTeamMemberInvitation,
+  getTenantTeamCareerDefaults,
+  setTenantTeamCareerDefaultProgram,
+} from "@/app/actions/team";
+import { hasPermission, type RoleName } from "@/shared/rolePermissions";
+import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
+import { TeamMemberCareerFields } from "./TeamMemberCareerFields";
 import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
@@ -205,6 +213,13 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   }, [searchQuery]);
 
   const isTabVisible = (tabId: TabId) => filteredTabs.some((t) => t.id === tabId);
+
+  const canManageTeamCareer = hasPermission(initial.roleName as RoleName, "team_members:write");
+
+  const resolvedCareerProgramForMember = useCallback((raw: string | null) => {
+    const { programId } = normalizeCareerProgramFromDb(raw);
+    return programId === "beplan" || programId === "premium_brokers" ? programId : null;
+  }, []);
 
   // --- Osobní údaje state
   const parsed = parseFullName(initial.fullName);
@@ -766,9 +781,22 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
 
   // --- Team
   const [teamMembers, setTeamMembers] = useState<Awaited<ReturnType<typeof listTenantMembers>>>([]);
+  const [tenantDefaultCareerProgram, setTenantDefaultCareerProgram] = useState<"__none__" | "beplan" | "premium_brokers">(
+    "__none__"
+  );
+  const [tenantDefaultSaving, setTenantDefaultSaving] = useState(false);
+
   useEffect(() => {
     listTenantMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "tym") return;
+    void getTenantTeamCareerDefaults().then((d) => {
+      const p = d.defaultCareerProgram;
+      setTenantDefaultCareerProgram(p === "beplan" || p === "premium_brokers" ? p : "__none__");
+    });
+  }, [activeTab]);
 
   const companyBaseline = (initial.networkCompany ?? initial.tenantName).trim();
   const profilDirty = useMemo(() => {
@@ -1382,6 +1410,45 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <Users size={16} /> Otevřít správu týmu
               </Link>
             </div>
+            {canManageTeamCareer ? (
+              <div className="px-6 sm:px-8 py-4 bg-violet-50/40 border-b border-[color:var(--wp-surface-card-border)]">
+                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">
+                  Výchozí kariérní program pro workspace — předvyplní se u členů bez uloženého programu (nepřepisuje jejich údaje).
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={tenantDefaultCareerProgram}
+                    onChange={(e) =>
+                      setTenantDefaultCareerProgram(e.target.value as "beplan" | "premium_brokers" | "__none__")
+                    }
+                    className="px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-medium min-h-[40px]"
+                  >
+                    <option value="__none__">Žádný výchozí</option>
+                    <option value="beplan">Beplan</option>
+                    <option value="premium_brokers">Premium Brokers</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={tenantDefaultSaving}
+                    onClick={async () => {
+                      setTenantDefaultSaving(true);
+                      try {
+                        const res = await setTenantTeamCareerDefaultProgram(
+                          tenantDefaultCareerProgram === "__none__" ? null : tenantDefaultCareerProgram
+                        );
+                        if (!res.ok) toast.showToast(res.error ?? "Uložení se nezdařilo.", "error");
+                        else toast.showToast("Výchozí kariérní program uložen.");
+                      } finally {
+                        setTenantDefaultSaving(false);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50 min-h-[40px]"
+                  >
+                    {tenantDefaultSaving ? "Ukládám…" : "Uložit výchozí"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="px-6 sm:px-8 py-4 bg-[color:var(--wp-surface-muted)] border-b border-[color:var(--wp-surface-card-border)]">
               <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3">Pozvat nového člena</p>
               <form
@@ -1479,6 +1546,20 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{displayEmail}</div>
                               </div>
                             </div>
+                            {canManageTeamCareer ? (
+                              <TeamMemberCareerFields
+                                key={`${m.membershipId}-${m.careerProgram ?? ""}-${m.careerTrack ?? ""}-${m.careerPositionCode ?? ""}`}
+                                membershipId={m.membershipId}
+                                initialProgram={resolvedCareerProgramForMember(m.careerProgram)}
+                                initialTrack={m.careerTrack}
+                                initialPosition={m.careerPositionCode}
+                                careerHasLegacyProgram={m.careerHasLegacyProgram}
+                                tenantDefaultProgram={
+                                  tenantDefaultCareerProgram === "__none__" ? null : tenantDefaultCareerProgram
+                                }
+                                onSaved={() => void listTenantMembers().then(setTeamMembers).catch(() => {})}
+                              />
+                            ) : null}
                           </td>
                           <td className="px-6 py-5">
                             <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg ${m.roleName === "Admin" ? "bg-slate-800 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"}`}>

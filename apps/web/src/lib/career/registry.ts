@@ -81,6 +81,23 @@ export function listCareerPositions(programId: CareerProgramId, trackId: CareerT
   );
 }
 
+const TRACK_ORDER: CareerTrackId[] = [
+  "individual_performance",
+  "management_structure",
+  "reality",
+  "call_center",
+];
+
+/** Větve dostupné v konfiguraci pro zvolený program (pro UI selecty). */
+export function listTracksForProgram(programId: CareerProgramId): CareerTrackId[] {
+  if (programId !== "beplan" && programId !== "premium_brokers") return [];
+  const set = new Set<CareerTrackId>();
+  for (const d of ALL_DEFS) {
+    if (d.programId === programId) set.add(d.trackId);
+  }
+  return TRACK_ORDER.filter((t) => set.has(t));
+}
+
 export function isKnownCareerProgramId(v: string): v is CareerProgramId {
   return v === "not_set" || v === "beplan" || v === "premium_brokers" || v === "unknown";
 }

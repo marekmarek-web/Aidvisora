@@ -178,6 +178,27 @@ export function TeamMemberDetailView({ detail }: { detail: TeamMemberDetail }) {
               </ul>
             </div>
           )}
+          {detail.careerEvaluation.proxySignals.length > 0 && (
+            <div className="rounded-xl border border-dashed border-violet-200/80 bg-violet-50/40 p-3 space-y-2">
+              <p className="text-xs font-semibold text-violet-900">Orientační signály z CRM</p>
+              <p className="text-[11px] text-[color:var(--wp-text-secondary)] leading-snug">
+                Níže uvedené údaje slouží jen jako kontext pro vedení — <strong>nejsou</strong> oficiálním splněním podmínek z kariérních řádů (BJ, BJS, licence apod.).
+              </p>
+              <ul className="space-y-1.5">
+                {detail.careerEvaluation.proxySignals.map((s) => (
+                  <li
+                    key={s.id}
+                    className="text-xs text-[color:var(--wp-text-secondary)] flex gap-2 items-start"
+                  >
+                    <span className="shrink-0 rounded bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 border border-violet-100">
+                      {s.kind === "crm_activity" ? "Aktivita" : s.kind === "hierarchy" ? "Struktura" : "Adaptace"}
+                    </span>
+                    <span>{s.labelCs}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </section>
 

@@ -37,6 +37,55 @@ import { AdvisorAiOutputNotice } from "@/app/components/ai/AdvisorAiOutputNotice
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { formatCareerSummaryLine } from "@/lib/career/evaluate-career-progress";
+import type { EvaluationCompleteness, ProgressEvaluation } from "@/lib/career/types";
+
+function teamOverviewCareerProgressShort(pe: ProgressEvaluation): string {
+  switch (pe) {
+    case "not_configured":
+      return "Nenastaveno";
+    case "data_missing":
+      return "Chybí data";
+    case "unknown":
+      return "Nejasné";
+    case "on_track":
+      return "Na cestě";
+    case "close_to_promotion":
+      return "Blízko postupu";
+    case "blocked":
+      return "Ke kontrole";
+    case "promoted_ready":
+      return "K potvrzení";
+    default:
+      return pe;
+  }
+}
+
+function teamOverviewCareerCompletenessShort(ec: EvaluationCompleteness): string {
+  switch (ec) {
+    case "full":
+      return "Kompletní";
+    case "partial":
+      return "Částečně";
+    case "low_confidence":
+      return "Nízká jistota";
+    case "manual_required":
+      return "Ruční ověření";
+    default:
+      return ec;
+  }
+}
+
+function overviewCareerProgressBadgeClass(pe: ProgressEvaluation): string {
+  if (pe === "on_track" || pe === "close_to_promotion" || pe === "promoted_ready") {
+    return "bg-emerald-50 text-emerald-800 border border-emerald-200/70";
+  }
+  return "bg-amber-50 text-amber-900 border border-amber-200/70";
+}
+
+function overviewCareerCompletenessBadgeClass(ec: EvaluationCompleteness): string {
+  if (ec === "full") return "bg-slate-50 text-slate-700 border border-slate-200/80";
+  return "bg-violet-50 text-violet-800 border border-violet-200/70";
+}
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
@@ -947,6 +996,27 @@ export function TeamOverviewView({
                           {careerLine ? (
                             <p className="text-[11px] text-[color:var(--wp-text-tertiary)] mt-0.5">{careerLine}</p>
                           ) : null}
+                          {met?.careerSummary ? (
+                            <div className="mt-1 space-y-0.5 max-w-[14rem]">
+                              <div className="flex flex-wrap gap-1">
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${overviewCareerProgressBadgeClass(met.careerSummary.progressEvaluation)}`}
+                                  title="Stav evaluace kariéry (orientační, ne oficiální řád)"
+                                >
+                                  {teamOverviewCareerProgressShort(met.careerSummary.progressEvaluation)}
+                                </span>
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${overviewCareerCompletenessBadgeClass(met.careerSummary.evaluationCompleteness)}`}
+                                  title="Úplnost automatické části evaluace"
+                                >
+                                  {teamOverviewCareerCompletenessShort(met.careerSummary.evaluationCompleteness)}
+                                </span>
+                              </div>
+                              <p className="text-[10px] leading-snug text-[color:var(--wp-text-secondary)]">
+                                {met.careerSummary.hintShort}
+                              </p>
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met?.unitsThisPeriod ?? "—"}</td>
                         <td className="px-4 py-3 text-right text-sm text-[color:var(--wp-text-secondary)]">{met ? formatNumber(met.productionThisPeriod) : "—"}</td>
@@ -991,6 +1061,23 @@ export function TeamOverviewView({
                         <p className="text-xs text-[color:var(--wp-text-secondary)]">{m.roleName}{m.email ? ` · ${m.email}` : ""}</p>
                         {careerLine ? (
                           <p className="text-[11px] text-[color:var(--wp-text-tertiary)] mt-0.5">{careerLine}</p>
+                        ) : null}
+                        {met?.careerSummary ? (
+                          <div className="mt-1 space-y-0.5">
+                            <div className="flex flex-wrap gap-1">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${overviewCareerProgressBadgeClass(met.careerSummary.progressEvaluation)}`}
+                              >
+                                {teamOverviewCareerProgressShort(met.careerSummary.progressEvaluation)}
+                              </span>
+                              <span
+                                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${overviewCareerCompletenessBadgeClass(met.careerSummary.evaluationCompleteness)}`}
+                              >
+                                {teamOverviewCareerCompletenessShort(met.careerSummary.evaluationCompleteness)}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-[color:var(--wp-text-secondary)]">{met.careerSummary.hintShort}</p>
+                          </div>
                         ) : null}
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${

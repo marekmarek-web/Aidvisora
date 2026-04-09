@@ -84,36 +84,80 @@ Evaluator používá **opatrnější** sadu požadavků (bez automatického mapo
 
 ---
 
-## 4. Co jde spočítat z dnešních dat
+## 4. Úložiště a editace (jeden zdroj pravdy)
+
+| Pole | Tabulka / sloupec |
+|------|-------------------|
+| `careerProgram` | `memberships.career_program` |
+| `careerTrack` | `memberships.career_track` |
+| `careerPositionCode` | `memberships.career_position_code` |
+
+**Nepersistovat** stejná data paralelně do `user_profiles`, tenant-only metadat či jiných tabulek — evaluator i Team Overview čtou z `memberships` (přes existující dotazy členů tenantu).
+
+**UI pro úpravu:** záložka **Nastavení → Tým** (`SetupView` + `TeamMemberCareerFields`). U každého člena se pod jménem zobrazí tři selecty (program → větev → pozice) a tlačítko uložení. Volné textové kódy nejsou povoleny.
+
+**Oprávnění:** zápis přes server action `updateMemberCareer` v `apps/web/src/app/actions/team.ts` je chráněn oprávněním **`team_members:write`** (typicky Director / Admin). Poradce bez tohoto oprávnění formulář nevidí. Aplikační role zůstává oddělená (správa rolí jinde).
+
+---
+
+## 5. Validace program / větev / pozice
+
+- **Zápis:** `validateCareerFieldsForWrite` v `apps/web/src/lib/career/career-write-validation.ts` — pouze kanonické programy `beplan` a `premium_brokers`; pozice musí existovat v registru pro danou dvojici program + track (`getCareerPositionDef`). Legacy řetězce v `career_program` při zápisu zamítnout (nutná oprava přes select).
+- **Klient:** nabídka větví z `listTracksForProgram(programId)`; pozice z `listCareerPositions(programId, trackId)` — filtrování podle výběru.
+- **Čtení / evaluace:** `normalizeCareerProgramFromDb`, `inferTrackFromLegacyProgram`, případně odhad větve z kódu u Beplanu — výsledkem může být `missingRequirements` (např. explicitní track), `evaluationCompleteness` `low_confidence` / `manual_required`, nikoli „tvrdá“ jistota.
+
+---
+
+## 6. Proxy pravidla (orientační, ne řád)
+
+Implementace: `buildCareerProxySignals` v `apps/web/src/lib/career/evaluate-career-progress.ts`. Signály jsou v `CareerEvaluationResult.proxySignals` a v detailu člena v sekci **„Orientační signály z CRM“** (viz `TeamMemberDetailView`).
+
+Aktuálně (MVP fáze 2):
+
+1. **CRM aktivita** — hrubý kontext z počtu aktivit a dnů bez aktivity (ne BJ/BJS).
+2. **Hierarchie** — kontext z počtu přímých podřízených tam, kde to dává smysl (stále bez předstírání splnění strukturálních kritérií z PDF).
+3. **Adaptace** — na detailu člena doplněný textový kontext ze stavu adaptace nováčka (`newcomerAdaptationStatusLabel`), pokud je k dispozici.
+
+V UI je vždy zdůrazněno, že jde o **doprovodné signály**, ne oficiální splnění podmínek kariérního řádu.
+
+---
+
+## 7. Výchozí kariérní program na tenantovi (volitelný prefill)
+
+- **Uložení:** `tenant_settings` — klíč `team_career_defaults`, doména `team`, JSON `{ "defaultCareerProgram": "beplan" | "premium_brokers" | null }`.
+- **Načtení / zápis:** `getTenantTeamCareerDefaults`, `setTenantTeamCareerDefaultProgram` v `apps/web/src/app/actions/team.ts`.
+- **Chování:** používá se jen jako **předvyplnění** ve formuláři u člena, pokud nemá uložený program — **nepřepisuje** už uložené hodnoty na `memberships`. V záhlaví záložky Tým je blok „Výchozí kariérní program pro workspace“ (jen při `team_members:write`).
+
+---
+
+## 8. Propsání do Team Overview a detailu člena
+
+- **Server:** `getTeamMemberMetrics` doplňuje `careerSummary` (`hintShort`, `progressEvaluation`, `evaluationCompleteness`) pomocí `evaluateCareerProgress` + `careerListHintShort` (`apps/web/src/app/actions/team-overview.ts`).
+- **Seznam členů:** `TeamOverviewView` — pod řádkem jména: text `formatCareerSummaryLine` (program · větev · pozice), pod tím kompaktní štítky stavu a úplnosti a krátký hint.
+- **Detail:** `getTeamMemberDetail` vrací `careerEvaluation` (pozice, další krok, `missingRequirements`, úplnost, proxy signály). Sekce Kariéra v `TeamMemberDetailView` zobrazuje čtyři vrstvy (role vs kariéra), stav evaluace a chybějící položky.
+
+---
+
+## 9. Co jde spočítat z dnešních dat (stručně)
 
 - Počet **přímých podřízených** (`parent_id`).
-- U **manažerské / call-centrum M*** větve: zda má přímý podřízený vyplněný **kariérní kód** (ne „splněno 6× M2“, jen přítomnost údaje).
-- Hrubé **CRM metriky** jako kontext — nikdy jako oficiální BJ/BJS.
+- U **manažerské / call-centrum M*** větve: přítomnost **kariérního kódu** u podřízených (ne kvantifikace „6× M2“).
+- Hrubé **CRM metriky** a **aktivita** jen jako proxy kontext — nikdy jako oficiální BJ/BJS.
 
 ---
 
-## 5. Co nejde spočítat / chybí specifikace
+## 10. Co nejde spočítat / zůstává manual
 
-- **BJ, BJS, historický výkon** z PDF — vždy **manual** / **unspecified** v `missingRequirements`.
-- **Licence, zkoušky, FT**, realitní podíl u manažerského postupu — manuálně nebo otevřená specifikace v configu.
-- **Kvantitativní prahy** z PDF bez bezpečné extrakce — nepřidávat do kódu bez schválení.
-- Neznámé řetězce v `career_program` / `career_track` → stav evaluace **`unknown`**, úplnost **`low_confidence`**.
+- **BJ, BJS, historický výkon** z PDF — `manual` / `unspecified` v `missingRequirements`.
+- **Licence, zkoušky, FT**, realitní podíly u postupu — manuálně nebo bez specifikace v configu.
+- **Kvantitativní prahy** z PDF bez bezpečné extrakce — do kódu nepřidávat bez schválení.
+- Neznámé řetězce v DB → `unknown` / `low_confidence` / doplnění přes Nastavení → Tým.
 
-Výstup evaluace používá `progressEvaluation` (např. `on_track`, `data_missing`, `blocked`, `unknown`, `not_configured`) a `evaluationCompleteness` (`full`, `partial`, `low_confidence`, `manual_required`). Hodnoty `close_to_promotion` / `promoted_ready` jsou v typu připravené pro budoucí pravidla — bez falešné přesnosti se dnes primárně používá `on_track` + `manual_required`.
-
----
-
-## 6. Rollout do Team Overview
-
-1. Konfigurace v `lib/career` (hotovo pro základ více větví).
-2. DB sloupce (již v migraci 0024).
-3. Úprava uložených hodnot v DB směrem k `beplan` / `premium_brokers` a explicitním trackům (postupně, legacy parser pomáhá).
-4. UI: přehled (řádek program · větev · pozice), detail (program, větev, pozice, další krok, stav, úplnost, chybějící položky).
-5. Další fáze: editace v Nastavení → Tým, tenant default, rozšířené pravidla s jasným „proxy“ labelingem.
+Výstup evaluace: `progressEvaluation` (`on_track`, `data_missing`, `blocked`, `unknown`, `not_configured`, …) a `evaluationCompleteness` (`full`, `partial`, `low_confidence`, `manual_required`). Bez falešné přesnosti — preferovat `manual_required` a partial stavy před „ready for promotion“.
 
 ---
 
-## 7. Rizika a otevřené otázky
+## 11. Rizika a otevřené otázky
 
 - **Legacy data** s `beplan_finance` bez tracku: dokud není vyplněn `career_track` nebo spolehlivý kód pozice, může zůstat `data_missing`.
 - **TP1–TP7**: názvy a počet stupňů musí odpovídat schválenému PDF; snadno doplnitelné v `beplan-top-poradce.ts`.
@@ -124,6 +168,9 @@ Výstup evaluace používá `progressEvaluation` (např. `on_track`, `data_missi
 
 ## Odkaz na kód
 
-- `apps/web/src/lib/career/`
-- `packages/db/src/schema/tenants.ts`
+- `apps/web/src/lib/career/` (registry, evaluace, `career-write-validation.ts`)
+- `apps/web/src/app/actions/team.ts` (`updateMemberCareer`, tenant default)
+- `apps/web/src/app/actions/team-overview.ts` (`careerSummary`, detail)
+- `apps/web/src/app/portal/setup/SetupView.tsx`, `TeamMemberCareerFields.tsx`
+- `apps/web/src/app/portal/team-overview/TeamOverviewView.tsx`, `[userId]/TeamMemberDetailView.tsx`
 - `packages/db/drizzle/0024_memberships_career.sql`

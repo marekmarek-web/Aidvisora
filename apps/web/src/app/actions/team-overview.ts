@@ -23,8 +23,8 @@ import {
   memberships,
   roles,
 } from "db";
-import { evaluateCareerProgress } from "@/lib/career";
-import type { CareerEvaluationResult } from "@/lib/career/types";
+import { evaluateCareerProgress, careerListHintShort } from "@/lib/career/evaluate-career-progress";
+import type { CareerEvaluationResult, EvaluationCompleteness, ProgressEvaluation } from "@/lib/career/types";
 import { eq, and, gte, lt, isNull, isNotNull, sql, desc, asc, inArray } from "db";
 
 export type TeamOverviewPeriod = "week" | "month" | "quarter";
@@ -103,6 +103,12 @@ export type TeamMemberInfo = {
   careerPositionCode: string | null;
 };
 
+export type TeamCareerListSummary = {
+  hintShort: string;
+  progressEvaluation: ProgressEvaluation;
+  evaluationCompleteness: EvaluationCompleteness;
+};
+
 export type TeamMemberMetrics = {
   userId: string;
   roleName: string;
@@ -131,6 +137,8 @@ export type TeamMemberMetrics = {
   productionTrend: number;
   meetingsTrend: number;
   riskLevel: "ok" | "warning" | "critical";
+  /** Kompaktní kariérní nápověda pro Team Overview (evaluace + krátký text) */
+  careerSummary?: TeamCareerListSummary;
 };
 
 async function getScopeContext(scope?: TeamOverviewScope) {
@@ -582,6 +590,29 @@ export async function getTeamMemberMetrics(
     const memberAlerts = buildAlertsFromMetric(metricBase);
     const hasCritical = memberAlerts.some((a) => a.severity === "critical");
     metricBase.riskLevel = hasCritical ? "critical" : memberAlerts.length > 0 ? "warning" : "ok";
+
+    const directsForCareer = ctx.tenantMembers.filter((tm) => tm.parentId === mem.userId);
+    const careerEval = evaluateCareerProgress({
+      systemRoleName: mem.roleName,
+      careerProgram: mem.careerProgram,
+      careerTrack: mem.careerTrack,
+      careerPositionCode: mem.careerPositionCode,
+      metrics: {
+        unitsThisPeriod: stats.unitsThisPeriod,
+        productionThisPeriod: stats.productionThisPeriod,
+        meetingsThisPeriod: stats.meetingsThisPeriod,
+      },
+      directReportsCount: directsForCareer.length,
+      directReportCareerPositionCodes: directsForCareer.map((d) => d.careerPositionCode),
+      activityCount: stats.activityCount,
+      daysWithoutActivity: stats.daysWithoutActivity,
+    });
+    metricBase.careerSummary = {
+      hintShort: careerListHintShort(careerEval),
+      progressEvaluation: careerEval.progressEvaluation,
+      evaluationCompleteness: careerEval.evaluationCompleteness,
+    };
+
     return metricBase;
   });
 
@@ -844,6 +875,9 @@ export async function getTeamMemberDetail(userId: string): Promise<TeamMemberDet
       : null,
     directReportsCount: directs.length,
     directReportCareerPositionCodes: directs.map((d) => d.careerPositionCode),
+    activityCount: metrics?.activityCount,
+    daysWithoutActivity: metrics?.daysWithoutActivity,
+    newcomerAdaptationStatusLabel: adaptation?.adaptationStatus ?? null,
   });
 
   const advisorPoints: TeamPerformancePoint[] = [];
