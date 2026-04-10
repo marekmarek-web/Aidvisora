@@ -9,12 +9,7 @@ import { buildTeamMemberCoachingSummaryBullets } from "@/lib/team-member-coachin
 import { crmUnitsFootnoteForProgram } from "@/lib/career/crm-units-copy";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { MemberCareerQuickActions } from "@/app/portal/team-overview/[userId]/MemberCareerQuickActions";
-
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString("cs-CZ");
-}
+import { formatTeamOverviewProduction } from "@/lib/team-overview-format";
 
 export function TeamOverviewSelectedMemberPanel({
   detail,
@@ -23,6 +18,8 @@ export function TeamOverviewSelectedMemberPanel({
   onClose,
   canCreateTeamCalendar,
   canEditTeamCareer,
+  /** Vybraný člen je v rozsahu, ale neprošel aktuálním segmentem/vyhledáváním v tabulce. */
+  outsideFilter = false,
 }: {
   detail: TeamMemberDetail | null;
   loading: boolean;
@@ -30,6 +27,7 @@ export function TeamOverviewSelectedMemberPanel({
   onClose: () => void;
   canCreateTeamCalendar: boolean;
   canEditTeamCareer: boolean;
+  outsideFilter?: boolean;
 }) {
   if (loading) {
     return (
@@ -89,6 +87,12 @@ export function TeamOverviewSelectedMemberPanel({
         <ExternalLink className="h-3.5 w-3.5" aria-hidden />
       </Link>
 
+      {outsideFilter ? (
+        <div className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs text-amber-950" role="status">
+          Tento člen neodpovídá aktuálnímu filtru tabulky — souhrn je z detailu serveru. Po úpravě filtru nebo hledání se řádek znovu zvýrazní.
+        </div>
+      ) : null}
+
       <section>
         <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-2 flex items-center gap-2">
           <Briefcase className="h-4 w-4 text-violet-500" />
@@ -131,7 +135,7 @@ export function TeamOverviewSelectedMemberPanel({
               <p className="text-[color:var(--wp-text-tertiary)]">Jednotky</p>
             </div>
             <div className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 p-2">
-              <p className="tabular-nums font-semibold text-[color:var(--wp-text)]">{formatNumber(m.productionThisPeriod)}</p>
+              <p className="tabular-nums font-semibold text-[color:var(--wp-text)]">{formatTeamOverviewProduction(m.productionThisPeriod)}</p>
               <p className="text-[color:var(--wp-text-tertiary)]">Produkce</p>
             </div>
           </div>

@@ -10,12 +10,7 @@ import { buildTeamCoachingAttentionList } from "@/lib/career/career-coaching";
 import { buildTeamCareerSummaryBlock, type TeamCareerSummaryBlock } from "@/lib/career/team-career-aggregate";
 import type { TeamCoachingAttentionItem } from "@/lib/career/career-coaching";
 import { computeTeamRhythmView, type TeamRhythmCalendarData, type TeamRhythmComputed } from "@/lib/team-rhythm/compute-view";
-
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString("cs-CZ");
-}
+import { formatTeamOverviewProduction } from "@/lib/team-overview-format";
 
 export type TeamOverviewPoolSplit = {
   counts: { beplan: number; premium_brokers: number; not_set: number; other: number };
@@ -98,7 +93,7 @@ function buildBriefingCopy(
     scope !== "me" && kpis
       ? `Tento týden: ${kpis.meetingsThisWeek} schůzek v CRM (tento rozsah) · období ${kpis.periodLabel}.`
       : scope === "me" && kpis
-        ? `Období ${kpis.periodLabel}: ${kpis.unitsThisPeriod} jednotek · produkce ${formatNumber(kpis.productionThisPeriod)}.`
+        ? `Období ${kpis.periodLabel}: ${kpis.unitsThisPeriod} jednotek · produkce ${formatTeamOverviewProduction(kpis.productionThisPeriod)}.`
         : null;
 
   const teamStandingLine =
@@ -117,7 +112,7 @@ function buildBriefingCopy(
           return `Jak si tým stojí: produkce je v podobné úrovni jako minulé období (CRM).${goalBit}`;
         })()
       : kpis && scope === "me"
-        ? `Váš výkon v období ${kpis.periodLabel}: ${formatNumber(kpis.productionThisPeriod)} produkce, ${kpis.unitsThisPeriod} jednotek (CRM — ne BJ/BJS z řádu).`
+        ? `Váš výkon v období ${kpis.periodLabel}: ${formatTeamOverviewProduction(kpis.productionThisPeriod)} produkce, ${kpis.unitsThisPeriod} jednotek (CRM — ne BJ/BJS z řádu).`
         : null;
 
   return {
