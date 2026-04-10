@@ -700,6 +700,11 @@ function NewTaskWizard({
 /* ==========================================
    MORE ACTIONS DROPDOWN
    ========================================== */
+const MORE_MENU_MIN_W = 220;
+const MORE_MENU_GAP = 4;
+/** Odhad výšky menu (3 položky × 44px + rámeček); při nedostatku místa se použije maxHeight + scroll */
+const MORE_MENU_APPROX_H = 200;
+
 function MoreActionsMenu({
   onEdit,
   onDelete,
@@ -721,7 +726,33 @@ function MoreActionsMenu({
     e.stopPropagation();
     if (!isOpen && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setMenuStyles({ top: rect.bottom + 4, left: rect.right - 220 });
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const spaceBelow = vh - rect.bottom - MORE_MENU_GAP;
+      const spaceAbove = rect.top - MORE_MENU_GAP;
+      const openUpward = spaceBelow < MORE_MENU_APPROX_H && spaceAbove > spaceBelow;
+
+      const left = Math.min(Math.max(MORE_MENU_GAP, rect.right - MORE_MENU_MIN_W), vw - MORE_MENU_MIN_W - MORE_MENU_GAP);
+
+      if (openUpward) {
+        const maxH = Math.max(120, spaceAbove - MORE_MENU_GAP);
+        setMenuStyles({
+          left,
+          top: "auto",
+          bottom: vh - rect.top + MORE_MENU_GAP,
+          maxHeight: maxH,
+          overflowY: "auto",
+        });
+      } else {
+        const maxH = Math.max(120, spaceBelow - MORE_MENU_GAP);
+        setMenuStyles({
+          left,
+          top: rect.bottom + MORE_MENU_GAP,
+          bottom: "auto",
+          maxHeight: maxH,
+          overflowY: "auto",
+        });
+      }
     }
     setIsOpen(!isOpen);
   };
@@ -742,7 +773,7 @@ function MoreActionsMenu({
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
           <div
-            className="fixed min-w-[13.5rem] max-w-[min(100vw-1rem,16rem)] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-xl py-1 z-[9999]"
+            className="fixed min-w-[13.5rem] max-w-[min(100vw-1rem,16rem)] bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-xl py-1 z-[9999] custom-scrollbar"
             style={menuStyles}
             role="menu"
           >
