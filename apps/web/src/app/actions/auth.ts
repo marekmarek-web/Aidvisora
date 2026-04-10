@@ -25,7 +25,6 @@ import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";
 import { CLIENT_INVITE_USER_FACING_ERROR_MESSAGES } from "@/lib/auth/client-invite-user-facing-errors";
 import { buildClientInviteLoginSearch, buildClientInvitePasswordSetupSearch } from "@/lib/auth/client-invite-url";
-import { clientHasCompletedPortalOnboarding } from "@/lib/auth/client-portal-onboarding";
 
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
@@ -677,7 +676,7 @@ export async function ensureClientPortalAccess(): Promise<
         "Účet nemá přiřazený klientský přístup. Požádejte svého poradce o pozvánku do klientské zóny (e-mail s odkazem).",
     };
   }
-  if ((m?.roleName as string) === "Client" && m.contactId) {
+  if (m && m.roleName === "Client" && m.contactId) {
     return { ok: true };
   }
   const pendingPasswordChangeToken = await findPendingClientPasswordChangeTokenByEmail(user.email);
