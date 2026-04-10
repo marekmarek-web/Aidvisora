@@ -6,6 +6,8 @@
 
 **Datum auditu:** 2026-04-09 (proti stavu kódu v `apps/web` a `packages/db`).
 
+**Stav synchronizace s kódem (2026-04-09):** Kritické pasáže o **scope / `parent_id`**, **AI kontextu** a **výpisu signálů** byly zarovnány s implementací po **Fázi 7** (QA / release readiness). Podrobný checklist a known limitations: [`docs/team-overview-release-checklist.md`](./team-overview-release-checklist.md). Starší auditní odstavce (např. executive summary §1) popisují stav před dokončením vlny MVP — ber je jako historický kontext, ne jako aktuální screenshot produktu.
+
 ---
 
 ## 0. Search audit (povinné dotazy)
@@ -19,9 +21,9 @@ Níže je souhrn cílených vyhledávání v kóbu a dokumentaci – **co z nich
 | `getTeamHierarchy` | `team-overview.ts` → `getTeamTree` v `team-hierarchy.ts`. | Vrací `TeamTreeNode[]` podle scope a `parent_id`. |
 | `NewcomerAdaptation` | Typ + `getNewcomerAdaptation` v `team-overview.ts`. | Nováčci &lt; 90 dní, role Advisor/Manager, checklist + skóre + status. |
 | `team_overview` | `rolePermissions.ts`, `entitlements.ts`, guards ve stránkách a AI. | Permission `team_overview:read` (a write u Director/Admin); entitlement klíč `team_overview` mapuje na `ai.assistant_enabled`. |
-| `team_calendar` | `rolePermissions.ts`, `team-events.ts`, `TeamCalendarModal.tsx`. | Write pro vytvoření týmové události/úkolu; read v matici rolí existuje, agregované „team calendar UI“ v přehledu chybí. |
+| `team_calendar` | `rolePermissions.ts`, `team-events.ts`, `TeamCalendarModal.tsx`, `TeamRhythmPanel.tsx`. | Write pro vytvoření týmové události/úkolu; v přehledu je **read model rytmu** (`getTeamRhythmCalendarData`), ne plný samostatný týmový kalendářový modul. |
 | `rolePermissions` | `shared/rolePermissions.ts` (+ testy release gate). | Centrální matice rolí vs. akcí; client-safe import pro bundler. |
-| `parentId` | `memberships.parentId`, `team-hierarchy*.ts`, `team-overview.ts`, `team.ts`. | Hierarchie reportingu v tenantu; bez vyplnění stromu padá fallback „všichni členové“ v `my_team`. |
+| `parentId` | `memberships.parentId`, `team-hierarchy*.ts`, `team-overview.ts`, `team.ts`. | Hierarchie reportingu v tenantu; pokud **nikdo nemá** `parent_id`, rozsah **`my_team` vrací jen aktuálního uživatele** (ochrana rozsahu); UI zobrazí banner o neúplné hierarchii. Viz `docs/TEAM-OVERVIEW-HIERARCHY.md`. |
 | Mindmap | `portal/mindmap/*`, `actions/mindmap.ts`. | Doména kontaktů/domácností a canvas; **není** org chart týmu. |
 | `generateTeamSummaryAction` | `ai-generations.ts` → `generateTeamSummary` v `ai-service.ts`. | Ukládá generaci `entityType: team`, `promptType: teamSummary`. |
 | `createTeamActionFromAi` | `ai-actions.ts` → `executeTeamAiAction` v `action-executors.ts`. | Z uloženého team summary vytvoří úkol nebo schůzku (`events.eventType: schuzka`) pro uživatele/člena. |
@@ -84,14 +86,14 @@ Níže je souhrn cílených vyhledávání v kóbu a dokumentaci – **co z nich
 ### Role / scope logika
 
 - **`team-hierarchy-types.ts`:** `TeamOverviewScope = "me" | "my_team" | "full"`; `resolveScopeForRole` – Advisor/Viewer vždy `me`; Manager nemůže `full` (přemapuje se na `my_team`); Director/Admin může `full`.
-- **`getVisibleUserIdsFromMembers`:** `my_team` = aktuální uživatel + potomci v grafu `parent_id`; pokud v tenantu **nikdo nemá** `parent_id`, `my_team` vrátí **všechny členy** (záměrný fallback – dokumentováno i v `docs/TEAM-OVERVIEW-HIERARCHY.md`).
+- **`getVisibleUserIdsFromMembers`:** `my_team` = aktuální uživatel + potomci v grafu `parent_id`. Pokud v tenantu **nikdo nemá** `parent_id`, `my_team` vrátí **jen aktuálního uživatele** (nelze bezpečně odvodit větev). Při **`full`** (Director/Admin) zůstávají viditelní všichni členové tenantu v rámci rolí týmu.
 
 ### AI flow (týmové shrnutí)
 
 - **Generování:** `generateTeamSummaryAction` → `generateTeamSummary` → `buildTeamAiContextRaw` + `renderTeamAiPromptVariables` → `runPromptGeneration` (`promptType: teamSummary`, `entityType: team`, `entityId: tenantId`).
-- **Kontext:** `buildTeamAiContextRaw` volá `getTeamOverviewKpis`, `listTeamMembersWithNames`, `getTeamMemberMetrics`, `getTeamAlerts`, `getNewcomerAdaptation` **bez explicitního `scope`** → použije se default z `resolveScopeForRole(role, undefined)` = pro Director/Admin **`my_team`**, ne `full` (viz riziko v sekci 8).
-- **API alternativa:** `GET /api/ai/team-summary` předává `scope` query param a defaultuje stejně jako UI stránka – konzistentnější než `buildTeamAiContextRaw`.
-- **Follow-up:** `createTeamActionFromAi` validuje generaci (`team` + `teamSummary`), pak `executeTeamAiAction` → `createTask` nebo `createEvent` (typ schůzky).
+- **Kontext:** `buildTeamAiContextRaw` přijímá **`scope`**; při volání z UI jde o stejný scope jako v `TeamOverviewView`. Pokud volající scope nepředá, použije se **default shodný s `team-overview/page.tsx`**: Advisor/Viewer → `me`, Manager → `my_team`, Director/Admin → `full`, následně `resolveScopeForRole`. Alerty se odvozují z jedné sady metrik přes `buildTeamAlertsFromMemberMetrics` ([`apps/web/src/lib/team-overview-alerts.ts`](../apps/web/src/lib/team-overview-alerts.ts)).
+- **API:** `GET /api/ai/team-summary` používá `resolveScopeForRole` na query param `scope` (Manager nemůže eskalovat na `full`).
+- **Follow-up:** `createTeamActionFromAi` validuje generaci (`team` + `teamSummary`); `executeTeamAiAction` kontroluje, že přiřazený uživatel patří do **max. scope** role; pak `createTask` nebo `createEvent` (typ schůzky).
 
 ### Newcomer / adaptation flow
 
@@ -140,10 +142,10 @@ Oprávnění dle [`apps/web/src/shared/rolePermissions.ts`](apps/web/src/shared/
 | Role | `team_overview:read` | Scope výchozí (UI page) | Týmová událost/úkol (`team_calendar:write`) | `team_goals` | Co vidí v Team Overview | Co skrýt / omezit | Riziko úniku |
 |------|----------------------|-------------------------|---------------------------------------------|--------------|---------------------------|-------------------|--------------|
 | **Advisor** | Ano | `me` – jen vlastní metriky | Ne | Jen read nepřísluší (není v roli) | Osobní „tým“ 1 člen; stejné KPI jako osobní výkon | Tlačítka týmového kalendáře; cíle týmu (pokud by se někdy zobrazily) | Nízké – vidí jen sebe. |
-| **Viewer** | **Ne** | N/A (stránka redirect) | Ne | Ne | Nemá přístup k `/portal/team-overview` | Celý modul | Sidebar stále může ukazovat sekci podle `layout` – ověřit konzistenci s permission (aktuálně sekce „Vedení týmu“ závisí na `showTeamOverview`, ne na `team_overview:read`). |
-| **Manager** | Ano | `my_team` | Ano (read+write) | read | Podřízení stromem + on sám; KPI za tým | Scope „Celá struktura“ UI neukáže (správně) | Střední: bez `parent_id` vidí **všechny** v tenantu v `my_team`. |
-| **Director** | Ano (+ `team_overview:write`) | `full` | Ano | read+write | Všichni členové tenantu; sloupec Nadřízený v tabulce při `full` | – | **AI kontext** bez scope parametru může být užší než UI (`my_team`). |
-| **Admin** | `*` | `full` | Ano | read+write | Totéž co Director + plná práva jinde | – | Stejné jako Director u AI scope. |
+| **Viewer** | **Ne** | N/A (stránka redirect) | Ne | Ne | Nemá přístup k `/portal/team-overview` | Celý modul | Nízké: `showTeamOverview` v `layout.tsx` nezahrnuje Viewer — odkaz na přehled se v sidebaru neukazuje; přímý URL stále končí redirectem. |
+| **Manager** | Ano | `my_team` | Ano (read+write) | read | Podřízení stromem + on sám; KPI za tým | Scope „Celá struktura“ UI neukáže (správně) | Bez `parent_id` v tenantu: **`my_team` = jen uživatel** (ne celý tenant); doplnit vazby v Nastavení → Tým. |
+| **Director** | Ano (+ `team_overview:write`) | `full` | Ano | read+write | Všichni členové tenantu; sloupec Nadřízený v tabulce při `full` | – | Uložené AI shrnutí může být z jiného scope/období než aktuální přepínač — viz release checklist. |
+| **Admin** | `*` | `full` | Ano | read+write | Totéž co Director + plná práva jinde | – | Stejné poznámky jako Director u uloženého AI shrnutí. |
 
 **Poznámka k navigaci:** `apps/web/src/app/portal/layout.tsx` nastavuje `showTeamOverview` pro Admin, Director, Manager, **Advisor** – Advisor má odkaz, ale data jsou scope `me`. To je konzistentní s „osobní přehled“, ale produktově může mást název „Týmový přehled“.
 
@@ -160,8 +162,8 @@ Oprávnění dle [`apps/web/src/shared/rolePermissions.ts`](apps/web/src/shared/
 
 ### Co v Team Overview chybí nebo je rozpracované
 
-- **Agregovaný pohled** „co má tým před sebou“ (nadcházející porady / interní schůzky / úkoly) – **není** v `TeamOverviewView`.
-- **Read API** pro `team_events` (filtrování podle tenantu, data, scope členů) – **neexistuje** v `actions` (kromě mutací v `team-events.ts`).
+- **Agregovaný pohled** „co má tým před sebou“: částečně řeší **Fáze 5** — `getTeamRhythmCalendarData` + `TeamRhythmPanel` (read model v časovém okně, scope jako ostatní gettery). Není to náhrada plného týmového kalendáře.
+- Samostatný **veřejný read action** jen pro výpis `team_events` mimo tento getter zatím typicky **nepotřebujete** — data táhne `getTeamRhythmCalendarData` v `team-overview.ts`.
 - **Typy interních událostí** v DB: `events.eventType` je string (např. `schuzka`); týmový modal defaultuje `schuzka`; **není** separátní enum „porada vs 1:1 vs školení“ – kategorizace je v názvu/poznámce a v budoucnu konvence nebo rozšíření schématu.
 
 ### Doporučené kategorie pro budoucí UI Team Overview
@@ -259,17 +261,17 @@ Níže bloky obrazovky v pořadí **doporučeném pro další vlna** (viz sekce 
 | Riziko | Popis |
 |--------|--------|
 | **Source of truth** | Metriky jsou odvozené z více tabulek; duplicitní ukládání se nepoužívá – dobré. Riziko je v **interpretaci** (např. první event ≠ první schůzka u nováčka). |
-| **Role / scope** | Fallback `my_team` bez hierarchie = celý tenant. Director: UI `full` vs AI context default `my_team`. Detail člena používá `getVisibleUserIds(..., "full")` pro Manager → interně přemapováno na `my_team` – konzistentní. |
-| **Performance** | `getTeamMemberMetrics` volá `collectUserStats` pro každého člena (paralelně, ale N× sady dotazů). `getNewcomerAdaptation` cyklus s dotazy na nováčka – při velkém týmu riziko latence a zátěže DB poolu. |
+| **Role / scope** | `my_team` bez jediného `parent_id`: **jen aktuální uživatel** (Fáze 7). Detail člena: `getTeamMemberDetail` kontroluje `visibleUserIds`; Manager s požadavkem `full` se přemapuje na `my_team` přes `resolveScopeForRole`. |
+| **Performance** | `getTeamMemberMetrics` volá `collectUserStats` pro každého člena (paralelně, ale N× sady dotazů). `getNewcomerAdaptation` cyklus s dotazy na nováčka – při velkém týmu riziko latence a zátěže DB poolu. Nadále platí **dvojí výpočet** metrik při načtení přehledu (KPI + tabulka) — viz release checklist. |
 | **Reuse** | Záměna mindmap vs team tree. |
-| **AI flow** | `buildTeamAiContextRaw` bez `scope` ≠ výchozí scope na stránce pro Director/Admin. |
-| **Team events** | Jen zápis; žádný centralizovaný read – riziko divergentních zobrazení napříč obrazovkami, až se panel přidá. |
+| **AI flow** | **Zmírněno:** `scope` se předává z UI; default pro Director/Admin je `full` jako na stránce. **Zbývá:** uložené generace nemusí nést metadata scope/period — uživatel má po přepnutí znovu generovat (UI disclaimer + known limitations). |
+| **Team events** | Zápis přes `team-events.ts`; read pro přehled přes **`getTeamRhythmCalendarData`** (ne plný kalendářový engine). |
 
 ### Dokumentační drift: `docs/team-overview-phase2-summary.md` vs kód
 
 Soubor **Phase 2** v sekci „Risk scoring“ popisuje rozšíření alertů (**slabá CRM disciplína**, **případy bez další akce**, **slabý follow-up** s prahy na otevřené úkoly + schůzky), která **v aktuální implementaci `buildAlertsFromMetric` v `team-overview.ts` nejsou**.
 
-**Skutečně implementované typy alertů** (pole `type`): `no_activity`, `meeting_drop`, `low_activity`, `weak_conversion`, `no_new_leads`, `production_drop`.
+**Skutečně implementované typy alertů** (pole `type`, včetně kariéry): `no_activity`, `meeting_drop`, `low_activity`, `weak_conversion`, `no_new_leads`, `production_drop`, `career_data_gap`, `career_review`, `career_low_confidence`.
 
 **Částečná shoda:** „Pokles výkonu“ z dokumentu je blízko `production_drop`, ale prahy a logika se mají ověřovat v kódu, ne podle Phase 2 textu.
 
@@ -341,7 +343,9 @@ Realistické pořadí samostatných promptů / PR:
 | `apps/web/src/app/actions/ai-generations.ts` | `generateTeamSummaryAction`, `getLatestTeamSummaryAction`, feedback. |
 | `apps/web/src/app/actions/ai-actions.ts` | `createTeamActionFromAi`. |
 | `apps/web/src/lib/ai/ai-service.ts` | `generateTeamSummary`. |
-| `apps/web/src/lib/ai/context/team-context.ts` | Sestavení raw kontextu pro AI (scope bug). |
+| `apps/web/src/lib/ai/context/team-context.ts` | Raw kontext pro AI; `scope` + default jako `page.tsx`; alerty přes `buildTeamAlertsFromMemberMetrics`. |
+| `apps/web/src/lib/team-overview-alerts.ts` | Sdílené odvození alertů z metrik (CRM + kariéra). |
+| `docs/team-overview-release-checklist.md` | Fáze 7 — QA, role, výkon, known limitations. |
 | `apps/web/src/lib/ai/context/team-context-render.ts` | Render proměnných pro prompt. |
 | `apps/web/src/lib/ai/actions/action-executors.ts` | `executeTeamAiAction`. |
 | `apps/web/src/app/api/ai/team-summary/route.ts` | REST shrnutí s korektním scope parametrem. |
@@ -425,7 +429,7 @@ Další implementační prompt považujte za splněný, pokud:
 
 1. Záhlaví stránky + akce (scope, období, kalendář).
 2. **Manažerský briefing** (first fold): nadpis „Tento týden v týmu“, 3 prioritní KPI (lidé v rozsahu, vyžaduje pozornost, v adaptaci), krátký value framing.
-3. **Co vyžaduje pozornost a doporučené navázání** (jen mimo scope „Já“): dvě karty — signály z CRM + doporučení kariéra/coaching; pozitivní empty states („V mezích“, „Žádný výrazný návrh navíc“).
+3. **Co vyžaduje pozornost a doporučené navázání** (jen mimo scope „Já“): dvě karty — **signály (CRM a kariéra)** + doporučení kariéra/coaching; pozitivní empty states („V mezích“, „Žádný výrazný návrh navíc“).
 4. **Růst a adaptace — kariérní přehled** + vnořená **Adaptace nováčků** (bez duplicitní sekce níže).
 5. **Týmový rytmus** (`TeamRhythmPanel`).
 6. **Struktura týmu** (`TeamStructurePanel`).
@@ -433,7 +437,7 @@ Další implementační prompt považujte za splněný, pokud:
 8. **CRM metriky — doplňující přehled** (mřížka KPI).
 9. **Trend výkonu (CRM)**.
 10. **Shrnutí týmu (AI)**.
-11. **Kompletní výpis signálů z CRM**.
+11. **Kompletní výpis signálů** (CRM i kariérní upozornění; stejný zdroj jako alerty v briefingové části).
 
 ### 2) Framing a copy principy
 
@@ -444,7 +448,7 @@ Další implementační prompt považujte za splněný, pokud:
 
 ### 3) Empty / low-data / healthy states
 
-- Žádné naléhavé CRM signály: karta **V mezích** (zelený rámec, vysvětlení).
+- Žádné naléhavé signály (CRM ani kariéra): karta **V mezích** (zelený rámec, vysvětlení).
 - Coaching prázdný: neutrální karta s odkazem na pravidelný kontakt a blok kariéry.
 - Kariérní větve nevyplněné: **příležitost doplnit data** + odkaz Nastavení → Tým.
 - Adaptace: prázdný stav s vysvětlením, až přijde nováček.
