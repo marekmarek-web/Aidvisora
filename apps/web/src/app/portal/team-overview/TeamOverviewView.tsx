@@ -386,11 +386,13 @@ export function TeamOverviewView({
     <div className="min-h-screen bg-[var(--wp-bg)]">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5 md:mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6 md:mb-7">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[color:var(--wp-text)]">Přehled týmu</h1>
-            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)] max-w-xl">
-              Prémiový nástroj pro vedení: pozornost, růst, adaptace a rytmus — ne jen čísla z CRM.
+            <h1 className="text-2xl font-black tracking-tight text-[color:var(--wp-text)] md:text-3xl">
+              Team Overview
+            </h1>
+            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)] max-w-lg">
+              Pozornost, coaching, kariéra a rytmus — manažerský cockpit vašeho týmu.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -440,13 +442,12 @@ export function TeamOverviewView({
 
         {kpis && scope !== "me" && !kpis.hierarchyParentLinksConfigured ? (
           <div
-            className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 shadow-sm sm:px-5"
+            className="mb-5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-950"
             role="status"
           >
-            <p className="font-semibold text-amber-950">Hierarchie týmu není zatím kompletně nastavena.</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-amber-900/95 sm:text-sm">
-              V tenantu nejsou vyplněné vazby nadřízenosti (parent_id). Rozsah „Můj tým“ zobrazí jen vás, dokud se vazby nedoplní — jde o ochranu rozsahu, ne o prázdný tým. Rozsah „Celá struktura“ může zobrazit všechny členy jako samostatné kořeny; po doplnění nadřízených se strom srovná.
-            </p>
+            <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
+            Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
+            <a href="/portal/setup?tab=tym" className="underline hover:text-amber-800">Doplňte v Nastavení → Tým</a>.
           </div>
         ) : null}
 

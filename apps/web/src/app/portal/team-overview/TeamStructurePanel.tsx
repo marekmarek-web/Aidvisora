@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import clsx from "clsx";
-import { Network, UserCircle } from "lucide-react";
+import { Network, UserCircle, ChevronRight } from "lucide-react";
 import type { TeamOverviewScope, TeamTreeNode } from "@/lib/team-hierarchy-types";
 
 function countDescendants(node: TeamTreeNode): number {
@@ -36,8 +36,9 @@ function TreeBranch({
   return (
     <ul
       className={clsx(
-        "space-y-0.5",
-        depth > 0 && "ml-3 sm:ml-4 mt-0.5 border-l border-[color:var(--wp-surface-card-border)] pl-3 sm:pl-4"
+        "space-y-px",
+        depth > 0 &&
+          "ml-4 mt-0.5 border-l-2 border-[color:var(--wp-surface-card-border)] pl-4 sm:ml-5 sm:pl-5"
       )}
     >
       {nodes.map((node) => {
@@ -49,21 +50,22 @@ function TreeBranch({
           <li key={node.userId}>
             <div
               className={clsx(
-                "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl py-2 px-2 -mx-2 text-sm",
-                isSelf && "bg-indigo-50 ring-1 ring-indigo-200/80",
-                isSelected && "bg-violet-50/90 ring-1 ring-violet-200/80"
+                "group flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-2.5 -mx-1 text-sm transition",
+                isSelf && "bg-indigo-50/80 ring-1 ring-indigo-200/70",
+                isSelected && !isSelf && "bg-violet-50/80 ring-1 ring-violet-200/70",
+                !isSelf && !isSelected && "hover:bg-[color:var(--wp-surface-muted)]/40"
               )}
             >
-              {isSelf ? (
-                <UserCircle className="w-4 h-4 shrink-0 text-indigo-600" aria-hidden />
-              ) : null}
+              {isSelf && (
+                <UserCircle className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+              )}
               {onSelectMember ? (
                 <button
                   type="button"
                   onClick={() => onSelectMember(node.userId)}
                   className={clsx(
-                    "font-semibold text-left text-[color:var(--wp-text)] hover:text-indigo-600 hover:underline",
-                    isSelected && "text-violet-900"
+                    "font-semibold text-left text-sm hover:underline",
+                    isSelected ? "text-violet-900" : isSelf ? "text-indigo-900" : "text-[color:var(--wp-text)] hover:text-indigo-600"
                   )}
                 >
                   {label}
@@ -71,27 +73,26 @@ function TreeBranch({
               ) : (
                 <Link
                   href={`/portal/team-overview/${node.userId}${memberDetailQuery}`}
-                  className="font-semibold text-[color:var(--wp-text)] hover:text-indigo-600 hover:underline"
+                  className="font-semibold text-sm text-[color:var(--wp-text)] hover:text-indigo-600 hover:underline"
                 >
                   {label}
                 </Link>
               )}
+              <span className="text-[11px] text-[color:var(--wp-text-tertiary)]">{node.roleName}</span>
+              {below > 0 && (
+                <span className="rounded-full bg-[color:var(--wp-surface-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--wp-text-secondary)]">
+                  +{below}
+                </span>
+              )}
               <Link
                 href={`/portal/team-overview/${node.userId}${memberDetailQuery}`}
-                className="text-[10px] font-medium uppercase tracking-wide text-[color:var(--wp-text-tertiary)] hover:text-indigo-600"
+                className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-[color:var(--wp-text-tertiary)] opacity-0 transition group-hover:opacity-100 hover:text-indigo-600"
                 title="Plný detail"
               >
                 Detail
               </Link>
-              <span className="text-xs text-[color:var(--wp-text-tertiary)]">{node.roleName}</span>
-              {below > 0 ? (
-                <span className="text-[11px] font-medium rounded-full bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-[color:var(--wp-text-secondary)]">
-                  ve větvi {below}{" "}
-                  {below === 1 ? "osoba" : below >= 2 && below <= 4 ? "osoby" : "osob"}
-                </span>
-              ) : null}
             </div>
-            {node.children.length > 0 ? (
+            {node.children.length > 0 && (
               <TreeBranch
                 nodes={node.children}
                 currentUserId={currentUserId}
@@ -100,7 +101,7 @@ function TreeBranch({
                 selectedUserId={selectedUserId}
                 onSelectMember={onSelectMember}
               />
-            ) : null}
+            )}
           </li>
         );
       })}
@@ -120,11 +121,8 @@ export function TeamStructurePanel({
   roots: TeamTreeNode[];
   currentUserId: string;
   scope: TeamOverviewScope;
-  /** Např. ?period=month — stejné období jako Team Overview */
   memberDetailQuery?: string;
-  /** False = v tenantu není žádný parent_id — „Můj tým“ je omezený (viz banner na přehledu). */
   hierarchyParentLinksConfigured?: boolean;
-  /** Výběr člena pro boční panel na přehledu (volitelné). */
   selectedUserId?: string | null;
   onSelectMember?: (userId: string) => void;
 }) {
@@ -133,13 +131,13 @@ export function TeamStructurePanel({
 
   if (roots.length === 0) {
     return (
-      <section className="mb-6 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
-          <Network className="w-5 h-5 text-indigo-500 shrink-0" />
-          Struktura týmu
-        </h2>
-        <p className="text-sm text-[color:var(--wp-text-secondary)]">
-          V tomto rozsahu zatím nejsou k dispozici žádná data o struktuře. Zkontrolujte nastavení nadřízených v týmu.
+      <section className="mb-6 overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm">
+        <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-5 py-3">
+          <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
+          <h2 className="text-base font-black text-[color:var(--wp-text)]">Struktura týmu</h2>
+        </div>
+        <p className="px-5 py-4 text-sm text-[color:var(--wp-text-secondary)]">
+          V tomto rozsahu zatím nejsou data o struktuře. Zkontrolujte nastavení nadřízených v týmu.
         </p>
       </section>
     );
@@ -148,78 +146,86 @@ export function TeamStructurePanel({
   const isPersonalOnly = scope === "me";
 
   return (
-    <section className="mb-6 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-[color:var(--wp-text)] mb-1 flex items-center gap-2">
-        <Network className="w-5 h-5 text-indigo-500 shrink-0" />
-        Struktura týmu
-      </h2>
-      {isPersonalOnly ? (
-        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
-          Zobrazujete osobní rozsah — struktura odráží jen vás. Širší přehled týmu je dostupný podle vaší role v přepínači rozsahu.
-        </p>
-      ) : (
-        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4">
-          Přehled větví podle nastavených nadřízených. Klik na jméno vybere člena pro souhrn vpravo; odkaz „Detail“ vede na plnou stránku.
-        </p>
-      )}
+    <section className="mb-6 overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-5 py-3">
+        <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
+        <h2 className="text-base font-black text-[color:var(--wp-text)]">Struktura týmu</h2>
+        <span className="ml-auto text-[11px] text-[color:var(--wp-text-tertiary)]">
+          {isPersonalOnly ? "Osobní rozsah" : `${roots.length} ${roots.length === 1 ? "kořen" : "kořenů"}`}
+        </span>
+      </div>
 
-      {!isPersonalOnly && !hierarchyParentLinksConfigured ? (
-        <div className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2.5 text-xs leading-relaxed text-amber-950 sm:text-sm">
-          <span className="font-semibold">Vazby nadřízenosti zatím chybí.</span>{" "}
-          Strom může ukázat všechny lidi jako oddělené kořeny — jde o data v CRM, ne o chybu modulu. Doplňte pole nadřízeného u členů v Nastavení → Tým.
-        </div>
-      ) : null}
-
-      {!isPersonalOnly && directChildren.length > 0 && (
-        <div className="mb-4 rounded-xl bg-[color:var(--wp-surface-muted)]/60 px-4 py-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)] mb-2">
-            Přímí spolupracovníci
+      <div className="p-5">
+        {isPersonalOnly && (
+          <p className="mb-4 text-xs text-[color:var(--wp-text-secondary)]">
+            Zobrazujete osobní rozsah — širší přehled je dostupný v přepínači rozsahu podle vaší role.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {directChildren.map((c) => (
-              <span key={c.userId} className="inline-flex items-center gap-1.5">
-                {onSelectMember ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelectMember(c.userId)}
-                    className={clsx(
-                      "inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-1.5 text-sm font-medium text-[color:var(--wp-text)] hover:border-indigo-200 hover:bg-indigo-50/50",
-                      selectedUserId === c.userId && "border-violet-300 bg-violet-50/80"
-                    )}
-                  >
-                    {c.displayName?.trim() || c.email || "Člen týmu"}
-                    <span className="text-xs text-[color:var(--wp-text-tertiary)]">({c.roleName})</span>
-                  </button>
-                ) : (
-                  <Link
-                    href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-1.5 text-sm font-medium text-[color:var(--wp-text)] hover:border-indigo-200 hover:bg-indigo-50/50"
-                  >
-                    {c.displayName?.trim() || c.email || "Člen týmu"}
-                    <span className="text-xs text-[color:var(--wp-text-tertiary)]">({c.roleName})</span>
-                  </Link>
-                )}
-                <Link
-                  href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
-                  className="text-[10px] font-semibold text-indigo-600 hover:underline"
-                >
-                  Detail
-                </Link>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      <div className="max-h-[min(24rem,55vh)] overflow-y-auto pr-1 -mr-1">
-        <TreeBranch
-          nodes={roots}
-          currentUserId={currentUserId}
-          depth={0}
-          memberDetailQuery={memberDetailQuery}
-          selectedUserId={selectedUserId}
-          onSelectMember={onSelectMember}
-        />
+        {!isPersonalOnly && !hierarchyParentLinksConfigured && (
+          <div className="mb-4 rounded-xl border border-amber-200/70 bg-amber-50/60 px-3.5 py-2.5 text-xs leading-relaxed text-amber-950">
+            <span className="font-semibold">Vazby nadřízenosti zatím chybí.</span>{" "}
+            Strom může zobrazit všechny jako samostatné kořeny — jde o data, ne o chybu. Doplňte v Nastavení → Tým.
+          </div>
+        )}
+
+        {/* Přímí podřízení */}
+        {!isPersonalOnly && directChildren.length > 0 && (
+          <div className="mb-5">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+              Přímí podřízení
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {directChildren.map((c) => {
+                const isChildSelected = selectedUserId === c.userId;
+                return (
+                  <span key={c.userId} className="inline-flex items-center gap-1.5">
+                    {onSelectMember ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelectMember(c.userId)}
+                        className={clsx(
+                          "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
+                          isChildSelected
+                            ? "border-violet-300 bg-violet-50/80 text-violet-900"
+                            : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] hover:border-indigo-200 hover:bg-indigo-50/50"
+                        )}
+                      >
+                        {c.displayName?.trim() || c.email || "Člen týmu"}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text)] hover:border-indigo-200 hover:bg-indigo-50/50 transition"
+                      >
+                        {c.displayName?.trim() || c.email || "Člen týmu"}
+                      </Link>
+                    )}
+                    <Link
+                      href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
+                      className="inline-flex items-center text-[10px] font-semibold text-indigo-600 hover:underline"
+                    >
+                      <ChevronRight className="h-3 w-3" aria-hidden />
+                    </Link>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Strom */}
+        <div className="max-h-[min(22rem,52vh)] overflow-y-auto pr-1 -mr-1">
+          <TreeBranch
+            nodes={roots}
+            currentUserId={currentUserId}
+            depth={0}
+            memberDetailQuery={memberDetailQuery}
+            selectedUserId={selectedUserId}
+            onSelectMember={onSelectMember}
+          />
+        </div>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, HeartHandshake } from "lucide-react";
+import { AlertTriangle, CheckCircle2, HeartHandshake, ChevronRight } from "lucide-react";
 import type { TeamMemberInfo } from "@/app/actions/team-overview";
 import type { TeamAlert } from "@/lib/team-overview-alerts";
 import type { TeamOverviewPageModel } from "@/lib/team-overview-page-model";
@@ -29,107 +29,150 @@ export function TeamOverviewAttentionSection({
         className="mb-8 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm"
         aria-labelledby="self-priority-heading"
       >
-        <h2 id="self-priority-heading" className="text-lg font-bold text-[color:var(--wp-text)]">
+        <h2 id="self-priority-heading" className="text-base font-bold text-[color:var(--wp-text)]">
           Váš kontext
         </h2>
-        <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)]">
-          V režimu „Já“ jsou priorita a coaching u jednotlivých členů v detailu osoby. Níže najdete kariérní přehled, metriky a trendy.
+        <p className="mt-1.5 text-sm text-[color:var(--wp-text-secondary)] max-w-xl">
+          V osobním rozsahu jsou priorita a coaching u jednotlivých členů v detailu osoby. Níže najdete kariérní přehled, metriky a naplánované termíny.
         </p>
       </section>
     );
   }
 
+  const hasCritical = topAttentionAlerts.some((a) => a.severity === "critical");
+
   return (
     <section className="mb-8" aria-labelledby="team-priority-heading">
-      <div className="mb-4">
-        <h2 id="team-priority-heading" className="text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
-          Kdo vyžaduje pozornost · doporučené navázání
-        </h2>
-        <p className="mt-1 max-w-2xl text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
-          Signály z CRM a doporučení z kariérní vrstvy — orientační návrh dalšího kroku, ne hodnocení lidí.
-        </p>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <h2 id="team-priority-heading" className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">
+            Kdo potřebuje pozornost
+          </h2>
+          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
+            Signály z CRM a kariérní vrstvy — orientační, ne hodnocení.
+          </p>
+        </div>
+        {hasCritical && (
+          <span className="shrink-0 inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold text-rose-800 ring-1 ring-rose-200">
+            Vyžaduje podporu
+          </span>
+        )}
       </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text)]">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-            Signály (CRM a kariéra)
-          </h3>
-          {topAttentionAlerts.length === 0 ? (
-            <div className="flex flex-1 flex-col justify-center rounded-xl border border-emerald-200/60 bg-emerald-50/35 px-4 py-5">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-600" aria-hidden />
+        {/* Signály */}
+        <div className="flex flex-col rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+            <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Signály</h3>
+            {topAttentionAlerts.length > 0 && (
+              <span className="ml-auto text-[11px] font-semibold tabular-nums text-amber-700">
+                {topAttentionAlerts.length}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col p-3">
+            {topAttentionAlerts.length === 0 ? (
+              <div className="flex flex-1 items-start gap-3 rounded-xl border border-emerald-200/60 bg-emerald-50/40 px-4 py-4">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
                 <div>
-                  <p className="font-semibold text-emerald-900">V mezích</p>
-                  <p className="mt-1 text-sm leading-relaxed text-emerald-900/85">
-                    Žádné naléhavé signály pro tento rozsah. Udržujte klidný rytmus kontaktu — sekce níže ukáže růst, adaptaci a naplánované termíny.
+                  <p className="font-semibold text-emerald-900 text-sm">Stabilní</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-emerald-800/80">
+                    Žádné naléhavé signály v tomto rozsahu. Udržujte klidný rytmus kontaktu.
                   </p>
                 </div>
               </div>
-            </div>
-          ) : (
-            <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-              {topAttentionAlerts.map((a, i) => {
-                const alertMember = members.find((m) => m.userId === a.memberId);
-                const name = alertMember ? displayName(alertMember) : "Člen týmu";
-                const tone = a.severity === "critical" ? ("Vyžaduje podporu" as const) : ("Potřebuje pozornost" as const);
-                return (
-                  <li key={`${a.memberId}-${i}`}>
-                    <button
-                      type="button"
-                      onClick={() => selectMember(a.memberId)}
-                      className="block w-full text-left rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/35 px-3 py-2.5 transition hover:border-indigo-200 hover:bg-indigo-50/40"
-                    >
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--wp-text-tertiary)]">{tone}</span>
-                      <p className="mt-0.5 text-sm font-medium text-[color:var(--wp-text)]">{name}</p>
-                      <p className="line-clamp-2 text-xs text-[color:var(--wp-text-secondary)]">{a.title}</p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div className="flex flex-col rounded-2xl border border-violet-200/60 bg-gradient-to-b from-violet-50/40 to-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text)]">
-            <HeartHandshake className="h-4 w-4 shrink-0 text-violet-600" />
-            Doporučené navázání (kariéra &amp; coaching)
-          </h3>
-          {pageModel.coachingAttention.length === 0 ? (
-            <div className="flex flex-1 flex-col justify-center rounded-xl border border-slate-200/80 bg-[color:var(--wp-surface-card)]/80 px-4 py-5">
-              <p className="font-semibold text-[color:var(--wp-text)]">Žádný výrazný návrh navíc</p>
-              <p className="mt-1 text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
-                Podle kariérní vrstvy a adaptace zatím nikdo nevyčnívá v prioritním seznamu — pokračujte v pravidelných 1:1 a sledujte blok „Kariérní přehled“ níže.
-              </p>
-            </div>
-          ) : (
-            <>
-              <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {pageModel.coachingAttention.map((c) => {
-                  const mem = members.find((m) => m.userId === c.userId);
-                  const name = mem ? displayName(mem) : c.displayName || c.email || "Člen týmu";
+            ) : (
+              <ul className="space-y-1.5 max-h-60 overflow-y-auto">
+                {topAttentionAlerts.map((a, i) => {
+                  const alertMember = members.find((m) => m.userId === a.memberId);
+                  const name = alertMember ? displayName(alertMember) : "Člen týmu";
+                  const isCritical = a.severity === "critical";
                   return (
-                    <li key={c.userId}>
+                    <li key={`${a.memberId}-${i}`}>
                       <button
                         type="button"
-                        onClick={() => selectMember(c.userId)}
-                        className="block w-full text-left rounded-xl border border-violet-200/50 bg-violet-50/50 px-3 py-2.5 transition hover:bg-violet-50/90"
+                        onClick={() => selectMember(a.memberId)}
+                        className="group block w-full text-left rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-3 py-2.5 transition hover:border-amber-200 hover:bg-amber-50/40"
                       >
-                        <p className="text-sm font-medium text-[color:var(--wp-text)]">{name}</p>
-                        <p className="mt-0.5 text-[11px] text-[color:var(--wp-text-secondary)]">{c.reasonCs}</p>
-                        <p className="mt-1 text-[11px] font-semibold text-violet-900">{c.recommendedActionLabelCs}</p>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                              isCritical
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {isCritical ? "Vyžaduje podporu" : "Potřebuje pozornost"}
+                          </span>
+                          <ChevronRight className="ml-auto h-3.5 w-3.5 text-[color:var(--wp-text-tertiary)] opacity-0 transition group-hover:opacity-100" aria-hidden />
+                        </div>
+                        <p className="mt-1 text-sm font-semibold text-[color:var(--wp-text)]">{name}</p>
+                        <p className="line-clamp-1 text-xs text-[color:var(--wp-text-secondary)]">{a.title}</p>
                       </button>
                     </li>
                   );
                 })}
               </ul>
-              {canCreateTeamCalendar ? (
-                <a href="#team-calendar-actions" className="mt-3 inline-flex text-xs font-medium text-indigo-600 hover:underline">
-                  Naplánovat týmovou schůzku nebo úkol — akce v záhlaví
-                </a>
-              ) : null}
-            </>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Doporučené navázání */}
+        <div className="flex flex-col rounded-2xl border border-violet-200/50 bg-gradient-to-b from-violet-50/35 to-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-violet-200/40 bg-violet-50/40 px-4 py-2.5">
+            <HeartHandshake className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
+            <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Doporučené navázání</h3>
+            {pageModel.coachingAttention.length > 0 && (
+              <span className="ml-auto text-[11px] font-semibold tabular-nums text-violet-700">
+                {pageModel.coachingAttention.length}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col p-3">
+            {pageModel.coachingAttention.length === 0 ? (
+              <div className="flex flex-1 flex-col justify-center rounded-xl border border-slate-200/70 bg-[color:var(--wp-surface-card)]/80 px-4 py-4">
+                <p className="font-semibold text-sm text-[color:var(--wp-text)]">Vyrovnaný přehled</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]">
+                  Z kariérního pohledu nikdo nevyčnívá. Pokračujte v pravidelných 1:1.
+                </p>
+              </div>
+            ) : (
+              <>
+                <ul className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {pageModel.coachingAttention.map((c) => {
+                    const mem = members.find((m) => m.userId === c.userId);
+                    const name = mem ? displayName(mem) : c.displayName || c.email || "Člen týmu";
+                    return (
+                      <li key={c.userId}>
+                        <button
+                          type="button"
+                          onClick={() => selectMember(c.userId)}
+                          className="group block w-full text-left rounded-xl border border-violet-200/40 bg-violet-50/40 px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/80"
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-[color:var(--wp-text)]">{name}</p>
+                            <ChevronRight className="ml-auto h-3.5 w-3.5 text-violet-400 opacity-0 transition group-hover:opacity-100" aria-hidden />
+                          </div>
+                          <p className="mt-0.5 text-xs text-[color:var(--wp-text-secondary)] line-clamp-1">{c.reasonCs}</p>
+                          <p className="mt-1 text-[11px] font-bold text-violet-800">{c.recommendedActionLabelCs}</p>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {canCreateTeamCalendar ? (
+                  <a
+                    href="#team-calendar-actions"
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline"
+                  >
+                    Naplánovat schůzku nebo úkol
+                    <ChevronRight className="h-3 w-3" aria-hidden />
+                  </a>
+                ) : null}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </section>

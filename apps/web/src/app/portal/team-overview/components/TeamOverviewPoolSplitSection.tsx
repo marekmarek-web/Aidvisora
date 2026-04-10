@@ -5,54 +5,97 @@ import type { TeamOverviewKpis } from "@/app/actions/team-overview";
 import type { TeamOverviewPageModel } from "@/lib/team-overview-page-model";
 import { poolCardUnitsFootnote, poolProgramLabel, poolUnitsLineLabel } from "@/lib/team-overview-format";
 
-export function TeamOverviewPoolSplitSection({ kpis, pageModel }: { kpis: TeamOverviewKpis | null; pageModel: TeamOverviewPageModel }) {
+export function TeamOverviewPoolSplitSection({
+  kpis,
+  pageModel,
+}: {
+  kpis: TeamOverviewKpis | null;
+  pageModel: TeamOverviewPageModel;
+}) {
+  const notSetCount = pageModel.poolSplit.counts.not_set;
+  const otherCount = pageModel.poolSplit.counts.other;
+
   return (
     <section
-      className="mb-8 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6"
+      className="mb-8 overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50/80 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] shadow-sm"
       aria-labelledby="team-pool-heading"
     >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-3xl">
-          <h2 id="team-pool-heading" className="flex items-center gap-2 text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
-            <Layers className="h-5 w-5 shrink-0 text-slate-600" />
-            Role vs kariéra · rozdělení poolů
-          </h2>
-          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
-            Systémová role v CRM je oddělená od kariérního programu a větve. Beplan a Premium Brokers zobrazujeme zvlášť — nesléváme je do jednoho modelu. Jednotky níže v tabulce jsou z CRM; u Beplanu je neinterpretujte jako BJ, u Premium Brokers ne jako BJS.
-          </p>
-        </div>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/55 p-4 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-900/85">{poolProgramLabel("beplan")}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--wp-text)]">{pageModel.poolSplit.counts.beplan}</p>
-          <p className="text-xs text-[color:var(--wp-text-secondary)]">členů s programem Beplan v rozsahu</p>
-          <p className="mt-3 text-sm text-[color:var(--wp-text-secondary)]">
-            {poolUnitsLineLabel(kpis?.periodLabel ?? "období")}:{" "}
-            <strong className="text-[color:var(--wp-text)] tabular-nums">{pageModel.poolSplit.units.beplan}</strong>
-          </p>
-          <p className="mt-1 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">{poolCardUnitsFootnote("beplan")}</p>
-        </div>
-        <div className="rounded-xl border border-violet-200/70 bg-violet-50/50 p-4 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900/85">{poolProgramLabel("premium_brokers")}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--wp-text)]">{pageModel.poolSplit.counts.premium_brokers}</p>
-          <p className="text-xs text-[color:var(--wp-text-secondary)]">členů s programem Premium Brokers v rozsahu</p>
-          <p className="mt-3 text-sm text-[color:var(--wp-text-secondary)]">
-            {poolUnitsLineLabel(kpis?.periodLabel ?? "období")}:{" "}
-            <strong className="text-[color:var(--wp-text)] tabular-nums">{pageModel.poolSplit.units.premium_brokers}</strong>
-          </p>
-          <p className="mt-1 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">{poolCardUnitsFootnote("premium_brokers")}</p>
-        </div>
-      </div>
-      <div className="mt-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/35 px-4 py-3 text-xs text-[color:var(--wp-text-secondary)] space-y-1">
-        <p>
-          <span className="font-semibold text-[color:var(--wp-text)]">Kariérní program nevyplněn:</span> {pageModel.poolSplit.counts.not_set}{" "}
-          {pageModel.poolSplit.counts.not_set === 1 ? "osoba" : "lidí"}
-        </p>
-        <p>
-          <span className="font-semibold text-[color:var(--wp-text)]">Neznámý nebo nestandardní záznam:</span> {pageModel.poolSplit.counts.other}
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200/60 bg-slate-50/60 px-5 py-3.5 sm:px-6">
+        <Layers className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+        <h2
+          id="team-pool-heading"
+          className="text-base font-black text-[color:var(--wp-text)]"
+        >
+          Rozdělení poolů
+        </h2>
+        <p className="ml-auto text-[11px] text-[color:var(--wp-text-tertiary)] max-w-sm text-right hidden sm:block">
+          Beplan a Premium Brokers zobrazujeme odděleně — jednotky jsou z CRM.
         </p>
       </div>
+
+      <div className="grid gap-4 p-5 md:grid-cols-2 sm:p-6">
+        {/* Beplan */}
+        <div className="flex flex-col rounded-xl border border-indigo-200/60 bg-indigo-50/50 p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-wider text-indigo-900/80">
+            {poolProgramLabel("beplan")}
+          </p>
+          <p className="mt-2 text-3xl font-black tabular-nums text-[color:var(--wp-text)] leading-none">
+            {pageModel.poolSplit.counts.beplan}
+          </p>
+          <p className="mt-0.5 text-xs text-indigo-800/70">
+            {pageModel.poolSplit.counts.beplan === 1 ? "člen" : "členů"} v rozsahu
+          </p>
+          <div className="mt-3 pt-3 border-t border-indigo-200/40 text-xs text-[color:var(--wp-text-secondary)]">
+            <span>{poolUnitsLineLabel(kpis?.periodLabel ?? "období")}: </span>
+            <strong className="text-[color:var(--wp-text)] tabular-nums">
+              {pageModel.poolSplit.units.beplan}
+            </strong>
+          </div>
+          <p className="mt-1.5 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">
+            {poolCardUnitsFootnote("beplan")}
+          </p>
+        </div>
+
+        {/* Premium Brokers */}
+        <div className="flex flex-col rounded-xl border border-violet-200/60 bg-violet-50/45 p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-wider text-violet-900/80">
+            {poolProgramLabel("premium_brokers")}
+          </p>
+          <p className="mt-2 text-3xl font-black tabular-nums text-[color:var(--wp-text)] leading-none">
+            {pageModel.poolSplit.counts.premium_brokers}
+          </p>
+          <p className="mt-0.5 text-xs text-violet-800/70">
+            {pageModel.poolSplit.counts.premium_brokers === 1 ? "člen" : "členů"} v rozsahu
+          </p>
+          <div className="mt-3 pt-3 border-t border-violet-200/40 text-xs text-[color:var(--wp-text-secondary)]">
+            <span>{poolUnitsLineLabel(kpis?.periodLabel ?? "období")}: </span>
+            <strong className="text-[color:var(--wp-text)] tabular-nums">
+              {pageModel.poolSplit.units.premium_brokers}
+            </strong>
+          </div>
+          <p className="mt-1.5 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">
+            {poolCardUnitsFootnote("premium_brokers")}
+          </p>
+        </div>
+      </div>
+
+      {(notSetCount > 0 || otherCount > 0) && (
+        <div className="mx-5 mb-5 flex flex-wrap gap-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-4 py-2.5 text-xs text-[color:var(--wp-text-secondary)] sm:mx-6 sm:mb-6">
+          {notSetCount > 0 && (
+            <p>
+              <span className="font-semibold text-[color:var(--wp-text)]">Nevyplněno: </span>
+              {notSetCount} {notSetCount === 1 ? "osoba" : "lidí"}
+            </p>
+          )}
+          {otherCount > 0 && (
+            <p>
+              <span className="font-semibold text-[color:var(--wp-text)]">Ostatní / nestandardní: </span>
+              {otherCount}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }
