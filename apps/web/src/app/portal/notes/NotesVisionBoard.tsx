@@ -722,8 +722,14 @@ function NotesVisionBoardInner({
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-[color:var(--wp-surface-card)] w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm animate-in fade-in duration-300"
+          onMouseDown={(e) => {
+            // Zavřít jen při stisku přímo na backdrop (ne při click po výběru textu z textarea — ten končí mouseupem na backdrop).
+            if (e.target === e.currentTarget) setIsModalOpen(false);
+          }}
+        >
+          <div className="bg-[color:var(--wp-surface-card)] w-full max-w-[480px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between px-8 py-6 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80">
               <div>
                 <h2 className="font-bold text-xl text-[color:var(--wp-text)]">
