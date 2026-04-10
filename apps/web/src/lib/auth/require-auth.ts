@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership, getDemoClientContactId } from "./get-membership";
+import { clientZoneSkipPendingPasswordGate } from "@/lib/auth/client-zone-pending-gate";
 import type { RoleName } from "@/shared/rolePermissions";
 import { db, clientInvitations, and, gt, isNull, sql } from "db";
 import {
@@ -226,7 +227,9 @@ async function requireClientZoneAuthUncached(): Promise<AuthContext> {
   if (m && (m.roleName as string) !== "Client") {
     redirect("/portal");
   }
-  const pendingPasswordChangeRedirect = await findPendingClientPasswordChangeRedirect(user.email);
+  const pendingPasswordChangeRedirect = clientZoneSkipPendingPasswordGate(m)
+    ? null
+    : await findPendingClientPasswordChangeRedirect(user.email);
   if (pendingPasswordChangeRedirect) {
     redirect(pendingPasswordChangeRedirect);
   }

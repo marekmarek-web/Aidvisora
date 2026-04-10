@@ -11,6 +11,7 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
     temporaryPassword?: string;
     emailSent?: boolean;
     emailError?: string;
+    reminderOnly?: boolean;
     error?: string;
     devHint?: string;
   } | null>(null);
@@ -27,6 +28,7 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
           temporaryPassword: res.temporaryPassword,
           emailSent: res.emailSent,
           emailError: res.emailError,
+          reminderOnly: res.reminderOnly,
         });
       } else {
         setResult({
@@ -71,15 +73,27 @@ export function InviteToClientZoneButton({ contactId }: { contactId: string }) {
       {result?.link && (
         <div className="rounded-lg bg-monday-row-hover border border-monday-border p-3 text-sm space-y-2">
           <p className="font-medium text-monday-text">
-            {result.emailSent ? "Pozvánka s přístupovými údaji byla odeslána na e-mail klienta." : "E-mail s přístupovými údaji se nepodařilo odeslat automaticky."}
+            {result.reminderOnly
+              ? result.emailSent
+                ? "Připomínka k přihlášení byla odeslána na e-mail klienta (heslo se neměnilo)."
+                : "Připomínkový e-mail se nepodařilo odeslat automaticky."
+              : result.emailSent
+                ? "Pozvánka s přístupovými údaji byla odeslána na e-mail klienta."
+                : "E-mail s přístupovými údaji se nepodařilo odeslat automaticky."}
           </p>
           {!result.emailSent && (
             <p className="text-monday-text-muted text-xs">
-              {result.emailError === "RESEND_API_KEY not set"
-                ? "Nastavte RESEND_API_KEY (a ověřenou doménu odesílatele), nebo klientovi pošlete odkaz i dočasné heslo ručně."
-                : result.emailError
-                  ? `Důvod: ${result.emailError}. Pošlete klientovi ručně odkaz i dočasné heslo níže.`
-                  : "Pošlete klientovi ručně odkaz i dočasné heslo níže."}
+              {result.reminderOnly
+                ? result.emailError === "RESEND_API_KEY not set"
+                  ? "Nastavte RESEND_API_KEY (a ověřenou doménu odesílatele), nebo klientovi pošlete odkaz na přihlášení ručně."
+                  : result.emailError
+                    ? `Důvod: ${result.emailError}. Pošlete klientovi ručně odkaz níže.`
+                    : "Pošlete klientovi ručně odkaz na přihlášení níže."
+                : result.emailError === "RESEND_API_KEY not set"
+                  ? "Nastavte RESEND_API_KEY (a ověřenou doménu odesílatele), nebo klientovi pošlete odkaz i dočasné heslo ručně."
+                  : result.emailError
+                    ? `Důvod: ${result.emailError}. Pošlete klientovi ručně odkaz i dočasné heslo níže.`
+                    : "Pošlete klientovi ručně odkaz i dočasné heslo níže."}
             </p>
           )}
           {result.loginEmail && (

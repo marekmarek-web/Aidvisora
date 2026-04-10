@@ -6,6 +6,15 @@ import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/server";
 import { db, memberships, roles, clientContacts, and, eq } from "db";
 
+export type ProvisionClientInviteAccountResult = {
+  userId: string;
+  /** Prázdné, pokud `alreadyOnboarded` — heslo se nemění. */
+  temporaryPassword: string;
+  reusedExistingUser: boolean;
+  /** Klient už má Client + propojený kontakt; heslo v Supabase se nepřepisuje. */
+  alreadyOnboarded?: boolean;
+};
+
 const TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 const USERS_PER_PAGE = 200;
 const MAX_USER_SCAN_PAGES = 20;
@@ -69,12 +78,35 @@ async function assertExistingAuthUserIsSafe(userId: string, tenantId: string, co
   }
 }
 
+async function isClientFullyOnboardedForContact(userId: string, tenantId: string, contactId: string): Promise<boolean> {
+  const membershipRows = await db
+    .select({ roleName: roles.name })
+    .from(memberships)
+    .innerJoin(roles, eq(memberships.roleId, roles.id))
+    .where(and(eq(memberships.userId, userId), eq(memberships.tenantId, tenantId)))
+    .limit(1);
+  const roleName = membershipRows[0]?.roleName;
+  if (roleName !== "Client") return false;
+  const linked = await db
+    .select({ contactId: clientContacts.contactId })
+    .from(clientContacts)
+    .where(
+      and(
+        eq(clientContacts.userId, userId),
+        eq(clientContacts.tenantId, tenantId),
+        eq(clientContacts.contactId, contactId),
+      ),
+    )
+    .limit(1);
+  return linked.length > 0;
+}
+
 export async function provisionClientInviteAccount(params: {
   email: string;
   fullName?: string | null;
   tenantId: string;
   contactId: string;
-}) {
+}): Promise<ProvisionClientInviteAccountResult> {
   const admin = createAdminClient();
   const normalizedEmail = params.email.trim().toLowerCase();
   const temporaryPassword = await generateClientInviteTemporaryPassword();
@@ -82,6 +114,28 @@ export async function provisionClientInviteAccount(params: {
 
   if (existingUser) {
     await assertExistingAuthUserIsSafe(existingUser.id, params.tenantId, params.contactId);
+    const onboarded = await isClientFullyOnboardedForContact(
+      existingUser.id,
+      params.tenantId,
+      params.contactId,
+    );
+    if (onboarded) {
+      const { error } = await admin.auth.admin.updateUserById(existingUser.id, {
+        email: normalizedEmail,
+        email_confirm: true,
+        user_metadata: {
+          ...existingUser.user_metadata,
+          full_name: params.fullName?.trim() || existingUser.user_metadata?.full_name || null,
+        },
+      });
+      if (error) throw error;
+      return {
+        userId: existingUser.id,
+        temporaryPassword: "",
+        reusedExistingUser: true,
+        alreadyOnboarded: true,
+      };
+    }
     const { error } = await admin.auth.admin.updateUserById(existingUser.id, {
       email: normalizedEmail,
       password: temporaryPassword,

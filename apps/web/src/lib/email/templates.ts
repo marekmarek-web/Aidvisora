@@ -696,6 +696,55 @@ export function clientPortalInviteTemplate(params: {
   });
 }
 
+/** Připomínka pro klienta, který už má účet — bez resetu hesla. */
+export function clientPortalReminderTemplate(params: {
+  loginUrl: string;
+  contactFirstName: string;
+  tenantName?: string;
+  loginEmail: string;
+  gdprUrl: string;
+  termsUrl: string;
+}) {
+  const subject = "Připomínka: klientská zóna Aidvisora";
+  const who = params.tenantName?.trim() ? params.tenantName.trim() : "váš poradce";
+
+  const bodyHtml = [
+    greeting(params.contactFirstName),
+    paragraph(
+      `${e(who)} vám posílá připomínku ke klientské zóně v Aidvisoře. Váš účet je už aktivní — přihlaste se stejným e-mailem a heslem, které jste si nastavili.`
+    ),
+    paragraph("Pokud heslo neznáte, použijte na přihlašovací stránce funkci pro obnovení hesla.", 0),
+    detailCard([{ label: "Přihlašovací e-mail", value: e(params.loginEmail) }]),
+    `<div style="margin:28px 0 0 0;text-align:center;">${brandedButton("Přihlásit se", params.loginUrl)}</div>`,
+  ].join("");
+
+  const secondaryBoxHtml =
+    infoBox({
+      title: "Když tlačítko nefunguje",
+      bodyHtml: `<p style="margin:0 0 12px 0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">Zkopírujte si tento odkaz do prohlížeče:</p>
+        <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;line-height:1.7;color:#0B1021;word-break:break-all;">${e(
+          params.loginUrl
+        )}</p>`,
+    }) +
+    infoBox({
+      title: "Právní informace",
+      bodyHtml: `<p style="margin:0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">
+        <a href="${safeHref(params.gdprUrl)}" target="_blank" class="link-hover" style="color:#5A4BFF;text-decoration:underline;">Zásady zpracování osobních údajů</a>
+        &nbsp; • &nbsp;
+        <a href="${safeHref(params.termsUrl)}" target="_blank" class="link-hover" style="color:#5A4BFF;text-decoration:underline;">Obchodní podmínky</a>
+      </p>`,
+    });
+
+  return buildTemplate({
+    subject,
+    preheader: "Připomínka k přihlášení do klientské zóny Aidvisora.",
+    badge: "Klientská zóna",
+    headline: "Přihlaste se do klientské zóny",
+    bodyHtml,
+    secondaryBoxHtml,
+  });
+}
+
 export function internalSummaryTemplate(params: {
   advisorName: string;
   summaryDate: string;

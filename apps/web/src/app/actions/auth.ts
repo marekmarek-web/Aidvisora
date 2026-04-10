@@ -19,12 +19,13 @@ import {
 import { eq, and, ne, gt, inArray, isNull, sql } from "db";
 import { sendEmail } from "@/lib/email/send-email";
 import type { SendResult } from "@/lib/email/send-email";
-import { clientPortalInviteTemplate } from "@/lib/email/templates";
+import { clientPortalInviteTemplate, clientPortalReminderTemplate } from "@/lib/email/templates";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";
 import { CLIENT_INVITE_USER_FACING_ERROR_MESSAGES } from "@/lib/auth/client-invite-user-facing-errors";
 import { buildClientInviteLoginSearch, buildClientInvitePasswordSetupSearch } from "@/lib/auth/client-invite-url";
+import { clientHasCompletedPortalOnboarding } from "@/lib/auth/client-portal-onboarding";
 
 /** Po prvním přihlášení (OAuth nebo signup) vytvoří workspace a uživatele jako Admin, pokud ještě nemá membership. */
 export async function ensureMembership(): Promise<EnsureMembershipResult> {
@@ -34,7 +35,16 @@ export async function ensureMembership(): Promise<EnsureMembershipResult> {
 const INVITE_EXPIRY_DAYS = 7;
 
 export type SendClientZoneInvitationResult =
-  | { ok: true; inviteLink: string; loginEmail: string; temporaryPassword: string; emailSent: boolean; emailError?: string }
+  | {
+      ok: true;
+      inviteLink: string;
+      loginEmail: string;
+      temporaryPassword: string;
+      emailSent: boolean;
+      emailError?: string;
+      /** Odeslán připomínkový e-mail bez nového hesla a bez nové pozvánky v DB. */
+      reminderOnly?: boolean;
+    }
   | { ok: false; error: string; devHint?: string };
 
 function isSupabaseAuthErrorShape(
@@ -445,6 +455,39 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
 
     await revokePendingClientInvitations(contact.tenantId, contact.id);
 
+    const baseUrl = getServerAppBaseUrl();
+    const tenantRow = await getTenantInviteEmailContext(contact.tenantId);
+    const gdprUrl = `${baseUrl}/gdpr`;
+    const termsUrl = `${baseUrl}/terms`;
+
+    if (preparedAccount.alreadyOnboarded) {
+      const loginUrl = `${baseUrl}/prihlaseni`;
+      const { subject, html } = clientPortalReminderTemplate({
+        loginUrl,
+        contactFirstName: contact.firstName?.trim() ?? "",
+        tenantName: tenantRow?.name ?? undefined,
+        loginEmail: contact.email.trim(),
+        gdprUrl,
+        termsUrl,
+      });
+      const replyTo = resolveResendReplyTo(tenantRow?.notificationEmail ?? undefined);
+      const sendResult = await sendEmail({
+        to: contact.email.trim(),
+        subject,
+        html,
+        replyTo,
+      });
+      return {
+        ok: true,
+        inviteLink: loginUrl,
+        loginEmail: contact.email.trim(),
+        temporaryPassword: "",
+        emailSent: sendResult.ok,
+        emailError: sendResult.ok ? undefined : sendResult.error,
+        reminderOnly: true,
+      };
+    }
+
     const token = crypto.randomUUID().replace(/-/g, "");
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
@@ -461,10 +504,7 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
       passwordChangeRequiredAt,
     });
 
-    const baseUrl = getServerAppBaseUrl();
     const inviteLink = `${baseUrl}/prihlaseni?${buildClientInviteLoginSearch(token)}`;
-
-    const tenantRow = await getTenantInviteEmailContext(contact.tenantId);
 
     const { subject, html } = clientPortalInviteTemplate({
       registerUrl: inviteLink,
@@ -474,8 +514,8 @@ export async function sendClientZoneInvitation(contactId: string): Promise<SendC
       temporaryPassword: preparedAccount.temporaryPassword,
       reusedExistingAccount: preparedAccount.reusedExistingUser,
       expiresInDays: INVITE_EXPIRY_DAYS,
-      gdprUrl: `${baseUrl}/gdpr`,
-      termsUrl: `${baseUrl}/terms`,
+      gdprUrl,
+      termsUrl,
     });
 
     const replyTo = resolveResendReplyTo(tenantRow?.notificationEmail ?? undefined);
@@ -625,6 +665,9 @@ export async function ensureClientPortalAccess(): Promise<
       error:
         "Účet nemá přiřazený klientský přístup. Požádejte svého poradce o pozvánku do klientské zóny (e-mail s odkazem).",
     };
+  }
+  if ((m?.roleName as string) === "Client" && m.contactId) {
+    return { ok: true };
   }
   const pendingPasswordChangeToken = await findPendingClientPasswordChangeTokenByEmail(user.email);
   if (pendingPasswordChangeToken) {
