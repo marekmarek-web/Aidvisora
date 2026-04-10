@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { fetchContactDocumentsBundle } from "@/app/dashboard/contacts/contact-documents-bundle";
@@ -40,6 +41,9 @@ import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProv
 import { contractSourceKindLabel, resolveAiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 export function ContractsSection({ contactId }: { contactId: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const bundleQK = queryKeys.contacts.documentsBundle(contactId);
 
@@ -107,6 +111,25 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   const [portfolioStatusEdit, setPortfolioStatusEdit] = useState("active");
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [mergeBusyKey, setMergeBusyKey] = useState<string | null>(null);
+
+  const clearAddQueryParam = useCallback(() => {
+    if (searchParams.get("add") !== "1") return;
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("add");
+    const q = p.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  const openAddWizardInUrl = useCallback(() => {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("add", "1");
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+    setAdding(true);
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") setAdding(true);
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -466,7 +489,11 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       <NewContractWizard
         open={adding}
         contactId={contactId}
-        onClose={() => { setAdding(false); invalidateContractsData(); }}
+        onClose={() => {
+          setAdding(false);
+          clearAddQueryParam();
+          invalidateContractsData();
+        }}
         onSuccess={() => invalidateContractsData()}
       />
       {editingId ? (
@@ -579,7 +606,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       ) : (
         <button
           type="button"
-          onClick={() => setAdding(true)}
+          onClick={() => openAddWizardInUrl()}
           className="rounded-[var(--wp-radius)] px-4 py-2.5 text-sm font-semibold bg-[var(--wp-accent)] text-white hover:opacity-90 min-h-[44px]"
         >
           + Přidat produkt / smlouvu

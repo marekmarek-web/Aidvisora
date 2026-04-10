@@ -62,10 +62,15 @@ export function normalizeContractFormForSave(form: ContractFormState): ContractP
     premiumAnnual = undefined;
   }
 
+  const partnerId = form.partnerId?.trim() || undefined;
+  let productId = form.productId?.trim() || undefined;
+  // Produkt v DB vždy patří partnerovi — osiřelé productId po změně partnera způsobovalo falešné chyby
+  if (!partnerId && productId) productId = undefined;
+
   return {
     segment,
-    partnerId: form.partnerId?.trim() || undefined,
-    productId: form.productId?.trim() || undefined,
+    partnerId,
+    productId,
     partnerName: form.partnerName?.trim() || undefined,
     productName: form.productName?.trim() || undefined,
     premiumAmount,

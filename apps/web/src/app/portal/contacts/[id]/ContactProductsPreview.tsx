@@ -7,10 +7,32 @@ import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { contractSourceKindLabel, resolveAiProvenanceKind } from "@/lib/portal/ai-review-provenance";
+import type { ContactTabId } from "./contact-detail-tabs";
 
 const PREVIEW_COUNT = 4;
 
-export function ContactProductsPreview({ contactId }: { contactId: string }) {
+function buildContactDetailHref(
+  contactId: string,
+  baseQueryNoTab: string,
+  tab: ContactTabId,
+  opts?: { addContract?: boolean }
+): string {
+  const p = new URLSearchParams(baseQueryNoTab);
+  p.set("tab", tab);
+  if (opts?.addContract && tab === "smlouvy") p.set("add", "1");
+  else p.delete("add");
+  const q = p.toString();
+  return `/portal/contacts/${contactId}?${q}`;
+}
+
+export function ContactProductsPreview({
+  contactId,
+  baseQueryNoTab,
+}: {
+  contactId: string;
+  /** Výsledek `contactDetailQueryWithoutTab` — bez `tab`. */
+  baseQueryNoTab: string;
+}) {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -39,9 +61,9 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
           Sjednané a rozjednané produkty
         </h2>
         <Link
-          href="#smlouvy"
+          href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy")}
+          scroll={false}
           className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 min-h-[44px]"
-          onClick={() => { window.location.hash = "smlouvy"; }}
         >
           Zobrazit vše <ChevronRight size={16} />
         </Link>
@@ -59,7 +81,8 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
             return (
             <Link
               key={c.id}
-              href="#smlouvy"
+              href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy")}
+              scroll={false}
               className="p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 hover:shadow-md transition-all bg-[color:var(--wp-surface-muted)]/30 group flex flex-col md:flex-row md:items-center justify-between gap-4 min-h-[44px]"
             >
               <div className="flex items-center gap-4 min-w-0">
@@ -110,13 +133,9 @@ export function ContactProductsPreview({ contactId }: { contactId: string }) {
           })
         )}
         <Link
-          href="#smlouvy&add=1"
+          href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy", { addContract: true })}
+          scroll={false}
           className="w-full py-4 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-2xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2 min-h-[44px]"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.hash = "smlouvy&add=1";
-            window.dispatchEvent(new CustomEvent("contact-open-add-contract"));
-          }}
         >
           <span className="text-base">+</span> Přidat produkt
         </Link>

@@ -13,6 +13,8 @@ import {
 function buildHref(pathname: string, tab: ContactTabId, baseQueryNoTab: string): string {
   const p = new URLSearchParams(baseQueryNoTab);
   p.set("tab", tab);
+  // `add=1` jen u záložky Produkty — jinak by wizard zůstal „otevřený“ v URL
+  if (tab !== "smlouvy") p.delete("add");
   const q = p.toString();
   return q ? `${pathname}?${q}` : `${pathname}?tab=${tab}`;
 }
@@ -37,11 +39,14 @@ function HashToQuerySync({ baseQueryNoTab }: { baseQueryNoTab: string }) {
     if (searchParams.get("tab")) return;
     if (!isContactDetailPathForHashSync(pathname)) return;
     const raw = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-    const tabPart = raw.split("&")[0] ?? "";
+    const parts = raw.split("&").filter(Boolean);
+    const tabPart = parts[0] ?? "";
+    const hasAddFromHash = parts.some((x) => x === "add=1");
     const normalized = normalizeContactTab(tabPart);
     if (!tabPart || normalized === "prehled") return;
     const p = new URLSearchParams(baseQueryNoTab);
     p.set("tab", normalized);
+    if (hasAddFromHash && normalized === "smlouvy") p.set("add", "1");
     const nextUrl = `${pathname}?${p.toString()}`;
     queueMicrotask(() => {
       if (cancelled) return;

@@ -130,12 +130,14 @@ function ContactTabBody({
   contact,
   household,
   latestGenerations,
+  baseQueryNoTab,
 }: {
   tab: ContactTabId;
   contactId: string;
   contact: ContactRow;
   household: HouseholdForContact;
   latestGenerations: LatestGenerations;
+  baseQueryNoTab: string;
 }): ReactNode {
   switch (tab) {
     case "prehled":
@@ -150,7 +152,7 @@ function ContactTabBody({
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2 space-y-6">
               <ContactLastNotePreview contactId={contactId} />
-              <ContactProductsPreview contactId={contactId} />
+              <ContactProductsPreview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
               <ContactFinancialAnalysesSection contactId={contactId} />
             </div>
             <aside className="xl:col-span-1 space-y-6">
@@ -176,7 +178,13 @@ function ContactTabBody({
         <div className="space-y-6 md:space-y-8">
           <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
             <div className="p-6">
-              <ContractsSection contactId={contactId} />
+              <Suspense
+                fallback={
+                  <p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám sekci smluv…</p>
+                }
+              >
+                <ContractsSection contactId={contactId} />
+              </Suspense>
               <ClientFinancialSummary contactId={contactId} />
               <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
                 <h2 className="text-lg font-black text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>
@@ -514,6 +522,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
             contact={contact}
             household={household}
             latestGenerations={latestGenerations}
+            baseQueryNoTab={baseQueryNoTab}
           />
         </div>
       </main>
