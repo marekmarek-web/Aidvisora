@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { WizardReviewRow } from "@/app/components/wizard";
 import { segmentLabel } from "@/app/lib/segment-labels";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
   type ContractSegmentCode,
   CONTRACT_SEGMENT_CODES,
@@ -173,12 +174,15 @@ export function buildContractReviewRows(
     rows.push({ label: "Číslo smlouvy", value: normalized.contractNumber });
   }
   if (normalized.startDate) {
-    rows.push({ label: "Od", value: normalized.startDate });
+    rows.push({
+      label: "Od",
+      value: formatDisplayDateCs(normalized.startDate) || normalized.startDate,
+    });
   }
   if (normalized.anniversaryDate) {
     rows.push({
       label: getSegmentUiGroup(segment) === "lending" ? "Výročí / fixace" : "Výročí",
-      value: normalized.anniversaryDate,
+      value: formatDisplayDateCs(normalized.anniversaryDate) || normalized.anniversaryDate,
     });
   }
   if (normalized.note) {

@@ -19,7 +19,7 @@ import {
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
 import { logActivity } from "./activity";
 import { db } from "db";
-import { contacts, documents, clientPaymentSetups, auditLog } from "db";
+import { contacts, documents, contracts, clientPaymentSetups, auditLog } from "db";
 import { eq, and } from "db";
 import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 
@@ -350,12 +350,39 @@ export async function applyContractReviewDrafts(
     null;
   if (effectiveClientId) {
     try {
-      await linkContractReviewFileToContactDocuments(id, {
+      const linkResult = await linkContractReviewFileToContactDocuments(id, {
         visibleToClient: true,
         contractId: result.payload.createdContractId ?? undefined,
         // When client was just created, matchedClientId is still null — pass explicitly
         overrideContactId: row.matchedClientId ? undefined : effectiveClientId,
       });
+      if (linkResult.ok && linkResult.documentId && result.payload.createdContractId) {
+        const [existingContract] = await db
+          .select({ sourceDocumentId: contracts.sourceDocumentId })
+          .from(contracts)
+          .where(
+            and(
+              eq(contracts.tenantId, auth.tenantId),
+              eq(contracts.id, result.payload.createdContractId)
+            )
+          )
+          .limit(1);
+
+        if (existingContract && !existingContract.sourceDocumentId) {
+          await db
+            .update(contracts)
+            .set({
+              sourceDocumentId: linkResult.documentId,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(contracts.tenantId, auth.tenantId),
+                eq(contracts.id, result.payload.createdContractId)
+              )
+            );
+        }
+      }
     } catch {
       /* best-effort — review already applied, doc linking is secondary */
     }

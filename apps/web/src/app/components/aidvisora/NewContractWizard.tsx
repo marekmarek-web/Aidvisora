@@ -179,7 +179,12 @@ export function NewContractWizard({
                   <input
                     value={form.partnerName}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, partnerName: e.target.value }))
+                      setForm((f) => ({
+                        ...f,
+                        partnerId: "",
+                        productId: "",
+                        partnerName: e.target.value,
+                      }))
                     }
                     placeholder="název partnera"
                     className={wizardInputClass}
@@ -190,7 +195,11 @@ export function NewContractWizard({
                   <input
                     value={form.productName}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, productName: e.target.value }))
+                      setForm((f) => ({
+                        ...f,
+                        productId: "",
+                        productName: e.target.value,
+                      }))
                     }
                     placeholder="název produktu"
                     className={wizardInputClass}

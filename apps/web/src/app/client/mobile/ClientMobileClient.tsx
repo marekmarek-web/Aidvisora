@@ -47,6 +47,7 @@ import {
   type PortalNotificationRow,
 } from "@/app/actions/portal-notifications";
 import { formatPortalNotificationBody } from "@/lib/client-portal/format-portal-notification-body";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
   aggregatePortfolioMetrics,
   PORTFOLIO_GROUP_LABELS,
@@ -565,13 +566,13 @@ function PortfolioScreen({ contracts }: { contracts: ClientMobileInitialData["co
                     {contract.startDate && (
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Od</p>
-                        <p className="font-bold text-slate-700">{new Date(contract.startDate).toLocaleDateString("cs-CZ")}</p>
+                        <p className="font-bold text-slate-700">{formatDisplayDateCs(contract.startDate) || contract.startDate}</p>
                       </div>
                     )}
                     {contract.anniversaryDate && (
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Výročí</p>
-                        <p className="font-bold text-slate-700">{new Date(contract.anniversaryDate).toLocaleDateString("cs-CZ")}</p>
+                        <p className="font-bold text-slate-700">{formatDisplayDateCs(contract.anniversaryDate) || contract.anniversaryDate}</p>
                       </div>
                     )}
                   </div>

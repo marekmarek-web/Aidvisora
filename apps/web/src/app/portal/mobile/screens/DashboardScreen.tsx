@@ -34,6 +34,7 @@ import type { BusinessPlanWidgetData } from "@/app/portal/today/DashboardEditabl
 import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
 import { getServiceCtaHref } from "@/lib/service-engine/cta";
 import { MobileCard, MobileSection, MetricCard } from "@/app/shared/mobile-ui/primitives";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import type {
   DashboardSummary,
@@ -41,7 +42,6 @@ import type {
   TaskDueItem,
   UrgentItem,
 } from "@/lib/ai/dashboard-types";
-import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -639,7 +639,7 @@ function ClientCareWidget({
             <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{c.partnerName ?? "—"}</h4>
             <p className="text-xs font-bold text-amber-600 flex items-center gap-1">
               <AlertCircle size={11} /> Výročí ·{" "}
-              {new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}
+              {formatDisplayDateCs(c.anniversaryDate) || c.anniversaryDate}
             </p>
           </div>
           <Link

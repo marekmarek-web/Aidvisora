@@ -12,6 +12,7 @@ import {
 import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import { getClientVisiblePortfolioDocumentNames } from "@/app/actions/documents";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
   aggregatePortfolioMetrics,
   PORTFOLIO_GROUP_LABELS,
@@ -197,11 +198,11 @@ export default async function ClientPortfolioPage() {
                           {(contract.startDate || contract.anniversaryDate) && (
                             <div className="text-xs text-slate-500">
                               {contract.startDate ? (
-                                <span>Od {new Date(contract.startDate).toLocaleDateString("cs-CZ")}</span>
+                                <span>Od {formatDisplayDateCs(contract.startDate) || contract.startDate}</span>
                               ) : null}
                               {contract.anniversaryDate ? (
                                 <span className={contract.startDate ? " ml-2" : ""}>
-                                  Výročí {new Date(contract.anniversaryDate).toLocaleDateString("cs-CZ")}
+                                  Výročí {formatDisplayDateCs(contract.anniversaryDate) || contract.anniversaryDate}
                                 </span>
                               ) : null}
                             </div>

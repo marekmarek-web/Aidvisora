@@ -39,7 +39,7 @@ import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
 import type { PrimaryDocumentType } from "@/lib/ai/document-review-types";
 import { CanonicalFieldsPanel } from "./CanonicalFieldsPanel";
-import { formatAiClassifierForAdvisor } from "@/lib/ai-review/czech-labels";
+import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "@/lib/ai-review/czech-labels";
 import type {
   ExtractionDocument,
   ExtractedGroup,
@@ -416,7 +416,7 @@ function PaymentSyncPreviewCard({ preview }: { preview: PaymentSyncPreview }) {
           {preview.warnings.map((w, i) => (
             <li key={i} className="text-[10px] text-amber-800 leading-snug flex items-start gap-1">
               <AlertTriangle size={10} className="shrink-0 mt-0.5" />
-              <span>{w}</span>
+              <span>{humanizeReviewReasonLine(w)}</span>
             </li>
           ))}
         </ul>
@@ -1029,11 +1029,13 @@ function resolveActionHref(action: DraftAction): string | null {
 
 function WorkActionsCard({
   doc,
+  onExecuteDraftAction,
   onConfirmCreateNew,
   onApproveAndApply,
   editedFields,
 }: {
   doc: ExtractionDocument;
+  onExecuteDraftAction?: (action: DraftAction) => void | Promise<void>;
   onConfirmCreateNew?: () => void;
   onApproveAndApply?: (editedFields: Record<string, string>, options?: { overrideGateReasons?: string[]; overrideReason?: string }) => void | Promise<void>;
   editedFields?: Record<string, string>;
@@ -1094,6 +1096,44 @@ function WorkActionsCard({
                     <span className="flex-1">
                       {alreadyLinked ? "Klient nastaven — spustit zápis do CRM" : a.label}
                     </span>
+                    <ArrowRight size={14} className="text-indigo-400 shrink-0" />
+                  </button>
+                </li>
+              );
+            }
+
+            if (
+              onExecuteDraftAction &&
+              (a.type === "create_task" ||
+                a.type === "create_service_task" ||
+                a.type === "create_service_review_task" ||
+                a.type === "create_task_followup" ||
+                a.type === "create_manual_review_task" ||
+                a.type === "schedule_consultation" ||
+                a.type === "create_opportunity" ||
+                a.type === "create_or_update_pipeline_deal")
+            ) {
+              return (
+                <li key={actionKey}>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={async () => {
+                      setBusyAction(actionKey);
+                      try {
+                        await onExecuteDraftAction(a);
+                      } finally {
+                        setBusyAction(null);
+                      }
+                    }}
+                    className={`${baseClass} text-indigo-700 bg-indigo-50/60 border-indigo-200 hover:bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/20 dark:border-indigo-800 dark:hover:bg-indigo-900/40 disabled:opacity-50`}
+                  >
+                    {isBusy ? (
+                      <span className="w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle2 size={15} className="text-indigo-500 shrink-0" />
+                    )}
+                    <span className="flex-1">{a.label}</span>
                     <ArrowRight size={14} className="text-indigo-400 shrink-0" />
                   </button>
                 </li>
@@ -1710,6 +1750,7 @@ type LeftPanelProps = {
   onDismissRec: (id: string) => void;
   onRestoreRec: (id: string) => void;
   onCreateTask: (rec: AIRecommendation) => void | Promise<void>;
+  onExecuteDraftAction?: (action: DraftAction) => void | Promise<void>;
   /** Fáze 11: Per-field pending confirmation */
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
   /** Fáze 1 fix: propagate create/apply callbacks for WorkActionsCard */
@@ -1730,12 +1771,14 @@ export function ExtractionLeftPanel({
   onDismissRec,
   onRestoreRec,
   onCreateTask,
+  onExecuteDraftAction,
   onConfirmPendingField,
   onConfirmCreateNew,
   onApproveAndApply,
   editedFields,
 }: LeftPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const showCrmMappingProposal = !doc.canonicalFields;
 
   const scrollToSection = useCallback(
     (id: string) => {
@@ -1814,12 +1857,13 @@ export function ExtractionLeftPanel({
           </div>
 
           <div data-section="recommendations" className="space-y-6">
-            {/* 4E: CRM mapping proposal – payload detail before apply (hidden after apply) */}
-            <CrmMappingProposalCard doc={doc} />
+            {/* Hide CRM payload mirror when canonical sections are already rendered above. */}
+            {showCrmMappingProposal ? <CrmMappingProposalCard doc={doc} /> : null}
             {/* Fáze 10+11: Enforcement result card – shown after apply */}
             <EnforcementResultCard doc={doc} onConfirmPendingField={onConfirmPendingField} />
             <WorkActionsCard
               doc={doc}
+              onExecuteDraftAction={onExecuteDraftAction}
               onConfirmCreateNew={onConfirmCreateNew}
               onApproveAndApply={onApproveAndApply}
               editedFields={editedFields}

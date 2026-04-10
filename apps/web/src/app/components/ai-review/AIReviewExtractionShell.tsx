@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import React, { useReducer, useCallback, useEffect, useState } from "react";
 import {
   FileText,
@@ -22,13 +23,16 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { createOpportunity, getOpportunityStages } from "@/app/actions/pipeline";
 import { createTask } from "@/app/actions/tasks";
 import { useToast } from "@/app/components/Toast";
+import { humanizeReviewReasonLine } from "@/lib/ai-review/czech-labels";
 import type {
   ExtractionDocument,
   ExtractionReviewState,
   ExtractionReviewAction,
   AIRecommendation,
+  DraftAction,
   FieldFilter,
   ApplyResultPayload,
 } from "@/lib/ai-review/types";
@@ -96,6 +100,19 @@ function humanizeApplyGateReason(code: string): string {
     return `Nízká jistota u pole ${fieldName}.`;
   }
   return code.replace(/_/g, " ").toLowerCase();
+}
+
+function buildRecommendationTaskTitle(rec: AIRecommendation): string {
+  const normalizedDescription = humanizeReviewReasonLine(rec.description?.trim() ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalizedDescription) {
+    return normalizedDescription.length > 140
+      ? `${normalizedDescription.slice(0, 137).trimEnd()}...`
+      : normalizedDescription;
+  }
+  const title = rec.title?.trim();
+  return title || "Prověřit výstup z AI review";
 }
 
 /* ─── Fáze 10: Apply Enforcement Result Summary ──────────────────── */
@@ -346,6 +363,7 @@ export function AIReviewExtractionShell({
   actionLoading,
   onRefreshPdf,
 }: Props) {
+  const router = useRouter();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -438,7 +456,7 @@ export function AIReviewExtractionShell({
 
   const handleCreateTask = useCallback(async (rec: AIRecommendation) => {
     try {
-      const title = rec.title?.trim() || rec.description?.slice(0, 120).trim() || "Úkol z AI review";
+      const title = buildRecommendationTaskTitle(rec);
       await createTask({
         title,
         description: rec.description?.trim() || undefined,
@@ -449,6 +467,76 @@ export function AIReviewExtractionShell({
       toast.showToast("Vytvoření úkolu selhalo.", "error");
     }
   }, [doc.matchedClientId, toast]);
+
+  const handleExecuteDraftAction = useCallback(async (action: DraftAction) => {
+    try {
+      const payload = action.payload ?? {};
+
+      if (
+        action.type === "create_task" ||
+        action.type === "create_service_task" ||
+        action.type === "create_service_review_task" ||
+        action.type === "create_task_followup" ||
+        action.type === "create_manual_review_task" ||
+        action.type === "schedule_consultation"
+      ) {
+        const notes =
+          typeof payload.notes === "string" && payload.notes.trim() ? payload.notes.trim() : undefined;
+        const description =
+          typeof payload.description === "string" && payload.description.trim()
+            ? payload.description.trim()
+            : notes;
+        const title =
+          typeof payload.title === "string" && payload.title.trim()
+            ? payload.title.trim()
+            : action.label?.trim() || "Prověřit výstup z AI review";
+        await createTask({
+          title,
+          description,
+          contactId: doc.matchedClientId || undefined,
+        });
+        toast.showToast("Úkol vytvořen.", "success");
+        router.push("/portal/tasks");
+        return;
+      }
+
+      if (action.type === "create_opportunity" || action.type === "create_or_update_pipeline_deal") {
+        if (!doc.matchedClientId) {
+          toast.showToast("Nejdřív vyberte nebo vytvořte klienta, pak lze založit příležitost.", "error");
+          return;
+        }
+        const stages = await getOpportunityStages();
+        const firstStageId = stages[0]?.id;
+        if (!firstStageId) {
+          throw new Error("V pipeline není dostupný žádný stupeň.");
+        }
+        const title =
+          typeof payload.title === "string" && payload.title.trim()
+            ? payload.title.trim()
+            : action.label?.trim() || "Navazující obchodní příležitost";
+        const opportunityId = await createOpportunity({
+          title,
+          caseType: "jiné",
+          contactId: doc.matchedClientId,
+          stageId: firstStageId,
+          customFields: {
+            aiSubtitle: action.label,
+            source: "ai_review",
+            reviewDocumentId: doc.id,
+            ...(typeof payload.lifecycleStatus === "string" && payload.lifecycleStatus.trim()
+              ? { lifecycleStatus: payload.lifecycleStatus.trim() }
+              : {}),
+          },
+        });
+        toast.showToast("Obchodní příležitost vytvořena.", "success");
+        router.push(opportunityId ? `/portal/pipeline/${opportunityId}` : "/portal/pipeline");
+        return;
+      }
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim() ? error.message : "Akci se nepodařilo dokončit.";
+      toast.showToast(message, "error");
+    }
+  }, [doc.id, doc.matchedClientId, router, toast]);
 
   const handleApproveClick = useCallback(() => {
     void Promise.resolve(onApprove(state.editedFields));
@@ -925,6 +1013,7 @@ export function AIReviewExtractionShell({
               onDismissRec={handleDismissRec}
               onRestoreRec={handleRestoreRec}
               onCreateTask={handleCreateTask}
+              onExecuteDraftAction={handleExecuteDraftAction}
               onConfirmPendingField={onConfirmPendingField}
               onConfirmCreateNew={onConfirmCreateNew}
               onApproveAndApply={onApproveAndApply}

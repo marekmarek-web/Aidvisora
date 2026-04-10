@@ -3,7 +3,7 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { contracts, contacts, unsubscribeTokens } from "db";
+import { contracts, contacts, clientPaymentSetups, unsubscribeTokens } from "db";
 import { eq, and } from "db";
 import { getPaymentAccountForContract } from "./payment-accounts";
 import { loadAdvisorMailHeadersForCurrentUser } from "@/lib/email/advisor-mail-headers";
@@ -23,6 +23,78 @@ export type PaymentInstruction = {
   variableSymbol: string | null;
 };
 
+type AiPaymentSetupInstructionRow = {
+  paymentType: string;
+  providerName: string | null;
+  productName: string | null;
+  contractNumber: string | null;
+  accountNumber: string | null;
+  bankCode: string | null;
+  iban: string | null;
+  variableSymbol: string | null;
+  amount: string | null;
+  frequency: string | null;
+  paymentInstructionsText: string | null;
+};
+
+function normalizeInstructionKeyPart(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function paymentInstructionDedupKey(instruction: PaymentInstruction): string {
+  return [
+    normalizeInstructionKeyPart(instruction.partnerName),
+    normalizeInstructionKeyPart(instruction.productName),
+    normalizeInstructionKeyPart(instruction.contractNumber),
+    normalizeInstructionKeyPart(instruction.accountNumber),
+    normalizeInstructionKeyPart(instruction.variableSymbol),
+  ].join("|");
+}
+
+function resolvePortalSegmentFromPaymentType(paymentType: string | null | undefined): string {
+  switch ((paymentType ?? "").trim().toLowerCase()) {
+    case "insurance":
+      return "ZP";
+    case "investment":
+      return "INV";
+    case "loan":
+      return "UVER";
+    default:
+      return "ZP";
+  }
+}
+
+function buildPortalPaymentAccount(row: AiPaymentSetupInstructionRow): string | null {
+  const iban = row.iban?.trim();
+  if (iban) return iban;
+
+  const accountNumber = row.accountNumber?.trim();
+  if (!accountNumber) return null;
+
+  const bankCode = row.bankCode?.trim();
+  return bankCode ? `${accountNumber}/${bankCode}` : accountNumber;
+}
+
+function mapAiPaymentSetupToInstruction(
+  row: AiPaymentSetupInstructionRow
+): PaymentInstruction | null {
+  const accountNumber = buildPortalPaymentAccount(row);
+  if (!accountNumber) return null;
+
+  return {
+    segment: resolvePortalSegmentFromPaymentType(row.paymentType),
+    partnerName: row.providerName?.trim() || "—",
+    productName: row.productName?.trim() || null,
+    contractNumber: row.contractNumber?.trim() || null,
+    accountNumber,
+    bank: null,
+    note: row.paymentInstructionsText?.trim() || null,
+    amount: row.amount?.trim() || null,
+    frequency: row.frequency?.trim() || null,
+    variableSymbol: row.variableSymbol?.trim() || null,
+  };
+}
+
 export async function getPaymentInstructionsForContact(contactId: string): Promise<PaymentInstruction[]> {
   const auth = await requireAuthInAction();
   if (auth.roleName === "Client") {
@@ -32,12 +104,50 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
   }
   const [contact] = await db.select().from(contacts).where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId))).limit(1);
   if (!contact) return [];
+
+  const aiReviewPaymentRows = await db
+    .select({
+      paymentType: clientPaymentSetups.paymentType,
+      providerName: clientPaymentSetups.providerName,
+      productName: clientPaymentSetups.productName,
+      contractNumber: clientPaymentSetups.contractNumber,
+      accountNumber: clientPaymentSetups.accountNumber,
+      bankCode: clientPaymentSetups.bankCode,
+      iban: clientPaymentSetups.iban,
+      variableSymbol: clientPaymentSetups.variableSymbol,
+      amount: clientPaymentSetups.amount,
+      frequency: clientPaymentSetups.frequency,
+      paymentInstructionsText: clientPaymentSetups.paymentInstructionsText,
+    })
+    .from(clientPaymentSetups)
+    .where(
+      and(
+        eq(clientPaymentSetups.tenantId, auth.tenantId),
+        eq(clientPaymentSetups.contactId, contactId),
+        eq(clientPaymentSetups.status, "active"),
+        eq(clientPaymentSetups.needsHumanReview, false)
+      )
+    );
+
+  const out = aiReviewPaymentRows
+    .map(mapAiPaymentSetupToInstruction)
+    .filter((instruction): instruction is PaymentInstruction => instruction !== null);
+  const seen = new Set(out.map(paymentInstructionDedupKey));
+
   const contractRows = await db.select().from(contracts).where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)));
-  const out: PaymentInstruction[] = [];
-  for (const c of contractRows) {
+  const visibleContractRows =
+    auth.roleName === "Client"
+      ? contractRows.filter(
+          (contract) =>
+            contract.visibleToClient === true &&
+            (contract.portfolioStatus === "active" || contract.portfolioStatus === "ended")
+        )
+      : contractRows;
+
+  for (const c of visibleContractRows) {
     const acc = await getPaymentAccountForContract(auth.tenantId, c.partnerId, c.partnerName, c.segment);
     if (acc) {
-      out.push({
+      const legacyInstruction: PaymentInstruction = {
         segment: c.segment,
         partnerName: acc.partnerName || c.partnerName || "—",
         productName: c.productName,
@@ -48,7 +158,11 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
         amount: c.premiumAmount,
         frequency: c.premiumAmount ? "měsíčně" : null,
         variableSymbol: c.contractNumber,
-      });
+      };
+      const dedupKey = paymentInstructionDedupKey(legacyInstruction);
+      if (seen.has(dedupKey)) continue;
+      seen.add(dedupKey);
+      out.push(legacyInstruction);
     }
   }
   return out;

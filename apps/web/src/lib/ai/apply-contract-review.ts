@@ -48,6 +48,190 @@ function normalizeExtractionConfidence(c: number | null | undefined): string | n
   return String(clamped);
 }
 
+type ExistingContactSnapshot = {
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  birthDate: string | null;
+  personalId: string | null;
+  street: string | null;
+  city: string | null;
+  zip: string | null;
+};
+
+type ExistingContractSnapshot = {
+  id: string;
+  contractNumber: string | null;
+  partnerName: string | null;
+  productName: string | null;
+  startDate: string | null;
+  segment: string | null;
+};
+
+type ExistingContractLookup = {
+  contractNumber: string | null;
+  institutionName: string | null;
+  productName: string | null;
+  effectiveDate: string | null;
+  segment: string | null;
+};
+
+function hasNonEmptyText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeComparableText(value: string | null | undefined): string | null {
+  if (!hasNonEmptyText(value)) return null;
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeContractIdentifier(value: string | null | undefined): string | null {
+  if (!hasNonEmptyText(value)) return null;
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function preferExistingValue(
+  existing: string | null | undefined,
+  incoming: string | null | undefined
+): string | null {
+  if (hasNonEmptyText(existing)) return existing.trim();
+  if (hasNonEmptyText(incoming)) return incoming.trim();
+  return null;
+}
+
+export function buildContactUpdatePatch(
+  existing: ExistingContactSnapshot,
+  payload: Record<string, unknown>
+): Record<string, string> {
+  const patch: Record<string, string> = {};
+
+  const assignIfMissing = (
+    key: keyof Pick<
+      ExistingContactSnapshot,
+      "firstName" | "lastName" | "email" | "phone" | "personalId" | "street" | "city" | "zip"
+    >,
+    incoming: unknown
+  ) => {
+    if (!hasNonEmptyText(incoming) || hasNonEmptyText(existing[key])) return;
+    patch[key] = incoming.trim();
+  };
+
+  assignIfMissing("firstName", payload.firstName);
+  assignIfMissing("lastName", payload.lastName);
+  assignIfMissing("email", payload.email);
+  assignIfMissing("phone", payload.phone);
+  assignIfMissing("personalId", payload.personalId);
+  assignIfMissing("city", payload.city);
+  assignIfMissing("zip", payload.zip);
+
+  const streetCandidate =
+    hasNonEmptyText(payload.street) ? payload.street : hasNonEmptyText(payload.address) ? payload.address : null;
+  assignIfMissing("street", streetCandidate);
+
+  const birthDate = normalizeDateToISO(
+    hasNonEmptyText(payload.birthDate) ? payload.birthDate : null
+  );
+  if (birthDate && !hasNonEmptyText(existing.birthDate)) {
+    patch.birthDate = birthDate;
+  }
+
+  return patch;
+}
+
+export function selectExistingContractId(
+  candidates: ExistingContractSnapshot[],
+  lookup: ExistingContractLookup
+): string | null {
+  const wantedContractNumber = normalizeContractIdentifier(lookup.contractNumber);
+  const wantedPartner = normalizeComparableText(lookup.institutionName);
+  const wantedProduct = normalizeComparableText(lookup.productName);
+  const wantedStartDate = normalizeDateToISO(lookup.effectiveDate);
+  const wantedSegment = normalizeComparableText(lookup.segment);
+
+  const segmentMatches = (candidate: ExistingContractSnapshot) => {
+    if (!wantedSegment) return true;
+    const candidateSegment = normalizeComparableText(candidate.segment);
+    return !candidateSegment || candidateSegment === wantedSegment;
+  };
+
+  if (wantedContractNumber) {
+    const byContractNumber = candidates.find(
+      (candidate) =>
+        segmentMatches(candidate) &&
+        normalizeContractIdentifier(candidate.contractNumber) === wantedContractNumber
+    );
+    if (byContractNumber) return byContractNumber.id;
+  }
+
+  if (wantedPartner && wantedProduct) {
+    const byPartnerAndProduct = candidates.find(
+      (candidate) =>
+        segmentMatches(candidate) &&
+        normalizeComparableText(candidate.partnerName) === wantedPartner &&
+        normalizeComparableText(candidate.productName) === wantedProduct
+    );
+    if (byPartnerAndProduct) return byPartnerAndProduct.id;
+  }
+
+  if (wantedPartner && wantedStartDate) {
+    const byPartnerAndStartDate = candidates.find(
+      (candidate) =>
+        segmentMatches(candidate) &&
+        normalizeComparableText(candidate.partnerName) === wantedPartner &&
+        normalizeDateToISO(candidate.startDate) === wantedStartDate
+    );
+    if (byPartnerAndStartDate) return byPartnerAndStartDate.id;
+  }
+
+  if (wantedPartner) {
+    const samePartnerOnly = candidates.filter(
+      (candidate) =>
+        segmentMatches(candidate) &&
+        normalizeComparableText(candidate.partnerName) === wantedPartner
+    );
+    if (samePartnerOnly.length === 1) return samePartnerOnly[0].id;
+  }
+
+  return null;
+}
+
+async function updateExistingContactFromPayload(
+  tenantId: string,
+  contactId: string,
+  payload: Record<string, unknown>,
+  tx: typeof db
+): Promise<void> {
+  const [existing] = await tx
+    .select({
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      email: contacts.email,
+      phone: contacts.phone,
+      birthDate: contacts.birthDate,
+      personalId: contacts.personalId,
+      street: contacts.street,
+      city: contacts.city,
+      zip: contacts.zip,
+    })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+    .limit(1);
+
+  if (!existing) return;
+
+  const patch = buildContactUpdatePatch(existing, payload);
+  if (Object.keys(patch).length === 0) return;
+
+  await tx
+    .update(contacts)
+    .set({
+      ...patch,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)));
+}
+
 /** Idempotent: find existing contact by email or personalId. */
 async function findExistingContactId(
   tenantId: string,
@@ -75,29 +259,35 @@ async function findExistingContactId(
   return null;
 }
 
-/** Check duplicate contract: same tenant, contact, contractNumber, partnerName. */
+/** Check duplicate contract using contract number first, then conservative fallbacks. */
 async function findExistingContractId(
   tenantId: string,
   contactId: string,
-  contractNumber: string | null,
-  institutionName: string | null,
+  lookup: ExistingContractLookup,
   tx: typeof db
 ): Promise<string | null> {
-  const cn = contractNumber?.trim();
-  const inst = institutionName?.trim();
-  if (!cn && !inst) return null;
-  const conditions = [
-    eq(contracts.tenantId, tenantId),
-    eq(contracts.contactId, contactId),
-  ];
-  if (cn) conditions.push(eq(contracts.contractNumber, cn));
-  if (inst) conditions.push(eq(contracts.partnerName, inst));
+  if (
+    !hasNonEmptyText(lookup.contractNumber) &&
+    !hasNonEmptyText(lookup.institutionName) &&
+    !hasNonEmptyText(lookup.productName)
+  ) {
+    return null;
+  }
+
   const rows = await tx
-    .select({ id: contracts.id })
+    .select({
+      id: contracts.id,
+      contractNumber: contracts.contractNumber,
+      partnerName: contracts.partnerName,
+      productName: contracts.productName,
+      startDate: contracts.startDate,
+      segment: contracts.segment,
+    })
     .from(contracts)
-    .where(and(...conditions))
-    .limit(1);
-  return rows[0]?.id ?? null;
+    .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId)))
+    .limit(50);
+
+  return selectExistingContractId(rows, lookup);
 }
 
 export async function applyContractReview(
@@ -167,23 +357,31 @@ export async function applyContractReview(
 
   try {
     await db.transaction(async (tx) => {
-        if (!effectiveContactId && createNewConfirmed) {
-        const createClientAction = draftActions.find(
-          (a) => a.type === "create_client" || a.type === "create_new_client"
-        );
+      const createClientAction = draftActions.find(
+        (a) => a.type === "create_client" || a.type === "create_new_client"
+      );
+      const contactEnforce = createClientAction
+        ? enforceContactPayload(
+            createClientAction.payload,
+            extractedPayloadForEnforcement,
+          )
+        : undefined;
+      if (contactEnforce) {
+        contactEnforcementResult = contactEnforce;
+      }
+
+      if (!effectiveContactId && createNewConfirmed) {
         if (createClientAction) {
-          const existing = await findExistingContactId(tenantId, createClientAction.payload, tx as unknown as typeof db);
+          const existing = await findExistingContactId(
+            tenantId,
+            createClientAction.payload,
+            tx as unknown as typeof db
+          );
           if (existing) {
             effectiveContactId = existing;
             resultPayload.linkedClientId = existing;
           } else {
-            // Fáze 9: Enforce contact payload před DB write
-            const contactEnforce = enforceContactPayload(
-              createClientAction.payload,
-              extractedPayloadForEnforcement,
-            );
-            contactEnforcementResult = contactEnforce;
-            const ep = contactEnforce.enforcedPayload;
+            const ep = contactEnforce?.enforcedPayload ?? createClientAction.payload;
 
             // firstName/lastName jsou povinné pro vytvoření kontaktu — fallback i při manual_required
             const firstName =
@@ -201,7 +399,12 @@ export async function applyContractReview(
                 phone: (ep.phone as string)?.trim() || null,
                 birthDate: normalizeDateToISO(ep.birthDate as string) || null,
                 personalId: (ep.personalId as string)?.trim() || null,
-                street: (ep.address as string)?.trim() || null,
+                street:
+                  (ep.street as string)?.trim() ||
+                  (ep.address as string)?.trim() ||
+                  null,
+                city: (ep.city as string)?.trim() || null,
+                zip: (ep.zip as string)?.trim() || null,
               })
               .returning({ id: contacts.id });
             if (inserted?.id) {
@@ -213,7 +416,18 @@ export async function applyContractReview(
         if (!effectiveContactId) {
           throw new Error("Nepodařilo se vytvořit ani najít klienta.");
         }
-      } else if (effectiveContactId) {
+      }
+
+      if (effectiveContactId && contactEnforce) {
+        await updateExistingContactFromPayload(
+          tenantId,
+          effectiveContactId,
+          contactEnforce.enforcedPayload,
+          tx as unknown as typeof db
+        );
+      }
+
+      if (effectiveContactId && !resultPayload.createdClientId) {
         resultPayload.linkedClientId = effectiveContactId;
       }
 
@@ -240,20 +454,44 @@ export async function applyContractReview(
 
           // contractNumber: manual_required → null (nesmí se tvářit jako potvrzené)
           const contractNumber = (ep.contractNumber as string)?.trim() || null;
-          const institutionName = (action.payload.institutionName as string)?.trim() || null;
+          const productName = (ep.productName as string)?.trim() || null;
+          const institutionName =
+            (ep.institutionName as string)?.trim() ||
+            (action.payload.institutionName as string)?.trim() ||
+            null;
+          const effectiveDate = (ep.effectiveDate as string)?.trim() || null;
           const segment = validateSegment(action.payload.segment as string);
           const existingContractId = await findExistingContractId(
             tenantId,
             effectiveContactId,
-            contractNumber,
-            institutionName,
+            {
+              contractNumber,
+              institutionName,
+              productName,
+              effectiveDate,
+              segment,
+            },
             tx as unknown as typeof db
           );
+          // premiumAmount: manual_required nebo do_not_apply → null (nesmí se zapsat jako finální)
+          const premiumAmountRaw = (ep.premiumAmount as string | undefined)?.trim() || null;
+          const premiumAnnualRaw = (ep.premiumAnnual as string | undefined)?.trim() || null;
+          const docType = (action.payload.documentType as string)?.trim() || null;
+          const noteParts = [productName, docType].filter(Boolean);
+          const normalizedStartDate = normalizeDateToISO(effectiveDate) || null;
+          const nextNote = noteParts.length ? noteParts.join(" · ") : null;
           if (existingContractId) {
             const [existingRow] = await tx
               .select({
                 portfolioAttributes: contracts.portfolioAttributes,
                 sourceKind: contracts.sourceKind,
+                partnerName: contracts.partnerName,
+                productName: contracts.productName,
+                contractNumber: contracts.contractNumber,
+                startDate: contracts.startDate,
+                premiumAmount: contracts.premiumAmount,
+                premiumAnnual: contracts.premiumAnnual,
+                note: contracts.note,
               })
               .from(contracts)
               .where(eq(contracts.id, existingContractId))
@@ -268,6 +506,13 @@ export async function applyContractReview(
                 ...(preserveManualLineage ? {} : { sourceKind: "ai_review" as const }),
                 segment,
                 type: segment,
+                partnerName: preferExistingValue(existingRow?.partnerName, institutionName),
+                productName: preferExistingValue(existingRow?.productName, productName),
+                contractNumber: preferExistingValue(existingRow?.contractNumber, contractNumber),
+                startDate: preferExistingValue(existingRow?.startDate, normalizedStartDate),
+                premiumAmount: preferExistingValue(existingRow?.premiumAmount, premiumAmountRaw),
+                premiumAnnual: preferExistingValue(existingRow?.premiumAnnual, premiumAnnualRaw),
+                note: preferExistingValue(existingRow?.note, nextNote),
                 advisorConfirmedAt: new Date(),
                 confirmedByUserId: userId,
                 visibleToClient: true,
@@ -280,12 +525,6 @@ export async function applyContractReview(
             resultPayload.createdContractId = existingContractId;
             continue;
           }
-          // premiumAmount: manual_required nebo do_not_apply → null (nesmí se zapsat jako finální)
-          const premiumAmountRaw = (ep.premiumAmount as string | undefined)?.trim() || null;
-          const premiumAnnualRaw = (ep.premiumAnnual as string | undefined)?.trim() || null;
-          const productName = (ep.productName as string)?.trim() || null;
-          const docType = (action.payload.documentType as string)?.trim() || null;
-          const noteParts = [productName, docType].filter(Boolean);
           const [inserted] = await tx
             .insert(contracts)
             .values({
@@ -297,10 +536,10 @@ export async function applyContractReview(
               partnerName: institutionName,
               productName,
               contractNumber,
-              startDate: normalizeDateToISO((ep.effectiveDate as string)?.trim()) || null,
+              startDate: normalizedStartDate,
               premiumAmount: premiumAmountRaw,
               premiumAnnual: premiumAnnualRaw,
-              note: noteParts.length ? noteParts.join(" · ") : null,
+              note: nextNote,
               visibleToClient: true,
               portfolioStatus: "active",
               sourceKind: "ai_review",

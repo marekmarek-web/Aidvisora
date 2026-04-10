@@ -34,6 +34,7 @@ import type { ProductionSummary } from "@/app/actions/production";
 import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 import { DashboardCard } from "@/app/components/dashboard/DashboardCard";
 import { DashboardSecondaryResolver } from "./DashboardSecondaryResolver";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 const pulseBar = "min-h-[120px] animate-pulse rounded-2xl bg-[color:var(--wp-surface-muted)]/80";
 
@@ -80,7 +81,6 @@ import {
 import { useDashboardCalendarDrawer } from "./use-dashboard-calendar-drawer";
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
-import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 
 export type { BusinessPlanWidgetData, DashboardSecondaryBundle } from "./dashboard-secondary-types";
 
@@ -614,7 +614,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50/30 border border-amber-100/50 min-h-[44px]">
                   <div>
                     <h4 className="font-bold text-sm text-[color:var(--wp-text)]">{c.partnerName ?? "—"}</h4>
-                    <p className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle size={12} /> Výročí · {c.contactName} · {new Date(c.anniversaryDate).toLocaleDateString("cs-CZ")}</p>
+                    <p className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle size={12} /> Výročí · {c.contactName} · {formatDisplayDateCs(c.anniversaryDate) || c.anniversaryDate}</p>
                   </div>
                   <Link href={`/portal/contacts/${c.contactId}`} className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-[color:var(--wp-text-secondary)] shadow-sm transition-colors hover:text-indigo-600 dark:hover:text-indigo-400" aria-label="Otevřít kontakt"><Phone size={14} /></Link>
                 </div>
