@@ -1,5 +1,6 @@
 import { getMeetingNotesForBoard } from "@/app/actions/meeting-notes";
 import { getContactNamePickerRows } from "@/app/actions/contacts";
+import { getNotesBoardPositions } from "@/app/actions/notes-board-positions";
 import { NotesVisionBoard } from "./NotesVisionBoard";
 
 export default async function NotesPage({
@@ -10,14 +11,17 @@ export default async function NotesPage({
   const sp = await searchParams;
   let notes: Awaited<ReturnType<typeof getMeetingNotesForBoard>> = [];
   let contactsList: Awaited<ReturnType<typeof getContactNamePickerRows>> = [];
+  let boardPositions: Awaited<ReturnType<typeof getNotesBoardPositions>> = {};
   try {
-    [notes, contactsList] = await Promise.all([
+    [notes, contactsList, boardPositions] = await Promise.all([
       getMeetingNotesForBoard(),
       getContactNamePickerRows(),
+      getNotesBoardPositions(),
     ]);
   } catch {
     notes = [];
     contactsList = [];
+    boardPositions = {};
   }
 
   return (
@@ -27,6 +31,7 @@ export default async function NotesPage({
         contacts={contactsList}
         initialSearchQuery={sp.q ?? ""}
         initialNoteId={sp.noteId ?? null}
+        initialBoardPositions={boardPositions}
       />
     </div>
   );

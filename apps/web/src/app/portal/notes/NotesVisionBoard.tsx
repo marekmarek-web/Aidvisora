@@ -4,7 +4,6 @@ import React, { Suspense, useState, useRef, useCallback, useEffect, useMemo } fr
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Pin,
-  Plus,
   GripHorizontal,
   Calendar,
   User,
@@ -29,13 +28,18 @@ import {
   deleteMeetingNote,
   summarizeMeetingNotes,
 } from "@/app/actions/meeting-notes";
+import { saveNotesBoardPositions } from "@/app/actions/notes-board-positions";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
+import type { NotesBoardStoredPosition } from "@/app/actions/notes-board-positions";
 import type { ContactNamePickerRow } from "@/app/actions/contacts";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
+/** Legacy cache (jen migrace → server); nové pozice jdou výhradně do DB. */
 const BOARD_POSITIONS_KEY = "portal-notes-board-positions";
 const MOBILE_TAB_KEY = "portal-notes-mobile-tab";
+const NOTE_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DOMAINS = [
   { value: "hypo", label: "Hypotéka" },
@@ -46,7 +50,8 @@ const DOMAINS = [
   { value: "komplex", label: "Komplexní plán" },
 ];
 
-type BoardPosition = { x: number; y: number; z: number; pinned: boolean };
+/** x,y jsou 0–1 relativně k rozměrům plátna (stejné jako v DB). */
+type BoardPosition = NotesBoardStoredPosition;
 
 function getProductDesign(type: string) {
   switch (type) {
@@ -122,6 +127,15 @@ function contentRecommendation(c: Record<string, unknown> | null): string {
   return typeof d === "string" ? d : "";
 }
 
+function defaultBoardPositionForIndex(index: number): BoardPosition {
+  return {
+    x: Math.min(0.88, 0.04 + (index % 3) * 0.28),
+    y: Math.min(0.82, 0.06 + Math.floor(index / 3) * 0.22),
+    z: index + 1,
+    pinned: false,
+  };
+}
+
 function noteMatchesSearch(note: MeetingNoteForBoard, q: string): boolean {
   if (!q.trim()) return true;
   const lower = q.toLowerCase();
@@ -142,31 +156,32 @@ function NotesVisionBoardInner({
   contacts,
   initialSearchQuery,
   initialNoteId,
+  initialBoardPositions,
 }: {
   initialNotes: MeetingNoteForBoard[];
   contacts: ContactNamePickerRow[];
   initialSearchQuery: string;
   initialNoteId: string | null;
+  initialBoardPositions: Record<string, NotesBoardStoredPosition>;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const searchQuery = searchParams.get("q") ?? initialSearchQuery;
   const noteIdFromQuery = searchParams.get("noteId") ?? initialNoteId ?? "";
   const [notes, setNotes] = useState(initialNotes);
-  const [positions, setPositions] = useState<Record<string, BoardPosition>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const raw = localStorage.getItem(BOARD_POSITIONS_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [positions, setPositions] = useState<Record<string, BoardPosition>>(initialBoardPositions);
+  const latestPositionsRef = useRef<Record<string, BoardPosition>>(initialBoardPositions);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const legacyLocalStorageMigrated = useRef(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [maxZIndex, setMaxZIndex] = useState(10);
+  const [maxZIndex, setMaxZIndex] = useState(() =>
+    Math.max(10, ...Object.values(initialBoardPositions).map((p) => p.z))
+  );
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState<"feed" | "board">("board");
   const boardRef = useRef<HTMLDivElement>(null);
+  const dragIndexRef = useRef(0);
   const deepLinkHandled = useRef(false);
   const contactFromQueryHandled = useRef(false);
 
@@ -177,6 +192,16 @@ function NotesVisionBoardInner({
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current);
+        saveDebounceRef.current = null;
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     try {
@@ -216,70 +241,177 @@ function NotesVisionBoardInner({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  const persistPositions = useCallback((next: Record<string, BoardPosition>) => {
-    setPositions(next);
+  const flushSaveBoardPositions = useCallback(async (next: Record<string, BoardPosition>) => {
     try {
-      localStorage.setItem(BOARD_POSITIONS_KEY, JSON.stringify(next));
-    } catch {}
+      await saveNotesBoardPositions(next);
+    } catch (err) {
+      console.error("[NotesVisionBoard] saveNotesBoardPositions", err);
+    }
   }, []);
+
+  const persistPositions = useCallback(
+    (next: Record<string, BoardPosition>) => {
+      latestPositionsRef.current = next;
+      setPositions(next);
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+      saveDebounceRef.current = setTimeout(() => {
+        saveDebounceRef.current = null;
+        void flushSaveBoardPositions(next);
+      }, 400);
+    },
+    [flushSaveBoardPositions]
+  );
 
   const getPosition = useCallback(
     (id: string, index: number): BoardPosition => {
       if (positions[id]) return positions[id];
-      return {
-        x: 50 + (index % 3) * 380,
-        y: 60 + Math.floor(index / 3) * 320,
-        z: index + 1,
-        pinned: false,
-      };
+      return defaultBoardPositionForIndex(index);
     },
     [positions]
   );
 
   const setPosition = useCallback(
-    (id: string, patch: Partial<BoardPosition>) => {
-      const prev = getPosition(id, 0);
-      const next = { ...positions, [id]: { ...prev, ...patch } };
-      persistPositions(next);
+    (id: string, index: number, patch: Partial<BoardPosition>) => {
+      setPositions((prev) => {
+        const prevPos = prev[id] ?? defaultBoardPositionForIndex(index);
+        const next = { ...prev, [id]: { ...prevPos, ...patch } };
+        latestPositionsRef.current = next;
+        if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+        saveDebounceRef.current = setTimeout(() => {
+          saveDebounceRef.current = null;
+          void flushSaveBoardPositions(latestPositionsRef.current);
+        }, 400);
+        return next;
+      });
     },
-    [positions, getPosition, persistPositions]
+    [flushSaveBoardPositions]
   );
 
-  const handlePointerDown = (e: React.PointerEvent, id: string) => {
+  const handlePointerDown = (e: React.PointerEvent, id: string, index: number) => {
     if ((e.target as HTMLElement).closest?.("button, a, [role=\"button\"]")) return;
+    dragIndexRef.current = index;
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     setDraggingId(id);
-    const pos = getPosition(id, 0);
     const newZ = maxZIndex + 1;
     setMaxZIndex(newZ);
-    setPosition(id, { z: newZ });
+    setPosition(id, index, { z: newZ });
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingId || !boardRef.current) return;
     const boardRect = boardRef.current.getBoundingClientRect();
-    const newX = Math.max(0, e.clientX - boardRect.left - dragOffset.x);
-    const newY = Math.max(0, e.clientY - boardRect.top - dragOffset.y);
-    setPosition(draggingId, { x: newX, y: newY });
+    const w = boardRect.width;
+    const h = boardRect.height;
+    if (w <= 0 || h <= 0) return;
+    const px = Math.max(0, e.clientX - boardRect.left - dragOffset.x);
+    const py = Math.max(0, e.clientY - boardRect.top - dragOffset.y);
+    setPosition(draggingId, dragIndexRef.current, { x: Math.min(1, px / w), y: Math.min(1, py / h) });
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    const wasDragging = draggingId != null;
     setDraggingId(null);
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    if (wasDragging) {
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current);
+        saveDebounceRef.current = null;
+      }
+      void flushSaveBoardPositions(latestPositionsRef.current);
+    }
   };
 
-  const togglePin = (id: string, e: React.MouseEvent) => {
+  const togglePin = (id: string, index: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const pos = getPosition(id, 0);
-    setPosition(id, { pinned: !pos.pinned });
+    const pos = getPosition(id, index);
+    setPosition(id, index, { pinned: !pos.pinned });
   };
 
   async function reload() {
     const fresh = await getMeetingNotesForBoard();
     setNotes(fresh);
   }
+
+  useEffect(() => {
+    if (Object.keys(initialBoardPositions).length > 0) {
+      try {
+        localStorage.removeItem(BOARD_POSITIONS_KEY);
+      } catch {
+        /* ignore */
+      }
+      legacyLocalStorageMigrated.current = true;
+      return;
+    }
+    if (legacyLocalStorageMigrated.current) return;
+    const timer = window.setTimeout(() => {
+      if (legacyLocalStorageMigrated.current) return;
+      const el = boardRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 64 || r.height < 64) return;
+      let raw: string | null = null;
+      try {
+        raw = localStorage.getItem(BOARD_POSITIONS_KEY);
+      } catch {
+        legacyLocalStorageMigrated.current = true;
+        return;
+      }
+      if (!raw) {
+        legacyLocalStorageMigrated.current = true;
+        return;
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        legacyLocalStorageMigrated.current = true;
+        try {
+          localStorage.removeItem(BOARD_POSITIONS_KEY);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      if (!parsed || typeof parsed !== "object") {
+        legacyLocalStorageMigrated.current = true;
+        return;
+      }
+      const w = r.width;
+      const h = r.height;
+      const next: Record<string, BoardPosition> = {};
+      for (const [key, val] of Object.entries(parsed as Record<string, unknown>)) {
+        if (!NOTE_ID_UUID_RE.test(key) || val == null || typeof val !== "object") continue;
+        const o = val as Record<string, unknown>;
+        let x = Number(o.x);
+        let y = Number(o.y);
+        const zRaw = Number(o.z);
+        const z = Number.isFinite(zRaw) ? Math.min(99999, Math.max(1, Math.floor(zRaw))) : 1;
+        const pinned = Boolean(o.pinned);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        if (x > 1 || y > 1) {
+          x = w > 0 ? Math.min(1, Math.max(0, x / w)) : 0;
+          y = h > 0 ? Math.min(1, Math.max(0, y / h)) : 0;
+        } else {
+          x = Math.min(1, Math.max(0, x));
+          y = Math.min(1, Math.max(0, y));
+        }
+        next[key] = { x, y, z, pinned };
+      }
+      legacyLocalStorageMigrated.current = true;
+      try {
+        localStorage.removeItem(BOARD_POSITIONS_KEY);
+      } catch {
+        /* ignore */
+      }
+      if (Object.keys(next).length === 0) return;
+      latestPositionsRef.current = next;
+      setPositions(next);
+      void flushSaveBoardPositions(next);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialBoardPositions, mobileTab, isMobile, flushSaveBoardPositions]);
 
   useEffect(() => {
     if (noteIdFromQuery && notes.length > 0 && !deepLinkHandled.current) {
@@ -354,7 +486,7 @@ function NotesVisionBoardInner({
     setSaving(true);
     try {
       await deleteMeetingNote(editingId);
-      const next = { ...positions };
+      const next = { ...latestPositionsRef.current };
       delete next[editingId];
       persistPositions(next);
       await reload();
@@ -397,13 +529,17 @@ function NotesVisionBoardInner({
         });
         if (newId && boardRef.current) {
           const boardRect = boardRef.current.getBoundingClientRect();
-          const spawnX = boardRect.width / 2 - 170 + (Math.random() * 40 - 20);
-          const spawnY = boardRect.height / 2 - 150 + (Math.random() * 40 - 20);
+          const bw = boardRect.width;
+          const bh = boardRect.height;
+          const spawnPxX = bw / 2 - 170 + (Math.random() * 40 - 20);
+          const spawnPxY = bh / 2 - 150 + (Math.random() * 40 - 20);
           const newZ = maxZIndex + 1;
           setMaxZIndex(newZ);
+          const xRel = bw > 0 ? Math.min(1, Math.max(0, spawnPxX / bw)) : 0.5;
+          const yRel = bh > 0 ? Math.min(1, Math.max(0, spawnPxY / bh)) : 0.5;
           persistPositions({
-            ...positions,
-            [newId]: { x: Math.max(20, spawnX), y: Math.max(20, spawnY), z: newZ, pinned: false },
+            ...latestPositionsRef.current,
+            [newId]: { x: xRel, y: yRel, z: newZ, pinned: false },
           });
         }
       }
@@ -608,14 +744,14 @@ function NotesVisionBoardInner({
           return (
             <div
               key={note.id}
-              onPointerDown={(e) => handlePointerDown(e, note.id)}
+              onPointerDown={(e) => handlePointerDown(e, note.id, index)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
               style={{
                 position: "absolute",
-                left: pos.x,
-                top: pos.y,
+                left: `${pos.x * 100}%`,
+                top: `${pos.y * 100}%`,
                 zIndex: isDragging ? 9999 : pos.z,
                 touchAction: "none",
               }}
@@ -638,7 +774,7 @@ function NotesVisionBoardInner({
                   </button>
                   <button
                     type="button"
-                    onClick={(e) => togglePin(note.id, e)}
+                    onClick={(e) => togglePin(note.id, index, e)}
                     className={`p-1.5 rounded-full transition-all ${pos.pinned ? "bg-amber-100 text-amber-600 shadow-sm" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] hover:text-[color:var(--wp-text-secondary)] hover:shadow-sm"}`}
                     title="Připnout"
                   >
@@ -939,6 +1075,7 @@ export function NotesVisionBoard(props: {
   contacts: ContactNamePickerRow[];
   initialSearchQuery: string;
   initialNoteId: string | null;
+  initialBoardPositions: Record<string, NotesBoardStoredPosition>;
 }) {
   return (
     <Suspense fallback={<NotesBoardSuspenseFallback />}>

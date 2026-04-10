@@ -35,6 +35,10 @@ export const advisorPreferences = pgTable(
       enabled: Record<string, boolean>;
       order: string[];
     }>(),
+    /** Vision board Zápisků: mapa noteId → { x,y v 0–1 (rel. k plátnu), z, pinned }. */
+    notesBoardPositions: jsonb("notes_board_positions").$type<
+      Record<string, { x: number; y: number; z: number; pinned: boolean }>
+    >(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

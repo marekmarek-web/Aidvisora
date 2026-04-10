@@ -644,6 +644,7 @@ ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_logo_url text;
 -- Fondová knihovna (FA): pořadí a zapnutí fondů na úrovni poradce
 ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS fund_library jsonb;
 ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS report_contact_email text;
+ALTER TABLE advisor_preferences ADD COLUMN IF NOT EXISTS notes_board_positions jsonb;
 
 CREATE TABLE IF NOT EXISTS fund_add_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
