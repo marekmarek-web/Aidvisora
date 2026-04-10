@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import clsx from "clsx";
 import { X, Briefcase, Target, ExternalLink, TrendingUp } from "lucide-react";
 import type { TeamMemberDetail } from "@/app/actions/team-overview";
 import { formatCareerProgramLabel, formatCareerTrackLabel } from "@/lib/career/evaluate-career-progress";
@@ -10,6 +11,7 @@ import { crmUnitsFootnoteForProgram } from "@/lib/career/crm-units-copy";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { MemberCareerQuickActions } from "@/app/portal/team-overview/[userId]/MemberCareerQuickActions";
 import { formatTeamOverviewProduction } from "@/lib/team-overview-format";
+import { PremiumProgressBar } from "@/app/portal/team-overview/premium/primitives";
 
 export function TeamOverviewSelectedMemberPanel({
   detail,
@@ -19,6 +21,7 @@ export function TeamOverviewSelectedMemberPanel({
   canCreateTeamCalendar,
   canEditTeamCareer,
   outsideFilter = false,
+  variant = "default",
 }: {
   detail: TeamMemberDetail | null;
   loading: boolean;
@@ -27,11 +30,21 @@ export function TeamOverviewSelectedMemberPanel({
   canCreateTeamCalendar: boolean;
   canEditTeamCareer: boolean;
   outsideFilter?: boolean;
+  variant?: "default" | "premium";
 }) {
+  const shell = (classes: string) =>
+    clsx(
+      "xl:sticky xl:top-6 h-fit",
+      variant === "premium"
+        ? "rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm"
+        : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm",
+      classes
+    );
+
   if (loading) {
     return (
       <aside
-        className="xl:sticky xl:top-6 space-y-3 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm h-fit"
+        className={shell("space-y-3 p-5")}
         aria-busy="true"
         aria-label="Načítání detailu člena"
       >
@@ -45,10 +58,25 @@ export function TeamOverviewSelectedMemberPanel({
 
   if (!detail) {
     return (
-      <aside className="xl:sticky xl:top-6 rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/20 p-6 text-sm text-[color:var(--wp-text-secondary)] h-fit">
-        <p className="font-semibold text-[color:var(--wp-text)]">Vyberte člena</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]">
-          Klikněte na jméno ve struktuře nebo v tabulce — zobrazí se coaching summary, kariérní stav a agenda pro 1:1.
+      <aside
+        className={clsx(
+          "xl:sticky xl:top-6 h-fit p-6 text-sm",
+          variant === "premium"
+            ? "rounded-[28px] border border-dashed border-slate-200 bg-slate-50 text-slate-600"
+            : "rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/20 text-[color:var(--wp-text-secondary)]"
+        )}
+      >
+        <p className={variant === "premium" ? "font-semibold text-slate-900" : "font-semibold text-[color:var(--wp-text)]"}>
+          Vyberte člena
+        </p>
+        <p
+          className={
+            variant === "premium"
+              ? "mt-1.5 text-xs leading-relaxed text-slate-600"
+              : "mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]"
+          }
+        >
+          Klikněte na řádek v seznamu lidí — zobrazí se coaching summary, kariérní stav a agenda pro 1:1.
         </p>
       </aside>
     );
@@ -60,9 +88,21 @@ export function TeamOverviewSelectedMemberPanel({
   const coachingBullets = buildTeamMemberCoachingSummaryBullets(detail);
 
   return (
-    <aside className="xl:sticky xl:top-6 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm h-fit max-h-[min(90vh,calc(100vh-4rem))] overflow-y-auto">
+    <aside
+      className={clsx(
+        "xl:sticky xl:top-6 h-fit max-h-[min(90vh,calc(100vh-4rem))] overflow-y-auto",
+        variant === "premium"
+          ? "rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm"
+          : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm"
+      )}
+    >
       {/* Identity strip */}
-      <div className="flex items-start justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] px-5 py-4">
+      <div
+        className={clsx(
+          "flex items-start justify-between gap-2 border-b px-5 py-4",
+          variant === "premium" ? "border-slate-200" : "border-[color:var(--wp-surface-card-border)]"
+        )}
+      >
         <div className="min-w-0">
           <h2 className="text-base font-black text-[color:var(--wp-text)] leading-tight">{name}</h2>
           <p className="mt-0.5 text-xs text-[color:var(--wp-text-tertiary)]">
@@ -169,6 +209,18 @@ export function TeamOverviewSelectedMemberPanel({
             <p className="mt-1.5 text-[10px] text-[color:var(--wp-text-tertiary)] leading-snug">
               {crmUnitsFootnoteForProgram(ce.careerProgramId)}
             </p>
+          </section>
+        ) : null}
+
+        {variant === "premium" && detail.adaptation ? (
+          <section>
+            <h3 className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Adaptace</h3>
+            <PremiumProgressBar
+              label="Adaptační skóre (výpočet z checklistu)"
+              value={detail.adaptation.adaptationScore}
+              tone="emerald"
+            />
+            <p className="mt-2 text-[10px] text-slate-500">{detail.adaptation.adaptationStatus}</p>
           </section>
         ) : null}
 

@@ -59,14 +59,14 @@ export function TeamManagementPanel({
   return (
     <section
       id="sprava-tymu"
-      className="scroll-mt-24 mb-8 overflow-hidden rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm animate-in fade-in duration-300"
+      className="scroll-mt-24 mb-8 overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm animate-in fade-in duration-300"
       aria-labelledby="team-management-heading"
     >
-      <div className="border-b border-[color:var(--wp-surface-card-border)]/50 px-6 py-6 sm:px-8">
-        <h2 id="team-management-heading" className="mb-1 text-xl font-black text-[color:var(--wp-text)]">
+      <div className="border-b border-slate-200/80 px-6 py-6 sm:px-8">
+        <h2 id="team-management-heading" className="mb-1 text-xl font-black text-slate-900">
           Správa týmu
         </h2>
-        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+        <p className="text-sm font-medium text-slate-600">
           Spolupracujte na klientech se svými asistenty nebo kolegy.
         </p>
       </div>

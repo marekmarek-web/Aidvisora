@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Users, Calendar, UserPlus, RefreshCw } from "lucide-react";
 import type {
   TeamOverviewKpis,
   TeamMemberInfo,
@@ -27,26 +25,32 @@ import { TeamCalendarModal, TeamCalendarButtons, type TeamCalendarModalPrefill }
 import { TeamRhythmPanel } from "./TeamRhythmPanel";
 import { TeamStructurePanel } from "./TeamStructurePanel";
 import { TeamOverviewSelectedMemberPanel } from "./TeamOverviewSelectedMemberPanel";
-import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { buildTeamOverviewPageModel, type PeopleSegmentFilter } from "@/lib/team-overview-page-model";
+import { deriveTeamOverviewPriorities } from "@/lib/team-overview-priorities";
+import type { CareerTrackId } from "@/lib/career/types";
 import {
   sortTeamMembersForOverview,
   getVisibleTeamMembers,
   isSelectedMemberInScope,
   isSelectedInFilteredList,
 } from "@/lib/team-overview-members";
-import { TeamOverviewBriefing } from "./components/TeamOverviewBriefing";
 import { TeamOverviewAttentionSection } from "./components/TeamOverviewAttentionSection";
 import { TeamOverviewCareerSummarySection } from "./components/TeamOverviewCareerSummarySection";
-import { TeamOverviewPoolSplitSection } from "./components/TeamOverviewPoolSplitSection";
 import { TeamOverviewAdaptationSection } from "./components/TeamOverviewAdaptationSection";
 import { TeamOverviewPeopleFiltersBar } from "./components/TeamOverviewPeopleFiltersBar";
-import { TeamOverviewMembersTable } from "./components/TeamOverviewMembersTable";
 import { TeamOverviewKpiDetailSection } from "./components/TeamOverviewKpiDetailSection";
 import { TeamOverviewPerformanceTrendSection } from "./components/TeamOverviewPerformanceTrendSection";
 import { TeamOverviewAiTeamSummarySection } from "./components/TeamOverviewAiTeamSummarySection";
 import { TeamOverviewFullAlertsSection } from "./components/TeamOverviewFullAlertsSection";
 import { TeamManagementPanel } from "./TeamManagementPanel";
+import {
+  TeamOverviewPremiumShell,
+  TeamOverviewPremiumBriefingDark,
+} from "./premium/TeamOverviewPremiumShell";
+import { TeamOverviewPremiumMemberRow } from "./premium/TeamOverviewPremiumMemberRow";
+import { TeamOverviewPremiumRuntimeChecks } from "./premium/TeamOverviewPremiumRuntimeChecks";
+import { PremiumSectionTitle } from "./premium/primitives";
+import { teamOverviewIcon } from "./premium/icons";
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
@@ -129,6 +133,8 @@ export function TeamOverviewView({
   const [teamCalendarModal, setTeamCalendarModal] = useState<"event" | "task" | null>(null);
   const [calendarPrefill, setCalendarPrefill] = useState<TeamCalendarModalPrefill | null>(null);
   const [rhythmCalendar, setRhythmCalendar] = useState<TeamRhythmCalendarData | null>(initialRhythmCalendar ?? null);
+  /** Cockpit = přehled + lidé; Struktura / Lidé = dílčí pohledy (viz premium layout). */
+  const [activeView, setActiveView] = useState("Cockpit");
 
   const syncTeamOverviewUrl = useCallback(
     (next: { period?: TeamOverviewPeriod; memberId?: string | null; scope?: TeamOverviewScope }) => {
@@ -345,19 +351,20 @@ export function TeamOverviewView({
     [members]
   );
 
-  const scopeOptions: { value: TeamOverviewScope; label: string }[] =
-    currentRole === "Advisor" || currentRole === "Viewer"
-      ? [{ value: "me", label: "Já" }]
-      : currentRole === "Manager"
-        ? [
-            { value: "me", label: "Já" },
-            { value: "my_team", label: "Můj tým" },
-          ]
-        : [
-            { value: "me", label: "Já" },
-            { value: "my_team", label: "Můj tým" },
-            { value: "full", label: "Celá struktura" },
-          ];
+  const scopeOptions: { value: TeamOverviewScope; label: string }[] = useMemo(() => {
+    if (currentRole === "Advisor" || currentRole === "Viewer") return [{ value: "me", label: "Já" }];
+    if (currentRole === "Manager") {
+      return [
+        { value: "me", label: "Já" },
+        { value: "my_team", label: "Můj tým" },
+      ];
+    }
+    return [
+      { value: "me", label: "Já" },
+      { value: "my_team", label: "Můj tým" },
+      { value: "full", label: "Celá struktura" },
+    ];
+  }, [currentRole]);
 
   const sortedMembers = useMemo(
     () => sortTeamMembersForOverview(members, metricsByUser, performanceFilter),
@@ -391,87 +398,147 @@ export function TeamOverviewView({
     isSelectedMemberInScope(selectedUserId, members) &&
     !isSelectedInFilteredList(selectedUserId, visibleMembers);
 
-  return (
-    <div className="min-h-screen bg-[var(--wp-bg)]">
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 md:py-8">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6 md:mb-7">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-[color:var(--wp-text)] md:text-3xl">
-              Team Overview
-            </h1>
-            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)] max-w-lg">
-              Pozornost, coaching, kariéra a rytmus — manažerský cockpit vašeho týmu.
+  const briefingStats = useMemo(() => {
+    const cs = pageModel.careerTeamSummary;
+    const byTrack = (id: CareerTrackId) => cs.byTrack.find((t) => t.trackId === id)?.count ?? 0;
+    return {
+      attention: pageModel.attentionUserIds.length,
+      adaptation: newcomers.length,
+      onTrack: cs.byManagerLabel["Na dobré cestě"] ?? 0,
+      managerial: byTrack("management_structure"),
+      performance: byTrack("individual_performance") + byTrack("reality") + byTrack("call_center"),
+    };
+  }, [pageModel, newcomers]);
+
+  const priorityItems = useMemo(
+    () =>
+      deriveTeamOverviewPriorities({
+        briefing: pageModel.briefing,
+        newcomers,
+        rhythm: pageModel.rhythmComputed,
+        kpis,
+        scopeIsTeam: scope !== "me",
+      }),
+    [pageModel, newcomers, kpis, scope]
+  );
+
+  const scopeLabelActive = scopeOptions.find((o) => o.value === scope)?.label ?? "Já";
+  const periodLabelActive = PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? "Měsíc";
+
+  const handleScopeToggle = useCallback(
+    (label: string) => {
+      const opt = scopeOptions.find((o) => o.label === label);
+      if (opt) {
+        setScope(opt.value);
+        syncTeamOverviewUrl({ scope: opt.value });
+      }
+    },
+    [scopeOptions, syncTeamOverviewUrl]
+  );
+
+  const handlePeriodToggle = useCallback(
+    (label: string) => {
+      const opt = PERIOD_OPTIONS.find((o) => o.label === label);
+      if (opt) {
+        setPeriod(opt.value);
+        syncTeamOverviewUrl({ period: opt.value });
+      }
+    },
+    [syncTeamOverviewUrl]
+  );
+
+  const hierarchyBanner =
+    kpis && scope !== "me" && !kpis.hierarchyParentLinksConfigured ? (
+      <div
+        className="mb-5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-950"
+        role="status"
+      >
+        <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
+        Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
+        <a href={teamManagementHref} className="underline hover:text-amber-800">
+          Doplňte ve Správě týmu níže
+        </a>
+        .
+      </div>
+    ) : null;
+
+  const peopleAndFilters = (
+    <>
+      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <TeamOverviewPeopleFiltersBar
+          peopleSearch={peopleSearch}
+          onPeopleSearchChange={setPeopleSearch}
+          peopleSegment={peopleSegment}
+          onPeopleSegmentChange={setPeopleSegment}
+          performanceFilter={performanceFilter}
+          onPerformanceFilterChange={setPerformanceFilter}
+          visibleCount={visibleMembers.length}
+          totalCount={members.length}
+        />
+        <div className="mt-4 space-y-3">
+          {visibleMembers.length === 0 ? (
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+              {members.length === 0
+                ? "V tomto rozsahu zatím nejsou žádní členové — zkuste jiný rozsah nebo doplnění hierarchie."
+                : "Žádný člen neodpovídá filtru — upravte segment nebo vyhledávání."}
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={teamManagementHref}
-              className="inline-flex items-center gap-2 min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-800 hover:bg-indigo-100 transition-colors"
-            >
-              <UserPlus className="w-4 h-4 shrink-0" />
-              Pozvat člena
-            </Link>
-            <div id="team-calendar-actions" className="flex flex-wrap gap-2">
-              <TeamCalendarButtons
-                canCreate={canCreateTeamCalendar}
-                onOpenEvent={() => openTeamEventModal(null)}
-                onOpenTask={() => openTeamTaskModal(null)}
+          ) : (
+            visibleMembers.map((m) => (
+              <TeamOverviewPremiumMemberRow
+                key={m.userId}
+                member={m}
+                metrics={metricsByUser.get(m.userId)}
+                displayName={displayName}
+                active={selectedUserId === m.userId}
+                onClick={() => selectMember(m.userId)}
               />
-            </div>
-            <CustomDropdown
-              value={scope}
-              onChange={(id) => {
-                const ns = id as TeamOverviewScope;
-                setScope(ns);
-                syncTeamOverviewUrl({ scope: ns });
-              }}
-              options={scopeOptions.map((o) => ({ id: o.value, label: o.label }))}
-              placeholder="Rozsah"
-              icon={Users}
-            />
-            <CustomDropdown
-              value={period}
-              onChange={(id) => {
-                const np = id as TeamOverviewPeriod;
-                setPeriod(np);
-                syncTeamOverviewUrl({ period: np });
-              }}
-              options={PERIOD_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
-              placeholder="Období"
-              icon={Calendar}
-            />
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={loading}
-              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2 text-sm font-medium text-[color:var(--wp-text-secondary)] shadow-sm hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
-              aria-label="Obnovit data"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
+            ))
+          )}
         </div>
+      </div>
+    </>
+  );
 
-        {kpis && scope !== "me" && !kpis.hierarchyParentLinksConfigured ? (
-          <div
-            className="mb-5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-950"
-            role="status"
-          >
-            <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
-            Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
-            <a href={teamManagementHref} className="underline hover:text-amber-800">
-              Doplňte ve Správě týmu níže
-            </a>
-            .
-          </div>
-        ) : null}
+  const kpiTrendAiAlerts = (
+    <>
+      <TeamOverviewKpiDetailSection
+        loading={loading}
+        kpis={kpis}
+        members={members}
+        topMetric={topMetric}
+        bottomMetric={bottomMetric}
+      />
+      <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
+      <TeamOverviewAiTeamSummarySection
+        aiLoading={aiLoading}
+        aiError={aiError}
+        aiSummary={aiSummary}
+        aiGenerationId={aiGenerationId}
+        aiFeedbackSubmitted={aiFeedbackSubmitted}
+        aiFeedbackSaving={aiFeedbackSaving}
+        teamActionSaving={teamActionSaving}
+        teamActionError={teamActionError}
+        canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
+        members={members}
+        onLoadLatest={loadLatestTeamSummary}
+        onGenerate={generateTeamSummary}
+        onSubmitFeedback={submitTeamSummaryFeedback}
+        onCreateFollowUp={createTeamFollowUp}
+      />
+      <TeamOverviewFullAlertsSection alerts={alerts} selectMember={selectMember} memberDetailHref={memberDetailHref} />
+    </>
+  );
 
-        <div className="xl:grid xl:grid-cols-1 xl:gap-8 xl:grid-cols-[minmax(0,1fr)_min(100%,380px)] xl:items-start">
-        <div className="min-w-0">
+  const cockpitBody = (
+    <>
+      <TeamOverviewPremiumBriefingDark
+        periodLabel={periodLabelActive}
+        scopeLabel={scopeLabelActive}
+        stats={briefingStats}
+        priorityItems={priorityItems}
+      />
 
-        <TeamOverviewBriefing briefing={pageModel.briefing} kpis={kpis} scope={scope} loading={loading} />
-
+      <div className="grid gap-6 2xl:grid-cols-[1.05fr_0.95fr]">
         <TeamOverviewAttentionSection
           scope={scope}
           members={members}
@@ -481,33 +548,81 @@ export function TeamOverviewView({
           selectMember={selectMember}
           canCreateTeamCalendar={canCreateTeamCalendar}
         />
-
         <TeamOverviewCareerSummarySection
           members={members}
           pageModel={pageModel}
           displayName={displayName}
           selectMember={selectMember}
         />
+      </div>
 
-        <TeamManagementPanel
-          currentUserId={currentUserId}
-          currentUserEmail={currentUserEmail}
-          currentUserFullName={currentUserFullName}
-          roleName={currentRole}
-        />
-
-        {members.length > 0 ? <TeamOverviewPoolSplitSection kpis={kpis} pageModel={pageModel} /> : null}
-
-        {members.length > 0 ? (
-          <TeamOverviewAdaptationSection
-            members={members}
-            newcomers={newcomers}
-            displayName={displayName}
-            memberDetailHref={memberDetailHref}
-            selectMember={selectMember}
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <PremiumSectionTitle
+            symbol={teamOverviewIcon("support")}
+            title="Role vs. kariéra"
+            subtitle="Čtyři nezávislé vrstvy: oprávnění v aplikaci, kariérní program, větev a pozice — stejně jako v nastavení členů."
           />
-        ) : null}
+          <div className="space-y-3">
+            {[
+              {
+                title: "Systémová role",
+                value: "Director / Manager / Advisor / …",
+                note: "Řídí oprávnění a rozsah dat v portálu.",
+              },
+              {
+                title: "Kariérní program",
+                value: "Beplan / Premium Brokers / …",
+                note: "Určuje řád a jednotky výkonu z produkčních dat.",
+              },
+              {
+                title: "Kariérní větev a pozice",
+                value: "Podle záznamu u člena",
+                note: "Slouží ke koučinku a evaluaci — doplňuje se ve Správě týmu.",
+              },
+            ].map((row) => (
+              <div key={row.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">{row.title}</p>
+                <p className="mt-2 text-sm font-medium text-slate-700">{row.value}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">{row.note}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <PremiumSectionTitle
+            symbol={teamOverviewIcon("learn")}
+            title="Adaptace a rozvoj"
+            subtitle="Obecné typy podpory — konkrétní stav nováčků je v sekci adaptace pod tímto blokem (skutečná data)."
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              { t: "Adaptační plán 30 / 60 / 90", ty: "Onboarding" },
+              { t: "1:1 šablona pro manažera", ty: "Coaching" },
+              { t: "Kariérní řády dle programu", ty: "Kariéra" },
+              { t: "Týmová porada — navázání", ty: "Follow-up" },
+            ].map((x) => (
+              <div key={x.t} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{x.ty}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{x.t}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {members.length > 0 ? (
+        <TeamOverviewAdaptationSection
+          members={members}
+          newcomers={newcomers}
+          displayName={displayName}
+          memberDetailHref={memberDetailHref}
+          selectMember={selectMember}
+        />
+      ) : null}
+
+      <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
         <TeamStructurePanel
           roots={hierarchy}
           currentUserId={currentUserId}
@@ -517,7 +632,6 @@ export function TeamOverviewView({
           selectedUserId={selectedUserId}
           onSelectMember={selectMember}
         />
-
         <TeamRhythmPanel
           computed={pageModel.rhythmComputed}
           disclaimer={
@@ -531,85 +645,121 @@ export function TeamOverviewView({
           onOpenEvent={openTeamEventModal}
           onOpenTask={openTeamTaskModal}
         />
-
-        <TeamOverviewPeopleFiltersBar
-          peopleSearch={peopleSearch}
-          onPeopleSearchChange={setPeopleSearch}
-          peopleSegment={peopleSegment}
-          onPeopleSegmentChange={setPeopleSegment}
-          performanceFilter={performanceFilter}
-          onPerformanceFilterChange={setPerformanceFilter}
-          visibleCount={visibleMembers.length}
-          totalCount={members.length}
-        />
-
-        <TeamCalendarModal
-          open={teamCalendarModal != null}
-          type={teamCalendarModal}
-          onClose={() => {
-            setTeamCalendarModal(null);
-            setCalendarPrefill(null);
-          }}
-          members={members}
-          metrics={metrics}
-          newcomers={newcomers}
-          onSuccess={refresh}
-          prefill={calendarPrefill}
-        />
-
-        <TeamOverviewMembersTable
-          scope={scope}
-          visibleMembers={visibleMembers}
-          membersInScopeCount={members.length}
-          metricsByUser={metricsByUser}
-          selectedUserId={selectedUserId}
-          selectMember={selectMember}
-          memberDetailHref={memberDetailHref}
-          displayName={displayName}
-        />
-
-        <TeamOverviewKpiDetailSection
-          loading={loading}
-          kpis={kpis}
-          members={members}
-          topMetric={topMetric}
-          bottomMetric={bottomMetric}
-        />
-
-        <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-
-        <TeamOverviewAiTeamSummarySection
-          aiLoading={aiLoading}
-          aiError={aiError}
-          aiSummary={aiSummary}
-          aiGenerationId={aiGenerationId}
-          aiFeedbackSubmitted={aiFeedbackSubmitted}
-          aiFeedbackSaving={aiFeedbackSaving}
-          teamActionSaving={teamActionSaving}
-          teamActionError={teamActionError}
-          canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
-          members={members}
-          onLoadLatest={loadLatestTeamSummary}
-          onGenerate={generateTeamSummary}
-          onSubmitFeedback={submitTeamSummaryFeedback}
-          onCreateFollowUp={createTeamFollowUp}
-        />
-
-        <TeamOverviewFullAlertsSection alerts={alerts} selectMember={selectMember} memberDetailHref={memberDetailHref} />
-
-        </div>
-        <TeamOverviewSelectedMemberPanel
-          detail={selectedDetail}
-          loading={detailLoading}
-          fullDetailHref={selectedUserId ? memberDetailHref(selectedUserId) : "#"}
-          onClose={() => selectMember(null)}
-          canCreateTeamCalendar={canCreateTeamCalendar}
-          canEditTeamCareer={canEditTeamCareer}
-          outsideFilter={selectedOutsideFilter}
-        />
       </div>
 
-      </div>
-    </div>
+      {peopleAndFilters}
+
+      <TeamManagementPanel
+        currentUserId={currentUserId}
+        currentUserEmail={currentUserEmail}
+        currentUserFullName={currentUserFullName}
+        roleName={currentRole}
+      />
+
+      {kpiTrendAiAlerts}
+    </>
+  );
+
+  const structureOnly = (
+    <>
+      {hierarchyBanner}
+      <TeamStructurePanel
+        roots={hierarchy}
+        currentUserId={currentUserId}
+        scope={scope}
+        memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
+        hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
+        selectedUserId={selectedUserId}
+        onSelectMember={selectMember}
+      />
+    </>
+  );
+
+  const peopleOnly = (
+    <>
+      {peopleAndFilters}
+      <TeamManagementPanel
+        currentUserId={currentUserId}
+        currentUserEmail={currentUserEmail}
+        currentUserFullName={currentUserFullName}
+        roleName={currentRole}
+      />
+      {kpiTrendAiAlerts}
+    </>
+  );
+
+  const mainColumn =
+    activeView === "Struktura" ? structureOnly : activeView === "Lidé" ? peopleOnly : cockpitBody;
+
+  return (
+    <>
+      <TeamOverviewPremiumShell
+        title="Týmový přehled jako cockpit pro vedení týmu"
+        subtitle="Pozornost, kariéra, struktura a rytmus — vše z reálných dat CRM a členství; žádné ukázkové řady."
+        scopeItems={scopeOptions.map((o) => o.label)}
+        scopeActive={scopeLabelActive}
+        onScopeItemChange={handleScopeToggle}
+        periodItems={PERIOD_OPTIONS.map((o) => o.label)}
+        periodActive={periodLabelActive}
+        onPeriodItemChange={handlePeriodToggle}
+        viewItems={["Cockpit", "Struktura", "Lidé"]}
+        viewActive={activeView}
+        onViewChange={setActiveView}
+        teamManagementHref={teamManagementHref}
+        calendarActions={
+          <div id="team-calendar-actions" className="flex flex-wrap gap-2">
+            <TeamCalendarButtons
+              canCreate={canCreateTeamCalendar}
+              onOpenEvent={() => openTeamEventModal(null)}
+              onOpenTask={() => openTeamTaskModal(null)}
+            />
+          </div>
+        }
+        onRefresh={refresh}
+        loading={loading}
+        poolBeplanCount={pageModel.poolSplit.counts.beplan}
+        poolPbCount={pageModel.poolSplit.counts.premium_brokers}
+        poolBeplanUnits={pageModel.poolSplit.units.beplan}
+        poolPbUnits={pageModel.poolSplit.units.premium_brokers}
+        runtimeChecksSlot={
+          process.env.NODE_ENV === "development" ? (
+            <TeamOverviewPremiumRuntimeChecks
+              membersCount={members.length}
+              metricsCount={metrics.length}
+              hierarchyRoots={hierarchy.length}
+            />
+          ) : null
+        }
+        aside={
+          <TeamOverviewSelectedMemberPanel
+            detail={selectedDetail}
+            loading={detailLoading}
+            fullDetailHref={selectedUserId ? memberDetailHref(selectedUserId) : "#"}
+            onClose={() => selectMember(null)}
+            canCreateTeamCalendar={canCreateTeamCalendar}
+            canEditTeamCareer={canEditTeamCareer}
+            outsideFilter={selectedOutsideFilter}
+            variant="premium"
+          />
+        }
+      >
+        {activeView === "Cockpit" ? hierarchyBanner : null}
+        {mainColumn}
+      </TeamOverviewPremiumShell>
+
+      <TeamCalendarModal
+        open={teamCalendarModal != null}
+        type={teamCalendarModal}
+        onClose={() => {
+          setTeamCalendarModal(null);
+          setCalendarPrefill(null);
+        }}
+        members={members}
+        metrics={metrics}
+        newcomers={newcomers}
+        onSuccess={refresh}
+        prefill={calendarPrefill}
+      />
+    </>
   );
 }
