@@ -38,6 +38,7 @@ import { ContactPaymentSetupsSection } from "./ContactPaymentSetupsSection";
 import { ClientReferralSection } from "./ClientReferralSection";
 import { Suspense, type ReactNode } from "react";
 import { InviteToClientZoneButton } from "@/app/dashboard/contacts/[id]/InviteToClientZoneButton";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 
 const DynamicContactOpportunityBoard = dynamic(
@@ -455,7 +456,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                       <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
                         <span className="flex items-center gap-2">
                           <Calendar size={16} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
-                          {contact.birthDate}
+                          {formatDisplayDateCs(contact.birthDate) || contact.birthDate}
                         </span>
                         {p && (
                           <span className="pl-6">
