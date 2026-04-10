@@ -7,7 +7,11 @@ import type { TeamOverviewScope, TeamHierarchyMember, TeamTreeNode } from "./tea
 import { getVisibleUserIdsFromMembers } from "./team-hierarchy-types";
 
 export type { TeamOverviewScope, TeamHierarchyMember, TeamTreeNode } from "./team-hierarchy-types";
-export { resolveScopeForRole, getVisibleUserIdsFromMembers } from "./team-hierarchy-types";
+export {
+  resolveScopeForRole,
+  getVisibleUserIdsFromMembers,
+  defaultLandingScopeForRole,
+} from "./team-hierarchy-types";
 
 const TEAM_ROLE_NAMES = ["Admin", "Director", "Manager", "Advisor", "Viewer"] as const;
 

@@ -34,6 +34,13 @@ Orchestrace zůstává v `TeamOverviewView.tsx` (stav, refresh, URL, AI akce).
 
 **Pool / BJ vs BJS:** žádné ruční opakování v blocích — texty pro pool karty jdou z `poolCardUnitsFootnote` / `poolProgramLabel` / `poolUnitsLineLabel`. Sloupec jednotek v tabulce používá `TEAM_OVERVIEW_UNITS_COLUMN_SUBTITLE`.
 
+## Scope v URL a parita přehled ↔ detail
+
+- **`defaultLandingScopeForRole`** (`team-hierarchy-types.ts`): výchozí scope při prvním načtení (Director/Admin = `full`, Manager = `my_team`, Advisor/Viewer = `me`). Liší se od `resolveScopeForRole(role, undefined)`, které u Director dává `my_team` — proto nelze u detailu člena spoléhat jen na „prázdný“ scope.
+- **`team-overview/page.tsx`** čte `?scope=` a předává `resolveScopeForRole(auth, scopeParam ?? landing)` do snapshotu.
+- **`TeamOverviewView`:** `syncTeamOverviewUrl` zapisuje `scope` do query; odkazy na detail a strom obsahují `period` + `scope`.
+- **`[userId]/page.tsx`:** `getTeamMemberDetail(userId, { period, scope: requestedScope })` kde `requestedScope` = `?scope=` nebo `defaultLandingScopeForRole` — shodná viditelnost jako na přehledu.
+
 ## Selected member flow
 
 1. Výběr: `selectMember(userId)` aktualizuje stav a URL (`?member=` přes `syncTeamOverviewUrl`).
@@ -57,8 +64,11 @@ Orchestrace zůstává v `TeamOverviewView.tsx` (stav, refresh, URL, AI akce).
 - `apps/web/src/lib/__tests__/team-overview-format.test.ts`
 - `apps/web/src/lib/__tests__/team-overview-members.test.ts`
 - `apps/web/src/lib/__tests__/team-overview-page-model.test.ts` (pool split přes `buildTeamOverviewPageModel`)
+- `apps/web/src/lib/__tests__/team-hierarchy-scope.test.ts` (`defaultLandingScopeForRole`, viditelnost, parita s Director landing)
 
 Spuštění: `pnpm --filter web test -- src/lib/__tests__/team-overview-*.test.ts`
+
+Finální QA checklist: `docs/team-overview-release-checklist.md`.
 
 ## Co zbývá na další prompt (UX/UI polish)
 

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getVisibleUserIdsFromMembers, type TeamHierarchyMember } from "@/lib/team-hierarchy-types";
+import {
+  getVisibleUserIdsFromMembers,
+  defaultLandingScopeForRole,
+  resolveScopeForRole,
+  type TeamHierarchyMember,
+} from "@/lib/team-hierarchy-types";
 
 function member(
   userId: string,
@@ -46,5 +51,26 @@ describe("getVisibleUserIdsFromMembers — hierarchy edge cases", () => {
   it("Advisor always scoped to me", () => {
     const members = [member("adv", null, "Advisor"), member("other", null, "Advisor")];
     expect(getVisibleUserIdsFromMembers(members, "adv", "Advisor", "full")).toEqual(["adv"]);
+  });
+});
+
+describe("defaultLandingScopeForRole — Team Overview + detail URL parity", () => {
+  it("Director/Admin land on full (same as team-overview/page initial)", () => {
+    expect(defaultLandingScopeForRole("Director")).toBe("full");
+    expect(defaultLandingScopeForRole("Admin")).toBe("full");
+  });
+
+  it("resolveScopeForRole(undefined) is more conservative than landing for Director — detail page must pass explicit landing/URL scope", () => {
+    expect(resolveScopeForRole("Director", undefined)).toBe("my_team");
+    expect(resolveScopeForRole("Director", "full")).toBe("full");
+  });
+
+  it("Advisor and Viewer land on me", () => {
+    expect(defaultLandingScopeForRole("Advisor")).toBe("me");
+    expect(defaultLandingScopeForRole("Viewer")).toBe("me");
+  });
+
+  it("Manager lands on my_team", () => {
+    expect(defaultLandingScopeForRole("Manager")).toBe("my_team");
   });
 });

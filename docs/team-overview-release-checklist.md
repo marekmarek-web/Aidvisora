@@ -1,122 +1,144 @@
-# Team Overview — release checklist & known limitations
+# Team Overview — release checklist, QA a known limitations
 
-Fáze 7 (QA / stabilizace). Použijte před demem nebo produkčním vydáním modulu **Týmový přehled** (Team Overview).
+Finální produkční sanity pass před **demem** nebo **release** modulu Týmový přehled. Dokument doplňuje `team-overview-implementation-notes.md` a `team-overview-masterplan.md`.
 
 ---
 
 ## 1. Role / permission checklist
 
-| Role | `team_overview:read` | Očekávaný výchozí scope | Career edit (`team_members:write`) | Týmový kalendář (`team_calendar:write`) |
-|------|----------------------|-------------------------|-------------------------------------|----------------------------------------|
-| Advisor | ano | `me` | ne | dle matice |
-| Viewer | typicky ne (bez přístupu na přehled) | — | ne | ne |
-| Manager | ano | `my_team` | dle matice | ano |
-| Director | ano | `full` | dle matice | dle matice |
-| Admin | ano | `full` | ano | dle matice |
+| Role | `team_overview:read` | Výchozí scope (landing) | Poznámka |
+|------|----------------------|-------------------------|----------|
+| Advisor | ano | `me` | Žádný týmový leak mimo self. |
+| Viewer | **ne** (v `rolePermissions.ts`) | — | Přístup na `/portal/team-overview` = redirect na `/portal` — Team Overview se netestuje jako Viewer. |
+| Manager | ano | `my_team` | Nemůže přepnout na `full` (UI + `resolveScopeForRole`). |
+| Director | ano | `full` | Širší přehled tenantu (v rámci `getVisibleUserIds`). |
+| Admin | ano | `full` | |
 
-- [ ] Advisor / Viewer nevidí cizí týmová data (scope vždy `me` pro tyto role).
-- [ ] Manager nemůže přepnout na `full` (server i `/api/ai/team-summary` používají `resolveScopeForRole`).
-- [ ] Detail člena (`getTeamMemberDetail`) vrací 404 / Forbidden mimo `visibleUserIds`.
-- [ ] AI follow-up z týmového shrnutí (`executeTeamAiAction`): přiřazený uživatel musí být v **maximálním** povoleném scope pro roli (stejná logika jako Team Overview).
-- [ ] CTA „Vytvořit follow-up z shrnutí“ se nezobrazí bez `contacts:write` nebo `tasks:*` (jinak informativní text místo formuláře).
+- [ ] `getTeamMemberDetail` kontroluje `visibleUserIds` pro předaný `scope` — mimo scope = Forbidden / null → 404 na stránce detailu.
+- [ ] **Detail člena (`/portal/team-overview/[userId]`):** server předává `scope` z `?scope=` nebo **`defaultLandingScopeForRole`** — musí odpovídat přehledu (Director/Admin = `full`, ne omylem jen `my_team` z `resolveScopeForRole(undefined)`).
+- [ ] Odkazy z přehledu obsahují `period` + `scope` v query — konzistence s panelem a hlubokými odkazy.
+- [ ] AI follow-up z týmového shrnutí: přiřazený uživatel musí být v povoleném scope (stejná logika jako Team Overview).
+- [ ] CTA „Vytvořit follow-up z shrnutí“ jen s `contacts:write` nebo `tasks:*` — jinak informativní text.
 
 ---
 
 ## 2. Scope / hierarchy checklist
 
-- [ ] Při **žádném** `parent_id` v tenantu: rozsah **„Můj tým“** ukazuje jen přihlášeného uživatele (bez scope leaku na celý tenant).
-- [ ] Zobrazí se informační banner (desktop + mobile) o neúplné hierarchii.
-- [ ] Panel struktury vysvětlí „plochý“ strom jako problém dat, ne rozbití UI.
-- [ ] Po doplnění `parent_id` se větev descendantů počítá konzistentně (`getDescendantIds`).
-- [ ] Sirotci / odkazy na neviditelné `parent_id` se ořezávají ve `getTeamTree` (zůstávají kořeny v rámci scope).
+- [ ] Bez jediného `parent_id`: „Můj tým“ = jen přihlášený uživatel (žádný leak na celý tenant).
+- [ ] Banner o neúplné hierarchii (`hierarchyParentLinksConfigured`) je viditelný, kde KPI existují a scope ≠ `me`.
+- [ ] Strom: sirotci / neviditelný parent → uzel jako kořen v rámci scope (`getTeamTree`).
+- [ ] Po změně scope se synchronizuje URL (`scope` v query) a obnoví se data.
 
 ---
 
-## 3. Career data checklist
+## 3. Career / pool / unit checklist
 
-- [ ] Krátké štítky stavu a úplnosti jsou v jednom modulu: `apps/web/src/lib/career/career-ui-labels.ts` (přehled i detail).
-- [ ] `not_configured`, `data_missing`, `unknown`, `manual_required`, `low_confidence` mají čitelné štítky v přehledu i v detailu (stejný slovník kde je to záměr).
-- [ ] Alert „Kariéra: …“ odpovídá `buildAlertsFromMetric` / řádku v tabulce.
-- [ ] Nováček bez kariéry: UI se nerozsype; evaluace má konzistentní `summaryLine`.
-
----
-
-## 4. AI / summary consistency checklist
-
-- [ ] Generování shrnutí (`generateTeamSummaryAction`) dostává **stejný** `scope` jako přepínač na stránce.
-- [ ] `buildTeamAiContextRaw` odvozuje alerty z **jedné** sady metrik (`buildTeamAlertsFromMemberMetrics`), ne třetím paralelním `getTeamAlerts`.
-- [ ] Uložené „poslední shrnutí“ může pocházet z jiného scope/období než aktuální výběr — po přepnutí scope znovu vygenerovat (viz known limitations).
-- [ ] V UI u bloku AI je vidět upozornění, že uložené shrnutí nemusí odpovídat aktuálnímu rozsahu/období.
-- [ ] Briefing a karty „Vyžaduje pozornost“ mluví konzistentně o **CRM i kariéře** (počet `riskyMemberCount` zahrnuje i kariérní alerty).
+- [ ] Beplan vs Premium Brokers: labely a poznámky k jednotkám z `team-overview-format.ts` (`poolCardUnitsFootnote`, `poolProgramLabel`, …) — ne mixovat BJ/BJS náhodně v komponentách.
+- [ ] Sloupec „Jednotky“ v tabulce: `TEAM_OVERVIEW_UNITS_COLUMN_SUBTITLE` (CRM ≠ BJ/BJS z řádu).
+- [ ] `not_set` / partial kariéra: štítky z `career-ui-labels` + evaluátor; chování je konzistentní mezi řádkem a bočním panelem (stejný serverový pipeline).
 
 ---
 
-## 5. Internal terms / cadence checklist
+## 4. Briefing / attention / rhythm consistency
 
-- [ ] Rytmus / interní termíny respektují `getScopeContext` (stejné `visibleUserIds` jako přehled).
-- [ ] Disclaimer u rytmu zůstává viditelný (zdroj dat, ne kalendářový engine).
-
----
-
-## 6. Loading / empty / error states checklist
-
-- [ ] Obnovení stránky: žádné tiché prázdné bloky bez textu.
-- [ ] Chyby AI shrnutí a follow-upu mají `role="alert"` / srozumitelnou češtinu.
-- [ ] Mobile: opravený `Promise.all` v `TeamOverviewScreen` (žádný „přesýpací“ počet výsledků).
+- [ ] Briefing počty a „Vyžaduje pozornost“ vycházejí z `buildTeamOverviewPageModel` / KPI — žádný druhý paralelní výpočet alertů na klientovi.
+- [ ] Sekce pozornosti (CRM + coaching) nepoužívá jinou sadu ID než filtr „attention“ ve filtrech lidí (zdroj `attentionUserIds` v page modelu).
+- [ ] Rytmus: stejný scope jako přehled (`getTeamRhythmCalendarData` / `getScopeContext`); disclaimer viditelný.
+- [ ] „Stabilní“ segment u lidí je **proxy** (viz komentáře u `memberMatchesPeopleSegment`) — na demo říct jako orientační, ne tvrdé pravidlo.
 
 ---
 
-## 7. Responsive / mobile checklist
+## 5. People area checklist
 
-- [ ] Banner hierarchie na mobile neřeže layout (padding `mx-4`).
-- [ ] Dlouhá jména v kartách členů: `truncate` / `min-w-0` kde je potřeba.
-- [ ] Kariérní řádek na kartě člena: `break-words` / krátký text ze `summaryLine` nebo `managerProgressLabel`.
-
----
-
-## 8. Performance sanity checklist
-
-- [ ] `getTeamOverviewKpis` už znovu nevolá `getTeamAlerts` (druhé `getTeamMemberMetrics`).
-- [ ] `getTeamMemberDetail` nestahuje metriky dvakrát kvůli alertům.
-- [ ] AI kontext a `/api/ai/team-summary` nevolají `getTeamAlerts` nad stejnými metrikami znovu.
-- [ ] SSR `team-overview/page.tsx` a client `refresh` v `TeamOverviewView` odvozují alerty z již načtených metrik (`buildTeamAlertsFromMemberMetrics`), bez dalšího `getTeamAlerts`.
-- [ ] **Zbývající duplicita (known limitation):** `getTeamOverviewKpis` a paralelní `getTeamMemberMetrics` stále oba počítají metriky — odstranění vyžaduje větší refaktor (sdílený „bundle“).
+- [ ] Segmenty (all / attention / adaptation / managers / healthy) + search — výsledek konzistentní s `getVisibleTeamMembers`.
+- [ ] Počet „Zobrazeno X z Y“ odpovídá `visibleMembers.length` / `members.length`.
+- [ ] Prázdný výsledek filtru: informační stav v tabulce, ne prázdná obrazovka bez textu.
+- [ ] Vybraný řádek: zvýraznění; mimo filtr: `outsideFilter` v bočním panelu.
 
 ---
 
-## 9. Known limitations (poctivě)
+## 6. Selected member checklist
 
-1. **Hierarchie** závisí na kvalitě `parent_id`; bez vazeb je „Můj tým“ záměrně restriktivní.
-2. **Kariéra:** část pravidel je heuristická; `manual_required` / legacy kombinace vyžadují lidskou kontrolu — nejsou tvrdé licence BJ/BJS v tomto modulu.
-3. **Uložené AI shrnutí** nemusí odpovídat aktuálnímu scope/period v UI — metadata generace to zatím plně nepropisuje.
-4. **Cadence / rytmus** je read model a doporučení, ne workflow engine s tvrdými stavy.
-5. **Výkon:** jedna navíc nákladná vrstva = dvojí výpočet member metrik (KPI + explicitní metrics) při načtení přehledu.
-6. **Typecheck celého `apps/web`:** může selhat na modulech mimo Team Overview (např. assistant chat, image-intake). Před releasem ověřte buď celý `tsc -p apps/web`, nebo aspoň dotčené soubory v IDE.
+- [ ] Výběr ze stromu / tabulky / alertů nastaví `member` v URL a načte detail se **stejným** `period` a `scope`.
+- [ ] Po změně scope: pokud vybraný user není v `members`, výběr se zruší (`isSelectedMemberInScope`).
+- [ ] Načtení detailu: `getTeamMemberDetail(..., { period, scope })` — při chybě prádzný panel, ne pád celé stránky.
 
 ---
 
-## 10. Doporučení před demo / release
+## 7. Empty / partial / fallback states checklist
 
-1. Nastavit u 2–3 uživatelů ukázkový `parent_id` a ověřit strom + „Můj tým“.
-2. Projít jednoho člena s prázdnou kariérou a jednoho s plnou konfigurací.
-3. Jako Director vygenerovat shrnutí v `full`, pak přepnout Manager účet a ověřit zúžení dat.
-4. Ověřit vytvoření follow-up úkolu jen pro člena v rozsahu.
+- [ ] Briefing: skeleton nebo prázdnota s kontextem při chybějících KPI.
+- [ ] Attention / career / pool / adaptation: existující empty copy (žádné holé bílé bloky).
+- [ ] Struktura: prázdný strom → vhodná zpráva v `TeamStructurePanel`.
+- [ ] Rytmus: prázdný kalendář — stávající empty states v panelu.
+
+---
+
+## 8. Responsive / density sanity checklist
+
+- [ ] Mobilní karty členů: `min-w-0`, zkrácené labely metrik kde je třeba; dlouhé názvy nemají rozbít layout.
+- [ ] Boční panel detailu na úzkém viewportu: scrollovatelný panel (`max-h` + overflow).
+- [ ] Banner hierarchie neřeže okraje na malých šířkách.
+
+---
+
+## 9. Performance sanity checklist
+
+- [ ] `pageModel`, `visibleMembers`, `sortedMembers`, `metricsByUser` — memoizováno v `TeamOverviewView` tam, kde dává smysl.
+- [ ] **Snadný win (hotovo):** jeden přepočet filtrů přes `getVisibleTeamMembers`, ne duplicitní filter v renderu.
+- [ ] **Future optimization (known limitation):** při načtení přehledu mohou běžet paralelně `getTeamOverviewKpis` a `getTeamMemberMetrics` — případná deduplikace vyžaduje větší refaktor server actions.
+
+---
+
+## 10. Tests / automated checks
+
+- [ ] `pnpm exec vitest run src/lib/__tests__/team-hierarchy-scope.test.ts`
+- [ ] `pnpm exec vitest run src/lib/__tests__/team-overview-format.test.ts src/lib/__tests__/team-overview-members.test.ts src/lib/__tests__/team-overview-page-model.test.ts`
+- [ ] `pnpm exec tsc --noEmit -p apps/web/tsconfig.json` (nebo aspoň dotčené soubory)
+- [ ] `pnpm exec eslint` na změněné soubory Team Overview
+
+---
+
+## 11. Known limitations (poctivě)
+
+1. **Hierarchie** závisí na `parent_id`; bez vazeb je „Můj tým“ záměrně restriktivní.
+2. **Kariéra:** část pravidel je heuristická; manuální / partial stavy vyžadují lidský kontext — modul neuděluje „licenci“ BJ/BJS.
+3. **Uložené AI shrnutí** nemusí odpovídat aktuálnímu scope/period — uživatel má znovu generovat po přepnutí.
+4. **Rytmus / cadence** je read model a doporučení, ne workflow engine.
+5. **Filtr „Stabilní“** u lidí je zjednodušený proxy (CRM risk + není v adaptaci).
+6. **Členové bez řádku metrik** ve filtrech: `getVisibleTeamMembers` je může pustit (`!mm` větev) — edge case závislý na datech ze serveru; při rozšíření metrik sjednotit.
+7. **Typecheck celého monorepa** může občas hlásit chyby mimo Team Overview — před releasem ověřit aspoň `apps/web` nebo dotčené moduly.
+
+---
+
+## 12. Blockers before release / demo
+
+*Aktuálně žádné povinné kódové blokery známé z tohoto QA passu — ověřte v cílovém prostředí (staging), že `parent_id` a ukázková data odpovídají scénáři dema.*
+
+---
+
+## 13. Demo script (doporučení)
+
+1. Přihlásit se jako **Director**, scope **Celá struktura** — ukázat briefing, pool split, strom.
+2. Přepnout na **Můj tým** (Manager účet nebo stejný uživatel) — ukázat zúžení dat a URL s `scope=`.
+3. Otevřít **detail člena** z řádku — ověřit, že stránka detailu načte (stejný scope v query).
+4. Filtrovat **Vyžaduje pozornost** + vyhledání — prázdný stav s vysvětlením.
+5. Krátce ukázat **rytmus** a disclaimer u interních termínů.
+6. (Volitelně) **Generovat AI shrnutí** — připomenout, že uložený text může být z jiného období.
 
 ---
 
 ## SQL migrace
 
-Žádné SQL migrace nejsou součástí této fáze (logika scope a výkon v aplikační vrstvě).
+Žádné SQL migrace nejsou součástí Team Overview logiky (scope a data v aplikační vrstvě).
 
-Odkaz na dotčené soubory (repo):  
-`apps/web/src/lib/team-hierarchy-types.ts`,  
-`apps/web/src/app/actions/team-overview.ts`,  
-`apps/web/src/lib/ai/actions/action-executors.ts`,  
-`apps/web/src/lib/ai/context/team-context.ts`,  
-`apps/web/src/app/api/ai/team-summary/route.ts`,  
-`apps/web/src/app/portal/team-overview/TeamOverviewView.tsx`,  
-`apps/web/src/app/portal/team-overview/TeamStructurePanel.tsx`,  
-`apps/web/src/app/portal/mobile/screens/TeamOverviewScreen.tsx`,  
-`apps/web/src/lib/career/career-ui-labels.ts`,  
-`apps/web/src/app/portal/team-overview/page.tsx`,  
-`apps/web/src/app/portal/team-overview/[userId]/TeamMemberDetailView.tsx`.
+```sql
+-- Žádná nová migrace pro tento QA pass.
+```
+
+Odkazy do repa (implementace):  
+`apps/web/src/lib/team-hierarchy-types.ts`  
+`apps/web/src/app/actions/team-overview.ts`  
+`apps/web/src/app/portal/team-overview/page.tsx`  
+`apps/web/src/app/portal/team-overview/[userId]/page.tsx`  
+`apps/web/src/app/portal/team-overview/TeamOverviewView.tsx`

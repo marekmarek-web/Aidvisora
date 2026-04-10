@@ -125,16 +125,18 @@ export function TeamOverviewView({
   const [rhythmCalendar, setRhythmCalendar] = useState<TeamRhythmCalendarData | null>(initialRhythmCalendar ?? null);
 
   const syncTeamOverviewUrl = useCallback(
-    (next: { period?: TeamOverviewPeriod; memberId?: string | null }) => {
+    (next: { period?: TeamOverviewPeriod; memberId?: string | null; scope?: TeamOverviewScope }) => {
       const p = new URLSearchParams();
       const per = next.period ?? period;
+      const sc = next.scope ?? scope;
       if (per !== "month") p.set("period", per);
+      p.set("scope", sc);
       const mem = next.memberId !== undefined ? next.memberId : selectedUserId;
       if (mem) p.set("member", mem);
       const qs = p.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [pathname, period, router, selectedUserId]
+    [pathname, period, router, scope, selectedUserId]
   );
 
   const refresh = useCallback(async () => {
@@ -298,8 +300,9 @@ export function TeamOverviewView({
   const newcomerSet = useMemo(() => new Set(newcomers.map((n) => n.userId)), [newcomers]);
 
   const memberDetailHref = useCallback(
-    (userId: string) => `/portal/team-overview/${userId}?period=${encodeURIComponent(period)}`,
-    [period]
+    (userId: string) =>
+      `/portal/team-overview/${userId}?${new URLSearchParams({ period, scope }).toString()}`,
+    [period, scope]
   );
 
   const pageModel = useMemo(
@@ -412,7 +415,11 @@ export function TeamOverviewView({
             </div>
             <CustomDropdown
               value={scope}
-              onChange={(id) => setScope(id as TeamOverviewScope)}
+              onChange={(id) => {
+                const ns = id as TeamOverviewScope;
+                setScope(ns);
+                syncTeamOverviewUrl({ scope: ns });
+              }}
               options={scopeOptions.map((o) => ({ id: o.value, label: o.label }))}
               placeholder="Rozsah"
               icon={Users}
@@ -489,7 +496,7 @@ export function TeamOverviewView({
           roots={hierarchy}
           currentUserId={currentUserId}
           scope={scope}
-          memberDetailQuery={`?period=${encodeURIComponent(period)}`}
+          memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
           hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
           selectedUserId={selectedUserId}
           onSelectMember={selectMember}

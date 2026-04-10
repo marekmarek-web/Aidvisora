@@ -32,6 +32,17 @@ export function resolveScopeForRole(roleName: RoleName, requested?: TeamOverview
   return next;
 }
 
+/**
+ * Výchozí scope při prvním načtení Team Overview (stejný jako `team-overview/page.tsx`).
+ * Liší se od `resolveScopeForRole(role, undefined)` — Director/Admin mají zde `full`, ne `my_team`.
+ * Použijte u deep linků na detail člena (`getTeamMemberDetail`), aby viditelnost odpovídala přehledu.
+ */
+export function defaultLandingScopeForRole(roleName: RoleName): TeamOverviewScope {
+  if (roleName === "Advisor" || roleName === "Viewer") return "me";
+  if (roleName === "Director" || roleName === "Admin") return "full";
+  return "my_team";
+}
+
 function getDescendantIds(members: TeamHierarchyMember[], rootUserId: string): Set<string> {
   const byParent = new Map<string, TeamHierarchyMember[]>();
   for (const m of members) {
