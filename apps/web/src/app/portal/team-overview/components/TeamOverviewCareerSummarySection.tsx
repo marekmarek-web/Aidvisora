@@ -51,7 +51,7 @@ export function TeamOverviewCareerSummarySection({
           Kariérní přehled
         </h2>
         <Link
-          href="/portal/setup?tab=tym"
+          href="/portal/team-overview#sprava-tymu"
           className="text-xs font-semibold text-violet-700 hover:text-violet-900 hover:underline"
         >
           Doplnit data
@@ -168,9 +168,10 @@ export function TeamOverviewCareerSummarySection({
         <div className="mx-5 mb-5 rounded-xl border border-amber-200/60 bg-amber-50/40 px-4 py-2.5 sm:mx-6 sm:mb-6">
           <p className="text-xs text-amber-950/90">
             <span className="font-semibold">Příležitost:</span> bez vyplněných kariérních větví zůstávají souhrny obecnější. Údaje doplníte v{" "}
-            <Link href="/portal/setup?tab=tym" className="underline hover:text-amber-800">
-              Nastavení → Tým
-            </Link>.
+            <Link href="/portal/team-overview#sprava-tymu" className="underline hover:text-amber-800">
+              Týmový přehled → Správa týmu
+            </Link>
+            .
           </p>
         </div>
       ) : null}

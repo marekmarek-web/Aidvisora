@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireAuth, getCachedSupabaseUser } from "@/lib/auth/require-auth";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { TeamOverviewView } from "./TeamOverviewView";
 import { defaultLandingScopeForRole, resolveScopeForRole, type TeamOverviewScope } from "@/lib/team-hierarchy-types";
@@ -30,12 +30,16 @@ export default async function TeamOverviewPage({
   const landing = defaultLandingScopeForRole(auth.roleName as RoleName);
   const initialScope: TeamOverviewScope = resolveScopeForRole(auth.roleName as RoleName, scopeParam ?? landing);
 
-  const snap = await getTeamOverviewPageSnapshot(period, initialScope);
+  const [snap, user] = await Promise.all([getTeamOverviewPageSnapshot(period, initialScope), getCachedSupabaseUser()]);
+  const currentUserEmail = user?.email ?? "";
+  const currentUserFullName = (user?.user_metadata?.full_name as string | undefined) ?? null;
 
   return (
     <TeamOverviewView
       teamId={auth.tenantId}
       currentUserId={auth.userId}
+      currentUserEmail={currentUserEmail}
+      currentUserFullName={currentUserFullName}
       currentRole={auth.roleName}
       initialScope={initialScope}
       initialHierarchy={snap.hierarchy}

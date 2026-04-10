@@ -46,6 +46,7 @@ import { TeamOverviewKpiDetailSection } from "./components/TeamOverviewKpiDetail
 import { TeamOverviewPerformanceTrendSection } from "./components/TeamOverviewPerformanceTrendSection";
 import { TeamOverviewAiTeamSummarySection } from "./components/TeamOverviewAiTeamSummarySection";
 import { TeamOverviewFullAlertsSection } from "./components/TeamOverviewFullAlertsSection";
+import { TeamManagementPanel } from "./TeamManagementPanel";
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
@@ -56,6 +57,8 @@ const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
 interface TeamOverviewViewProps {
   teamId: string;
   currentUserId: string;
+  currentUserEmail: string;
+  currentUserFullName: string | null;
   currentRole: string;
   initialScope: TeamOverviewScope;
   initialHierarchy: TeamTreeNode[];
@@ -78,6 +81,8 @@ interface TeamOverviewViewProps {
 export function TeamOverviewView({
   teamId,
   currentUserId,
+  currentUserEmail,
+  currentUserFullName,
   currentRole,
   initialScope,
   initialHierarchy,
@@ -96,6 +101,7 @@ export function TeamOverviewView({
 }: TeamOverviewViewProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const teamManagementHref = `${pathname}#sprava-tymu`;
   const [period, setPeriod] = useState<TeamOverviewPeriod>(defaultPeriod);
   const [scope, setScope] = useState<TeamOverviewScope>(initialScope);
   const [kpis, setKpis] = useState<TeamOverviewKpis | null>(initialKpis);
@@ -400,7 +406,7 @@ export function TeamOverviewView({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/portal/setup?tab=tym"
+              href={teamManagementHref}
               className="inline-flex items-center gap-2 min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-800 hover:bg-indigo-100 transition-colors"
             >
               <UserPlus className="w-4 h-4 shrink-0" />
@@ -454,7 +460,10 @@ export function TeamOverviewView({
           >
             <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
             Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
-            <a href="/portal/setup?tab=tym" className="underline hover:text-amber-800">Doplňte v Nastavení → Tým</a>.
+            <a href={teamManagementHref} className="underline hover:text-amber-800">
+              Doplňte ve Správě týmu níže
+            </a>
+            .
           </div>
         ) : null}
 
@@ -478,6 +487,13 @@ export function TeamOverviewView({
           pageModel={pageModel}
           displayName={displayName}
           selectMember={selectMember}
+        />
+
+        <TeamManagementPanel
+          currentUserId={currentUserId}
+          currentUserEmail={currentUserEmail}
+          currentUserFullName={currentUserFullName}
+          roleName={currentRole}
         />
 
         {members.length > 0 ? <TeamOverviewPoolSplitSection kpis={kpis} pageModel={pageModel} /> : null}

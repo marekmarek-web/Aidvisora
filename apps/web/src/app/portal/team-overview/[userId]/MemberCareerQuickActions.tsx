@@ -80,10 +80,10 @@ export function MemberCareerQuickActions({
         </p>
         {showSetupLink ? (
           <Link
-            href="/portal/setup?tab=tym"
+            href="/portal/team-overview#sprava-tymu"
             className="inline-flex mt-2 text-sm font-medium text-indigo-600 hover:underline"
           >
-            Otevřít Nastavení → Tým (doplnit kariéru)
+            Otevřít Týmový přehled → Správa týmu (doplnit kariéru)
           </Link>
         ) : null}
       </div>
@@ -131,8 +131,8 @@ export function MemberCareerQuickActions({
         </button>
       </div>
       {showSetupLink ? (
-        <Link href="/portal/setup?tab=tym" className="inline-flex text-sm font-medium text-violet-700 hover:underline">
-          Doplnit kariérní zařazení v Nastavení → Tým
+        <Link href="/portal/team-overview#sprava-tymu" className="inline-flex text-sm font-medium text-violet-700 hover:underline">
+          Doplnit kariérní zařazení v Týmovém přehledu (Správa týmu)
         </Link>
       ) : null}
       {status ? <p className="text-sm text-[color:var(--wp-text-secondary)]">{status}</p> : null}

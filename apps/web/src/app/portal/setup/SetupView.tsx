@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -17,33 +17,20 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
-  Users,
   CreditCard,
-  FileDigit,
   Download,
   Bell,
   Server,
-  ArrowUpRight,
   CheckCircle,
   AlertCircle,
   Settings2,
   Loader2,
-  UserCog,
 } from "lucide-react";
 import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
 import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar, getAdvisorReportFields, updateAdvisorReportBranding, getNotificationPrefs, setNotificationPrefs, getAdvisorBirthdayEmailPrefs, updateAdvisorBirthdayEmailPrefs } from "@/app/actions/preferences";
 import { getWorkspaceBirthdayEmailTheme, setWorkspaceBirthdayEmailTheme } from "@/app/actions/birthday-greetings";
 import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
 import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
-import {
-  listTenantMembers,
-  sendTeamMemberInvitation,
-  getTenantTeamCareerDefaults,
-  setTenantTeamCareerDefaultProgram,
-} from "@/app/actions/team";
-import { hasPermission, type RoleName } from "@/shared/rolePermissions";
-import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
-import { TeamMemberCareerFields } from "./TeamMemberCareerFields";
 import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
@@ -51,20 +38,17 @@ import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { PortalAdvisorMfaCard } from "@/app/components/auth/PortalAdvisorMfaCard";
-import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
 import type { PublicBookingSettingsDTO } from "@/app/actions/public-booking-settings";
 import { PublicBookingSetupBlock } from "@/app/portal/setup/PublicBookingSetupBlock";
 import { queryKeys } from "@/lib/query-keys";
 import { getBillingOverview, type InvoiceRow } from "@/app/actions/billing";
-import { removeMember } from "@/app/actions/team";
 import type { FundLibrarySetupSnapshot } from "@/lib/fund-library/fund-library-setup-types";
 import { FundLibrarySettings } from "@/app/portal/setup/FundLibrarySettings";
 
 const TABS = [
   { id: "osobni", label: "Osobní údaje", keywords: ["osobní", "údaje", "fakturace", "heslo", "zabezpečení", "2fa", "rychlé", "demo"] },
   { id: "profil", label: "Profil poradce", keywords: ["profil", "poradce", "vizitka"] },
-  { id: "tym", label: "Tým", keywords: ["tým", "člen", "pozvat"] },
   { id: "fakturace", label: "Fakturace a Tarif", keywords: ["fakturace", "tarif", "platba", "faktura"] },
   { id: "notifikace", label: "Notifikace", keywords: ["notifikace", "email", "push", "rezervace", "rezervační", "odkaz", "veřejn"] },
   { id: "fondy", label: "Knihovna fondů", keywords: ["fond", "fondy", "knihovna", "knihovna fondů", "etf", "investice", "portfolio"] },
@@ -189,6 +173,12 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     if (found) setActiveTabState(found.id as TabId);
   }, [searchParams]);
 
+  useLayoutEffect(() => {
+    if (searchParams.get("tab") === "tym") {
+      window.location.assign("/portal/team-overview#sprava-tymu");
+    }
+  }, [searchParams]);
+
   // Scroll to #quick-actions when hash is present (e.g. from QuickNewMenu "Upravit nabídku")
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -213,13 +203,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   }, [searchQuery]);
 
   const isTabVisible = (tabId: TabId) => filteredTabs.some((t) => t.id === tabId);
-
-  const canManageTeamCareer = hasPermission(initial.roleName as RoleName, "team_members:write");
-
-  const resolvedCareerProgramForMember = useCallback((raw: string | null) => {
-    const { programId } = normalizeCareerProgramFromDb(raw);
-    return programId === "beplan" || programId === "premium_brokers" ? programId : null;
-  }, []);
 
   // --- Osobní údaje state
   const parsed = parseFullName(initial.fullName);
@@ -424,11 +407,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
         .finally(() => setInvoicesLoaded(true));
     }
   }, [activeTab, invoicesLoaded]);
-
-  // --- Team invite
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("Advisor");
-  const [inviteSending, setInviteSending] = useState(false);
 
   // --- Notifications
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({ daily: true, message: true, tasks: true, contracts: true });
@@ -778,25 +756,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
       setAiHealthTesting(false);
     }
   }, [fetchAiHealth, toast]);
-
-  // --- Team
-  const [teamMembers, setTeamMembers] = useState<Awaited<ReturnType<typeof listTenantMembers>>>([]);
-  const [tenantDefaultCareerProgram, setTenantDefaultCareerProgram] = useState<"__none__" | "beplan" | "premium_brokers">(
-    "__none__"
-  );
-  const [tenantDefaultSaving, setTenantDefaultSaving] = useState(false);
-
-  useEffect(() => {
-    listTenantMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
-  }, []);
-
-  useEffect(() => {
-    if (activeTab !== "tym") return;
-    void getTenantTeamCareerDefaults().then((d) => {
-      const p = d.defaultCareerProgram;
-      setTenantDefaultCareerProgram(p === "beplan" || p === "premium_brokers" ? p : "__none__");
-    });
-  }, [activeTab]);
 
   const companyBaseline = (initial.networkCompany ?? initial.tenantName).trim();
   const profilDirty = useMemo(() => {
@@ -1394,206 +1353,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Tým */}
-        {activeTab === "tym" && (
-          <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden animate-in fade-in duration-300">
-            <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-black text-[color:var(--wp-text)] mb-1">Správa Týmu</h2>
-                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Spolupracujte na klientech se svými asistenty nebo kolegy.</p>
-              </div>
-              <Link href="/portal/team-overview" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-black uppercase tracking-widest transition-colors min-h-[44px]">
-                <Users size={16} /> Otevřít správu týmu
-              </Link>
-            </div>
-            {canManageTeamCareer ? (
-              <div className="px-6 sm:px-8 py-4 bg-violet-50/40 border-b border-[color:var(--wp-surface-card-border)]">
-                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">
-                  Výchozí kariérní program pro workspace — předvyplní se u členů bez uloženého programu (nepřepisuje jejich údaje).
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={tenantDefaultCareerProgram}
-                    onChange={(e) =>
-                      setTenantDefaultCareerProgram(e.target.value as "beplan" | "premium_brokers" | "__none__")
-                    }
-                    className="px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-medium min-h-[40px]"
-                  >
-                    <option value="__none__">Žádný výchozí</option>
-                    <option value="beplan">Beplan</option>
-                    <option value="premium_brokers">Premium Brokers</option>
-                  </select>
-                  <button
-                    type="button"
-                    disabled={tenantDefaultSaving}
-                    onClick={async () => {
-                      setTenantDefaultSaving(true);
-                      try {
-                        const res = await setTenantTeamCareerDefaultProgram(
-                          tenantDefaultCareerProgram === "__none__" ? null : tenantDefaultCareerProgram
-                        );
-                        if (!res.ok) toast.showToast(res.error ?? "Uložení se nezdařilo.", "error");
-                        else toast.showToast("Výchozí kariérní program uložen.");
-                      } finally {
-                        setTenantDefaultSaving(false);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50 min-h-[40px]"
-                  >
-                    {tenantDefaultSaving ? "Ukládám…" : "Uložit výchozí"}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-            <div className="px-6 sm:px-8 py-4 bg-[color:var(--wp-surface-muted)] border-b border-[color:var(--wp-surface-card-border)]">
-              <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3">Pozvat nového člena</p>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!inviteEmail.trim()) return;
-                  setInviteSending(true);
-                  try {
-                    const result = await sendTeamMemberInvitation(inviteEmail.trim(), inviteRole);
-                    if (!result.ok) {
-                      toast.showToast(result.error, "error");
-                      return;
-                    }
-                    if (result.emailSent) {
-                      toast.showToast(`Pozvánka odeslána na ${inviteEmail.trim()}`);
-                    } else {
-                      toast.showToast(
-                        result.emailError
-                          ? `Pozvánka uložena, ale e-mail se nepodařilo odeslat (${result.emailError}). Odkaz: ${result.inviteLink}`
-                          : `Pozvánka uložena. Odkaz: ${result.inviteLink}`,
-                        "error",
-                      );
-                    }
-                    setInviteEmail("");
-                    void listTenantMembers().then(setTeamMembers).catch(() => {});
-                  } catch {
-                    toast.showToast("Pozvánku se nepodařilo vytvořit.", "error");
-                  } finally {
-                    setInviteSending(false);
-                  }
-                }}
-                className="flex flex-wrap items-center gap-3"
-              >
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="email@kolegy.cz"
-                  className="flex-1 min-w-[200px] px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 min-h-[44px]"
-                  required
-                />
-                <CustomDropdown
-                  value={inviteRole}
-                  onChange={setInviteRole}
-                  options={[
-                    { id: "Advisor", label: "Poradce" },
-                    { id: "Manager", label: "Manažer" },
-                    { id: "Viewer", label: "Prohlížeč" },
-                    { id: "Admin", label: "Admin" },
-                  ]}
-                  placeholder="Role"
-                  icon={UserCog}
-                />
-                <button
-                  type="submit"
-                  disabled={inviteSending || !inviteEmail.trim()}
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 min-h-[44px] transition-colors"
-                >
-                  {inviteSending ? "Odesílám…" : "Pozvat"}
-                </button>
-              </form>
-            </div>
-            <div className="overflow-x-auto">
-              {teamMembers.length === 0 ? (
-                <div className="p-8 text-center text-[color:var(--wp-text-secondary)]">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-[color:var(--wp-text-tertiary)]" />
-                  <p className="font-medium">Zatím žádní další členové.</p>
-                  <p className="text-sm mt-1">Pozvěte prvního člena tlačítkem výše.</p>
-                </div>
-              ) : (
-                <table className="w-full text-left min-w-[500px]">
-                  <thead>
-                    <tr className="bg-[color:var(--wp-surface-muted)]/50 border-b border-[color:var(--wp-surface-card-border)]">
-                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Uživatel</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Role</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hidden md:table-cell">Připojení</th>
-                      <th className="px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] text-right">Akce</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teamMembers.map((m) => {
-                      const isCurrentUser = m.userId === initial.userId;
-                      const displayName = isCurrentUser ? (initial.fullName || initial.email || "—") : "Člen týmu";
-                      const displayEmail = isCurrentUser ? initial.email : "—";
-                      const initials = isCurrentUser && initial.fullName ? [initial.fullName.trim().split(/\s+/)[0]?.[0], initial.fullName.trim().split(/\s+/).pop()?.[0]].filter(Boolean).join("").toUpperCase() : (displayEmail.slice(0, 2).toUpperCase() || "?");
-                      return (
-                        <tr key={m.membershipId} className="border-b border-[color:var(--wp-surface-card-border)]/50">
-                          <td className="px-6 sm:px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0">
-                                {initials}
-                              </div>
-                              <div>
-                                <div className="font-bold text-[color:var(--wp-text)]">{displayName}</div>
-                                <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">{displayEmail}</div>
-                              </div>
-                            </div>
-                            {canManageTeamCareer ? (
-                              <TeamMemberCareerFields
-                                key={`${m.membershipId}-${m.careerProgram ?? ""}-${m.careerTrack ?? ""}-${m.careerPositionCode ?? ""}`}
-                                membershipId={m.membershipId}
-                                initialProgram={resolvedCareerProgramForMember(m.careerProgram)}
-                                initialTrack={m.careerTrack}
-                                initialPosition={m.careerPositionCode}
-                                careerHasLegacyProgram={m.careerHasLegacyProgram}
-                                tenantDefaultProgram={
-                                  tenantDefaultCareerProgram === "__none__" ? null : tenantDefaultCareerProgram
-                                }
-                                onSaved={() => void listTenantMembers().then(setTeamMembers).catch(() => {})}
-                              />
-                            ) : null}
-                          </td>
-                          <td className="px-6 py-5">
-                            <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg ${m.roleName === "Admin" ? "bg-slate-800 text-white" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)]"}`}>
-                              {m.roleName === "Admin" ? "Vlastník" : m.roleName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-5 text-sm font-bold text-[color:var(--wp-text-secondary)] hidden md:table-cell">
-                            {new Date(m.joinedAt).toLocaleDateString("cs-CZ")}
-                          </td>
-                          <td className="px-6 sm:px-8 py-5 text-right text-[color:var(--wp-text-tertiary)]">{isCurrentUser ? "—" : (
-                            <button
-                              type="button"
-                              className="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline"
-                              onClick={async () => {
-                                const confirmed = window.confirm(`Opravdu chcete odebrat tohoto člena z workspace?`);
-                                if (!confirmed) return;
-                                const res = await removeMember(m.membershipId);
-                                if (res.ok) {
-                                  toast.showToast("Člen byl odebrán.");
-                                  setTeamMembers((prev) => prev.filter((x) => x.membershipId !== m.membershipId));
-                                } else {
-                                  toast.showToast(res.error ?? "Odebrání se nezdařilo.", "error");
-                                }
-                              }}
-                            >
-                              Odebrat
-                            </button>
-                          )}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
             </div>
           </div>
         )}
