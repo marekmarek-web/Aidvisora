@@ -349,6 +349,13 @@ export function TeamMemberDetailView({
               <p className="text-xs text-[color:var(--wp-text-secondary)]">Hodnota obchodů</p>
             </div>
           </div>
+          <p className="mt-3 text-[11px] text-[color:var(--wp-text-tertiary)] leading-relaxed">
+            {detail.careerEvaluation.careerProgramId === "beplan"
+              ? "Jednotky v CRM nejsou BJ z kariérního řádu Beplan — jen orientační výkon v systému."
+              : detail.careerEvaluation.careerProgramId === "premium_brokers"
+                ? "Jednotky v CRM nejsou BJS z řádu Premium Brokers — jen orientační výkon v systému."
+                : "Jednotky v CRM jsou obecné metriky — neinterpretujte je jako BJ ani BJS bez ručního ověření řádu."}
+          </p>
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
             <p className="text-[color:var(--wp-text-secondary)]">Otevřené úkoly: <strong>{m.tasksOpen}</strong></p>
             <p className="text-[color:var(--wp-text-secondary)]">Splněné úkoly: <strong>{m.tasksCompleted}</strong></p>

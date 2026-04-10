@@ -24,6 +24,8 @@ import {
   Briefcase,
   CheckCircle2,
   HeartHandshake,
+  Search,
+  Layers,
 } from "lucide-react";
 import type {
   TeamOverviewKpis,
@@ -62,6 +64,7 @@ import { buildTeamCoachingAttentionList } from "@/lib/career/career-coaching";
 import { buildTeamCareerSummaryBlock } from "@/lib/career/team-career-aggregate";
 import { careerCompletenessShortLabel, careerProgressShortLabel } from "@/lib/career/career-ui-labels";
 import type { EvaluationCompleteness, ProgressEvaluation } from "@/lib/career/types";
+import { CAREER_PROGRAM_LABELS } from "@/lib/career/types";
 
 function overviewCareerProgressBadgeClass(pe: ProgressEvaluation): string {
   if (pe === "on_track" || pe === "close_to_promotion" || pe === "promoted_ready") {
@@ -292,6 +295,7 @@ export function TeamOverviewView({
   const [riskOnly, setRiskOnly] = useState(false);
   const [onboardingOnly, setOnboardingOnly] = useState(false);
   const [performanceFilter, setPerformanceFilter] = useState<"all" | "top" | "bottom">("all");
+  const [peopleSearch, setPeopleSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiGenerationId, setAiGenerationId] = useState<string | null>(null);
@@ -498,6 +502,26 @@ export function TeamOverviewView({
     [rhythmCalendar, members, metrics, newcomers, coachingAttention]
   );
 
+  const poolSplit = useMemo(() => {
+    const counts = { beplan: 0, premium_brokers: 0, not_set: 0, other: 0 };
+    const units = { beplan: 0, premium_brokers: 0 };
+    for (const m of metrics) {
+      const pid = m.careerEvaluation.careerProgramId;
+      if (pid === "beplan") {
+        counts.beplan += 1;
+        units.beplan += m.unitsThisPeriod;
+      } else if (pid === "premium_brokers") {
+        counts.premium_brokers += 1;
+        units.premium_brokers += m.unitsThisPeriod;
+      } else if (pid === "not_set") {
+        counts.not_set += 1;
+      } else {
+        counts.other += 1;
+      }
+    }
+    return { counts, units };
+  }, [metrics]);
+
   const openTeamEventModal = useCallback((prefill?: TeamCalendarModalPrefill | null) => {
     setCalendarPrefill(prefill ?? null);
     setTeamCalendarModal("event");
@@ -538,12 +562,18 @@ export function TeamOverviewView({
     if (performanceFilter === "bottom") return -byPerf;
     return (a.displayName || "").localeCompare(b.displayName || "", "cs-CZ");
   });
+  const peopleQuery = peopleSearch.trim().toLowerCase();
   const visibleMembers = sortedMembers.filter((m) => {
     const mm = metricsByUser.get(m.userId);
     if (!mm) return true;
     if (roleFilter !== "all" && m.roleName !== roleFilter) return false;
     if (riskOnly && mm.riskLevel === "ok") return false;
     if (onboardingOnly && !newcomerSet.has(m.userId)) return false;
+    if (peopleQuery) {
+      const name = (m.displayName || "").toLowerCase();
+      const email = (m.email || "").toLowerCase();
+      if (!name.includes(peopleQuery) && !email.includes(peopleQuery)) return false;
+    }
     return true;
   });
   const rankedMetrics = [...metrics].sort((a, b) => b.productionThisPeriod - a.productionThisPeriod);
@@ -572,6 +602,25 @@ export function TeamOverviewView({
       ? `Tento týden: ${kpis.meetingsThisWeek} schůzek v CRM (tento rozsah) · období ${kpis.periodLabel}.`
       : scope === "me" && kpis
         ? `Období ${kpis.periodLabel}: ${kpis.unitsThisPeriod} jednotek · produkce ${formatNumber(kpis.productionThisPeriod)}.`
+        : null;
+
+  const teamStandingLine =
+    kpis && scope !== "me"
+      ? (() => {
+          const goalBit =
+            kpis.teamGoalProgressPercent != null && kpis.teamGoalType
+              ? ` Týmový cíl (${kpis.teamGoalType}): ${kpis.teamGoalProgressPercent} %.`
+              : "";
+          if (kpis.productionTrend > 0) {
+            return `Jak si tým stojí: souhrnná produkce roste oproti předchozímu období (orientační trend z CRM).${goalBit}`;
+          }
+          if (kpis.productionTrend < 0) {
+            return `Jak si tým stojí: souhrnná produkce zaostává za předchozím obdobím — vhodný moment na krátký manažerský check-in a podporu, ne sankce.${goalBit}`;
+          }
+          return `Jak si tým stojí: produkce je v podobné úrovni jako minulé období (CRM).${goalBit}`;
+        })()
+      : kpis && scope === "me"
+        ? `Váš výkon v období ${kpis.periodLabel}: ${formatNumber(kpis.productionThisPeriod)} produkce, ${kpis.unitsThisPeriod} jednotek (CRM — ne BJ/BJS z řádu).`
         : null;
 
   return (
@@ -703,8 +752,13 @@ export function TeamOverviewView({
               ))}
             </div>
           ) : null}
+          {teamStandingLine ? (
+            <p className="mt-5 text-sm text-[color:var(--wp-text)] border-t border-[color:var(--wp-surface-card-border)]/70 pt-4 font-medium">
+              {teamStandingLine}
+            </p>
+          ) : null}
           {weeklySnapshotLine ? (
-            <p className="mt-5 text-sm text-[color:var(--wp-text-secondary)] border-t border-[color:var(--wp-surface-card-border)]/70 pt-4">
+            <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)]">
               {weeklySnapshotLine}
             </p>
           ) : null}
@@ -715,7 +769,7 @@ export function TeamOverviewView({
           <section className="mb-8" aria-labelledby="team-priority-heading">
             <div className="mb-4">
               <h2 id="team-priority-heading" className="text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
-                Co vyžaduje pozornost a doporučené navázání
+                Kdo vyžaduje pozornost · doporučené navázání
               </h2>
               <p className="mt-1 max-w-2xl text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
                 Signály z CRM a doporučení z kariérní vrstvy — orientační návrh dalšího kroku, ne hodnocení lidí.
@@ -829,10 +883,10 @@ export function TeamOverviewView({
               <div className="max-w-3xl">
                 <h2 id="team-career-growth-heading" className="flex items-center gap-2 text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
                   <Briefcase className="h-5 w-5 shrink-0 text-violet-600" />
-                  Růst a adaptace — kariérní přehled
+                  Kariérní přehled týmu
                 </h2>
                 <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
-                  Kde tým roste, kde chybí data a kdo je v adaptaci. Orientační pohled z údajů v aplikaci a CRM — ne oficiální splnění řádu (BJ, licence). Chybějící údaje bereme jako příležitost doplnit v Nastavení → Tým.
+                  Program, větev, pozice a stav evaluace z údajů v aplikaci — orientační, ne oficiální splnění řádu. Chybějící údaje bereme jako příležitost doplnit v Nastavení → Tým.
                 </p>
               </div>
               <Link
@@ -938,65 +992,132 @@ export function TeamOverviewView({
                 <span className="font-semibold">Příležitost doplnit data:</span> bez vyplněných kariérních větví zůstávají souhrny obecnější. Údaje doplníte v Nastavení → Tým.
               </div>
             ) : null}
-
-            <div className="mt-8 border-t border-[color:var(--wp-surface-card-border)]/80 pt-6" aria-labelledby="team-newcomers-inline-heading">
-              <h3 id="team-newcomers-inline-heading" className="text-sm font-bold text-[color:var(--wp-text)]">
-                Adaptace nováčků
-              </h3>
-              <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
-                Rozjezd v roli — stručný stav checklistu a signály z CRM.
-              </p>
-              {newcomers.length === 0 ? (
-                <div className="mt-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-4 py-5 text-center text-sm text-[color:var(--wp-text-secondary)]">
-                  <p className="font-medium text-[color:var(--wp-text)]">Žádní nováčci v adaptačním okně</p>
-                  <p className="mt-1 text-xs leading-relaxed">
-                    Jakmile někdo nový přistoupí do týmu, objeví se tady s checklistem — ideální podklad na krátký check-in.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {newcomers.map((n) => {
-                    const member = members.find((m) => m.userId === n.userId);
-                    const name = member ? displayName(member) : "Člen týmu";
-                    return (
-                      <Link
-                        key={n.userId}
-                        href={memberDetailHref(n.userId)}
-                        className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-semibold text-[color:var(--wp-text)]">{name}</p>
-                            <p className="text-xs text-[color:var(--wp-text-secondary)]">
-                              {n.daysInTeam} dní v týmu · {n.adaptationStatus}
-                            </p>
-                          </div>
-                          <div className="rounded-full bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-xs font-bold text-[color:var(--wp-text-secondary)]">
-                            {n.adaptationScore} %
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {n.checklist.map((s) => (
-                            <span
-                              key={s.key}
-                              className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                                s.completed ? "bg-emerald-100 text-emerald-600" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"
-                              }`}
-                              title={s.label}
-                            >
-                              {s.completed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                            </span>
-                          ))}
-                        </div>
-                        {n.warnings.length > 0 && <p className="mt-2 text-xs text-amber-600">{n.warnings.join(" · ")}</p>}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </section>
         )}
+
+        {members.length > 0 ? (
+          <section
+            className="mb-8 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6"
+            aria-labelledby="team-pool-heading"
+          >
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div className="max-w-3xl">
+                <h2 id="team-pool-heading" className="flex items-center gap-2 text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
+                  <Layers className="h-5 w-5 shrink-0 text-slate-600" />
+                  Role vs kariéra · rozdělení poolů
+                </h2>
+                <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
+                  Systémová role v CRM je oddělená od kariérního programu a větve. Beplan a Premium Brokers zobrazujeme zvlášť — nesléváme je do jednoho modelu. Jednotky níže v tabulce jsou z CRM; u Beplanu je neinterpretujte jako BJ, u Premium Brokers ne jako BJS.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/55 p-4 shadow-sm">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-900/85">{CAREER_PROGRAM_LABELS.beplan}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--wp-text)]">{poolSplit.counts.beplan}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)]">členů s programem Beplan v rozsahu</p>
+                <p className="mt-3 text-sm text-[color:var(--wp-text-secondary)]">
+                  Jednotky ({kpis?.periodLabel ?? "období"}, CRM):{" "}
+                  <strong className="text-[color:var(--wp-text)] tabular-nums">{poolSplit.units.beplan}</strong>
+                </p>
+                <p className="mt-1 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">
+                  Nejedná se o BJ z kariérního řádu — jen součet jednotek u členů s programem Beplan.
+                </p>
+              </div>
+              <div className="rounded-xl border border-violet-200/70 bg-violet-50/50 p-4 shadow-sm">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900/85">{CAREER_PROGRAM_LABELS.premium_brokers}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--wp-text)]">{poolSplit.counts.premium_brokers}</p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)]">členů s programem Premium Brokers v rozsahu</p>
+                <p className="mt-3 text-sm text-[color:var(--wp-text-secondary)]">
+                  Jednotky ({kpis?.periodLabel ?? "období"}, CRM):{" "}
+                  <strong className="text-[color:var(--wp-text)] tabular-nums">{poolSplit.units.premium_brokers}</strong>
+                </p>
+                <p className="mt-1 text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">
+                  Nejedná se o BJS z kariérního řádu — jen součet jednotek u členů s programem Premium Brokers.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/35 px-4 py-3 text-xs text-[color:var(--wp-text-secondary)] space-y-1">
+              <p>
+                <span className="font-semibold text-[color:var(--wp-text)]">Kariérní program nevyplněn:</span>{" "}
+                {poolSplit.counts.not_set} {poolSplit.counts.not_set === 1 ? "osoba" : "lidí"}
+              </p>
+              <p>
+                <span className="font-semibold text-[color:var(--wp-text)]">Neznámý nebo nestandardní záznam:</span> {poolSplit.counts.other}
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        {members.length > 0 ? (
+          <section
+            className="mb-8 rounded-2xl border border-blue-200/60 bg-gradient-to-br from-blue-50/40 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6"
+            aria-labelledby="team-adaptation-heading"
+          >
+            <h2 id="team-adaptation-heading" className="text-lg font-bold text-[color:var(--wp-text)] sm:text-xl">
+              Adaptace a rozvoj
+            </h2>
+            <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
+              Nováčci v adaptačním okně — checklist a signály z CRM. Podpůrný tón: investice do náběhu, ne dohled.
+            </p>
+            {newcomers.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-4 py-5 text-center text-sm text-[color:var(--wp-text-secondary)]">
+                <p className="font-medium text-[color:var(--wp-text)]">Žádní nováčci v adaptačním okně</p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  Jakmile někdo nový přistoupí do týmu, objeví se tady s checklistem — dobrý podklad na krátký check-in.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {newcomers.map((n) => {
+                  const member = members.find((m) => m.userId === n.userId);
+                  const name = member ? displayName(member) : "Člen týmu";
+                  return (
+                    <Link
+                      key={n.userId}
+                      href={memberDetailHref(n.userId)}
+                      className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-[color:var(--wp-text)]">{name}</p>
+                          <p className="text-xs text-[color:var(--wp-text-secondary)]">
+                            {n.daysInTeam} dní v týmu · {n.adaptationStatus}
+                          </p>
+                        </div>
+                        <div className="rounded-full bg-[color:var(--wp-surface-muted)] px-2 py-0.5 text-xs font-bold text-[color:var(--wp-text-secondary)]">
+                          {n.adaptationScore} %
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {n.checklist.map((s) => (
+                          <span
+                            key={s.key}
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                              s.completed ? "bg-emerald-100 text-emerald-600" : "bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-tertiary)]"
+                            }`}
+                            title={s.label}
+                          >
+                            {s.completed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          </span>
+                        ))}
+                      </div>
+                      {n.warnings.length > 0 && <p className="mt-2 text-xs text-amber-600">{n.warnings.join(" · ")}</p>}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        <TeamStructurePanel
+          roots={hierarchy}
+          currentUserId={currentUserId}
+          scope={scope}
+          memberDetailQuery={`?period=${encodeURIComponent(period)}`}
+          hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
+        />
 
         <TeamRhythmPanel
           computed={rhythmComputed}
@@ -1012,22 +1133,28 @@ export function TeamOverviewView({
           onOpenTask={openTeamTaskModal}
         />
 
-        <TeamStructurePanel
-          roots={hierarchy}
-          currentUserId={currentUserId}
-          scope={scope}
-          memberDetailQuery={`?period=${encodeURIComponent(period)}`}
-          hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
-        />
-
-        <div className="mb-6 border-t border-slate-200/70 pt-8">
-          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">Lidé a metriky v detailu</h2>
+        <div className="mb-6 border-t border-slate-200/70 pt-8" id="lide-v-tymu">
+          <h2 className="text-lg font-bold text-[color:var(--wp-text)]">Lidé v týmu</h2>
           <p className="mt-1 max-w-2xl text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
-            Tabulka a filtry až po prioritách výše — pro hlubší pohled na jednotlivce otevřete detail.
+            Filtr, vyhledání a metriky — řádek vede do detailu člena (kariéra, coaching, 1:1, CRM).
           </p>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[min(100%,220px)] flex-1 max-w-md">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wp-text-tertiary)]"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={peopleSearch}
+              onChange={(e) => setPeopleSearch(e.target.value)}
+              placeholder="Hledat jméno nebo e-mail…"
+              className="min-h-[44px] w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-2 pl-10 pr-3 text-sm text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)]"
+              aria-label="Hledat v seznamu členů"
+            />
+          </div>
           <CustomDropdown
             value={roleFilter}
             onChange={(id) => setRoleFilter(id as "all" | "Advisor" | "Manager" | "Director")}
@@ -1094,7 +1221,12 @@ export function TeamOverviewView({
                 <thead>
                   <tr className="bg-[color:var(--wp-surface-muted)]/80">
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Člen</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Jednotky</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">
+                      <span className="block">Jednotky</span>
+                      <span className="block text-[10px] font-normal normal-case text-[color:var(--wp-text-tertiary)] leading-tight">
+                        CRM · ne BJ/BJS
+                      </span>
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Produkce</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Schůzky</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[color:var(--wp-text-secondary)]">Konverze</th>
