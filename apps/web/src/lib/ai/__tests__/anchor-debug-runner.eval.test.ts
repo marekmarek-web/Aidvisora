@@ -73,6 +73,10 @@ const CORE_FIELD_KEYS = [
   "fullName",
   "clientFullName",
   "borrowerName",
+  "investorFullName",
+  "participantFullName",
+  "policyholder",
+  "insuredPersonName",
   "contractNumber",
   "proposalNumber",
   "proposalNumber_or_contractNumber",
@@ -205,11 +209,18 @@ function semanticQualityIssues(envelope: DocumentReviewEnvelope, docText: string
     const isSupportingDoc = primaryType === "payslip_document" || primaryType === "corporate_tax_return" || primaryType === "bank_statement";
 
     if (!isSupportingDoc) {
-      // 5. POLICYHOLDER PRESENCE: doc contains explicit policyholder block → fullName must not be empty
-      const hasPoliceeholderBlock = /pojistník|pojistníka|policyholder/i.test(text);
-      const clientPresent = !!(ef.fullName?.value || ef.clientFullName?.value || ef.borrowerName?.value || ef.investorFullName?.value);
+      // 5. CLIENT PRESENCE: doc contains explicit client/policyholder/participant/investor block → client field must not be empty
+      const hasPoliceeholderBlock = /pojistník|pojistníka|policyholder|pojistník\s*\/\s*pojištěný|účastník\s+smlouvy|investor\s*[:\/]/i.test(text);
+      const clientPresent = !!(
+        ef.fullName?.value ||
+        ef.clientFullName?.value ||
+        ef.borrowerName?.value ||
+        ef.investorFullName?.value ||
+        ef.participantFullName?.value ||
+        ef.policyholder?.value
+      );
       if (hasPoliceeholderBlock && !clientPresent) {
-        issues.push("Dokument obsahuje blok 'Pojistník', ale export nemá fullName/clientFullName");
+        issues.push("Dokument obsahuje blok klienta (Pojistník/Investor/Účastník), ale export nemá žádné klientské pole (fullName/policyholder/investorFullName/participantFullName)");
       }
 
       // 6. PAYMENT BLOCK PRESENCE: doc has explicit payment section → payment fields must not all be empty
@@ -408,7 +419,14 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
           const isSupportingDoc = primaryType === "payslip_document" || primaryType === "corporate_tax_return" || primaryType === "bank_statement";
 
           const insurerOk = !!(coreFields.insurer?.value || coreFields.institutionName?.value || coreFields.provider?.value || coreFields.lender?.value);
-          const clientOk = !!(coreFields.fullName?.value || coreFields.clientFullName?.value || coreFields.borrowerName?.value);
+          const clientOk = !!(
+            coreFields.fullName?.value ||
+            coreFields.clientFullName?.value ||
+            coreFields.borrowerName?.value ||
+            coreFields.investorFullName?.value ||
+            coreFields.participantFullName?.value ||
+            coreFields.policyholder?.value
+          );
           const productOk = !!(coreFields.productName?.value || coreFields.productType?.value);
           const paymentsOk = !!(
             coreFields.totalMonthlyPremium?.value ||
@@ -439,8 +457,8 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
             if (!afterCoercion.insurer && !afterCoercion.institutionName && !afterCoercion.provider && !afterCoercion.lender) {
               lossPoints.push("insurer/provider missing BEFORE alias normalize (ztrácí se v LLM extraction nebo Zod coercion)");
             }
-            if (!afterCoercion.fullName && !afterCoercion.clientFullName) {
-              lossPoints.push("client fullName missing BEFORE alias normalize");
+            if (!afterCoercion.fullName && !afterCoercion.clientFullName && !afterCoercion.investorFullName && !afterCoercion.participantFullName && !afterCoercion.policyholder) {
+              lossPoints.push("client identity missing BEFORE alias normalize (fullName/investorFullName/participantFullName/policyholder)");
             }
             if (!afterCoercion.contractNumber && !afterCoercion.proposalNumber) {
               lossPoints.push("contract/proposal number missing BEFORE alias normalize");
@@ -458,7 +476,7 @@ describe.skipIf(!process.env.ANCHOR_DEBUG)("ANCHOR DEBUG RUNNER", () => {
             }
           }
           if (!insurerOk) lossPoints.push("insurer/provider stále chybí ve final export payload");
-          if (!clientOk) lossPoints.push("client stále chybí ve final export payload");
+          if (!clientOk) lossPoints.push("client stále chybí ve final export payload (fullName/investorFullName/participantFullName/policyholder)");
           if (!paymentsOk) lossPoints.push("payments stále chybí ve final export payload");
 
           // ── Semantic quality gate (catches "syntactically PASS, semantically wrong") ──────

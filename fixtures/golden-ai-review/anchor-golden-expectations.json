@@ -172,6 +172,36 @@
       "segment": "life_modelation",
       "expectedPrimaryTypes": ["life_insurance_modelation", "life_insurance_proposal", "life_insurance_investment_contract"],
       "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+    },
+    {
+      "id": "ALLIANZ_POV",
+      "segment": "auto_mtpl",
+      "expectedPrimaryTypes": ["non_life_insurance_contract", "liability_insurance_proposal", "nonlife_insurance_contract"],
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName", "policyholder"], ["annualPremium", "totalMonthlyPremium", "premiumAmount"]]
+    },
+    {
+      "id": "CPP_DOMEX",
+      "segment": "property",
+      "expectedPrimaryTypes": ["non_life_insurance_contract", "nonlife_insurance_contract", "liability_insurance_proposal"],
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName", "policyholder"], ["annualPremium", "totalMonthlyPremium", "premiumAmount"]]
+    },
+    {
+      "id": "INVESTIKA",
+      "segment": "investment_subscription",
+      "expectedPrimaryTypes": ["investment_subscription_document", "investment_service_agreement", "generic_financial_document"],
+      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "investorFullName"], ["contractNumber", "proposalNumber"]]
+    },
+    {
+      "id": "KB_DPS",
+      "segment": "pension",
+      "expectedPrimaryTypes": ["pension_contract", "investment_subscription_document", "generic_financial_document"],
+      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "participantFullName"]]
+    },
+    {
+      "id": "MAXIMA_NEMOV",
+      "segment": "property",
+      "expectedPrimaryTypes": ["non_life_insurance_contract", "nonlife_insurance_contract", "liability_insurance_proposal"],
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName", "policyholder"], ["annualPremium", "totalMonthlyPremium", "premiumAmount"]]
     }
   ]
 }

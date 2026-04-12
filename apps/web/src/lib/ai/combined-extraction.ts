@@ -351,18 +351,37 @@ Výjimka pro masking NEEXISTUJE ani pro "GDPR", ani pro "ochranu dat". Toto je i
 ══════════════════════════════════════════════════════════
 RULE 3 — PARTY ROLE RESOLUTION
 ══════════════════════════════════════════════════════════
-Globální pravidla pro osoby:
-- policyholder: vždy vyplň z bloku "Pojistník" nebo "Klient" nebo "Žadatel". Pokud text říká "Pojistník je shodný s hlavním pojištěným" nebo "Pojistník = Pojištěný", nastav pojistníka I tak.
-- insured (pojištěný/á): primární pojištěná osoba — může být shodná s pojistníkem.
-- "2. pojištěný" / "Druhý pojištěný" / "Vedlejší pojištěná" → role "second_insured", vždy přidej do parties.
-- child_insured: "Pojistník je zákonný zástupce", "Dítě", "Pojištěné dítě" → role "child_insured".
-- co_applicant / coBorrower: "Spoludlužník" → role "co_applicant".
-- legal_representative: "Zákonný zástupce", "Jednatel", "Prokurista" → role "legal_representative".
-- beneficiary: "Obmyšlená osoba", "Obmyšlený", "Oprávněná osoba" → role "beneficiary".
-- investor: "Investor", "Klient / Investor" → role "investor".
-Každá role má: { role, fullName, birthDate?, personalId?, address?, email?, phone?, occupation? }.
-Pokud je v dokumentu explicitně uveden 2. pojištěný nebo spoludlužník, MUSÍ se objevit v parties — i u proposal docs.
-fullName (hlavní klient) ber VÝHRADNĚ z bloku pojistník/klient — NIKDY z hlavičky pojistitele, banky nebo pojišťovny.
+Globální pravidla pro osoby a role:
+
+MAPOVÁNÍ ROLÍ (combined label → role):
+- "Pojistník" / "Klient" / "Žadatel" → role "policyholder" → extractedFields.fullName + extractedFields.policyholder
+- "Pojištěný" / "Pojistený" (odlišný od pojistníka) → role "insured" → extractedFields.insuredPersonName
+- "Pojistník/Pojištěný" / "Pojistník a Pojištěný" / "Pojistník je shodný s pojištěným" → role "policyholder" I role "insured" jsou tatáž osoba → nastav OBOJÍ z téhož jména
+- "Pojištěný je shodný s pojistníkem" → insuredPersonName = fullName / policyholder (neprázdná hodnota)
+- "Účastník" / "Účastník smlouvy" (DPS, penzijní) → role "participant" → extractedFields.participantFullName + extractedFields.fullName
+- "Investor" / "Klient / Investor" / "Klient/Investor" → role "investor" → extractedFields.investorFullName + extractedFields.fullName
+- "2. pojištěný" / "Druhý pojištěný" / "Vedlejší pojištěná" → role "second_insured", přidej do parties
+- "Dítě" / "Pojištěné dítě" → role "child_insured"
+- "Spoludlužník" → role "co_applicant"
+- "Zákonný zástupce" / "Jednatel" / "Prokurista" → role "legal_representative"
+- "Obmyšlená osoba" / "Oprávněná osoba" → role "beneficiary"
+- "Zprostředkovatel" / "Distributor" / "Obchodní zástupce" / "Poradce" → VÝHRADNĚ do intermediaryName/intermediaryCode/intermediaryCompany, NIKDY do fullName, policyholder nebo insured
+
+PRIORITY ZDROJŮ PRO OSOBY (od nejvyšší):
+1. Blok "Pojistník" / "Klient" / "Žadatel" / "Investor" / "Účastník" v hlavní smluvní části
+2. Explicitní sekce smluvních stran ("Smluvní strany", "Strany smlouvy")
+3. Záhlaví nebo podpis klienta ve smluvní části
+4. Platební sekce (pokud klient uveden)
+5. AML / FATCA / dotazníky / přílohy / podpisové protokoly — POUZE pokud není vyplněno výše
+
+ZÁKAZY:
+- fullName (hlavní klient) NIKDY z hlavičky pojišťovny, banky nebo investiční společnosti
+- fullName NIKDY ze sekce zprostředkovatele, distributora nebo obchodního zástupce
+- intermediaryName NIKDY ze sekce pojistníka / klienta
+- insurer / lender / provider NIKDY z bloku klienta / pojistníka
+
+KAŽDÁ OSOBA v parties: { role, fullName, birthDate?, personalId?, address?, email?, phone?, occupation? }
+Pokud je v dokumentu explicitně uveden 2. pojištěný nebo spoludlužník, MUSÍ se objevit v parties.
 
 ══════════════════════════════════════════════════════════
 RULE 4 — PAYMENT BLOCK PRIORITY
@@ -390,6 +409,27 @@ Dokumenty typu: proposal, offer, modelation, amendment, service_doc, supporting_
 - coverages pokud jsou přítomny.
 Příklad: MAXIMA nabídka má platební blok → totalMonthlyPremium MUSÍ být vyplněno.
 Zdravotní dotazník jako příloha NESMÍ potlačit klientská data z hlavní smluvní části.
+
+══════════════════════════════════════════════════════════
+RULE 6 — SECTION PRIORITY (hlavní vs vedlejší sekce)
+══════════════════════════════════════════════════════════
+Pořadí priority sekcí (od nejvyšší):
+1. Hlavní hlavička smlouvy / nabídky (první strana, nadpis, záhlaví)
+2. Explicitní smluvní strany ("Pojistník", "Klient", "Žadatel", "Investor", "Účastník")
+3. Sekce klient / pojistník / pojištěný / investor / účastník v těle smlouvy
+4. Platební sekce a parametry smlouvy (bankAccount, variableSymbol, premium)
+5. Vedlejší sekce — ČTOU SE, ale NESMÍ přepsat data z sekcí 1–4:
+   - AML / FATCA dotazník
+   - Zdravotní dotazník
+   - Zprostředkovatel / Distributor / Obchodní zástupce
+   - Podpisový protokol / podpisová strana
+   - Přílohy, VOP, sazebník, ceník, reklamační řád
+   - Marketingové materiály
+
+Pokud najdeš osobu ve vedlejší sekci (např. jméno poradce v sekci Zprostředkovatel):
+- NEPŘEPISUJ fullName / policyholder extrahovaný z hlavní sekce
+- Poradenské jméno dej VÝHRADNĚ do intermediaryName
+- Vedlejší sekce MŮŽE doplnit chybějící hodnoty (pokud sekce 1–4 nebyly dostupné)
 
 ══════════════════════════════════════════════════════════
 PRAVIDLA EXTRAKCE — POLE

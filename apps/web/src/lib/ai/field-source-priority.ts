@@ -120,6 +120,50 @@ const CONTRACT_NUMBER_FIELDS = new Set([
   "contractNumber", "proposalNumber", "policyNumber", "existingPolicyNumber",
 ]);
 
+// ─── Section priority ordering ───────────────────────────────────────────────
+//
+// Generické pořadí důvěryhodnosti sekcí (od nejvyšší k nejnižší):
+//  1. Hlavní hlavička smlouvy / nabídky (contract_block, policyholder_block, client_block)
+//  2. Explicitní smluvní strany (policyholder_block, client_block, investor_block)
+//  3. Klientská sekce: klient / pojistník / pojištěný / investor / účastník
+//  4. Platební sekce a parametry smlouvy (payment_block)
+//  5. Vedlejší sekce: AML, FATCA, dotazníky, podpisové protokoly, distributor, přílohy, VOP
+//
+// Vedlejší sekce NESMÍ přepsat hodnotu z hlavní sekce.
+
+const SECTION_SOURCE_PRIORITY: Record<string, number> = {
+  // Tier 1 — main contract header, primary parties
+  policyholder_block: 10,
+  client_block: 10,
+  borrower_block: 10,
+  investor_block: 10,
+  owner_block: 10,
+  // Tier 2 — payment data (authoritative for payment fields, not client identity)
+  payment_block: 6,
+  contract_block: 8,
+  // Tier 3 — inferred / normalized
+  parties_record: 7,
+  pipeline_normalized: 4,
+  // Tier 4 — secondary sections (must not override client identity)
+  intermediary_block: 3,
+  signature_block: 2,
+  aml_block: 1,
+  attachment_block: 1,
+  health_block: 1,
+  // Institution / provider headers (must not set client fields)
+  insurer_header: 0,
+  bank_header: 0,
+  provider_header: 0,
+  // Unknown
+  product_block: 5,
+  unknown: 3,
+};
+
+function sourcePriorityScore(kind: string | undefined): number {
+  if (!kind) return 3;
+  return SECTION_SOURCE_PRIORITY[kind] ?? 3;
+}
+
 // ─── Suspicious institution-name patterns ────────────────────────────────────
 
 const INSTITUTION_PATTERNS = [
@@ -129,6 +173,8 @@ const INSTITUTION_PATTERNS = [
   /česká spořitelna/i, /air bank/i, /fio banka/i, /oberbank/i,
   /čsob leasing/i, /s morava leasing/i, /sgef/i,
   /česká republika/i, /finanční správa/i,
+  /investika/i, /kb penzijní/i, /conseq/i, /\bcpp\b/i, /česká podnikatelská/i,
+  /maxima pojišťovna/i, /pillow pojišťovna/i,
 ];
 
 function looksLikeInstitution(value: unknown): boolean {
@@ -246,7 +292,12 @@ export function applyFieldSourcePriorityAndEvidence(env: DocumentReviewEnvelope)
   // Step 8: Name deduplication — ensure fullName is not duplicated via firstName+lastName
   resolveNameFields(ef);
 
-  // Step 9: Tag parties-sourced fields
+  // Step 8b: Mixed-section guard — prevent secondary sections (AML, distributor, signature blocks)
+  // from overriding client identity. Must run before tagFromParties so parties can restore
+  // the correct client when a secondary-section value was incorrectly set.
+  applyMixedSectionGuard(env, ef);
+
+  // Step 9: Tag parties-sourced fields — uses role priority to pick the best client identity
   tagFromParties(env, ef);
 }
 
@@ -329,6 +380,9 @@ function resolveNameFields(ef: Record<string, ExtractedField | undefined>): void
 /**
  * If envelope.parties has a policyholder/client/borrower/investor entry with fullName,
  * and the extractedFields fullName is missing/weaker, copy it with proper source tagging.
+ *
+ * Priority: parties with role policyholder > insured > investor > client > participant.
+ * Distributor/intermediary/broker roles are EXCLUDED — they must never set client identity.
  */
 function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, ExtractedField | undefined>): void {
   const parties = env.parties;
@@ -339,23 +393,55 @@ function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, Extracte
     ? (parties as Array<Record<string, unknown>>)
     : Object.values(parties).filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null);
 
-  const CLIENT_ROLES = new Set(["policyholder", "client", "borrower", "owner", "investor", "insured", "customer"]);
+  // CLIENT_ROLES — roles that map to the main client identity.
+  // Excluded: intermediary, broker, distributor, agent, advisor, legal_representative (institution side).
+  const CLIENT_ROLES = new Set([
+    "policyholder", "client", "borrower", "owner", "investor",
+    "insured", "customer", "participant", "účastník", "pojistník",
+    "pojisteny", "pojisteny_je_shodny_s_pojistnikem",
+  ]);
 
+  // Role priority: higher = preferred for fullName enrichment.
+  const rolePriority: Record<string, number> = {
+    policyholder: 10, pojistník: 10,
+    insured: 9, pojisteny: 9,
+    investor: 8,
+    participant: 7, účastník: 7,
+    owner: 6, client: 6, customer: 6,
+    borrower: 5,
+  };
+
+  // Pick the best-priority client party for fullName enrichment
+  let bestParty: Record<string, unknown> | null = null;
+  let bestPriority = -1;
   for (const party of partyList) {
     const role = typeof party.role === "string" ? party.role.toLowerCase() : "";
     if (!CLIENT_ROLES.has(role)) continue;
-
     const partyFullName = typeof party.fullName === "string" ? party.fullName.trim() :
       typeof party.name === "string" ? party.name.trim() : null;
     if (!partyFullName || looksLikeInstitution(partyFullName)) continue;
+    const prio = rolePriority[role] ?? 4;
+    if (prio > bestPriority) {
+      bestPriority = prio;
+      bestParty = party;
+    }
+  }
+
+  if (bestParty) {
+    const role = typeof bestParty.role === "string" ? bestParty.role.toLowerCase() : "client";
+    const partyFullName = (typeof bestParty.fullName === "string" ? bestParty.fullName.trim() :
+      typeof bestParty.name === "string" ? bestParty.name.trim() : "") as string;
 
     const existingFullName = ef["fullName"];
+    // Enrich if: missing, or current source is from a lower-priority section (secondary)
+    const existingSourcePrio = sourcePriorityScore(existingFullName?.sourceKind);
+    const partiesPrio = 7; // parties_record tier
     const shouldEnrich = !isPresent(existingFullName) ||
-      (!isExplicit(existingFullName?.evidenceTier) && isPresent({ value: partyFullName, status: "extracted" } as ExtractedField));
+      (!isExplicit(existingFullName?.evidenceTier) && partiesPrio > existingSourcePrio);
 
     if (shouldEnrich) {
       const sourceKind: SourceKind =
-        role === "policyholder" ? "policyholder_block" :
+        role === "policyholder" || role === "pojistník" ? "policyholder_block" :
         role === "borrower" ? "borrower_block" :
         role === "investor" ? "investor_block" :
         "client_block";
@@ -371,7 +457,7 @@ function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, Extracte
 
     // Also enrich birthDate / personalId from party if missing in ef
     for (const fieldKey of ["birthDate", "personalId", "address", "phone", "email"] as const) {
-      const partyVal = party[fieldKey];
+      const partyVal = bestParty[fieldKey];
       if (typeof partyVal === "string" && partyVal.trim() && !isPresent(ef[fieldKey])) {
         ef[fieldKey] = {
           value: partyVal.trim(),
@@ -381,6 +467,67 @@ function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, Extracte
           sourceLabel: `z účastníků (role: ${role})`,
           confidence: 0.85,
         };
+      }
+    }
+  }
+}
+
+// ─── Mixed-section guard ──────────────────────────────────────────────────────
+
+/**
+ * Mixed-section guard: prevents secondary sections (AML, FATCA, distributor,
+ * zprostředkovatel, podpisové protokoly, přílohy, VOP, health questionnaire)
+ * from overriding client identity fields set by the main contractual section.
+ *
+ * Rule: if a client identity field is tagged as coming from a high-priority
+ * source (policyholder_block, client_block, investor_block) AND the current
+ * value looks like it was overwritten by a secondary source, restore from parties.
+ *
+ * Also enforces: distributors/intermediaries must NEVER appear in client fields.
+ */
+function applyMixedSectionGuard(env: DocumentReviewEnvelope, ef: Record<string, ExtractedField | undefined>): void {
+  // Secondary section patterns in evidenceSnippet or sourceLabel that indicate
+  // the value came from a non-primary section.
+  const SECONDARY_SOURCE_PATTERNS = [
+    /zprostředkovatel/i,
+    /distributor/i,
+    /obchodní\s+zástupce/i,
+    /aml/i,
+    /fatca/i,
+    /příloha/i,
+    /zdravotní\s+dotazník/i,
+    /podpisový\s+protokol/i,
+    /vop\b/i,
+    /poradce\s+zástupce/i,
+  ];
+
+  function looksLikeSecondarySource(field: ExtractedField | undefined): boolean {
+    if (!field) return false;
+    const label = (field.sourceLabel ?? "").toLowerCase();
+    const snippet = (field.evidenceSnippet ?? "").toLowerCase();
+    const kind = field.sourceKind ?? "";
+    if (kind === "intermediary_block" || kind === "aml_block" || kind === "attachment_block" || kind === "signature_block") return true;
+    return SECONDARY_SOURCE_PATTERNS.some((p) => p.test(label) || p.test(snippet));
+  }
+
+  // If fullName came from a secondary source but parties has a stronger client role, clear it
+  // so tagFromParties can fill it in. (tagFromParties runs AFTER this guard.)
+  const fullNameField = ef["fullName"];
+  if (isPresent(fullNameField) && looksLikeSecondarySource(fullNameField)) {
+    // Check if parties has a better candidate
+    const parties = env.parties;
+    if (parties && typeof parties === "object") {
+      const partyList: Array<Record<string, unknown>> = Array.isArray(parties)
+        ? (parties as Array<Record<string, unknown>>)
+        : Object.values(parties).filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null);
+      const hasClientParty = partyList.some((p) => {
+        const role = typeof p.role === "string" ? p.role.toLowerCase() : "";
+        const name = typeof p.fullName === "string" ? p.fullName.trim() : typeof p.name === "string" ? p.name.trim() : "";
+        return (role === "policyholder" || role === "client" || role === "investor" || role === "participant") && name && !looksLikeInstitution(name);
+      });
+      if (hasClientParty) {
+        // Clear the secondary-sourced fullName so the parties enrichment can set the correct one
+        ef["fullName"] = { value: null, status: "missing", evidenceTier: "missing" };
       }
     }
   }

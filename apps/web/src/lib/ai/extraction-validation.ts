@@ -533,7 +533,8 @@ export function validateDocumentEnvelope(payload: {
     }
   }
 
-  // 4. Text explicitly mentions Pojistník but policyholder/fullName is empty
+  // 4. Client identity is missing for contract-type documents.
+  // Covers: insurance (pojistník), pension/DPS (účastník), investment (investor/klient).
   // Uses fieldPresent (not fieldExtracted) to avoid false positives when the combined
   // extraction path wraps scalar values as inferred_low_confidence.
   const insuranceDocTypes = new Set([
@@ -541,7 +542,14 @@ export function validateDocumentEnvelope(payload: {
     "life_insurance_proposal", "nonlife_insurance_contract", "liability_insurance_offer",
     "life_insurance_change_request", "insurance_policy_change_or_service_doc",
   ]);
-  if (insuranceDocTypes.has(primaryType)) {
+  const pensionAndInvestmentDocTypes = new Set([
+    "pension_contract",
+    "investment_subscription_document",
+    "investment_service_agreement",
+  ]);
+  const clientMandatoryDocTypes = new Set([...insuranceDocTypes, ...pensionAndInvestmentDocTypes]);
+
+  if (clientMandatoryDocTypes.has(primaryType)) {
     const hasClient =
       fieldPresent(ef.fullName) ||
       fieldPresent(ef.policyholder) ||
@@ -550,10 +558,15 @@ export function validateDocumentEnvelope(payload: {
       fieldPresent(ef.lastName) ||
       fieldPresent(ef.policyholderName) ||
       fieldPresent(ef.investorFullName) ||
-      fieldPresent(ef.participantFullName);
+      fieldPresent(ef.participantFullName) ||
+      fieldPresent(ef.borrowerName) ||
+      fieldPresent(ef.customerName);
     if (!hasClient) {
+      const docLabel = pensionAndInvestmentDocTypes.has(primaryType)
+        ? "Klient / investor / účastník"
+        : "Pojistník / klient";
       addWarning(warnings, reasonsForReview, "POLICYHOLDER_MISSING",
-        "Pojistník / klient nebyl extrahován — dokument má pojistníka dle typu.",
+        `${docLabel} nebyl extrahován — dokument má klienta dle typu.`,
         "extractedFields.fullName", "policyholder_missing");
     }
   }

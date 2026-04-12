@@ -595,14 +595,21 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "accountHolderName",
         "memberName",
         "ucastnik",
+        "ucastnikJmeno",
         "klient",
+        "pojistnik",
+        "policyholderName",
+        "policyholder",
       ]);
-      // Ensure fullName is also populated for display/validation when participantFullName is set
+      // Ensure fullName is also populated for display/validation when participantFullName is set.
+      // participantFullName is the primary identity for pension/DPS contracts — always promote to fullName.
       mergeFromAliases(ef, "fullName", [
         "participantFullName",
         "clientFullName",
         "accountHolderName",
         "memberName",
+        "ucastnik",
+        "klient",
       ]);
       mergeFromAliases(ef, "startDate", [
         "policyStartDate",
@@ -654,12 +661,16 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "klient",
         "ucastnik",
         "investor",
+        "investorJmeno",
+        "clientName",
       ]);
       mergeFromAliases(ef, "fullName", [
         "investorFullName",
         "clientFullName",
         "investorName",
+        "investor",
         "klient",
+        "ucastnik",
       ]);
       mergeFromAliases(ef, "isin", [
         "isinCode",
@@ -863,11 +874,13 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
     case "nonlife_insurance_contract":
     case "liability_insurance_offer":
       // Bidirectional policyholder ↔ fullName sync.
+      // Priority order: policyholder > policyholderName > pojistnik > fullName > clientFullName > klient.
+      // This ensures the explicit "Pojistník" section always wins over generic klient labels.
       mergeFromAliases(ef, "policyholder", [
-        "fullName",
-        "clientFullName",
         "policyholderName",
         "pojistnik",
+        "fullName",
+        "clientFullName",
         "klient",
       ]);
       mergeFromAliases(ef, "fullName", [
@@ -875,16 +888,29 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "policyholderName",
         "pojistnik",
         "clientFullName",
+        "klient",
       ]);
-      // Insured person fallback: if insuredPersonName is not separately extracted,
-      // use policyholder / fullName (common for single-person proposals and non-life docs).
-      // "Pojištěný je shodný s pojistníkem" semantic — also handled in combined-extraction prompt.
+      // Insured person: prefer explicit pojisteny/insured field.
+      // Only fall back to policyholder/fullName when document uses
+      // "Pojištěný je shodný s pojistníkem" or equivalent — do not mix up
+      // separate pojistník vs pojištěný (MAXIMA, ČPP DOMEX+) unless explicitly
+      // the same person per document text (handled by LLM prompt; here we do
+      // the pure alias fallback which the prompt uses to signal equality).
       mergeFromAliases(ef, "insuredPersonName", [
         "insured",
         "pojisteny",
-        "policyholder",
-        "fullName",
+        "insuredPerson",
+        "pojistenyJmeno",
       ]);
+      // If document explicitly states identity (pojistník = pojištěný), LLM sets
+      // insuredPersonName from pojistnik in its output; the fallback below covers
+      // cases where only fullName/policyholder was extracted (single-person docs).
+      if (!valuePresent(ef.insuredPersonName)) {
+        mergeFromAliases(ef, "insuredPersonName", [
+          "policyholder",
+          "fullName",
+        ]);
+      }
       mergeFromAliases(ef, "insurer", [
         "pojistitel",
         "pojistovna",
@@ -1099,7 +1125,15 @@ const DESCRIPTIVE_KEY_MAP: Record<string, string> = {
   "Pojišťovací zprostředkovatel": "intermediaryName",
   "Pojistník/pojištěný": "fullName",
   "Pojistník / Pojištěný": "fullName",
+  "Pojistník/Pojištěný": "fullName",
+  "Pojištěná osoba": "insuredPersonName",
   "Pojištěný a oprávněná osoba": "insuredPersonName",
+  "Pojistník a pojištěný": "fullName",
+  "Pojistník a Pojištěný": "fullName",
+  "Účastník": "participantFullName",
+  "Investor": "investorFullName",
+  "Klient / Investor": "investorFullName",
+  "Klient/Investor": "investorFullName",
   "Oprávněná osoba": "beneficiary",
   "Obmyšlená osoba": "beneficiary",
   // English descriptive keys

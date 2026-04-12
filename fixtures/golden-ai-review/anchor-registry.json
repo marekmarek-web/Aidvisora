@@ -28,6 +28,11 @@
     { "id": "LEASING", "label": "ČSOB Leasing PBI", "file": "Test AI/Tested preprompt/ČSOB Leasing PBI.pdf" },
     { "id": "CODYA_PREP", "label": "Investiční smlouva Codya (preprompt copy)", "file": "Test AI/Tested preprompt/Investiční smlouva Codya.pdf" },
     { "id": "METLIFE", "label": "Lehnert Metlife (více osob)", "file": "Test AI/Tested preprompt/Lehnert Metlife.pdf" },
-    { "id": "MODELACE_KOOP", "label": "Modelace životního pojištění Kooperativa", "file": "Test AI/Tested preprompt/Modelace životního pojištění Kooperativa.pdf" }
+    { "id": "MODELACE_KOOP", "label": "Modelace životního pojištění Kooperativa", "file": "Test AI/Tested preprompt/Modelace životního pojištění Kooperativa.pdf" },
+    { "id": "ALLIANZ_POV", "label": "POV Allianz Špád (povinné ručení)", "file": "Test AI/Nové k testu/POV Allianz Špád.pdf" },
+    { "id": "CPP_DOMEX", "label": "ČPP DOMEX+ (pojištění nemovitosti)", "file": "Test AI/Nové k testu/ČPP DOMEX+.pdf" },
+    { "id": "INVESTIKA", "label": "INVESTIKA Plachý (investiční smlouva)", "file": "Test AI/Nové k testu/INVESTIKA PLACHÝ.pdf" },
+    { "id": "KB_DPS", "label": "Plachý KB DPS (penzijní smlouva)", "file": "Test AI/Nové k testu/Plachý KB DPS.pdf" },
+    { "id": "MAXIMA_NEMOV", "label": "MAXIMA Pojištění nemovitosti", "file": "Test AI/Nové k testu/MAXIMA Pojištění nemovitosti.pdf" }
   ]
 }
