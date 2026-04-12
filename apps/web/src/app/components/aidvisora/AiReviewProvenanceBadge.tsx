@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, CheckCircle2 } from "lucide-react";
+import { Sparkles, CheckCircle2, Clock, PenLine } from "lucide-react";
 import type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 export type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 
 export type AiReviewProvenanceBadgeProps = {
-  /** "confirmed" = poradce explicitně potvrdil pole, "auto_applied" = zapsáno automaticky z AI Review */
+  /**
+   * confirmed     = poradce explicitně potvrdil pole
+   * auto_applied  = zapsáno automaticky z AI Review
+   * pending_review = čeká na potvrzení poradcem
+   * manual        = vyžaduje ruční doplnění
+   */
   kind: AiProvenanceKind;
-  /** ID AI Review, pro odkaz na detail  */
+  /** ID AI Review, pro odkaz na detail */
   reviewId?: string | null;
   /** Datum potvrzení poradcem (ISO string nebo Date) */
   confirmedAt?: string | Date | null;
@@ -17,12 +22,43 @@ export type AiReviewProvenanceBadgeProps = {
   className?: string;
 };
 
+const BADGE_CONFIG: Record<
+  AiProvenanceKind,
+  { label: string; icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>; iconColor: string; textColor: string }
+> = {
+  confirmed: {
+    label: "Potvrzeno z AI Review",
+    icon: CheckCircle2,
+    iconColor: "text-emerald-500",
+    textColor: "text-[color:var(--wp-text-tertiary)]",
+  },
+  auto_applied: {
+    label: "Převzato z AI Review",
+    icon: Sparkles,
+    iconColor: "text-indigo-400",
+    textColor: "text-[color:var(--wp-text-tertiary)]",
+  },
+  pending_review: {
+    label: "Čeká na potvrzení",
+    icon: Clock,
+    iconColor: "text-amber-500",
+    textColor: "text-amber-700",
+  },
+  manual: {
+    label: "Vyžaduje ruční doplnění",
+    icon: PenLine,
+    iconColor: "text-slate-400",
+    textColor: "text-slate-500",
+  },
+};
+
 /**
- * Jemná provenance indikace pro pole pocházející z AI Review.
- * Zobrazuje se jako sekundární muted řádek pod hodnotou pole.
+ * Vizuální provenance badge pro pole kontaktu/smlouvy.
  *
- * kind = "confirmed"    → "Potvrzeno z AI Review"  (poradce explicitně potvrdil)
- * kind = "auto_applied" → "Převzato z AI Review"   (zapsáno automaticky)
+ * confirmed      → "Potvrzeno z AI Review"      (zelená)
+ * auto_applied   → "Převzato z AI Review"        (indigo)
+ * pending_review → "Čeká na potvrzení"           (jantarová)
+ * manual         → "Vyžaduje ruční doplnění"     (šedá)
  */
 export function AiReviewProvenanceBadge({
   kind,
@@ -30,9 +66,7 @@ export function AiReviewProvenanceBadge({
   confirmedAt,
   className = "",
 }: AiReviewProvenanceBadgeProps) {
-  const label = kind === "confirmed" ? "Potvrzeno z AI Review" : "Převzato z AI Review";
-  const Icon = kind === "confirmed" ? CheckCircle2 : Sparkles;
-  const iconColor = kind === "confirmed" ? "text-emerald-500" : "text-indigo-400";
+  const { label, icon: Icon, iconColor, textColor } = BADGE_CONFIG[kind];
 
   const dateStr = confirmedAt
     ? new Date(confirmedAt).toLocaleDateString("cs-CZ", {
@@ -42,12 +76,14 @@ export function AiReviewProvenanceBadge({
       })
     : null;
 
+  const showLink = reviewId && (kind === "confirmed" || kind === "auto_applied" || kind === "pending_review");
+
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] text-[color:var(--wp-text-tertiary)] leading-none ${className}`}
+      className={`inline-flex items-center gap-1 text-[10px] leading-none ${textColor} ${className}`}
     >
       <Icon className={`w-3 h-3 shrink-0 ${iconColor}`} aria-hidden />
-      {reviewId ? (
+      {showLink ? (
         <Link
           href={`/portal/contracts/review/${reviewId}`}
           className="hover:text-indigo-600 transition-colors underline-offset-2 hover:underline"

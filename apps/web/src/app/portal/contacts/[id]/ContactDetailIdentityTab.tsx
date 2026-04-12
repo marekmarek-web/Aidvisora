@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Calendar, CreditCard, Hash, MapPin, User } from "lucide-react";
+import type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 import type { ContactAiProvenanceResult, ContactRow } from "@/app/actions/contacts";
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
@@ -7,13 +8,19 @@ import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 function resolveContactFieldProvenance(
   fieldKey: string,
   provenance: ContactAiProvenanceResult | null,
-): { kind: "confirmed" | "auto_applied"; reviewId: string; confirmedAt?: string | null } | null {
+): { kind: AiProvenanceKind; reviewId: string; confirmedAt?: string | null } | null {
   if (!provenance) return null;
   if (provenance.confirmedFields.includes(fieldKey)) {
     return { kind: "confirmed", reviewId: provenance.reviewId, confirmedAt: provenance.appliedAt };
   }
   if (provenance.autoAppliedFields.includes(fieldKey)) {
     return { kind: "auto_applied", reviewId: provenance.reviewId };
+  }
+  if (provenance.pendingFields.includes(fieldKey)) {
+    return { kind: "pending_review", reviewId: provenance.reviewId };
+  }
+  if (provenance.manualRequiredFields.includes(fieldKey)) {
+    return { kind: "manual", reviewId: provenance.reviewId };
   }
   return null;
 }
@@ -45,7 +52,12 @@ export function ContactDetailIdentityTab({ contactId, contact, provenance }: Pro
     { key: "address", label: "Adresa", icon: MapPin, value: addressLine || null },
   ];
 
-  const hasAny = rows.some((r) => r.value);
+  // Pole se zobrazí pokud má hodnotu NEBO pokud provenance říká pending/manual (poradce musí vědět co chybí)
+  const visibleRows = rows.filter(({ key, value }) => {
+    if (value) return true;
+    const p = resolveContactFieldProvenance(key, provenance);
+    return p?.kind === "pending_review" || p?.kind === "manual";
+  });
 
   return (
     <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
@@ -64,7 +76,7 @@ export function ContactDetailIdentityTab({ contactId, contact, provenance }: Pro
         </Link>
       </div>
       <div className="p-6">
-        {!hasAny ? (
+        {visibleRows.length === 0 ? (
           <p className="text-sm text-[color:var(--wp-text-secondary)]">
             Zatím nejsou vyplněny žádné identifikační údaje. Použijte{" "}
             <Link href={`/portal/contacts/${contactId}/edit`} className="font-bold text-indigo-600 hover:underline">
@@ -74,8 +86,7 @@ export function ContactDetailIdentityTab({ contactId, contact, provenance }: Pro
           </p>
         ) : (
           <dl className="space-y-5">
-            {rows.map(({ key, label, icon: Icon, value }) => {
-              if (!value) return null;
+            {visibleRows.map(({ key, label, icon: Icon, value }) => {
               const p = resolveContactFieldProvenance(key, provenance);
               return (
                 <div key={key} className="flex flex-col gap-1">
@@ -83,8 +94,12 @@ export function ContactDetailIdentityTab({ contactId, contact, provenance }: Pro
                     <Icon size={14} className="shrink-0 opacity-70" aria-hidden />
                     {label}
                   </dt>
-                  <dd className="text-base font-bold text-[color:var(--wp-text)] pl-6 break-words">
-                    {value}
+                  <dd className="pl-6 break-words">
+                    {value ? (
+                      <span className="text-base font-bold text-[color:var(--wp-text)]">{value}</span>
+                    ) : (
+                      <span className="text-sm text-[color:var(--wp-text-tertiary)] italic">—</span>
+                    )}
                     {p && (
                       <span className="ml-2 inline-block align-middle">
                         <AiReviewProvenanceBadge kind={p.kind} reviewId={p.reviewId} confirmedAt={p.confirmedAt} />

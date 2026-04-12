@@ -34,6 +34,7 @@ import { ClientFinancialSummaryBlock } from "./ClientFinancialSummaryBlock";
 import { ClientServiceBlock } from "./ClientServiceBlock";
 import { ContactDetailEditButton } from "./ContactDetailEditButton";
 import { ContactIdentityCompletenessGuard } from "./ContactIdentityCompletenessGuard";
+import { ContactMergeConflictGuard } from "./ContactMergeConflictGuard";
 import { ContactDetailIdentityTab } from "./ContactDetailIdentityTab";
 import { ContactPaymentSetupsSection } from "./ContactPaymentSetupsSection";
 import { ClientReferralSection } from "./ClientReferralSection";
@@ -514,6 +515,13 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
           provenance={contactProvenance}
           contactId={contactId}
         />
+        {contactProvenance?.mergeConflictFields && contactProvenance.mergeConflictFields.length > 0 && (
+          <ContactMergeConflictGuard
+            mergeConflicts={contactProvenance.mergeConflictFields}
+            contactId={contactId}
+            reviewId={contactProvenance.reviewId}
+          />
+        )}
 
         <Suspense
           fallback={

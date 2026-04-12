@@ -810,6 +810,12 @@ export async function setContactTags(contactId: string, tags: string[]): Promise
  * Najde poslední applied review, které vytvořilo nebo linkovalo daný kontakt.
  * Vrací per-field provenance pro contact identity pole.
  */
+export type ContactMergeConflictField = {
+  fieldKey: string;
+  incomingValue: string | null;
+  reason: "manual_protected" | "conflict";
+};
+
 export type ContactAiProvenanceResult = {
   reviewId: string;
   appliedAt: string | null;
@@ -821,6 +827,11 @@ export type ContactAiProvenanceResult = {
   pendingFields: string[];
   /** Pole vyžadující ruční doplnění (manual_required policy) */
   manualRequiredFields: string[];
+  /**
+   * Merge konflikty z apply: pole kde AI přinesla jinou hodnotu než existující manuální data.
+   * Stávající hodnota zůstala, AI hodnota čeká na rozhodnutí poradce.
+   */
+  mergeConflictFields: ContactMergeConflictField[];
 } | null;
 
 async function loadContactAiProvenance(contactId: string): Promise<ContactAiProvenanceResult> {
@@ -877,6 +888,19 @@ async function loadContactAiProvenance(contactId: string): Promise<ContactAiProv
     const pendingFields: string[] = contactEnforcement?.pendingConfirmationFields ?? [];
     const manualRequiredFields: string[] = contactEnforcement?.manualRequiredFields ?? [];
 
+    // Merge konflikty: pole kde AI přinesla jinou hodnotu než existující manuální data
+    const rawMergeConflicts = payload?.pendingFields as
+      | Array<{ fieldKey?: string; incomingValue?: string | null; reason?: string }>
+      | null
+      | undefined;
+    const mergeConflictFields: ContactMergeConflictField[] = (rawMergeConflicts ?? [])
+      .filter((f) => f?.fieldKey)
+      .map((f) => ({
+        fieldKey: f.fieldKey!,
+        incomingValue: f.incomingValue ?? null,
+        reason: (f.reason === "manual_protected" || f.reason === "conflict") ? f.reason : "conflict",
+      }));
+
     // Pokud pro tento kontakt nenajdeme žádná concrete pole, ale review ho vytvořilo/linkovalo,
     // označíme základní identity pole jako auto_applied (kontakt byl vytvořen z AI Review).
     const createdClientId = (payload?.createdClientId as string | undefined) ?? null;
@@ -894,6 +918,7 @@ async function loadContactAiProvenance(contactId: string): Promise<ContactAiProv
       autoAppliedFields: effectiveAutoApplied,
       pendingFields,
       manualRequiredFields,
+      mergeConflictFields,
     };
   } catch {
     return null;

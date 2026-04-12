@@ -28,7 +28,7 @@ import { NewContractWizard } from "@/app/components/aidvisora/NewContractWizard"
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { ContractParametersFields } from "@/app/components/aidvisora/ContractParametersFields";
-import { ExternalLink, FileText, ScrollText } from "lucide-react";
+import { ExternalLink, FileText, ScrollText, FileCheck } from "lucide-react";
 import Link from "next/link";
 import {
   initialContractFormState,
@@ -385,12 +385,23 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                     </button>
                   </div>
                 </div>
-                {provenanceMap[c.id] !== undefined && (
-                  <ContractPendingFieldsGuard
-                    contractId={c.id}
-                    provenance={provenanceMap[c.id]}
-                  />
-                )}
+                {provenanceMap[c.id] !== undefined && (() => {
+                  const prov = provenanceMap[c.id];
+                  if (prov?.supportingDocumentGuard) {
+                    return (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 leading-none mt-1">
+                        <FileCheck className="w-3 h-3 text-slate-400" aria-hidden />
+                        Podkladový dokument — evidenční záznam bez potvrzovacího toku
+                      </span>
+                    );
+                  }
+                  return (
+                    <ContractPendingFieldsGuard
+                      contractId={c.id}
+                      provenance={prov}
+                    />
+                  );
+                })()}
               </li>
               );
             })}
@@ -461,12 +472,23 @@ export function ContractsSection({ contactId }: { contactId: string }) {
                 </button>
               </div>
             </div>
-            {provenanceMap[c.id] !== undefined && (
-              <ContractPendingFieldsGuard
-                contractId={c.id}
-                provenance={provenanceMap[c.id]}
-              />
-            )}
+            {provenanceMap[c.id] !== undefined && (() => {
+              const prov = provenanceMap[c.id];
+              if (prov?.supportingDocumentGuard) {
+                return (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 leading-none mt-1">
+                    <FileCheck className="w-3 h-3 text-slate-400" aria-hidden />
+                    Podkladový dokument — evidenční záznam bez potvrzovacího toku
+                  </span>
+                );
+              }
+              return (
+                <ContractPendingFieldsGuard
+                  contractId={c.id}
+                  provenance={prov}
+                />
+              );
+            })()}
           </li>
           );
         })}

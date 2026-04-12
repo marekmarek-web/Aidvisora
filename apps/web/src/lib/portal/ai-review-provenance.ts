@@ -2,7 +2,7 @@
  * Pure helpers for AI Review provenance in advisor-facing UI (contracts, products preview).
  */
 
-export type AiProvenanceKind = "confirmed" | "auto_applied";
+export type AiProvenanceKind = "confirmed" | "auto_applied" | "pending_review" | "manual";
 
 /**
  * Ze sourceKind a advisorConfirmedAt urči provenance kind.
