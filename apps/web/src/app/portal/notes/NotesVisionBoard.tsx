@@ -20,6 +20,7 @@ import {
   ChevronDown,
   PiggyBank,
   Landmark,
+  Briefcase,
 } from "lucide-react";
 import {
   getMeetingNotesForBoard,
@@ -27,8 +28,11 @@ import {
   updateMeetingNote,
   deleteMeetingNote,
   summarizeMeetingNotes,
+  attachMeetingNoteToOpportunity,
 } from "@/app/actions/meeting-notes";
 import { saveNotesBoardPositions } from "@/app/actions/notes-board-positions";
+import { getPipeline } from "@/app/actions/pipeline";
+import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { NotesBoardStoredPosition } from "@/app/actions/notes-board-positions";
 import type { ContactNamePickerRow } from "@/app/actions/contacts";
@@ -238,6 +242,12 @@ function NotesVisionBoardInner({
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
+  const [attachNote, setAttachNote] = useState<MeetingNoteForBoard | null>(null);
+  const [pipelineStages, setPipelineStages] = useState<StageWithOpportunities[]>([]);
+  const [attachStageId, setAttachStageId] = useState<string>("");
+  const [attachLoading, setAttachLoading] = useState(false);
+  const [attachSaving, setAttachSaving] = useState(false);
+
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
@@ -333,6 +343,44 @@ function NotesVisionBoardInner({
     const fresh = await getMeetingNotesForBoard();
     setNotes(fresh);
   }
+
+  const openAttachToDeal = useCallback(async (note: MeetingNoteForBoard) => {
+    setAttachNote(note);
+    setAttachLoading(true);
+    try {
+      const stages = await getPipeline();
+      setPipelineStages(stages);
+      setAttachStageId(stages[0]?.id ?? "");
+    } catch {
+      setPipelineStages([]);
+      setAttachStageId("");
+    } finally {
+      setAttachLoading(false);
+    }
+  }, []);
+
+  const closeAttachModal = useCallback(() => {
+    setAttachNote(null);
+    setPipelineStages([]);
+    setAttachStageId("");
+  }, []);
+
+  const handleAttachToOpportunity = async (opportunityId: string) => {
+    if (!attachNote) return;
+    setAttachSaving(true);
+    try {
+      await attachMeetingNoteToOpportunity(attachNote.id, opportunityId);
+      const next = { ...positions };
+      delete next[attachNote.id];
+      persistPositions(next);
+      await reload();
+      closeAttachModal();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Chyba při přiřazení.");
+    } finally {
+      setAttachSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (Object.keys(initialBoardPositions).length > 0) {
@@ -519,6 +567,7 @@ function NotesVisionBoardInner({
           content,
           domain: formData.type,
           meetingAt,
+          contactId: formData.client?.trim() || null,
         });
       } else {
         const newId = await createMeetingNote({
@@ -553,6 +602,15 @@ function NotesVisionBoardInner({
   const filteredNotes = searchQuery.trim()
     ? notes.filter((n) => noteMatchesSearch(n, searchQuery))
     : notes;
+
+  const oppsInAttachStage = pipelineStages.find((s) => s.id === attachStageId)?.opportunities ?? [];
+
+  useEffect(() => {
+    if (!attachNote || pipelineStages.length === 0) return;
+    if (!pipelineStages.some((s) => s.id === attachStageId)) {
+      setAttachStageId(pipelineStages[0].id);
+    }
+  }, [attachNote, pipelineStages, attachStageId]);
 
   const isFormValid = formData.title.trim() !== "";
 
@@ -670,11 +728,11 @@ function NotesVisionBoardInner({
               {filteredNotes.map((note) => {
                 const design = getProductDesign(note.domain);
                 return (
-                  <li key={note.id}>
+                  <li key={note.id} className="flex gap-2 items-stretch">
                     <button
                       type="button"
                       onClick={(e) => handleOpenEdit(note, e)}
-                      className="notes-glass-card min-h-[44px] w-full rounded-2xl border border-[color:var(--wp-surface-card-border)] p-4 text-left shadow-lg transition-shadow active:scale-[0.99]"
+                      className="notes-glass-card min-h-[44px] flex-1 rounded-2xl border border-[color:var(--wp-surface-card-border)] p-4 text-left shadow-lg transition-shadow active:scale-[0.99]"
                     >
                       <div className="flex justify-between items-start gap-2 mb-2">
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase border ${design.color}`}>
@@ -698,6 +756,15 @@ function NotesVisionBoardInner({
                       <p className="text-[13px] text-[color:var(--wp-text-secondary)] leading-relaxed line-clamp-2">
                         {contentBody(note.content) || <span className="text-[color:var(--wp-text-tertiary)] italic">Bez obsahu…</span>}
                       </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void openAttachToDeal(note)}
+                      className="shrink-0 w-12 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] flex items-center justify-center text-indigo-600 shadow-sm active:scale-[0.98]"
+                      title="Přiřadit k obchodu"
+                      aria-label="Přiřadit k obchodu"
+                    >
+                      <Briefcase size={20} />
                     </button>
                   </li>
                 );
@@ -764,6 +831,17 @@ function NotesVisionBoardInner({
               <div className="flex items-center justify-between rounded-t-2xl border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/90 px-4 py-2.5">
                 <GripHorizontal size={18} className="text-[color:var(--wp-text-tertiary)]" />
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openAttachToDeal(note);
+                    }}
+                    className="p-1.5 rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] hover:text-indigo-600 hover:shadow-sm transition-all"
+                    title="Přiřadit k obchodu"
+                  >
+                    <Briefcase size={14} />
+                  </button>
                   <button
                     type="button"
                     onClick={(e) => handleOpenEdit(note, e)}
@@ -851,6 +929,86 @@ function NotesVisionBoardInner({
                 className="px-5 py-2.5 rounded-xl font-bold text-sm border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-all min-h-[44px]"
               >
                 Zavřít
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {attachNote && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)]">
+            <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-6 py-4 shrink-0">
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)] pr-2">Přiřadit k obchodu</h2>
+              <button
+                type="button"
+                onClick={closeAttachModal}
+                disabled={attachSaving}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-raised)] disabled:opacity-50"
+                aria-label="Zavřít"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 shrink-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">Zápisek</p>
+              <p className="text-sm font-semibold text-[color:var(--wp-text)] truncate">{contentTitle(attachNote.content)}</p>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-4">
+              {attachLoading ? (
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání obchodů…</p>
+              ) : pipelineStages.length === 0 ? (
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+                  Žádné fáze obchodů nebo nemáte oprávnění k příležitostem.
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Fáze</label>
+                    <CustomDropdown
+                      value={attachStageId}
+                      onChange={(id) => setAttachStageId(id)}
+                      options={pipelineStages.map((s) => ({ id: s.id, label: s.name }))}
+                      placeholder="Vyberte fázi"
+                      icon={Briefcase}
+                      lightIsland
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Obchod</label>
+                    {oppsInAttachStage.length === 0 ? (
+                      <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+                        V této fázi nejsou otevřené obchody.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {oppsInAttachStage.map((o) => (
+                          <li key={o.id}>
+                            <button
+                              type="button"
+                              disabled={attachSaving}
+                              onClick={() => void handleAttachToOpportunity(o.id)}
+                              className="w-full min-h-[44px] text-left rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all disabled:opacity-50"
+                            >
+                              <span className="font-semibold text-[color:var(--wp-text)] block">{o.title}</span>
+                              <span className="text-xs text-[color:var(--wp-text-tertiary)]">{o.contactName}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={closeAttachModal}
+                disabled={attachSaving}
+                className="px-5 py-2.5 rounded-xl font-bold text-sm border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-all min-h-[44px] disabled:opacity-50"
+              >
+                Zrušit
               </button>
             </div>
           </div>
@@ -1019,15 +1177,29 @@ function NotesVisionBoardInner({
             </div>
             <div className="p-6 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] flex items-center justify-between gap-3">
               {editingId ? (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={saving}
-                  className="flex items-center justify-center w-12 h-12 bg-[color:var(--wp-surface-card)] border border-red-200 text-red-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm disabled:opacity-50"
-                  title="Smazat zápisek"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={saving}
+                    className="flex items-center justify-center w-12 h-12 bg-[color:var(--wp-surface-card)] border border-red-200 text-red-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm disabled:opacity-50"
+                    title="Smazat zápisek"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = notes.find((x) => x.id === editingId);
+                      if (n) void openAttachToDeal(n);
+                    }}
+                    disabled={saving}
+                    className="flex items-center justify-center w-12 h-12 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm disabled:opacity-50"
+                    title="Přiřadit k obchodu"
+                  >
+                    <Briefcase size={18} />
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"

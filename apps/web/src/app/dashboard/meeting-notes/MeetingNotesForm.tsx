@@ -93,6 +93,7 @@ export function MeetingNotesForm({
           content: parsed,
           domain,
           meetingAt: meetingAt || new Date().toISOString().slice(0, 16),
+          contactId: contactId.trim() || null,
         });
       } else {
         await createMeetingNote({

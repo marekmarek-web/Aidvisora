@@ -3,10 +3,33 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { noteTemplates, meetingNotes, contacts } from "db";
-import { eq, and, desc } from "db";
+import { noteTemplates, meetingNotes, contacts, opportunities } from "db";
+import { eq, and, desc, isNull } from "db";
 
 export type TemplateRow = { id: string; name: string; domain: string };
+
+async function ensureContactBelongsToTenant(tenantId: string, contactId: string): Promise<void> {
+  const [row] = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+    .limit(1);
+  if (!row) throw new Error("Vybraný kontakt neexistuje.");
+}
+
+/** Náhled textu pro seznam (tělo obchodu nebo formát nástěnky title/obsah). */
+function meetingNoteContentPreview(content: unknown): string | null {
+  if (!content || typeof content !== "object" || content === null) return null;
+  const c = content as Record<string, unknown>;
+  const body = typeof c.body === "string" ? c.body.trim() : "";
+  if (body) return body.length > 160 ? `${body.slice(0, 160)}…` : body;
+  const title = typeof c.title === "string" ? c.title.trim() : "";
+  const obsah = typeof c.obsah === "string" ? c.obsah.trim() : "";
+  const parts = [title, obsah].filter(Boolean);
+  if (parts.length === 0) return null;
+  const combined = parts.join(" — ");
+  return combined.length > 160 ? `${combined.slice(0, 160)}…` : combined;
+}
 
 export type MeetingNoteRow = {
   id: string;
@@ -99,7 +122,7 @@ export async function getMeetingNotesForBoard(): Promise<MeetingNoteForBoard[]> 
       createdAt: meetingNotes.createdAt,
     })
     .from(meetingNotes)
-    .where(eq(meetingNotes.tenantId, auth.tenantId))
+    .where(and(eq(meetingNotes.tenantId, auth.tenantId), isNull(meetingNotes.opportunityId)))
     .orderBy(desc(meetingNotes.meetingAt))
     .limit(100);
   const contactIds = [...new Set(rows.map((r) => r.contactId).filter(Boolean))] as string[];
@@ -142,11 +165,7 @@ export async function getMeetingNotesByOpportunityId(
   const contactList = contactIds.length ? await db.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName }).from(contacts).where(eq(contacts.tenantId, auth.tenantId)) : [];
   const nameMap = Object.fromEntries(contactList.map((c) => [c.id, `${c.firstName} ${c.lastName}`]));
   return rows.map((r) => {
-    const body =
-      r.content && typeof r.content === "object" && r.content !== null && "body" in r.content
-        ? String((r.content as { body?: unknown }).body ?? "")
-        : "";
-    const preview = body.trim() ? (body.length > 160 ? `${body.slice(0, 160)}…` : body) : null;
+    const preview = meetingNoteContentPreview(r.content);
     return {
       id: r.id,
       meetingAt: r.meetingAt,
@@ -211,19 +230,72 @@ export async function getMeetingNote(id: string): Promise<MeetingNoteDetail | nu
 
 export async function updateMeetingNote(
   id: string,
-  data: { content: Record<string, unknown>; domain?: string; meetingAt?: string }
+  data: {
+    content: Record<string, unknown>;
+    domain?: string;
+    meetingAt?: string;
+    contactId?: string | null;
+  },
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "meeting_notes:write")) throw new Error("Forbidden");
+
+  let contactPatch: { contactId: string | null } | Record<string, never> = {};
+  if (data.contactId !== undefined) {
+    if (data.contactId === null || data.contactId === "") {
+      contactPatch = { contactId: null };
+    } else {
+      await ensureContactBelongsToTenant(auth.tenantId, data.contactId);
+      contactPatch = { contactId: data.contactId };
+    }
+  }
+
   await db
     .update(meetingNotes)
     .set({
       content: data.content,
+      ...contactPatch,
       ...(data.domain != null && { domain: data.domain }),
       ...(data.meetingAt != null && { meetingAt: new Date(data.meetingAt) }),
       updatedAt: new Date(),
     })
     .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.id, id)));
+}
+
+/**
+ * Přiřadí zápisek k obchodu; contact_id převezme z obchodu.
+ */
+export async function attachMeetingNoteToOpportunity(noteId: string, opportunityId: string) {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "meeting_notes:write")) throw new Error("Forbidden");
+  if (!hasPermission(auth.roleName, "opportunities:read")) throw new Error("Forbidden");
+
+  const [opp] = await db
+    .select({
+      id: opportunities.id,
+      contactId: opportunities.contactId,
+      tenantId: opportunities.tenantId,
+    })
+    .from(opportunities)
+    .where(and(eq(opportunities.tenantId, auth.tenantId), eq(opportunities.id, opportunityId)))
+    .limit(1);
+  if (!opp) throw new Error("Obchod nebyl nalezen.");
+
+  const [note] = await db
+    .select({ id: meetingNotes.id })
+    .from(meetingNotes)
+    .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.id, noteId)))
+    .limit(1);
+  if (!note) throw new Error("Zápisek nebyl nalezen.");
+
+  await db
+    .update(meetingNotes)
+    .set({
+      opportunityId,
+      contactId: opp.contactId,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.id, noteId)));
 }
 
 export async function deleteMeetingNote(id: string) {
