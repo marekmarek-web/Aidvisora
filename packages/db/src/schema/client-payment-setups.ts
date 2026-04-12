@@ -4,7 +4,7 @@ import { contractUploadReviews } from "./contract-upload-reviews";
 
 /** Plan 3 §9.2 — payment instructions for client portal / advisor. */
 export type ClientPaymentSetupStatus = "draft" | "review_required" | "active" | "archived";
-export type ClientPaymentSetupPaymentType = "insurance" | "investment" | "loan" | "other";
+export type ClientPaymentSetupPaymentType = "insurance" | "investment" | "pension" | "contribution" | "loan" | "other";
 
 export const clientPaymentSetups = pgTable("client_payment_setups", {
   id: uuid("id").primaryKey().defaultRandom(),

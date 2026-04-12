@@ -49,8 +49,6 @@ import {
 } from "./premium/TeamOverviewPremiumShell";
 import { TeamOverviewPremiumMemberRow } from "./premium/TeamOverviewPremiumMemberRow";
 import { TeamOverviewPremiumRuntimeChecks } from "./premium/TeamOverviewPremiumRuntimeChecks";
-import { PremiumSectionTitle } from "./premium/primitives";
-import { teamOverviewIcon } from "./premium/icons";
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
@@ -133,8 +131,20 @@ export function TeamOverviewView({
   const [teamCalendarModal, setTeamCalendarModal] = useState<"event" | "task" | null>(null);
   const [calendarPrefill, setCalendarPrefill] = useState<TeamCalendarModalPrefill | null>(null);
   const [rhythmCalendar, setRhythmCalendar] = useState<TeamRhythmCalendarData | null>(initialRhythmCalendar ?? null);
-  /** Cockpit = přehled + lidé; Struktura / Lidé = dílčí pohledy (viz premium layout). */
+  /** Cockpit = CRM dashboard; Kariéra = souhrn kariéry a výkonu; Struktura / Lidé = dílčí pohledy. */
   const [activeView, setActiveView] = useState("Cockpit");
+
+  useEffect(() => {
+    const syncViewWithHash = () => {
+      if (window.location.hash === "#sprava-tymu") {
+        setActiveView("Lidé");
+      }
+    };
+
+    syncViewWithHash();
+    window.addEventListener("hashchange", syncViewWithHash);
+    return () => window.removeEventListener("hashchange", syncViewWithHash);
+  }, []);
 
   const syncTeamOverviewUrl = useCallback(
     (next: { period?: TeamOverviewPeriod; memberId?: string | null; scope?: TeamOverviewScope }) => {
@@ -456,7 +466,7 @@ export function TeamOverviewView({
         <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
         Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
         <a href={teamManagementHref} className="underline hover:text-amber-800">
-          Doplňte ve Správě týmu níže
+          Doplňte v pohledu Lidé → Správa týmu
         </a>
         .
       </div>
@@ -499,31 +509,14 @@ export function TeamOverviewView({
     </>
   );
 
-  const kpiTrendAiAlerts = (
+  /** Lidé: správa + alerty — adaptace je jen v pohledu Kariéra. */
+  const peopleOperationalSections = (
     <>
-      <TeamOverviewKpiDetailSection
-        loading={loading}
-        kpis={kpis}
-        members={members}
-        topMetric={topMetric}
-        bottomMetric={bottomMetric}
-      />
-      <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-      <TeamOverviewAiTeamSummarySection
-        aiLoading={aiLoading}
-        aiError={aiError}
-        aiSummary={aiSummary}
-        aiGenerationId={aiGenerationId}
-        aiFeedbackSubmitted={aiFeedbackSubmitted}
-        aiFeedbackSaving={aiFeedbackSaving}
-        teamActionSaving={teamActionSaving}
-        teamActionError={teamActionError}
-        canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
-        members={members}
-        onLoadLatest={loadLatestTeamSummary}
-        onGenerate={generateTeamSummary}
-        onSubmitFeedback={submitTeamSummaryFeedback}
-        onCreateFollowUp={createTeamFollowUp}
+      <TeamManagementPanel
+        currentUserId={currentUserId}
+        currentUserEmail={currentUserEmail}
+        currentUserFullName={currentUserFullName}
+        roleName={currentRole}
       />
       <TeamOverviewFullAlertsSection alerts={alerts} selectMember={selectMember} memberDetailHref={memberDetailHref} />
     </>
@@ -531,107 +524,62 @@ export function TeamOverviewView({
 
   const cockpitBody = (
     <>
-      <TeamOverviewPremiumBriefingDark
-        periodLabel={periodLabelActive}
-        scopeLabel={scopeLabelActive}
-        stats={briefingStats}
-        priorityItems={priorityItems}
-      />
+      {/* First fold: briefing → KPI / výkon → pozornost; AI až pod tím jako sekundární */}
+      <div className="space-y-3">
+        <TeamOverviewPremiumBriefingDark
+          periodLabel={periodLabelActive}
+          scopeLabel={scopeLabelActive}
+          stats={briefingStats}
+          priorityItems={priorityItems}
+        />
 
-      <div className="grid gap-6 2xl:grid-cols-[1.05fr_0.95fr]">
-        <TeamOverviewAttentionSection
-          scope={scope}
-          members={members}
-          displayName={displayName}
-          topAttentionAlerts={topAttentionAlerts}
-          pageModel={pageModel}
-          selectMember={selectMember}
-          canCreateTeamCalendar={canCreateTeamCalendar}
-        />
-        <TeamOverviewCareerSummarySection
-          members={members}
-          pageModel={pageModel}
-          displayName={displayName}
-          selectMember={selectMember}
-        />
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(280px,1fr)]">
+          <div className="min-w-0 space-y-3">
+            <TeamOverviewKpiDetailSection
+              loading={loading}
+              kpis={kpis}
+              members={members}
+              topMetric={topMetric}
+              bottomMetric={bottomMetric}
+            />
+            <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
+          </div>
+          <div className="min-w-0">
+            <TeamOverviewAttentionSection
+              variant="firstFold"
+              scope={scope}
+              members={members}
+              displayName={displayName}
+              topAttentionAlerts={topAttentionAlerts}
+              pageModel={pageModel}
+              selectMember={selectMember}
+              canCreateTeamCalendar={canCreateTeamCalendar}
+            />
+          </div>
+        </div>
+
+        <div className="max-w-3xl rounded-lg border border-dashed border-slate-200/80 bg-slate-50/50 p-1.5 opacity-90">
+          <TeamOverviewAiTeamSummarySection
+            compact
+            aiLoading={aiLoading}
+            aiError={aiError}
+            aiSummary={aiSummary}
+            aiGenerationId={aiGenerationId}
+            aiFeedbackSubmitted={aiFeedbackSubmitted}
+            aiFeedbackSaving={aiFeedbackSaving}
+            teamActionSaving={teamActionSaving}
+            teamActionError={teamActionError}
+            canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
+            members={members}
+            onLoadLatest={loadLatestTeamSummary}
+            onGenerate={generateTeamSummary}
+            onSubmitFeedback={submitTeamSummaryFeedback}
+            onCreateFollowUp={createTeamFollowUp}
+          />
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <PremiumSectionTitle
-            symbol={teamOverviewIcon("support")}
-            title="Role vs. kariéra"
-            subtitle="Čtyři nezávislé vrstvy: oprávnění v aplikaci, kariérní program, větev a pozice — stejně jako v nastavení členů."
-          />
-          <div className="space-y-3">
-            {[
-              {
-                title: "Systémová role",
-                value: "Director / Manager / Advisor / …",
-                note: "Řídí oprávnění a rozsah dat v portálu.",
-              },
-              {
-                title: "Kariérní program",
-                value: "Beplan / Premium Brokers / …",
-                note: "Určuje řád a jednotky výkonu z produkčních dat.",
-              },
-              {
-                title: "Kariérní větev a pozice",
-                value: "Podle záznamu u člena",
-                note: "Slouží ke koučinku a evaluaci — doplňuje se ve Správě týmu.",
-              },
-            ].map((row) => (
-              <div key={row.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-900">{row.title}</p>
-                <p className="mt-2 text-sm font-medium text-slate-700">{row.value}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{row.note}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <PremiumSectionTitle
-            symbol={teamOverviewIcon("learn")}
-            title="Adaptace a rozvoj"
-            subtitle="Obecné typy podpory — konkrétní stav nováčků je v sekci adaptace pod tímto blokem (skutečná data)."
-          />
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              { t: "Adaptační plán 30 / 60 / 90", ty: "Onboarding" },
-              { t: "1:1 šablona pro manažera", ty: "Coaching" },
-              { t: "Kariérní řády dle programu", ty: "Kariéra" },
-              { t: "Týmová porada — navázání", ty: "Follow-up" },
-            ].map((x) => (
-              <div key={x.t} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{x.ty}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">{x.t}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {members.length > 0 ? (
-        <TeamOverviewAdaptationSection
-          members={members}
-          newcomers={newcomers}
-          displayName={displayName}
-          memberDetailHref={memberDetailHref}
-          selectMember={selectMember}
-        />
-      ) : null}
-
-      <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
-        <TeamStructurePanel
-          roots={hierarchy}
-          currentUserId={currentUserId}
-          scope={scope}
-          memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
-          hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
-          selectedUserId={selectedUserId}
-          onSelectMember={selectMember}
-        />
+      <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
         <TeamRhythmPanel
           computed={pageModel.rhythmComputed}
           disclaimer={
@@ -645,18 +593,56 @@ export function TeamOverviewView({
           onOpenEvent={openTeamEventModal}
           onOpenTask={openTeamTaskModal}
         />
+        <TeamStructurePanel
+          roots={hierarchy}
+          currentUserId={currentUserId}
+          scope={scope}
+          memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
+          hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
+          selectedUserId={selectedUserId}
+          onSelectMember={selectMember}
+        />
       </div>
 
       {peopleAndFilters}
+    </>
+  );
 
-      <TeamManagementPanel
-        currentUserId={currentUserId}
-        currentUserEmail={currentUserEmail}
-        currentUserFullName={currentUserFullName}
-        roleName={currentRole}
-      />
-
-      {kpiTrendAiAlerts}
+  const careerOnly = (
+    <>
+      <div className="mb-4 border-b border-slate-200 pb-3">
+        <h2 className="text-base font-semibold text-slate-900">Kariéra a výkon</h2>
+        <p className="mt-1 text-xs text-slate-600">
+          {periodLabelActive} · {scopeLabelActive} · Beplan {pageModel.poolSplit.counts.beplan} lidí /{" "}
+          {pageModel.poolSplit.units.beplan} j. · Premium Brokers {pageModel.poolSplit.counts.premium_brokers} lidí /{" "}
+          {pageModel.poolSplit.units.premium_brokers} j.
+        </p>
+      </div>
+      <div className="space-y-4">
+        <TeamOverviewCareerSummarySection
+          members={members}
+          pageModel={pageModel}
+          displayName={displayName}
+          selectMember={selectMember}
+        />
+        <TeamOverviewKpiDetailSection
+          loading={loading}
+          kpis={kpis}
+          members={members}
+          topMetric={topMetric}
+          bottomMetric={bottomMetric}
+        />
+        <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
+        {members.length > 0 ? (
+          <TeamOverviewAdaptationSection
+            members={members}
+            newcomers={newcomers}
+            displayName={displayName}
+            memberDetailHref={memberDetailHref}
+            selectMember={selectMember}
+          />
+        ) : null}
+      </div>
     </>
   );
 
@@ -678,34 +664,35 @@ export function TeamOverviewView({
   const peopleOnly = (
     <>
       {peopleAndFilters}
-      <TeamManagementPanel
-        currentUserId={currentUserId}
-        currentUserEmail={currentUserEmail}
-        currentUserFullName={currentUserFullName}
-        roleName={currentRole}
-      />
-      {kpiTrendAiAlerts}
+      {peopleOperationalSections}
     </>
   );
 
   const mainColumn =
-    activeView === "Struktura" ? structureOnly : activeView === "Lidé" ? peopleOnly : cockpitBody;
+    activeView === "Struktura"
+      ? structureOnly
+      : activeView === "Lidé"
+        ? peopleOnly
+        : activeView === "Kariéra"
+          ? careerOnly
+          : cockpitBody;
 
   return (
     <>
       <TeamOverviewPremiumShell
-        title="Týmový přehled jako cockpit pro vedení týmu"
-        subtitle="Pozornost, kariéra, struktura a rytmus — vše z reálných dat CRM a členství; žádné ukázkové řady."
+        title="Tým"
+        subtitle="Výkon, struktura a navazující práce v týmu."
         scopeItems={scopeOptions.map((o) => o.label)}
         scopeActive={scopeLabelActive}
         onScopeItemChange={handleScopeToggle}
         periodItems={PERIOD_OPTIONS.map((o) => o.label)}
         periodActive={periodLabelActive}
         onPeriodItemChange={handlePeriodToggle}
-        viewItems={["Cockpit", "Struktura", "Lidé"]}
+        viewItems={["Cockpit", "Kariéra", "Struktura", "Lidé"]}
         viewActive={activeView}
         onViewChange={setActiveView}
         teamManagementHref={teamManagementHref}
+        onTeamManagementOpen={() => setActiveView("Lidé")}
         calendarActions={
           <div id="team-calendar-actions" className="flex flex-wrap gap-2">
             <TeamCalendarButtons
@@ -717,10 +704,6 @@ export function TeamOverviewView({
         }
         onRefresh={refresh}
         loading={loading}
-        poolBeplanCount={pageModel.poolSplit.counts.beplan}
-        poolPbCount={pageModel.poolSplit.counts.premium_brokers}
-        poolBeplanUnits={pageModel.poolSplit.units.beplan}
-        poolPbUnits={pageModel.poolSplit.units.premium_brokers}
         runtimeChecksSlot={
           process.env.NODE_ENV === "development" ? (
             <TeamOverviewPremiumRuntimeChecks
@@ -740,10 +723,11 @@ export function TeamOverviewView({
             canEditTeamCareer={canEditTeamCareer}
             outsideFilter={selectedOutsideFilter}
             variant="premium"
+            selectedUserId={selectedUserId}
           />
         }
       >
-        {activeView === "Cockpit" ? hierarchyBanner : null}
+        {activeView === "Cockpit" || activeView === "Kariéra" ? hierarchyBanner : null}
         {mainColumn}
       </TeamOverviewPremiumShell>
 

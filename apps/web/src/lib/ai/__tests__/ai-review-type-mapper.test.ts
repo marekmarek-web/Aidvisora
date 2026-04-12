@@ -48,7 +48,7 @@ describe("mapAiClassifierToPrimaryType", () => {
     ).toBe("liability_insurance_offer");
   });
 
-  it("maps payment_instructions + investment family to investment_payment_instruction (e.g. FUNDOO/Amundi)", () => {
+  it("maps payment_instructions + investment family to investment_payment_instruction", () => {
     expect(
       mapAiClassifierToPrimaryType(
         cls({
@@ -60,7 +60,7 @@ describe("mapAiClassifierToPrimaryType", () => {
     ).toBe("investment_payment_instruction");
   });
 
-  it("maps payment_instructions + fundoo subtype to investment_payment_instruction", () => {
+  it("maps payment_instructions + banking family to payment_instruction (investment family required for investment_payment_instruction)", () => {
     expect(
       mapAiClassifierToPrimaryType(
         cls({
@@ -69,7 +69,7 @@ describe("mapAiClassifierToPrimaryType", () => {
           productSubtype: "fundoo",
         })
       )
-    ).toBe("investment_payment_instruction");
+    ).toBe("payment_instruction");
   });
 
   it("maps generic payment_instructions to payment_instruction", () => {

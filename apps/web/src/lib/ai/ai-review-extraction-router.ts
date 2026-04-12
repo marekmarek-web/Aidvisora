@@ -234,7 +234,7 @@ export function resolveAiReviewExtractionRoute(input: AiReviewRouterInput): AiRe
     }
   }
 
-  // §3 Investment (vč. FUNDOO / Amundi — čistá investice, ne DPS/PP)
+  // §3 Investment (čistá investiční smlouva / úpis — ne DPS/PP)
   if (fam === "investment") {
     if (dt === "contract") {
       return { outcome: "extract", promptKey: "investmentContractExtraction", reasonCodes: extendReasons("investment_contract") };

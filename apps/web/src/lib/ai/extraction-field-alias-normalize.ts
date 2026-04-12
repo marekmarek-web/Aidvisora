@@ -1547,3 +1547,99 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   // - Resolves fullName / firstName / lastName deduplication
   applyFieldSourcePriorityAndEvidence(envelope);
 }
+
+// ─── Participant role alias map ───────────────────────────────────────────────
+// Generic, vendor-independent. Maps Czech / common LLM label variants onto
+// canonical PARTICIPANT_ROLES values.  Used by extraction post-processing and
+// any layer that receives a free-text role from an LLM response.
+
+import type { ParticipantRole } from "./document-packet-types";
+
+export const PARTICIPANT_ROLE_ALIAS_MAP: Record<string, ParticipantRole> = {
+  // policyholder
+  "pojistník": "policyholder",
+  "pojistnik": "policyholder",
+  "pojistnik_platce": "policyholder",
+  "platce_pojistneho": "policyholder",
+  "sjednatel": "policyholder",
+  // insured
+  "pojištěný": "insured",
+  "pojisteny": "insured",
+  "hlavni_pojisteny": "insured",
+  // second_insured
+  "2. pojištěný": "second_insured",
+  "2. pojisteny": "second_insured",
+  "druhý pojištěný": "second_insured",
+  "druhy_pojisteny": "second_insured",
+  "spolupojištěný": "second_insured",
+  "spolupojisteny": "second_insured",
+  "second_insured": "second_insured",
+  // child_insured
+  "dítě": "child_insured",
+  "dite": "child_insured",
+  "pojištěné dítě": "child_insured",
+  "pojistene_dite": "child_insured",
+  "child": "child_insured",
+  // beneficiary
+  "oprávněná osoba": "beneficiary",
+  "opravnena_osoba": "beneficiary",
+  "obmyšlený": "beneficiary",
+  "obmysleny": "beneficiary",
+  "beneficiary": "beneficiary",
+  // legal_representative
+  "zákonný zástupce": "legal_representative",
+  "zakonny_zastupce": "legal_representative",
+  "legal_rep": "legal_representative",
+  // co_applicant
+  "spoludlužník": "co_applicant",
+  "spoluduceznik": "co_applicant",
+  "co_borrower": "co_applicant",
+  // borrower
+  "dlužník": "borrower",
+  "dluznik": "borrower",
+  "žadatel": "borrower",
+  "zadatel": "borrower",
+  // guarantor
+  "ručitel": "guarantor",
+  "rucitel": "guarantor",
+  // investor
+  "investor": "investor",
+  "účastník": "investor",
+  "ucastnik": "investor",
+  "účastník smlouvy": "investor",
+  "ucastnik_smlouvy": "investor",
+  // employer
+  "zaměstnavatel": "employer",
+  "zamestnavatel": "employer",
+  "employer": "employer",
+  // intermediary
+  "zprostředkovatel": "intermediary",
+  "zprostredkovatel": "intermediary",
+  "poradce": "intermediary",
+  "makléř": "intermediary",
+  "makler": "intermediary",
+  "finanční poradce": "intermediary",
+  "financni_poradce": "intermediary",
+  "agent": "intermediary",
+  // spouse
+  "manžel": "spouse",
+  "manžel/ka": "spouse",
+  "manzelka": "spouse",
+  "manzel_ka": "spouse",
+  "spouse": "spouse",
+  "partner": "spouse",
+};
+
+/**
+ * Normalises a free-text participant role string to a canonical `ParticipantRole`.
+ * Performs case-insensitive, whitespace-collapsed lookup.
+ * Returns `"other"` when no alias matches.
+ */
+export function normalizeParticipantRole(raw: string): ParticipantRole {
+  const key = String(raw ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const direct = PARTICIPANT_ROLE_ALIAS_MAP[key];
+  if (direct) return direct;
+  // Collapsed underscore variant
+  const underscored = key.replace(/\s/g, "_");
+  return PARTICIPANT_ROLE_ALIAS_MAP[underscored] ?? "other";
+}

@@ -22,6 +22,8 @@ export function TeamOverviewSelectedMemberPanel({
   canEditTeamCareer,
   outsideFilter = false,
   variant = "default",
+  /** Když je výběr v URL/state, ale detail se nenačetl — neukazovat „Vyberte člena“. */
+  selectedUserId = null,
 }: {
   detail: TeamMemberDetail | null;
   loading: boolean;
@@ -31,6 +33,7 @@ export function TeamOverviewSelectedMemberPanel({
   canEditTeamCareer: boolean;
   outsideFilter?: boolean;
   variant?: "default" | "premium";
+  selectedUserId?: string | null;
 }) {
   const shell = (classes: string) =>
     clsx(
@@ -57,6 +60,49 @@ export function TeamOverviewSelectedMemberPanel({
   }
 
   if (!detail) {
+    if (selectedUserId) {
+      return (
+        <aside
+          className={clsx(
+            "xl:sticky xl:top-6 h-fit p-6 text-sm",
+            variant === "premium"
+              ? "rounded-[28px] border border-amber-200/80 bg-amber-50/50 text-slate-800"
+              : "rounded-2xl border border-amber-200/80 bg-amber-50/40 text-[color:var(--wp-text-secondary)]"
+          )}
+          role="alert"
+        >
+          <p className={variant === "premium" ? "font-semibold text-slate-900" : "font-semibold text-[color:var(--wp-text)]"}>
+            Detail člena se nepodařilo načíst
+          </p>
+          <p
+            className={
+              variant === "premium"
+                ? "mt-1.5 text-xs leading-relaxed text-slate-600"
+                : "mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]"
+            }
+          >
+            Zkuste obnovit data, změnit rozsah přehledu nebo otevřít plný detail.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={fullDetailHref}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              Plný detail
+              <ExternalLink className="h-3 w-3" aria-hidden />
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs font-semibold text-slate-600 underline hover:text-slate-900"
+            >
+              Zrušit výběr
+            </button>
+          </div>
+        </aside>
+      );
+    }
+
     return (
       <aside
         className={clsx(
@@ -76,7 +122,7 @@ export function TeamOverviewSelectedMemberPanel({
               : "mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]"
           }
         >
-          Klikněte na řádek v seznamu lidí — zobrazí se coaching summary, kariérní stav a agenda pro 1:1.
+          Klikněte na řádek v seznamu, na uzel ve struktuře nebo na položku v přehledu pozornosti — zobrazí se souhrn pro 1:1.
         </p>
       </aside>
     );

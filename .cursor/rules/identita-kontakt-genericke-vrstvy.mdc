@@ -1,0 +1,26 @@
+---
+description: Identita klienta — co je přenositelné bez nahraného dokumentu a kde se vyhýbat document-specific hackům.
+globs: apps/web/src/lib/ai/**/*.{ts,tsx},apps/web/src/app/portal/contacts/**/*.{ts,tsx},apps/web/src/app/actions/contacts.ts,packages/db/**/*.ts
+alwaysApply: false
+---
+
+# Identita kontaktu: generické vrstvy vs. image intake
+
+Toto pravidlo drží hranici mezi **daty v CRM** (platí i pro ruční zadání, import, asistenta bez OCR) a **pipeline nahraného dokumentu** (klasifikace, envelope, extrakce).
+
+## Co je generické a přenositelné (i bez nahraného dokumentu)
+
+- **České RČ → datum narození** — čistá doménová logika v [`czech-personal-id-birth-date.ts`](apps/web/src/lib/ai/czech-personal-id-birth-date.ts) (`birthDateFromCzechPersonalId`, `enrichBirthDateFromPersonalIdInParams`). Nezávislá na typu souboru, LLM nebo „document review“.
+- **Stejné obohacení params** — `enrichBirthDateFromPersonalIdInParams` se má volat tam, kde se do zapisovaných parametrů dostane `personalId` / `birthDate` (např. image intake planner, assistant write adaptéry), aby **jedno pravidlo** platilo pro OCR i pro neobrázkové zápisy.
+- **Zobrazení datumů** — [`formatDisplayDateCs`](apps/web/src/lib/date/format-display-cs.ts) pro ISO data z DB; stejné pro kontakty, úkoly, smlouvy.
+- **Persistovaná identita** — `contacts.personal_id`, `birth_date`, `id_card_number` (nebo ekvivalent) jsou **zdroj pravdy** pro UI (záložka Detail / editace). Zobrazení a editace nesmí záviset na tom, zda řádek přišel z extrakce nebo z formuláře.
+- **Mapování z dokladu do CRM** — při „apply“ z extrakce jen **vyplnit stejná pole** jako při ručním vstupu**, ne paralelní strukturu jen pro dokument.
+
+## Kde se vědomě vyhnout document-specific hackům
+
+- **Žádná druhá heuristika RČ → datum** mimo `czech-personal-id-birth-date.ts` (ne v komponentě kontaktu, ne v response mapperu jako rychlá oprava). Úpravy algoritmu = unit testy v [`czech-personal-id-birth-date.test.ts`](apps/web/src/lib/ai/__tests__/czech-personal-id-birth-date.test.ts).
+- **Image intake** ([`identity-contact-intake.ts`](apps/web/src/lib/ai/image-intake/identity-contact-intake.ts)) má mapovat **jen na existující contacts schema**; typ dokladu / platnost patří do poznámek nebo metadat intake, ne do duplicitního „stínového“ modelu identity.
+- **Rozlišení zdroje draftu** (`identity_document` vs `crm_form_screenshot`, skip match vůči aktivnímu kontaktu) ovlivňuje **chování intake**, ne výpočet RČ ani formátování polí v portálu — toto logiku tam neposouvat.
+- **Nepřenášet identitu výhradně přes extraction envelope** — pokud má být údaj v profilu klienta, musí projít do **kontaktu v DB** (stejně jako při ručním zadání).
+
+Při nových funkcích se ptej: *funguje to stejně, když uživatel nic nenahrál a jen doplnil pole v editaci?* Pokud ne, odděl generickou vrstvu od dokumentové pipeline.

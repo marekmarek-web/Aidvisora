@@ -37,121 +37,154 @@ export function TeamOverviewKpiDetailSection({
   topMetric: TeamMemberMetrics | null;
   bottomMetric: TeamMemberMetrics | null;
 }) {
+  const topPerformerName = topMetric ? (members.find((m) => m.userId === topMetric.userId)?.displayName || "Člen týmu") : "—";
+  const supportName = bottomMetric
+    ? (members.find((m) => m.userId === bottomMetric.userId)?.displayName || "Člen týmu")
+    : "—";
+
   return (
-    <section className="mb-10 border-t border-slate-200/60 pt-8" aria-labelledby="team-kpi-detail-heading">
-      <h2 id="team-kpi-detail-heading" className="text-lg font-bold text-[color:var(--wp-text)]">
-        CRM metriky — doplňující přehled
-      </h2>
-      <p className="mt-1 mb-4 max-w-2xl text-xs text-[color:var(--wp-text-secondary)] sm:text-sm">
-        Po prioritách výše: čísla z CRM za zvolené období — pro srovnání a kontext, ne jako jediný úsudek o týmu.
-      </p>
+    <section
+      className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm"
+      aria-labelledby="team-kpi-detail-heading"
+    >
+      <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 id="team-kpi-detail-heading" className="text-base font-bold text-[color:var(--wp-text)]">
+            Výkon a funnel
+          </h2>
+          <p className="mt-0.5 max-w-2xl text-[11px] text-[color:var(--wp-text-secondary)]">
+            CRM metriky za zvolené období.
+          </p>
+        </div>
+        {kpis ? (
+          <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
+            Období: <span className="font-semibold text-[color:var(--wp-text)]">{kpis.periodLabel}</span>
+          </p>
+        ) : null}
+      </div>
       {loading && !kpis ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <SkeletonBlock key={i} className="h-28 rounded-2xl" />
-          ))}
+        <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(248px,0.8fr)]">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonBlock key={i} className="h-28 rounded-2xl" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <SkeletonBlock key={i} className="h-24 rounded-2xl" />
+            ))}
+          </div>
         </div>
       ) : kpis ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(248px,0.8fr)]">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="#clenove"
-            className="group rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm transition hover:shadow-md hover:border-[color:var(--wp-surface-card-border)]"
+            className="group rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm transition hover:border-slate-300"
           >
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.blue.bg}`}>
-              <Users className={`w-5 h-5 ${KPI_THEMES.blue.subtitle}`} />
+              <Users className={`h-5 w-5 ${KPI_THEMES.blue.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.memberCount}</p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Členové týmu</p>
+            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Lidé ve scope</p>
           </Link>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
-              <TrendingUp className={`w-5 h-5 ${KPI_THEMES.green.subtitle}`} />
+              <TrendingUp className={`h-5 w-5 ${KPI_THEMES.green.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.unitsThisPeriod}</p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Jednotky ({kpis.periodLabel})</p>
+            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Jednotky</p>
             <div className="mt-1">
               <TeamOverviewTrendIndicator trend={kpis.unitsTrend} />
             </div>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.purple.bg}`}>
-              <TrendingUp className={`w-5 h-5 ${KPI_THEMES.purple.subtitle}`} />
+              <TrendingUp className={`h-5 w-5 ${KPI_THEMES.purple.subtitle}`} />
             </div>
-            <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{formatTeamOverviewProduction(kpis.productionThisPeriod)}</p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Produkce ({kpis.periodLabel})</p>
+            <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">
+              {formatTeamOverviewProduction(kpis.productionThisPeriod)}
+            </p>
+            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Produkce</p>
             <div className="mt-1">
               <TeamOverviewTrendIndicator trend={Math.round(kpis.productionTrend)} />
             </div>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
-              <Calendar className={`w-5 h-5 ${KPI_THEMES.green.subtitle}`} />
+              <Calendar className={`h-5 w-5 ${KPI_THEMES.green.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.meetingsThisWeek}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Schůzky tento týden</p>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.amber.bg}`}>
-              <UserPlus className={`w-5 h-5 ${KPI_THEMES.amber.subtitle}`} />
+              <UserPlus className={`h-5 w-5 ${KPI_THEMES.amber.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.newcomersInAdaptation}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Nováčci v adaptaci</p>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
+          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.rose.bg}`}>
-              <AlertTriangle className={`w-5 h-5 ${KPI_THEMES.rose.subtitle}`} />
+              <AlertTriangle className={`h-5 w-5 ${KPI_THEMES.rose.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.riskyMemberCount}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Vyžaduje pozornost</p>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Hodnota obchodů</p>
-            <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{formatTeamOverviewProduction(Math.round(kpis.pipelineValue))}</p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Konverze: {Math.round(kpis.conversionRate * 100)} %</p>
           </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Top performer</p>
-            <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">
-              {topMetric ? (members.find((m) => m.userId === topMetric.userId)?.displayName || "Člen týmu") : "—"}
-            </p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
-              {topMetric ? formatTeamOverviewProduction(topMetric.productionThisPeriod) : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Podpora ve výkonu</p>
-            <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">
-              {bottomMetric ? (members.find((m) => m.userId === bottomMetric.userId)?.displayName || "Člen týmu") : "—"}
-            </p>
-            <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
-              {bottomMetric ? formatTeamOverviewProduction(bottomMetric.productionThisPeriod) : "—"}
-            </p>
-          </div>
-          {kpis.teamGoalTarget != null && kpis.teamGoalType && (
-            <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm">
-              <div className="inline-flex rounded-xl p-2 bg-indigo-500/20">
-                <Target className="w-5 h-5 text-indigo-600" />
-              </div>
+          <div className="space-y-2.5">
+            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+              <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Hodnota obchodů</p>
               <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">
-                {kpis.teamGoalProgressPercent != null ? `${kpis.teamGoalProgressPercent} %` : "—"}
+                {formatTeamOverviewProduction(Math.round(kpis.pipelineValue))}
               </p>
-              <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Splnění týmového cíle</p>
-              <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
-                {kpis.teamGoalActual != null ? formatTeamOverviewProduction(kpis.teamGoalActual) : "0"} / {formatTeamOverviewProduction(kpis.teamGoalTarget)}
-                {kpis.teamGoalType === "units" && " jednotek"}
-                {kpis.teamGoalType === "production" && " produkce"}
-                {kpis.teamGoalType === "meetings" && " schůzek"}
+              <p className="mt-1 text-xs font-medium text-[color:var(--wp-text-secondary)]">
+                Konverze: {Math.round(kpis.conversionRate * 100)} %
               </p>
-              {kpis.teamGoalProgressPercent != null && (
-                <div className="mt-2 h-1.5 w-full rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-indigo-500 transition-all"
-                    style={{ width: `${Math.min(kpis.teamGoalProgressPercent, 100)}%` }}
-                  />
-                </div>
-              )}
             </div>
-          )}
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Top performer</p>
+                <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">{topPerformerName}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
+                  {topMetric ? formatTeamOverviewProduction(topMetric.productionThisPeriod) : "—"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Podpora ve výkonu</p>
+                <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">{supportName}</p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
+                  {bottomMetric ? formatTeamOverviewProduction(bottomMetric.productionThisPeriod) : "—"}
+                </p>
+              </div>
+            </div>
+            {kpis.teamGoalTarget != null && kpis.teamGoalType && (
+              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+                <div className="inline-flex rounded-xl bg-indigo-500/20 p-2">
+                  <Target className="h-5 w-5 text-indigo-600" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">
+                  {kpis.teamGoalProgressPercent != null ? `${kpis.teamGoalProgressPercent} %` : "—"}
+                </p>
+                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Splnění týmového cíle</p>
+                <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
+                  {kpis.teamGoalActual != null ? formatTeamOverviewProduction(kpis.teamGoalActual) : "0"} /{" "}
+                  {formatTeamOverviewProduction(kpis.teamGoalTarget)}
+                  {kpis.teamGoalType === "units" && " jednotek"}
+                  {kpis.teamGoalType === "production" && " produkce"}
+                  {kpis.teamGoalType === "meetings" && " schůzek"}
+                </p>
+                {kpis.teamGoalProgressPercent != null && (
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--wp-surface-muted)]">
+                    <div
+                      className="h-full rounded-full bg-indigo-500 transition-all"
+                      style={{ width: `${Math.min(kpis.teamGoalProgressPercent, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
     </section>

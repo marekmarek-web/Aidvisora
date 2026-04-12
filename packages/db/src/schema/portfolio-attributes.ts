@@ -38,5 +38,21 @@ export type PortfolioAttributes = {
   subcategory?: string;
   loanFixationUntil?: string;
   loanMaturityDate?: string;
+  /** DPS / DIP — příspěvek účastníka (měsíčně) */
+  participantContribution?: string;
+  /** DPS / DIP — příspěvek zaměstnavatele (měsíčně) */
+  employerContribution?: string;
+  /** DPS — odhadovaný státní příspěvek (derived: 20 % z participantContribution, max 340 CZK/měs.) */
+  stateContributionEstimate?: string;
+  /** Investiční strategie (profil / název strategie) */
+  investmentStrategy?: string;
+  /** Investiční fondy s případnou alokací */
+  investmentFunds?: Array<{ name: string; allocation?: string }>;
+  /** Investiční horizont (např. „20 let", „do roku 2045") */
+  investmentHorizon?: string;
+  /** Cílová částka investice */
+  targetAmount?: string;
+  /** Předpokládaná budoucí hodnota (z modelace / ilustrace) */
+  expectedFutureValue?: string;
   [key: string]: unknown;
 };

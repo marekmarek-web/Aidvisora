@@ -14,6 +14,7 @@ import type {
 import { buildHumanSummary, buildHumanErrorMessage, getDocumentTypeLabel } from "../ai/document-messages";
 import type { PrimaryDocumentType } from "../ai/document-review-types";
 import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-date-normalize";
+import { formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
 import type { DocumentReviewEnvelope } from "../ai/document-review-types";
 import type { InputMode } from "../ai/input-mode-detection";
 import { formatAiClassifierForAdvisor } from "./czech-labels";
@@ -918,9 +919,18 @@ function flattenEnvelopeToGroups(
       // Suppress fields that fail quality gate
       if (gateResult.level === "suppress_from_main_view" || gateResult.level === "diagnostic_only") continue;
 
-      const strVal = isDateFieldKey(fKey)
+      let strVal = isDateFieldKey(fKey)
         ? normalizeDateForAdvisorDisplay(rawVal == null ? null : String(rawVal)) || formatExtractedValue(rawVal)
         : formatExtractedValue(rawVal);
+
+      if (fKey === "bankAccount") {
+        const bc = ef.bankCode?.value != null ? String(ef.bankCode.value).trim() : "";
+        strVal = formatDomesticAccountDisplayLine(strVal, bc) || strVal;
+      }
+      if (fKey === "variableSymbol") {
+        const sanitized = sanitizeVariableSymbolForCanonical(strVal);
+        strVal = sanitized || "—";
+      }
 
       // Skip if display value is empty dash
       if (strVal === "—") continue;

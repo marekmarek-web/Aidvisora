@@ -102,12 +102,17 @@ export interface PacketMeta {
 export const PARTICIPANT_ROLES = [
   "policyholder",        // pojistník
   "insured",             // pojištěný
+  "second_insured",      // 2. pojištěný / spolupojištěný
   "legal_representative",// zákonný zástupce
   "beneficiary",         // oprávněná osoba
   "child_insured",       // pojištěné dítě
   "co_applicant",        // spoludlužník / spoluúčastník
   "borrower",            // dlužník
   "guarantor",           // ručitel
+  "investor",            // investor / účastník (DPS/DIP/investice)
+  "employer",            // zaměstnavatel (DPS příspěvky)
+  "intermediary",        // zprostředkovatel / poradce / makléř
+  "spouse",              // manžel/ka
   "other",
 ] as const;
 

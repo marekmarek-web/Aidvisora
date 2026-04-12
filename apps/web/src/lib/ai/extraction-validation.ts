@@ -3,6 +3,11 @@
  * Rules for contract number, amounts, payment frequency, dates, email, phone, identifiers.
  */
 
+import {
+  dedupeCzechAccountTrailingBankCode,
+  isValidPaymentVariableSymbol,
+} from "./payment-field-contract";
+
 export type ValidationWarning = {
   code: string;
   message: string;
@@ -43,12 +48,6 @@ function isValidIbanFormat(iban: string): boolean {
 function isValidCzechAccountFormat(account: string): boolean {
   const cleaned = account.replace(/\s/g, "");
   return /^(\d{0,6}-?)?\d{2,10}\/\d{4}$/.test(cleaned);
-}
-
-/** Variable symbol: 1-10 digits. */
-function isValidVariableSymbol(vs: string): boolean {
-  const cleaned = vs.replace(/\s/g, "");
-  return /^\d{1,10}$/.test(cleaned);
 }
 
 function addWarning(
@@ -311,7 +310,7 @@ export function validateExtractedContract(payload: {
   const variableSymbol = payload.paymentDetails?.variableSymbol
     ?? (payload as Record<string, unknown>).variableSymbol as string | undefined;
   if (variableSymbol != null && String(variableSymbol).trim() !== "") {
-    if (!isValidVariableSymbol(String(variableSymbol).trim())) {
+    if (!isValidPaymentVariableSymbol(String(variableSymbol).trim())) {
       addWarning(
         warnings,
         reasonsForReview,
@@ -531,6 +530,24 @@ export function validateDocumentEnvelope(payload: {
         `Pole ${payKey} je zamaskované v interním review — údaj musí být plný.`,
         `extractedFields.${payKey}`, "payment_field_masked");
     }
+  }
+
+  // 3b. Domestic account: duplicate /bank/bank suffix (e.g. 2727/2700/2700) or non-numeric VS
+  const bankAccRaw = ef.bankAccount?.value != null ? String(ef.bankAccount.value).trim() : "";
+  if (bankAccRaw) {
+    const compact = bankAccRaw.replace(/\s/g, "");
+    const deduped = dedupeCzechAccountTrailingBankCode(bankAccRaw);
+    if (compact !== deduped) {
+      addWarning(warnings, reasonsForReview, "ACCOUNT_NUMBER_DUPLICATE_BANK_SUFFIX",
+        "Číslo účtu obsahuje zdvojený kód banky — ověřte proti originálu.",
+        "extractedFields.bankAccount", "account_duplicate_bank_suffix");
+    }
+  }
+  const vsRaw = ef.variableSymbol?.value != null ? String(ef.variableSymbol.value).trim() : "";
+  if (vsRaw && !isValidPaymentVariableSymbol(vsRaw)) {
+    addWarning(warnings, reasonsForReview, "VARIABLE_SYMBOL_INVALID",
+      "Variabilní symbol není platný (1–10 číslic) nebo obsahuje text místo čísla.",
+      "extractedFields.variableSymbol", "variable_symbol_invalid");
   }
 
   // 4. Client identity is missing for contract-type documents.

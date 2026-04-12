@@ -1,5 +1,12 @@
 import { pgTable, uuid, text, timestamp, date, unique, boolean } from "drizzle-orm/pg-core";
 
+/**
+ * How a contact row was created (provenance tracking).
+ * Consistent with contractSourceKinds in contracts.ts.
+ */
+export const contactSourceKinds = ["manual", "document", "ai_review", "import"] as const;
+export type ContactSourceKind = (typeof contactSourceKinds)[number];
+
 export const contacts = pgTable("contacts", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
@@ -40,6 +47,15 @@ export const contacts = pgTable("contacts", {
   preferredGreetingName: text("preferred_greeting_name"),
   greetingStyle: text("greeting_style"),
   birthGreetingOptOut: boolean("birth_greeting_opt_out").notNull().default(false),
+  /**
+   * Provenance: how this contact was created.
+   * `manual` = typed in by advisor; never auto-overwrite.
+   * `ai_review` = created from AI extraction apply.
+   * `document` = created from document import/processing.
+   * `import` = batch import.
+   * Default `manual` ensures safe rollout on existing rows.
+   */
+  sourceKind: text("source_kind").$type<ContactSourceKind>().default("manual"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

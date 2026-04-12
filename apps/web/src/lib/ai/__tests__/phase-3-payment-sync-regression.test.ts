@@ -86,6 +86,22 @@ describe("Phase 3F — payment-publish-bridge visibility", () => {
 });
 
 describe("Phase 3F — canonical payment + sync readiness", () => {
+  it("dedupes mistaken double bank suffix on domestic account (2727/2700/2700 → 2727/2700)", () => {
+    const env = minimalEnvelope("final_contract");
+    env.extractedFields = {
+      regularAmount: { value: "900", status: "extracted", confidence: 0.9 },
+      bankAccount: { value: "2727/2700/2700", status: "extracted", confidence: 0.88 },
+      bankCode: { value: "2700", status: "extracted", confidence: 0.88 },
+      currency: { value: "CZK", status: "extracted", confidence: 0.99 },
+    };
+    const cp = buildCanonicalPaymentPayload(env);
+    expect(cp.accountNumber).toBe("2727/2700");
+    expect(cp.bankCode).toBe("2700");
+    const vm = buildAdvisorReviewViewModel({ envelope: env });
+    expect(vm.paymentSyncPreview?.summary).not.toMatch(/2700\/2700\/2700/);
+    expect(vm.paymentSyncPreview?.summary).toMatch(/2727\/2700/);
+  });
+
   it("final contract with IBAN + amount + VS is sync-ready", () => {
     const env = minimalEnvelope("final_contract");
     env.extractedFields = {
@@ -120,7 +136,7 @@ describe("Phase 3F — draft regeneration from corrected raw payload (simulated 
       extractedFields: {
         regularAmount: { value: "2000" },
         iban: { value: "CZ1111111111111111111111" },
-        variableSymbol: { value: "OLD_VS" },
+        variableSymbol: { value: "1111111111" },
         currency: { value: "CZK" },
         paymentFrequency: { value: "měsíčně" },
       },
@@ -130,11 +146,11 @@ describe("Phase 3F — draft regeneration from corrected raw payload (simulated 
     expect((draft0?.payload as Record<string, string>).iban).toBe("CZ1111111111111111111111");
 
     (raw.extractedFields as Record<string, { value: string }>).iban = { value: "CZ9999999999999999999999" };
-    (raw.extractedFields as Record<string, { value: string }>).variableSymbol = { value: "NEW_VS_42" };
+    (raw.extractedFields as Record<string, { value: string }>).variableSymbol = { value: "9876543210" };
 
     const draft1 = tryBuildPaymentSetupDraftFromRawPayload(raw);
     expect((draft1?.payload as Record<string, string>).iban).toBe("CZ9999999999999999999999");
-    expect((draft1?.payload as Record<string, string>).variableSymbol).toBe("NEW_VS_42");
+    expect((draft1?.payload as Record<string, string>).variableSymbol).toBe("9876543210");
   });
 
   it("returns null when no payment slice in payload", () => {

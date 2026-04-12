@@ -40,14 +40,14 @@ export function PremiumSectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-sm text-slate-700">
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-700">
           {symbol}
         </div>
         <div>
           <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-          {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
         </div>
       </div>
       {action ?? null}
@@ -78,14 +78,14 @@ export function PremiumMetricCard({
   };
 
   return (
-    <div className={`rounded-3xl border bg-gradient-to-br ${toneClass[tone] || toneClass.default} p-4`}>
+    <div className={`rounded-2xl border bg-gradient-to-br ${toneClass[tone] || toneClass.default} p-3.5`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-          {change ? <p className="mt-1 text-xs text-slate-500">{change}</p> : null}
+          <p className="text-xs text-slate-500">{label}</p>
+          <p className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900">{value}</p>
+          {change ? <p className="mt-0.5 text-[11px] text-slate-500">{change}</p> : null}
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 text-sm shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-sm shadow-sm">
           {symbol}
         </div>
       </div>
@@ -135,13 +135,13 @@ export function PremiumToggleGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1">
       {items.map((item) => (
         <button
           key={item}
           type="button"
           onClick={() => onChange(item)}
-          className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+          className={`rounded-xl px-2.5 py-1.5 text-sm font-medium transition ${
             active === item ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
           }`}
         >

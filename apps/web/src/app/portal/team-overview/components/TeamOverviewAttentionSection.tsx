@@ -14,6 +14,8 @@ export function TeamOverviewAttentionSection({
   pageModel,
   selectMember,
   canCreateTeamCalendar,
+  /** Úzký sloupec first foldu — méně spodní mezery a méně dekorativního zvýraznění vedlejšího panelu. */
+  variant = "default",
 }: {
   scope: TeamOverviewScope;
   members: TeamMemberInfo[];
@@ -22,6 +24,7 @@ export function TeamOverviewAttentionSection({
   pageModel: TeamOverviewPageModel;
   selectMember: (userId: string) => void;
   canCreateTeamCalendar: boolean;
+  variant?: "default" | "firstFold";
 }) {
   if (scope === "me") {
     return (
@@ -40,17 +43,16 @@ export function TeamOverviewAttentionSection({
   }
 
   const hasCritical = topAttentionAlerts.some((a) => a.severity === "critical");
+  const isFirstFold = variant === "firstFold";
 
   return (
-    <section className="mb-8" aria-labelledby="team-priority-heading">
-      <div className="mb-4 flex items-end justify-between gap-3">
+    <section className={isFirstFold ? "mb-3" : "mb-8"} aria-labelledby="team-priority-heading">
+      <div className={`flex items-end justify-between gap-3 ${isFirstFold ? "mb-3" : "mb-4"}`}>
         <div>
           <h2 id="team-priority-heading" className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">
             Kdo potřebuje pozornost
           </h2>
-          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
-            Signály z CRM a kariérní vrstvy — orientační, ne hodnocení.
-          </p>
+          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">Signály z CRM a kariéry.</p>
         </div>
         {hasCritical && (
           <span className="shrink-0 inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold text-rose-800 ring-1 ring-rose-200">
@@ -59,7 +61,7 @@ export function TeamOverviewAttentionSection({
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={`grid gap-4 ${isFirstFold ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-2"}`}>
         {/* Signály */}
         <div className="flex flex-col rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-2.5">
@@ -119,8 +121,20 @@ export function TeamOverviewAttentionSection({
         </div>
 
         {/* Doporučené navázání */}
-        <div className="flex flex-col rounded-2xl border border-violet-200/50 bg-gradient-to-b from-violet-50/35 to-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-violet-200/40 bg-violet-50/40 px-4 py-2.5">
+        <div
+          className={
+            isFirstFold
+              ? "flex flex-col overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm"
+              : "flex flex-col overflow-hidden rounded-2xl border border-violet-200/50 bg-gradient-to-b from-violet-50/35 to-[color:var(--wp-surface-card)] shadow-sm"
+          }
+        >
+          <div
+            className={
+              isFirstFold
+                ? "flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-2.5"
+                : "flex items-center gap-2 border-b border-violet-200/40 bg-violet-50/40 px-4 py-2.5"
+            }
+          >
             <HeartHandshake className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
             <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Doporučené navázání</h3>
             {pageModel.coachingAttention.length > 0 && (

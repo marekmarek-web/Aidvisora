@@ -25,7 +25,7 @@ export function extractFirstNumericAmount(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export type PaymentFrequencyClass = "annual" | "monthly" | "unknown";
+export type PaymentFrequencyClass = "annual" | "monthly" | "quarterly" | "semi_annual" | "one_time" | "unknown";
 
 export function classifyPaymentFrequency(
   ef: Record<string, ExtractedField | undefined>
@@ -41,6 +41,21 @@ export function classifyPaymentFrequency(
   }
   if (v.includes("měsíč") || v.includes("mesic") || /\bmonthly\b/.test(v) || /\bmonth\b/.test(v)) {
     return "monthly";
+  }
+  if (v.includes("čtvrtlet") || v.includes("ctvrtlet") || /\bquarter(ly)?\b/.test(v)) {
+    return "quarterly";
+  }
+  if (v.includes("pololet") || /\bsemi.?annual(ly)?\b/.test(v) || /\bhalf.?year(ly)?\b/.test(v)) {
+    return "semi_annual";
+  }
+  if (
+    v.includes("jednorázov") ||
+    v.includes("jednorazov") ||
+    /\bone.?time\b/.test(v) ||
+    /\blump.?sum\b/.test(v) ||
+    /\bsingle.?premium\b/.test(v)
+  ) {
+    return "one_time";
   }
   return "unknown";
 }

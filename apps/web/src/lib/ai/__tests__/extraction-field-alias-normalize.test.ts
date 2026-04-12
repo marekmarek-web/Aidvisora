@@ -177,6 +177,50 @@ describe("applyExtractedFieldAliasNormalizations", () => {
     expect(warnings.filter((w) => w.code === "MISSING_REQUIRED_FIELD")).toHaveLength(0);
   });
 
+  it("synthesizes insuredObject for nonlife_insurance_contract from split vehicle / property fields", () => {
+    const env = minimalEnvelope("nonlife_insurance_contract");
+    env.extractedFields = {
+      insurer: { value: "Test Pojišťovna", status: "extracted", confidence: 0.9, evidenceSnippet: "x" },
+      productName: { value: "Povinné ručení", status: "extracted", confidence: 0.9, evidenceSnippet: "x" },
+      contractNumber: { value: "NZ-1", status: "extracted", confidence: 0.88, evidenceSnippet: "x" },
+      policyStartDate: { value: "2026-01-01", status: "extracted", confidence: 0.87, evidenceSnippet: "x" },
+      spz: { value: "1A2 3456", status: "extracted", confidence: 0.86, evidenceSnippet: "SPZ" },
+      vin: { value: "TMB12345678901234", status: "extracted", confidence: 0.85, evidenceSnippet: "VIN" },
+      vehicleBrand: { value: "Škoda", status: "extracted", confidence: 0.84, evidenceSnippet: "značka" },
+      vehicleModel: { value: "Octavia", status: "extracted", confidence: 0.84, evidenceSnippet: "model" },
+      yearOfManufacture: { value: "2020", status: "extracted", confidence: 0.83, evidenceSnippet: "rok" },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(String(env.extractedFields.insuredObject?.value)).toMatch(/Škoda Octavia/);
+    expect(String(env.extractedFields.insuredObject?.value)).toMatch(/SPZ:\s*1A2 3456/);
+    expect(String(env.extractedFields.insuredObject?.value)).toMatch(/TMB12345678901234/);
+    const schema = selectSchemaForType("nonlife_insurance_contract");
+    const { completeness, warnings } = runVerificationPass(env, schema);
+    expect(completeness.requiredSatisfied).toBe(schema.extractionRules.required.length);
+    expect(warnings.filter((w) => w.code === "MISSING_REQUIRED_FIELD")).toHaveLength(0);
+  });
+
+  it("synthesizes insuredObject for nonlife from místo pojištění when insuredObject missing", () => {
+    const env = minimalEnvelope("nonlife_insurance_contract");
+    env.extractedFields = {
+      insurer: { value: "Test Pojišťovna", status: "extracted", confidence: 0.9, evidenceSnippet: "x" },
+      productName: { value: "Pojištění domácnosti", status: "extracted", confidence: 0.9, evidenceSnippet: "x" },
+      contractNumber: { value: "DOM-9", status: "extracted", confidence: 0.88, evidenceSnippet: "x" },
+      policyStartDate: { value: "2026-01-01", status: "extracted", confidence: 0.87, evidenceSnippet: "x" },
+      mistoPojisteni: {
+        value: "Praha 4, ul. Testovací 12",
+        status: "extracted",
+        confidence: 0.86,
+        evidenceSnippet: "místo",
+      },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(String(env.extractedFields.insuredObject?.value)).toContain("Praha 4");
+    const schema = selectSchemaForType("nonlife_insurance_contract");
+    const { warnings } = runVerificationPass(env, schema);
+    expect(warnings.filter((w) => w.code === "MISSING_REQUIRED_FIELD")).toHaveLength(0);
+  });
+
   it("maps pension_contract provider and participantFullName aliases", () => {
     const env = minimalEnvelope("pension_contract");
     env.extractedFields = {

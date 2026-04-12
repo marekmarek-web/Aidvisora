@@ -42,7 +42,7 @@ export function mapAiClassifierToPrimaryType(c: AiClassifierOutput): PrimaryDocu
   const sub = n(c.productSubtype);
 
   if (dt === "payment_instructions") {
-    if (fam === "investment" || sub.includes("fundoo") || sub.includes("amundi")) {
+    if (fam === "investment") {
       return "investment_payment_instruction";
     }
     return "payment_instruction";
