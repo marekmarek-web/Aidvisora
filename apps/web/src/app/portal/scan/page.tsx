@@ -195,6 +195,7 @@ export default function ScanPage() {
   const [quickProcessingStatus, setQuickProcessingStatus] = useState<string | null>(null);
   const [quickProcessingStage, setQuickProcessingStage] = useState<string | null>(null);
   const [iosPdfEmbedUnreliable, setIosPdfEmbedUnreliable] = useState(false);
+  const [uploadedDocumentId, setUploadedDocumentId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -330,6 +331,7 @@ export default function ScanPage() {
 
       const docId = uploadResponse.documentId ?? uploadResponse.id;
       if (docId) {
+        setUploadedDocumentId(docId);
         void triggerDocumentBackgroundProcessing(docId).catch(() => {});
       }
 
@@ -879,12 +881,53 @@ export default function ScanPage() {
                       return null;
                     });
                     setPreparedPdf(null);
+                    setUploadedDocumentId(null);
                     clearPages();
                     router.push(selectedContact ? `/portal/contacts/${selectedContact.id}` : "/portal/documents");
                   }}
                   className="min-h-[44px] flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
                 >
                   {selectedContact ? "Otevřít klienta" : "Otevřít dokumenty"}
+                </button>
+                {uploadedDocumentId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfPreviewUrl((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return null;
+                      });
+                      setPreparedPdf(null);
+                      setUploadedDocumentId(null);
+                      clearPages();
+                      router.push(`/portal/documents?doc=${uploadedDocumentId}`);
+                    }}
+                    className="min-h-[44px] flex-1 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700"
+                  >
+                    Otevřít tento dokument
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPdfPreviewUrl((prev) => {
+                      if (prev) URL.revokeObjectURL(prev);
+                      return null;
+                    });
+                    setPreparedPdf(null);
+                    setUploadedDocumentId(null);
+                    clearPages();
+                    setSelectedContact(null);
+                    setDocumentType("");
+                    setNote("");
+                    setUploadState("idle");
+                    setUploadError(null);
+                    setGlobalError(null);
+                    setStep("mode");
+                  }}
+                  className="min-h-[44px] flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)]"
+                >
+                  Naskenovat další
                 </button>
               </>
             ) : null}

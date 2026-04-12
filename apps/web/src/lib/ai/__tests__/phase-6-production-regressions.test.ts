@@ -281,10 +281,11 @@ describe("PR05 — ZP / životní pojištění segment label", () => {
     expect(label).toBe("Smlouva");
   });
 
-  it("labelDocumentType neznámého kódu → nahradí podtržítka mezerami", () => {
+  it("labelDocumentType neznámého kódu → česká obecná formulace bez syrového kódu", () => {
     const label = labelDocumentType("life_insurance_final_contract");
     expect(label).not.toBe("life_insurance_final_contract");
     expect(label.includes("_")).toBe(false);
+    expect(label).toContain("Typ dokumentu");
   });
 });
 
@@ -322,17 +323,20 @@ describe("PR07 — manualChecklist neobsahuje syrové anglické kódy", () => {
     "partial_extraction_coerced",
   ];
 
-  it("buildAdvisorReviewViewModel humanizuje reasonsForReview — žádný raw kód v checklistu", () => {
+  it("buildAdvisorReviewViewModel — reasonsForReview nejsou duplicitně v checklistu; reviewWarnings zůstávají česky", () => {
     const vm = buildAdvisorReviewViewModel({
-      envelope: baseEnvelope(),
+      envelope: baseEnvelope({
+        reviewWarnings: [
+          { severity: "warning", message: "Ověřte výši pojistného přímo v dokumentu." },
+        ],
+      }),
       reasonsForReview: technicalCodes,
     });
     for (const code of technicalCodes) {
-      // Žádná položka v checklistu nesmí být shodná s raw kódem
       expect(vm.manualChecklist).not.toContain(code);
     }
-    // Ale checklist musí být neprázdný
     expect(vm.manualChecklist.length).toBeGreaterThan(0);
+    expect(vm.manualChecklist.some((s) => s.includes("pojistné"))).toBe(true);
   });
 
   it("prázdné reasonsForReview → žádné položky z nich v checklistu", () => {

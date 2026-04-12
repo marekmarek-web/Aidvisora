@@ -174,7 +174,7 @@ const PAYMENT_GATE_MESSAGES: Record<string, string> = {
 };
 
 function humanizePaymentGateCode(code: string): string {
-  return PAYMENT_GATE_MESSAGES[code] ?? code;
+  return PAYMENT_GATE_MESSAGES[code] ?? humanizeReviewReasonLine(code);
 }
 
 /**
@@ -341,9 +341,8 @@ export function buildAdvisorReviewViewModel(args: BuildArgs): AdvisorReviewViewM
       manualChecklist.push(w.message);
     }
   }
-  for (const r of reasonsForReview ?? []) {
-    manualChecklist.push(humanizeReviewReasonLine(r));
-  }
+  // reasonsForReview se neopakují zde — stejné položky jsou v bloku „Stav a kontrola“ / „Co zkontrolovat“
+  // (mapování v mappers.humanizeReasonForAdvisor + humanizeReviewReasonLine), aby UI nebylo duplicitní.
   for (const v of validationWarnings ?? []) {
     if (v.message) manualChecklist.push(v.message);
   }

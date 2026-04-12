@@ -17,6 +17,7 @@ import {
   captureContractReviewApplyFailure,
 } from "@/lib/observability/contract-review-sentry";
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
+import * as Sentry from "@sentry/nextjs";
 import { logActivity } from "./activity";
 import { db } from "db";
 import { contacts, documents, contracts, clientPaymentSetups, auditLog } from "db";
@@ -338,70 +339,174 @@ export async function applyContractReviewDrafts(
     payload: result.payload,
   });
 
-  await updateContractReview(id, auth.tenantId, {
-    reviewStatus: "applied",
-    appliedBy: auth.userId,
-    appliedAt: new Date(),
-    applyResultPayload: bridgedPayload,
-  });
+  // Slice 4: reviewStatus update je MUST-SUCCEED post-commit krok — retry 1x, pak hard alert.
+  const persistReviewStatus = async () => {
+    await updateContractReview(id, auth.tenantId, {
+      reviewStatus: "applied",
+      appliedBy: auth.userId,
+      appliedAt: new Date(),
+      applyResultPayload: bridgedPayload,
+    });
+  };
 
-  // 5D: Auto-link the reviewed document into the client's document vault (visible)
-  // effectiveClientId: prefer matchedClientId, fallback to createdClientId / linkedClientId from apply result
+  try {
+    await persistReviewStatus();
+  } catch (firstErr) {
+    // Slice 4: HARD retry — reviewStatus persistence je kritická pro idempotency
+    console.error("[apply] reviewStatus persist failed (attempt 1), retrying…", {
+      reviewId: id,
+      error: firstErr instanceof Error ? firstErr.message : String(firstErr),
+    });
+    try {
+      await persistReviewStatus();
+    } catch (secondErr) {
+      // Slice 4: HARD FAIL — oba pokusy selhaly, CRM data jsou zapsána ale status není
+      const errMsg = secondErr instanceof Error ? secondErr.message : String(secondErr);
+      console.error("[apply] reviewStatus persist HARD FAIL — apply committed but status not persisted", {
+        reviewId: id,
+        tenantId: auth.tenantId,
+        error: errMsg,
+      });
+      try {
+        Sentry.withScope((scope) => {
+          scope.setTag("feature", "contract_review_apply");
+          scope.setTag("post_commit_step", "review_status_persist");
+          scope.setTag("severity", "hard_fail");
+          scope.setFingerprint(["apply-review-status-persist-hard-fail"]);
+          scope.setContext("apply_post_commit", {
+            reviewId: id,
+            tenantId: auth.tenantId,
+            error: errMsg.slice(0, 2000),
+          });
+          Sentry.captureMessage(
+            `[HARD] apply_review_status_persist_failed: ${errMsg.slice(0, 200)}`,
+            "error"
+          );
+        });
+      } catch {
+        /* Sentry nesmí crashovat apply response */
+      }
+      // Apply proběhl úspěšně — vracíme ok:true ale signalizujeme varování
+      return { ok: true, payload: bridgedPayload };
+    }
+  }
+
+  // effectiveClientId: prefer matchedClientId, fallback na createdClientId / linkedClientId
   const effectiveClientId =
     row.matchedClientId ??
     result.payload.createdClientId ??
     result.payload.linkedClientId ??
     null;
+
+  // Slice 4: Document linking — SOFT fail (log + Sentry capture, apply nezastaví)
   if (effectiveClientId) {
     try {
       const linkResult = await linkContractReviewFileToContactDocuments(id, {
         visibleToClient: true,
         contractId: result.payload.createdContractId ?? undefined,
-        // When client was just created, matchedClientId is still null — pass explicitly
         overrideContactId: row.matchedClientId ? undefined : effectiveClientId,
       });
       if (linkResult.ok && linkResult.documentId && result.payload.createdContractId) {
-        const [existingContract] = await db
-          .select({ sourceDocumentId: contracts.sourceDocumentId })
-          .from(contracts)
-          .where(
-            and(
-              eq(contracts.tenantId, auth.tenantId),
-              eq(contracts.id, result.payload.createdContractId)
-            )
-          )
-          .limit(1);
-
-        if (existingContract && !existingContract.sourceDocumentId) {
-          await db
-            .update(contracts)
-            .set({
-              sourceDocumentId: linkResult.documentId,
-              updatedAt: new Date(),
-            })
+        try {
+          const [existingContract] = await db
+            .select({ sourceDocumentId: contracts.sourceDocumentId })
+            .from(contracts)
             .where(
               and(
                 eq(contracts.tenantId, auth.tenantId),
                 eq(contracts.id, result.payload.createdContractId)
               )
-            );
+            )
+            .limit(1);
+          if (existingContract && !existingContract.sourceDocumentId) {
+            await db
+              .update(contracts)
+              .set({ sourceDocumentId: linkResult.documentId, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(contracts.tenantId, auth.tenantId),
+                  eq(contracts.id, result.payload.createdContractId)
+                )
+              );
+          }
+        } catch (sourceDocErr) {
+          // Slice 4: sourceDocumentId update selhal — SOFT, logujeme ale nezastavujeme
+          console.warn("[apply] post-commit sourceDocumentId update failed (soft)", {
+            reviewId: id,
+            documentId: linkResult.documentId,
+            error: sourceDocErr instanceof Error ? sourceDocErr.message : String(sourceDocErr),
+          });
+          try {
+            Sentry.addBreadcrumb({
+              category: "contract_review.apply",
+              level: "warning",
+              message: "post_commit_source_document_id_update_failed",
+              data: { reviewId: id, documentId: linkResult.documentId },
+            });
+          } catch { /* noop */ }
         }
       }
-    } catch {
-      /* best-effort — review already applied, doc linking is secondary */
+    } catch (linkErr) {
+      // Slice 4: Document linking selhal — SOFT, celý apply je OK
+      console.warn("[apply] post-commit document linking failed (soft)", {
+        reviewId: id,
+        error: linkErr instanceof Error ? linkErr.message : String(linkErr),
+      });
+      try {
+        Sentry.withScope((scope) => {
+          scope.setTag("feature", "contract_review_apply");
+          scope.setTag("post_commit_step", "document_linking");
+          scope.setTag("severity", "soft_fail");
+          scope.setContext("apply_post_commit", {
+            reviewId: id,
+            tenantId: auth.tenantId,
+            error: linkErr instanceof Error ? linkErr.message.slice(0, 1000) : String(linkErr),
+          });
+          Sentry.captureMessage(
+            `[SOFT] apply_document_linking_failed: ${linkErr instanceof Error ? linkErr.message.slice(0, 150) : "unknown"}`,
+            "warning"
+          );
+        });
+      } catch { /* noop */ }
     }
   }
 
-  // 5E: Auto-set coverage for life insurance contracts (ZP segment)
+  // Slice 4: Coverage upsert — SOFT fail (explicitní log + Sentry, apply nezastaví)
   if (effectiveClientId && result.payload.createdContractId) {
     const { upsertCoverageFromAppliedReview } = await import("@/lib/ai/apply-coverage-from-review");
-    await upsertCoverageFromAppliedReview({
-      tenantId: auth.tenantId,
-      userId: auth.userId,
-      contactId: effectiveClientId,
-      contractId: result.payload.createdContractId,
-      row,
-    }).catch(() => {/* best-effort */});
+    try {
+      await upsertCoverageFromAppliedReview({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        contactId: effectiveClientId,
+        contractId: result.payload.createdContractId,
+        row,
+      });
+    } catch (coverageErr) {
+      // Slice 4: Coverage upsert selhal — SOFT, ale explicitně logujeme
+      console.warn("[apply] post-commit coverage upsert failed (soft)", {
+        reviewId: id,
+        contractId: result.payload.createdContractId,
+        error: coverageErr instanceof Error ? coverageErr.message : String(coverageErr),
+      });
+      try {
+        Sentry.withScope((scope) => {
+          scope.setTag("feature", "contract_review_apply");
+          scope.setTag("post_commit_step", "coverage_upsert");
+          scope.setTag("severity", "soft_fail");
+          scope.setContext("apply_post_commit", {
+            reviewId: id,
+            tenantId: auth.tenantId,
+            contractId: result.payload.createdContractId,
+            error: coverageErr instanceof Error ? coverageErr.message.slice(0, 1000) : String(coverageErr),
+          });
+          Sentry.captureMessage(
+            `[SOFT] apply_coverage_upsert_failed: ${coverageErr instanceof Error ? coverageErr.message.slice(0, 150) : "unknown"}`,
+            "warning"
+          );
+        });
+      } catch { /* noop */ }
+    }
   }
 
   return { ok: true, payload: bridgedPayload };

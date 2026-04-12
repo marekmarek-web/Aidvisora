@@ -49,6 +49,8 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
 
   const [search, setSearch] = useState("");
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null);
+  const [retryingDocId, setRetryingDocId] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -76,6 +78,31 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
     }
     await deleteDocument(docId);
     invalidateBundle();
+  }
+
+  async function handleRetryProcessing(docId: string) {
+    setRetryingDocId(docId);
+    setRetryError(null);
+    try {
+      const response = await fetch(`/api/documents/${docId}/process`, { method: "POST" });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+        alreadyProcessing?: boolean;
+      };
+      if (response.status === 202 || payload.alreadyProcessing) {
+        invalidateBundle();
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Zpracování se nepodařilo spustit.");
+      }
+      invalidateBundle();
+    } catch (e) {
+      setRetryError(e instanceof Error ? e.message : "Zpracování se nepodařilo spustit.");
+    } finally {
+      setRetryingDocId(null);
+    }
   }
 
   const loadError = isError ? (error instanceof Error ? error.message : "Nepodařilo se načíst dokumenty.") : null;
@@ -109,6 +136,12 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
           </span>
         )}
       </div>
+
+      {retryError ? (
+        <div className="mb-4 rounded-[var(--wp-radius)] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {retryError}
+        </div>
+      ) : null}
 
       <input
         type="text"
@@ -146,6 +179,16 @@ export function DocumentsSection({ contactId }: { contactId: string }) {
                 isScanLike={d.isScanLike}
                 compact
               />
+              {(d.processingStatus === "failed" || d.processingStatus === "preprocessing_failed") ? (
+                <button
+                  type="button"
+                  onClick={() => void handleRetryProcessing(d.id)}
+                  disabled={retryingDocId === d.id}
+                  className="text-xs font-medium px-3 py-2 rounded-[var(--wp-radius)] border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 min-h-[44px] disabled:opacity-50"
+                >
+                  {retryingDocId === d.id ? "Spouštím…" : "Zkusit znovu"}
+                </button>
+              ) : null}
               <label className="flex items-center gap-1.5 text-[color:var(--wp-text-muted)] min-h-[44px]">
                 <input
                   type="checkbox"

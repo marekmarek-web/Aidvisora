@@ -43,7 +43,7 @@ const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
 
 function roleLabel(role: string | undefined): string {
   if (!role) return "Osoba";
-  return PARTICIPANT_ROLE_LABELS[role] ?? role.replace(/_/g, " ");
+  return PARTICIPANT_ROLE_LABELS[role] ?? "Role osoby — upřesněte podle dokumentu";
 }
 
 function formatAmount(v: string | number | undefined): string {
@@ -174,7 +174,7 @@ function PublishHintsSection({ ph }: { ph: NonNullable<CanonicalFields["publishH
       {ph.needsManualValidation && (
         <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mt-1">
           <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-          <span>Vyžaduje ruční validaci před apply.</span>
+          <span>Vyžaduje ruční ověření před zápisem do CRM.</span>
         </div>
       )}
     </Section>

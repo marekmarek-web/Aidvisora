@@ -17,7 +17,7 @@ import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-
 import { formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
 import type { DocumentReviewEnvelope } from "../ai/document-review-types";
 import type { InputMode } from "../ai/input-mode-detection";
-import { formatAiClassifierForAdvisor } from "./czech-labels";
+import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "./czech-labels";
 import { advisorFieldPresentation, advisorFieldPresentationWithEvidence, shouldCountFieldForAttentionBanner } from "./advisor-confidence-policy";
 import type { EvidenceTier, SourceKind } from "../ai/document-review-types";
 import {
@@ -497,6 +497,11 @@ function humanizeSnakeOrCamel(key: string): string {
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : key;
 }
 
+/** Veřejné české popisky polí pro UI (enforcement, tabulky) — bez interních cest. */
+export function advisorFieldLabelForKey(rawKey: string): string {
+  return fieldLabelForKey(rawKey);
+}
+
 function fieldLabelForKey(rawKey: string): string {
   const candidates = [
     rawKey,
@@ -583,7 +588,7 @@ function humanizeReasonForAdvisor(reason: string): string | null {
   if (reason === "missing_existing_contract_match") {
     return "Jde o změnový dokument, ale v CRM se nepodařilo najít navázanou existující smlouvu.";
   }
-  return null;
+  return humanizeReviewReasonLine(reason);
 }
 
 /** Internal pipeline paths that appear in Zod validation messages — advisor-irrelevant noise. */

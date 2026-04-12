@@ -1,6 +1,7 @@
 import { db } from "db";
 import { contacts, contracts, tasks, auditLog, clientPaymentSetups, contractSegments, type ClientPaymentSetupPaymentType } from "db";
 import { eq, and, isNotNull } from "db";
+import * as Sentry from "@sentry/nextjs";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
 import {
@@ -22,6 +23,12 @@ import {
   buildApplyEnforcementTrace,
   type ApplyPolicyEnforcementTrace,
 } from "@/lib/ai/apply-policy-enforcement";
+import { validateBeforeApply } from "./pre-apply-validation";
+import type { DocumentReviewEnvelope } from "./document-review-types";
+import {
+  resolveFieldMerge,
+  type ContactSourceKind,
+} from "./field-merge-policy";
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
 
@@ -67,6 +74,7 @@ type ExistingContractSnapshot = {
   productName: string | null;
   startDate: string | null;
   segment: string | null;
+  sourceContractReviewId: string | null;
 };
 
 type ExistingContractLookup = {
@@ -160,8 +168,17 @@ export function buildContactUpdatePatch(
 
 export function selectExistingContractId(
   candidates: ExistingContractSnapshot[],
-  lookup: ExistingContractLookup
+  lookup: ExistingContractLookup & { sourceContractReviewId?: string | null }
 ): string | null {
+  // Slice 3: Re-apply stejné review → sourceContractReviewId match je nejvyšší priorita.
+  // Garantuje, že re-apply vždy updatuje ten samý contract, i když contractNumber chybí nebo se liší.
+  if (lookup.sourceContractReviewId) {
+    const byReview = candidates.find(
+      (c) => c.sourceContractReviewId === lookup.sourceContractReviewId
+    );
+    if (byReview) return byReview.id;
+  }
+
   const wantedContractNumber = normalizeContractIdentifier(lookup.contractNumber);
   const wantedPartner = normalizeComparableText(lookup.institutionName);
   const wantedProduct = normalizeComparableText(lookup.productName);
@@ -215,12 +232,47 @@ export function selectExistingContractId(
   return null;
 }
 
-async function updateExistingContactFromPayload(
+/**
+ * Slice 2: Contact fields that participate in merge policy loop.
+ * Generic list — does not hardcode vendor-specific semantics.
+ */
+const CONTACT_MERGE_FIELDS: Array<{
+  fieldKey: keyof Pick<
+    ExistingContactSnapshot,
+    "firstName" | "lastName" | "email" | "phone" | "personalId" | "street" | "city" | "zip" | "birthDate"
+  >;
+  payloadKeys: string[];
+  normalize?: (v: string) => string | null;
+}> = [
+  { fieldKey: "firstName", payloadKeys: ["firstName"] },
+  { fieldKey: "lastName", payloadKeys: ["lastName"] },
+  { fieldKey: "email", payloadKeys: ["email"] },
+  { fieldKey: "phone", payloadKeys: ["phone"] },
+  { fieldKey: "personalId", payloadKeys: ["personalId"] },
+  { fieldKey: "street", payloadKeys: ["street", "address"] },
+  { fieldKey: "city", payloadKeys: ["city"] },
+  { fieldKey: "zip", payloadKeys: ["zip"] },
+  {
+    fieldKey: "birthDate",
+    payloadKeys: ["birthDate"],
+    normalize: (v) => normalizeDateToISO(v),
+  },
+];
+
+/**
+ * Slice 2: Merge-policy-based contact update.
+ * Uses resolveFieldMerge loop over CONTACT_MERGE_FIELDS.
+ * - auto_fill: applies value
+ * - keep_existing / manual_protected: no-op
+ * - flag_pending: adds to pendingFields[], no DB write
+ * Returns list of pending conflicts for propagation into applyResultPayload.
+ */
+async function updateExistingContactFromPayloadWithMerge(
   tenantId: string,
   contactId: string,
   payload: Record<string, unknown>,
   tx: typeof db
-): Promise<void> {
+): Promise<Array<{ fieldKey: string; incomingValue: string | null; reason: "manual_protected" | "conflict" }>> {
   const [existing] = await tx
     .select({
       firstName: contacts.firstName,
@@ -232,23 +284,58 @@ async function updateExistingContactFromPayload(
       street: contacts.street,
       city: contacts.city,
       zip: contacts.zip,
+      sourceKind: contacts.sourceKind,
     })
     .from(contacts)
     .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
     .limit(1);
 
-  if (!existing) return;
+  if (!existing) return [];
 
-  const patch = buildContactUpdatePatch(existing, payload);
-  if (Object.keys(patch).length === 0) return;
+  const existingSourceKind: ContactSourceKind = (existing.sourceKind as ContactSourceKind) ?? "manual";
+  const patch: Record<string, string | null> = {};
+  const pendingFields: Array<{ fieldKey: string; incomingValue: string | null; reason: "manual_protected" | "conflict" }> = [];
 
-  await tx
-    .update(contacts)
-    .set({
-      ...patch,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)));
+  for (const fieldDef of CONTACT_MERGE_FIELDS) {
+    let incomingRaw: string | null = null;
+    for (const key of fieldDef.payloadKeys) {
+      const v = payload[key];
+      if (hasNonEmptyText(v)) {
+        incomingRaw = (v as string).trim();
+        break;
+      }
+    }
+
+    const incomingNormalized = incomingRaw && fieldDef.normalize
+      ? fieldDef.normalize(incomingRaw)
+      : incomingRaw;
+
+    const decision = resolveFieldMerge(
+      existing[fieldDef.fieldKey] as string | null,
+      incomingNormalized,
+      existingSourceKind
+    );
+
+    if (decision.action === "apply_incoming" && decision.resolvedValue != null) {
+      patch[fieldDef.fieldKey] = decision.resolvedValue;
+    } else if (decision.action === "flag_pending") {
+      pendingFields.push({
+        fieldKey: fieldDef.fieldKey,
+        incomingValue: decision.resolvedValue,
+        reason: decision.reason === "manual_protected" ? "manual_protected" : "conflict",
+      });
+    }
+    // keep_existing → no-op
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await tx
+      .update(contacts)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)));
+  }
+
+  return pendingFields;
 }
 
 /** Idempotent: find existing contact by email or personalId. */
@@ -278,13 +365,30 @@ async function findExistingContactId(
   return null;
 }
 
-/** Check duplicate contract using contract number first, then conservative fallbacks. */
+/** Check duplicate contract using contract number first, then conservative fallbacks.
+ * Slice 3: Zahrnuje sourceContractReviewId match jako nejvyšší prioritu (re-apply safety). */
 async function findExistingContractId(
   tenantId: string,
   contactId: string,
-  lookup: ExistingContractLookup,
+  lookup: ExistingContractLookup & { sourceContractReviewId?: string | null },
   tx: typeof db
 ): Promise<string | null> {
+  // Slice 3: Pokud máme sourceContractReviewId, zkusíme přímý match přes tenant (bez vazby na contactId)
+  // aby re-apply fungovalo i při edge-case kdy contactId se liší od původního zápisu.
+  if (lookup.sourceContractReviewId) {
+    const byReview = await tx
+      .select({ id: contracts.id })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, tenantId),
+          eq(contracts.sourceContractReviewId, lookup.sourceContractReviewId)
+        )
+      )
+      .limit(1);
+    if (byReview[0]?.id) return byReview[0].id;
+  }
+
   if (
     !hasNonEmptyText(lookup.contractNumber) &&
     !hasNonEmptyText(lookup.institutionName) &&
@@ -301,6 +405,7 @@ async function findExistingContractId(
       productName: contracts.productName,
       startDate: contracts.startDate,
       segment: contracts.segment,
+      sourceContractReviewId: contracts.sourceContractReviewId,
     })
     .from(contracts)
     .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId)))
@@ -313,11 +418,18 @@ export async function applyContractReview(
   input: ApplyContractReviewInput
 ): Promise<ApplyContractReviewResult> {
   const { reviewId, tenantId, userId, row } = input;
-  const attrsFromReview = buildPortfolioAttributesFromExtracted(row.extractedPayload);
-  const extractionConfidence = normalizeExtractionConfidence(row.confidence ?? undefined);
 
-  if (row.reviewStatus === "applied" && row.applyResultPayload) {
-    return { ok: true, payload: row.applyResultPayload };
+  // ── Slice 1: Runtime guard — missing userId/tenantId must fail before transaction ──
+  if (!userId || !userId.trim()) {
+    return { ok: false, error: "Apply guard: userId chybí — nelze nastavit advisorId na smlouvě." };
+  }
+  if (!tenantId || !tenantId.trim()) {
+    return { ok: false, error: "Apply guard: tenantId chybí — nelze izolovat data tenanta." };
+  }
+
+  // ── Slice 1: Idempotency — reviewStatus=applied alone is terminal (even if payload is null) ──
+  if (row.reviewStatus === "applied") {
+    return { ok: true, payload: row.applyResultPayload ?? {} };
   }
 
   if (row.reviewStatus !== "approved") {
@@ -328,6 +440,24 @@ export async function applyContractReview(
     });
     return { ok: false, error: "Publish guard: review musí být schválena před aplikací do CRM." };
   }
+
+  // ── Slice 1: Pre-apply validation — runs BEFORE transaction boundary ──
+  const extractedEnvelope = (row.extractedPayload as DocumentReviewEnvelope | null) ?? ({} as DocumentReviewEnvelope);
+  const segmentForValidation = validateSegment(
+    (row.extractedPayload as Record<string, unknown> | null)?.segment as string | undefined
+  );
+  const validationResult = validateBeforeApply(extractedEnvelope, segmentForValidation);
+  if (!validationResult.valid) {
+    const errorMessages = validationResult.issues
+      .filter((i) => i.severity === "error")
+      .map((i) => i.message)
+      .join("; ");
+    return { ok: false, error: `Pre-apply validace selhala: ${errorMessages}` };
+  }
+  // Warnings are non-blocking — they are logged to resultPayload below
+
+  const attrsFromReview = buildPortfolioAttributesFromExtracted(row.extractedPayload);
+  const extractionConfidence = normalizeExtractionConfidence(row.confidence ?? undefined);
 
   // Sensitivity / publishability signals are logged for audit but NEVER block apply.
   // The advisor has already reviewed and approved — these are section-level warnings.
@@ -362,6 +492,12 @@ export async function applyContractReview(
   }
 
   const resultPayload: ApplyResultPayload = {};
+  const allPendingFields: Array<{ fieldKey: string; incomingValue: string | null; reason: "manual_protected" | "conflict" }> = [];
+
+  // Attach non-blocking validation warnings to trace (non-blocking, continue apply)
+  const validationWarnings = validationResult.issues
+    .filter((i) => i.severity === "warning")
+    .map((i) => i.message);
 
   // Fáze 9: Resolve extractedPayload pro enforcement engine
   const extractedPayloadForEnforcement = (row.extractedPayload as Record<string, unknown>) ?? {};
@@ -416,6 +552,8 @@ export async function applyContractReview(
                 tenantId,
                 firstName,
                 lastName,
+                // Slice 2: source_kind = "ai_review" pro všechny kontakty vytvořené z AI review
+                sourceKind: "ai_review" as const,
                 // Pole s prefill_confirm jdou jako null (needsHumanReview) — nebo jako hodnota pokud prošla enforcement
                 email: (ep.email as string)?.trim() || null,
                 phone: (ep.phone as string)?.trim() || null,
@@ -441,12 +579,14 @@ export async function applyContractReview(
       }
 
       if (effectiveContactId && contactEnforce) {
-        await updateExistingContactFromPayload(
+        // Slice 2: use merge-policy-based update instead of blind patch
+        const pendingFromMerge = await updateExistingContactFromPayloadWithMerge(
           tenantId,
           effectiveContactId,
           contactEnforce.enforcedPayload,
           tx as unknown as typeof db
         );
+        allPendingFields.push(...pendingFromMerge);
       }
 
       if (effectiveContactId && !resultPayload.createdClientId) {
@@ -492,6 +632,8 @@ export async function applyContractReview(
               productName,
               effectiveDate,
               segment,
+              // Slice 3: Re-apply safety — sourceContractReviewId jako nejvyšší prioritní match
+              sourceContractReviewId: reviewId,
             },
             tx as unknown as typeof db
           );
@@ -547,32 +689,77 @@ export async function applyContractReview(
             resultPayload.createdContractId = existingContractId;
             continue;
           }
-          const [inserted] = await tx
-            .insert(contracts)
-            .values({
-              tenantId,
-              contactId: effectiveContactId,
-              advisorId: userId,
-              segment,
-              type: segment,
-              partnerName: institutionName,
-              productName,
-              contractNumber,
-              startDate: normalizedStartDate,
-              premiumAmount: premiumAmountRaw,
-              premiumAnnual: premiumAnnualRaw,
-              note: nextNote,
-              visibleToClient: true,
-              portfolioStatus: "active",
-              sourceKind: "ai_review",
-              sourceContractReviewId: reviewId,
-              advisorConfirmedAt: new Date(),
-              confirmedByUserId: userId,
-              portfolioAttributes: attrsFromReview,
-              extractionConfidence,
-            })
-            .returning({ id: contracts.id });
-          if (inserted?.id) resultPayload.createdContractId = inserted.id;
+          // Slice 3: Race-safe INSERT — pokud app-level dedupe nic nenašel ale DB unique index
+          // zachytí konflikt (race condition), fallback na SELECT existujícího záznamu místo pádu.
+          let insertedContractId: string | null = null;
+          try {
+            const [inserted] = await tx
+              .insert(contracts)
+              .values({
+                tenantId,
+                contactId: effectiveContactId,
+                advisorId: userId,
+                segment,
+                type: segment,
+                partnerName: institutionName,
+                productName,
+                contractNumber,
+                startDate: normalizedStartDate,
+                premiumAmount: premiumAmountRaw,
+                premiumAnnual: premiumAnnualRaw,
+                note: nextNote,
+                visibleToClient: true,
+                portfolioStatus: "active",
+                sourceKind: "ai_review",
+                sourceContractReviewId: reviewId,
+                advisorConfirmedAt: new Date(),
+                confirmedByUserId: userId,
+                portfolioAttributes: attrsFromReview,
+                extractionConfidence,
+              })
+              .returning({ id: contracts.id });
+            insertedContractId = inserted?.id ?? null;
+          } catch (insertErr) {
+            // Slice 3: Unique index conflict (race condition) — pokus o SELECT existujícího záznamu.
+            const isUniqueViolation =
+              insertErr instanceof Error &&
+              (insertErr.message.includes("unique") ||
+                insertErr.message.includes("duplicate") ||
+                insertErr.message.includes("23505"));
+            if (isUniqueViolation && contractNumber) {
+              try {
+                Sentry.addBreadcrumb({
+                  category: "contract_review.apply",
+                  level: "warning",
+                  message: "contract_insert_unique_conflict_fallback",
+                  data: { reviewId, tenantId, contractNumber: contractNumber.slice(0, 50) },
+                });
+                const [conflicted] = await tx
+                  .select({ id: contracts.id })
+                  .from(contracts)
+                  .where(
+                    and(
+                      eq(contracts.tenantId, tenantId),
+                      eq(contracts.contractNumber, contractNumber)
+                    )
+                  )
+                  .limit(1);
+                insertedContractId = conflicted?.id ?? null;
+                // Pokud jsme našli existující, updatujeme sourceContractReviewId pro idempotency
+                if (insertedContractId) {
+                  await tx
+                    .update(contracts)
+                    .set({ sourceContractReviewId: reviewId, updatedAt: new Date() })
+                    .where(eq(contracts.id, insertedContractId));
+                }
+              } catch {
+                // Fallback selhal — necháme insertedContractId = null, apply pokračuje bez contractId
+              }
+            } else {
+              throw insertErr;
+            }
+          }
+          if (insertedContractId) resultPayload.createdContractId = insertedContractId;
         } else if (action.type === "create_task" && effectiveContactId) {
           const title = (action.payload.title as string)?.trim() || action.label;
           const [inserted] = await tx
@@ -646,6 +833,11 @@ export async function applyContractReview(
       }
     });
 
+    // Slice 2: Propagate pending conflict fields into resultPayload
+    if (allPendingFields.length > 0) {
+      resultPayload.pendingFields = allPendingFields;
+    }
+
     // Fáze 9: Build enforcement trace pro audit a resultPayload
     const enforcementTrace = buildApplyEnforcementTrace(
       contactEnforcementResult,
@@ -653,6 +845,11 @@ export async function applyContractReview(
       paymentEnforcementResult,
       extractedPayloadForEnforcement,
     );
+
+    // Attach validation warnings to trace (non-blocking)
+    if (validationWarnings.length > 0) {
+      (resultPayload as Record<string, unknown>).preApplyValidationWarnings = validationWarnings;
+    }
 
     // Přidej trace do resultPayload (viditelný v applyResultPayload v DB)
     resultPayload.policyEnforcementTrace = {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { ProcessingStatusBadge } from "./ProcessingStatusBadge";
 import type { DocumentRow } from "@/app/actions/documents";
+import { sendDocumentByEmail } from "@/app/actions/document-send";
 
 type DocumentPdfPreviewDialogProps = {
   doc: DocumentRow | null;
@@ -25,6 +26,10 @@ export function DocumentPdfPreviewDialog({
 }: DocumentPdfPreviewDialogProps) {
   const titleId = useId();
   const [expanded, setExpanded] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [isSendPending, setIsSendPending] = useState(false);
 
   useEffect(() => {
     if (!doc) {
@@ -37,6 +42,12 @@ export function DocumentPdfPreviewDialog({
       document.body.style.overflow = prev;
     };
   }, [doc]);
+
+  useEffect(() => {
+    setRecipientEmail("");
+    setSendError(null);
+    setSendSuccess(false);
+  }, [doc?.id]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -61,6 +72,16 @@ export function DocumentPdfPreviewDialog({
   const iframeHeightClass = expanded
     ? "min-h-[calc(100dvh-7rem)] h-[calc(100dvh-7rem)]"
     : "min-h-[min(70vh,720px)] h-[min(70vh,720px)]";
+  const isProcessingInProgress =
+    doc.processingStatus === "queued" ||
+    doc.processingStatus === "processing" ||
+    doc.processingStatus === "preprocessing_pending" ||
+    doc.processingStatus === "preprocessing_running" ||
+    doc.processingStatus === "extraction_running";
+  const needsAttention =
+    doc.processingStatus === "failed" ||
+    doc.processingStatus === "preprocessing_failed" ||
+    isProcessingInProgress;
 
   return (
     <div
@@ -100,9 +121,15 @@ export function DocumentPdfPreviewDialog({
                 processingStage={doc.processingStage}
                 aiInputSource={doc.aiInputSource}
                 isScanLike={doc.isScanLike}
-                compact
               />
             </div>
+            {needsAttention ? (
+              <p className="mt-2 text-xs text-[color:var(--wp-text-muted)]">
+                {doc.processingStatus === "failed" || doc.processingStatus === "preprocessing_failed"
+                  ? "Zpracování dokumentu selhalo. Můžete ho zkusit spustit znovu přímo zde."
+                  : "Zpracování už běží na pozadí. Duplicitní klik není potřeba, náhled je dostupný už teď."}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-3 py-2 text-xs font-medium text-[color:var(--wp-text-muted)]">
@@ -114,12 +141,6 @@ export function DocumentPdfPreviewDialog({
               />
               Viditelné klientovi
             </label>
-            <a
-              href={downloadHref}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-3 py-2 text-xs font-semibold text-[var(--wp-accent)] hover:bg-[color:var(--wp-surface-inset)]"
-            >
-              Stáhnout
-            </a>
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -139,6 +160,68 @@ export function DocumentPdfPreviewDialog({
             </button>
           </div>
         </header>
+        <div className="shrink-0 border-b border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--wp-text-muted)]">
+            Akce
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            <a
+              href={downloadHref}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-2 text-sm font-semibold text-[var(--wp-accent)] hover:bg-[color:var(--wp-surface-inset)]"
+            >
+              Stáhnout dokument
+            </a>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center">
+              <label className="sr-only" htmlFor={`${titleId}-send-email`}>
+                E-mail příjemce
+              </label>
+              <input
+                id={`${titleId}-send-email`}
+                type="email"
+                autoComplete="email"
+                placeholder="E-mail příjemce"
+                value={recipientEmail}
+                onChange={(e) => {
+                  setRecipientEmail(e.target.value);
+                  setSendError(null);
+                  setSendSuccess(false);
+                }}
+                disabled={isSendPending}
+                className="min-h-[44px] w-full min-w-0 flex-1 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-3 text-sm text-[color:var(--wp-text)] outline-none focus:border-[var(--wp-accent)] sm:max-w-md"
+              />
+              <button
+                type="button"
+                disabled={isSendPending || !recipientEmail.trim()}
+                onClick={() => {
+                  setSendError(null);
+                  setSendSuccess(false);
+                  setIsSendPending(true);
+                  void sendDocumentByEmail(doc.id, recipientEmail.trim())
+                    .then((result) => {
+                      if (result.ok) {
+                        setSendSuccess(true);
+                      } else {
+                        setSendError(result.error);
+                      }
+                    })
+                    .catch(() => {
+                      setSendError("Odeslání selhalo.");
+                    })
+                    .finally(() => {
+                      setIsSendPending(false);
+                    });
+                }}
+                className="min-h-[44px] shrink-0 rounded-[var(--wp-radius)] border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-900 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSendPending ? "Odesílám…" : "Poslat e-mailem"}
+              </button>
+            </div>
+          </div>
+          {sendSuccess ? (
+            <p className="mt-2 text-xs font-medium text-emerald-700">E-mail byl odeslán.</p>
+          ) : null}
+          {sendError ? <p className="mt-2 text-xs text-red-600">{sendError}</p> : null}
+        </div>
         <div className="min-h-0 flex-1 overflow-auto bg-[color:var(--wp-surface-inset)] p-2 sm:p-4">
           <iframe
             src={downloadHref}

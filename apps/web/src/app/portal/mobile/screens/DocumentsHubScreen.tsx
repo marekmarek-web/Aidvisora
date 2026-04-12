@@ -24,6 +24,7 @@ import {
   ScanLine,
   Pencil,
   Download,
+  Mail,
 } from "lucide-react";
 import {
   listDocuments,
@@ -32,6 +33,7 @@ import {
   updateDocumentVisibleToClient,
   type DocumentRow,
 } from "@/app/actions/documents";
+import { sendDocumentByEmail } from "@/app/actions/document-send";
 import {
   BottomSheet,
   EmptyState,
@@ -249,12 +251,19 @@ function DocumentDetailPanel({
   const [editTags, setEditTags] = useState(doc.tags?.join(", ") ?? "");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [isSendPending, setIsSendPending] = useState(false);
 
   useEffect(() => {
     setEditMode(false);
     setEditName(doc.name);
     setEditTags(doc.tags?.join(", ") ?? "");
     setSaveError(null);
+    setRecipientEmail("");
+    setSendError(null);
+    setSendSuccess(false);
   }, [doc.id, doc.name, doc.tags]);
 
   const downloadHref = `/api/documents/${doc.id}/download`;
@@ -441,6 +450,59 @@ function DocumentDetailPanel({
                   </div>
                 </details>
               )}
+              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3">
+                <label className="sr-only" htmlFor={`portal-send-email-${doc.id}`}>
+                  E-mail příjemce
+                </label>
+                <div className="space-y-2">
+                  <input
+                    id={`portal-send-email-${doc.id}`}
+                    type="email"
+                    autoComplete="email"
+                    placeholder="E-mail příjemce"
+                    value={recipientEmail}
+                    onChange={(e) => {
+                      setRecipientEmail(e.target.value);
+                      setSendError(null);
+                      setSendSuccess(false);
+                    }}
+                    disabled={isSendPending}
+                    className="w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-sm text-[color:var(--wp-text)] outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    disabled={isSendPending || !recipientEmail.trim()}
+                    onClick={() => {
+                      setSendError(null);
+                      setSendSuccess(false);
+                      setIsSendPending(true);
+                      void sendDocumentByEmail(doc.id, recipientEmail.trim())
+                        .then((result) => {
+                          if (result.ok) {
+                            setSendSuccess(true);
+                          } else {
+                            setSendError(result.error);
+                          }
+                        })
+                        .catch(() => {
+                          setSendError("Odeslání selhalo.");
+                        })
+                        .finally(() => {
+                          setIsSendPending(false);
+                        });
+                    }}
+                    className="w-full min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-800 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Mail size={14} /> {isSendPending ? "Odesílám…" : "Poslat e-mailem"}
+                  </button>
+                </div>
+                {sendSuccess ? (
+                  <p className="mt-2 text-xs font-semibold text-emerald-700">E-mail byl odeslán.</p>
+                ) : null}
+                {sendError ? (
+                  <p className="mt-2 text-xs font-semibold text-rose-600">{sendError}</p>
+                ) : null}
+              </div>
             </>
           ) : (
             <a
@@ -624,6 +686,7 @@ export function DocumentsHubScreen({
   /** Skryje lokální FAB — používá se se spodní lištou s centrálním +. */
   hideScreenFab?: boolean;
 }) {
+  const router = useRouter();
   const { supportsMultiPageScan } = useCaptureCapabilities();
   const searchParams = useSearchParams();
   const docIdFromQuery = searchParams.get("doc");
@@ -783,6 +846,19 @@ export function DocumentsHubScreen({
             </button>
           </div>
         </div>
+        {supportsMultiPageScan ? (
+          <button
+            type="button"
+            onClick={() => {
+              setUploadOpen(false);
+              void router.push("/portal/scan");
+            }}
+            className="w-full min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-800 flex items-center justify-center gap-2"
+          >
+            <ScanLine size={16} className="text-indigo-600 shrink-0" />
+            Naskenovat dokument
+          </button>
+        ) : null}
         <FilterChips
           value={sourceFilter}
           onChange={(v) => setSourceFilter(v as SourceFilter)}

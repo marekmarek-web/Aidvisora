@@ -53,6 +53,15 @@ export type ApplyResultPayload = {
     paymentEnforcement?: { autoAppliedFields: string[]; pendingConfirmationFields: string[]; manualRequiredFields: string[]; excludedFields: string[] };
   };
   /**
+   * F3 Slice 2: Conflict/pending fields from contact merge policy.
+   * Each entry = { fieldKey, incomingValue, reason }.
+   */
+  pendingFields?: Array<{
+    fieldKey: string;
+    incomingValue: string | null;
+    reason: "manual_protected" | "conflict";
+  }>;
+  /**
    * Fáze 11: Per-field confirmation trace — záznamy o potvrzení jednotlivých pending polí poradcem.
    * Klíč = fieldKey (např. "birthDate", "contractNumber"), hodnota = metadata potvrzení.
    */

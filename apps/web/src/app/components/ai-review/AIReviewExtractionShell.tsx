@@ -27,6 +27,7 @@ import { createOpportunity, getOpportunityStages } from "@/app/actions/pipeline"
 import { createTask } from "@/app/actions/tasks";
 import { useToast } from "@/app/components/Toast";
 import { humanizeReviewReasonLine } from "@/lib/ai-review/czech-labels";
+import { advisorFieldLabelForKey } from "@/lib/ai-review/mappers";
 import type {
   ExtractionDocument,
   ExtractionReviewState,
@@ -97,9 +98,10 @@ function humanizeApplyGateReason(code: string): string {
   if (APPLY_GATE_REASON_LABELS[code]) return APPLY_GATE_REASON_LABELS[code];
   if (code.startsWith("LOW_FIELD_CONFIDENCE:")) {
     const fieldName = code.split(":").slice(1).join(":");
-    return `Nízká jistota u pole ${fieldName}.`;
+    const label = advisorFieldLabelForKey(fieldName.trim());
+    return `Nízká jistota u pole „${label}“ — ověřte proti dokumentu.`;
   }
-  return code.replace(/_/g, " ").toLowerCase();
+  return humanizeReviewReasonLine(code);
 }
 
 function buildRecommendationTaskTitle(rec: AIRecommendation): string {
@@ -173,13 +175,13 @@ function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
     <div className="rounded-xl border border-emerald-200 bg-white/70 px-4 py-3 space-y-2.5">
       <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
         <Shield size={11} className="shrink-0" />
-        {isSupporting ? "Výsledek zpracování" : "Výsledek enforcement zápisu"}
+        {isSupporting ? "Výsledek zpracování" : "Shrnutí zápisu do CRM"}
       </p>
 
       {isSupporting ? (
         <p className="text-xs font-semibold text-amber-800 leading-snug flex items-start gap-1.5">
           <AlertCircle size={13} className="shrink-0 mt-0.5 text-amber-600" />
-          Tento dokument slouží jako podklad — nevznikla žádná smluvní smlouva ani automatický zápis platebních dat.
+          Tento dokument slouží jako podklad — nevznikla z něj nová smlouva v CRM ani automatický zápis platebních údajů.
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -219,7 +221,7 @@ function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
           <div className="flex flex-wrap gap-1">
             {pendingFields.map((f) => (
               <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-800 bg-amber-100 rounded px-1.5 py-0.5">
-                {f}
+                {advisorFieldLabelForKey(f)}
               </span>
             ))}
           </div>
@@ -235,7 +237,7 @@ function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
           <div className="flex flex-wrap gap-1">
             {manualFields.map((f) => (
               <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-800 bg-rose-100 rounded px-1.5 py-0.5">
-                {f}
+                {advisorFieldLabelForKey(f)}
               </span>
             ))}
           </div>
@@ -251,7 +253,7 @@ function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
           <div className="flex flex-wrap gap-1">
             {excludedFields.map((f) => (
               <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded px-1.5 py-0.5">
-                {f}
+                {advisorFieldLabelForKey(f)}
               </span>
             ))}
           </div>
@@ -960,7 +962,7 @@ export function AIReviewExtractionShell({
                     ) : (
                       <Send size={14} />
                     )}
-                    <span>Schválit + CRM</span>
+                    <span>Schválit a zapsat do CRM</span>
                   </button>
                 ) : null}
                 {canApproveReject ? (
@@ -1074,7 +1076,8 @@ export function AIReviewExtractionShell({
                                 {c.displayName ?? c.clientId}
                               </p>
                               <p className="text-[10px] text-[color:var(--wp-text-secondary)]">
-                                {Math.round(c.score * 100)}% · {c.reasons.join(", ")}
+                                {Math.round(c.score * 100)}% ·{" "}
+                                {c.reasons.map((r) => humanizeReviewReasonLine(r)).join(" · ")}
                               </p>
                             </div>
                             <button

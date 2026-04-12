@@ -72,6 +72,10 @@ const REGISTRY: ReasonCode[] = [
 
   // Matching
   { code: "missing_existing_contract_match", severity: "warning", humanMessage: "Nenalezena odpovídající existující smlouva v CRM.", retryRecommended: false },
+
+  // Advisor-facing extraction gaps (UI / pipeline hints)
+  { code: "policyholder_missing", severity: "warning", humanMessage: "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.", retryRecommended: false },
+  { code: "document_family_unknown", severity: "warning", humanMessage: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.", retryRecommended: false },
 ];
 
 const CODE_MAP = new Map<string, ReasonCode>(REGISTRY.map((r) => [r.code, r]));

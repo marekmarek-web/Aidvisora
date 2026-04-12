@@ -9,6 +9,14 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
+const IN_PROGRESS_STATUSES = new Set([
+  "queued",
+  "processing",
+  "preprocessing_pending",
+  "preprocessing_running",
+  "extraction_running",
+]);
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -38,10 +46,16 @@ export async function POST(
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
-  if (doc.processingStatus === "processing") {
+  if (doc.processingStatus && IN_PROGRESS_STATUSES.has(doc.processingStatus)) {
     return NextResponse.json(
-      { error: "Document is already being processed.", status: doc.processingStatus },
-      { status: 409 }
+      {
+        success: true,
+        alreadyProcessing: true,
+        processingStatus: doc.processingStatus,
+        processingStage: doc.processingStage,
+        message: "Zpracování už běží.",
+      },
+      { status: 202 }
     );
   }
 

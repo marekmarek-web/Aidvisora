@@ -927,3 +927,22 @@ export function paymentPdfAttachmentClientTemplate(params: {
     bodyHtml,
   });
 }
+
+/** E-mail s přílohou dokumentu — `sendDocumentByEmail`. */
+export function documentAttachmentEmailTemplate(params: { documentName: string }) {
+  const bodyHtml = [
+    paragraph(
+      `v příloze posíláme dokument <strong style="color:#0B1021;">${e(params.documentName)}</strong>.`,
+      0,
+    ),
+    paragraph("Soubor byl odeslán z aplikace Aidvisora.", 0),
+  ].join("");
+
+  return buildTemplate({
+    subject: `Dokument: ${params.documentName} – Aidvisora`,
+    preheader: "Dokument v příloze.",
+    badge: "Dokument",
+    headline: "Dokument v příloze",
+    bodyHtml,
+  });
+}

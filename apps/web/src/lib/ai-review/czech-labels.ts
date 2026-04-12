@@ -30,7 +30,7 @@ const FAMILY: Record<string, string> = {
   mortgage: "Hypotéka",
   banking: "Bankovnictví",
   legacy_financial_product: "Starší finanční produkt",
-  unknown: "Nerozpoznaná rodina",
+  unknown: "Rodina produktu nebyla rozpoznána",
 };
 
 const SUBTYPE: Record<string, string> = {
@@ -57,19 +57,27 @@ const SUBTYPE: Record<string, string> = {
   unknown: "Jiný podtyp",
 };
 
+/** Neznámé enum hodnoty — bez anglických kódů v UI. */
+function labelUnknownClassifier(kind: string): string {
+  return `${kind} — upřesněte podle dokumentu`;
+}
+
 export function labelDocumentType(code: string): string {
   const k = code.trim().toLowerCase();
-  return DOC_TYPE[k] ?? code.replace(/_/g, " ");
+  if (!k) return "Neurčeno";
+  return DOC_TYPE[k] ?? labelUnknownClassifier("Typ dokumentu");
 }
 
 export function labelProductFamily(code: string): string {
   const k = code.trim().toLowerCase();
-  return FAMILY[k] ?? code.replace(/_/g, " ");
+  if (!k) return "Neurčeno";
+  return FAMILY[k] ?? labelUnknownClassifier("Rodina produktu");
 }
 
 export function labelProductSubtype(code: string): string {
   const k = code.trim().toLowerCase();
-  return SUBTYPE[k] ?? code.replace(/_/g, " ");
+  if (!k) return "Neurčeno";
+  return SUBTYPE[k] ?? labelUnknownClassifier("Podtyp produktu");
 }
 
 /** Normalized pipeline branch labels (internal codes → Czech for advisors). */
@@ -90,7 +98,8 @@ const PIPELINE_NORMALIZED: Record<string, string> = {
 
 export function labelNormalizedPipelineClassification(code: string): string {
   const k = code.trim().toLowerCase();
-  return PIPELINE_NORMALIZED[k] ?? code.replace(/_/g, " ");
+  if (!k) return "Neurčeno";
+  return PIPELINE_NORMALIZED[k] ?? labelUnknownClassifier("Klasifikace dokumentu");
 }
 
 export type AiClassifierLike = {
@@ -130,7 +139,60 @@ const EXTRA_REASON_CS: Record<string, string> = {
   product_family_text_override: "Úprava rodiny produktu podle textu dokumentu.",
   router_input_text_override: "Úprava vstupu routeru podle textu dokumentu.",
   combined_dip_dps_type_override: "Úprava typu DIP/DPS podle obsahu dokumentu.",
+  policyholder_missing: "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.",
+  "policyholder missing": "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.",
+  document_family_unknown: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
+  "document family unknown": "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
+  document_family_unclassified: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
 };
+
+const PATH_PREFIX_RE =
+  /^(?:extractedFields|documentClassification|documentMeta|publishHints|packetMeta|parties|financialTerms)\./i;
+
+function stripInternalPathPrefixes(s: string): string {
+  let t = s.trim();
+  for (let i = 0; i < 8 && PATH_PREFIX_RE.test(t); i++) {
+    t = t.replace(PATH_PREFIX_RE, "").trim();
+  }
+  if (t.includes(".")) {
+    const parts = t.split(".").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && /^[a-zA-Z][a-zA-Z0-9_]*$/.test(last)) {
+      t = last;
+    }
+  }
+  return t.trim();
+}
+
+function normalizeReasonKey(s: string): string {
+  return stripInternalPathPrefixes(s)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+function resolveOneReasonToken(token: string): string | null {
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+  const stripped = stripInternalPathPrefixes(trimmed);
+  const k = normalizeReasonKey(stripped);
+  const variants = Array.from(new Set([stripped, stripped.toLowerCase(), k].filter(Boolean)));
+  for (const v of variants) {
+    if (EXTRA_REASON_CS[v]) return EXTRA_REASON_CS[v];
+  }
+  for (const v of variants) {
+    const msg = getReasonMessage(v);
+    if (msg !== v) return msg;
+  }
+  if (/^[a-z][a-z0-9_]*$/i.test(stripped) && stripped.includes("_") && stripped.length <= 80) {
+    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
+  }
+  if (/[a-zA-Z]/.test(stripped) && stripped.length > 80) {
+    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
+  }
+  return null;
+}
 
 /**
  * Převod interních kódů a prefixovaných důvodů (např. `router_…:code`) na čitelnou češtinu pro poradce.
@@ -142,25 +204,48 @@ export function humanizeReviewReasonLine(raw: string): string {
 
   if (t.includes(":")) {
     const idx = t.indexOf(":");
-    const prefix = t.slice(0, idx).trim();
+    const prefix = stripInternalPathPrefixes(t.slice(0, idx).trim());
     const suffix = t.slice(idx + 1).trim();
-    const left =
-      EXTRA_REASON_CS[prefix] ?? (getReasonMessage(prefix) !== prefix ? getReasonMessage(prefix) : "");
-    const leftLabel = left || prefix.replace(/_/g, " ");
+    const leftResolved =
+      resolveOneReasonToken(prefix) ??
+      (getReasonMessage(normalizeReasonKey(prefix)) !== normalizeReasonKey(prefix)
+        ? getReasonMessage(normalizeReasonKey(prefix))
+        : null);
+    const leftLabel =
+      leftResolved ??
+      (prefix.length > 0 && !/^[a-z0-9_]+$/i.test(prefix)
+        ? prefix
+        : "Kontrola dokumentu");
     if (!suffix) return leftLabel;
     const subParts = suffix.split(",").map((s) => s.trim()).filter(Boolean);
     const rightBits = subParts.map((s) => {
-      const h = EXTRA_REASON_CS[s] ?? getReasonMessage(s);
-      return h !== s ? h : s.replace(/_/g, " ");
+      const r = resolveOneReasonToken(s);
+      if (r) return r;
+      const nk = normalizeReasonKey(s);
+      const msg = getReasonMessage(nk);
+      return msg !== nk ? msg : "Podrobnost ke kontrole";
     });
     return `${leftLabel}: ${rightBits.join(", ")}`;
   }
 
-  const direct = EXTRA_REASON_CS[t] ?? getReasonMessage(t);
-  if (direct !== t) return direct;
+  const stripped = stripInternalPathPrefixes(t);
+  const single = resolveOneReasonToken(stripped);
+  if (single) return single;
 
-  if (/^[a-z][a-z0-9_]*$/i.test(t) && t.includes("_")) {
-    return t.replace(/_/g, " ");
+  const nk = normalizeReasonKey(stripped);
+  const fromRegistry = getReasonMessage(nk);
+  if (fromRegistry !== nk) return fromRegistry;
+  if (EXTRA_REASON_CS[nk]) return EXTRA_REASON_CS[nk];
+
+  if (/^[a-z][a-z0-9_]*$/i.test(stripped) && stripped.includes("_")) {
+    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
   }
-  return t;
+  // Zachovat již české věty z API / validace (nejsou to interní kódy).
+  if (/[áčďéěíňóřšťúůýž]/i.test(stripped)) {
+    return stripped;
+  }
+  if (stripped.length > 0 && stripped.length < 200 && /[\s]/.test(stripped)) {
+    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
+  }
+  return "Kontrola dokumentu";
 }
