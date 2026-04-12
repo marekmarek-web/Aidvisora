@@ -5,8 +5,69 @@
  * for a client-ready payment setup, and how to extract them from an envelope.
  */
 
-import type { DocumentReviewEnvelope } from "./document-review-types";
+import type { DocumentReviewEnvelope, PrimaryDocumentType } from "./document-review-types";
 import { normalizeDateToISO } from "./canonical-date-normalize";
+import { resolvePaymentSemanticContext, selectCanonicalPaymentAmount } from "./payment-semantics";
+
+/** Remove mistaken duplicate bank suffix, e.g. "2727/2700/2700" → "2727/2700". */
+export function dedupeCzechAccountTrailingBankCode(raw: string): string {
+  let cleaned = raw.replace(/\s/g, "").trim();
+  let prev: string;
+  do {
+    prev = cleaned;
+    const m = cleaned.match(/^(.+)\/(\d{4})\/\2$/);
+    if (m) cleaned = `${m[1]}/${m[2]}`;
+  } while (cleaned !== prev);
+  return cleaned;
+}
+
+/**
+ * Single canonical domestic account + bank code: no double "/bank/bank", and if the account
+ * string already ends with /NNNN, the separate bankCode must not be appended again in UI.
+ */
+export function normalizeDomesticAccountAndBankCode(
+  accountNumber: string,
+  bankCode: string
+): { accountNumber: string; bankCode: string } {
+  let acc = dedupeCzechAccountTrailingBankCode(accountNumber.trim());
+  const bc = bankCode.replace(/\s/g, "").trim();
+  const embedded = acc.match(/^(.+)\/(\d{4})$/);
+  if (embedded) {
+    const code = embedded[2];
+    if (!bc || bc === code) {
+      return { accountNumber: acc, bankCode: code };
+    }
+    return { accountNumber: acc, bankCode: code };
+  }
+  if (acc && bc && !acc.includes("/")) {
+    return { accountNumber: `${acc}/${bc}`, bankCode: bc };
+  }
+  return { accountNumber: acc, bankCode: bc };
+}
+
+/** 1–10 digits; spaces stripped. */
+export function isValidPaymentVariableSymbol(vs: string): boolean {
+  const cleaned = vs.replace(/\s/g, "");
+  return /^\d{1,10}$/.test(cleaned);
+}
+
+/** Reject labels / placeholders that are not numeric VS (e.g. "Číslo smlouvy", "VS:"). */
+export function sanitizeVariableSymbolForCanonical(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  if (/číslo\s*smlouvy|č\.\s*smlouvy|variabil|placeholder|^vs\s*$/i.test(t)) return "";
+  if (!isValidPaymentVariableSymbol(t)) return "";
+  return t.replace(/\s/g, "");
+}
+
+/** One display line for advisor summary / preview (uses same merge as canonical payload). */
+export function formatDomesticAccountDisplayLine(accountNumber: string, bankCode: string): string {
+  const { accountNumber: acc, bankCode: bc } = normalizeDomesticAccountAndBankCode(accountNumber, bankCode);
+  if (!acc) return "";
+  if (bc && acc.endsWith(`/${bc}`)) return acc;
+  if (bc && !acc.includes("/")) return `${acc}/${bc}`;
+  return acc;
+}
 
 export type PaymentFieldTier = "required_for_sync" | "optional_visible" | "note_only";
 
@@ -55,14 +116,30 @@ function fvFromEnvelope(ef: DocumentReviewEnvelope["extractedFields"], keys: str
  */
 export function buildCanonicalPaymentPayload(envelope: DocumentReviewEnvelope): CanonicalPaymentPayload {
   const ef = envelope.extractedFields;
+  const ctx = resolvePaymentSemanticContext(envelope);
   const result: CanonicalPaymentPayload = {};
   for (const spec of PAYMENT_FIELD_SPECS) {
-    result[spec.canonical] = fvFromEnvelope(ef, spec.envelopeKeys);
+    if (spec.canonical === "amount") {
+      const semanticAmount = selectCanonicalPaymentAmount(ef, ctx);
+      result.amount = semanticAmount || fvFromEnvelope(ef, spec.envelopeKeys);
+    } else {
+      result[spec.canonical] = fvFromEnvelope(ef, spec.envelopeKeys);
+    }
   }
   if (result.firstPaymentDate) {
     result.firstPaymentDate = normalizeDateToISO(result.firstPaymentDate) || result.firstPaymentDate;
   }
   if (!result.currency) result.currency = "CZK";
+
+  if (!result.iban && (result.accountNumber || result.bankCode)) {
+    const n = normalizeDomesticAccountAndBankCode(result.accountNumber, result.bankCode);
+    result.accountNumber = n.accountNumber;
+    result.bankCode = n.bankCode;
+  }
+  if (result.variableSymbol) {
+    result.variableSymbol = sanitizeVariableSymbolForCanonical(result.variableSymbol);
+  }
+
   return result;
 }
 
@@ -75,8 +152,20 @@ export function buildCanonicalPaymentPayloadFromRaw(
 ): CanonicalPaymentPayload | null {
   const ef = payload.extractedFields as Record<string, { value?: unknown }> | undefined;
   if (!ef || typeof ef !== "object") return null;
+  const primaryType =
+    (payload.documentClassification as { primaryType?: PrimaryDocumentType } | undefined)?.primaryType ??
+    "unsupported_or_unknown";
   const result: CanonicalPaymentPayload = {};
   for (const spec of PAYMENT_FIELD_SPECS) {
+    if (spec.canonical === "amount") {
+      const semanticAmount = selectCanonicalPaymentAmount(ef as DocumentReviewEnvelope["extractedFields"], {
+        primaryType,
+      });
+      if (semanticAmount) {
+        result.amount = semanticAmount;
+        continue;
+      }
+    }
     for (const k of spec.envelopeKeys) {
       const cell = ef[k];
       if (cell?.value != null) {
@@ -93,6 +182,16 @@ export function buildCanonicalPaymentPayloadFromRaw(
     result.firstPaymentDate = normalizeDateToISO(result.firstPaymentDate) || result.firstPaymentDate;
   }
   if (!result.currency) result.currency = "CZK";
+
+  if (!result.iban && (result.accountNumber || result.bankCode)) {
+    const n = normalizeDomesticAccountAndBankCode(result.accountNumber, result.bankCode);
+    result.accountNumber = n.accountNumber;
+    result.bankCode = n.bankCode;
+  }
+  if (result.variableSymbol) {
+    result.variableSymbol = sanitizeVariableSymbolForCanonical(result.variableSymbol);
+  }
+
   return result;
 }
 

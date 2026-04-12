@@ -1,4 +1,5 @@
-import type { DocumentReviewEnvelope, PrimaryDocumentType } from "../ai/document-review-types";
+import type { DocumentReviewEnvelope, ExtractedField, PrimaryDocumentType } from "../ai/document-review-types";
+import { resolvePaymentSemanticContext, selectCanonicalPaymentAmount } from "../ai/payment-semantics";
 import { buildAllDraftActions, pruneRedundantDraftActions } from "../ai/draft-actions";
 import type { DraftActionBase } from "../ai/review-queue";
 import { getDocumentTypeLabel } from "../ai/document-messages";
@@ -7,10 +8,12 @@ import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "./czech-
 import type { AdvisorReviewViewModel, DraftAction, PaymentSyncPreview } from "./types";
 import {
   buildCanonicalPaymentPayload,
+  formatDomesticAccountDisplayLine,
   isPaymentSyncReady,
   hasPaymentTarget,
   missingRequiredPaymentFields,
   PAYMENT_FIELD_SPECS,
+  sanitizeVariableSymbolForCanonical,
 } from "../ai/payment-field-contract";
 
 function fv(env: DocumentReviewEnvelope, key: string): unknown {
@@ -25,7 +28,9 @@ function str(v: unknown): string {
 function formatMoneyLine(env: DocumentReviewEnvelope): string {
   const parts: string[] = [];
   const annual = str(fv(env, "annualPremium"));
+  const ef = env.extractedFields as Record<string, ExtractedField | undefined>;
   const amt =
+    selectCanonicalPaymentAmount(ef, resolvePaymentSemanticContext(env)) ||
     str(fv(env, "totalMonthlyPremium")) ||
     str(fv(env, "premiumAmount")) ||
     str(fv(env, "monthlyPremium")) ||
@@ -39,17 +44,15 @@ function formatMoneyLine(env: DocumentReviewEnvelope): string {
   if (amt) {
     parts.push(freq ? `${amt} (${freq})` : amt);
   }
-  const vs = str(fv(env, "variableSymbol"));
+  const vsRaw = str(fv(env, "variableSymbol"));
+  const vs = vsRaw ? sanitizeVariableSymbolForCanonical(vsRaw) : "";
   if (vs) parts.push(`VS ${vs}`);
   const iban = str(fv(env, "iban"));
   const acc = str(fv(env, "bankAccount")) || str(fv(env, "accountNumber"));
   const bankCode = str(fv(env, "bankCode"));
   if (iban) parts.push(`IBAN: ${iban}`);
   else if (acc) {
-    // Guard: do not append bankCode if it is already present at the end of acc (e.g. "2727/2700").
-    // Pattern: account format is "prefix/bankCode" or "prefix-number/bankCode".
-    const bankCodeAlreadyInAcc = bankCode && acc.endsWith(`/${bankCode}`);
-    parts.push(bankCode && !bankCodeAlreadyInAcc ? `Účet: ${acc}/${bankCode}` : `Účet: ${acc}`);
+    parts.push(`Účet: ${formatDomesticAccountDisplayLine(acc, bankCode)}`);
   }
   const pt = str(fv(env, "paymentType"));
   if (/trval|standing|direct/i.test(pt) || /trvalý/i.test(pt)) {
@@ -243,13 +246,9 @@ function buildPaymentSyncPreview(envelope: DocumentReviewEnvelope): PaymentSyncP
     };
   }
 
-  // Guard: avoid double bank code (e.g. "2727/2700/2700") if bankCode already in accountNumber
-  const accAlreadyHasCode = cp.bankCode && cp.accountNumber && cp.accountNumber.endsWith(`/${cp.bankCode}`);
   const targetPart = cp.iban
     ? `IBAN: ${cp.iban}`
-    : accAlreadyHasCode
-    ? cp.accountNumber
-    : `${cp.accountNumber}/${cp.bankCode}`;
+    : formatDomesticAccountDisplayLine(cp.accountNumber, cp.bankCode);
   const amtPart = cp.currency ? `${cp.amount} ${cp.currency}` : cp.amount;
   return {
     status: "will_sync",
