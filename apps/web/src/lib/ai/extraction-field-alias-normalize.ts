@@ -6,6 +6,11 @@
 import type { DocumentReviewEnvelope, ExtractedField, PrimaryDocumentType } from "./document-review-types";
 import { normalizeExtractedFieldDates, normalizeExtractedFieldFrequencies } from "./canonical-date-normalize";
 import { applyFieldSourcePriorityAndEvidence } from "./field-source-priority";
+import {
+  normalizeDomesticAccountAndBankCode,
+  sanitizeVariableSymbolForCanonical,
+} from "./payment-field-contract";
+import { applySemanticContractUnderstanding } from "./contract-semantic-understanding";
 
 function valuePresent(cell: ExtractedField | undefined): boolean {
   if (!cell) return false;
@@ -63,6 +68,122 @@ function mergeFromAliases(
       return;
     }
   }
+}
+
+/** Promote common LLM split fields (SPZ, VIN, brand+model, místo pojištění) before insuredObject merge/synthesis. */
+function normalizeVehicleAndPropertyCanonicalFields(ef: Record<string, ExtractedField>): void {
+  mergeFromAliases(ef, "vin", [
+    "vinNumber",
+    "serialNumber",
+    "vyrobniCislo",
+    "identificationNumber",
+    "chassisNumber",
+  ]);
+  mergeFromAliases(ef, "registrationPlate", [
+    "spz",
+    "spzNumber",
+    "licensePlate",
+    "ecv",
+    "registrationNumber",
+    "statniZnacka",
+    "registracniZnacka",
+  ]);
+  mergeFromAliases(ef, "brandModel", [
+    "vehicleMakeModel",
+    "makeModel",
+    "carMakeModel",
+    "vehicleName",
+    "vehicleDescription",
+  ]);
+  mergeFromAliases(ef, "yearOfManufacture", [
+    "modelYear",
+    "vehicleYear",
+    "rokVyroby",
+  ]);
+  if (!valuePresent(ef.brandModel)) {
+    const vb = String(ef.vehicleBrand?.value ?? ef.make?.value ?? ef.carMake?.value ?? "").trim();
+    const vm = String(ef.vehicleModel?.value ?? ef.model?.value ?? ef.carModel?.value ?? "").trim();
+    const combined = [vb, vm].filter(Boolean).join(" ");
+    if (combined) {
+      const c1 = typeof ef.vehicleBrand?.confidence === "number" ? ef.vehicleBrand.confidence : 0.75;
+      const c2 = typeof ef.vehicleModel?.confidence === "number" ? ef.vehicleModel.confidence : 0.75;
+      ef.brandModel = {
+        value: combined,
+        status: "extracted",
+        confidence: Math.min(Math.max(c1, c2), 0.88),
+        evidenceSnippet: ef.vehicleBrand?.evidenceSnippet ?? ef.vehicleModel?.evidenceSnippet,
+      };
+    }
+  }
+  if (!valuePresent(ef.brandModel) && valuePresent(ef.vehicle)) {
+    const raw = ef.vehicle!.value;
+    const text = typeof raw === "string" ? raw.trim() : formatUnknownValue(raw).trim();
+    if (text) {
+      ef.brandModel = {
+        value: text,
+        status: ef.vehicle!.status === "inferred_low_confidence" ? "inferred_low_confidence" : "extracted",
+        confidence: typeof ef.vehicle!.confidence === "number" ? ef.vehicle!.confidence : 0.78,
+        evidenceSnippet: ef.vehicle!.evidenceSnippet,
+      };
+    }
+  }
+  mergeFromAliases(ef, "insuredAddress", [
+    "placeOfInsurance",
+    "mistoPojisteni",
+    "insuranceLocation",
+    "propertyLocation",
+    "insuredLocation",
+    "propertyAddress",
+    "nemovitost",
+    "addressOfRisk",
+    "riskAddress",
+    "insuredPremises",
+  ]);
+}
+
+/** Canonical domestic account + numeric VS before dates / evidence (same rules as payment-field-contract). */
+function sanitizeExtractedPaymentAccountAndVariableSymbol(envelope: DocumentReviewEnvelope): void {
+  const ef = envelope.extractedFields;
+  const ba = ef.bankAccount;
+  const bcCell = ef.bankCode;
+  if (ba?.value != null || bcCell?.value != null) {
+    const n = normalizeDomesticAccountAndBankCode(
+      String(ba?.value ?? "").trim(),
+      String(bcCell?.value ?? "").trim()
+    );
+    if (ba && n.accountNumber) {
+      ba.value = n.accountNumber;
+    }
+    if (n.bankCode) {
+      if (bcCell) {
+        bcCell.value = n.bankCode;
+      } else {
+        ef.bankCode = { value: n.bankCode, status: "extracted" as const, confidence: 0.82 };
+      }
+    }
+  }
+
+  const vs = ef.variableSymbol;
+  if (!vs || vs.value == null) return;
+  const raw = String(vs.value).trim();
+  if (!raw) return;
+  const clean = sanitizeVariableSymbolForCanonical(raw);
+  if (clean) {
+    vs.value = clean;
+    return;
+  }
+  vs.value = "";
+  vs.status = "missing";
+  envelope.reviewWarnings = [
+    ...(envelope.reviewWarnings ?? []),
+    {
+      code: "VARIABLE_SYMBOL_INVALID",
+      message:
+        "Variabilní symbol není platný číselný údaj (nebo obsahuje text pole místo čísla) — doplněte ručně z dokumentu.",
+      field: "extractedFields.variableSymbol",
+      severity: "warning",
+    },
+  ];
 }
 
 function formatUnknownValue(v: unknown): string {
@@ -1366,6 +1487,14 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
 
   mergeFromAliases(ef, "documentStatus", ["status", "contractStatus", "documentState", "agreementStatus"]);
 
+  /**
+   * Canonical vehicle / risk-location keys for all insurance-like extractions.
+   * LLMs often emit `spz` / `vehicleBrand`+`vehicleModel` only on non-life docs; those aliases
+   * were previously merged only for leasing (`generic_financial_document`), so `insuredObject`
+   * stayed empty despite clear subject signals.
+   */
+  normalizeVehicleAndPropertyCanonicalFields(ef);
+
   mergeFromAliases(ef, "insuredObject", [
     "subjectOfInsurance",
     "insuredItem",
@@ -1409,8 +1538,11 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   salvageCanonicalFieldsFromTextishCells(ef, {
     skipContractNumberSalvage: isModelationDoc,
   });
+  sanitizeExtractedPaymentAccountAndVariableSymbol(envelope);
   normalizeExtractedFieldDates(ef);
   normalizeExtractedFieldFrequencies(ef);
+  // Generic lifecycle, segment, institution, and payment-meaning reconciliation (before evidence tiers).
+  applySemanticContractUnderstanding(envelope);
   // Evidence tagging and source priority enforcement:
   // - Tags each field with evidenceTier + sourceKind
   // - Prevents client fields from containing institution names
