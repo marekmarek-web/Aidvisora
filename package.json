@@ -33,7 +33,8 @@
     "benchmark:claude": "node --env-file=apps/web/.env.local scripts/benchmark-claude-review.mjs",
     "eval:golden-live": "pnpm --filter web eval:golden-live",
     "debug:anchors": "pnpm --filter web debug:anchors",
-    "debug:anchors:core": "pnpm --filter web debug:anchors:core"
+    "debug:anchors:core": "pnpm --filter web debug:anchors:core",
+    "test:f9-release-gate": "pnpm --filter web test:f9-release-gate"
   },
   "dependencies": {
     "postgres": "^3.4.4"

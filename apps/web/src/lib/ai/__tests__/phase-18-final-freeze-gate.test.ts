@@ -2,6 +2,7 @@
  * FÁZE 18 — FINAL FREEZE GATE: Desktop + Mobile AI Review
  *
  * Jediná must-pass sada pro release/freeze rozhodnutí AI Review feature.
+ * Součást agregované brány: `pnpm test:f9-release-gate` (viz `apps/web/RELEASE_GATE.md`).
  * Reuse-first: importuje existující logic z Fází 8–17.
  *
  * Anchor scénáře:
