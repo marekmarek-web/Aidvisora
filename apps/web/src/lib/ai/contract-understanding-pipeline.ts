@@ -32,10 +32,10 @@ import { isOpenAIRateLimitError } from "./openai-rate-limit";
 import {
   mapPrimaryToPipelineClassification,
   resolveExtractionRoute,
-  isProposalOrModelationLifecycle,
   type ExtractionRoute,
   type PipelineNormalizedClassification,
 } from "./pipeline-extraction-routing";
+import { isLifecycleNonFinalProjection } from "./lifecycle-semantics";
 import type { ClassificationResult } from "./document-classification";
 import {
   extractPaymentInstructionsFromDocument,
@@ -678,7 +678,7 @@ export async function runContractUnderstandingPipeline(
   applyExtractedFieldAliasNormalizations(data);
 
   const lifecycle = data.documentClassification.lifecycleStatus;
-  if (isProposalOrModelationLifecycle(lifecycle)) {
+  if (isLifecycleNonFinalProjection(lifecycle)) {
     allReasons.push("proposal_or_modelation_not_final_contract");
   }
   if (!data.contentFlags) {

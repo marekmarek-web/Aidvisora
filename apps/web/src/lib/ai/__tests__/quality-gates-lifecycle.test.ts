@@ -48,10 +48,20 @@ function minimalRow(overrides: Partial<ContractReviewRow> = {}): ContractReviewR
 }
 
 describe("evaluateApplyReadiness lifecycle guard", () => {
-  it("sets apply barrier when envelope lifecycle is proposal", () => {
+  it("does not treat proposal lifecycle as non-final apply barrier", () => {
     const row = minimalRow({
       extractedPayload: {
         documentClassification: { lifecycleStatus: "proposal" },
+      },
+    });
+    const g = evaluateApplyReadiness(row);
+    expect(g.applyBarrierReasons).not.toContain("NON_FINAL_LIFECYCLE");
+  });
+
+  it("sets apply barrier when envelope lifecycle is modelation", () => {
+    const row = minimalRow({
+      extractedPayload: {
+        documentClassification: { lifecycleStatus: "modelation" },
       },
     });
     const g = evaluateApplyReadiness(row);

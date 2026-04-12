@@ -177,7 +177,7 @@ function humanizeReviewReasonForAdvisorSummary(code: string): string | null {
   const map: Record<string, string> = {
     partial_extraction_coerced: "Část údajů byla dopočítána z kontextu — ověřte je v PDF.",
     partial_extraction_merged_into_stub: "Výstup byl zjednodušen — zkontrolujte hodnoty oproti dokumentu.",
-    proposal_or_modelation_not_final_contract: "Dokument vypadá jako návrh nebo modelace, ne jako finální smlouva.",
+    proposal_or_modelation_not_final_contract: "Dokument vypadá jako modelace, kalkulace nebo ilustrace, ne jako finální smlouva.",
     proposal_not_final_contract: "Rozpoznání ukazuje spíš na návrh než na finální smlouvu.",
     hybrid_contract_signals_detected: "V dokumentu jsou prvky smlouvy i modelace — ověřte typ dokumentu.",
     scan_or_ocr_unusable: "OCR nemělo dost spolehlivý text — důkladně zkontrolujte pole.",

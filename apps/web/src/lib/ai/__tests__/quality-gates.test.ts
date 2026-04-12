@@ -76,9 +76,12 @@ describe("evaluateApplyReadiness", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("sets apply barrier (not hard block) for proposals/modelations", () => {
+  it("sets apply barrier (not hard block) for modelation primary types", () => {
     const result = evaluateApplyReadiness(
-      baseRow({ detectedDocumentType: "insurance_proposal" }),
+      baseRow({
+        detectedDocumentType: "life_insurance_modelation",
+        lifecycleStatus: "modelation",
+      }),
     );
     expect(result.readiness).toBe("review_required");
     expect(result.blockedReasons).not.toContain("PROPOSAL_NOT_FINAL");

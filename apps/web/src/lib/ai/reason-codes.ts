@@ -62,7 +62,7 @@ const REGISTRY: ReasonCode[] = [
   // Document lifecycle
   { code: "proposal_not_final_contract", severity: "warning", humanMessage: "Dokument je návrh smlouvy — není to finální smlouva.", retryRecommended: false },
   { code: "offer_not_binding_contract", severity: "warning", humanMessage: "Dokument je nabídka — není to závazná smlouva.", retryRecommended: false },
-  { code: "proposal_or_modelation_not_final_contract", severity: "warning", humanMessage: "Návrh nebo modelace — nejedná se o finální smlouvu.", retryRecommended: false },
+  { code: "proposal_or_modelation_not_final_contract", severity: "warning", humanMessage: "Modelace, kalkulace nebo ilustrace — nejedná se o finální smlouvu.", retryRecommended: false },
   { code: "supporting_document_review", severity: "info", humanMessage: "Podpůrný dokument vyžaduje ruční kontrolu.", retryRecommended: false },
 
   // Payment

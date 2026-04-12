@@ -66,8 +66,8 @@ const initialState: ExtractionReviewState = {
 };
 
 const APPLY_GATE_REASON_LABELS: Record<string, string> = {
-  PROPOSAL_NOT_FINAL: "Dokument působí jako návrh nebo modelace.",
-  NON_FINAL_LIFECYCLE: "Rozpoznaný životní cyklus neodpovídá finální smlouvě.",
+  PROPOSAL_NOT_FINAL: "Dokument je klasifikován jako modelace nebo nefinální projekce.",
+  NON_FINAL_LIFECYCLE: "Životní cyklus odpovídá modelaci, kalkulaci nebo ilustraci — nikoli finální smlouvě.",
   LOW_CLASSIFICATION_CONFIDENCE: "Typ dokumentu není rozpoznaný dost jistě.",
   LOW_EXTRACTION_CONFIDENCE: "Extrakce má nižší jistotu a potřebuje kontrolu.",
   LOW_TEXT_COVERAGE: "Dokument má slabé textové pokrytí.",

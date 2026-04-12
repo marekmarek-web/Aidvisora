@@ -15,6 +15,7 @@ import {
   extractFirstNumericAmount,
   nonlifeRiskPremiumHasExplicitSemantics,
 } from "./payment-semantics";
+import { isLifecycleFinalInput, isLifecycleNonFinalProjection } from "./lifecycle-semantics";
 
 function isPresent(cell: ExtractedField | undefined): cell is ExtractedField {
   if (!cell) return false;
@@ -191,25 +192,9 @@ export function normalizeFinalityContentFlags(envelope: DocumentReviewEnvelope):
     containsMultipleDocumentSections: false,
   };
 
-  const nonFinal = new Set([
-    "modelation",
-    "illustration",
-    "non_binding_projection",
-  ]);
-
-  const finalInput = new Set([
-    "final_contract",
-    "proposal",
-    "offer",
-    "confirmation",
-    "annex",
-    "endorsement_request",
-    "policy_change_request",
-  ]);
-
-  if (nonFinal.has(lc)) {
+  if (isLifecycleNonFinalProjection(lc)) {
     envelope.contentFlags = { ...prev, isFinalContract: false, isProposalOnly: true };
-  } else if (finalInput.has(lc)) {
+  } else if (isLifecycleFinalInput(lc)) {
     envelope.contentFlags = { ...prev, isFinalContract: true, isProposalOnly: false };
   }
 }

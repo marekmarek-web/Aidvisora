@@ -4,6 +4,11 @@
  */
 
 import type { ContractReviewRow, ExtractionTrace } from "./review-queue-repository";
+import {
+  isLifecycleFinalInput,
+  isLifecycleNonFinalProjection,
+  PRIMARY_TYPES_MODELATION_NON_FINAL,
+} from "./lifecycle-semantics";
 
 export type ApplyReadiness = "ready_for_apply" | "review_required" | "blocked_for_apply";
 
@@ -59,17 +64,6 @@ const CRITICAL_FIELDS = [
   "paymentdetails.iban",
 ];
 
-const PROPOSAL_TYPES = new Set([
-  "insurance_proposal",
-  "insurance_modelation",
-  "life_insurance_proposal",
-  "life_insurance_modelation",
-  "investment_modelation",
-  "precontract_information",
-  "liability_insurance_offer",
-  "insurance_comparison",
-]);
-
 const WARN_ONLY_DOCUMENT_TYPES = new Set([
   "unknown",
   "supporting_document",
@@ -115,22 +109,28 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
     warnings.push("LOW_EXTRACTION_CONFIDENCE");
   }
 
-  if (PROPOSAL_TYPES.has(normalizedType) || PROPOSAL_TYPES.has(docType)) {
-    applyBarrier.push("PROPOSAL_NOT_FINAL");
-  }
-
   const payload = row.extractedPayload as Record<string, unknown> | null | undefined;
   const docClass = payload?.documentClassification as Record<string, unknown> | undefined;
   const lifecycleFromEnvelope =
     typeof docClass?.lifecycleStatus === "string" ? docClass.lifecycleStatus : "";
   const lifecycleFromRow = typeof row.lifecycleStatus === "string" ? row.lifecycleStatus : "";
-  const lifecycle = lifecycleFromEnvelope || lifecycleFromRow;
+  const corrected =
+    typeof row.correctedLifecycleStatus === "string" && row.correctedLifecycleStatus.trim() !== ""
+      ? row.correctedLifecycleStatus
+      : "";
+  const lifecycle = corrected || lifecycleFromEnvelope || lifecycleFromRow;
+  const lifecycleTreatsAsFinalInput = isLifecycleFinalInput(lifecycle);
+
+  // Modelation primary types — skip when lifecycle (or advisor override) is a final-input lifecycle.
   if (
-    lifecycle === "proposal" ||
-    lifecycle === "modelation" ||
-    lifecycle === "offer" ||
-    lifecycle === "illustration"
+    !lifecycleTreatsAsFinalInput &&
+    (PRIMARY_TYPES_MODELATION_NON_FINAL.has(normalizedType) ||
+      PRIMARY_TYPES_MODELATION_NON_FINAL.has(docType))
   ) {
+    applyBarrier.push("PROPOSAL_NOT_FINAL");
+  }
+
+  if (!lifecycleTreatsAsFinalInput && isLifecycleNonFinalProjection(lifecycle)) {
     applyBarrier.push("NON_FINAL_LIFECYCLE");
   }
 

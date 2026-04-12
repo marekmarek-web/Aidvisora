@@ -201,8 +201,17 @@ describe("GH01 — G02 modelace: apply gate blocks modelation lifecycle", () => 
     expect(gate.readiness).not.toBe("ready_for_apply");
   });
 
-  it("PROPOSAL_NOT_FINAL when detectedDocumentType is life_insurance_modelation", () => {
-    const row = baseRow({ detectedDocumentType: "life_insurance_modelation" });
+  it("PROPOSAL_NOT_FINAL when detectedDocumentType is life_insurance_modelation and lifecycle is not final-input", () => {
+    const row = baseRow(
+      { detectedDocumentType: "life_insurance_modelation" },
+      {
+        documentClassification: {
+          ...baseEnvelope().documentClassification,
+          lifecycleStatus: "modelation",
+          primaryType: "life_insurance_modelation",
+        },
+      },
+    );
     const gate = evaluateApplyReadiness(row);
     expect(gate.applyBarrierReasons).toContain("PROPOSAL_NOT_FINAL");
   });

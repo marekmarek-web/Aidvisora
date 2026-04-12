@@ -4,6 +4,7 @@
  */
 
 import type { PrimaryDocumentType } from "./document-review-types";
+import { isLifecycleNonFinalProjection } from "./lifecycle-semantics";
 
 export const PIPELINE_NORMALIZED_CLASSIFICATIONS = [
   "insurance_contract",
@@ -98,13 +99,15 @@ export function resolveExtractionRoute(
   return "contract_intake";
 }
 
+/**
+ * True for proposal/offer OR non-final projection lifecycles (routing / legacy checks).
+ * For finality warnings, use only {@link isLifecycleNonFinalProjection}.
+ */
 export function isProposalOrModelationLifecycle(lifecycle: string | undefined): boolean {
   if (!lifecycle) return false;
   return (
     lifecycle === "proposal" ||
     lifecycle === "offer" ||
-    lifecycle === "illustration" ||
-    lifecycle === "modelation" ||
-    lifecycle === "non_binding_projection"
+    isLifecycleNonFinalProjection(lifecycle)
   );
 }

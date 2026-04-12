@@ -80,6 +80,20 @@ describe("contract-semantic-understanding", () => {
     expect(env.contentFlags?.isProposalOnly).toBe(true);
   });
 
+  it("normalizeFinalityContentFlags: offer → final input for extraction", () => {
+    const env = bareEnvelope("liability_insurance_offer", "offer");
+    normalizeFinalityContentFlags(env);
+    expect(env.contentFlags?.isFinalContract).toBe(true);
+    expect(env.contentFlags?.isProposalOnly).toBe(false);
+  });
+
+  it("normalizeFinalityContentFlags: non_binding_projection → non-final", () => {
+    const env = bareEnvelope("life_insurance_modelation", "non_binding_projection");
+    normalizeFinalityContentFlags(env);
+    expect(env.contentFlags?.isFinalContract).toBe(false);
+    expect(env.contentFlags?.isProposalOnly).toBe(true);
+  });
+
   it("dedupeInstitutionIdentityFields clears duplicate provider", () => {
     const ef: Record<string, import("../document-review-types").ExtractedField | undefined> = {
       insurer: { value: "ACME a.s.", status: "extracted", confidence: 0.9 },

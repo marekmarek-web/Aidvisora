@@ -348,9 +348,18 @@ describe("PR07 — manualChecklist neobsahuje syrové anglické kódy", () => {
 
 describe("PR08 — finální smlouva override vs. modelace", () => {
   it("modelation je barrier (ne hard block), manual override (correctedLifecycleStatus=final_contract) by prošel", () => {
+    const modelPayload = {
+      ...baseEnvelope(),
+      documentClassification: {
+        ...baseEnvelope().documentClassification,
+        lifecycleStatus: "modelation" as const,
+        primaryType: "life_insurance_modelation" as const,
+      },
+    };
     const modelaceRow = baseRow({
       lifecycleStatus: "modelation",
       detectedDocumentType: "life_insurance_modelation",
+      extractedPayload: modelPayload,
     });
     const gate = evaluateApplyReadiness(modelaceRow);
     expect(gate.applyBarrierReasons).toContain("PROPOSAL_NOT_FINAL");
@@ -360,10 +369,11 @@ describe("PR08 — finální smlouva override vs. modelace", () => {
       lifecycleStatus: "modelation",
       detectedDocumentType: "life_insurance_modelation",
       correctedLifecycleStatus: "final_contract",
+      extractedPayload: modelPayload,
     });
     const gateOverride = evaluateApplyReadiness(overrideRow);
-    // Po override by neměl mít NON_FINAL_LIFECYCLE barrier
     expect(gateOverride.applyBarrierReasons).not.toContain("NON_FINAL_LIFECYCLE");
+    expect(gateOverride.applyBarrierReasons).not.toContain("PROPOSAL_NOT_FINAL");
   });
 
   it("final_contract bez override → ready_for_apply", () => {

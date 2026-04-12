@@ -37,9 +37,9 @@ import { isOpenAIRateLimitError } from "./openai-rate-limit";
 import {
   mapPrimaryToPipelineClassification,
   resolveExtractionRoute,
-  isProposalOrModelationLifecycle,
   type ExtractionRoute,
 } from "./pipeline-extraction-routing";
+import { isLifecycleNonFinalProjection } from "./lifecycle-semantics";
 import {
   extractPaymentInstructionsFromDocument,
   buildPaymentInstructionEnvelope,
@@ -467,7 +467,7 @@ function finalizeContractPayload(params: {
   data.debug["fieldEvidenceSummaries"] = evidenceSummaries;
 
   const lifecycle = data.documentClassification.lifecycleStatus;
-  if (isProposalOrModelationLifecycle(lifecycle)) {
+  if (isLifecycleNonFinalProjection(lifecycle)) {
     allReasons.push("proposal_or_modelation_not_final_contract");
   }
   if (!data.contentFlags) {

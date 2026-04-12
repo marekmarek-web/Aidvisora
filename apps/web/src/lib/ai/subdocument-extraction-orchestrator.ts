@@ -326,7 +326,8 @@ function runModelationLifecycleCorrection(
     return { type: "skipped", reason: "no_primary_subdocument_type" };
   }
 
-  const MODELATION_TYPES = new Set(["modelation", "contract_proposal"]);
+  // Only the explicit modelation section is a non-final projection; "contract_proposal" (návrh) is finální vstup.
+  const MODELATION_TYPES = new Set(["modelation"]);
   const isPrimaryModelation = MODELATION_TYPES.has(packetMeta.primarySubdocumentType);
   const FINAL_TYPES = new Set(["final_contract"]);
   const isPrimaryFinal = FINAL_TYPES.has(packetMeta.primarySubdocumentType);
