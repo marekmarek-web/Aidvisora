@@ -10,16 +10,21 @@ const baseProvenance = (overrides: Partial<NonNullable<ContactProvenanceInput>> 
   ...overrides,
 });
 
+/** Vrátí jen REQUIRED výsledky pro zpětnou kompatibilitu testů. */
+function required(result: ReturnType<typeof resolveIdentityCompleteness>) {
+  return result.filter((r) => r.category === "required");
+}
+
 describe("resolveIdentityCompleteness", () => {
   // -----------------------------------------------------------------------
   // A) Pole přítomno → vždy "ok"
   // -----------------------------------------------------------------------
-  it("marks field ok when value is present (no provenance)", () => {
+  it("marks required fields ok when value is present (no provenance)", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: "1985-03-22", personalId: "850322/1234" },
       null,
     );
-    expect(result.every((r) => r.status === "ok")).toBe(true);
+    expect(required(result).every((r) => r.status === "ok")).toBe(true);
   });
 
   it("marks field ok when value present and also in confirmedFields", () => {
@@ -67,23 +72,23 @@ describe("resolveIdentityCompleteness", () => {
   // -----------------------------------------------------------------------
   // C) Pole chybí + žádná provenance
   // -----------------------------------------------------------------------
-  it("marks field manual when missing and provenance is null", () => {
+  it("marks required fields manual when missing and provenance is null", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: null, personalId: null },
       null,
     );
-    expect(result.every((r) => r.status === "manual")).toBe(true);
+    expect(required(result).every((r) => r.status === "manual")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
   // D) Prázdný string → považován jako missing
   // -----------------------------------------------------------------------
-  it("treats empty string as missing", () => {
+  it("treats empty string as missing for required fields", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: "", personalId: "  " },
       null,
     );
-    expect(result.every((r) => r.status === "manual")).toBe(true);
+    expect(required(result).every((r) => r.status === "manual")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
@@ -95,11 +100,11 @@ describe("resolveIdentityCompleteness", () => {
       { birthDate: null, personalId: null },
       baseProvenance({ pendingFields: [] }),
     );
-    expect(result.every((r) => r.status === "manual")).toBe(true);
+    expect(required(result).every((r) => r.status === "manual")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
-  // F) Must-pass anchor C017 Roman Koloburda UNIQA
+  // F) Must-pass anchor C017
   //    birthDate chybí, pendingFields má birthDate → pending_ai
   //    personalId chybí, žádný pending → manual
   // -----------------------------------------------------------------------
@@ -113,22 +118,21 @@ describe("resolveIdentityCompleteness", () => {
   });
 
   // -----------------------------------------------------------------------
-  // G) Must-pass anchor C029 Investiční smlouva Codya
-  //    obě pole confirmed → guard tichý (všechny ok)
+  // G) Must-pass anchor C029
+  //    obě pole confirmed → required guard tichý
   // -----------------------------------------------------------------------
-  it("C029 anchor: all confirmed → no completeness alert", () => {
+  it("C029 anchor: required fields confirmed → no required completeness alert", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: "1985-03-22", personalId: "850322/1234" },
       baseProvenance({
         confirmedFields: ["birthDate", "personalId"],
       }),
     );
-    expect(result.every((r) => r.status === "ok")).toBe(true);
+    expect(required(result).every((r) => r.status === "ok")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
   // H) Fáze 15: Po inline confirmu — pole přejde z pending_ai do ok
-  //    (simulace: confirmedFields nyní obsahuje potvrzené pole)
   // -----------------------------------------------------------------------
   it("Phase 15: after confirm, birthDate moves to ok (appears in confirmedFields)", () => {
     const result = resolveIdentityCompleteness(
@@ -142,7 +146,7 @@ describe("resolveIdentityCompleteness", () => {
     expect(result.find((r) => r.key === "personalId")!.status).toBe("pending_ai");
   });
 
-  it("Phase 15: after confirming all pending fields, guard returns empty (all ok)", () => {
+  it("Phase 15: after confirming all pending fields, required guard silent (all ok)", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: null, personalId: null },
       baseProvenance({
@@ -150,12 +154,11 @@ describe("resolveIdentityCompleteness", () => {
         pendingFields: [],
       }),
     );
-    expect(result.every((r) => r.status === "ok")).toBe(true);
+    expect(required(result).every((r) => r.status === "ok")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
   // I) Fáze 15: Supporting docs — nesmí generovat pending_ai CTA
-  //    (pendingFields je prázdné, pokud contact enforcement nevznikl)
   // -----------------------------------------------------------------------
   it("Phase 15: C022/C040 supporting doc — no pending_ai CTA when pendingFields empty", () => {
     const result = resolveIdentityCompleteness(
@@ -166,11 +169,11 @@ describe("resolveIdentityCompleteness", () => {
         confirmedFields: [],
       }),
     );
-    expect(result.every((r) => r.status === "manual")).toBe(true);
+    expect(required(result).every((r) => r.status === "manual")).toBe(true);
   });
 
   // -----------------------------------------------------------------------
-  // J) Fáze 15: Must-pass anchor C030 IŽP Generali
+  // J) Must-pass anchor C030
   //    birthDate + personalId pending → oba v pending_ai
   // -----------------------------------------------------------------------
   it("C030 anchor: both identity fields pending → both pending_ai", () => {
@@ -183,17 +186,102 @@ describe("resolveIdentityCompleteness", () => {
   });
 
   // -----------------------------------------------------------------------
-  // K) Fáze 15: manual pole nesmí dostat pending_ai status
-  //    i když reviewId existuje (jen protože provenance je přítomna)
+  // K) manual pole nesmí dostat pending_ai status
   // -----------------------------------------------------------------------
   it("Phase 15: manual fields stay manual even when provenance/reviewId present", () => {
     const result = resolveIdentityCompleteness(
       { birthDate: null, personalId: null },
       baseProvenance({
         pendingFields: ["birthDate"],
-        // personalId není v pendingFields → manual
       }),
     );
     expect(result.find((r) => r.key === "personalId")!.status).toBe("manual");
+  });
+
+  // -----------------------------------------------------------------------
+  // Slice 4.2: Advisory fields
+  // -----------------------------------------------------------------------
+  it("advisory: idCardNumber ok when value present", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null, idCardNumber: "123456789" },
+      null,
+    );
+    expect(result.find((r) => r.key === "idCardNumber")!.status).toBe("ok");
+    expect(result.find((r) => r.key === "idCardNumber")!.category).toBe("advisory");
+  });
+
+  it("advisory: idCardNumber pending_ai when in pendingFields", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null, idCardNumber: null },
+      baseProvenance({ pendingFields: ["idCardNumber"] }),
+    );
+    expect(result.find((r) => r.key === "idCardNumber")!.status).toBe("pending_ai");
+  });
+
+  it("advisory: idCardNumber manual when missing and no provenance", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null },
+      null,
+    );
+    expect(result.find((r) => r.key === "idCardNumber")!.status).toBe("manual");
+  });
+
+  it("advisory: address ok when street + city present", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null, street: "Hlavní 12", city: "Praha" },
+      null,
+    );
+    expect(result.find((r) => r.key === "address")!.status).toBe("ok");
+  });
+
+  it("advisory: address manual when all address fields missing", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null },
+      null,
+    );
+    expect(result.find((r) => r.key === "address")!.status).toBe("manual");
+  });
+
+  it("advisory: address pending_ai when street in pendingFields", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null },
+      baseProvenance({ pendingFields: ["street"] }),
+    );
+    expect(result.find((r) => r.key === "address")!.status).toBe("pending_ai");
+  });
+
+  it("advisory: contact ok when email present", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null, email: "test@example.com" },
+      null,
+    );
+    expect(result.find((r) => r.key === "contact")!.status).toBe("ok");
+  });
+
+  it("advisory: contact ok when phone present", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null, phone: "+420 123 456 789" },
+      null,
+    );
+    expect(result.find((r) => r.key === "contact")!.status).toBe("ok");
+  });
+
+  it("advisory: contact manual when neither email nor phone", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: null, personalId: null },
+      null,
+    );
+    expect(result.find((r) => r.key === "contact")!.status).toBe("manual");
+  });
+
+  it("result contains required + advisory categories", () => {
+    const result = resolveIdentityCompleteness(
+      { birthDate: "1985-01-01", personalId: "850101/1234", idCardNumber: "AB123456", street: "Hlavní 1", city: "Praha", zip: "110 00", email: "a@b.com" },
+      null,
+    );
+    const categories = [...new Set(result.map((r) => r.category))];
+    expect(categories).toContain("required");
+    expect(categories).toContain("advisory");
+    expect(result.every((r) => r.status === "ok")).toBe(true);
   });
 });
