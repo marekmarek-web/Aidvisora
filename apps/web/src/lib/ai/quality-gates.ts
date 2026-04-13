@@ -187,9 +187,10 @@ export function evaluateApplyReadiness(row: ContractReviewRow): ApplyGateResult 
   }
 
   if (trace?.llmClientMatchKind === "ambiguous" && matchVerdict !== "existing_match") {
-    // LLM can only downgrade, never override existing_match.
+    // LLM ambiguous without a confirmed existing_match verdict is a hard block.
+    // Ambiguity cannot be resolved without advisor action — block apply.
     if (!blocked.includes("AMBIGUOUS_CLIENT_MATCH")) {
-      warnings.push("LLM_CLIENT_MATCH_AMBIGUOUS");
+      blocked.push("LLM_CLIENT_MATCH_AMBIGUOUS");
     }
   }
 
