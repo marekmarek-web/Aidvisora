@@ -34,7 +34,7 @@ Jednotná **regression brána** před releasem CRM / AI Review / portálu. Žád
 
 4. **Volitelné — soft warning / manuální hloubka**
    - Živý golden eval (nákladné, může volat API): `pnpm --filter web eval:golden-live`
-   - Anchor debug (nákladné): `pnpm debug:anchors` nebo `pnpm debug:anchors:core`
+   - Anchor debug (nákladné, může volat modely / dlouhý běh): `pnpm debug:anchors` nebo `pnpm debug:anchors:core` — **není** součástí `test:f9-release-gate`; spouští se před major releasem nebo při podezření na regresi v extrakci.
    - E2E: `pnpm --filter web test:e2e` (pokud je Playwright nakonfigurován v CI)
 
 ## Co gate pokrývá (mapování oblastí)
@@ -42,10 +42,13 @@ Jednotná **regression brána** před releasem CRM / AI Review / portálu. Žád
 | Oblast | Primární soubory ve `test:f9-release-gate` |
 |--------|---------------------------------------------|
 | Final freeze + pending + supporting + mobile parity (F6–F8) | `phase-18-final-freeze-gate.test.ts` |
-| Kvalita / lifecycle signály | `quality-gates.test.ts` |
+| Kvalita | `quality-gates.test.ts` |
+| Lifecycle gates | `quality-gates-lifecycle.test.ts` |
 | Sémantika dokumentu | `contract-semantic-understanding.test.ts` |
 | Type mapper | `ai-review-type-mapper.test.ts` |
 | Alias / normalizace polí | `extraction-field-alias-normalize.test.ts` |
+| Extrakce — envelope parse / coerce | `envelope-parse-coerce.test.ts` |
+| Apply před validace (extrakční gate před zápisem) | `pre-apply-validation.test.ts` |
 | Platby (sync) | `phase-3-payment-sync-regression.test.ts` |
 | Apply / idempotence / merge (F3) | `apply-contract-review-f3-slice12.test.ts`, `apply-contract-review-f3-slice345.test.ts` |
 | Kontakt — completeness + pending | `contact-identity-completeness-guard.test.ts` |
