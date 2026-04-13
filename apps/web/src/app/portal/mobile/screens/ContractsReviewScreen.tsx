@@ -30,6 +30,8 @@ import {
   rejectContractReview,
   selectMatchedClient,
 } from "@/app/actions/contract-review";
+import type { MatchVerdict } from "@/lib/ai-review/types";
+import { isSupportingDocumentOnly } from "@/lib/ai/apply-policy-enforcement";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import {
   EmptyState,
@@ -75,8 +77,10 @@ type ReviewDetail = {
   confidence: number | null;
   errorMessage?: string | null;
   extractedPayload?: Record<string, unknown> | null;
+  extractionTrace?: Record<string, unknown> | null;
+  matchVerdict?: string | null;
   draftActions?: unknown[] | null;
-  clientMatchCandidates?: Array<{ id: string; fullName?: string; score?: number }> | null;
+  clientMatchCandidates?: Array<{ id: string; fullName?: string; score?: number; clientId?: string }> | null;
   matchedClientId?: string;
   createNewClientConfirmed?: string | null;
   createdAt: string;
@@ -86,6 +90,15 @@ type ReviewDetail = {
 
 type StatusFilter = "all" | "pending" | "done" | "failed";
 
+function resolveMatchVerdictFromReviewDetail(d: ReviewDetail): MatchVerdict | null {
+  const v =
+    (d.matchVerdict as MatchVerdict | undefined) ??
+    (d.extractionTrace?.matchVerdict as MatchVerdict | undefined);
+  if (v === "existing_match" || v === "near_match" || v === "ambiguous_match" || v === "no_match") {
+    return v;
+  }
+  return null;
+}
 
 function humanizeFieldKey(key: string): string {
   const s = key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
@@ -880,6 +893,33 @@ export function ContractsReviewScreen({
     const alreadyResolved =
       !!current.matchedClientId?.trim() || current.createNewClientConfirmed === "true";
     if (alreadyResolved) return true;
+
+    const verdict = resolveMatchVerdictFromReviewDetail(current);
+    if (verdict === "ambiguous_match") {
+      const msg = "Nejdřív vyberte klienta — zápis je do výběru pozastavený.";
+      setError(msg);
+      showToast(msg, "error");
+      return false;
+    }
+    if (verdict === "near_match" || verdict === "existing_match") {
+      return true;
+    }
+
+    const payload = current.extractedPayload;
+    if (payload && isSupportingDocumentOnly(payload)) {
+      const msg = "U podpůrného dokumentu vyberte klienta pro připojení.";
+      setError(msg);
+      showToast(msg, "error");
+      return false;
+    }
+
+    const cand = current.clientMatchCandidates;
+    if (verdict == null && Array.isArray(cand) && cand.length > 1) {
+      const msg = "Vyberte klienta z kandidátů.";
+      setError(msg);
+      showToast(msg, "error");
+      return false;
+    }
 
     const result = await confirmCreateNewClient(current.id);
     if (!result.ok) {
