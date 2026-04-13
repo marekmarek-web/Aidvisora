@@ -162,6 +162,10 @@ export type ExtractionTrace = {
   llmClientMatchDurationMs?: number;
   /** Parsed from optional client-match LLM (guardrails). */
   llmClientMatchKind?: string;
+  /**
+   * Deterministic client-match verdict; may mirror top-level DB column when also stored in trace.
+   */
+  matchVerdict?: string | null;
   /** Classifier v2: false → skip automatic structured extraction (review path). */
   supportedForDirectExtraction?: boolean;
   scanPendingReason?: string;
