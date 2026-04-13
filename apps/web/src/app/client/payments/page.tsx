@@ -1,12 +1,15 @@
 import { ClientPaymentsView } from "./payments-client";
 import { requireClientZoneAuth } from "@/lib/auth/require-auth";
-import { getPaymentInstructionsForContact } from "@/app/actions/payment-pdf";
+import {
+  getPaymentInstructionsForContact,
+  type PaymentInstruction,
+} from "@/app/actions/payment-pdf";
 
 export default async function ClientPaymentsPage() {
   const auth = await requireClientZoneAuth();
   if (!auth.contactId) return null;
 
-  let paymentInstructions = [];
+  let paymentInstructions: PaymentInstruction[] = [];
   try {
     paymentInstructions = await getPaymentInstructionsForContact(auth.contactId);
   } catch {
