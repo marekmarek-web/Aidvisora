@@ -10,18 +10,18 @@ export function PremiumPill({
   tone?: string;
 }) {
   const tones: Record<string, string> = {
-    default: "bg-white/70 text-slate-700 border-slate-200",
-    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    warn: "bg-amber-50 text-amber-700 border-amber-200",
-    danger: "bg-rose-50 text-rose-700 border-rose-200",
-    info: "bg-sky-50 text-sky-700 border-sky-200",
-    violet: "bg-violet-50 text-violet-700 border-violet-200",
-    dark: "bg-slate-800 text-slate-100 border-slate-700",
+    default: "border-slate-200 bg-slate-50 text-slate-600",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
+    danger: "border-rose-200 bg-rose-50 text-rose-700",
+    info: "border-sky-200 bg-sky-50 text-sky-700",
+    violet: "border-violet-200 bg-violet-50 text-violet-700",
+    dark: "border-white/10 bg-white/10 text-white",
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${tones[tone] || tones.default}`}
+      className={`inline-flex items-center rounded-[12px] border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] ${tones[tone] || tones.default}`}
     >
       {children}
     </span>
@@ -42,12 +42,12 @@ export function PremiumSectionTitle({
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-700">
+        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-[14px] bg-slate-100 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200/70">
           {symbol}
         </div>
         <div>
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-          {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
+          <h3 className="text-[1.05rem] font-black tracking-tight text-slate-950">{title}</h3>
+          {subtitle ? <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
         </div>
       </div>
       {action ?? null}
@@ -69,23 +69,23 @@ export function PremiumMetricCard({
   symbol?: string;
 }) {
   const toneClass: Record<string, string> = {
-    default: "from-white to-slate-50/80 border-slate-200/80",
-    info: "from-sky-50/70 to-white border-sky-200/70",
-    success: "from-emerald-50/70 to-white border-emerald-200/70",
-    warn: "from-amber-50/70 to-white border-amber-200/70",
-    danger: "from-rose-50/70 to-white border-rose-200/70",
-    violet: "from-violet-50/70 to-white border-violet-200/70",
+    default: "border-slate-200/80 bg-white",
+    info: "border-sky-200/80 bg-sky-50/65",
+    success: "border-emerald-200/80 bg-emerald-50/65",
+    warn: "border-amber-200/80 bg-amber-50/65",
+    danger: "border-rose-200/80 bg-rose-50/65",
+    violet: "border-violet-200/80 bg-violet-50/65",
   };
 
   return (
-    <div className={`rounded-3xl border bg-gradient-to-br ${toneClass[tone] || toneClass.default} p-4 shadow-sm`}>
+    <div className={`rounded-[24px] border ${toneClass[tone] || toneClass.default} p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-slate-950">{value}</p>
-          {change ? <p className="mt-1 text-[11px] text-slate-500">{change}</p> : null}
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+          <p className="mt-3 text-[2rem] font-black leading-none tracking-tight text-slate-950">{value}</p>
+          {change ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{change}</p> : null}
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/85 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200/60">
+        <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-white/90 text-sm text-slate-700 shadow-sm ring-1 ring-black/5">
           {symbol}
         </div>
       </div>
@@ -114,11 +114,11 @@ export function PremiumProgressBar({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-        <span className="text-slate-600">{label}</span>
-        <span className="font-semibold tabular-nums text-slate-900">{value}%</span>
+      <div className="mb-2.5 flex items-center justify-between gap-3 text-sm">
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">{label}</span>
+        <span className="text-sm font-black tabular-nums text-slate-950">{value}%</span>
       </div>
-      <div className="h-2 rounded-full bg-slate-100">
+      <div className="h-2 rounded-full bg-slate-200/80">
         <div className={`h-2 rounded-full transition-all duration-300 ${toneClass[tone]}`} style={{ width }} />
       </div>
     </div>
@@ -135,16 +135,16 @@ export function PremiumToggleGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-[24px] border border-white bg-white/70 p-1.5 shadow-[0_8px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl">
       {items.map((item) => (
         <button
           key={item}
           type="button"
           onClick={() => onChange(item)}
-          className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+          className={`rounded-[18px] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.18em] transition-all duration-300 ${
             active === item
-              ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
-              : "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+              ? "scale-[1.02] bg-[#16192b] text-white shadow-md shadow-[#16192b]/20"
+              : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
           }`}
         >
           {item}

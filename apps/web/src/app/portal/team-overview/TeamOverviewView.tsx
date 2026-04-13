@@ -551,24 +551,25 @@ export function TeamOverviewView({
   );
 
   const peopleAndFilters = (
-    <div className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm md:p-6">{peopleFiltersInner}</div>
+    <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] md:p-6">
+      {peopleFiltersInner}
+    </div>
   );
 
   const peopleLideTab = (
     <>
-      <div className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm md:p-6">
+      <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] md:p-6">
         {peopleFiltersInner}
         {visibleMembers.length > 0 ? (
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-white/95 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400 backdrop-blur-sm">
+          <div className="mt-6 overflow-x-auto rounded-[24px] border border-slate-200/80 bg-white">
+            <table className="w-full min-w-[860px] border-separate border-spacing-y-0 text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-white text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
                 <tr>
-                  <th className="px-4 py-3">Jméno a role</th>
-                  <th className="px-4 py-3">Kariéra (program / větev)</th>
-                  <th className="px-4 py-3">Skupina (pool)</th>
-                  <th className="px-4 py-3">Výkon (produkce)</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Akce</th>
+                  <th className="border-b border-slate-200/80 px-6 py-4">Jméno a role</th>
+                  <th className="border-b border-slate-200/80 px-6 py-4">Program / track / pozice</th>
+                  <th className="border-b border-slate-200/80 px-6 py-4">Produkce + skupina</th>
+                  <th className="border-b border-slate-200/80 px-6 py-4">Status</th>
+                  <th className="border-b border-slate-200/80 px-6 py-4 text-right">Akce</th>
                 </tr>
               </thead>
               <tbody>
@@ -578,37 +579,45 @@ export function TeamOverviewView({
                   return (
                     <tr
                       key={mem.userId}
-                      className="cursor-pointer bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-px hover:bg-slate-50"
+                      className="cursor-pointer transition hover:bg-slate-50/70"
                       onClick={() => selectMember(mem.userId)}
                     >
-                      <td className="rounded-l-2xl px-4 py-4">
-                        <div className="font-semibold text-slate-950">{displayName(mem)}</div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{mem.roleName}</div>
+                      <td className="border-b border-slate-100 px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-slate-100 text-sm font-black text-slate-700">
+                            {displayName(mem).slice(0, 1).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-[15px] text-slate-950">{displayName(mem)}</div>
+                            <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+                              {mem.roleName}
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-xs font-semibold text-slate-800">
+                      <td className="border-b border-slate-100 px-6 py-5">
+                        <div className="text-xs font-bold text-slate-800">
                           {ce ? formatCareerProgramLabel(ce.careerProgramId) : "—"}
                         </div>
-                        <div className="text-[10px] text-slate-500">
+                        <div className="mt-1 text-[11px] text-slate-500">
                           {ce ? formatCareerTrackLabel(ce.careerTrackId) : "—"} · {ce?.careerPositionLabel ?? "—"}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-xs font-semibold text-slate-800">
-                        {ce ? poolColumnLabel(ce.careerProgramId) : "—"}
-                      </td>
-                      <td className="px-4 py-4 font-black text-slate-950">
-                        {mm ? formatTeamOverviewProduction(mm.productionThisPeriod) : "—"}
-                        <div className="text-[10px] font-medium text-slate-500">
-                          Jednotky: {mm != null ? mm.unitsThisPeriod : "—"}
+                      <td className="border-b border-slate-100 px-6 py-5">
+                        <div className="font-black text-slate-950">
+                          {mm ? formatTeamOverviewProduction(mm.productionThisPeriod) : "—"}
+                        </div>
+                        <div className="mt-1 text-[11px] font-semibold text-slate-500">
+                          {ce ? poolColumnLabel(ce.careerProgramId) : "—"} · Jednotky: {mm != null ? mm.unitsThisPeriod : "—"}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                      <td className="border-b border-slate-100 px-6 py-5">
+                        <span className="inline-flex rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-700">
                           {ce?.managerProgressLabel ?? "—"}
                         </span>
                       </td>
-                      <td className="rounded-r-2xl px-4 py-4 text-right">
-                        <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end">
+                      <td className="border-b border-slate-100 px-6 py-5 text-right">
+                        <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -616,9 +625,9 @@ export function TeamOverviewView({
                               openMemberModal("progress", mem.userId);
                               selectMember(mem.userId);
                             }}
-                            className="rounded-2xl bg-violet-100 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-900 transition hover:bg-violet-200/80"
+                            className="rounded-[12px] bg-slate-100 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
                           >
-                            Strom
+                            Strom progresu
                           </button>
                           <button
                             type="button"
@@ -627,7 +636,7 @@ export function TeamOverviewView({
                               openMemberModal("crm", mem.userId);
                               selectMember(mem.userId);
                             }}
-                            className="rounded-2xl bg-slate-100 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
+                            className="rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-50"
                           >
                             CRM karta
                           </button>
@@ -656,8 +665,8 @@ export function TeamOverviewView({
 
   const cockpitBody = (
     <>
-      {/* First fold: briefing → KPI / výkon → pozornost; AI až pod tím jako sekundární */}
-      <div className="space-y-3">
+      {/* First fold: briefing → KPI → attention + rhythm; secondary panels až pod tím */}
+      <div className="space-y-4">
         <TeamOverviewPremiumBriefingDark
           periodLabel={periodLabelActive}
           scopeLabel={scopeLabelActive}
@@ -667,17 +676,7 @@ export function TeamOverviewView({
 
         <TeamOverviewCockpitFourCards kpis={kpis} inProductionCount={inProductionCount} loading={loading} />
 
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(280px,1fr)]">
-          <div className="min-w-0 space-y-3">
-            <TeamOverviewKpiDetailSection
-              loading={loading}
-              kpis={kpis}
-              members={members}
-              topMetric={topMetric}
-              bottomMetric={bottomMetric}
-            />
-            <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-          </div>
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
           <div className="min-w-0">
             <TeamOverviewAttentionSection
               variant="firstFold"
@@ -690,54 +689,64 @@ export function TeamOverviewView({
               canCreateTeamCalendar={canCreateTeamCalendar}
             />
           </div>
-        </div>
-
-        <div className="max-w-3xl rounded-[24px] border border-dashed border-slate-200/80 bg-slate-50/60 p-1.5 opacity-90">
-          <TeamOverviewAiTeamSummarySection
-            compact
-            aiLoading={aiLoading}
-            aiError={aiError}
-            aiSummary={aiSummary}
-            aiGenerationId={aiGenerationId}
-            aiFeedbackSubmitted={aiFeedbackSubmitted}
-            aiFeedbackSaving={aiFeedbackSaving}
-            teamActionSaving={teamActionSaving}
-            teamActionError={teamActionError}
-            canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
-            members={members}
-            onLoadLatest={loadLatestTeamSummary}
-            onGenerate={generateTeamSummary}
-            onSubmitFeedback={submitTeamSummaryFeedback}
-            onCreateFollowUp={createTeamFollowUp}
+          <TeamRhythmPanel
+            computed={pageModel.rhythmComputed}
+            disclaimer={
+              rhythmCalendar?.disclaimerCs ??
+              "Týmové položky pocházejí z team_events / team_tasks a jsou filtrované podle rozsahu přehledu."
+            }
+            scope={scope}
+            canCreate={canCreateTeamCalendar}
+            memberDetailHref={memberDetailHref}
+            resolveMemberLabel={resolveRhythmMemberLabel}
+            onOpenEvent={openTeamEventModal}
+            onOpenTask={openTeamTaskModal}
           />
         </div>
-      </div>
 
-      <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <TeamRhythmPanel
-          computed={pageModel.rhythmComputed}
-          disclaimer={
-            rhythmCalendar?.disclaimerCs ??
-            "Týmové položky pocházejí z team_events / team_tasks a jsou filtrované podle rozsahu přehledu."
-          }
-          scope={scope}
-          canCreate={canCreateTeamCalendar}
-          memberDetailHref={memberDetailHref}
-          resolveMemberLabel={resolveRhythmMemberLabel}
-          onOpenEvent={openTeamEventModal}
-          onOpenTask={openTeamTaskModal}
-        />
-        <TeamStructurePanel
-          roots={hierarchy}
-          currentUserId={currentUserId}
-          scope={scope}
-          memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
-          hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
-          selectedUserId={selectedUserId}
-          onSelectMember={selectMember}
-          metricsByUser={metricsByUser}
-          newcomerUserIds={newcomerSet}
-        />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)]">
+          <TeamOverviewKpiDetailSection
+            loading={loading}
+            kpis={kpis}
+            members={members}
+            topMetric={topMetric}
+            bottomMetric={bottomMetric}
+          />
+          <div className="max-w-3xl rounded-[28px] border border-dashed border-slate-200/80 bg-slate-50/60 p-1.5 opacity-90">
+            <TeamOverviewAiTeamSummarySection
+              compact
+              aiLoading={aiLoading}
+              aiError={aiError}
+              aiSummary={aiSummary}
+              aiGenerationId={aiGenerationId}
+              aiFeedbackSubmitted={aiFeedbackSubmitted}
+              aiFeedbackSaving={aiFeedbackSaving}
+              teamActionSaving={teamActionSaving}
+              teamActionError={teamActionError}
+              canCreateAiTeamFollowUp={canCreateAiTeamFollowUp}
+              members={members}
+              onLoadLatest={loadLatestTeamSummary}
+              onGenerate={generateTeamSummary}
+              onSubmitFeedback={submitTeamSummaryFeedback}
+              onCreateFollowUp={createTeamFollowUp}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+          <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
+          <TeamStructurePanel
+            roots={hierarchy}
+            currentUserId={currentUserId}
+            scope={scope}
+            memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
+            hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
+            selectedUserId={selectedUserId}
+            onSelectMember={selectMember}
+            metricsByUser={metricsByUser}
+            newcomerUserIds={newcomerSet}
+          />
+        </div>
       </div>
 
       {peopleAndFilters}
@@ -746,9 +755,9 @@ export function TeamOverviewView({
 
   const careerOnly = (
     <>
-      <div className="mb-4 rounded-[28px] border border-slate-200/80 bg-white px-5 py-4 shadow-sm">
-        <h2 className="text-lg font-black tracking-tight text-slate-950">Kariéra a výkon</h2>
-        <p className="mt-1.5 text-sm text-slate-600">
+      <div className="mb-4 rounded-[32px] border border-slate-200/80 bg-white px-6 py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+        <h2 className="text-[26px] font-black tracking-tight text-slate-950">Kariéra a výkon</h2>
+        <p className="mt-2 text-sm text-slate-600">
           {periodLabelActive} · {scopeLabelActive} · Beplan {pageModel.poolSplit.counts.beplan} lidí /{" "}
           {pageModel.poolSplit.units.beplan} j. · Premium Brokers {pageModel.poolSplit.counts.premium_brokers} lidí /{" "}
           {pageModel.poolSplit.units.premium_brokers} j.
@@ -836,7 +845,7 @@ export function TeamOverviewView({
   return (
     <>
       <TeamOverviewPremiumShell
-        title="Tým"
+        title="Týmový přehled"
         subtitle="Výkon, struktura a navazující práce v týmu."
         scopeItems={scopeOptions.map((o) => o.label)}
         scopeActive={scopeLabelActive}
@@ -890,6 +899,18 @@ export function TeamOverviewView({
             }
             onOpenCheckIn={
               selectedUserId ? () => openMemberModal("checkin", selectedUserId) : undefined
+            }
+            onOpenTask={
+              selectedUserId
+                ? () => {
+                    const m = members.find((x) => x.userId === selectedUserId);
+                    setCalendarPrefill({
+                      title: `Follow-up — ${m ? displayName(m) : "člen"}`,
+                      memberUserIds: [selectedUserId],
+                    });
+                    setTeamCalendarModal("task");
+                  }
+                : undefined
             }
             onOpenOneToOne={
               selectedUserId

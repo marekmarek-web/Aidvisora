@@ -71,33 +71,33 @@ export function TeamOverviewCareerSummarySection({
 
   return (
     <section
-      className="mb-8 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm"
+      className="mb-8 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
       aria-labelledby="team-career-growth-heading"
     >
-      <div className="grid gap-3 border-b border-slate-200/80 bg-slate-50/40 px-5 py-4 sm:px-6 sm:grid-cols-3">
-        <div className="rounded-3xl border border-emerald-200/80 bg-emerald-50/40 px-4 py-3 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-800/80">Připraveno k posunu</p>
+      <div className="grid gap-4 bg-white px-6 py-6 sm:grid-cols-3">
+        <div className="rounded-[24px] border border-emerald-200/80 bg-emerald-50/60 px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-800/80">Připraveno k posunu</p>
           <p className="mt-1 text-2xl font-black tabular-nums text-emerald-900">{statBuckets.readyToAdvance}</p>
         </div>
-        <div className="rounded-3xl border border-amber-200/80 bg-amber-50/40 px-4 py-3 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-900/80">Ke schválení</p>
+        <div className="rounded-[24px] border border-amber-200/80 bg-amber-50/60 px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-900/80">Ke schválení</p>
           <p className="mt-1 text-2xl font-black tabular-nums text-amber-950">{statBuckets.pendingReview}</p>
         </div>
-        <div className="rounded-3xl border border-rose-200/80 bg-rose-50/40 px-4 py-3 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-900/80">Blokováno</p>
+        <div className="rounded-[24px] border border-rose-200/80 bg-rose-50/60 px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-900/80">Blokováno</p>
           <p className="mt-1 text-2xl font-black tabular-nums text-rose-950">{statBuckets.blocked}</p>
         </div>
       </div>
 
-      <div className="overflow-x-auto border-b border-slate-200/80">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="bg-slate-50/70 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
+      <div className="border-t border-slate-200/80" />
+      <div className="overflow-x-auto p-4 sm:p-6">
+        <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+          <thead className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
             <tr>
               <th className="px-5 py-3 sm:px-6">Poradce</th>
-              <th className="px-3 py-3">Aktuální krok</th>
-              <th className="px-3 py-3">Další krok</th>
-              <th className="px-3 py-3">Readiness %</th>
-              <th className="px-3 py-3">Blokátory / status</th>
+              <th className="px-3 py-3">Aktuální kariérní krok</th>
+              <th className="px-3 py-3">Plnění podmínek</th>
+              <th className="px-3 py-3">Status / blokátory</th>
               <th className="px-5 py-3 text-right sm:px-6">Akce</th>
             </tr>
           </thead>
@@ -115,21 +115,40 @@ export function TeamOverviewCareerSummarySection({
               return (
                 <tr
                   key={mem.userId}
-                  className="cursor-pointer border-t border-slate-200/70 transition hover:bg-slate-50/70"
+                  className="cursor-pointer rounded-[20px] bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:bg-slate-50/70"
                   onClick={() => selectMember(mem.userId)}
                 >
-                  <td className="px-5 py-3 font-semibold text-[color:var(--wp-text)] sm:px-6">{displayName(mem)}</td>
-                  <td className="px-3 py-3 text-xs text-[color:var(--wp-text-secondary)]">
-                    {ce.careerPositionLabel ?? "—"}
+                  <td className="rounded-l-[20px] px-5 py-5 font-extrabold text-slate-950 sm:px-6">{displayName(mem)}</td>
+                  <td className="px-3 py-5 text-xs text-slate-600">
+                    <div className="flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-500">
+                      <span className="rounded-[10px] bg-slate-100 px-3 py-1.5 text-slate-700">{ce.careerPositionLabel ?? "—"}</span>
+                      <ChevronRight className="h-3 w-3 text-slate-300" aria-hidden />
+                      <span className="text-[#16192b]">{ce.nextCareerPositionLabel ?? "—"}</span>
+                    </div>
                   </td>
-                  <td className="px-3 py-3 text-xs text-[color:var(--wp-text-secondary)]">
-                    {ce.nextCareerPositionLabel ?? "—"}
+                  <td className="px-3 py-5">
+                    <div className="flex items-center gap-4">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full ${readiness === 100 ? "bg-emerald-500" : "bg-[#16192b]"}`}
+                          style={{ width: `${readiness}%` }}
+                        />
+                      </div>
+                      <span className="text-[13px] font-black text-slate-900">{readiness}%</span>
+                    </div>
                   </td>
-                  <td className="px-3 py-3 font-bold tabular-nums text-slate-950">{readiness} %</td>
-                  <td className="max-w-[200px] px-3 py-3 text-xs text-[color:var(--wp-text-secondary)] line-clamp-2">
-                    {blocker}
+                  <td className="max-w-[240px] px-3 py-5 text-xs font-bold">
+                    {ce.missingRequirements[0]?.labelCs ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-rose-50 px-3 py-1.5 text-rose-600">
+                        {ce.missingRequirements[0].labelCs}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-emerald-50 px-3 py-1.5 text-emerald-600">
+                        Připraveno k posunu
+                      </span>
+                    )}
                   </td>
-                  <td className="px-5 py-3 text-right sm:px-6">
+                  <td className="rounded-r-[20px] px-5 py-5 text-right sm:px-6">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -137,7 +156,7 @@ export function TeamOverviewCareerSummarySection({
                         onOpenProgress(mem.userId);
                         selectMember(mem.userId);
                       }}
-                      className="rounded-2xl bg-violet-100 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-900 transition hover:bg-violet-200/80"
+                      className="rounded-[12px] bg-slate-100 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
                     >
                       Strom progresu
                     </button>
@@ -148,7 +167,7 @@ export function TeamOverviewCareerSummarySection({
                         onOpenCrm(mem.userId);
                         selectMember(mem.userId);
                       }}
-                      className="ml-2 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-50"
+                      className="ml-2 rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-50"
                     >
                       CRM karta
                     </button>
@@ -160,8 +179,7 @@ export function TeamOverviewCareerSummarySection({
         </table>
       </div>
 
-      {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/50 px-6 py-4">
         <h2
           id="team-career-growth-heading"
           className="flex items-center gap-2 text-lg font-black tracking-tight text-[color:var(--wp-text)]"

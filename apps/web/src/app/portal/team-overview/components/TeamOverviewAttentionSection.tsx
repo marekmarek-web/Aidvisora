@@ -46,8 +46,8 @@ export function TeamOverviewAttentionSection({
   const isFirstFold = variant === "firstFold";
 
   return (
-    <section className={isFirstFold ? "mb-3" : "mb-8"} aria-labelledby="team-priority-heading">
-      <div className={`flex items-end justify-between gap-3 ${isFirstFold ? "mb-3" : "mb-4"}`}>
+    <section className={isFirstFold ? "mb-0" : "mb-8"} aria-labelledby="team-priority-heading">
+      <div className={`flex items-end justify-between gap-3 ${isFirstFold ? "mb-4" : "mb-4"}`}>
         <div>
           <h2 id="team-priority-heading" className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">
             Kdo potřebuje pozornost
@@ -63,7 +63,7 @@ export function TeamOverviewAttentionSection({
 
       <div className={`grid gap-4 ${isFirstFold ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-2"}`}>
         {/* Signály */}
-        <div className="flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm">
+        <div className="flex flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
           <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/60 px-4 py-3">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
             <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Signály</h3>
@@ -121,13 +121,7 @@ export function TeamOverviewAttentionSection({
         </div>
 
         {/* Doporučené navázání */}
-        <div
-          className={
-            isFirstFold
-              ? "flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm"
-              : "flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm"
-          }
-        >
+        <div className="flex flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
           <div
             className={
               isFirstFold

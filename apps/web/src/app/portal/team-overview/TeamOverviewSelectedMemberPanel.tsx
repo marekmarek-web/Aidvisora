@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import clsx from "clsx";
-import { X, Briefcase, Target, ExternalLink, TrendingUp } from "lucide-react";
+import { X, Calendar, CheckSquare, Layers3, FileText, ExternalLink } from "lucide-react";
 import type { TeamMemberDetail } from "@/app/actions/team-overview";
 import { formatCareerProgramLabel, formatCareerTrackLabel } from "@/lib/career/evaluate-career-progress";
-import { careerCompletenessShortLabel, careerProgressShortLabel } from "@/lib/career/career-ui-labels";
+import { careerProgressShortLabel } from "@/lib/career/career-ui-labels";
 import { buildTeamMemberCoachingSummaryBullets } from "@/lib/team-member-coaching-bullets";
 import { crmUnitsFootnoteForProgram } from "@/lib/career/crm-units-copy";
 import { SkeletonBlock } from "@/app/components/Skeleton";
@@ -13,7 +13,6 @@ import { MemberCareerQuickActions } from "@/app/portal/team-overview/[userId]/Me
 import { formatTeamOverviewProduction, poolProgramLabel } from "@/lib/team-overview-format";
 import type { TeamMemberMetrics } from "@/lib/team-overview-alerts";
 import type { CareerProgramId } from "@/lib/career/types";
-import { PremiumProgressBar } from "@/app/portal/team-overview/premium/primitives";
 
 function poolLine(programId: CareerProgramId): string {
   if (programId === "beplan" || programId === "premium_brokers") return poolProgramLabel(programId);
@@ -37,6 +36,7 @@ export function TeamOverviewSelectedMemberPanel({
   onOpenProgress,
   onOpenCheckIn,
   onOpenOneToOne,
+  onOpenTask,
 }: {
   detail: TeamMemberDetail | null;
   loading: boolean;
@@ -52,12 +52,14 @@ export function TeamOverviewSelectedMemberPanel({
   onOpenProgress?: () => void;
   onOpenCheckIn?: () => void;
   onOpenOneToOne?: () => void;
+  onOpenTask?: () => void;
 }) {
+  const premium = variant === "premium";
   const shell = (classes: string) =>
     clsx(
       "xl:sticky xl:top-6 h-fit",
-      variant === "premium"
-        ? "rounded-[28px] border border-slate-200/80 bg-white text-slate-900 shadow-sm"
+      premium
+        ? "overflow-hidden rounded-[32px] border border-slate-800 bg-[#16192b] text-white shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
         : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm",
       classes
     );
@@ -83,19 +85,19 @@ export function TeamOverviewSelectedMemberPanel({
         <aside
           className={clsx(
             "xl:sticky xl:top-6 h-fit p-6 text-sm",
-            variant === "premium"
-              ? "rounded-[28px] border border-amber-200/80 bg-amber-50/50 text-slate-800 shadow-sm"
+            premium
+              ? "rounded-[32px] border border-slate-800 bg-[#16192b] text-white shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
               : "rounded-2xl border border-amber-200/80 bg-amber-50/40 text-[color:var(--wp-text-secondary)]"
           )}
           role="alert"
         >
-          <p className={variant === "premium" ? "font-semibold text-slate-900" : "font-semibold text-[color:var(--wp-text)]"}>
+          <p className={premium ? "font-semibold text-white" : "font-semibold text-[color:var(--wp-text)]"}>
             Detail člena se nepodařilo načíst
           </p>
           <p
             className={
-              variant === "premium"
-                ? "mt-1.5 text-xs leading-relaxed text-slate-600"
+              premium
+                ? "mt-1.5 text-xs leading-relaxed text-slate-300"
                 : "mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]"
             }
           >
@@ -104,7 +106,7 @@ export function TeamOverviewSelectedMemberPanel({
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href={fullDetailHref}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+              className={premium ? "inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-white hover:underline" : "inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"}
             >
               Plný detail
               <ExternalLink className="h-3 w-3" aria-hidden />
@@ -112,7 +114,7 @@ export function TeamOverviewSelectedMemberPanel({
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-semibold text-slate-600 underline hover:text-slate-900"
+              className={premium ? "text-xs font-semibold text-slate-300 underline hover:text-white" : "text-xs font-semibold text-slate-600 underline hover:text-slate-900"}
             >
               Zrušit výběr
             </button>
@@ -125,18 +127,18 @@ export function TeamOverviewSelectedMemberPanel({
       <aside
         className={clsx(
           "xl:sticky xl:top-6 h-fit p-6 text-sm",
-          variant === "premium"
-            ? "rounded-[28px] border border-dashed border-slate-200/80 bg-slate-50/80 text-slate-600"
+          premium
+            ? "rounded-[32px] border border-slate-800 bg-[#16192b] text-slate-300 shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
             : "rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/20 text-[color:var(--wp-text-secondary)]"
         )}
       >
-        <p className={variant === "premium" ? "font-semibold text-slate-900" : "font-semibold text-[color:var(--wp-text)]"}>
+        <p className={premium ? "font-semibold text-white" : "font-semibold text-[color:var(--wp-text)]"}>
           Vyberte člena
         </p>
         <p
           className={
-            variant === "premium"
-              ? "mt-1.5 text-xs leading-relaxed text-slate-600"
+            premium
+              ? "mt-1.5 text-xs leading-relaxed text-slate-300"
               : "mt-1.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]"
           }
         >
@@ -151,254 +153,223 @@ export function TeamOverviewSelectedMemberPanel({
   const ce = detail.careerEvaluation;
   const coachingBullets = buildTeamMemberCoachingSummaryBullets(detail);
   const showModalActions =
-    variant === "premium" && (onOpenCrm || onOpenProgress || onOpenCheckIn || onOpenOneToOne);
+    premium && (onOpenCrm || onOpenProgress || onOpenCheckIn || onOpenOneToOne || onOpenTask);
+  const progressValue = Math.max(0, Math.min(100, m?.targetProgressPercent ?? 0));
+  const readinessLabel = ce.missingRequirements.length > 0 ? `Blokace: ${ce.missingRequirements[0].labelCs}` : "Všechny podmínky pro postup splněny";
+
+  const actionButtonClass =
+    "flex min-h-[74px] flex-col items-start justify-between rounded-[16px] border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10";
 
   return (
     <aside
       className={clsx(
         "xl:sticky xl:top-6 h-fit max-h-[min(90vh,calc(100vh-4rem))] overflow-y-auto",
-        variant === "premium"
-          ? "rounded-[28px] border border-slate-200/80 bg-white text-slate-900 shadow-sm"
+        premium
+          ? "rounded-[32px] border border-slate-800 bg-[#16192b] text-white shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
           : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm"
       )}
     >
-      {/* Identity strip */}
-      <div
-        className={clsx(
-          "flex items-start justify-between gap-3 border-b px-5 py-4",
-          variant === "premium" ? "border-slate-200/80 bg-slate-50/40" : "border-[color:var(--wp-surface-card-border)]"
-        )}
-      >
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Vybraný člen</p>
-          <h2 className="mt-1 text-xl font-black leading-tight text-slate-950">{name}</h2>
-          <p className="mt-1 text-xs text-[color:var(--wp-text-tertiary)]">
-            {detail.roleName}
-            {detail.email ? ` · ${detail.email}` : ""}
-          </p>
-          <Link
-            href={fullDetailHref}
-            className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+      <div className={premium ? "border-b border-white/10 px-8 pb-6 pt-8" : "border-b px-5 py-4"}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className={premium ? "text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400" : "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500"}>
+              Vybraný člen
+            </p>
+            <h2 className={premium ? "mt-3 text-[28px] font-black leading-none tracking-tight text-white" : "mt-1 text-xl font-black leading-tight text-slate-950"}>
+              {name}
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={premium ? "rounded-[8px] border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white" : "rounded-[8px] border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-700"}>
+                {detail.roleName}
+              </span>
+              {detail.adaptation ? (
+                <span className="rounded-[8px] border border-sky-500/20 bg-sky-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-300">
+                  V adaptaci
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className={premium ? "rounded-full bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white" : "shrink-0 mt-0.5 rounded-lg p-1.5 text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"}
+            aria-label="Zavřít výběr"
           >
-            Plný detail
-            <ExternalLink className="h-3 w-3" aria-hidden />
-          </Link>
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="shrink-0 mt-0.5 rounded-lg p-1.5 text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
-          aria-label="Zavřít výběr"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
-      <div className="space-y-5 px-5 py-4">
+      <div className={premium ? "space-y-6 px-8 pb-8 pt-6" : "space-y-5 px-5 py-4"}>
         {outsideFilter && (
-          <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 px-3.5 py-2.5 text-xs text-amber-950" role="status">
+          <div className={premium ? "rounded-[12px] border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-200" : "rounded-2xl border border-amber-200/70 bg-amber-50/60 px-3.5 py-2.5 text-xs text-amber-950"} role="status">
             Člen není v aktuálním filtru tabulky — souhrn je platný.
           </div>
         )}
 
-        {/* Kariérní kontext */}
-        <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-            <Briefcase className="h-3.5 w-3.5 text-violet-500" aria-hidden />
-            Kariérní kontext
-          </h3>
-          <div className="space-y-2 rounded-3xl border border-violet-200/50 bg-violet-50/35 p-4 text-xs">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              <p className="col-span-2">
-                <span className="text-[color:var(--wp-text-tertiary)]">Skupina (pool)</span>
-                <br />
-                <strong className="text-[color:var(--wp-text)]">{poolLine(ce.careerProgramId)}</strong>
-              </p>
-              <p>
-                <span className="text-[color:var(--wp-text-tertiary)]">Program</span>
-                <br />
-                <strong className="text-[color:var(--wp-text)]">{formatCareerProgramLabel(ce.careerProgramId)}</strong>
-              </p>
-              <p>
-                <span className="text-[color:var(--wp-text-tertiary)]">Větev</span>
-                <br />
-                <strong className="text-[color:var(--wp-text)]">{formatCareerTrackLabel(ce.careerTrackId)}</strong>
-              </p>
-              {ce.careerPositionLabel && (
-                <p className="col-span-2">
-                  <span className="text-[color:var(--wp-text-tertiary)]">Pozice</span>
-                  <br />
-                  <strong className="text-[color:var(--wp-text)]">{ce.careerPositionLabel}</strong>
-                </p>
-              )}
+        <div className={premium ? "grid grid-cols-2 gap-4" : "grid grid-cols-2 gap-3"}>
+          <div>
+            <div className={premium ? "mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
+              Skupina (pool)
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-1 border-t border-violet-200/40">
-              <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-violet-900">
-                {careerProgressShortLabel(ce.progressEvaluation)}
-              </span>
-              <span className="rounded-full border border-violet-200 bg-white/70 px-2.5 py-1 text-[10px] text-violet-800">
-                {careerCompletenessShortLabel(ce.evaluationCompleteness)}
-              </span>
+            <div className={premium ? "text-sm font-bold text-white" : "text-sm font-bold text-slate-950"}>
+              {poolLine(ce.careerProgramId)}
             </div>
-            {ce.nextCareerPositionLabel && (
-              <p className="text-[color:var(--wp-text-secondary)]">
-                <span className="font-semibold text-[color:var(--wp-text)]">Další krok:</span>{" "}
-                {ce.nextCareerPositionLabel}
-              </p>
+            <div className={premium ? "mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-300" : "mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-700"}>
+              {careerProgressShortLabel(ce.progressEvaluation)}
+            </div>
+          </div>
+          <div>
+            <div className={premium ? "mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
+              Kariérní větev / pozice
+            </div>
+            <div className={premium ? "text-sm font-bold text-white" : "text-sm font-bold text-slate-950"}>
+              {formatCareerTrackLabel(ce.careerTrackId)}
+            </div>
+            <div className={premium ? "mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
+              Pozice: {ce.careerPositionLabel ?? "—"}
+            </div>
+          </div>
+        </div>
+
+        {m ? (
+          <section className={premium ? "rounded-[20px] border border-white/5 bg-white/5 p-5" : "rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4"}>
+            <div className="flex items-end justify-between gap-3">
+              <div className={premium ? "text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
+                Plnění cíle
+              </div>
+              <div className={premium ? "text-right text-[20px] font-black text-white" : "text-right text-lg font-black text-slate-950"}>
+                {formatTeamOverviewProduction(m.productionThisPeriod)}
+                {m.targetProgressPercent != null ? (
+                  <span className={premium ? "ml-1 text-[11px] font-bold text-slate-500" : "ml-1 text-[11px] font-bold text-slate-400"}>/ {m.targetProgressPercent}%</span>
+                ) : null}
+              </div>
+            </div>
+            <div className={premium ? "mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800" : "mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200"}>
+              <div
+                className={clsx("h-full rounded-full", progressValue >= 100 ? "bg-emerald-500" : "bg-amber-500")}
+                style={{ width: `${progressValue}%` }}
+              />
+            </div>
+            <div className={premium ? "mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-400" : "mt-3 text-[11px] font-bold text-slate-500"}>
+              {m.meetingsThisPeriod} schůzek evidováno
+            </div>
+          </section>
+        ) : null}
+
+        <section className={premium ? "border-t border-white/10 pt-6" : ""}>
+          <div className={premium ? "mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-purple-300" : "mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-700"}>
+            Další kariérní krok: {ce.nextCareerPositionLabel ?? "Bez určeného dalšího kroku"}
+          </div>
+          <div
+            className={clsx(
+              "rounded-[12px] border px-3 py-3 text-[11px] font-bold",
+              ce.missingRequirements.length > 0
+                ? premium
+                  ? "border-red-500/20 bg-red-500/10 text-red-300"
+                  : "border-red-200 bg-red-50 text-red-700"
+                : premium
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
             )}
-            {ce.missingRequirements.length > 0 && (
-              <p className="text-[11px] text-amber-800">
-                <span className="font-semibold">Blokátor:</span> {ce.missingRequirements[0].labelCs}
-              </p>
-            )}
+          >
+            {readinessLabel}
+          </div>
+          <div className={premium ? "mt-3 text-xs font-bold text-slate-400" : "mt-3 text-xs font-bold text-slate-500"}>
+            Poslední kontakt:{" "}
+            <span className={premium ? "text-white" : "text-slate-900"}>
+              {m?.daysSinceMeeting != null ? `před ${m.daysSinceMeeting} dny` : "Bez kontaktu"}
+            </span>
           </div>
         </section>
 
-        {showModalActions ? (
-          <div className="flex flex-wrap gap-2">
-            {onOpenCrm ? (
-              <button
-                type="button"
-                onClick={onOpenCrm}
-                className="rounded-2xl bg-slate-900 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white transition hover:bg-slate-800"
-              >
-                CRM karta
-              </button>
-            ) : null}
-            {onOpenProgress ? (
-              <button
-                type="button"
-                onClick={onOpenProgress}
-                className="rounded-2xl bg-violet-100 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-900 transition hover:bg-violet-200/80"
-              >
-                Strom progresu
-              </button>
-            ) : null}
-            {onOpenCheckIn ? (
-              <button
-                type="button"
-                onClick={onOpenCheckIn}
-                className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-50"
-              >
-                Check-in
-              </button>
-            ) : null}
-            {onOpenOneToOne ? (
-              <button
-                type="button"
-                onClick={onOpenOneToOne}
-                className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-indigo-900 transition hover:bg-indigo-100/80"
-              >
-                1:1 schůzka
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* CRM metriky */}
-        {m ? (
-          <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-              <TrendingUp className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
-              CRM (aktuální období)
-            </h3>
-            {m.targetProgressPercent != null ? (
-              <div className="mb-3">
-                <PremiumProgressBar
-                  label="Plnění týmového cíle (produkce, orientační %)"
-                  value={Math.min(100, m.targetProgressPercent)}
-                  tone="violet"
-                />
-              </div>
-            ) : null}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
-                <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">{m.unitsThisPeriod}</p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Jednotky</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
-                <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">
-                  {formatTeamOverviewProduction(m.productionThisPeriod)}
-                </p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Produkce</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
-                <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">{m.meetingsThisPeriod}</p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Schůzky</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
-                <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">
-                  {Math.round(m.conversionRate * 100)} %
-                </p>
-                <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Konverze</p>
-              </div>
+        {detail.adaptation ? (
+          <section className={premium ? "rounded-[20px] border border-white/5 bg-white/5 p-4" : "rounded-2xl border border-slate-200/80 bg-slate-50 p-4"}>
+            <div className={premium ? "text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
+              Adaptace
             </div>
-            <p className="mt-1.5 text-[10px] text-[color:var(--wp-text-tertiary)] leading-snug">
-              {crmUnitsFootnoteForProgram(ce.careerProgramId)}
-            </p>
+            <div className={premium ? "mt-2 text-sm font-bold text-white" : "mt-2 text-sm font-bold text-slate-950"}>
+              {detail.adaptation.adaptationStatus} · {detail.adaptation.adaptationScore} %
+            </div>
           </section>
         ) : null}
 
-        {variant === "premium" && detail.adaptation ? (
-          <section>
-            <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Adaptace</h3>
-            <PremiumProgressBar
-              label="Adaptační skóre (výpočet z checklistu)"
-              value={detail.adaptation.adaptationScore}
-              tone="emerald"
-            />
-            <p className="mt-2 text-[10px] text-slate-500">{detail.adaptation.adaptationStatus}</p>
-          </section>
-        ) : null}
-
-        {/* Coaching a další krok */}
         <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-            <Target className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+          <div className={premium ? "mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
             Coaching a 1:1
-          </h3>
-          <div className="space-y-2 rounded-3xl border border-indigo-200/40 bg-indigo-50/25 p-4">
-            <p className="text-xs font-semibold text-[color:var(--wp-text)]">
+          </div>
+          <div className={premium ? "rounded-[20px] border border-white/5 bg-white/5 p-4" : "rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4"}>
+            <p className={premium ? "text-sm font-semibold text-white" : "text-sm font-semibold text-slate-950"}>
               {detail.careerCoaching.suggestedNextStepLine}
             </p>
-            <p className="text-[11px] font-bold text-violet-800">
+            <p className={premium ? "mt-2 text-[11px] font-bold text-purple-300" : "mt-2 text-[11px] font-bold text-violet-700"}>
               {detail.careerCoaching.recommendedActionLabelCs}
             </p>
-            {detail.careerCoaching.oneOnOneAgenda.length > 0 && (
-              <ul className="mt-1 space-y-1 text-[11px] text-[color:var(--wp-text-secondary)]">
+            {detail.careerCoaching.oneOnOneAgenda.length > 0 ? (
+              <ul className={premium ? "mt-3 space-y-1 text-[11px] text-slate-300" : "mt-3 space-y-1 text-[11px] text-slate-600"}>
                 {detail.careerCoaching.oneOnOneAgenda.slice(0, 4).map((item, i) => (
-                  <li key={i} className="flex gap-1.5 leading-snug">
-                    <span className="mt-0.5 shrink-0 text-indigo-400">·</span>
-                    {item.text}
-                  </li>
+                  <li key={i}>{item.text}</li>
                 ))}
               </ul>
-            )}
+            ) : null}
           </div>
-          <MemberCareerQuickActions
-            memberUserId={detail.userId}
-            coaching={detail.careerCoaching}
-            canCreateTeamCalendar={canCreateTeamCalendar}
-            canEditTeamCareer={canEditTeamCareer}
-          />
+          {!premium ? (
+            <MemberCareerQuickActions
+              memberUserId={detail.userId}
+              coaching={detail.careerCoaching}
+              canCreateTeamCalendar={canCreateTeamCalendar}
+              canEditTeamCareer={canEditTeamCareer}
+            />
+          ) : null}
         </section>
 
-        {/* Coaching bullets */}
-        {coachingBullets.length > 0 && (
+        {coachingBullets.length > 0 ? (
           <section>
-            <h3 className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
+            <div className={premium ? "mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400" : "mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500"}>
               Coaching summary
-            </h3>
-            <ul className="space-y-1 text-[11px] text-[color:var(--wp-text-secondary)]">
+            </div>
+            <ul className={premium ? "space-y-1 text-[11px] text-slate-300" : "space-y-1 text-[11px] text-slate-600"}>
               {coachingBullets.map((b, i) => (
-                <li key={i} className="flex gap-1.5 leading-snug">
-                  <span className="mt-0.5 shrink-0 text-violet-400">·</span>
-                  {b}
-                </li>
+                <li key={i}>{b}</li>
               ))}
             </ul>
           </section>
-        )}
+        ) : null}
+
+        {m ? (
+          <p className={premium ? "text-[10px] leading-snug text-slate-500" : "text-[10px] leading-snug text-slate-500"}>
+            {crmUnitsFootnoteForProgram(ce.careerProgramId)}
+          </p>
+        ) : null}
+
+        {showModalActions ? (
+          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-6">
+            {onOpenOneToOne ? (
+              <button type="button" onClick={onOpenOneToOne} className={actionButtonClass}>
+                <Calendar className="h-4 w-4 text-white" aria-hidden />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-white">Schůzka 1:1</span>
+              </button>
+            ) : null}
+            {onOpenTask ? (
+              <button type="button" onClick={onOpenTask} className={actionButtonClass}>
+                <CheckSquare className="h-4 w-4 text-slate-200" aria-hidden />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-white">Nový úkol</span>
+              </button>
+            ) : null}
+            {onOpenProgress ? (
+              <button type="button" onClick={onOpenProgress} className={actionButtonClass}>
+                <Layers3 className="h-4 w-4 text-slate-200" aria-hidden />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-white">Strom progresu</span>
+              </button>
+            ) : null}
+            {onOpenCrm ? (
+              <button type="button" onClick={onOpenCrm} className={actionButtonClass}>
+                <FileText className="h-4 w-4 text-slate-200" aria-hidden />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-white">CRM karta</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </aside>
   );

@@ -64,11 +64,11 @@ export function TeamRhythmPanel({
 
   return (
     <section
-      className="mb-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm"
+      className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
       aria-labelledby="team-rhythm-heading"
     >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/40 px-6 py-4">
         <div className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-teal-600 shrink-0" aria-hidden />
           <h2 id="team-rhythm-heading" className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">
@@ -103,14 +103,14 @@ export function TeamRhythmPanel({
         )}
       </div>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-12">
+      <div className="grid gap-5 p-6 lg:grid-cols-12">
         {/* Statistiky */}
         <div className="lg:col-span-4 space-y-3">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             Tento týden / 14 dní
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-3">
               <p className="text-lg font-black tabular-nums leading-none text-[color:var(--wp-text)]">
                 {computed.stats.adaptationCheckinsThisWeek}
               </p>
@@ -118,7 +118,7 @@ export function TeamRhythmPanel({
                 Adaptace
               </p>
             </div>
-            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-3">
               <p className="text-lg font-black tabular-nums leading-none text-[color:var(--wp-text)]">
                 {computed.stats.oneOnOneTaggedThisWeek}
               </p>
@@ -126,7 +126,7 @@ export function TeamRhythmPanel({
                 1:1
               </p>
             </div>
-            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-3">
               <p className="text-lg font-black tabular-nums leading-none text-[color:var(--wp-text)]">
                 {computed.stats.teamMeetingsThisWeek}
               </p>
@@ -137,8 +137,8 @@ export function TeamRhythmPanel({
             <div
               className={
                 computed.stats.overdueTeamTasks > 0
-                  ? "rounded-xl border border-rose-200/60 bg-rose-50/40 px-3 py-2.5"
-                  : "rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2.5"
+                  ? "rounded-[16px] border border-rose-200/60 bg-rose-50/40 px-4 py-3"
+                  : "rounded-[16px] border border-slate-200/80 bg-white px-4 py-3"
               }
             >
               <p

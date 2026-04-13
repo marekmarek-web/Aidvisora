@@ -88,10 +88,12 @@ function TreeBranch({
           <li key={node.userId}>
             <div
               className={clsx(
-                "group flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-3 text-sm transition",
-                isSelf && "border-indigo-200/80 bg-indigo-50/80 shadow-sm",
-                isSelected && !isSelf && "border-violet-200/80 bg-violet-50/80 shadow-sm",
-                !isSelf && !isSelected && "border-transparent hover:border-slate-200 hover:bg-slate-50/80"
+                "group flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[24px] border px-4 py-4 text-sm transition",
+                depth === 0 && "border-slate-800 bg-[#16192b] text-white shadow-xl shadow-slate-900/10",
+                depth > 0 && "bg-white shadow-sm",
+                isSelf && depth > 0 && "border-indigo-200/80 bg-indigo-50/80 shadow-sm",
+                isSelected && !isSelf && depth > 0 && "border-violet-200/80 bg-violet-50/80 shadow-sm",
+                !isSelf && !isSelected && depth > 0 && "border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/80"
               )}
             >
               {isSelf && (
@@ -103,7 +105,13 @@ function TreeBranch({
                   onClick={() => onSelectMember(node.userId)}
                   className={clsx(
                     "font-semibold text-left text-sm hover:underline",
-                    isSelected ? "text-violet-900" : isSelf ? "text-indigo-900" : "text-[color:var(--wp-text)] hover:text-indigo-600"
+                    depth === 0
+                      ? "text-white"
+                      : isSelected
+                        ? "text-violet-900"
+                        : isSelf
+                          ? "text-indigo-900"
+                          : "text-[color:var(--wp-text)] hover:text-indigo-600"
                   )}
                 >
                   {label}
@@ -116,7 +124,7 @@ function TreeBranch({
                   {label}
                 </Link>
               )}
-              <span className="text-[11px] text-[color:var(--wp-text-tertiary)]">{node.roleName}</span>
+              <span className={clsx("text-[11px]", depth === 0 ? "text-slate-400" : "text-[color:var(--wp-text-tertiary)]")}>{node.roleName}</span>
               {m != null && (
                 <span className="text-[10px] text-[color:var(--wp-text-secondary)]">
                   · {formatTeamOverviewProduction(m.productionThisPeriod)}
@@ -190,7 +198,7 @@ export function TeamStructurePanel({
 
   if (roots.length === 0) {
     return (
-      <section className="mb-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm">
+      <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
         <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5">
           <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
           <h2 className="text-base font-black text-[color:var(--wp-text)]">Struktura týmu</h2>
@@ -205,9 +213,9 @@ export function TeamStructurePanel({
   const isPersonalOnly = scope === "me";
 
   return (
-      <section className="mb-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm">
+      <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5">
+      <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/40 px-6 py-4">
         <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
         <h2 className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">Struktura týmu</h2>
         <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--wp-text-tertiary)]">
@@ -215,7 +223,9 @@ export function TeamStructurePanel({
         </span>
       </div>
 
-      <div className="p-5">
+      <div className="relative overflow-hidden p-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-50" />
+        <div className="relative z-10">
         {isPersonalOnly && (
           <p className="mb-4 text-xs text-[color:var(--wp-text-secondary)]">
             Zobrazujete osobní rozsah — širší přehled je dostupný v přepínači rozsahu podle vaší role.
@@ -286,6 +296,7 @@ export function TeamStructurePanel({
             metricsByUser={metricsByUser}
             newcomerUserIds={newcomerUserIds}
           />
+        </div>
         </div>
       </div>
     </section>

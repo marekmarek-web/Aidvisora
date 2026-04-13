@@ -25,24 +25,24 @@ export function TeamOverviewPeopleFiltersBar({
 }) {
   return (
     <>
-      <div className="mb-5 border-t border-slate-200/60 pt-6" id="lide-v-tymu">
+      <div className="mb-5" id="lide-v-tymu">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">Lidé v týmu</h2>
-            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
+            <h2 className="text-[26px] font-black tracking-tight text-slate-950">Lidé v týmu</h2>
+            <p className="mt-1.5 text-sm text-slate-500">
               Klikněte na řádek pro souhrn člena — kariéra, coaching, CRM.
             </p>
           </div>
-          <p className="shrink-0 text-xs text-[color:var(--wp-text-tertiary)] tabular-nums">
+          <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 tabular-nums">
             {visibleCount} / {totalCount}
           </p>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[min(100%,200px)] flex-1 max-w-sm">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative min-w-[min(100%,220px)] flex-1 max-w-md">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wp-text-tertiary)]"
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
             aria-hidden
           />
           <input
@@ -50,34 +50,36 @@ export function TeamOverviewPeopleFiltersBar({
             value={peopleSearch}
             onChange={(e) => onPeopleSearchChange(e.target.value)}
             placeholder="Hledat jméno nebo e-mail…"
-            className="min-h-[42px] w-full rounded-2xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
+            className="min-h-[52px] w-full rounded-[16px] border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#16192b]/10"
             aria-label="Hledat v seznamu členů"
           />
         </div>
-        <CustomDropdown
-          value={peopleSegment}
-          onChange={(id) => onPeopleSegmentChange(id as PeopleSegmentFilter)}
-          options={[
-            { id: "all", label: "Všichni" },
-            { id: "attention", label: "Potřebuje pozornost" },
-            { id: "adaptation", label: "V adaptaci" },
-            { id: "managers", label: "Manažeři a ředitelé" },
-            { id: "healthy", label: "Stabilní" },
-          ]}
-          placeholder="Segment"
-          icon={Filter}
-        />
-        <CustomDropdown
-          value={performanceFilter}
-          onChange={(id) => onPerformanceFilterChange(id as "all" | "top" | "bottom")}
-          options={[
-            { id: "all", label: "Všichni" },
-            { id: "top", label: "Nejsilnější výkon" },
-            { id: "bottom", label: "Podpora ve výkonu" },
-          ]}
-          placeholder="Výkon"
-          icon={BarChart3}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <CustomDropdown
+            value={peopleSegment}
+            onChange={(id) => onPeopleSegmentChange(id as PeopleSegmentFilter)}
+            options={[
+              { id: "all", label: "Všichni" },
+              { id: "attention", label: "Potřebuje pozornost" },
+              { id: "adaptation", label: "V adaptaci" },
+              { id: "managers", label: "Manažeři a ředitelé" },
+              { id: "healthy", label: "Stabilní" },
+            ]}
+            placeholder="Segment"
+            icon={Filter}
+          />
+          <CustomDropdown
+            value={performanceFilter}
+            onChange={(id) => onPerformanceFilterChange(id as "all" | "top" | "bottom")}
+            options={[
+              { id: "all", label: "Všichni" },
+              { id: "top", label: "Nejsilnější výkon" },
+              { id: "bottom", label: "Podpora ve výkonu" },
+            ]}
+            placeholder="Výkon"
+            icon={BarChart3}
+          />
+        </div>
       </div>
     </>
   );
