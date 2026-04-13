@@ -41,7 +41,7 @@ import {
   isTerminationModeAllowedForSegment,
 } from "@/lib/terminations/segment-termination-matrix";
 import { classifyInsuranceSegment } from "@/lib/terminations/segment-classifier";
-import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
+import { openTerminationLetterPrintWindow, plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
 import { replaceTerminationLetterPlaceDateLine } from "@/lib/terminations/termination-letter-builder";
 import {
   computeTwoMonthDeadline,
@@ -673,17 +673,7 @@ export function TerminationIntakeWizard({
       setError("Náhled dopisu zatím není k dispozici.");
       return;
     }
-    const html = plainTextToLetterHtml(plain);
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(
-        `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Výpověď – PDF</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
-      );
-      w.document.close();
-      w.focus();
-      w.print();
-      w.close();
-    }
+    openTerminationLetterPrintWindow(plainTextToLetterHtml(plain), "Výpověď – PDF");
   }
 
   function onExportPdf() {

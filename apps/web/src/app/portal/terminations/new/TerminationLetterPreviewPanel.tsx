@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { getTerminationLetterPreview, saveTerminationGeneratedDocumentAction } from "@/app/actions/terminations";
 import { terminationDeliveryChannelLabel } from "@/lib/terminations/client";
 import type { TerminationLetterBuildResult } from "@/lib/terminations/termination-letter-types";
-import { plainTextToLetterHtml } from "@/lib/terminations/termination-letter-html";
+import {
+  openTerminationLetterPrintWindow,
+  plainTextToLetterHtml,
+} from "@/lib/terminations/termination-letter-html";
 import { formatIsoDateForUiCs } from "@/lib/forms/cz-date";
 
 function badgeClasses(badge: TerminationLetterBuildResult["badge"]): string {
@@ -202,15 +205,7 @@ export function TerminationLetterPreviewPanel({
       html = letterHtml ?? coveringLetterHtml ?? null;
     }
     if (!html) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(
-      `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Náhled výpovědi</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
-    );
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
+    openTerminationLetterPrintWindow(html, "Náhled výpovědi");
   }
 
   if (layout === "wizardFinish") {
@@ -227,16 +222,7 @@ export function TerminationLetterPreviewPanel({
     function printWizardLetter() {
       const t = letterBody;
       if (!t) return;
-      const w = window.open("", "_blank");
-      if (!w) return;
-      const html = plainTextToLetterHtml(t);
-      w.document.write(
-        `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"/><title>Výpověď – tisk</title></head><body style="margin:24px;font-family:system-ui,sans-serif">${html}</body></html>`,
-      );
-      w.document.close();
-      w.focus();
-      w.print();
-      w.close();
+      openTerminationLetterPrintWindow(plainTextToLetterHtml(t), "Výpověď – tisk");
     }
 
     return (
