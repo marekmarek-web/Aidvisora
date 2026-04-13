@@ -44,15 +44,15 @@ export function TeamOverviewKpiDetailSection({
 
   return (
     <section
-      className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm"
+      className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-sm"
       aria-labelledby="team-kpi-detail-heading"
     >
-      <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 id="team-kpi-detail-heading" className="text-base font-bold text-[color:var(--wp-text)]">
+          <h2 id="team-kpi-detail-heading" className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">
             Výkon a funnel
           </h2>
-          <p className="mt-0.5 max-w-2xl text-[11px] text-[color:var(--wp-text-secondary)]">
+          <p className="mt-1 max-w-2xl text-sm text-[color:var(--wp-text-secondary)]">
             CRM metriky za zvolené období.
           </p>
         </div>
@@ -80,7 +80,7 @@ export function TeamOverviewKpiDetailSection({
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="#clenove"
-            className="group rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm transition hover:border-slate-300"
+            className="group rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm transition hover:border-slate-300 hover:bg-white"
           >
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.blue.bg}`}>
               <Users className={`h-5 w-5 ${KPI_THEMES.blue.subtitle}`} />
@@ -88,7 +88,7 @@ export function TeamOverviewKpiDetailSection({
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.memberCount}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Lidé ve scope</p>
           </Link>
-          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
               <TrendingUp className={`h-5 w-5 ${KPI_THEMES.green.subtitle}`} />
             </div>
@@ -98,7 +98,7 @@ export function TeamOverviewKpiDetailSection({
               <TeamOverviewTrendIndicator trend={kpis.unitsTrend} />
             </div>
           </div>
-          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.purple.bg}`}>
               <TrendingUp className={`h-5 w-5 ${KPI_THEMES.purple.subtitle}`} />
             </div>
@@ -110,21 +110,21 @@ export function TeamOverviewKpiDetailSection({
               <TeamOverviewTrendIndicator trend={Math.round(kpis.productionTrend)} />
             </div>
           </div>
-          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.green.bg}`}>
               <Calendar className={`h-5 w-5 ${KPI_THEMES.green.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.meetingsThisWeek}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Schůzky tento týden</p>
           </div>
-          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.amber.bg}`}>
               <UserPlus className={`h-5 w-5 ${KPI_THEMES.amber.subtitle}`} />
             </div>
             <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">{kpis.newcomersInAdaptation}</p>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Nováčci v adaptaci</p>
           </div>
-          <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-3 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/35 p-4 shadow-sm">
             <div className={`inline-flex rounded-xl p-2 ${KPI_THEMES.rose.bg}`}>
               <AlertTriangle className={`h-5 w-5 ${KPI_THEMES.rose.subtitle}`} />
             </div>
@@ -133,7 +133,7 @@ export function TeamOverviewKpiDetailSection({
           </div>
           </div>
           <div className="space-y-2.5">
-            <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm">
               <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Hodnota obchodů</p>
               <p className="mt-2 text-2xl font-bold text-[color:var(--wp-text)]">
                 {formatTeamOverviewProduction(Math.round(kpis.pipelineValue))}
@@ -143,14 +143,14 @@ export function TeamOverviewKpiDetailSection({
               </p>
             </div>
             <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+              <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm">
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Top performer</p>
                 <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">{topPerformerName}</p>
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
                   {topMetric ? formatTeamOverviewProduction(topMetric.productionThisPeriod) : "—"}
                 </p>
               </div>
-              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+              <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm">
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Podpora ve výkonu</p>
                 <p className="mt-2 text-base font-bold text-[color:var(--wp-text)]">{supportName}</p>
                 <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
@@ -159,7 +159,7 @@ export function TeamOverviewKpiDetailSection({
               </div>
             </div>
             {kpis.teamGoalTarget != null && kpis.teamGoalType && (
-              <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-slate-50 p-3 shadow-sm">
+              <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm">
                 <div className="inline-flex rounded-xl bg-indigo-500/20 p-2">
                   <Target className="h-5 w-5 text-indigo-600" />
                 </div>

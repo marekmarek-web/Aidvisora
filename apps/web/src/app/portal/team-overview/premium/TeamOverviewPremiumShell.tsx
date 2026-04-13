@@ -21,6 +21,8 @@ type ShellProps = {
   onViewChange: (label: string) => void;
   teamManagementHref: string;
   onTeamManagementOpen: () => void;
+  /** Když je „Správa týmu“ samostatný tab, schovat duplicitní tlačítko v hlavičce. */
+  showTeamManagementQuickLink?: boolean;
   calendarActions: ReactNode;
   onRefresh: () => void;
   loading: boolean;
@@ -44,6 +46,7 @@ export function TeamOverviewPremiumShell({
   onViewChange,
   teamManagementHref,
   onTeamManagementOpen,
+  showTeamManagementQuickLink = true,
   calendarActions,
   onRefresh,
   loading,
@@ -54,32 +57,35 @@ export function TeamOverviewPremiumShell({
   return (
     <div className="min-h-screen bg-slate-100/80 text-slate-900">
       <div className="mx-auto max-w-[1600px] p-4 md:p-5 xl:p-6">
-        <div className="mb-3 rounded-lg border border-slate-200 bg-white px-3.5 py-3 md:px-4 md:py-3">
-          <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+        <div className="mb-4 rounded-[28px] border border-slate-200/80 bg-white/95 px-4 py-4 shadow-sm backdrop-blur md:px-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold tracking-tight text-slate-950 md:text-xl">{title}</h1>
-              <p className="mt-0.5 max-w-xl text-xs text-slate-600 md:text-sm">{subtitle}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Aidvisora CRM Portal</p>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950 md:text-[2rem]">{title}</h1>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">{subtitle}</p>
             </div>
 
-            <div className="flex flex-col gap-1.5 xl:items-end">
+            <div className="flex flex-col gap-2 xl:items-end">
               <PremiumToggleGroup items={scopeItems} active={scopeActive} onChange={onScopeItemChange} />
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 xl:justify-end">
                 <PremiumToggleGroup items={periodItems} active={periodActive} onChange={onPeriodItemChange} />
                 <PremiumToggleGroup items={viewItems} active={viewActive} onChange={onViewChange} />
-                <Link
-                  href={teamManagementHref}
-                  onClick={onTeamManagementOpen}
-                  className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
-                  Správa týmu
-                </Link>
+                {showTeamManagementQuickLink ? (
+                  <Link
+                    href={teamManagementHref}
+                    onClick={onTeamManagementOpen}
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
+                    Správa týmu
+                  </Link>
+                ) : null}
                 {calendarActions}
                 <button
                   type="button"
                   onClick={onRefresh}
                   disabled={loading}
-                  className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
                   aria-label="Obnovit data"
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
@@ -92,9 +98,9 @@ export function TeamOverviewPremiumShell({
 
         {runtimeChecksSlot}
 
-        <div className="grid gap-3 xl:grid-cols-[1.35fr_0.95fr]">
-          <div className="min-w-0 space-y-3">{children}</div>
-          <aside className="min-w-0 space-y-3 xl:sticky xl:top-6 xl:self-start">{aside}</aside>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.78fr)]">
+          <div className="min-w-0 space-y-4">{children}</div>
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-6 xl:self-start">{aside}</aside>
         </div>
       </div>
     </div>
@@ -120,18 +126,18 @@ export function TeamOverviewPremiumBriefingDark({
   priorityItems: { title: string; subtitle: string }[];
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="grid gap-3 xl:grid-cols-[1.3fr_0.7fr]">
+    <section className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-sm md:p-5">
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
         <div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             <span>{periodLabel}</span>
             <span>&middot;</span>
             <span>{scopeLabel}</span>
           </div>
-          <h2 className="mt-1.5 text-base font-semibold tracking-tight text-slate-950 md:text-lg">
-            Souhrn
+          <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950 md:text-[1.65rem]">
+            Kondice týmu
           </h2>
-          <div className="mt-2.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <PremiumMetricCard
               label="Vyžaduje pozornost"
               value={String(stats.attention)}
@@ -170,21 +176,21 @@ export function TeamOverviewPremiumBriefingDark({
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-slate-900">Priority</p>
-              <p className="mt-0.5 text-[11px] text-slate-500">Aktuálně v rozsahu.</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Priority</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">Aktuálně v rozsahu</p>
             </div>
           </div>
-          <div className="mt-2.5 space-y-2">
+          <div className="mt-3 space-y-2.5">
             {priorityItems.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600">
+              <div className="rounded-2xl border border-slate-200 bg-white p-3.5 text-sm text-slate-600">
                 Žádné další priority v tomto rozsahu (nebo je zvolený pohled „Já“).
               </div>
             ) : (
               priorityItems.map((item) => (
-                <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-slate-300">
                   <p className="text-sm font-semibold text-slate-900">{item.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">{item.subtitle}</p>
                 </div>

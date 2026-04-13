@@ -21,7 +21,7 @@ export function PremiumPill({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${tones[tone] || tones.default}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${tones[tone] || tones.default}`}
     >
       {children}
     </span>
@@ -69,23 +69,23 @@ export function PremiumMetricCard({
   symbol?: string;
 }) {
   const toneClass: Record<string, string> = {
-    default: "from-white to-slate-50 border-slate-200",
-    info: "from-sky-50 to-white border-sky-200",
-    success: "from-emerald-50 to-white border-emerald-200",
-    warn: "from-amber-50 to-white border-amber-200",
-    danger: "from-rose-50 to-white border-rose-200",
-    violet: "from-violet-50 to-white border-violet-200",
+    default: "from-white to-slate-50/80 border-slate-200/80",
+    info: "from-sky-50/70 to-white border-sky-200/70",
+    success: "from-emerald-50/70 to-white border-emerald-200/70",
+    warn: "from-amber-50/70 to-white border-amber-200/70",
+    danger: "from-rose-50/70 to-white border-rose-200/70",
+    violet: "from-violet-50/70 to-white border-violet-200/70",
   };
 
   return (
-    <div className={`rounded-2xl border bg-gradient-to-br ${toneClass[tone] || toneClass.default} p-3.5`}>
+    <div className={`rounded-3xl border bg-gradient-to-br ${toneClass[tone] || toneClass.default} p-4 shadow-sm`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-slate-500">{label}</p>
-          <p className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900">{value}</p>
-          {change ? <p className="mt-0.5 text-[11px] text-slate-500">{change}</p> : null}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+          <p className="mt-2 text-2xl font-black tracking-tight text-slate-950">{value}</p>
+          {change ? <p className="mt-1 text-[11px] text-slate-500">{change}</p> : null}
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-sm shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/85 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200/60">
           {symbol}
         </div>
       </div>
@@ -114,12 +114,12 @@ export function PremiumProgressBar({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-sm">
+      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
         <span className="text-slate-600">{label}</span>
-        <span className="font-medium text-slate-900">{value}%</span>
+        <span className="font-semibold tabular-nums text-slate-900">{value}%</span>
       </div>
-      <div className="h-2.5 rounded-full bg-slate-100">
-        <div className={`h-2.5 rounded-full ${toneClass[tone]}`} style={{ width }} />
+      <div className="h-2 rounded-full bg-slate-100">
+        <div className={`h-2 rounded-full transition-all duration-300 ${toneClass[tone]}`} style={{ width }} />
       </div>
     </div>
   );
@@ -135,14 +135,16 @@ export function PremiumToggleGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1">
       {items.map((item) => (
         <button
           key={item}
           type="button"
           onClick={() => onChange(item)}
-          className={`rounded-xl px-2.5 py-1.5 text-sm font-medium transition ${
-            active === item ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+            active === item
+              ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
+              : "text-slate-500 hover:bg-white/70 hover:text-slate-700"
           }`}
         >
           {item}

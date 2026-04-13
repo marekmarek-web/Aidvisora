@@ -29,7 +29,7 @@ export function TeamOverviewAttentionSection({
   if (scope === "me") {
     return (
       <section
-        className="mb-8 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm"
+        className="mb-8 rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm"
         aria-labelledby="self-priority-heading"
       >
         <h2 id="self-priority-heading" className="text-base font-bold text-[color:var(--wp-text)]">
@@ -52,7 +52,7 @@ export function TeamOverviewAttentionSection({
           <h2 id="team-priority-heading" className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">
             Kdo potřebuje pozornost
           </h2>
-          <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">Signály z CRM a kariéry.</p>
+          <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">Signály z CRM a kariéry.</p>
         </div>
         {hasCritical && (
           <span className="shrink-0 inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold text-rose-800 ring-1 ring-rose-200">
@@ -63,8 +63,8 @@ export function TeamOverviewAttentionSection({
 
       <div className={`grid gap-4 ${isFirstFold ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-2"}`}>
         {/* Signály */}
-        <div className="flex flex-col rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-2.5">
+        <div className="flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/60 px-4 py-3">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
             <h3 className="text-sm font-bold text-[color:var(--wp-text)]">Signály</h3>
             {topAttentionAlerts.length > 0 && (
@@ -95,11 +95,11 @@ export function TeamOverviewAttentionSection({
                       <button
                         type="button"
                         onClick={() => selectMember(a.memberId)}
-                        className="group block w-full text-left rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 px-3 py-2.5 transition hover:border-amber-200 hover:bg-amber-50/40"
+                      className="group block w-full rounded-2xl border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 text-left transition hover:border-amber-200 hover:bg-amber-50/30"
                       >
                         <div className="flex items-center gap-2">
                           <span
-                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                            className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] ${
                               isCritical
                                 ? "bg-rose-100 text-rose-800"
                                 : "bg-amber-100 text-amber-800"
@@ -124,15 +124,15 @@ export function TeamOverviewAttentionSection({
         <div
           className={
             isFirstFold
-              ? "flex flex-col overflow-hidden rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm"
-              : "flex flex-col overflow-hidden rounded-2xl border border-violet-200/50 bg-gradient-to-b from-violet-50/35 to-[color:var(--wp-surface-card)] shadow-sm"
+              ? "flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm"
+              : "flex flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-sm"
           }
         >
           <div
             className={
               isFirstFold
-                ? "flex items-center gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 px-4 py-2.5"
-                : "flex items-center gap-2 border-b border-violet-200/40 bg-violet-50/40 px-4 py-2.5"
+                ? "flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/60 px-4 py-3"
+                : "flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/60 px-4 py-3"
             }
           >
             <HeartHandshake className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
@@ -162,7 +162,7 @@ export function TeamOverviewAttentionSection({
                         <button
                           type="button"
                           onClick={() => selectMember(c.userId)}
-                          className="group block w-full text-left rounded-xl border border-violet-200/40 bg-violet-50/40 px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/80"
+                        className="group block w-full rounded-2xl border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 text-left transition hover:border-violet-200 hover:bg-violet-50/60"
                         >
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold text-[color:var(--wp-text)]">{name}</p>

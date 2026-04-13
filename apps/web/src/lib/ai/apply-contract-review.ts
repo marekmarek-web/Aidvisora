@@ -147,6 +147,7 @@ type ExistingContactSnapshot = {
   phone: string | null;
   birthDate: string | null;
   personalId: string | null;
+  idCardNumber: string | null;
   street: string | null;
   city: string | null;
   zip: string | null;
@@ -324,7 +325,7 @@ export function selectExistingContractId(
 const CONTACT_MERGE_FIELDS: Array<{
   fieldKey: keyof Pick<
     ExistingContactSnapshot,
-    "firstName" | "lastName" | "email" | "phone" | "personalId" | "street" | "city" | "zip" | "birthDate"
+    "firstName" | "lastName" | "email" | "phone" | "personalId" | "idCardNumber" | "street" | "city" | "zip" | "birthDate"
   >;
   payloadKeys: string[];
   normalize?: (v: string) => string | null;
@@ -334,6 +335,7 @@ const CONTACT_MERGE_FIELDS: Array<{
   { fieldKey: "email", payloadKeys: ["email"] },
   { fieldKey: "phone", payloadKeys: ["phone"] },
   { fieldKey: "personalId", payloadKeys: ["personalId"] },
+  { fieldKey: "idCardNumber", payloadKeys: ["idCardNumber"] },
   { fieldKey: "street", payloadKeys: ["street", "address"] },
   { fieldKey: "city", payloadKeys: ["city"] },
   { fieldKey: "zip", payloadKeys: ["zip"] },
@@ -366,6 +368,7 @@ async function updateExistingContactFromPayloadWithMerge(
       phone: contacts.phone,
       birthDate: contacts.birthDate,
       personalId: contacts.personalId,
+      idCardNumber: contacts.idCardNumber,
       street: contacts.street,
       city: contacts.city,
       zip: contacts.zip,

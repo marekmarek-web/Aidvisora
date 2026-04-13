@@ -562,7 +562,107 @@ export async function getTeamMemberMetrics(
     return metricBase;
   });
 
+  const { start: rangeStart } = getPeriodRange(period);
+  const periodYear = rangeStart.getFullYear();
+  const periodMonth =
+    period === "month" ? rangeStart.getMonth() + 1 : Math.floor(rangeStart.getMonth() / 3) + 1;
+  const [teamGoalRow] = await db
+    .select({ goalType: teamGoals.goalType, targetValue: teamGoals.targetValue })
+    .from(teamGoals)
+    .where(
+      and(
+        eq(teamGoals.tenantId, ctx.auth.tenantId),
+        eq(teamGoals.period, period),
+        eq(teamGoals.year, periodYear),
+        eq(teamGoals.month, periodMonth)
+      )
+    )
+    .limit(1);
+
+  if (
+    teamGoalRow &&
+    teamGoalRow.targetValue > 0 &&
+    teamGoalRow.goalType === "production" &&
+    result.length > 0
+  ) {
+    const perMemberTarget = teamGoalRow.targetValue / result.length;
+    for (const m of result) {
+      m.targetProgressPercent = Math.min(
+        100,
+        Math.round((m.productionThisPeriod / perMemberTarget) * 100)
+      );
+    }
+  }
+
   return result;
+}
+
+/** Složení produkce podle segmentů smluv (mock CRM karta) — Kč za období. */
+export type AdvisorProductionMix = {
+  investice: number;
+  penze: number;
+  zivot: number;
+  hypoteky: number;
+  other: number;
+  total: number;
+};
+
+export async function getAdvisorProductionMix(
+  advisorUserId: string,
+  period: TeamOverviewPeriod = "month"
+): Promise<AdvisorProductionMix> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName as RoleName, "team_overview:read")) throw new Error("Forbidden");
+
+  const { start, end } = getPeriodRange(period);
+  const { startStr, endStr } = toDateRangeStr(start, end);
+
+  const rows = await db
+    .select({
+      segment: contracts.segment,
+      amount: sql<number>`coalesce(sum(coalesce(${contracts.premiumAnnual}::numeric, ${contracts.premiumAmount}::numeric, 0)), 0)`,
+    })
+    .from(contracts)
+    .where(
+      and(
+        eq(contracts.tenantId, auth.tenantId),
+        eq(contracts.advisorId, advisorUserId),
+        contractProdDateGte(startStr),
+        contractProdDateLt(endStr)
+      )
+    )
+    .groupBy(contracts.segment);
+
+  const empty: AdvisorProductionMix = {
+    investice: 0,
+    penze: 0,
+    zivot: 0,
+    hypoteky: 0,
+    other: 0,
+    total: 0,
+  };
+
+  for (const r of rows) {
+    const v = Number(r.amount) || 0;
+    const seg = (r.segment ?? "").toUpperCase();
+    if (seg === "INV" || seg === "DIP") empty.investice += v;
+    else if (seg === "DPS") empty.penze += v;
+    else if (seg === "HYPO" || seg === "UVER") empty.hypoteky += v;
+    else if (
+      seg === "ZP" ||
+      seg === "MAJ" ||
+      seg === "ODP" ||
+      seg === "AUTO_PR" ||
+      seg === "AUTO_HAV" ||
+      seg === "CEST" ||
+      seg === "FIRMA_POJ"
+    )
+      empty.zivot += v;
+    else empty.other += v;
+    empty.total += v;
+  }
+
+  return empty;
 }
 
 export async function getTeamAlerts(

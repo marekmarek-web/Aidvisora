@@ -49,12 +49,33 @@ import {
 } from "./premium/TeamOverviewPremiumShell";
 import { TeamOverviewPremiumMemberRow } from "./premium/TeamOverviewPremiumMemberRow";
 import { TeamOverviewPremiumRuntimeChecks } from "./premium/TeamOverviewPremiumRuntimeChecks";
+import { TeamOverviewCockpitFourCards } from "./TeamOverviewCockpitFourCards";
+import { TeamOverviewCrmCardModal } from "./TeamOverviewCrmCardModal";
+import { TeamOverviewProgressTreeModal } from "./TeamOverviewProgressTreeModal";
+import { TeamOverviewCheckInModal } from "./TeamOverviewCheckInModal";
+import { formatCareerProgramLabel, formatCareerTrackLabel } from "@/lib/career/evaluate-career-progress";
+import { formatTeamOverviewProduction, poolProgramLabel } from "@/lib/team-overview-format";
+import type { CareerProgramId } from "@/lib/career/types";
 
 const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
   { value: "week", label: "Týden" },
   { value: "month", label: "Měsíc" },
   { value: "quarter", label: "Kvartál" },
 ];
+
+const VIEW_TAB_ORDER = [
+  "Cockpit",
+  "Lidé",
+  "Kariéra",
+  "Adaptace",
+  "Struktura",
+  "Správa týmu",
+] as const;
+
+function poolColumnLabel(programId: CareerProgramId): string {
+  if (programId === "beplan" || programId === "premium_brokers") return poolProgramLabel(programId);
+  return formatCareerProgramLabel(programId);
+}
 
 interface TeamOverviewViewProps {
   teamId: string;
@@ -131,13 +152,18 @@ export function TeamOverviewView({
   const [teamCalendarModal, setTeamCalendarModal] = useState<"event" | "task" | null>(null);
   const [calendarPrefill, setCalendarPrefill] = useState<TeamCalendarModalPrefill | null>(null);
   const [rhythmCalendar, setRhythmCalendar] = useState<TeamRhythmCalendarData | null>(initialRhythmCalendar ?? null);
-  /** Cockpit = CRM dashboard; Kariéra = souhrn kariéry a výkonu; Struktura / Lidé = dílčí pohledy. */
-  const [activeView, setActiveView] = useState("Cockpit");
+  /** Cockpit / Lidé / Kariéra / Adaptace / Struktura / Správa týmu — podle mocku týmového přehledu. */
+  type ActiveTab = (typeof VIEW_TAB_ORDER)[number];
+  const [activeView, setActiveView] = useState<ActiveTab>("Cockpit");
+
+  const [overviewModal, setOverviewModal] = useState<
+    null | { type: "crm" | "progress" | "checkin"; userId: string }
+  >(null);
 
   useEffect(() => {
     const syncViewWithHash = () => {
       if (window.location.hash === "#sprava-tymu") {
-        setActiveView("Lidé");
+        setActiveView("Správa týmu");
       }
     };
 
@@ -318,6 +344,10 @@ export function TeamOverviewView({
   }, [members, selectedUserId, selectMember]);
 
   const metricsByUser = useMemo(() => new Map(metrics.map((m) => [m.userId, m])), [metrics]);
+  const inProductionCount = useMemo(
+    () => metrics.filter((m) => m.productionThisPeriod > 0).length,
+    [metrics]
+  );
   const displayName = useCallback((m: TeamMemberInfo) => m.displayName || "Člen týmu", []);
   const newcomerSet = useMemo(() => new Set(newcomers.map((n) => n.userId)), [newcomers]);
 
@@ -457,6 +487,19 @@ export function TeamOverviewView({
     [syncTeamOverviewUrl]
   );
 
+  const handleViewChange = useCallback((label: string) => {
+    if ((VIEW_TAB_ORDER as readonly string[]).includes(label)) {
+      setActiveView(label as ActiveTab);
+    }
+  }, []);
+
+  const openMemberModal = useCallback(
+    (type: "crm" | "progress" | "checkin", userId: string) => {
+      setOverviewModal({ type, userId });
+    },
+    []
+  );
+
   const hierarchyBanner =
     kpis && scope !== "me" && !kpis.hierarchyParentLinksConfigured ? (
       <div
@@ -466,60 +509,149 @@ export function TeamOverviewView({
         <span className="font-semibold">Hierarchie týmu není kompletní.</span>{" "}
         Vazby nadřízenosti zatím chybí — rozsah „Můj tým“ zobrazí jen vás.
         <a href={teamManagementHref} className="underline hover:text-amber-800">
-          Doplňte v pohledu Lidé → Správa týmu
+          Doplňte v záložce Správa týmu
         </a>
         .
       </div>
     ) : null;
 
-  const peopleAndFilters = (
+  const peopleFiltersInner = (
     <>
-      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <TeamOverviewPeopleFiltersBar
-          peopleSearch={peopleSearch}
-          onPeopleSearchChange={setPeopleSearch}
-          peopleSegment={peopleSegment}
-          onPeopleSegmentChange={setPeopleSegment}
-          performanceFilter={performanceFilter}
-          onPerformanceFilterChange={setPerformanceFilter}
-          visibleCount={visibleMembers.length}
-          totalCount={members.length}
-        />
-        <div className="mt-4 space-y-3">
-          {visibleMembers.length === 0 ? (
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-              {members.length === 0
-                ? "V tomto rozsahu zatím nejsou žádní členové — zkuste jiný rozsah nebo doplnění hierarchie."
-                : "Žádný člen neodpovídá filtru — upravte segment nebo vyhledávání."}
-            </p>
-          ) : (
-            visibleMembers.map((m) => (
-              <TeamOverviewPremiumMemberRow
-                key={m.userId}
-                member={m}
-                metrics={metricsByUser.get(m.userId)}
-                displayName={displayName}
-                active={selectedUserId === m.userId}
-                onClick={() => selectMember(m.userId)}
-              />
-            ))
-          )}
-        </div>
+      <TeamOverviewPeopleFiltersBar
+        peopleSearch={peopleSearch}
+        onPeopleSearchChange={setPeopleSearch}
+        peopleSegment={peopleSegment}
+        onPeopleSegmentChange={setPeopleSegment}
+        performanceFilter={performanceFilter}
+        onPerformanceFilterChange={setPerformanceFilter}
+        visibleCount={visibleMembers.length}
+        totalCount={members.length}
+      />
+      <div className="mt-4 space-y-3">
+        {visibleMembers.length === 0 ? (
+          <p className="rounded-3xl border border-slate-200/80 bg-slate-50/90 px-5 py-7 text-center text-sm leading-6 text-slate-600">
+            {members.length === 0
+              ? "V tomto rozsahu zatím nejsou žádní členové — zkuste jiný rozsah nebo doplnění hierarchie."
+              : "Žádný člen neodpovídá filtru — upravte segment nebo vyhledávání."}
+          </p>
+        ) : (
+          visibleMembers.map((m) => (
+            <TeamOverviewPremiumMemberRow
+              key={m.userId}
+              member={m}
+              metrics={metricsByUser.get(m.userId)}
+              displayName={displayName}
+              active={selectedUserId === m.userId}
+              onClick={() => selectMember(m.userId)}
+            />
+          ))
+        )}
       </div>
     </>
   );
 
-  /** Lidé: správa + alerty — adaptace je jen v pohledu Kariéra. */
-  const peopleOperationalSections = (
+  const peopleAndFilters = (
+    <div className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm md:p-6">{peopleFiltersInner}</div>
+  );
+
+  const peopleLideTab = (
     <>
-      <TeamManagementPanel
-        currentUserId={currentUserId}
-        currentUserEmail={currentUserEmail}
-        currentUserFullName={currentUserFullName}
-        roleName={currentRole}
-      />
+      <div className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm md:p-6">
+        {peopleFiltersInner}
+        {visibleMembers.length > 0 ? (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-white/95 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400 backdrop-blur-sm">
+                <tr>
+                  <th className="px-4 py-3">Jméno a role</th>
+                  <th className="px-4 py-3">Kariéra (program / větev)</th>
+                  <th className="px-4 py-3">Skupina (pool)</th>
+                  <th className="px-4 py-3">Výkon (produkce)</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Akce</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleMembers.map((mem) => {
+                  const mm = metricsByUser.get(mem.userId);
+                  const ce = mm?.careerEvaluation;
+                  return (
+                    <tr
+                      key={mem.userId}
+                      className="cursor-pointer bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-px hover:bg-slate-50"
+                      onClick={() => selectMember(mem.userId)}
+                    >
+                      <td className="rounded-l-2xl px-4 py-4">
+                        <div className="font-semibold text-slate-950">{displayName(mem)}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{mem.roleName}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-xs font-semibold text-slate-800">
+                          {ce ? formatCareerProgramLabel(ce.careerProgramId) : "—"}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {ce ? formatCareerTrackLabel(ce.careerTrackId) : "—"} · {ce?.careerPositionLabel ?? "—"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-xs font-semibold text-slate-800">
+                        {ce ? poolColumnLabel(ce.careerProgramId) : "—"}
+                      </td>
+                      <td className="px-4 py-4 font-black text-slate-950">
+                        {mm ? formatTeamOverviewProduction(mm.productionThisPeriod) : "—"}
+                        <div className="text-[10px] font-medium text-slate-500">
+                          Jednotky: {mm != null ? mm.unitsThisPeriod : "—"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          {ce?.managerProgressLabel ?? "—"}
+                        </span>
+                      </td>
+                      <td className="rounded-r-2xl px-4 py-4 text-right">
+                        <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openMemberModal("progress", mem.userId);
+                              selectMember(mem.userId);
+                            }}
+                            className="rounded-2xl bg-violet-100 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-900 transition hover:bg-violet-200/80"
+                          >
+                            Strom
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openMemberModal("crm", mem.userId);
+                              selectMember(mem.userId);
+                            }}
+                            className="rounded-2xl bg-slate-100 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
+                          >
+                            CRM karta
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
       <TeamOverviewFullAlertsSection alerts={alerts} selectMember={selectMember} memberDetailHref={memberDetailHref} />
     </>
+  );
+
+  const teamAdminOnly = (
+    <TeamManagementPanel
+      currentUserId={currentUserId}
+      currentUserEmail={currentUserEmail}
+      currentUserFullName={currentUserFullName}
+      roleName={currentRole}
+    />
   );
 
   const cockpitBody = (
@@ -532,6 +664,8 @@ export function TeamOverviewView({
           stats={briefingStats}
           priorityItems={priorityItems}
         />
+
+        <TeamOverviewCockpitFourCards kpis={kpis} inProductionCount={inProductionCount} loading={loading} />
 
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(280px,1fr)]">
           <div className="min-w-0 space-y-3">
@@ -558,7 +692,7 @@ export function TeamOverviewView({
           </div>
         </div>
 
-        <div className="max-w-3xl rounded-lg border border-dashed border-slate-200/80 bg-slate-50/50 p-1.5 opacity-90">
+        <div className="max-w-3xl rounded-[24px] border border-dashed border-slate-200/80 bg-slate-50/60 p-1.5 opacity-90">
           <TeamOverviewAiTeamSummarySection
             compact
             aiLoading={aiLoading}
@@ -601,6 +735,8 @@ export function TeamOverviewView({
           hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
           selectedUserId={selectedUserId}
           onSelectMember={selectMember}
+          metricsByUser={metricsByUser}
+          newcomerUserIds={newcomerSet}
         />
       </div>
 
@@ -610,9 +746,9 @@ export function TeamOverviewView({
 
   const careerOnly = (
     <>
-      <div className="mb-4 border-b border-slate-200 pb-3">
-        <h2 className="text-base font-semibold text-slate-900">Kariéra a výkon</h2>
-        <p className="mt-1 text-xs text-slate-600">
+      <div className="mb-4 rounded-[28px] border border-slate-200/80 bg-white px-5 py-4 shadow-sm">
+        <h2 className="text-lg font-black tracking-tight text-slate-950">Kariéra a výkon</h2>
+        <p className="mt-1.5 text-sm text-slate-600">
           {periodLabelActive} · {scopeLabelActive} · Beplan {pageModel.poolSplit.counts.beplan} lidí /{" "}
           {pageModel.poolSplit.units.beplan} j. · Premium Brokers {pageModel.poolSplit.counts.premium_brokers} lidí /{" "}
           {pageModel.poolSplit.units.premium_brokers} j.
@@ -621,9 +757,12 @@ export function TeamOverviewView({
       <div className="space-y-4">
         <TeamOverviewCareerSummarySection
           members={members}
+          metrics={metrics}
           pageModel={pageModel}
           displayName={displayName}
           selectMember={selectMember}
+          onOpenCrm={(uid) => openMemberModal("crm", uid)}
+          onOpenProgress={(uid) => openMemberModal("progress", uid)}
         />
         <TeamOverviewKpiDetailSection
           loading={loading}
@@ -633,16 +772,22 @@ export function TeamOverviewView({
           bottomMetric={bottomMetric}
         />
         <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-        {members.length > 0 ? (
-          <TeamOverviewAdaptationSection
-            members={members}
-            newcomers={newcomers}
-            displayName={displayName}
-            memberDetailHref={memberDetailHref}
-            selectMember={selectMember}
-          />
-        ) : null}
       </div>
+    </>
+  );
+
+  const adaptationOnly = (
+    <>
+      {hierarchyBanner}
+      <TeamOverviewAdaptationSection
+        variant="standalone"
+        members={members}
+        newcomers={newcomers}
+        displayName={displayName}
+        memberDetailHref={memberDetailHref}
+        selectMember={selectMember}
+        onCheckIn={(userId) => openMemberModal("checkin", userId)}
+      />
     </>
   );
 
@@ -657,14 +802,9 @@ export function TeamOverviewView({
         hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
         selectedUserId={selectedUserId}
         onSelectMember={selectMember}
+        metricsByUser={metricsByUser}
+        newcomerUserIds={newcomerSet}
       />
-    </>
-  );
-
-  const peopleOnly = (
-    <>
-      {peopleAndFilters}
-      {peopleOperationalSections}
     </>
   );
 
@@ -672,10 +812,26 @@ export function TeamOverviewView({
     activeView === "Struktura"
       ? structureOnly
       : activeView === "Lidé"
-        ? peopleOnly
+        ? peopleLideTab
         : activeView === "Kariéra"
           ? careerOnly
-          : cockpitBody;
+          : activeView === "Adaptace"
+            ? adaptationOnly
+            : activeView === "Správa týmu"
+              ? teamAdminOnly
+              : cockpitBody;
+
+  const overviewModalMetrics =
+    overviewModal != null ? metricsByUser.get(overviewModal.userId) ?? null : null;
+  const overviewModalMember =
+    overviewModal != null ? members.find((m) => m.userId === overviewModal.userId) ?? null : null;
+  const overviewModalName = overviewModalMember ? displayName(overviewModalMember) : "Člen týmu";
+  const overviewModalCareer =
+    overviewModalMetrics?.careerEvaluation ??
+    (overviewModal != null && selectedDetail?.userId === overviewModal.userId
+      ? selectedDetail.careerEvaluation
+      : null) ??
+    null;
 
   return (
     <>
@@ -688,11 +844,12 @@ export function TeamOverviewView({
         periodItems={PERIOD_OPTIONS.map((o) => o.label)}
         periodActive={periodLabelActive}
         onPeriodItemChange={handlePeriodToggle}
-        viewItems={["Cockpit", "Kariéra", "Struktura", "Lidé"]}
+        viewItems={[...VIEW_TAB_ORDER]}
         viewActive={activeView}
-        onViewChange={setActiveView}
+        onViewChange={handleViewChange}
         teamManagementHref={teamManagementHref}
-        onTeamManagementOpen={() => setActiveView("Lidé")}
+        onTeamManagementOpen={() => setActiveView("Správa týmu")}
+        showTeamManagementQuickLink={false}
         calendarActions={
           <div id="team-calendar-actions" className="flex flex-wrap gap-2">
             <TeamCalendarButtons
@@ -724,6 +881,28 @@ export function TeamOverviewView({
             outsideFilter={selectedOutsideFilter}
             variant="premium"
             selectedUserId={selectedUserId}
+            metricsSnapshot={selectedUserId ? metricsByUser.get(selectedUserId) ?? null : null}
+            onOpenCrm={
+              selectedUserId ? () => openMemberModal("crm", selectedUserId) : undefined
+            }
+            onOpenProgress={
+              selectedUserId ? () => openMemberModal("progress", selectedUserId) : undefined
+            }
+            onOpenCheckIn={
+              selectedUserId ? () => openMemberModal("checkin", selectedUserId) : undefined
+            }
+            onOpenOneToOne={
+              selectedUserId
+                ? () => {
+                    const m = members.find((x) => x.userId === selectedUserId);
+                    setCalendarPrefill({
+                      title: `1:1 — ${m ? displayName(m) : "člen"}`,
+                      memberUserIds: [selectedUserId],
+                    });
+                    setTeamCalendarModal("event");
+                  }
+                : undefined
+            }
           />
         }
       >
@@ -744,6 +923,37 @@ export function TeamOverviewView({
         onSuccess={refresh}
         prefill={calendarPrefill}
       />
+
+      {overviewModal?.type === "crm" && overviewModalMetrics ? (
+        <TeamOverviewCrmCardModal
+          open
+          userId={overviewModal.userId}
+          memberName={overviewModalName}
+          metrics={overviewModalMetrics}
+          careerEvaluation={overviewModalMetrics.careerEvaluation}
+          period={period}
+          onClose={() => setOverviewModal(null)}
+        />
+      ) : null}
+
+      {overviewModal?.type === "progress" && overviewModalCareer ? (
+        <TeamOverviewProgressTreeModal
+          open
+          memberName={overviewModalName}
+          careerEvaluation={overviewModalCareer}
+          onClose={() => setOverviewModal(null)}
+        />
+      ) : null}
+
+      {overviewModal?.type === "checkin" ? (
+        <TeamOverviewCheckInModal
+          open={true}
+          memberName={overviewModalName}
+          memberUserId={overviewModal.userId}
+          onClose={() => setOverviewModal(null)}
+          onSuccess={refresh}
+        />
+      ) : null}
     </>
   );
 }

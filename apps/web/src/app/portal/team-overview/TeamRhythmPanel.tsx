@@ -64,14 +64,14 @@ export function TeamRhythmPanel({
 
   return (
     <section
-      className="mb-6 overflow-hidden rounded-2xl border border-teal-200/50 bg-gradient-to-br from-teal-50/30 via-[color:var(--wp-surface-card)] to-[color:var(--wp-surface-card)] shadow-sm"
+      className="mb-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm"
       aria-labelledby="team-rhythm-heading"
     >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-teal-200/40 bg-teal-50/30 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5">
         <div className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-teal-600 shrink-0" aria-hidden />
-          <h2 id="team-rhythm-heading" className="text-base font-black text-[color:var(--wp-text)]">
+          <h2 id="team-rhythm-heading" className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">
             Týmový rytmus
           </h2>
           {hasOverdue && (
@@ -86,7 +86,7 @@ export function TeamRhythmPanel({
             <button
               type="button"
               onClick={() => onOpenTask({ title: "Follow-up — týmový přehled" })}
-              className="inline-flex items-center gap-1.5 min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)] transition hover:bg-slate-50"
             >
               <Plus className="h-3 w-3" aria-hidden />
               Úkol
@@ -94,7 +94,7 @@ export function TeamRhythmPanel({
             <button
               type="button"
               onClick={() => onOpenEvent({ title: "Porada — rozvoj týmu" })}
-              className="inline-flex items-center gap-1.5 min-h-[36px] rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-800"
             >
               <Plus className="h-3 w-3" aria-hidden />
               Schůzka
@@ -106,7 +106,7 @@ export function TeamRhythmPanel({
       <div className="grid gap-5 p-5 lg:grid-cols-12">
         {/* Statistiky */}
         <div className="lg:col-span-4 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             Tento týden / 14 dní
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -155,7 +155,7 @@ export function TeamRhythmPanel({
           </div>
 
           {showCadence && computed.coachingCadenceAlignedCount > 0 ? (
-            <div className="rounded-lg border border-teal-200/50 bg-teal-50/60 px-3 py-2 text-xs text-teal-900/90">
+            <div className="rounded-2xl border border-teal-200/50 bg-teal-50/60 px-3 py-2 text-xs text-teal-900/90">
               <span className="font-bold">{computed.coachingCadenceAlignedCount}</span>{" "}
               {computed.coachingCadenceAlignedCount === 1 ? "osoba" : "lidí"} z „Potřebuje krok" jsou i v cadence — detail člena spojí kariéru a návrh termínu.
             </div>
@@ -164,7 +164,7 @@ export function TeamRhythmPanel({
 
         {/* Nadcházející */}
         <div className="lg:col-span-4 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             Nadcházející
           </p>
           {computed.upcomingEvents.length === 0 ? (
@@ -176,7 +176,7 @@ export function TeamRhythmPanel({
               {computed.upcomingEvents.slice(0, 8).map((e) => (
                 <li
                   key={e.id}
-                  className={`rounded-lg border px-3 py-2 text-xs ${e.withinWeek ? "border-teal-200/60 bg-teal-50/30" : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]"}`}
+                  className={`rounded-2xl border px-3 py-2.5 text-xs ${e.withinWeek ? "border-teal-200/60 bg-teal-50/30" : "border-slate-200/80 bg-slate-50/40"}`}
                 >
                   <p className="font-semibold text-[color:var(--wp-text)] line-clamp-1">{e.title}</p>
                   <p className="mt-0.5 text-[color:var(--wp-text-secondary)]">
@@ -194,7 +194,7 @@ export function TeamRhythmPanel({
           )}
           {computed.recentPastEvents.length > 0 && (
             <div className="pt-2 border-t border-[color:var(--wp-surface-card-border)]/50">
-              <p className="mb-1 text-[10px] font-bold uppercase text-[color:var(--wp-text-tertiary)]">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
                 Nedávno proběhlo
               </p>
               <ul className="space-y-0.5 text-[11px] text-[color:var(--wp-text-secondary)]">
@@ -210,7 +210,7 @@ export function TeamRhythmPanel({
 
         {/* Úkoly */}
         <div className="lg:col-span-4 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)] flex items-center gap-1.5">
+          <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             <ListChecks className="h-3.5 w-3.5" aria-hidden />
             Úkoly
           </p>
@@ -222,7 +222,7 @@ export function TeamRhythmPanel({
               </p>
               <ul className="space-y-1.5 max-h-28 overflow-y-auto">
                 {computed.overdueTasks.slice(0, 5).map((t) => (
-                  <li key={t.id} className="rounded-lg border border-rose-200/50 bg-rose-50/30 px-2.5 py-1.5 text-xs">
+                  <li key={t.id} className="rounded-2xl border border-rose-200/50 bg-rose-50/30 px-2.5 py-2 text-xs">
                     <p className="font-semibold text-rose-800">{t.dueDateDate?.toLocaleDateString("cs-CZ")}</p>
                     <p className="text-[color:var(--wp-text-secondary)] line-clamp-1">{t.title}</p>
                   </li>
@@ -230,7 +230,7 @@ export function TeamRhythmPanel({
               </ul>
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-200/50 bg-emerald-50/30 px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200/50 bg-emerald-50/30 px-3 py-2.5 text-xs">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
               <p className="text-emerald-800">Žádné týmové úkoly po termínu.</p>
             </div>
@@ -252,8 +252,8 @@ export function TeamRhythmPanel({
 
       {/* Cadence */}
       {showCadence ? (
-        <div className="border-t border-teal-200/40 px-5 py-4">
-          <p className="mb-2.5 text-[10px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+        <div className="border-t border-slate-200/80 px-5 py-4">
+          <p className="mb-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             Doporučená cadence
           </p>
           {computed.cadenceWithoutUpcomingTouch.length === 0 ? (
@@ -266,7 +266,7 @@ export function TeamRhythmPanel({
               {computed.cadenceWithoutUpcomingTouch.slice(0, 6).map((c) => (
                 <li
                   key={c.userId}
-                  className="flex flex-col gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/25 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <Link
@@ -276,7 +276,7 @@ export function TeamRhythmPanel({
                       {resolveMemberLabel(c.userId)}
                     </Link>
                     <p className="mt-0.5 text-[11px] text-[color:var(--wp-text-secondary)]">{c.reasonCs}</p>
-                    <span className="mt-1 inline-block rounded-full bg-teal-100/80 px-2 py-0.5 text-[10px] font-bold text-teal-800">
+                    <span className="mt-1 inline-block rounded-full border border-teal-200/60 bg-teal-100/80 px-2 py-0.5 text-[10px] font-bold text-teal-800">
                       {cadenceKindLabel(c.cadenceKind)}
                     </span>
                   </div>
@@ -291,7 +291,7 @@ export function TeamRhythmPanel({
                             memberUserIds: [c.userId],
                           })
                         }
-                        className="min-h-[36px] rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition"
+                        className="min-h-[36px] rounded-2xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-800"
                       >
                         Naplánovat 1:1
                       </button>
@@ -304,7 +304,7 @@ export function TeamRhythmPanel({
                             memberUserIds: [c.userId],
                           })
                         }
-                        className="min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition"
+                        className="min-h-[36px] rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text-secondary)] transition hover:bg-slate-50"
                       >
                         Úkol
                       </button>
@@ -328,7 +328,7 @@ export function TeamRhythmPanel({
         </p>
       )}
 
-      <p className="border-t border-[color:var(--wp-surface-card-border)]/40 px-5 py-2.5 text-[10px] text-[color:var(--wp-text-tertiary)]">
+      <p className="border-t border-slate-200/80 px-5 py-2.5 text-[10px] text-[color:var(--wp-text-tertiary)]">
         {disclaimer}
       </p>
     </section>

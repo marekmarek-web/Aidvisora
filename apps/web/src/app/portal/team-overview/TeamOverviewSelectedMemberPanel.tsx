@@ -10,8 +10,15 @@ import { buildTeamMemberCoachingSummaryBullets } from "@/lib/team-member-coachin
 import { crmUnitsFootnoteForProgram } from "@/lib/career/crm-units-copy";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { MemberCareerQuickActions } from "@/app/portal/team-overview/[userId]/MemberCareerQuickActions";
-import { formatTeamOverviewProduction } from "@/lib/team-overview-format";
+import { formatTeamOverviewProduction, poolProgramLabel } from "@/lib/team-overview-format";
+import type { TeamMemberMetrics } from "@/lib/team-overview-alerts";
+import type { CareerProgramId } from "@/lib/career/types";
 import { PremiumProgressBar } from "@/app/portal/team-overview/premium/primitives";
+
+function poolLine(programId: CareerProgramId): string {
+  if (programId === "beplan" || programId === "premium_brokers") return poolProgramLabel(programId);
+  return formatCareerProgramLabel(programId);
+}
 
 export function TeamOverviewSelectedMemberPanel({
   detail,
@@ -24,6 +31,12 @@ export function TeamOverviewSelectedMemberPanel({
   variant = "default",
   /** Když je výběr v URL/state, ale detail se nenačetl — neukazovat „Vyberte člena“. */
   selectedUserId = null,
+  /** Metriky ze seznamu (snapshot), když `detail.metrics` ještě chybí. */
+  metricsSnapshot = null,
+  onOpenCrm,
+  onOpenProgress,
+  onOpenCheckIn,
+  onOpenOneToOne,
 }: {
   detail: TeamMemberDetail | null;
   loading: boolean;
@@ -34,12 +47,17 @@ export function TeamOverviewSelectedMemberPanel({
   outsideFilter?: boolean;
   variant?: "default" | "premium";
   selectedUserId?: string | null;
+  metricsSnapshot?: TeamMemberMetrics | null;
+  onOpenCrm?: () => void;
+  onOpenProgress?: () => void;
+  onOpenCheckIn?: () => void;
+  onOpenOneToOne?: () => void;
 }) {
   const shell = (classes: string) =>
     clsx(
       "xl:sticky xl:top-6 h-fit",
       variant === "premium"
-        ? "rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm"
+        ? "rounded-[28px] border border-slate-200/80 bg-white text-slate-900 shadow-sm"
         : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm",
       classes
     );
@@ -66,7 +84,7 @@ export function TeamOverviewSelectedMemberPanel({
           className={clsx(
             "xl:sticky xl:top-6 h-fit p-6 text-sm",
             variant === "premium"
-              ? "rounded-[28px] border border-amber-200/80 bg-amber-50/50 text-slate-800"
+              ? "rounded-[28px] border border-amber-200/80 bg-amber-50/50 text-slate-800 shadow-sm"
               : "rounded-2xl border border-amber-200/80 bg-amber-50/40 text-[color:var(--wp-text-secondary)]"
           )}
           role="alert"
@@ -108,7 +126,7 @@ export function TeamOverviewSelectedMemberPanel({
         className={clsx(
           "xl:sticky xl:top-6 h-fit p-6 text-sm",
           variant === "premium"
-            ? "rounded-[28px] border border-dashed border-slate-200 bg-slate-50 text-slate-600"
+            ? "rounded-[28px] border border-dashed border-slate-200/80 bg-slate-50/80 text-slate-600"
             : "rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/20 text-[color:var(--wp-text-secondary)]"
         )}
       >
@@ -129,29 +147,32 @@ export function TeamOverviewSelectedMemberPanel({
   }
 
   const name = detail.displayName || "Člen týmu";
-  const m = detail.metrics;
+  const m = detail.metrics ?? metricsSnapshot;
   const ce = detail.careerEvaluation;
   const coachingBullets = buildTeamMemberCoachingSummaryBullets(detail);
+  const showModalActions =
+    variant === "premium" && (onOpenCrm || onOpenProgress || onOpenCheckIn || onOpenOneToOne);
 
   return (
     <aside
       className={clsx(
         "xl:sticky xl:top-6 h-fit max-h-[min(90vh,calc(100vh-4rem))] overflow-y-auto",
         variant === "premium"
-          ? "rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm"
+          ? "rounded-[28px] border border-slate-200/80 bg-white text-slate-900 shadow-sm"
           : "rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm"
       )}
     >
       {/* Identity strip */}
       <div
         className={clsx(
-          "flex items-start justify-between gap-2 border-b px-5 py-4",
-          variant === "premium" ? "border-slate-200" : "border-[color:var(--wp-surface-card-border)]"
+          "flex items-start justify-between gap-3 border-b px-5 py-4",
+          variant === "premium" ? "border-slate-200/80 bg-slate-50/40" : "border-[color:var(--wp-surface-card-border)]"
         )}
       >
         <div className="min-w-0">
-          <h2 className="text-base font-black text-[color:var(--wp-text)] leading-tight">{name}</h2>
-          <p className="mt-0.5 text-xs text-[color:var(--wp-text-tertiary)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Vybraný člen</p>
+          <h2 className="mt-1 text-xl font-black leading-tight text-slate-950">{name}</h2>
+          <p className="mt-1 text-xs text-[color:var(--wp-text-tertiary)]">
             {detail.roleName}
             {detail.email ? ` · ${detail.email}` : ""}
           </p>
@@ -173,21 +194,26 @@ export function TeamOverviewSelectedMemberPanel({
         </button>
       </div>
 
-      <div className="px-5 py-4 space-y-5">
+      <div className="space-y-5 px-5 py-4">
         {outsideFilter && (
-          <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-950" role="status">
+          <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 px-3.5 py-2.5 text-xs text-amber-950" role="status">
             Člen není v aktuálním filtru tabulky — souhrn je platný.
           </div>
         )}
 
         {/* Kariérní kontext */}
         <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             <Briefcase className="h-3.5 w-3.5 text-violet-500" aria-hidden />
             Kariérní kontext
           </h3>
-          <div className="rounded-xl border border-violet-200/50 bg-violet-50/35 p-3 text-xs space-y-2">
+          <div className="space-y-2 rounded-3xl border border-violet-200/50 bg-violet-50/35 p-4 text-xs">
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              <p className="col-span-2">
+                <span className="text-[color:var(--wp-text-tertiary)]">Skupina (pool)</span>
+                <br />
+                <strong className="text-[color:var(--wp-text)]">{poolLine(ce.careerProgramId)}</strong>
+              </p>
               <p>
                 <span className="text-[color:var(--wp-text-tertiary)]">Program</span>
                 <br />
@@ -207,10 +233,10 @@ export function TeamOverviewSelectedMemberPanel({
               )}
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1 border-t border-violet-200/40">
-              <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-violet-900">
+              <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-violet-900">
                 {careerProgressShortLabel(ce.progressEvaluation)}
               </span>
-              <span className="rounded-full border border-violet-200 bg-white/60 px-2 py-0.5 text-[10px] text-violet-800">
+              <span className="rounded-full border border-violet-200 bg-white/70 px-2.5 py-1 text-[10px] text-violet-800">
                 {careerCompletenessShortLabel(ce.evaluationCompleteness)}
               </span>
             </div>
@@ -220,32 +246,87 @@ export function TeamOverviewSelectedMemberPanel({
                 {ce.nextCareerPositionLabel}
               </p>
             )}
+            {ce.missingRequirements.length > 0 && (
+              <p className="text-[11px] text-amber-800">
+                <span className="font-semibold">Blokátor:</span> {ce.missingRequirements[0].labelCs}
+              </p>
+            )}
           </div>
         </section>
+
+        {showModalActions ? (
+          <div className="flex flex-wrap gap-2">
+            {onOpenCrm ? (
+              <button
+                type="button"
+                onClick={onOpenCrm}
+                className="rounded-2xl bg-slate-900 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white transition hover:bg-slate-800"
+              >
+                CRM karta
+              </button>
+            ) : null}
+            {onOpenProgress ? (
+              <button
+                type="button"
+                onClick={onOpenProgress}
+                className="rounded-2xl bg-violet-100 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-900 transition hover:bg-violet-200/80"
+              >
+                Strom progresu
+              </button>
+            ) : null}
+            {onOpenCheckIn ? (
+              <button
+                type="button"
+                onClick={onOpenCheckIn}
+                className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-50"
+              >
+                Check-in
+              </button>
+            ) : null}
+            {onOpenOneToOne ? (
+              <button
+                type="button"
+                onClick={onOpenOneToOne}
+                className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3.5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-indigo-900 transition hover:bg-indigo-100/80"
+              >
+                1:1 schůzka
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* CRM metriky */}
         {m ? (
           <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+            <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
               <TrendingUp className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
               CRM (aktuální období)
             </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/25 px-3 py-2">
+            {m.targetProgressPercent != null ? (
+              <div className="mb-3">
+                <PremiumProgressBar
+                  label="Plnění týmového cíle (produkce, orientační %)"
+                  value={Math.min(100, m.targetProgressPercent)}
+                  tone="violet"
+                />
+              </div>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
                 <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">{m.unitsThisPeriod}</p>
                 <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Jednotky</p>
               </div>
-              <div className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/25 px-3 py-2">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
                 <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">
                   {formatTeamOverviewProduction(m.productionThisPeriod)}
                 </p>
                 <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Produkce</p>
               </div>
-              <div className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/25 px-3 py-2">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
                 <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">{m.meetingsThisPeriod}</p>
                 <p className="mt-0.5 text-[10px] text-[color:var(--wp-text-tertiary)]">Schůzky</p>
               </div>
-              <div className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/25 px-3 py-2">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5">
                 <p className="text-base font-black tabular-nums text-[color:var(--wp-text)] leading-none">
                   {Math.round(m.conversionRate * 100)} %
                 </p>
@@ -260,7 +341,7 @@ export function TeamOverviewSelectedMemberPanel({
 
         {variant === "premium" && detail.adaptation ? (
           <section>
-            <h3 className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Adaptace</h3>
+            <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Adaptace</h3>
             <PremiumProgressBar
               label="Adaptační skóre (výpočet z checklistu)"
               value={detail.adaptation.adaptationScore}
@@ -272,11 +353,11 @@ export function TeamOverviewSelectedMemberPanel({
 
         {/* Coaching a další krok */}
         <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+          <h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
             <Target className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
             Coaching a 1:1
           </h3>
-          <div className="rounded-xl border border-indigo-200/40 bg-indigo-50/25 p-3 space-y-2">
+          <div className="space-y-2 rounded-3xl border border-indigo-200/40 bg-indigo-50/25 p-4">
             <p className="text-xs font-semibold text-[color:var(--wp-text)]">
               {detail.careerCoaching.suggestedNextStepLine}
             </p>
@@ -305,7 +386,7 @@ export function TeamOverviewSelectedMemberPanel({
         {/* Coaching bullets */}
         {coachingBullets.length > 0 && (
           <section>
-            <h3 className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+            <h3 className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
               Coaching summary
             </h3>
             <ul className="space-y-1 text-[11px] text-[color:var(--wp-text-secondary)]">

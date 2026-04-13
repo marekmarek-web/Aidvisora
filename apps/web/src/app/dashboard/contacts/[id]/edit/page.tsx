@@ -20,6 +20,12 @@ export default function EditContactPage() {
     email: "",
     phone: "",
     title: "",
+    birthDate: "",
+    personalId: "",
+    idCardNumber: "",
+    street: "",
+    city: "",
+    zip: "",
     referralSource: "",
     referralContactId: "",
     priority: "",
@@ -39,6 +45,12 @@ export default function EditContactPage() {
           email: c.email ?? "",
           phone: c.phone ?? "",
           title: c.title ?? "",
+          birthDate: c.birthDate ?? "",
+          personalId: c.personalId ?? "",
+          idCardNumber: c.idCardNumber ?? "",
+          street: c.street ?? "",
+          city: c.city ?? "",
+          zip: c.zip ?? "",
           referralSource: c.referralSource ?? "",
           referralContactId: c.referralContactId ?? "",
           priority: c.priority ?? "",
@@ -71,6 +83,12 @@ export default function EditContactPage() {
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
         title: form.title.trim() || undefined,
+        birthDate: form.birthDate.trim() || undefined,
+        personalId: form.personalId.trim() || undefined,
+        idCardNumber: form.idCardNumber.trim() || undefined,
+        street: form.street.trim() || undefined,
+        city: form.city.trim() || undefined,
+        zip: form.zip.trim() || undefined,
         referralSource: form.referralSource.trim() || undefined,
         referralContactId: form.referralContactId || undefined,
         priority: form.priority || undefined,
@@ -150,6 +168,74 @@ export default function EditContactPage() {
             name="title"
             className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
           />
+        </div>
+        <div className="border-t border-[color:var(--wp-border)] pt-4">
+          <p className="mb-3 text-sm font-semibold text-[color:var(--wp-text)]">Identifikační údaje</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Datum narození</label>
+          <input
+            type="date"
+            value={form.birthDate}
+            onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))}
+            name="birthDate"
+            className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Rodné číslo</label>
+          <input
+            value={form.personalId}
+            onChange={(e) => setForm((f) => ({ ...f, personalId: e.target.value }))}
+            name="personalId"
+            placeholder="např. 850101/1234"
+            className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Číslo dokladu (OP/pas)</label>
+          <input
+            value={form.idCardNumber}
+            onChange={(e) => setForm((f) => ({ ...f, idCardNumber: e.target.value }))}
+            name="idCardNumber"
+            placeholder="např. 123456789"
+            className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Ulice a číslo</label>
+          <input
+            value={form.street}
+            onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
+            name="street"
+            placeholder="např. Hlavní 12"
+            className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Město</label>
+            <input
+              value={form.city}
+              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+              name="city"
+              placeholder="Praha"
+              className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">PSČ</label>
+            <input
+              value={form.zip}
+              onChange={(e) => setForm((f) => ({ ...f, zip: e.target.value }))}
+              name="zip"
+              placeholder="110 00"
+              className="w-full rounded-lg border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] px-3 py-2 text-[color:var(--wp-input-text)]"
+            />
+          </div>
+        </div>
+        <div className="border-t border-[color:var(--wp-border)] pt-4">
+          <p className="mb-3 text-sm font-semibold text-[color:var(--wp-text)]">Ostatní</p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-[color:var(--wp-text-secondary)]">Doporučil / zdroj</label>

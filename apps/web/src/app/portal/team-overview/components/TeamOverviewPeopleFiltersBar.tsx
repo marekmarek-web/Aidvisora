@@ -25,11 +25,11 @@ export function TeamOverviewPeopleFiltersBar({
 }) {
   return (
     <>
-      <div className="mb-5 border-t border-slate-200/60 pt-7" id="lide-v-tymu">
+      <div className="mb-5 border-t border-slate-200/60 pt-6" id="lide-v-tymu">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">Lidé v týmu</h2>
-            <p className="mt-1 text-xs text-[color:var(--wp-text-secondary)]">
+            <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">
               Klikněte na řádek pro souhrn člena — kariéra, coaching, CRM.
             </p>
           </div>
@@ -50,7 +50,7 @@ export function TeamOverviewPeopleFiltersBar({
             value={peopleSearch}
             onChange={(e) => onPeopleSearchChange(e.target.value)}
             placeholder="Hledat jméno nebo e-mail…"
-            className="min-h-[40px] w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] py-2 pl-10 pr-3 text-sm text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
+            className="min-h-[42px] w-full rounded-2xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-[color:var(--wp-text-secondary)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
             aria-label="Hledat v seznamu členů"
           />
         </div>

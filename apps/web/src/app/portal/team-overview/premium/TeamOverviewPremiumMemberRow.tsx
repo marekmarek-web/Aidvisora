@@ -43,10 +43,10 @@ export function TeamOverviewPremiumMemberRow({
     <button
       type="button"
       onClick={onClick}
-      className={`grid w-full grid-cols-12 items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+      className={`grid w-full grid-cols-12 items-center gap-3 rounded-[24px] border px-4 py-3 text-left transition ${
         active
           ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10"
-          : "border-slate-200 bg-white hover:border-slate-300"
+          : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/60"
       }`}
     >
       <div className="col-span-5 min-w-0 lg:col-span-4">
