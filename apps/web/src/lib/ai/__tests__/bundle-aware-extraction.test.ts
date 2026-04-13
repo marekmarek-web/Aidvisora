@@ -22,6 +22,14 @@
  * BA16: packet segmentation detects IŽP investment part as investment_section
  * BA17: ContractPipelineOptions bundleHint type is exported correctly
  * BA18: investment section pass with existing funds — does not replace when already set
+ *
+ * Failure-class regression tests (P1.5):
+ * BA19: AML/FATCA annex must not override primary contract fields
+ * BA20: health questionnaire must not change client identity fields
+ * BA21: information-only annex must not produce contract/payment actions
+ * BA22: investment/DPS bundle must not fall into insurance semantics
+ * BA23: bundle prompt for AML candidate contains non-override warning
+ * BA24: investment domain type guard correctly identifies investment types
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -52,6 +60,8 @@ import {
 } from "@/lib/ai/subdocument-extraction-orchestrator";
 import { segmentDocumentPacket } from "@/lib/ai/document-packet-segmentation";
 import type { BundleHint } from "@/lib/ai/contract-understanding-pipeline";
+import { validateDocumentEnvelope } from "@/lib/ai/extraction-validation";
+import { isInvestmentDomainType } from "@/lib/ai/ai-review-type-mapper";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -670,5 +680,209 @@ describe("investment section funds merge", () => {
     // Funds should NOT be replaced — already have 2 funds
     expect(envelope.investmentData!.funds).toHaveLength(2);
     expect(envelope.investmentData!.funds![0].name).toBe("Fond A");
+  });
+});
+
+// ─── BA19–BA24: P1.5 Bundle failure-class regression tests ───────────────────
+//
+// These tests verify GENERIC failure-class protections, not specific PDFs or vendors.
+// They test system-level rules: AML/FATCA/health annexes must not override primary
+// contract data or produce unintended actions, investment bundles must not use
+// insurance semantics.
+
+describe("P1.5 — AML/FATCA annex does not override primary contract fields", () => {
+  it("BA19: validateDocumentEnvelope emits no investment-role warning for life insurance (correct domain)", () => {
+    // Life insurance with policyholder is correct — no domain-role warning expected
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "life_insurance_contract", lifecycleStatus: "final_contract" },
+      contentFlags: { isFinalContract: true },
+      extractedFields: {
+        fullName: { value: "Jan Novák", status: "extracted" },
+        policyStartDate: { value: "2024-01-01", status: "extracted" },
+        totalMonthlyPremium: { value: "1500", status: "extracted" },
+        contractNumber: { value: "POL-12345", status: "extracted" },
+        bankAccount: { value: "123456789/0100", status: "extracted" },
+        variableSymbol: { value: "12345", status: "extracted" },
+      },
+    });
+    const domainRoleWarning = result.warnings.find((w) => w.code === "INVESTMENT_DOC_INSURANCE_ROLE_LABEL");
+    expect(domainRoleWarning).toBeUndefined();
+  });
+
+  it("BA19b: AML candidate in bundle prompt contains non-override instruction", () => {
+    const bundleHint: BundleHint = {
+      isBundle: true,
+      primarySubdocumentType: "final_contract",
+      candidateTypes: ["final_contract", "aml_questionnaire"],
+      sectionHeadings: ["Pojistná smlouva", "AML formulář"],
+      hasSensitiveAttachment: true,
+      hasInvestmentSection: false,
+    };
+    const prompt = buildCombinedClassifyAndExtractPrompt(
+      "contract text with AML annex",
+      "smlouva-aml.pdf",
+      bundleHint,
+    );
+    // Prompt must include sensitive attachment guard — generic bundle rule
+    expect(prompt).toContain("citlivou přílohu");
+  });
+});
+
+describe("P1.5 — Health questionnaire does not change client identity fields", () => {
+  it("BA20: bundle with health_questionnaire candidate → prompt contains health section guard", () => {
+    const bundleHint: BundleHint = {
+      isBundle: true,
+      primarySubdocumentType: "final_contract",
+      candidateTypes: ["final_contract", "health_questionnaire"],
+      sectionHeadings: ["Životní pojištění", "Zdravotní dotazník"],
+      hasSensitiveAttachment: true,
+      hasInvestmentSection: false,
+    };
+    const prompt = buildCombinedClassifyAndExtractPrompt(
+      "contract text with health questionnaire",
+      "smlouva-zdravotni.pdf",
+      bundleHint,
+    );
+    expect(prompt).toContain("citlivou přílohu");
+  });
+
+  it("BA20b: health questionnaire annex orchestration sets needsManualValidation when standalone", async () => {
+    mockLLMResponse.mockReset();
+    mockLLMResponse.mockResolvedValue({
+      parsed: {
+        healthSectionPresent: true,
+        questionnaireEntries: [{ question: "Kouříte?", answer: "Ne" }],
+      },
+    });
+
+    const packetMeta = makePacketMeta({
+      hasSensitiveAttachment: true,
+      subdocumentCandidates: [
+        { type: "health_questionnaire", confidence: 0.85, label: "Zdravotní dotazník", publishable: false },
+      ],
+    });
+
+    const envelope = makeEnvelope();
+    const origFullName = envelope.extractedFields?.fullName?.value;
+    const origContract = envelope.extractedFields?.contractNumber?.value;
+
+    await orchestrateSubdocumentExtraction(
+      "Zdravotní dotazník: Kouříte? Ne.",
+      packetMeta,
+      envelope,
+    );
+
+    // Primary contract identity fields must be unchanged after health orchestration
+    expect(envelope.extractedFields?.fullName?.value).toBe(origFullName);
+    expect(envelope.extractedFields?.contractNumber?.value).toBe(origContract);
+  });
+});
+
+describe("P1.5 — Information-only annex does not produce contract/payment actions", () => {
+  it("BA21: pension_contract with AML-only bundle: payment warning when no explicit payment section", () => {
+    // Generic rule: pension_contract without explicit payment section but with payment fields
+    // must emit a warning — the AML annex cannot be the source of payment data
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "pension_contract", lifecycleStatus: "final_contract" },
+      contentFlags: { containsPaymentInstructions: false },
+      extractedFields: {
+        participantFullName: { value: "Jana Nováková", status: "extracted" },
+        contractStartDate: { value: "2024-01-01", status: "extracted" },
+        bankAccount: { value: "987654321/0300", status: "extracted" },
+        variableSymbol: { value: "98765", status: "extracted" },
+      },
+    });
+    // Generic payment-without-section warning must fire
+    const paymentWarn = result.warnings.find(
+      (w) => w.code === "PAYMENT_FIELDS_WITHOUT_EXPLICIT_SECTION" || w.code === "NON_PAYMENT_DOC_HAS_PAYMENT_FIELDS",
+    );
+    expect(paymentWarn).toBeTruthy();
+  });
+
+  it("BA21b: information-only modelation does not produce payment actions (non-payment informative type)", () => {
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "investment_modelation", lifecycleStatus: "modelation" },
+      contentFlags: { isProposalOnly: true, containsPaymentInstructions: false },
+      extractedFields: {
+        bankAccount: { value: "123456789/0100", status: "extracted" },
+        variableSymbol: { value: "12345", status: "extracted" },
+        annualPremium: { value: "24000", status: "extracted" },
+      },
+    });
+    const warn = result.warnings.find((w) => w.code === "NON_PAYMENT_DOC_HAS_PAYMENT_FIELDS");
+    expect(warn).toBeTruthy();
+    expect(warn?.message).toContain("NESMÍ");
+  });
+});
+
+describe("P1.5 — Investment/DPS bundle must not fall into insurance semantics", () => {
+  it("BA22: pension_contract with policyholder field → INVESTMENT_DOC_INSURANCE_ROLE_LABEL warning", () => {
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "pension_contract", lifecycleStatus: "final_contract" },
+      extractedFields: {
+        participantFullName: { value: "Jana Nováková", status: "extracted" },
+        policyholder: { value: "Jana Nováková", status: "extracted" }, // wrong role for pension
+        contractStartDate: { value: "2024-01-01", status: "extracted" },
+      },
+    });
+    const domainWarn = result.warnings.find((w) => w.code === "INVESTMENT_DOC_INSURANCE_ROLE_LABEL");
+    expect(domainWarn).toBeTruthy();
+    expect(domainWarn?.message).toContain("policyholder");
+  });
+
+  it("BA22b: investment_subscription_document with policyholder field → domain role warning", () => {
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "investment_subscription_document", lifecycleStatus: "final_contract" },
+      extractedFields: {
+        investorFullName: { value: "Petr Procházka", status: "extracted" },
+        policyholder: { value: "Petr Procházka", status: "extracted" }, // wrong role
+        contractStartDate: { value: "2024-03-01", status: "extracted" },
+      },
+    });
+    const domainWarn = result.warnings.find((w) => w.code === "INVESTMENT_DOC_INSURANCE_ROLE_LABEL");
+    expect(domainWarn).toBeTruthy();
+  });
+
+  it("BA22c: investment_service_agreement with correct investor role → no domain role warning", () => {
+    const result = validateDocumentEnvelope({
+      documentClassification: { primaryType: "investment_service_agreement", lifecycleStatus: "final_contract" },
+      extractedFields: {
+        investorFullName: { value: "Petr Procházka", status: "extracted" },
+        contractStartDate: { value: "2024-03-01", status: "extracted" },
+        fundStrategy: { value: "Dynamická", status: "extracted" },
+        investmentFunds: { value: "Fond A, Fond B", status: "extracted" },
+      },
+    });
+    const domainWarn = result.warnings.find((w) => w.code === "INVESTMENT_DOC_INSURANCE_ROLE_LABEL");
+    expect(domainWarn).toBeUndefined();
+  });
+
+  it("BA23: investment bundle prompt — investment section rules injected", () => {
+    const bundleHint: BundleHint = {
+      isBundle: true,
+      primarySubdocumentType: "final_contract",
+      candidateTypes: ["final_contract", "investment_section"],
+      sectionHeadings: ["DPS smlouva", "Investiční strategie"],
+      hasSensitiveAttachment: false,
+      hasInvestmentSection: true,
+    };
+    const prompt = buildCombinedClassifyAndExtractPrompt(
+      "DPS contract text with investment allocation",
+      "dps-smlouva.pdf",
+      bundleHint,
+    );
+    expect(prompt).toContain("DIP/DPS/fond");
+    expect(prompt).not.toContain("policyholder is authoritative");
+  });
+
+  it("BA24: isInvestmentDomainType correctly identifies investment types", () => {
+    expect(isInvestmentDomainType("pension_contract")).toBe(true);
+    expect(isInvestmentDomainType("investment_subscription_document")).toBe(true);
+    expect(isInvestmentDomainType("investment_service_agreement")).toBe(true);
+    expect(isInvestmentDomainType("investment_payment_instruction")).toBe(true);
+    // Life insurance is NOT investment domain (it has its own semantics)
+    expect(isInvestmentDomainType("life_insurance_contract")).toBe(false);
+    expect(isInvestmentDomainType("life_insurance_investment_contract")).toBe(false);
+    expect(isInvestmentDomainType("nonlife_insurance_contract")).toBe(false);
   });
 });

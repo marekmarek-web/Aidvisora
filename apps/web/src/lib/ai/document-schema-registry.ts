@@ -53,6 +53,39 @@ const PAYMENT_ANTI_HALLUCINATION_REVIEW_RULES: string[] = [
 ];
 
 /**
+ * Completeness advisory rules — injected into all contractual document types.
+ *
+ * Generic rule: when a key field is not present in the document, the model must
+ * mark it as missing/not_found and emit an advisory. It must NEVER hallucinate
+ * a value for a missing field. "missing is better than invented".
+ */
+const COMPLETENESS_ADVISORY_REVIEW_RULES: string[] = [
+  "if contractStartDate (policyStartDate, startDate) is not found in the document, set status=missing and do NOT invent a date",
+  "if contractEndDate (policyEndDate, maturityDate, endDate) is not found, set status=missing — do not derive from duration alone",
+  "if contractDuration (policyDuration, loanTermMonths, duration) is not found, set status=missing",
+  "if insuredObject (subject of insurance, vehicle, property, person insured) is not found for non-life or loan-protection types, set status=missing",
+  "if fundStrategy (investmentStrategy, investmentProgram) is not found for investment/DPS/IŽP types, set status=missing",
+  "if investmentFunds (fundAllocation, funds list) is not found for investment types, set status=missing",
+  "if coverageList (coverages, insuredRisks, selected risks) is not found for life/non-life types, set status=missing",
+  "missing field advisory: emit reviewWarning code=missing_key_field severity=info for each required field that could not be found — never substitute a hallucinated value",
+];
+
+/**
+ * Investment/DPS/DIP domain role correctness rules.
+ *
+ * Generic rule: investment, DPS, DIP, and pension documents operate in the investment domain.
+ * They MUST NOT use insurance-only role labels (policyholder, insured) for the primary client.
+ * Use investor / participant / account_holder instead.
+ * This prevents the model from copying insurance-role semantics to non-insurance product types.
+ */
+const INVESTMENT_DOMAIN_ROLE_REVIEW_RULES: string[] = [
+  "DO NOT use insurance-only role labels (policyholder, insured) for the primary client in investment/DPS/DIP/pension documents — use investor, participant, or account_holder instead",
+  "parties.policyholder and parties.insured are NOT valid roles for investment subscriptions, DPS, DIP, or pension contracts — map to parties.investor or parties.participant",
+  "if the document is an investment or pension product and the client role is ambiguous, prefer neutral label client or participant over insurance-specific policyholder",
+  "fundStrategy, investmentFunds, fundAllocation are domain fields for investment types — do not leave them unmapped when present in document text",
+];
+
+/**
  * Person section ownership rules — injected into all types to prevent institution header
  * address from overriding client address found in an explicitly labeled person/client block.
  */
@@ -354,7 +387,9 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
         "extractedFields.coverageLimit",
         "extractedFields.deductible",
         "extractedFields.insuredRisks",
+        "extractedFields.coverageList",
         "extractedFields.insuredAddress",
+        "extractedFields.contractDuration",
         ...commonOptional,
       ],
       conditional: ["extractedFields.coinsured_if_present"],
@@ -504,13 +539,19 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
         "extractedFields.contributionEmployer",
         "extractedFields.stateContribution",
         "extractedFields.investmentStrategy",
+        "extractedFields.fundStrategy",
+        "extractedFields.investmentFunds",
+        "extractedFields.fundAllocation",
         "extractedFields.beneficiaries",
         "extractedFields.startDate",
+        "extractedFields.contractStartDate",
+        "extractedFields.contractEndDate",
+        "extractedFields.contractDuration",
         "extractedFields.paymentFrequency",
         ...commonOptional,
       ],
       conditional: ["extractedFields.taxOptimization_if_present"],
-      notApplicableRules: ["loan-specific fields are not_applicable"],
+      notApplicableRules: ["loan-specific fields are not_applicable", "insurance-only fields (policyholder, insured) are not_applicable"],
       matchingKeys: ["participantFullName", "birthDate", "maskedPersonalId", "email", "phone", "address"],
       crmMappingTarget: "contracts(segment=PP)",
       reviewRules: [
@@ -772,10 +813,13 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
         "extractedFields.fatcaStatus",
         "extractedFields.communicationPreferences",
         "extractedFields.onlineAccessServices",
+        "extractedFields.fundStrategy",
+        "extractedFields.investmentFunds",
+        "extractedFields.contractStartDate",
         ...commonOptional,
       ],
       conditional: ["extractedFields.qualifiedInvestorDeclaration_if_present"],
-      notApplicableRules: ["document may be onboarding without product holding"],
+      notApplicableRules: ["document may be onboarding without product holding", "insurance-only role labels (policyholder, insured) are not_applicable"],
       matchingKeys: ["investorFullName", "birthDate", "maskedPersonalId", "email", "phone"],
       crmMappingTarget: "investment_onboarding",
       reviewRules: ["must not be auto-labeled as investment product contract"],
@@ -798,9 +842,21 @@ export const DOCUMENT_SCHEMA_REGISTRY: Record<
     defaultIntent: "creates_new_product",
     extractionRules: {
       required: ["extractedFields.investorFullName", "extractedFields.productName", "extractedFields.productType"],
-      optional: ["extractedFields.contributionAmount", "extractedFields.bankAccount", "extractedFields.variableSymbol", ...commonOptional],
+      optional: [
+        "extractedFields.contributionAmount",
+        "extractedFields.bankAccount",
+        "extractedFields.variableSymbol",
+        "extractedFields.contractStartDate",
+        "extractedFields.contractEndDate",
+        "extractedFields.contractDuration",
+        "extractedFields.fundStrategy",
+        "extractedFields.investmentFunds",
+        "extractedFields.fundAllocation",
+        "extractedFields.coverageList",
+        ...commonOptional,
+      ],
       conditional: ["extractedFields.signedDate_if_present"],
-      notApplicableRules: ["bank-statement specific fields are not_applicable"],
+      notApplicableRules: ["bank-statement specific fields are not_applicable", "insurance-only role labels (policyholder, insured) are not_applicable for investment subscriptions"],
       matchingKeys: ["investorFullName", "birthDate", "maskedPersonalId", "email"],
       crmMappingTarget: "contracts(segment=INV)",
       reviewRules: [
@@ -1346,6 +1402,38 @@ const PAYMENT_EXEMPT_TYPES = new Set<string>([
   "payment_schedule",
 ]);
 
+/**
+ * Contractual types that benefit from completeness advisory injection.
+ * These are types where start/end/duration/coverage/fund fields are business-critical.
+ */
+const COMPLETENESS_ADVISORY_TYPES = new Set<string>([
+  "life_insurance_contract",
+  "life_insurance_final_contract",
+  "life_insurance_investment_contract",
+  "life_insurance_proposal",
+  "life_insurance_modelation",
+  "nonlife_insurance_contract",
+  "consumer_loan_contract",
+  "consumer_loan_with_payment_protection",
+  "mortgage_document",
+  "pension_contract",
+  "investment_subscription_document",
+  "investment_service_agreement",
+  "investment_modelation",
+]);
+
+/**
+ * Investment/DPS/DIP/pension types that must never use insurance-only role semantics.
+ * Injecting domain role rules into these types is a generic guard — not vendor-specific.
+ */
+const INVESTMENT_DOMAIN_TYPES = new Set<string>([
+  "pension_contract",
+  "investment_modelation",
+  "investment_service_agreement",
+  "investment_subscription_document",
+  "investment_payment_instruction",
+]);
+
 for (const [typeName, def] of Object.entries(DOCUMENT_SCHEMA_REGISTRY)) {
   if (!PAYMENT_EXEMPT_TYPES.has(typeName)) {
     def.extractionRules.reviewRules = [
@@ -1357,6 +1445,22 @@ for (const [typeName, def] of Object.entries(DOCUMENT_SCHEMA_REGISTRY)) {
     ...def.extractionRules.reviewRules,
     ...PERSON_SECTION_OWNERSHIP_REVIEW_RULES,
   ];
+  if (INVESTMENT_DOMAIN_TYPES.has(typeName)) {
+    def.extractionRules.reviewRules = [
+      ...def.extractionRules.reviewRules,
+      ...INVESTMENT_DOMAIN_ROLE_REVIEW_RULES,
+    ];
+    def.extractionRules.notApplicableRules = [
+      ...def.extractionRules.notApplicableRules,
+      "insurance-only role labels (policyholder, insured) are not_applicable for this investment/pension document type",
+    ];
+  }
+  if (COMPLETENESS_ADVISORY_TYPES.has(typeName)) {
+    def.extractionRules.reviewRules = [
+      ...def.extractionRules.reviewRules,
+      ...COMPLETENESS_ADVISORY_REVIEW_RULES,
+    ];
+  }
 }
 
 function toLifecycle(

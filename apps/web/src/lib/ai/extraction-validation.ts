@@ -671,6 +671,144 @@ export function validateDocumentEnvelope(payload: {
       "extractedFields.intermediaryName", "insurer_intermediary_duplicate");
   }
 
+  // 9. DOMAIN ROLE CORRECTNESS: investment/DPS/DIP/pension documents must not carry
+  //    insurance-only role labels (policyholder, insured) for the primary client.
+  //
+  //    Generic rule: if the primaryType belongs to the investment/pension domain and
+  //    parties contain insurance-only role keys with non-empty values, emit a warning
+  //    and flag for role correction. This is not tied to any vendor or filename.
+  const investmentDomainTypes = new Set([
+    "pension_contract",
+    "investment_subscription_document",
+    "investment_service_agreement",
+    "investment_modelation",
+    "investment_payment_instruction",
+  ]);
+  if (investmentDomainTypes.has(primaryType)) {
+    const parties = (payload as Record<string, unknown>).parties as Record<string, unknown> | undefined;
+    const insuranceOnlyRoleKeys = ["policyholder", "insured"] as const;
+    for (const roleKey of insuranceOnlyRoleKeys) {
+      const roleVal = parties?.[roleKey];
+      const hasRoleValue =
+        roleVal != null &&
+        typeof roleVal === "object" &&
+        "fullName" in roleVal &&
+        (roleVal as Record<string, unknown>).fullName != null &&
+        String((roleVal as Record<string, unknown>).fullName).trim() !== "";
+      if (hasRoleValue) {
+        addWarning(
+          warnings,
+          reasonsForReview,
+          "INVESTMENT_DOC_INSURANCE_ROLE_LABEL",
+          `Investiční/penzijní dokument (${primaryType}) používá pojišťovací roli '${roleKey}'. Použijte 'investor', 'participant' nebo 'account_holder'.`,
+          `parties.${roleKey}`,
+          "investment_doc_insurance_role_label",
+        );
+      }
+    }
+    // Also check extractedFields for insurance-role field names
+    if (fieldPresent(ef.policyholder) || fieldPresent(ef.policyholderName)) {
+      addWarning(
+        warnings,
+        reasonsForReview,
+        "INVESTMENT_DOC_INSURANCE_ROLE_LABEL",
+        `Investiční/penzijní dokument (${primaryType}) má extrahované pole 'policyholder'. Pro investiční typy použijte 'investorFullName' nebo 'participantFullName'.`,
+        "extractedFields.policyholder",
+        "investment_doc_insurance_role_label",
+      );
+    }
+  }
+
+  // 9b. COMPLETENESS ADVISORY: key contractual fields missing.
+  //     Generic rule: when a required/expected field is absent, emit an advisory warning
+  //     instead of silently accepting a missing value or allowing hallucination.
+  //     "missing is better than invented" — this is a content-agnostic guard.
+  const contractualTypes = new Set([
+    "life_insurance_contract",
+    "life_insurance_final_contract",
+    "life_insurance_investment_contract",
+    "nonlife_insurance_contract",
+    "consumer_loan_contract",
+    "consumer_loan_with_payment_protection",
+    "mortgage_document",
+    "pension_contract",
+    "investment_subscription_document",
+  ]);
+  if (contractualTypes.has(primaryType)) {
+    // Start date completeness
+    const hasStartDate =
+      fieldPresent(ef.contractStartDate) ||
+      fieldPresent(ef.policyStartDate) ||
+      fieldPresent(ef.startDate) ||
+      fieldPresent(ef.effectiveDate);
+    if (!hasStartDate) {
+      addWarning(
+        warnings,
+        reasonsForReview,
+        "MISSING_CONTRACT_START_DATE",
+        "Datum začátku smlouvy (contractStartDate / policyStartDate) nebylo nalezeno — neinventovat.",
+        "extractedFields.contractStartDate",
+        "missing_key_field",
+      );
+    }
+
+    // Investment/DPS-specific: fund strategy + funds
+    const investmentContractTypes = new Set([
+      "life_insurance_investment_contract",
+      "pension_contract",
+      "investment_subscription_document",
+    ]);
+    if (investmentContractTypes.has(primaryType)) {
+      const hasFundStrategy =
+        fieldPresent(ef.fundStrategy) ||
+        fieldPresent(ef.investmentStrategy) ||
+        fieldPresent(ef.investmentProgram);
+      const hasInvestmentFunds =
+        fieldPresent(ef.investmentFunds) ||
+        fieldPresent(ef.fundAllocation) ||
+        fieldPresent(ef.proposedFunds);
+      if (!hasFundStrategy) {
+        addWarning(
+          warnings,
+          reasonsForReview,
+          "MISSING_FUND_STRATEGY",
+          "Investiční strategie (fundStrategy / investmentStrategy) nebyla nalezena — neinventovat.",
+          "extractedFields.fundStrategy",
+          "missing_key_field",
+        );
+      }
+      if (!hasInvestmentFunds) {
+        addWarning(
+          warnings,
+          reasonsForReview,
+          "MISSING_INVESTMENT_FUNDS",
+          "Investiční fondy (investmentFunds / fundAllocation) nebyly nalezeny — neinventovat.",
+          "extractedFields.investmentFunds",
+          "missing_key_field",
+        );
+      }
+    }
+
+    // Non-life: insured object
+    if (primaryType === "nonlife_insurance_contract") {
+      const hasInsuredObject =
+        fieldPresent(ef.insuredObject) ||
+        fieldPresent(ef.insuredAddress) ||
+        fieldPresent(ef.vehicleInfo) ||
+        fieldPresent(ef.propertyAddress);
+      if (!hasInsuredObject) {
+        addWarning(
+          warnings,
+          reasonsForReview,
+          "MISSING_INSURED_OBJECT",
+          "Pojistný předmět (insuredObject) nebyl nalezen — neinventovat.",
+          "extractedFields.insuredObject",
+          "missing_key_field",
+        );
+      }
+    }
+  }
+
   // 10. documentFamily fell to unknown when text clearly indicates a known family
   if (primaryType === "unsupported_or_unknown" || primaryType === "generic_financial_document") {
     addWarning(warnings, reasonsForReview, "DOCUMENT_FAMILY_UNKNOWN",

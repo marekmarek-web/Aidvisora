@@ -205,6 +205,29 @@ export function primaryTypeFallbackFromPromptKey(
   }
 }
 
+/**
+ * Investment/pension primary types — these must never adopt insurance-only role semantics.
+ * Used by downstream validators to detect domain role mismatches.
+ *
+ * Generic rule: if a document is classified into one of these types, the extraction
+ * layer must not map the primary client to 'policyholder' or 'insured'.
+ */
+export const INVESTMENT_DOMAIN_PRIMARY_TYPES = new Set<string>([
+  "pension_contract",
+  "investment_subscription_document",
+  "investment_service_agreement",
+  "investment_modelation",
+  "investment_payment_instruction",
+]);
+
+/**
+ * Returns true if the given primaryType is in the investment/pension domain
+ * where insurance-only role labels are not applicable.
+ */
+export function isInvestmentDomainType(primaryType: string): boolean {
+  return INVESTMENT_DOMAIN_PRIMARY_TYPES.has(primaryType);
+}
+
 export function mapAiClassifierToClassificationResult(c: AiClassifierOutput): ClassificationResult {
   const primaryType = mapAiClassifierToPrimaryType(c);
   const rawConf = c.confidence;
