@@ -78,6 +78,16 @@ export type ApplyResultPayload = {
     hasLinkedUserAccount: boolean;
     hasAcceptedInvitation: boolean;
   };
+  /**
+   * Phase 3.5: ID dokumentu v tabulce `documents` po linkage v post-commit kroku.
+   * Null/absent = document linking se nezdařil (viz documentLinkWarning).
+   */
+  linkedDocumentId?: string;
+  /**
+   * Phase 3.5: Varování pokud document linkage selhal v post-commit kroku.
+   * Přítomnost tohoto klíče signalizuje partiální stav (apply OK, doc link ne).
+   */
+  documentLinkWarning?: string;
 };
 
 /** Extraction trace stored in DB (no document content). */

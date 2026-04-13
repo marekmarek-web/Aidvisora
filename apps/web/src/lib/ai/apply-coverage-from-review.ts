@@ -4,6 +4,17 @@ import { eq, and } from "db";
 import type { ContractReviewRow } from "./review-queue-repository";
 import { resolveSegmentFromType } from "./draft-actions";
 
+/**
+ * Explicit coverage list item from extraction envelope.
+ * Generic shape — coverage items come from any contract type, not vendor-specific.
+ */
+type CoverageListItem = {
+  itemKey?: string;
+  name?: string;
+  segmentCode?: string;
+  segment?: string;
+};
+
 /** Segment codes that auto-set coverage when an AI review contract is applied. */
 const SEGMENT_TO_COVERAGE_ITEM: Record<string, string> = {
   ZP: "Životní pojištění",
@@ -73,49 +84,70 @@ export async function upsertCoverageFromAppliedReview(
     }
   }
 
-  const itemKey = SEGMENT_TO_COVERAGE_ITEM[segment];
-  if (!itemKey) return;
+  // Build list of (itemKey, segmentCode) pairs to upsert.
+  // Priority: explicit coverageList from envelope > segment-level fallback.
+  const coverageItems: Array<{ itemKey: string; segmentCode: string }> = [];
 
-  const segmentCode = segment;
+  const rawCoverageList = extractedPayload?.coverageList;
+  const coverageList: CoverageListItem[] = Array.isArray(rawCoverageList) ? rawCoverageList : [];
 
-  // Check existing coverage — don't overwrite if already "done"
-  const existing = await db
-    .select({ id: contactCoverage.id, status: contactCoverage.status })
-    .from(contactCoverage)
-    .where(
-      and(
-        eq(contactCoverage.tenantId, tenantId),
-        eq(contactCoverage.contactId, contactId),
-        eq(contactCoverage.itemKey, itemKey)
-      )
-    )
-    .limit(1);
+  if (coverageList.length > 0) {
+    for (const item of coverageList) {
+      const key = item.itemKey ?? item.name;
+      const seg = item.segmentCode ?? item.segment ?? segment;
+      if (key && typeof key === "string" && key.trim()) {
+        coverageItems.push({ itemKey: key.trim(), segmentCode: seg });
+      }
+    }
+  }
 
-  if (existing[0]?.status === "done") return;
+  // Fallback to segment-level mapping when no explicit list
+  if (coverageItems.length === 0) {
+    const itemKey = SEGMENT_TO_COVERAGE_ITEM[segment];
+    if (!itemKey) return;
+    coverageItems.push({ itemKey, segmentCode: segment });
+  }
 
   const now = new Date();
-  if (existing[0]) {
-    await db
-      .update(contactCoverage)
-      .set({
+
+  for (const { itemKey, segmentCode } of coverageItems) {
+    const existing = await db
+      .select({ id: contactCoverage.id, status: contactCoverage.status })
+      .from(contactCoverage)
+      .where(
+        and(
+          eq(contactCoverage.tenantId, tenantId),
+          eq(contactCoverage.contactId, contactId),
+          eq(contactCoverage.itemKey, itemKey)
+        )
+      )
+      .limit(1);
+
+    if (existing[0]?.status === "done") continue;
+
+    if (existing[0]) {
+      await db
+        .update(contactCoverage)
+        .set({
+          status: "done",
+          linkedContractId: contractId,
+          isRelevant: true,
+          updatedAt: now,
+          updatedBy: userId,
+        })
+        .where(eq(contactCoverage.id, existing[0].id));
+    } else {
+      await db.insert(contactCoverage).values({
+        tenantId,
+        contactId,
+        itemKey,
+        segmentCode,
         status: "done",
         linkedContractId: contractId,
         isRelevant: true,
         updatedAt: now,
         updatedBy: userId,
-      })
-      .where(eq(contactCoverage.id, existing[0].id));
-  } else {
-    await db.insert(contactCoverage).values({
-      tenantId,
-      contactId,
-      itemKey,
-      segmentCode,
-      status: "done",
-      linkedContractId: contractId,
-      isRelevant: true,
-      updatedAt: now,
-      updatedBy: userId,
-    });
+      });
+    }
   }
 }

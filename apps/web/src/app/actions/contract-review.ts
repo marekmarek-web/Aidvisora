@@ -406,45 +406,57 @@ export async function applyContractReviewDrafts(
         contractId: result.payload.createdContractId ?? undefined,
         overrideContactId: row.matchedClientId ? undefined : effectiveClientId,
       });
-      if (linkResult.ok && linkResult.documentId && result.payload.createdContractId) {
-        try {
-          const [existingContract] = await db
-            .select({ sourceDocumentId: contracts.sourceDocumentId })
-            .from(contracts)
-            .where(
-              and(
-                eq(contracts.tenantId, auth.tenantId),
-                eq(contracts.id, result.payload.createdContractId)
-              )
-            )
-            .limit(1);
-          if (existingContract && !existingContract.sourceDocumentId) {
-            await db
-              .update(contracts)
-              .set({ sourceDocumentId: linkResult.documentId, updatedAt: new Date() })
+      if (linkResult.ok && linkResult.documentId) {
+        // Propagate linked document ID into payload so callers and read models can see it
+        bridgedPayload.linkedDocumentId = linkResult.documentId;
+
+        if (result.payload.createdContractId) {
+          try {
+            const [existingContract] = await db
+              .select({ sourceDocumentId: contracts.sourceDocumentId })
+              .from(contracts)
               .where(
                 and(
                   eq(contracts.tenantId, auth.tenantId),
                   eq(contracts.id, result.payload.createdContractId)
                 )
-              );
-          }
-        } catch (sourceDocErr) {
-          // Slice 4: sourceDocumentId update selhal — SOFT, logujeme ale nezastavujeme
-          console.warn("[apply] post-commit sourceDocumentId update failed (soft)", {
-            reviewId: id,
-            documentId: linkResult.documentId,
-            error: sourceDocErr instanceof Error ? sourceDocErr.message : String(sourceDocErr),
-          });
-          try {
-            Sentry.addBreadcrumb({
-              category: "contract_review.apply",
-              level: "warning",
-              message: "post_commit_source_document_id_update_failed",
-              data: { reviewId: id, documentId: linkResult.documentId },
+              )
+              .limit(1);
+            if (existingContract && !existingContract.sourceDocumentId) {
+              await db
+                .update(contracts)
+                .set({ sourceDocumentId: linkResult.documentId, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(contracts.tenantId, auth.tenantId),
+                    eq(contracts.id, result.payload.createdContractId)
+                  )
+                );
+            }
+          } catch (sourceDocErr) {
+            // Slice 4: sourceDocumentId update selhal — SOFT, logujeme ale nezastavujeme
+            console.warn("[apply] post-commit sourceDocumentId update failed (soft)", {
+              reviewId: id,
+              documentId: linkResult.documentId,
+              error: sourceDocErr instanceof Error ? sourceDocErr.message : String(sourceDocErr),
             });
-          } catch { /* noop */ }
+            try {
+              Sentry.addBreadcrumb({
+                category: "contract_review.apply",
+                level: "warning",
+                message: "post_commit_source_document_id_update_failed",
+                data: { reviewId: id, documentId: linkResult.documentId },
+              });
+            } catch { /* noop */ }
+          }
         }
+      } else if (!linkResult.ok) {
+        // Document linking returned ok:false — log as warning, propagate to payload
+        console.warn("[apply] post-commit document linking returned ok:false (soft)", {
+          reviewId: id,
+          error: linkResult.error,
+        });
+        (bridgedPayload as Record<string, unknown>).documentLinkWarning = linkResult.error ?? "document_link_failed";
       }
     } catch (linkErr) {
       // Slice 4: Document linking selhal — SOFT, celý apply je OK
@@ -452,6 +464,7 @@ export async function applyContractReviewDrafts(
         reviewId: id,
         error: linkErr instanceof Error ? linkErr.message : String(linkErr),
       });
+      (bridgedPayload as Record<string, unknown>).documentLinkWarning = "document_link_exception";
       try {
         Sentry.withScope((scope) => {
           scope.setTag("feature", "contract_review_apply");

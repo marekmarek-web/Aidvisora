@@ -2,13 +2,15 @@ import { db } from "db";
 import {
   contacts,
   contracts,
+  partners,
+  products,
   tasks,
   auditLog,
   clientPaymentSetups,
   contractSegments,
   type ClientPaymentSetupPaymentType,
 } from "db";
-import { eq, and, isNotNull } from "db";
+import { eq, and, isNotNull, ilike } from "db";
 import * as Sentry from "@sentry/nextjs";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
@@ -40,6 +42,79 @@ import {
 import { loadContactPortalAccessSnapshot } from "./client-portal-access";
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
+
+/**
+ * Catalog FK resolution: find partnerId/productId by name (case-insensitive fuzzy match).
+ * Soft-fail by design — returns nulls when catalog entry not found.
+ * Generic: does not hardcode any vendor or institution name.
+ */
+async function resolveCatalogFKs(
+  tenantId: string,
+  partnerName: string | null,
+  productName: string | null,
+  segment: string,
+  tx: typeof db
+): Promise<{ partnerId: string | null; productId: string | null }> {
+  if (!partnerName) return { partnerId: null, productId: null };
+
+  const partnerRows = await tx
+    .select({ id: partners.id, name: partners.name })
+    .from(partners)
+    .where(
+      and(
+        ilike(partners.name, partnerName.trim()),
+        eq(partners.segment, segment),
+        // Global partners have tenantId null; tenant-specific partners override globals.
+        // Prefer tenant-specific match, fallback to global.
+      )
+    )
+    .limit(10);
+
+  // Prefer tenant-specific partner over global
+  const tenantPartner = partnerRows.find((p) => {
+    const row = p as { id: string; name: string; tenantId?: string | null };
+    return row.tenantId === tenantId;
+  });
+  const globalPartner = partnerRows.find((p) => {
+    const row = p as { id: string; name: string; tenantId?: string | null };
+    return !row.tenantId;
+  });
+  const resolvedPartner = tenantPartner ?? globalPartner ?? null;
+
+  if (!resolvedPartner) {
+    console.warn("[apply] catalog partner lookup: no match", {
+      partnerName: partnerName.slice(0, 80),
+      segment,
+    });
+    return { partnerId: null, productId: null };
+  }
+
+  if (!productName) return { partnerId: resolvedPartner.id, productId: null };
+
+  const productRows = await tx
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        eq(products.partnerId, resolvedPartner.id),
+        ilike(products.name, productName.trim())
+      )
+    )
+    .limit(5);
+
+  const resolvedProduct = productRows[0] ?? null;
+  if (!resolvedProduct) {
+    console.warn("[apply] catalog product lookup: partner found but product not matched", {
+      partnerId: resolvedPartner.id,
+      productName: productName.slice(0, 80),
+    });
+  }
+
+  return {
+    partnerId: resolvedPartner.id,
+    productId: resolvedProduct?.id ?? null,
+  };
+}
 
 function validateSegment(raw: string | null | undefined): string {
   const trimmed = (raw ?? "").trim();
@@ -679,6 +754,8 @@ export async function applyContractReview(
                 premiumAmount: contracts.premiumAmount,
                 premiumAnnual: contracts.premiumAnnual,
                 note: contracts.note,
+                partnerId: contracts.partnerId,
+                productId: contracts.productId,
               })
               .from(contracts)
               .where(eq(contracts.id, existingContractId))
@@ -686,6 +763,19 @@ export async function applyContractReview(
             const prevAttrs =
               (existingRow?.portfolioAttributes as Record<string, unknown> | undefined) ?? {};
             const preserveManualLineage = existingRow?.sourceKind === "manual";
+
+            // Catalog FK: resolve only if not already set on existing row
+            const resolvedFKs =
+              !existingRow?.partnerId && institutionName
+                ? await resolveCatalogFKs(
+                    tenantId,
+                    institutionName,
+                    productName,
+                    segment,
+                    tx as unknown as typeof db
+                  ).catch(() => ({ partnerId: null, productId: null }))
+                : { partnerId: existingRow?.partnerId ?? null, productId: existingRow?.productId ?? null };
+
             await tx
               .update(contracts)
               .set({
@@ -706,6 +796,8 @@ export async function applyContractReview(
                 portfolioStatus: "active",
                 portfolioAttributes: mergePortfolioAttributesForApply(prevAttrs, attrsFromReview),
                 extractionConfidence,
+                ...(resolvedFKs.partnerId ? { partnerId: resolvedFKs.partnerId } : {}),
+                ...(resolvedFKs.productId ? { productId: resolvedFKs.productId } : {}),
                 updatedAt: new Date(),
               })
               .where(eq(contracts.id, existingContractId));
@@ -716,6 +808,17 @@ export async function applyContractReview(
           // zachytí konflikt (race condition), fallback na SELECT existujícího záznamu místo pádu.
           let insertedContractId: string | null = null;
           try {
+            // Catalog FK resolution for new contract (soft-fail: null if not found)
+            const newFKs = institutionName
+              ? await resolveCatalogFKs(
+                  tenantId,
+                  institutionName,
+                  productName,
+                  segment,
+                  tx as unknown as typeof db
+                ).catch(() => ({ partnerId: null, productId: null }))
+              : { partnerId: null, productId: null };
+
             const [inserted] = await tx
               .insert(contracts)
               .values({
@@ -739,6 +842,8 @@ export async function applyContractReview(
                 confirmedByUserId: userId,
                 portfolioAttributes: attrsFromReview,
                 extractionConfidence,
+                ...(newFKs.partnerId ? { partnerId: newFKs.partnerId } : {}),
+                ...(newFKs.productId ? { productId: newFKs.productId } : {}),
               })
               .returning({ id: contracts.id });
             insertedContractId = inserted?.id ?? null;
