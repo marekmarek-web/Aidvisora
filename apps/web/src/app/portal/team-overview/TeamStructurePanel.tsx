@@ -44,13 +44,7 @@ function TreeBranch({
   newcomerUserIds?: Set<string>;
 }) {
   return (
-    <ul
-      className={clsx(
-        "space-y-1",
-        depth > 0 &&
-          "ml-4 mt-1 border-l-2 border-slate-200/80 pl-4 sm:ml-5 sm:pl-5"
-      )}
-    >
+    <ul className={clsx("space-y-6", depth > 0 && "mt-6 pl-10")}>
       {nodes.map((node) => {
         const below = countDescendants(node);
         const isSelf = node.userId === currentUserId;
@@ -86,16 +80,23 @@ function TreeBranch({
             : null;
         return (
           <li key={node.userId}>
-            <div
-              className={clsx(
-                "group flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[24px] border px-4 py-4 text-sm transition",
-                depth === 0 && "border-slate-800 bg-[#16192b] text-white shadow-xl shadow-slate-900/10",
-                depth > 0 && "bg-white shadow-sm",
-                isSelf && depth > 0 && "border-indigo-200/80 bg-indigo-50/80 shadow-sm",
-                isSelected && !isSelf && depth > 0 && "border-violet-200/80 bg-violet-50/80 shadow-sm",
-                !isSelf && !isSelected && depth > 0 && "border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/80"
-              )}
-            >
+            <div className="relative">
+              {depth > 0 ? (
+                <>
+                  <span className="pointer-events-none absolute -left-10 top-6 h-px w-10 bg-slate-300" />
+                  <span className="pointer-events-none absolute -left-10 -top-6 h-12 w-px bg-slate-300" />
+                </>
+              ) : null}
+              <div
+                className={clsx(
+                  "group flex flex-wrap items-center gap-x-2 gap-y-2 rounded-[24px] border px-5 py-5 text-sm transition",
+                  depth === 0 && "border-slate-800 bg-[#16192b] text-white shadow-xl shadow-slate-900/10",
+                  depth > 0 && "bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]",
+                  isSelf && depth > 0 && "border-indigo-200/80 bg-indigo-50/70",
+                  isSelected && !isSelf && depth > 0 && "border-violet-200/80 bg-violet-50/80",
+                  !isSelf && !isSelected && depth > 0 && "border-slate-200/80 hover:-translate-y-0.5 hover:border-slate-300"
+                )}
+              >
               {isSelf && (
                 <UserCircle className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
               )}
@@ -152,6 +153,7 @@ function TreeBranch({
               >
                 Detail
               </Link>
+              </div>
             </div>
             {node.children.length > 0 && (
               <TreeBranch
@@ -193,9 +195,6 @@ export function TeamStructurePanel({
   metricsByUser?: Map<string, TeamMemberMetrics>;
   newcomerUserIds?: Set<string>;
 }) {
-  const selfNode = findNodeInForest(roots, currentUserId);
-  const directChildren = selfNode?.children ?? [];
-
   if (roots.length === 0) {
     return (
       <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
@@ -210,82 +209,20 @@ export function TeamStructurePanel({
     );
   }
 
-  const isPersonalOnly = scope === "me";
-
   return (
       <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-      {/* Header */}
       <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/40 px-6 py-4">
         <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
         <h2 className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">Struktura týmu</h2>
         <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--wp-text-tertiary)]">
-          {isPersonalOnly ? "Osobní rozsah" : `${roots.length} ${roots.length === 1 ? "kořen" : "kořenů"}`}
+          {scope === "me" ? "Osobní rozsah" : `${roots.length} ${roots.length === 1 ? "kořen" : "kořenů"}`}
         </span>
       </div>
 
-      <div className="relative overflow-hidden p-6">
+      <div className="relative overflow-hidden p-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-50" />
-        <div className="relative z-10">
-        {isPersonalOnly && (
-          <p className="mb-4 text-xs text-[color:var(--wp-text-secondary)]">
-            Zobrazujete osobní rozsah — širší přehled je dostupný v přepínači rozsahu podle vaší role.
-          </p>
-        )}
-
-        {!isPersonalOnly && !hierarchyParentLinksConfigured && (
-          <div className="mb-4 rounded-2xl border border-amber-200/70 bg-amber-50/60 px-3.5 py-2.5 text-xs leading-relaxed text-amber-950">
-            <span className="font-semibold">Vazby nadřízenosti zatím chybí.</span>{" "}
-            Strom může zobrazit všechny jako samostatné kořeny — jde o data, ne o chybu. Doplňte v Nastavení → Tým.
-          </div>
-        )}
-
-        {/* Přímí podřízení */}
-        {!isPersonalOnly && directChildren.length > 0 && (
-          <div className="mb-5">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-              Přímí podřízení
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {directChildren.map((c) => {
-                const isChildSelected = selectedUserId === c.userId;
-                return (
-                  <span key={c.userId} className="inline-flex items-center gap-1.5">
-                    {onSelectMember ? (
-                      <button
-                        type="button"
-                        onClick={() => onSelectMember(c.userId)}
-                        className={clsx(
-                          "inline-flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold transition",
-                          isChildSelected
-                            ? "border-violet-300 bg-violet-50/80 text-violet-900"
-                            : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] hover:border-indigo-200 hover:bg-indigo-50/50"
-                        )}
-                      >
-                        {c.displayName?.trim() || c.email || "Člen týmu"}
-                      </button>
-                    ) : (
-                      <Link
-                        href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
-                        className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--wp-text)] transition hover:border-indigo-200 hover:bg-indigo-50/50"
-                      >
-                        {c.displayName?.trim() || c.email || "Člen týmu"}
-                      </Link>
-                    )}
-                    <Link
-                      href={`/portal/team-overview/${c.userId}${memberDetailQuery}`}
-                      className="inline-flex items-center text-[10px] font-semibold text-indigo-600 hover:underline"
-                    >
-                      <ChevronRight className="h-3 w-3" aria-hidden />
-                    </Link>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Strom */}
-        <div className="-mr-1 max-h-[min(24rem,56vh)] overflow-y-auto pr-1">
+        <div className="relative z-10 min-h-[620px] overflow-x-auto">
+        <div className="mx-auto max-w-[1120px] pt-8">
           <TreeBranch
             nodes={roots}
             currentUserId={currentUserId}

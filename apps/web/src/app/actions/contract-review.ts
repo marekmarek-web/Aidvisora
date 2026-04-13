@@ -525,9 +525,26 @@ export async function applyContractReviewDrafts(
 
   // Phase 5A: Compute and attach publishOutcome — truthful post-apply status.
   // Single computation, single read path — no ghost success.
+  // GUARD: publishOutcome is computed from actual DB artifact IDs — never from intent.
   const extractedPayloadForOutcome = (row.extractedPayload as Record<string, unknown> | null) ?? {};
   const isDocumentSupporting = isSupportingDocumentOnly(extractedPayloadForOutcome);
-  bridgedPayload.publishOutcome = computePublishOutcome(bridgedPayload, isDocumentSupporting);
+  const computedOutcome = computePublishOutcome(bridgedPayload, isDocumentSupporting);
+
+  // Truthful enforcement: log guard violations (non-blocking, advisory only)
+  if (computedOutcome.mode === "product_published_visible_to_client" && !bridgedPayload.createdContractId) {
+    console.error("[publish-guard] VIOLATION: product_published_visible_to_client without createdContractId", {
+      reviewId: id,
+      tenantId: auth.tenantId,
+    });
+  }
+  if (computedOutcome.paymentOutcome === "payment_setup_published" && !bridgedPayload.createdPaymentSetupId) {
+    console.error("[publish-guard] VIOLATION: payment_setup_published without createdPaymentSetupId", {
+      reviewId: id,
+      tenantId: auth.tenantId,
+    });
+  }
+
+  bridgedPayload.publishOutcome = computedOutcome;
 
   // Persist publishOutcome into the stored applyResultPayload
   try {

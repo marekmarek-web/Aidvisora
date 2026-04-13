@@ -59,10 +59,11 @@ export function TeamManagementPanel({
   return (
     <section
       id="sprava-tymu"
-      className="scroll-mt-24 mb-8 overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-sm animate-in fade-in duration-300"
+      className="scroll-mt-24 mb-8 overflow-hidden rounded-[32px] border border-slate-200 bg-white text-slate-900 shadow-[0_18px_40px_rgba(15,23,42,0.06)] animate-in fade-in duration-300"
       aria-labelledby="team-management-heading"
     >
       <div className="border-b border-slate-200/80 px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500">Admin surface</p>
         <h2 id="team-management-heading" className="mb-1 text-xl font-black text-slate-900">
           Správa týmu
         </h2>
@@ -72,7 +73,7 @@ export function TeamManagementPanel({
       </div>
 
       {canManageTeamCareer ? (
-        <div className="border-b border-[color:var(--wp-surface-card-border)] bg-violet-50/40 px-6 py-4 sm:px-8">
+        <div className="border-b border-[color:var(--wp-surface-card-border)] bg-slate-50/70 px-6 py-5 sm:px-8">
           <p className="mb-2 text-xs font-bold text-[color:var(--wp-text-secondary)]">
             Výchozí kariérní program pro workspace — předvyplní se u členů bez uloženého programu (nepřepisuje jejich
             údaje).
@@ -104,7 +105,7 @@ export function TeamManagementPanel({
                   setTenantDefaultSaving(false);
                 }
               }}
-              className="min-h-[40px] rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+              className="min-h-[40px] rounded-xl bg-[#16192b] px-4 py-2 text-sm font-bold text-white hover:bg-black disabled:opacity-50"
             >
               {tenantDefaultSaving ? "Ukládám…" : "Uložit výchozí"}
             </button>
@@ -112,7 +113,7 @@ export function TeamManagementPanel({
         </div>
       ) : null}
 
-      <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-6 py-4 sm:px-8">
+      <div className="border-b border-[color:var(--wp-surface-card-border)] bg-[#16192b] px-6 py-5 text-white sm:px-8">
         <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[color:var(--wp-text-secondary)]">
           Pozvat nového člena
         </p>
@@ -152,7 +153,7 @@ export function TeamManagementPanel({
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="email@kolegy.cz"
-            className="min-h-[44px] min-w-[200px] flex-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-2.5 text-sm font-medium focus:border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="min-h-[44px] min-w-[200px] flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white placeholder:text-slate-500 focus:border-white/30 focus:outline-none focus:ring-2 focus:ring-white/10"
             required
           />
           <CustomDropdown
@@ -170,7 +171,7 @@ export function TeamManagementPanel({
           <button
             type="submit"
             disabled={inviteSending || !inviteEmail.trim()}
-            className="min-h-[44px] rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            className="min-h-[44px] rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-[#16192b] transition-colors hover:bg-slate-100 disabled:opacity-50"
           >
             {inviteSending ? "Odesílám…" : "Pozvat"}
           </button>
@@ -187,7 +188,7 @@ export function TeamManagementPanel({
         ) : (
           <table className="w-full min-w-[500px] text-left">
             <thead>
-              <tr className="border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50">
+              <tr className="border-b border-[color:var(--wp-surface-card-border)] bg-slate-50/70">
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] sm:px-8">
                   Uživatel
                 </th>

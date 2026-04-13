@@ -6,9 +6,13 @@ export default async function ClientPaymentsPage() {
   const auth = await requireClientZoneAuth();
   if (!auth.contactId) return null;
 
-  const paymentInstructions = await getPaymentInstructionsForContact(
-    auth.contactId
-  );
+  let paymentInstructions = [];
+  try {
+    paymentInstructions = await getPaymentInstructionsForContact(auth.contactId);
+  } catch {
+    // Payments page must never crash — show empty state on any fetch error
+    paymentInstructions = [];
+  }
 
   return <ClientPaymentsView paymentInstructions={paymentInstructions} />;
 }

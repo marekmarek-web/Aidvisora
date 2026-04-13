@@ -31,7 +31,7 @@ export function TeamOverviewAdaptationSection({
   return (
     <section className={sectionClass} aria-labelledby="team-adaptation-heading">
       <h2 id="team-adaptation-heading" className="text-[26px] font-black tracking-tight text-[color:var(--wp-text)] sm:text-[1.9rem]">
-        {variant === "standalone" ? "Adaptace finančního poradce" : "Adaptace a rozvoj"}
+        {variant === "standalone" ? "Adaptace finančního poradce" : "Adaptace"}
       </h2>
       <p className="mt-1.5 text-sm text-[color:var(--wp-text-secondary)]">
         Nováčci v adaptačním okně, checklist a signály z CRM pro kompaktní check-in.

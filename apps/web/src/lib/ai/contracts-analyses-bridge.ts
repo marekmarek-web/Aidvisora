@@ -13,26 +13,33 @@ type PayloadWithBridge = ApplyResultPayload & {
 
 function hasAnyContractArtifacts(payload: ApplyResultPayload | null | undefined) {
   if (!payload) return false;
-  return Boolean(payload.createdContractId || payload.createdPaymentId || payload.createdTaskId);
+  return Boolean(payload.createdContractId || payload.createdPaymentSetupId || payload.createdTaskId);
 }
 
 /**
  * Phase 5A: Deterministicky spočítá publish outcome z výsledku apply.
  * Jeden zdroj pravdy — volán z applyContractReviewDrafts a čten v UI.
  * Neobsahuje žádnou vendor/PDF logiku.
+ *
+ * Truthful outcome enforcement:
+ * - product_published_visible_to_client vyžaduje reálný createdContractId v DB
+ * - payment_setup_published vyžaduje reálný createdPaymentSetupId v DB
+ * - bez těchto artefaktů nelze vrátit zelený outcome
  */
 export function computePublishOutcome(
   payload: ApplyResultPayload | null | undefined,
   isSupportingDocument: boolean,
 ): ApplyPublishOutcome {
-  const hasContract = Boolean(payload?.createdContractId);
-  const hasPaymentSetup = Boolean(payload?.createdPaymentSetupId);
+  // GUARD: createdContractId musí být skutečné DB ID — ne jen truthy string
+  const hasContract = typeof payload?.createdContractId === "string" && payload.createdContractId.length > 0;
+  // GUARD: createdPaymentSetupId musí být skutečné DB ID
+  const hasPaymentSetup = typeof payload?.createdPaymentSetupId === "string" && payload.createdPaymentSetupId.length > 0;
   const hasLinkedDoc = Boolean(payload?.linkedDocumentId);
   const hasDocWarning = Boolean(payload?.documentLinkWarning);
   const supportingGuard = isSupportingDocument ||
     (payload?.policyEnforcementTrace?.supportingDocumentGuard === true);
 
-  // Payment outcome — orthogonal to product outcome
+  // TRUTHFUL: payment_setup_published jen pokud skutečný artefakt vznikl
   const paymentOutcome: ApplyPublishOutcome["paymentOutcome"] = hasPaymentSetup
     ? "payment_setup_published"
     : "payment_setup_skipped";
@@ -57,7 +64,7 @@ export function computePublishOutcome(
     };
   }
 
-  // Contract created + visible to client (normal apply path)
+  // TRUTHFUL: product_published_visible_to_client jen pokud contract v DB opravdu vznikl
   if (hasContract) {
     return {
       mode: "product_published_visible_to_client",
@@ -71,7 +78,7 @@ export function computePublishOutcome(
   if (hasLinkedDoc && !hasContract) {
     return {
       mode: "internal_document_only",
-      paymentOutcome,
+      paymentOutcome: "payment_setup_skipped",
       visibleToClient: false,
       label: "Dokument přiložen ke kontaktu — smlouva/produkt nevznikl.",
     };
@@ -80,7 +87,7 @@ export function computePublishOutcome(
   // Fallback: payment only or task only — no contract artifact
   return {
     mode: "supporting_doc_only",
-    paymentOutcome,
+    paymentOutcome: "payment_setup_skipped",
     visibleToClient: false,
     label: "Zapsáno bez vytvoření smlouvy/produktu.",
   };

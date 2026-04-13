@@ -33,10 +33,10 @@ export function TeamOverviewAttentionSection({
         aria-labelledby="self-priority-heading"
       >
         <h2 id="self-priority-heading" className="text-base font-bold text-[color:var(--wp-text)]">
-          Váš kontext
+          Vyžaduje pozornost
         </h2>
         <p className="mt-1.5 text-sm text-[color:var(--wp-text-secondary)] max-w-xl">
-          V osobním rozsahu jsou priorita a coaching u jednotlivých členů v detailu osoby. Níže najdete kariérní přehled, metriky a naplánované termíny.
+          V osobním rozsahu se seznam pozornosti neukazuje. Přepněte na týmový scope pro manažerský přehled.
         </p>
       </section>
     );
@@ -50,7 +50,7 @@ export function TeamOverviewAttentionSection({
       <div className={`flex items-end justify-between gap-3 ${isFirstFold ? "mb-4" : "mb-4"}`}>
         <div>
           <h2 id="team-priority-heading" className="text-xl font-black tracking-tight text-[color:var(--wp-text)]">
-            Kdo potřebuje pozornost
+            Vyžaduje pozornost
           </h2>
           <p className="mt-1 text-sm text-[color:var(--wp-text-secondary)]">Signály z CRM a kariéry.</p>
         </div>
