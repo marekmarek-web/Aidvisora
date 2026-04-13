@@ -153,13 +153,13 @@ function EnforcementCountBadge({
   );
 }
 
+/** Phase 5B: Compact enforcement summary — inline counts only, field detail in disclosure. */
 function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
   const s = trace.summary;
   const isSupporting = trace.supportingDocumentGuard;
   const total = s.totalAutoApplied + s.totalPendingConfirmation + s.totalManualRequired + s.totalExcluded;
   if (total === 0 && !isSupporting) return null;
 
-  // Collect all pending + manual field names for per-section detail
   const pendingFields: string[] = [
     ...(trace.contactEnforcement?.pendingConfirmationFields ?? []),
     ...(trace.contractEnforcement?.pendingConfirmationFields ?? []),
@@ -175,96 +175,84 @@ function ApplyEnforcementResultSummary({ trace }: { trace: EnforcementTrace }) {
     ...(trace.contractEnforcement?.excludedFields ?? []),
     ...(trace.paymentEnforcement?.excludedFields ?? []),
   ];
+  const hasDetail = pendingFields.length > 0 || manualFields.length > 0 || excludedFields.length > 0;
+
+  if (isSupporting) {
+    return (
+      <p className="text-[11px] text-amber-800 font-medium leading-snug flex items-center gap-1.5">
+        <AlertCircle size={12} className="shrink-0 text-amber-600" />
+        Podkladový dokument — nevznikla z něj nová smlouva ani platební instrukce.
+      </p>
+    );
+  }
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-white/70 px-4 py-3 space-y-2.5">
-      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-        <Shield size={11} className="shrink-0" />
-        {isSupporting ? "Výsledek zpracování" : "Shrnutí zápisu do CRM"}
-      </p>
-
-      {isSupporting ? (
-        <p className="text-xs font-semibold text-amber-800 leading-snug flex items-start gap-1.5">
-          <AlertCircle size={13} className="shrink-0 mt-0.5 text-amber-600" />
-          Tento dokument slouží jako podklad — nevznikla z něj nová smlouva v CRM ani automatický zápis platebních údajů.
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          <EnforcementCountBadge
-            count={s.totalAutoApplied}
-            label="Zapsáno automaticky"
-            icon={<CheckCircle2 size={13} className="shrink-0 text-emerald-600" />}
-            colorCls="bg-emerald-100 text-emerald-800"
-          />
-          <EnforcementCountBadge
-            count={s.totalPendingConfirmation}
-            label="Předvyplněno, čeká na potvrzení"
-            icon={<Clock size={13} className="shrink-0 text-amber-600" />}
-            colorCls="bg-amber-100 text-amber-800"
-          />
-          <EnforcementCountBadge
-            count={s.totalManualRequired}
-            label="Vyžaduje ruční doplnění"
-            icon={<Pencil size={13} className="shrink-0 text-rose-600" />}
-            colorCls="bg-rose-100 text-rose-800"
-          />
-          <EnforcementCountBadge
-            count={s.totalExcluded}
-            label="Nezapsáno"
-            icon={<XCircle size={13} className="shrink-0 text-slate-500" />}
-            colorCls="bg-slate-100 text-slate-600"
-          />
+    <details className="group">
+      <summary className="cursor-pointer list-none select-none">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          {s.totalAutoApplied > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+              <CheckCircle2 size={10} /> {s.totalAutoApplied} auto
+            </span>
+          )}
+          {s.totalPendingConfirmation > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+              <Clock size={10} /> {s.totalPendingConfirmation} čeká
+            </span>
+          )}
+          {s.totalManualRequired > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">
+              <Pencil size={10} /> {s.totalManualRequired} ručně
+            </span>
+          )}
+          {s.totalExcluded > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">
+              <XCircle size={10} /> {s.totalExcluded} vynecháno
+            </span>
+          )}
+          {hasDetail && (
+            <span className="text-[10px] text-slate-400 font-medium group-open:hidden">↓ detail</span>
+          )}
+          {hasDetail && (
+            <span className="text-[10px] text-slate-400 font-medium hidden group-open:inline">↑ skrýt</span>
+          )}
+        </div>
+      </summary>
+      {hasDetail && (
+        <div className="mt-2 space-y-1.5 pl-1">
+          {pendingFields.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center">
+              <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 mr-1">Čeká:</span>
+              {pendingFields.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-amber-800 bg-amber-100 rounded px-1.5 py-0.5">
+                  {advisorFieldLabelForKey(f)}
+                </span>
+              ))}
+            </div>
+          )}
+          {manualFields.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center">
+              <span className="text-[9px] font-black uppercase tracking-widest text-rose-700 mr-1">Ručně:</span>
+              {manualFields.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-rose-800 bg-rose-100 rounded px-1.5 py-0.5">
+                  {advisorFieldLabelForKey(f)}
+                </span>
+              ))}
+            </div>
+          )}
+          {excludedFields.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center">
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 mr-1">Vynecháno:</span>
+              {excludedFields.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-slate-600 bg-slate-100 rounded px-1.5 py-0.5">
+                  {advisorFieldLabelForKey(f)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
-
-      {/* Pending fields — need advisor confirmation */}
-      {pendingFields.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-amber-800 mb-1.5 flex items-center gap-1">
-            <Clock size={10} /> Čeká na potvrzení poradcem
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {pendingFields.map((f) => (
-              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-800 bg-amber-100 rounded px-1.5 py-0.5">
-                {advisorFieldLabelForKey(f)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Manual required fields */}
-      {manualFields.length > 0 && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-rose-800 mb-1.5 flex items-center gap-1">
-            <Pencil size={10} /> Vyžaduje ruční doplnění
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {manualFields.map((f) => (
-              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-800 bg-rose-100 rounded px-1.5 py-0.5">
-                {advisorFieldLabelForKey(f)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Excluded / not applied fields */}
-      {excludedFields.length > 0 && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5 flex items-center gap-1">
-            <XCircle size={10} /> Nezapsáno
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {excludedFields.map((f) => (
-              <span key={f} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded px-1.5 py-0.5">
-                {advisorFieldLabelForKey(f)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </details>
   );
 }
 
@@ -648,199 +636,198 @@ export function AIReviewExtractionShell({
         </div>
       )}
 
-      {/* Fáze 10 + 5A: Apply result summary – publish outcome + enforcement trace */}
-      {doc.isApplied && doc.applyResultPayload && (
-        <div className={`border-b px-4 py-4 md:px-6 ${
-          doc.applyResultPayload.publishOutcome?.mode === "publish_partial_failure"
-            ? "bg-amber-50 border-amber-200"
-            : doc.applyResultPayload.publishOutcome?.mode === "supporting_doc_only" ||
-              doc.applyResultPayload.publishOutcome?.mode === "internal_document_only"
-            ? "bg-blue-50 border-blue-200"
-            : "bg-emerald-50 border-emerald-200"
-        }`}>
-          <div className="max-w-6xl mx-auto space-y-3">
-            {/* Phase 5A: Truthful publish outcome heading */}
-            <div className="flex flex-wrap items-center gap-2">
-              <h4 className={`text-sm font-black flex items-center gap-1.5 ${
-                doc.applyResultPayload.publishOutcome?.mode === "publish_partial_failure"
-                  ? "text-amber-900"
-                  : doc.applyResultPayload.publishOutcome?.mode === "supporting_doc_only" ||
-                    doc.applyResultPayload.publishOutcome?.mode === "internal_document_only"
-                  ? "text-blue-900"
-                  : "text-emerald-900"
-              }`}>
-                <Check size={15} className={
-                  doc.applyResultPayload.publishOutcome?.mode === "publish_partial_failure"
-                    ? "text-amber-600 shrink-0"
-                    : doc.applyResultPayload.publishOutcome?.mode === "supporting_doc_only" ||
-                      doc.applyResultPayload.publishOutcome?.mode === "internal_document_only"
-                    ? "text-blue-600 shrink-0"
-                    : "text-emerald-600 shrink-0"
-                } />
-                {doc.applyResultPayload.publishOutcome
-                  ? doc.applyResultPayload.publishOutcome.label
-                  : "Zapsáno do CRM"}
-              </h4>
-              {doc.applyResultPayload.publishOutcome?.visibleToClient && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-200 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                  Portál vidí
-                </span>
-              )}
-              {doc.applyResultPayload.publishOutcome?.paymentOutcome === "payment_setup_published" && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 border border-blue-200 text-[10px] font-black uppercase tracking-widest text-blue-700">
-                  Platby zapsány
-                </span>
-              )}
-              {doc.applyResultPayload.publishOutcome?.paymentOutcome === "payment_setup_skipped" &&
-                doc.applyResultPayload.publishOutcome?.mode !== "supporting_doc_only" && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  Platby přeskočeny
-                </span>
-              )}
-            </div>
+      {/* Phase 5B: Compact post-apply status strip — single row + collapsible details */}
+      {doc.isApplied && doc.applyResultPayload && (() => {
+        const outcome = doc.applyResultPayload.publishOutcome;
+        const isPartial = outcome?.mode === "publish_partial_failure";
+        const isDocOnly = outcome?.mode === "supporting_doc_only" || outcome?.mode === "internal_document_only";
+        const isProduct = outcome?.mode === "product_published_visible_to_client" || outcome?.mode === "product_published";
+        const clientId = doc.applyResultPayload.createdClientId ?? doc.applyResultPayload.linkedClientId;
+        const isNewClient = !!doc.applyResultPayload.createdClientId;
 
-            {/* What was actually written — artifact chips */}
-            <div className="flex flex-wrap gap-2 text-xs">
-              {doc.applyResultPayload.createdClientId && (
-                <Link
-                  href={`/portal/contacts/${doc.applyResultPayload.createdClientId}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold hover:bg-emerald-200 transition-colors"
-                >
-                  <UserPlus size={11} /> Nový klient vytvořen →
-                </Link>
-              )}
-              {doc.applyResultPayload.linkedClientId && !doc.applyResultPayload.createdClientId && (
-                <Link
-                  href={`/portal/contacts/${doc.applyResultPayload.linkedClientId}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold hover:bg-emerald-200 transition-colors"
-                >
-                  <UserPlus size={11} /> Klient přirazen →
-                </Link>
-              )}
-              {doc.applyResultPayload.createdContractId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
-                  <Shield size={11} /> Smlouva/produkt vytvořen
-                </span>
-              )}
-              {/* Phase 5A: distinguish document-only from product publish */}
-              {!doc.applyResultPayload.createdContractId && doc.applyResultPayload.linkedDocumentId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-blue-800 font-bold">
-                  <FileText size={11} /> Dokument přiložen (bez smlouvy)
-                </span>
-              )}
-              {doc.applyResultPayload.createdPaymentSetupId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
-                  <CreditCard size={11} /> Platební instrukce uloženy
-                </span>
-              )}
-              {doc.applyResultPayload.createdPaymentId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
-                  <CreditCard size={11} /> Platba evidována
-                </span>
-              )}
-              {doc.applyResultPayload.createdTaskId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
-                  <Check size={11} /> Úkol vytvořen
-                </span>
-              )}
-              {doc.applyResultPayload.createdNoteId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
-                  <FileText size={11} /> Poznámka uložena
-                </span>
-              )}
-              {/* Phase 5A: partial failure warning */}
-              {doc.applyResultPayload.documentLinkWarning && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-200 text-amber-800 font-bold">
-                  ⚠ Propojení dokumentu selhalo (parciální výsledek)
-                </span>
-              )}
-            </div>
+        const stripBg = isPartial
+          ? "bg-amber-50 border-amber-200"
+          : isDocOnly
+          ? "bg-sky-50 border-sky-200"
+          : "bg-emerald-50 border-emerald-200";
+        const textCls = isPartial ? "text-amber-900" : isDocOnly ? "text-sky-900" : "text-emerald-900";
+        const iconCls = isPartial ? "text-amber-500" : isDocOnly ? "text-sky-500" : "text-emerald-500";
 
-            {doc.applyResultPayload.portalClientAccess?.hasActiveClientPortal ? (
-              <p className="text-xs text-emerald-900 font-medium leading-snug">
-                Klient už má aktivní přístup do klientské zóny — není třeba znovu spouštět pozvánku k přístupu.
-              </p>
-            ) : null}
+        return (
+          <details className="group border-b" open={isPartial}>
+            <summary className={`cursor-pointer list-none select-none px-4 py-2 md:px-6 ${stripBg}`}>
+              <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-2 min-h-[36px]">
+                {/* Status icon */}
+                {isPartial
+                  ? <AlertCircle size={14} className="text-amber-500 shrink-0" />
+                  : <CheckCircle2 size={14} className={`${iconCls} shrink-0`} />}
 
-            {/* Fáze 10: Policy enforcement result summary */}
-            {doc.applyResultPayload.policyEnforcementTrace && (
-              <ApplyEnforcementResultSummary trace={doc.applyResultPayload.policyEnforcementTrace} />
-            )}
+                {/* Primary label */}
+                <span className={`text-xs font-black leading-tight ${textCls}`}>
+                  {outcome ? outcome.label : "Zapsáno do CRM"}
+                </span>
 
-            {/* Payment setup detail when present */}
-            {doc.applyResultPayload.paymentSetup && (
-              <div className="rounded-xl border border-emerald-200 bg-white/60 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-2">
-                  Detail platební instrukce
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
-                  {doc.applyResultPayload.paymentSetup.provider && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Poskytovatel</span>
-                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.provider}</p>
-                    </div>
+                {/* Badges */}
+                {outcome?.visibleToClient && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 border border-emerald-200 text-[9px] font-black uppercase tracking-widest text-emerald-700">
+                    Portál
+                  </span>
+                )}
+                {outcome?.paymentOutcome === "payment_setup_published" && (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-100 border border-blue-200 text-[9px] font-black uppercase tracking-widest text-blue-700">
+                    Platby ✓
+                  </span>
+                )}
+                {outcome?.paymentOutcome === "payment_setup_skipped" && !isDocOnly && (
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    Platby —
+                  </span>
+                )}
+                {doc.applyResultPayload.documentLinkWarning && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-[9px] font-black uppercase tracking-widest text-amber-700">
+                    ⚠ Dok. link selhal
+                  </span>
+                )}
+
+                {/* Expand toggle */}
+                <span className="ml-auto text-[10px] font-medium text-slate-400 group-open:hidden shrink-0">↓ detail</span>
+                <span className="ml-auto text-[10px] font-medium text-slate-400 hidden group-open:inline shrink-0">↑ skrýt</span>
+              </div>
+            </summary>
+
+            {/* Collapsible detail body — only loaded when opened */}
+            <div className={`px-4 pb-3 pt-2 md:px-6 ${stripBg}`}>
+              <div className="max-w-6xl mx-auto space-y-2">
+
+                {/* Artifact chips — compact row */}
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  {clientId && (
+                    <Link
+                      href={`/portal/contacts/${clientId}`}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border font-bold hover:opacity-80 transition-opacity ${
+                        isNewClient
+                          ? "bg-emerald-100 border-emerald-200 text-emerald-800"
+                          : "bg-slate-100 border-slate-200 text-slate-700"
+                      }`}
+                    >
+                      <UserPlus size={10} />
+                      {isNewClient ? "Nový klient →" : "Klient →"}
+                    </Link>
                   )}
-                  {doc.applyResultPayload.paymentSetup.regularAmount && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Částka</span>
-                      <p className="font-semibold text-[color:var(--wp-text)]">
-                        {doc.applyResultPayload.paymentSetup.regularAmount} {doc.applyResultPayload.paymentSetup.currency}
-                      </p>
-                    </div>
+                  {doc.applyResultPayload.createdContractId && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold">
+                      <Shield size={10} /> Smlouva
+                    </span>
                   )}
-                  {doc.applyResultPayload.paymentSetup.iban && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">IBAN</span>
-                      <p className="font-semibold text-[color:var(--wp-text)] truncate">{doc.applyResultPayload.paymentSetup.iban}</p>
-                    </div>
+                  {!doc.applyResultPayload.createdContractId && doc.applyResultPayload.linkedDocumentId && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-sky-100 border border-sky-200 text-sky-800 font-bold">
+                      <FileText size={10} /> Pouze dokument
+                    </span>
                   )}
-                  {!doc.applyResultPayload.paymentSetup.iban && doc.applyResultPayload.paymentSetup.recipientAccount && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Č. účtu</span>
-                      <p className="font-semibold text-[color:var(--wp-text)]">
-                        {doc.applyResultPayload.paymentSetup.recipientAccount}
-                        {doc.applyResultPayload.paymentSetup.bankCode ? `/${doc.applyResultPayload.paymentSetup.bankCode}` : ""}
-                      </p>
-                    </div>
+                  {doc.applyResultPayload.createdPaymentSetupId && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 border border-blue-200 text-blue-800 font-bold">
+                      <CreditCard size={10} /> Platební instrukce
+                    </span>
                   )}
-                  {doc.applyResultPayload.paymentSetup.variableSymbol && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">VS</span>
-                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.variableSymbol}</p>
-                    </div>
-                  )}
-                  {doc.applyResultPayload.paymentSetup.frequency && (
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">Frekvence</span>
-                      <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.frequency}</p>
-                    </div>
+                  {doc.applyResultPayload.createdTaskId && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-bold">
+                      <Check size={10} /> Úkol
+                    </span>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* Bridge suggestions – what remains as advisories */}
-            {(doc.applyResultPayload.bridgeSuggestions?.length ?? 0) > 0 && (
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1.5">
-                  Doporučené navazující kroky
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {doc.applyResultPayload.bridgeSuggestions!.map((item) => (
+                {/* Enforcement summary — always compact */}
+                {doc.applyResultPayload.policyEnforcementTrace && (
+                  <ApplyEnforcementResultSummary trace={doc.applyResultPayload.policyEnforcementTrace} />
+                )}
+
+                {/* Payment detail — compact 2-col */}
+                {doc.applyResultPayload.paymentSetup && (
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs border-t border-current/10 pt-2">
+                    {doc.applyResultPayload.paymentSetup.provider && (
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Poskytovatel</span>
+                        <p className="font-semibold text-[color:var(--wp-text)] truncate">{doc.applyResultPayload.paymentSetup.provider}</p>
+                      </div>
+                    )}
+                    {doc.applyResultPayload.paymentSetup.regularAmount && (
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Částka</span>
+                        <p className="font-semibold text-[color:var(--wp-text)]">{doc.applyResultPayload.paymentSetup.regularAmount} {doc.applyResultPayload.paymentSetup.currency}</p>
+                      </div>
+                    )}
+                    {(doc.applyResultPayload.paymentSetup.iban || doc.applyResultPayload.paymentSetup.recipientAccount) && (
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Účet</span>
+                        <p className="font-semibold text-[color:var(--wp-text)] truncate font-mono text-[10px]">
+                          {doc.applyResultPayload.paymentSetup.iban || `${doc.applyResultPayload.paymentSetup.recipientAccount}${doc.applyResultPayload.paymentSetup.bankCode ? `/${doc.applyResultPayload.paymentSetup.bankCode}` : ""}`}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Portal access note */}
+                {doc.applyResultPayload.portalClientAccess?.hasActiveClientPortal && (
+                  <p className="text-[11px] text-emerald-800 font-medium">
+                    Klient má aktivní přístup do klientské zóny.
+                  </p>
+                )}
+
+                {/* Outcome-aware CTAs — Phase 5B */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {/* Product publish → go to client detail */}
+                  {isProduct && clientId && (
+                    <Link
+                      href={`/portal/contacts/${clientId}?tab=smlouvy`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 text-[11px] font-black text-emerald-700 hover:bg-emerald-50 transition-colors"
+                    >
+                      <Shield size={11} /> Otevřít smlouvy klienta
+                    </Link>
+                  )}
+                  {/* visibleToClient → portal follow-up */}
+                  {outcome?.visibleToClient && clientId && (
+                    <Link
+                      href={`/portal/contacts/${clientId}?tab=prehled`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 text-[11px] font-black text-emerald-700 hover:bg-emerald-50 transition-colors"
+                    >
+                      <Eye size={11} /> Přehled klienta
+                    </Link>
+                  )}
+                  {/* Payment published → go to payments */}
+                  {outcome?.paymentOutcome === "payment_setup_published" && clientId && (
+                    <Link
+                      href={`/portal/contacts/${clientId}?tab=prehled`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-blue-200 text-[11px] font-black text-blue-700 hover:bg-blue-50 transition-colors"
+                    >
+                      <CreditCard size={11} /> Zkontrolovat platební instrukce
+                    </Link>
+                  )}
+                  {/* Document only → no product language */}
+                  {isDocOnly && clientId && (
+                    <Link
+                      href={`/portal/contacts/${clientId}?tab=dokumenty`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-sky-200 text-[11px] font-black text-sky-700 hover:bg-sky-50 transition-colors"
+                    >
+                      <FileText size={11} /> Zobrazit dokumenty klienta
+                    </Link>
+                  )}
+                  {/* Bridge suggestions — compact */}
+                  {(doc.applyResultPayload.bridgeSuggestions ?? []).slice(0, 2).map((item) => (
                     <Link
                       key={item.id}
                       href={item.href}
-                      className="px-3 py-1.5 rounded-lg bg-[color:var(--wp-surface-card)] border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-black text-slate-600 hover:bg-slate-50 transition-colors"
                     >
                       {item.label}
                     </Link>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </details>
+        );
+      })()}
 
       {(() => {
         if (isFailed || isProcessing) return null;
@@ -970,7 +957,7 @@ export function AIReviewExtractionShell({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left panel */}
         <section
-          className={`flex min-h-0 w-full min-w-0 flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] lg:w-[48%] ${
+          className={`flex min-h-0 w-full min-w-0 flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] lg:w-[55%] ${
             state.showPdfOnMobile ? "hidden lg:flex" : "flex"
           }`}
         >
@@ -1272,7 +1259,7 @@ export function AIReviewExtractionShell({
 
         {/* Right panel */}
         <aside
-          className={`flex min-h-0 w-full min-w-0 flex-col lg:w-[52%] ${
+          className={`flex min-h-0 w-full min-w-0 flex-col lg:flex-1 ${
             state.showPdfOnMobile ? "flex" : "hidden lg:flex"
           }`}
         >

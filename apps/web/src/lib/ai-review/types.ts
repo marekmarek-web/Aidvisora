@@ -223,6 +223,22 @@ export type ApplyResultPayload = {
     /** Deterministický verdict — source of truth pro invite/re-invite rozhodování. */
     accessVerdict?: string;
   };
+  /** Phase 5A: ID přiloženého dokumentu (bez vytvoření smlouvy). */
+  linkedDocumentId?: string;
+  /** Phase 5A: True pokud propojení dokumentu se smlouvou selhalo (parciální výsledek). */
+  documentLinkWarning?: boolean;
+  /** Phase 5A: Deterministický publish outcome — co skutečně vzniklo po apply. */
+  publishOutcome?: {
+    mode:
+      | "supporting_doc_only"
+      | "internal_document_only"
+      | "product_published"
+      | "product_published_visible_to_client"
+      | "publish_partial_failure";
+    paymentOutcome: "payment_setup_published" | "payment_setup_skipped";
+    label: string;
+    visibleToClient: boolean;
+  };
 };
 
 export type ExtractionDocument = {
