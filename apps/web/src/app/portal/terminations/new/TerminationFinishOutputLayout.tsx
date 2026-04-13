@@ -28,6 +28,8 @@ type Props = {
   /** ISO yyyy-mm-dd; prázdné = při generování dnešní datum. */
   letterHeaderDateIso: string;
   onLetterHeaderDateIsoChange: (iso: string) => void;
+  /** Změna termínu/režimu → znovu načíst náhled dopisu ze serveru. */
+  letterServerSyncKey: string;
 };
 
 export function TerminationFinishOutputLayout({
@@ -39,6 +41,7 @@ export function TerminationFinishOutputLayout({
   onLetterPlainTextDraftChange,
   letterHeaderDateIso,
   onLetterHeaderDateIsoChange,
+  letterServerSyncKey,
 }: Props) {
   const deliveryLabel = leftPanel.deliveryChannelHint
     ? terminationDeliveryChannelLabel(leftPanel.deliveryChannelHint)
@@ -157,6 +160,7 @@ export function TerminationFinishOutputLayout({
             showPersistButtons={showPersistButtons}
             wizardLetterDraft={letterPlainTextDraft}
             onWizardLetterDraftChange={onLetterPlainTextDraftChange}
+            letterServerSyncKey={letterServerSyncKey}
           />
         </div>
       </div>

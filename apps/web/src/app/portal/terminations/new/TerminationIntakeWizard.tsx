@@ -285,6 +285,24 @@ export function TerminationIntakeWizard({
   const [previewSyncBusy, setPreviewSyncBusy] = useState(false);
   const [previewGapMessages, setPreviewGapMessages] = useState<string[]>([]);
   const [finishLetterVm, setFinishLetterVm] = useState<TerminationLetterBuildResult["viewModel"] | null>(null);
+  /** Změna termínu/režimu → TerminationLetterPreviewPanel znovu načte merge ze serveru. */
+  const letterServerSyncKey = useMemo(
+    () =>
+      [
+        terminationMode,
+        requestedEffectiveDate,
+        requestedSubmissionDate,
+        contractAnniversaryDate,
+        contractStartDate,
+      ].join("|"),
+    [
+      terminationMode,
+      requestedEffectiveDate,
+      requestedSubmissionDate,
+      contractAnniversaryDate,
+      contractStartDate,
+    ],
+  );
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [aiExtractBusy, setAiExtractBusy] = useState(false);
@@ -415,6 +433,31 @@ export function TerminationIntakeWizard({
     policyholderAddressLine2Override,
     advisorConfirmed,
   ]);
+
+  const persistIntakeDraftForPreview = useCallback(async (): Promise<boolean> => {
+    if (!canWrite || requestStatus !== "intake") return true;
+    setPreviewSyncBusy(true);
+    try {
+      const res = await saveTerminationIntakePartialAction({
+        ...buildBasePayload(),
+        partialRequestId: partialRequestIdRef.current,
+      });
+      if (res.ok) {
+        setPartialRequestId(res.requestId);
+        return true;
+      }
+      setError(res.error);
+      return false;
+    } finally {
+      setPreviewSyncBusy(false);
+    }
+  }, [canWrite, requestStatus, buildBasePayload]);
+
+  useEffect(() => {
+    if (wizardStep !== 2) {
+      setFinishLetterVm(null);
+    }
+  }, [wizardStep]);
 
   useEffect(() => {
     const q = insurerQuery.trim();
@@ -812,7 +855,14 @@ export function TerminationIntakeWizard({
           <button
             key={label}
             type="button"
-            onClick={() => setWizardStep(index)}
+            onClick={async () => {
+              if (index === 2 && wizardStep < 2 && canWrite && requestStatus === "intake") {
+                setError(null);
+                const ok = await persistIntakeDraftForPreview();
+                if (!ok) return;
+              }
+              setWizardStep(index);
+            }}
             className={cx(
               "rounded-2xl border px-4 py-3 text-left transition min-h-[44px]",
               active && "border-violet-200 bg-violet-50 shadow-sm",
@@ -1456,6 +1506,7 @@ export function TerminationIntakeWizard({
                   requestId={partialRequestId}
                   letterPlainTextDraft={letterPlainTextDraft}
                   onLetterPlainTextDraftChange={onLetterPlainTextDraftChange}
+                  letterServerSyncKey={letterServerSyncKey}
                   letterHeaderDateIso={letterHeaderDateIso}
                   onLetterHeaderDateIsoChange={(iso) => {
                     setLetterHeaderDateIso(iso);
@@ -1551,7 +1602,14 @@ export function TerminationIntakeWizard({
               {wizardStep < STEP_LABELS.length - 1 ? (
                 <button
                   type="button"
-                  onClick={() => setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
+                  onClick={async () => {
+                    if (wizardStep === 1 && canWrite && requestStatus === "intake") {
+                      setError(null);
+                      const ok = await persistIntakeDraftForPreview();
+                      if (!ok) return;
+                    }
+                    setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
+                  }}
                   className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20"
                 >
                   Další krok

@@ -62,6 +62,7 @@ export function TerminationLetterPreviewPanel({
   onBuildResult,
   wizardLetterDraft,
   onWizardLetterDraftChange,
+  letterServerSyncKey,
 }: {
   requestId: string;
   /** Uložení do CRM dokumentů (vyžaduje documents:write). */
@@ -78,6 +79,11 @@ export function TerminationLetterPreviewPanel({
   /** Wizard: řízený text dopisu z rodiče (editovatelný výstup před PDF). */
   wizardLetterDraft?: string;
   onWizardLetterDraftChange?: (plain: string) => void;
+  /**
+   * Změna klíčových polí (režim, data) → znovu načíst náhled ze serveru (merge s draftem).
+   * Bez toho při stejném requestId zůstane zastaralý dopis po úpravě kroku 2.
+   */
+  letterServerSyncKey?: string;
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +96,10 @@ export function TerminationLetterPreviewPanel({
   const [coverDraft, setCoverDraft] = useState("");
   const [coverSaved, setCoverSaved] = useState("");
   const [editSaveMsg, setEditSaveMsg] = useState<string | null>(null);
-  const lastSeededRequestIdRef = useRef<string | null>(null);
   const onBuildResultRef = useRef(onBuildResult);
   onBuildResultRef.current = onBuildResult;
 
-  useEffect(() => {
-    lastSeededRequestIdRef.current = null;
-  }, [requestId]);
+  const syncKey = letterServerSyncKey ?? "";
 
   useEffect(() => {
     let cancelled = false;
@@ -117,11 +120,10 @@ export function TerminationLetterPreviewPanel({
     return () => {
       cancelled = true;
     };
-  }, [requestId]);
+  }, [requestId, syncKey]);
 
   useEffect(() => {
     if (!data || loading) return;
-    if (lastSeededRequestIdRef.current === requestId) return;
     const lp = data.letterPlainText ?? "";
     const cp = data.coveringLetterPlainText ?? "";
     if (layout === "wizardFinish" && onWizardLetterDraftChange) {
@@ -138,8 +140,7 @@ export function TerminationLetterPreviewPanel({
     setCoverDraft(cp);
     setCoverSaved(cp);
     setEditSaveMsg(null);
-    lastSeededRequestIdRef.current = requestId;
-  }, [data, loading, requestId, layout, onWizardLetterDraftChange]); // eslint-disable-line react-hooks/exhaustive-deps -- wizardLetterDraft jen při seedu při změně `data`
+  }, [data, loading, requestId, layout, onWizardLetterDraftChange, syncKey]); // eslint-disable-line react-hooks/exhaustive-deps -- wizardLetterDraft jen při seedu při změně `data`
 
   if (loading) {
     return (
