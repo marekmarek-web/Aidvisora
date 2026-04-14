@@ -9,6 +9,7 @@ import type {
   TeamOverviewPeriod,
   TeamRhythmCalendarData,
   TeamMemberDetail,
+  TeamPerformancePoint,
 } from "@/app/actions/team-overview";
 import type { TeamMemberMetrics, TeamAlert } from "@/lib/team-overview-alerts";
 import type { TeamOverviewScope, TeamTreeNode } from "@/lib/team-hierarchy-types";
@@ -30,6 +31,7 @@ import {
   isSelectedInFilteredList,
 } from "@/lib/team-overview-members";
 import { TeamOverviewAttentionSection } from "./components/TeamOverviewAttentionSection";
+import { TeamOverviewPerformanceTrendSection } from "./components/TeamOverviewPerformanceTrendSection";
 import { TeamOverviewCareerSummarySection } from "./components/TeamOverviewCareerSummarySection";
 import { TeamOverviewAdaptationSection } from "./components/TeamOverviewAdaptationSection";
 import { TeamOverviewPeopleFiltersBar } from "./components/TeamOverviewPeopleFiltersBar";
@@ -81,6 +83,8 @@ interface TeamOverviewViewProps {
   initialMetrics: TeamMemberMetrics[];
   initialAlerts: TeamAlert[];
   initialNewcomers: NewcomerAdaptation[];
+  /** Jednotky po obdobích pro cockpit trend (CRM). */
+  initialPerformanceOverTime?: TeamPerformancePoint[];
   initialRhythmCalendar?: TeamRhythmCalendarData | null;
   defaultPeriod: TeamOverviewPeriod;
   canCreateTeamCalendar?: boolean;
@@ -103,6 +107,7 @@ export function TeamOverviewView({
   initialMetrics,
   initialAlerts,
   initialNewcomers,
+  initialPerformanceOverTime = [],
   initialRhythmCalendar = null,
   defaultPeriod,
   canCreateTeamCalendar = false,
@@ -130,6 +135,9 @@ export function TeamOverviewView({
   const [teamCalendarModal, setTeamCalendarModal] = useState<"event" | "task" | null>(null);
   const [calendarPrefill, setCalendarPrefill] = useState<TeamCalendarModalPrefill | null>(null);
   const [rhythmCalendar, setRhythmCalendar] = useState<TeamRhythmCalendarData | null>(initialRhythmCalendar ?? null);
+  const [performanceOverTime, setPerformanceOverTime] = useState<TeamPerformancePoint[]>(
+    initialPerformanceOverTime,
+  );
   /** Cockpit / Lidé / Kariéra / Adaptace / Struktura / Správa týmu — podle mocku týmového přehledu. */
   type ActiveTab = (typeof VIEW_TAB_ORDER)[number];
   const [activeView, setActiveView] = useState<ActiveTab>("Cockpit");
@@ -176,6 +184,7 @@ export function TeamOverviewView({
       setNewcomers(snap.newcomers);
       setHierarchy(snap.hierarchy);
       setRhythmCalendar(snap.rhythmCalendar);
+      setPerformanceOverTime(snap.performanceOverTime);
     } finally {
       setLoading(false);
     }
@@ -548,6 +557,7 @@ export function TeamOverviewView({
         priorityItems={priorityItems}
       />
       <TeamOverviewCockpitFourCards kpis={kpis} inProductionCount={inProductionCount} loading={loading} />
+      <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
       <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
         <div className="min-w-0">
           <TeamOverviewAttentionSection
