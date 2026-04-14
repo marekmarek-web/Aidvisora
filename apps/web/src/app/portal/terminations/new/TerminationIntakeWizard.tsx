@@ -847,9 +847,9 @@ export function TerminationIntakeWizard({
             ? "Rychlá akce"
             : "Ruční zadání";
 
-  // Stepper — 2027 Light Design
+  // Stepper — 2027 Light Design (mobile: snap scroll, desktop: flex grid)
   const stepper = (
-    <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+    <div className="flex items-center gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 pb-2 scrollbar-none sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:snap-none">
       {STEP_LABELS.map((label, index) => {
         const active = index === wizardStep;
         const done = index < wizardStep;
@@ -866,7 +866,7 @@ export function TerminationIntakeWizard({
               setWizardStep(index);
             }}
             className={cx(
-              "flex shrink-0 items-center gap-3 rounded-[20px] border px-4 py-3 text-left transition min-h-[44px] sm:flex-1",
+              "flex shrink-0 snap-center items-center gap-3 rounded-[20px] border px-4 py-3 text-left transition min-h-[44px] min-w-[200px] sm:min-w-0",
               active && "border-indigo-200 bg-white shadow-md ring-4 ring-indigo-50",
               done && "border-emerald-100 bg-emerald-50/50 text-emerald-700",
               !active && !done && "border-slate-100 bg-white text-slate-400 opacity-60",
@@ -897,8 +897,8 @@ export function TerminationIntakeWizard({
   const contactDocsHref = contactId ? `/portal/contacts/${contactId}?tab=dokumenty` : "/portal/contacts/new";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-32">
-      <div className="mx-auto max-w-[1000px] space-y-6 px-4 pb-10 pt-6 sm:px-6">
+    <div className="min-h-screen bg-[#f8fafc]">
+      <div className="mx-auto max-w-[1100px] space-y-6 px-4 pb-36 pt-6 sm:px-8 md:pt-10 lg:px-10">
         {/* Hlavička */}
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
@@ -1576,99 +1576,94 @@ export function TerminationIntakeWizard({
               {error}
             </p>
           ) : null}
-
-          {/* Action bar */}
-          <div className="mt-6 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-              <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600">
-                {sourceFooterLabel}
-              </span>
-              <span className="font-medium">
-                {wizardStep === 2 ? "Toto je finální náhled před exportem." : "Vyplňte údaje a pokračujte na další krok."}
-              </span>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={wizardStep === 0}
-                  onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-                  className="h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition shadow-sm"
-                >
-                  Zpět
-                </button>
-                {contactId ? (
-                  <Link
-                    href={`/portal/contacts/${contactId}`}
-                    className="inline-flex h-11 min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
-                  >
-                    Zrušit
-                  </Link>
-                ) : (
-                  <Link
-                    href="/portal/today"
-                    className="inline-flex h-11 min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
-                  >
-                    Zrušit
-                  </Link>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                <button
-                  type="button"
-                  disabled={!canWrite || isPending}
-                  onClick={() => void onSavePartial()}
-                  className="h-11 min-h-[44px] rounded-xl border border-violet-200 bg-violet-50 px-5 text-sm font-bold text-violet-700 disabled:opacity-50 hover:bg-violet-100 transition"
-                >
-                  {isPending ? "Ukládám…" : "Uložit rozepsané"}
-                </button>
-                {wizardStep < STEP_LABELS.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (wizardStep === 1 && canWrite && requestStatus === "intake") {
-                        setError(null);
-                        const ok = await persistIntakeDraftForPreview();
-                        if (!ok) return;
-                      }
-                      setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
-                    }}
-                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700 active:scale-95 transition"
-                  >
-                    Další krok
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                ) : null}
-                {wizardStep === STEP_LABELS.length - 1 ? (
-                  <>
-                    {!advisorConfirmed && (
-                      <p className="text-xs text-amber-600 self-center">
-                        Nejdříve potvrďte správnost výstupu výše.
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      disabled={!canWrite || isPending || !partialRequestId || !advisorConfirmed}
-                      onClick={() => onExportPdf()}
-                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 hover:bg-slate-50 transition"
-                    >
-                      Exportovat PDF
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canWrite || isPending || !advisorConfirmed}
-                      onClick={() => onCompleteRequest()}
-                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/25 disabled:opacity-50 hover:bg-indigo-700 active:scale-95 transition"
-                    >
-                      Dokončit žádost
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
         </form>
+      </div>
+
+      {/* Fixed bottom action bar — always visible */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_-4px_24px_rgba(15,23,42,0.08)]" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}>
+        <div className="mx-auto flex max-w-[1100px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="hidden shrink-0 rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 sm:inline-flex">
+              {sourceFooterLabel}
+            </span>
+            <button
+              type="button"
+              disabled={wizardStep === 0}
+              onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
+              className="h-11 min-h-[44px] shrink-0 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition shadow-sm"
+            >
+              Zpět
+            </button>
+            {contactId ? (
+              <Link
+                href={`/portal/contacts/${contactId}`}
+                className="inline-flex h-11 min-h-[44px] shrink-0 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
+              >
+                Zrušit
+              </Link>
+            ) : (
+              <Link
+                href="/portal/today"
+                className="inline-flex h-11 min-h-[44px] shrink-0 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
+              >
+                Zrušit
+              </Link>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-3 overflow-x-auto">
+            <button
+              type="button"
+              disabled={!canWrite || isPending}
+              onClick={() => void onSavePartial()}
+              className="h-11 min-h-[44px] shrink-0 rounded-xl border border-violet-200 bg-violet-50 px-5 text-sm font-bold text-violet-700 disabled:opacity-50 hover:bg-violet-100 transition"
+            >
+              {isPending ? "Ukládám…" : "Uložit rozepsané"}
+            </button>
+            {wizardStep < STEP_LABELS.length - 1 ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (wizardStep === 1 && canWrite && requestStatus === "intake") {
+                    setError(null);
+                    const ok = await persistIntakeDraftForPreview();
+                    if (!ok) return;
+                  }
+                  setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
+                }}
+                className="inline-flex h-11 min-h-[44px] shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700 active:scale-95 transition"
+              >
+                Další krok
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            ) : null}
+            {wizardStep === STEP_LABELS.length - 1 ? (
+              <>
+                {!advisorConfirmed && (
+                  <p className="hidden text-xs text-amber-600 self-center sm:block">
+                    Nejdříve potvrďte správnost výstupu výše.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={!canWrite || isPending || !partialRequestId || !advisorConfirmed}
+                  onClick={() => onExportPdf()}
+                  className="inline-flex h-11 min-h-[44px] shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 hover:bg-slate-50 transition"
+                >
+                  Exportovat PDF
+                </button>
+                <button
+                  type="button"
+                  disabled={!canWrite || isPending || !advisorConfirmed}
+                  onClick={() => onCompleteRequest()}
+                  className="inline-flex h-11 min-h-[44px] shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/25 disabled:opacity-50 hover:bg-indigo-700 active:scale-95 transition"
+                >
+                  Dokončit žádost
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

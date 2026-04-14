@@ -80,19 +80,21 @@ export default async function TerminationNewPage({
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-3">
-      <Suspense fallback={<p className="text-sm text-[color:var(--wp-text-secondary)]">Načítání průvodce…</p>}>
-        <TerminationIntakeWizard
-          prefill={prefill}
-          segments={segments.length ? segments : ["ZP"]}
-          canWrite={canWrite}
-          sourceQuick={sourceQuick}
-          sourceFromAi={sourceFromAi}
-          urlPrefill={urlPrefill}
-          loadedDraft={loadedDraft}
-          draftLoadError={draftLoadError}
-        />
-      </Suspense>
-    </div>
+    <Suspense fallback={
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Načítání průvodce…</p>
+      </div>
+    }>
+      <TerminationIntakeWizard
+        prefill={prefill}
+        segments={segments.length ? segments : ["ZP"]}
+        canWrite={canWrite}
+        sourceQuick={sourceQuick}
+        sourceFromAi={sourceFromAi}
+        urlPrefill={urlPrefill}
+        loadedDraft={loadedDraft}
+        draftLoadError={draftLoadError}
+      />
+    </Suspense>
   );
 }

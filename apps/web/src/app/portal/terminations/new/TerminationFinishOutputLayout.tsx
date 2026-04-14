@@ -50,29 +50,27 @@ export function TerminationFinishOutputLayout({
   return (
     <div className="rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       {/* Header */}
-      <div className="border-b border-slate-100 px-6 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
+      <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <div className="text-lg font-semibold text-slate-950">Dokončit výstup</div>
             <div className="mt-1 text-sm text-slate-500">
-              Upravte text výpovědi v poli vpravo. „Rychlý náhled tisku“ otevře okno tisku z aktuálního náhledu. Tlačítkem
-              „Dokončit žádost“ dole uložíte žádost přes pravidla; „Exportovat PDF“ jen vytiskne / uloží PDF bez změny
-              stavu žádosti.
+              Upravte text výpovědi v editoru. Tlačítkem &bdquo;Dokončit žádost&ldquo; uložíte žádost; &bdquo;Exportovat PDF&ldquo; vytiskne dokument.
             </div>
           </div>
-          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <div className="shrink-0 self-start rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
             Náhled dokumentu
           </div>
         </div>
       </div>
 
       {/* Grid: left info + right letter preview */}
-      <div className="grid gap-6 p-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* Left column */}
         <div className="space-y-4">
           <div className="rounded-2xl bg-slate-50 p-4">
             <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Klient</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{leftPanel.clientName || "—"}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">{leftPanel.clientName || "\u2014"}</div>
             {leftPanel.clientSubline ? (
               <div className="mt-1 text-xs text-slate-500">{leftPanel.clientSubline}</div>
             ) : null}
@@ -80,7 +78,7 @@ export function TerminationFinishOutputLayout({
 
           <div className="rounded-2xl bg-slate-50 p-4">
             <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Instituce</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{leftPanel.insurerName || "—"}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">{leftPanel.insurerName || "\u2014"}</div>
             {leftPanel.insurerAddress ? (
               <div className="mt-1 text-xs leading-5 text-slate-500">{leftPanel.insurerAddress}</div>
             ) : null}
@@ -90,10 +88,10 @@ export function TerminationFinishOutputLayout({
             <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Souhrn</div>
             <div className="mt-2 space-y-2 text-sm text-slate-700">
               <div>
-                <span className="font-medium">Číslo smlouvy:</span> {leftPanel.contractNumber || "—"}
+                <span className="font-medium">Číslo smlouvy:</span> {leftPanel.contractNumber || "\u2014"}
               </div>
               <div>
-                <span className="font-medium">Typ ukončení:</span> {leftPanel.terminationModeLabel || "—"}
+                <span className="font-medium">Typ ukončení:</span> {leftPanel.terminationModeLabel || "\u2014"}
               </div>
               {leftPanel.submissionDateLabel ? (
                 <div>
@@ -102,7 +100,7 @@ export function TerminationFinishOutputLayout({
               ) : null}
               <div>
                 <span className="font-medium">Datum účinnosti / podle pravidel:</span>{" "}
-                {leftPanel.effectiveDateLabel || "—"}
+                {leftPanel.effectiveDateLabel || "\u2014"}
               </div>
               {deliveryLabel ? (
                 <div>
@@ -148,8 +146,7 @@ export function TerminationFinishOutputLayout({
               className="h-11 w-full max-w-xs rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
             />
             <p className="mt-1 text-xs text-slate-500">
-              Volitelné – kalendář v prohlížeči. Prázdné pole = v generovaném textu se použije dnešní datum; po výběru
-              se první řádek dopisu přepíše.
+              Volitelné – prázdné pole = dnešní datum; po výběru se první řádek dopisu přepíše.
             </p>
           </div>
           <TerminationLetterPreviewPanel
