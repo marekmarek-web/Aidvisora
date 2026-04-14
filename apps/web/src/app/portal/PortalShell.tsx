@@ -214,6 +214,8 @@ function PortalShellInner({
   const isMobile = !isDesktop;
   const router = useRouter();
   const pathname = usePathname();
+  /** AI Review detail = dedicated workspace without portal chrome (header, search, +Nový). */
+  const isAiReviewWorkspace = /^\/portal\/contracts\/review\/[^/]+/.test(pathname);
   const { hasSharedFiles } = useShareIntent();
   const { shouldShowSoftPrompt, requestSystemPermission, markSoftPromptSeen } = usePushNotifications({
     onPushNotificationActionPerformed: (action) => {
@@ -285,6 +287,7 @@ function PortalShellInner({
           style={{ marginLeft: mainMarginPx, transition: "margin-left 200ms ease-in-out" }}
         >
           <div className="wp-portal-main-panel flex min-h-0 flex-1 flex-col">
+            {!isAiReviewWorkspace && (
             <header className="wp-portal-top-header">
             <button
               type="button"
@@ -363,7 +366,27 @@ function PortalShellInner({
               </div>
             </div>
           </header>
-            <div className="wp-portal-main-scroll px-4 pb-5 pt-4 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-3">
+            )}
+            {isAiReviewWorkspace && isMobile && (
+              <div className="shrink-0 flex items-center px-2 py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                <button
+                  type="button"
+                  onClick={() => setSidebarDrawerOpen(true)}
+                  className="p-2 rounded-lg text-[color:var(--wp-text-muted)] hover:bg-[color:var(--wp-link-hover-bg)] min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Otevřít menu"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" viewBox="0 0 24 24">
+                    <path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            <div className={clsx(
+              "wp-portal-main-scroll",
+              isAiReviewWorkspace
+                ? "flex flex-col flex-1 min-h-0 overflow-hidden"
+                : "px-4 pb-5 pt-4 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-3",
+            )}>
               {children}
             </div>
           </div>

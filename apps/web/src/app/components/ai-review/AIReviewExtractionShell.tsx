@@ -32,7 +32,6 @@ import type {
   ExtractionDocument,
   ExtractionReviewState,
   ExtractionReviewAction,
-  AIRecommendation,
   DraftAction,
   FieldFilter,
   ApplyResultPayload,
@@ -107,19 +106,6 @@ function humanizeApplyGateReason(code: string): string {
     return `Nízká jistota u pole „${label}“ — ověřte proti dokumentu.`;
   }
   return humanizeReviewReasonLine(code);
-}
-
-function buildRecommendationTaskTitle(rec: AIRecommendation): string {
-  const normalizedDescription = humanizeReviewReasonLine(rec.description?.trim() ?? "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (normalizedDescription) {
-    return normalizedDescription.length > 140
-      ? `${normalizedDescription.slice(0, 137).trimEnd()}...`
-      : normalizedDescription;
-  }
-  const title = rec.title?.trim();
-  return title || "Prověřit výstup z AI review";
 }
 
 /* ─── Fáze 10: Apply Enforcement Result Summary ──────────────────── */
@@ -340,6 +326,9 @@ type Props = {
   isApproving?: boolean;
   actionLoading?: string | null;
   onRefreshPdf?: () => void | Promise<void>;
+  /** Client document linking (rendered under the wizard in the left panel). */
+  onLinkToClientDocuments?: (visibleToClient: boolean) => void | Promise<void>;
+  linkDocBusy?: boolean;
 };
 
 export function AIReviewExtractionShell({
@@ -357,6 +346,8 @@ export function AIReviewExtractionShell({
   isApproving,
   actionLoading,
   onRefreshPdf,
+  onLinkToClientDocuments,
+  linkDocBusy,
 }: Props) {
   const router = useRouter();
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -450,28 +441,6 @@ export function AIReviewExtractionShell({
   const handleToggleGroup = useCallback((groupId: string) => {
     dispatch({ type: "TOGGLE_GROUP", groupId });
   }, []);
-
-  const handleDismissRec = useCallback((id: string) => {
-    dispatch({ type: "DISMISS_RECOMMENDATION", recId: id });
-  }, []);
-
-  const handleRestoreRec = useCallback((id: string) => {
-    dispatch({ type: "RESTORE_RECOMMENDATION", recId: id });
-  }, []);
-
-  const handleCreateTask = useCallback(async (rec: AIRecommendation) => {
-    try {
-      const title = buildRecommendationTaskTitle(rec);
-      await createTask({
-        title,
-        description: rec.description?.trim() || undefined,
-        contactId: doc.matchedClientId || undefined,
-      });
-      toast.showToast("Úkol vytvořen.", "success");
-    } catch {
-      toast.showToast("Vytvoření úkolu selhalo.", "error");
-    }
-  }, [doc.matchedClientId, toast]);
 
   const handleExecuteDraftAction = useCallback(async (action: DraftAction) => {
     try {
@@ -576,7 +545,7 @@ export function AIReviewExtractionShell({
   }, [doc, state.dismissedRecommendations, state.editedFields, toast]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden -m-4 md:-m-6">
+    <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -1073,9 +1042,6 @@ export function AIReviewExtractionShell({
               onRevert={handleRevert}
               onFilterChange={handleFilterChange}
               onToggleGroup={handleToggleGroup}
-              onDismissRec={handleDismissRec}
-              onRestoreRec={handleRestoreRec}
-              onCreateTask={handleCreateTask}
               onExecuteDraftAction={handleExecuteDraftAction}
               onConfirmPendingField={onConfirmPendingField}
               onConfirmCreateNew={onConfirmCreateNew}
@@ -1102,6 +1068,33 @@ export function AIReviewExtractionShell({
             </div>
           )}
 
+          {/* Client document linking — placed under the extraction workflow */}
+          {doc.matchedClientId && onLinkToClientDocuments && (
+            <div className="border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 md:px-6 shrink-0">
+              <p className="font-bold text-sm text-[color:var(--wp-text)] mb-1.5">Dokumenty klienta</p>
+              <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3 leading-relaxed">
+                Přidejte tento soubor do dokumentové vrstvy klienta. Úložiště se nekopíruje — jen se vytvoří odkaz v CRM.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  disabled={!!linkDocBusy}
+                  onClick={() => void onLinkToClientDocuments(false)}
+                  className="min-h-[40px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 text-xs font-bold text-[color:var(--wp-text)] disabled:opacity-50"
+                >
+                  {linkDocBusy ? "Ukládám…" : "Přidat do dokumentů (interně)"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!!linkDocBusy}
+                  onClick={() => void onLinkToClientDocuments(true)}
+                  className="min-h-[40px] rounded-xl bg-indigo-600 px-4 text-xs font-bold text-white disabled:opacity-50"
+                >
+                  Přidat a zobrazit v klientském portálu
+                </button>
+              </div>
+            </div>
+          )}
           {/* Client match + actions at bottom of left panel */}
           {!doc.isApplied && hasData && (
             <div className="border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 md:p-6 shrink-0">

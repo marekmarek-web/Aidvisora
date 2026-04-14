@@ -9,9 +9,6 @@ import {
   Heart,
   AlertCircle,
   AlertTriangle,
-  Lightbulb,
-  TrendingUp,
-  ShieldCheck,
   ArrowRight,
   ChevronDown,
   ChevronRight,
@@ -35,7 +32,7 @@ import {
   MinusCircle,
   Pencil,
 } from "lucide-react";
-import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
+
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
 import type { PrimaryDocumentType } from "@/lib/ai/document-review-types";
 import { CanonicalFieldsPanel } from "./CanonicalFieldsPanel";
@@ -44,7 +41,6 @@ import type {
   ExtractionDocument,
   ExtractedGroup,
   ExtractedField,
-  AIRecommendation,
   DraftAction,
   FieldFilter,
   FieldStatus,
@@ -94,39 +90,6 @@ function fieldInputClass(status: FieldStatus) {
   return map[status];
 }
 
-/* ─── Recommendation icon ───────────────────────────────────────── */
-
-function RecIcon({ type }: { type: AIRecommendation["type"] }) {
-  switch (type) {
-    case "warning":
-      return <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />;
-    case "insight":
-      return <Lightbulb size={18} className="text-indigo-500 shrink-0 mt-0.5" />;
-    case "opportunity":
-      return <TrendingUp size={18} className="text-emerald-500 shrink-0 mt-0.5" />;
-    case "compliance":
-      return <ShieldCheck size={18} className="text-orange-500 shrink-0 mt-0.5" />;
-    case "next_step":
-      return <ArrowRight size={18} className="text-blue-500 shrink-0 mt-0.5" />;
-  }
-}
-
-function recTypeBadge(type: AIRecommendation["type"]) {
-  const map: Record<AIRecommendation["type"], { label: string; cls: string }> = {
-    warning: { label: "Upozornění", cls: "bg-amber-100 text-amber-700" },
-    insight: { label: "Zjištění", cls: "bg-indigo-100 text-indigo-700" },
-    opportunity: { label: "Příležitost", cls: "bg-emerald-100 text-emerald-700" },
-    compliance: { label: "Kontrola", cls: "bg-orange-100 text-orange-700" },
-    next_step: { label: "Další krok", cls: "bg-blue-100 text-blue-700" },
-  };
-  const v = map[type];
-  return (
-    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${v.cls}`}>
-      {v.label}
-    </span>
-  );
-}
-
 /* ─── Section Navigation ────────────────────────────────────────── */
 
 const SECTIONS = [
@@ -134,7 +97,7 @@ const SECTIONS = [
   { id: "advisor", label: "Přehled AI" },
   { id: "data", label: "Pole k ověření" },
   { id: "diagnostics", label: "Diagnostika" },
-  { id: "recommendations", label: "Kontroly a akce" },
+  { id: "recommendations", label: "Stav a výsledky" },
 ] as const;
 
 function SectionNav({ onScrollTo }: { onScrollTo: (id: string) => void }) {
@@ -1387,119 +1350,6 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
   );
 }
 
-/* ─── AI Recommendations Card ───────────────────────────────────── */
-
-function AIRecommendationsCard({
-  recommendations,
-  dismissedMap,
-  onDismiss,
-  onRestore,
-  onCreateTask,
-  onFieldClick,
-}: {
-  recommendations: AIRecommendation[];
-  dismissedMap: Record<string, boolean>;
-  onDismiss: (id: string) => void;
-  onRestore: (id: string) => void;
-  onCreateTask: (rec: AIRecommendation) => void | Promise<void>;
-  onFieldClick: (fieldId: string, page?: number) => void;
-}) {
-  const visible = recommendations.filter((r) => !dismissedMap[r.id]);
-  const dismissed = recommendations.filter((r) => dismissedMap[r.id]);
-
-  if (visible.length === 0 && dismissed.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 rounded-[20px] border border-indigo-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
-      <div className="relative z-10">
-        <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-800 mb-1 flex items-center gap-2">
-          <AiAssistantBrandIcon size={16} className="shrink-0" />
-          Kontroly a akce
-          <span className="ml-auto text-indigo-500 font-bold text-[10px] normal-case tracking-normal">
-            {visible.length} aktivních
-          </span>
-        </h3>
-        <p className="text-[10px] text-indigo-700/80 font-medium leading-snug mb-4 pl-0.5">
-          Zkontrolujte body níže před schválením nebo zápisem do CRM. U úkolu můžete nechat sledovat doplnění.
-        </p>
-
-        <div className="space-y-3">
-          {visible.map((rec) => (
-            <div
-              key={rec.id}
-              className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-sm p-4 rounded-xl border border-indigo-100/50 shadow-sm"
-            >
-              <div className="flex items-start gap-3">
-                <RecIcon type={rec.type} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    {recTypeBadge(rec.type)}
-                  </div>
-                  <p className="text-sm font-bold text-[color:var(--wp-text)] leading-snug">
-                    {rec.title}
-                  </p>
-                  <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1 leading-relaxed">
-                    {rec.description}
-                  </p>
-                  {rec.linkedFieldIds.length > 0 && (
-                    <button
-                      onClick={() =>
-                        onFieldClick(rec.linkedFieldIds[0], rec.linkedPage)
-                      }
-                      className="mt-2 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
-                    >
-                      Zobrazit v dokumentu <ArrowRight size={12} />
-                    </button>
-                  )}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => void onCreateTask(rec)}
-                      className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-100/50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Vytvořit úkol
-                    </button>
-                    <button
-                      onClick={() => onDismiss(rec.id)}
-                      className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Zahodit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {dismissed.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-indigo-100">
-            <p className="text-[10px] font-bold text-indigo-400 mb-2">
-              {dismissed.length} zahozených návrhů
-            </p>
-            {dismissed.map((rec) => (
-              <div
-                key={rec.id}
-                className="flex items-center justify-between py-1.5 text-xs text-[color:var(--wp-text-tertiary)]"
-              >
-                <span className="truncate">{rec.title}</span>
-                <button
-                  onClick={() => onRestore(rec.id)}
-                  className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 ml-2 shrink-0"
-                >
-                  Obnovit
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Review Attention Banner ───────────────────────────────────── */
 
 function ReviewAttentionBanner({
@@ -1854,67 +1704,6 @@ function ExtractedGroupCard({
   );
 }
 
-/* ─── Extra Recommendations Card ────────────────────────────────── */
-
-function ExtraRecommendationsCard({
-  recommendations,
-  dismissedMap,
-  onDismiss,
-  onCreateTask,
-}: {
-  recommendations: AIRecommendation[];
-  dismissedMap: Record<string, boolean>;
-  onDismiss: (id: string) => void;
-  onCreateTask: (rec: AIRecommendation) => void | Promise<void>;
-}) {
-  const visible = recommendations.filter((r) => !dismissedMap[r.id]);
-  if (visible.length === 0) return null;
-
-  return (
-    <div className="bg-gradient-to-br from-emerald-50/50 to-blue-50/30 rounded-[20px] border border-emerald-100 shadow-sm p-4 md:p-5">
-      <h3 className="text-[11px] font-black uppercase tracking-widest text-emerald-800 mb-4 flex items-center gap-2">
-        <TrendingUp size={16} className="text-emerald-500" />
-        Další interní podněty od AI
-      </h3>
-      <div className="space-y-3">
-        {visible.map((rec) => (
-          <div
-            key={rec.id}
-            className="bg-[color:var(--wp-surface-card)]/80 backdrop-blur-sm p-4 rounded-xl border border-emerald-100/50 shadow-sm"
-          >
-            <div className="flex items-start gap-3">
-              <RecIcon type={rec.type} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  {recTypeBadge(rec.type)}
-                </div>
-                <p className="text-sm font-bold text-[color:var(--wp-text)]">{rec.title}</p>
-                <p className="text-xs text-[color:var(--wp-text-secondary)] mt-1 leading-relaxed">
-                  {rec.description}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => void onCreateTask(rec)}
-                    className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Vytvořit úkol
-                  </button>
-                  <button
-                    onClick={() => onDismiss(rec.id)}
-                    className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Skrýt
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Document Finality Warning ─────────────────────────────────── */
 
 function DocumentFinalityWarning({ doc }: { doc: ExtractionDocument }) {
@@ -1957,9 +1746,6 @@ type LeftPanelProps = {
   onRevert: (fieldId: string) => void;
   onFilterChange: (filter: FieldFilter) => void;
   onToggleGroup: (groupId: string) => void;
-  onDismissRec: (id: string) => void;
-  onRestoreRec: (id: string) => void;
-  onCreateTask: (rec: AIRecommendation) => void | Promise<void>;
   onExecuteDraftAction?: (action: DraftAction) => void | Promise<void>;
   /** Fáze 11: Per-field pending confirmation */
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
@@ -1978,9 +1764,6 @@ export function ExtractionLeftPanel({
   onRevert,
   onFilterChange,
   onToggleGroup,
-  onDismissRec,
-  onRestoreRec,
-  onCreateTask,
   onExecuteDraftAction,
   onConfirmPendingField,
   onConfirmCreateNew,
@@ -2067,9 +1850,7 @@ export function ExtractionLeftPanel({
           </div>
 
           <div data-section="recommendations" className="space-y-6">
-            {/* Hide CRM payload mirror when canonical sections are already rendered above. */}
             {showCrmMappingProposal ? <CrmMappingProposalCard doc={doc} /> : null}
-            {/* Fáze 10+11: Enforcement result card – shown after apply */}
             <EnforcementResultCard doc={doc} onConfirmPendingField={onConfirmPendingField} />
             <WorkActionsCard
               doc={doc}
@@ -2079,20 +1860,6 @@ export function ExtractionLeftPanel({
               editedFields={editedFields}
             />
             <DocumentFinalityWarning doc={doc} />
-            <AIRecommendationsCard
-              recommendations={doc.recommendations}
-              dismissedMap={state.dismissedRecommendations}
-              onDismiss={onDismissRec}
-              onRestore={onRestoreRec}
-              onCreateTask={onCreateTask}
-              onFieldClick={onFieldClick}
-            />
-            <ExtraRecommendationsCard
-              recommendations={doc.extraRecommendations}
-              dismissedMap={state.dismissedRecommendations}
-              onDismiss={onDismissRec}
-              onCreateTask={onCreateTask}
-            />
           </div>
         </div>
       </div>

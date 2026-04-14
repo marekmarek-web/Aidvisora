@@ -630,33 +630,6 @@ export default function ContractReviewDetailPage() {
           </p>
         </div>
       ) : null}
-      {matchedClientId ? (
-        <div className="mx-4 md:mx-6 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm">
-          <p className="font-bold text-[color:var(--wp-text)] mb-2">Dokumenty klienta</p>
-          <p className="text-[color:var(--wp-text-secondary)] mb-3 leading-relaxed">
-            Přidejte tento soubor do stejné dokumentové vrstvy jako ruční nahrávání u kontaktu. Úložiště se nekopíruje —
-            jen se vytvoří odkaz v CRM.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              disabled={linkDocBusy}
-              onClick={() => void handleLinkToClientDocuments(false)}
-              className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 text-sm font-bold text-[color:var(--wp-text)] disabled:opacity-50"
-            >
-              {linkDocBusy ? "Ukládám…" : "Přidat do dokumentů (interně)"}
-            </button>
-            <button
-              type="button"
-              disabled={linkDocBusy}
-              onClick={() => void handleLinkToClientDocuments(true)}
-              className="min-h-[44px] rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white disabled:opacity-50"
-            >
-              Přidat a zobrazit v klientském portálu
-            </button>
-          </div>
-        </div>
-      ) : null}
       <AIReviewExtractionShell
         doc={doc}
         onBack={handleBack}
@@ -672,6 +645,8 @@ export default function ContractReviewDetailPage() {
         isApproving={actionLoading === "approve"}
         actionLoading={actionLoading}
         onRefreshPdf={loadPdf}
+        onLinkToClientDocuments={handleLinkToClientDocuments}
+        linkDocBusy={linkDocBusy}
       />
     </div>
   );
