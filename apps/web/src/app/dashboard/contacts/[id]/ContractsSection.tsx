@@ -102,7 +102,13 @@ export function ContractsSection({ contactId }: { contactId: string }) {
   }, [list]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const wizardOpen = searchParams.get("add") === "1";
+  /** URL `add=1` je pravda; zavírání přes App Router je však asynchronní — bez tohoto zůstane modal otevřený, dokud nedorazí nová URL. */
+  const urlWantsContractWizard = searchParams.get("add") === "1";
+  const [wizardDismissedOptimistic, setWizardDismissedOptimistic] = useState(false);
+  useEffect(() => {
+    if (urlWantsContractWizard) setWizardDismissedOptimistic(false);
+  }, [urlWantsContractWizard]);
+  const wizardOpen = urlWantsContractWizard && !wizardDismissedOptimistic;
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -497,8 +503,8 @@ export function ContractsSection({ contactId }: { contactId: string }) {
         open={wizardOpen}
         contactId={contactId}
         onClose={() => {
+          setWizardDismissedOptimistic(true);
           clearAddQueryParam();
-          invalidateContractsData();
         }}
         onSuccess={() => invalidateContractsData()}
       />
