@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShieldAlert } from "lucide-react";
+import { Briefcase, Loader2 } from "lucide-react";
 import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
 import { mapContractToCanonicalProduct } from "@/lib/products/canonical-product-read";
@@ -43,21 +43,33 @@ export function OpportunityProductsTab({
     );
   }
   if (loading) {
-    return <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání…</p>;
+    return (
+      <div
+        className="flex min-h-[120px] items-center justify-center gap-3 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-6 text-sm font-medium text-[color:var(--wp-text-secondary)] shadow-sm"
+        aria-busy="true"
+      >
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[color:var(--wp-text-tertiary)]" aria-hidden />
+        Načítání…
+      </div>
+    );
   }
   if (loadError) {
-    return <p className="text-sm font-medium text-red-600">{loadError}</p>;
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50/80 p-5 text-sm font-medium text-red-800 shadow-sm" role="alert">
+        {loadError}
+      </div>
+    );
   }
   if (contracts.length === 0) {
     return (
       <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-6 text-center">
-        <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+        <p className="text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
           Klient {contactName} zatím nemá evidované smlouvy.{" "}
           <Link
             href={`/portal/contacts/${contactId}`}
-            className="font-black text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
+            className="font-black text-indigo-600 underline-offset-4 hover:underline min-h-[44px] inline-flex items-center"
           >
-            Přidat v detailu kontaktu
+            Otevřít detail kontaktu
           </Link>
         </p>
       </div>
@@ -66,7 +78,7 @@ export function OpportunityProductsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-1">
+      <div className="mb-1 border-b border-[color:var(--wp-surface-card-border)]/60 pb-3">
         <h3 className="text-lg font-black text-[color:var(--wp-text)]">Sjednávané produkty</h3>
       </div>
       <ul className="space-y-3">
@@ -86,8 +98,8 @@ export function OpportunityProductsTab({
               className="p-4 sm:p-5 border border-[color:var(--wp-surface-card-border)] rounded-2xl bg-[color:var(--wp-surface-card)] shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
             >
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 shrink-0">
-                  <ShieldAlert size={20} aria-hidden />
+                <div className="w-12 h-12 shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Briefcase size={20} aria-hidden />
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-[color:var(--wp-text)] text-base leading-snug">
@@ -111,7 +123,7 @@ export function OpportunityProductsTab({
       <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] pt-1">
         <Link
           href={`/portal/contacts/${contactId}`}
-          className="font-black text-indigo-600 hover:underline min-h-[44px] inline-flex items-center"
+          className="font-black text-indigo-600 underline-offset-4 hover:underline min-h-[44px] inline-flex items-center"
         >
           Otevřít detail kontaktu a smlouvy
         </Link>

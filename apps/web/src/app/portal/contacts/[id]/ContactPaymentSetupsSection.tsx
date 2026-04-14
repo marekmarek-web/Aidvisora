@@ -50,7 +50,7 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
     return (
       <section
         id="contact-payment-setups"
-        className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-800"
+        className="rounded-2xl border border-red-200 bg-red-50/80 p-5 text-sm text-red-800 shadow-sm"
       >
         {error}
       </section>
@@ -61,10 +61,10 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
     return (
       <section
         id="contact-payment-setups"
-        className="flex items-center gap-2 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 text-sm text-[color:var(--wp-text-secondary)]"
+        className="flex min-h-[52px] items-center gap-3 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 text-sm text-[color:var(--wp-text-secondary)] shadow-sm"
       >
-        <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden />
-        Načítám platební údaje…
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[color:var(--wp-text-tertiary)]" aria-hidden />
+        Načítání platebních údajů…
       </section>
     );
   }
@@ -73,21 +73,24 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
     return (
       <section
         id="contact-payment-setups"
-        className="rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40 p-4 text-sm text-[color:var(--wp-text-secondary)]"
+        className="rounded-2xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40 p-5 text-sm text-[color:var(--wp-text-secondary)] shadow-sm"
       >
-        <div className="mb-1 flex items-center gap-2 font-semibold text-[color:var(--wp-text)]">
+        <div className="mb-2 flex items-center gap-2">
           <CreditCard className="h-5 w-5 shrink-0 text-[color:var(--wp-text-secondary)]" aria-hidden />
-          Platební údaje z dokumentů
+          <h2 className="text-base font-semibold text-[color:var(--wp-text)]">Platební údaje (z dokumentů)</h2>
         </div>
-        <p className="leading-snug">
-          Zatím zde nejsou žádné uložené platební údaje z dokumentů ani z AI Review. Klient je má v přehledu plateb v klientské zóně, jakmile je systém má k dispozici.
+        <p className="max-w-prose leading-relaxed">
+          Zatím zde nejsou žádné uložené platební údaje z dokumentů ani z AI Review. V klientské zóně se zobrazí v přehledu plateb, jakmile je systém k dispozici.
         </p>
       </section>
     );
   }
 
   return (
-    <section id="contact-payment-setups" className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
+    <section
+      id="contact-payment-setups"
+      className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm"
+    >
       <div className="mb-3 flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-[color:var(--wp-text-secondary)]" aria-hidden />
         <h2 className="text-base font-semibold text-[color:var(--wp-text)]">Platební údaje (z dokumentů)</h2>
@@ -96,14 +99,14 @@ export function ContactPaymentSetupsSection({ contactId }: { contactId: string }
         {items.map((row) => (
           <li
             key={row.id}
-            className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-3 text-sm text-[color:var(--wp-text)]"
+            className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80 p-4 text-sm text-[color:var(--wp-text)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium">
                 {row.providerName ?? "Instituce neuvedena"}
                 {row.productName ? ` · ${row.productName}` : ""}
               </span>
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+              <span className="rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-950">
                 {row.status}
                 {row.needsHumanReview ? " · ke kontrole" : ""}
               </span>

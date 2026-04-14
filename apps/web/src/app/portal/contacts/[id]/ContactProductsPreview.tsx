@@ -70,13 +70,17 @@ export function ContactProductsPreview({
           Zobrazit vše <ChevronRight size={16} />
         </Link>
       </div>
-      <div className="p-4 space-y-3">
+      <div className="space-y-3 p-4 sm:p-5">
         {loading ? (
-          <p className="text-sm text-[color:var(--wp-text-tertiary)]">Načítám…</p>
+          <p className="text-sm text-[color:var(--wp-text-tertiary)]">Načítání…</p>
         ) : loadError ? (
-          <p className="text-sm text-red-600">{loadError}</p>
+          <div className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-800" role="alert">
+            {loadError}
+          </div>
         ) : contracts.length === 0 ? (
-          <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné smlouvy.</p>
+          <p className="max-w-prose text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
+            V tomto náhledu zatím nejsou žádné smlouvy. Přidejte je v záložce Produkty nebo počkejte na zápis z AI Review.
+          </p>
         ) : (
           contracts.map((c) => (
             <Link

@@ -31,7 +31,7 @@ const FALLBACK_BRANDING = {
 function ThemeSelector({ value, onChange }: { value: ReportTheme; onChange: (t: ReportTheme) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Styl:</span>
+      <span className="text-xs font-semibold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Vzhled:</span>
       <div className="inline-flex rounded-lg border border-[color:var(--wp-surface-card-border)] overflow-hidden">
         <button
           type="button"
