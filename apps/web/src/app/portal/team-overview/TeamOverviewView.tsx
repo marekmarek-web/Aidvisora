@@ -383,127 +383,115 @@ export function TeamOverviewView({
     []
   );
 
-  const peopleFiltersInner = (
-    <>
-      <TeamOverviewPeopleFiltersBar
-        peopleSearch={peopleSearch}
-        onPeopleSearchChange={setPeopleSearch}
-        peopleSegment={peopleSegment}
-        onPeopleSegmentChange={setPeopleSegment}
-        performanceFilter={performanceFilter}
-        onPerformanceFilterChange={setPerformanceFilter}
-        visibleCount={visibleMembers.length}
-        totalCount={members.length}
-      />
-      <div className="mt-4 space-y-3">
-        {visibleMembers.length === 0 ? (
-          <p className="rounded-3xl border border-slate-200/80 bg-slate-50/90 px-5 py-7 text-center text-sm leading-6 text-slate-600">
+
+  const peopleLideTab = (
+    <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+      <div className="border-b border-slate-100 px-6 py-5">
+        <h2 className="text-[22px] font-black tracking-tight text-slate-950">Lidé v týmu</h2>
+        <p className="mt-1 text-[13px] text-slate-500">
+          Klikněte na řádek pro souhrn — kariéra, coaching, CRM.
+        </p>
+      </div>
+      <div className="px-6 py-5">
+        <TeamOverviewPeopleFiltersBar
+          peopleSearch={peopleSearch}
+          onPeopleSearchChange={setPeopleSearch}
+          peopleSegment={peopleSegment}
+          onPeopleSegmentChange={setPeopleSegment}
+          performanceFilter={performanceFilter}
+          onPerformanceFilterChange={setPerformanceFilter}
+          visibleCount={visibleMembers.length}
+          totalCount={members.length}
+        />
+      </div>
+      {visibleMembers.length === 0 ? (
+        <div className="px-6 pb-8 text-center">
+          <p className="rounded-[20px] border border-slate-200/80 bg-slate-50/90 px-5 py-8 text-sm text-slate-500">
             {members.length === 0
               ? "V tomto rozsahu zatím nejsou žádní členové — zkuste jiný rozsah nebo doplnění hierarchie."
               : "Žádný člen neodpovídá filtru — upravte segment nebo vyhledávání."}
           </p>
-        ) : (
-          visibleMembers.map((m) => (
-            <TeamOverviewPremiumMemberRow
-              key={m.userId}
-              member={m}
-              metrics={metricsByUser.get(m.userId)}
-              displayName={displayName}
-              active={selectedUserId === m.userId}
-              onClick={() => selectMember(m.userId)}
-            />
-          ))
-        )}
-      </div>
-    </>
-  );
-
-  const peopleLideTab = (
-    <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] md:p-6">
-      {selectedUserId ? (
-        <div className="mb-6 rounded-[24px] border border-slate-200/80 bg-slate-50/70 px-5 py-4">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
-            Vybraný člen
-          </p>
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[18px] font-black tracking-tight text-slate-950">
-                {members.find((member) => member.userId === selectedUserId)?.displayName ?? "Člen týmu"}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Detail je otevřený v pravém tmavém panelu.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => selectMember(null)}
-              className="rounded-[14px] border border-slate-200 bg-white px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-700 transition hover:bg-slate-50"
-            >
-              Zrušit výběr
-            </button>
-          </div>
         </div>
-      ) : null}
-      <div>
-        {peopleFiltersInner}
-        {visibleMembers.length > 0 ? (
-          <div className="mt-6 overflow-x-auto rounded-[24px] border border-slate-200/80 bg-white">
-            <table className="w-full min-w-[860px] border-separate border-spacing-y-0 text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-white text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+      ) : (
+        <>
+          {/* Quick-select rows */}
+          <div className="space-y-2 px-6 pb-4">
+            {visibleMembers.map((m) => (
+              <TeamOverviewPremiumMemberRow
+                key={m.userId}
+                member={m}
+                metrics={metricsByUser.get(m.userId)}
+                displayName={displayName}
+                active={selectedUserId === m.userId}
+                onClick={() => selectMember(m.userId)}
+              />
+            ))}
+          </div>
+          {/* Full table */}
+          <div className="border-t border-slate-100 overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left text-sm">
+              <thead className="bg-slate-50/80 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
                 <tr>
-                  <th className="border-b border-slate-200/80 px-6 py-4">Jméno a role</th>
-                  <th className="border-b border-slate-200/80 px-6 py-4">Program / track / pozice</th>
-                  <th className="border-b border-slate-200/80 px-6 py-4">Produkce + skupina</th>
-                  <th className="border-b border-slate-200/80 px-6 py-4">Status</th>
-                  <th className="border-b border-slate-200/80 px-6 py-4 text-right">Akce</th>
+                  <th className="border-b border-slate-100 px-6 py-3.5">Jméno a role</th>
+                  <th className="border-b border-slate-100 px-4 py-3.5">Program / track</th>
+                  <th className="border-b border-slate-100 px-4 py-3.5">Produkce</th>
+                  <th className="border-b border-slate-100 px-4 py-3.5">Status</th>
+                  <th className="border-b border-slate-100 px-6 py-3.5 text-right">Akce</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleMembers.map((mem) => {
                   const mm = metricsByUser.get(mem.userId);
                   const ce = mm?.careerEvaluation;
+                  const isActive = selectedUserId === mem.userId;
                   return (
                     <tr
                       key={mem.userId}
-                      className="cursor-pointer transition hover:bg-slate-50/70"
+                      className={`cursor-pointer transition ${isActive ? "bg-slate-50" : "hover:bg-slate-50/60"}`}
                       onClick={() => selectMember(mem.userId)}
                     >
-                      <td className="border-b border-slate-100 px-6 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-slate-100 text-sm font-black text-slate-700">
+                      <td className="border-b border-slate-100/80 px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-slate-100 text-sm font-black text-slate-700">
                             {displayName(mem).slice(0, 1).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-extrabold text-[15px] text-slate-950">{displayName(mem)}</div>
-                            <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+                            <div className={`text-[14px] font-extrabold ${isActive ? "text-[#16192b]" : "text-slate-900"}`}>{displayName(mem)}</div>
+                            <div className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
                               {mem.roleName}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="border-b border-slate-100 px-6 py-5">
-                        <div className="text-xs font-bold text-slate-800">
+                      <td className="border-b border-slate-100/80 px-4 py-4">
+                        <div className="text-[12px] font-bold text-slate-800">
                           {ce ? formatCareerProgramLabel(ce.careerProgramId) : "—"}
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-500">
+                        <div className="mt-0.5 text-[11px] text-slate-400">
                           {ce ? formatCareerTrackLabel(ce.careerTrackId) : "—"} · {ce?.careerPositionLabel ?? "—"}
                         </div>
                       </td>
-                      <td className="border-b border-slate-100 px-6 py-5">
-                        <div className="font-black text-slate-950">
+                      <td className="border-b border-slate-100/80 px-4 py-4">
+                        <div className="text-[14px] font-black text-slate-950">
                           {mm ? formatTeamOverviewProduction(mm.productionThisPeriod) : "—"}
                         </div>
-                        <div className="mt-1 text-[11px] font-semibold text-slate-500">
-                          {ce ? poolColumnLabel(ce.careerProgramId) : "—"} · Jednotky: {mm != null ? mm.unitsThisPeriod : "—"}
+                        <div className="mt-0.5 text-[11px] text-slate-400">
+                          {ce ? poolColumnLabel(ce.careerProgramId) : "—"} · {mm != null ? mm.unitsThisPeriod : "—"} j.
                         </div>
                       </td>
-                      <td className="border-b border-slate-100 px-6 py-5">
-                        <span className="inline-flex rounded-[12px] border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-700">
+                      <td className="border-b border-slate-100/80 px-4 py-4">
+                        <span className={`inline-flex items-center rounded-[10px] border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] ${
+                          ce?.managerProgressLabel === "Na dobré cestě"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : ce?.managerProgressLabel === "Potřebuje pozornost"
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-slate-200 bg-slate-50 text-slate-600"
+                        }`}>
                           {ce?.managerProgressLabel ?? "—"}
                         </span>
                       </td>
-                      <td className="border-b border-slate-100 px-6 py-5 text-right">
-                        <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
+                      <td className="border-b border-slate-100/80 px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -511,9 +499,9 @@ export function TeamOverviewView({
                               openMemberModal("progress", mem.userId);
                               selectMember(mem.userId);
                             }}
-                            className="rounded-[12px] bg-slate-100 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
+                            className="rounded-[10px] bg-slate-100 px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#16192b] transition hover:bg-slate-200"
                           >
-                            Strom progresu
+                            Progres
                           </button>
                           <button
                             type="button"
@@ -522,9 +510,9 @@ export function TeamOverviewView({
                               openMemberModal("crm", mem.userId);
                               selectMember(mem.userId);
                             }}
-                            className="rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-50"
+                            className="rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50"
                           >
-                            CRM karta
+                            CRM
                           </button>
                         </div>
                       </td>
@@ -534,8 +522,8 @@ export function TeamOverviewView({
               </tbody>
             </table>
           </div>
-        ) : null}
-      </div>
+        </>
+      )}
     </div>
   );
 
@@ -558,19 +546,17 @@ export function TeamOverviewView({
       />
       <TeamOverviewCockpitFourCards kpis={kpis} inProductionCount={inProductionCount} loading={loading} />
       <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <div className="min-w-0">
-          <TeamOverviewAttentionSection
-            variant="firstFold"
-            scope={scope}
-            members={members}
-            displayName={displayName}
-            topAttentionAlerts={topAttentionAlerts}
-            pageModel={pageModel}
-            selectMember={selectMember}
-            canCreateTeamCalendar={canCreateTeamCalendar}
-          />
-        </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <TeamOverviewAttentionSection
+          variant="firstFold"
+          scope={scope}
+          members={members}
+          displayName={displayName}
+          topAttentionAlerts={topAttentionAlerts}
+          pageModel={pageModel}
+          selectMember={selectMember}
+          canCreateTeamCalendar={canCreateTeamCalendar}
+        />
         <TeamRhythmPanel
           computed={pageModel.rhythmComputed}
           disclaimer={
@@ -589,58 +575,43 @@ export function TeamOverviewView({
   );
 
   const careerOnly = (
-    <>
-      <div className="mb-4 rounded-[32px] border border-slate-200/80 bg-white px-6 py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500">Career plan</p>
-        <h2 className="mt-2 text-[26px] font-black tracking-tight text-slate-950">Kariérní plán</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          {periodLabelActive} · {scopeLabelActive} · Beplan {pageModel.poolSplit.counts.beplan} lidí /{" "}
-          {pageModel.poolSplit.units.beplan} j. · Premium Brokers {pageModel.poolSplit.counts.premium_brokers} lidí /{" "}
-          {pageModel.poolSplit.units.premium_brokers} j.
-        </p>
-      </div>
-      <div>
-        <TeamOverviewCareerSummarySection
-          members={members}
-          metrics={metrics}
-          pageModel={pageModel}
-          displayName={displayName}
-          selectMember={selectMember}
-          onOpenCrm={(uid) => openMemberModal("crm", uid)}
-          onOpenProgress={(uid) => openMemberModal("progress", uid)}
-        />
-      </div>
-    </>
+    <TeamOverviewCareerSummarySection
+      members={members}
+      metrics={metrics}
+      pageModel={pageModel}
+      displayName={displayName}
+      selectMember={selectMember}
+      onOpenCrm={(uid) => openMemberModal("crm", uid)}
+      onOpenProgress={(uid) => openMemberModal("progress", uid)}
+      periodLabel={periodLabelActive}
+      scopeLabel={scopeLabelActive}
+    />
   );
 
   const adaptationOnly = (
-    <>
-      <TeamOverviewAdaptationSection
-        variant="standalone"
-        members={members}
-        newcomers={newcomers}
-        displayName={displayName}
-        memberDetailHref={memberDetailHref}
-        selectMember={selectMember}
-        onCheckIn={(userId) => openMemberModal("checkin", userId)}
-      />
-    </>
+    <TeamOverviewAdaptationSection
+      variant="standalone"
+      members={members}
+      newcomers={newcomers}
+      displayName={displayName}
+      memberDetailHref={memberDetailHref}
+      selectMember={selectMember}
+      onCheckIn={(userId) => openMemberModal("checkin", userId)}
+    />
   );
 
   const structureOnly = (
-    <>
-      <TeamStructurePanel
-        roots={hierarchy}
-        currentUserId={currentUserId}
-        scope={scope}
-        memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
-        hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
-        selectedUserId={selectedUserId}
-        onSelectMember={selectMember}
-        metricsByUser={metricsByUser}
-        newcomerUserIds={newcomerSet}
-      />
-    </>
+    <TeamStructurePanel
+      roots={hierarchy}
+      currentUserId={currentUserId}
+      scope={scope}
+      memberDetailQuery={`?${new URLSearchParams({ period, scope }).toString()}`}
+      hierarchyParentLinksConfigured={kpis?.hierarchyParentLinksConfigured !== false}
+      selectedUserId={selectedUserId}
+      onSelectMember={selectMember}
+      metricsByUser={metricsByUser}
+      newcomerUserIds={newcomerSet}
+    />
   );
 
   const mainColumn =

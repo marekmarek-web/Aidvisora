@@ -54,6 +54,8 @@ export function TeamOverviewCareerSummarySection({
   selectMember,
   onOpenCrm,
   onOpenProgress,
+  periodLabel,
+  scopeLabel,
 }: {
   members: TeamMemberInfo[];
   metrics: TeamMemberMetrics[];
@@ -62,6 +64,8 @@ export function TeamOverviewCareerSummarySection({
   selectMember: (userId: string) => void;
   onOpenCrm: (userId: string) => void;
   onOpenProgress: (userId: string) => void;
+  periodLabel?: string;
+  scopeLabel?: string;
 }) {
   if (members.length === 0) return null;
 
@@ -71,34 +75,68 @@ export function TeamOverviewCareerSummarySection({
 
   return (
     <section
-      className="mb-8 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
+      className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"
       aria-labelledby="team-career-growth-heading"
     >
-      <div className="grid gap-4 bg-white px-6 py-6 sm:grid-cols-3">
-        <div className="rounded-[24px] border border-emerald-200/80 bg-emerald-50/60 px-5 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-800/80">Připraveno k posunu</p>
-          <p className="mt-1 text-2xl font-black tabular-nums text-emerald-900">{statBuckets.readyToAdvance}</p>
-        </div>
-        <div className="rounded-[24px] border border-amber-200/80 bg-amber-50/60 px-5 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-900/80">Ke schválení</p>
-          <p className="mt-1 text-2xl font-black tabular-nums text-amber-950">{statBuckets.pendingReview}</p>
-        </div>
-        <div className="rounded-[24px] border border-rose-200/80 bg-rose-50/60 px-5 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-900/80">Blokováno</p>
-          <p className="mt-1 text-2xl font-black tabular-nums text-rose-950">{statBuckets.blocked}</p>
+      {/* Header */}
+      <div className="border-b border-slate-100 px-7 py-5">
+        {(periodLabel || scopeLabel) ? (
+          <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+            {periodLabel ? <span>{periodLabel}</span> : null}
+            {periodLabel && scopeLabel ? <span>·</span> : null}
+            {scopeLabel ? <span>{scopeLabel}</span> : null}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2
+              id="team-career-growth-heading"
+              className="flex items-center gap-2 text-[22px] font-black tracking-tight text-slate-950"
+            >
+              <Briefcase className="h-5 w-5 shrink-0 text-violet-600" aria-hidden />
+              Kariérní přehled
+            </h2>
+            <p className="mt-1 text-[13px] text-slate-500">
+              {hasTracks
+                ? `${pageModel.careerTeamSummary.byTrack.reduce((s, t) => s + t.count, 0)} lidí v kariérních větvích`
+                : "Doplňte kariérní větve pro detailnější přehled."}
+            </p>
+          </div>
+          <Link
+            href="/portal/team-overview#sprava-tymu"
+            className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-violet-600 transition hover:text-violet-800 hover:underline"
+          >
+            Správa kariéry
+          </Link>
         </div>
       </div>
 
-      <div className="border-t border-slate-200/80" />
-      <div className="overflow-x-auto p-4 sm:p-6">
-        <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
-          <thead className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+      {/* 3 stat cards */}
+      <div className="grid grid-cols-3 gap-4 px-7 py-5 border-b border-slate-100">
+        <div className="rounded-[20px] border border-emerald-200/70 bg-emerald-50/60 px-5 py-4">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-700/80">Připraveno k posunu</p>
+          <p className="mt-2 text-[30px] font-black leading-none tabular-nums text-emerald-900">{statBuckets.readyToAdvance}</p>
+        </div>
+        <div className="rounded-[20px] border border-amber-200/70 bg-amber-50/60 px-5 py-4">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-amber-800/80">Ke schválení</p>
+          <p className="mt-2 text-[30px] font-black leading-none tabular-nums text-amber-950">{statBuckets.pendingReview}</p>
+        </div>
+        <div className="rounded-[20px] border border-rose-200/70 bg-rose-50/60 px-5 py-4">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-rose-800/80">Blokováno</p>
+          <p className="mt-2 text-[30px] font-black leading-none tabular-nums text-rose-950">{statBuckets.blocked}</p>
+        </div>
+      </div>
+
+      {/* Career table */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="bg-slate-50/80 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
             <tr>
-              <th className="px-5 py-3 sm:px-6">Poradce</th>
-              <th className="px-3 py-3">Aktuální kariérní krok</th>
-              <th className="px-3 py-3">Plnění podmínek</th>
-              <th className="px-3 py-3">Status / blokátory</th>
-              <th className="px-5 py-3 text-right sm:px-6">Akce</th>
+              <th className="border-b border-slate-100 px-7 py-3.5">Poradce</th>
+              <th className="border-b border-slate-100 px-4 py-3.5">Kariérní krok</th>
+              <th className="border-b border-slate-100 px-4 py-3.5">Plnění</th>
+              <th className="border-b border-slate-100 px-4 py-3.5">Status</th>
+              <th className="border-b border-slate-100 px-7 py-3.5 text-right">Akce</th>
             </tr>
           </thead>
           <tbody>
@@ -110,67 +148,71 @@ export function TeamOverviewCareerSummarySection({
                 completenessToPercent(ce.evaluationCompleteness),
                 readinessPercentFromRequirements(ce.missingRequirements)
               );
-              const blocker =
-                ce.missingRequirements[0]?.labelCs ?? ce.managerProgressLabel ?? "—";
               return (
                 <tr
                   key={mem.userId}
-                  className="cursor-pointer rounded-[20px] bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:bg-slate-50/70"
+                  className="cursor-pointer transition hover:bg-slate-50/60"
                   onClick={() => selectMember(mem.userId)}
                 >
-                  <td className="rounded-l-[20px] px-5 py-5 font-extrabold text-slate-950 sm:px-6">{displayName(mem)}</td>
-                  <td className="px-3 py-5 text-xs text-slate-600">
-                    <div className="flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-500">
-                      <span className="rounded-[10px] bg-slate-100 px-3 py-1.5 text-slate-700">{ce.careerPositionLabel ?? "—"}</span>
-                      <ChevronRight className="h-3 w-3 text-slate-300" aria-hidden />
+                  <td className="border-b border-slate-100/80 px-7 py-4 font-extrabold text-slate-950">
+                    {displayName(mem)}
+                  </td>
+                  <td className="border-b border-slate-100/80 px-4 py-4">
+                    <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                      <span className="rounded-[8px] bg-slate-100 px-2.5 py-1 text-slate-700">
+                        {ce.careerPositionLabel ?? "—"}
+                      </span>
+                      <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" aria-hidden />
                       <span className="text-[#16192b]">{ce.nextCareerPositionLabel ?? "—"}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <td className="border-b border-slate-100/80 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-1.5 w-full max-w-[80px] overflow-hidden rounded-full bg-slate-100">
                         <div
                           className={`h-full rounded-full ${readiness === 100 ? "bg-emerald-500" : "bg-[#16192b]"}`}
                           style={{ width: `${readiness}%` }}
                         />
                       </div>
-                      <span className="text-[13px] font-black text-slate-900">{readiness}%</span>
+                      <span className="text-[12px] font-black text-slate-900 tabular-nums">{readiness}%</span>
                     </div>
                   </td>
-                  <td className="max-w-[240px] px-3 py-5 text-xs font-bold">
+                  <td className="border-b border-slate-100/80 px-4 py-4">
                     {ce.missingRequirements[0]?.labelCs ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-rose-50 px-3 py-1.5 text-rose-600">
+                      <span className="inline-flex items-center rounded-[10px] border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-extrabold text-rose-600">
                         {ce.missingRequirements[0].labelCs}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-emerald-50 px-3 py-1.5 text-emerald-600">
+                      <span className="inline-flex items-center rounded-[10px] border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold text-emerald-700">
                         Připraveno k posunu
                       </span>
                     )}
                   </td>
-                  <td className="rounded-r-[20px] px-5 py-5 text-right sm:px-6">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenProgress(mem.userId);
-                        selectMember(mem.userId);
-                      }}
-                      className="rounded-[12px] bg-slate-100 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#16192b] transition hover:bg-slate-200"
-                    >
-                      Strom progresu
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenCrm(mem.userId);
-                        selectMember(mem.userId);
-                      }}
-                      className="ml-2 rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-50"
-                    >
-                      CRM karta
-                    </button>
+                  <td className="border-b border-slate-100/80 px-7 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenProgress(mem.userId);
+                          selectMember(mem.userId);
+                        }}
+                        className="rounded-[10px] bg-slate-100 px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#16192b] transition hover:bg-slate-200"
+                      >
+                        Progres
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenCrm(mem.userId);
+                          selectMember(mem.userId);
+                        }}
+                        className="rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50"
+                      >
+                        CRM
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -179,37 +221,20 @@ export function TeamOverviewCareerSummarySection({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/50 px-6 py-4">
-        <h2
-          id="team-career-growth-heading"
-          className="flex items-center gap-2 text-lg font-black tracking-tight text-[color:var(--wp-text)]"
-        >
-          <Briefcase className="h-4 w-4 shrink-0 text-violet-600" aria-hidden />
-          Kariérní přehled
-        </h2>
-        <Link
-          href="/portal/team-overview#sprava-tymu"
-          className="text-xs font-semibold text-violet-700 hover:text-violet-900 hover:underline"
-        >
-          Doplnit data
-        </Link>
-      </div>
-
-      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-12">
+      {/* Bottom details grid */}
+      <div className="grid gap-5 border-t border-slate-100 p-7 lg:grid-cols-3">
         {/* Větve */}
-        <div className="lg:col-span-4 space-y-2.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-            Podle větve
-          </p>
+        <div className="space-y-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Podle větve</p>
           {!hasTracks ? (
-            <p className="text-xs text-[color:var(--wp-text-secondary)] leading-relaxed">
+            <p className="text-xs leading-relaxed text-slate-500">
               Bez rozlišených větví — doplněním zpřesníte doporučení.
             </p>
           ) : (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-1.5">
               {pageModel.careerTeamSummary.byTrack.map((t) => (
                 <li key={t.trackId} className="flex items-center justify-between gap-2">
-                  <span className="text-[color:var(--wp-text-secondary)] truncate text-xs">{t.label}</span>
+                  <span className="truncate text-xs text-slate-500">{t.label}</span>
                   <span className="shrink-0 rounded-full bg-violet-100/80 px-2 py-0.5 text-[11px] font-bold tabular-nums text-violet-900">
                     {t.count}
                   </span>
@@ -217,45 +242,33 @@ export function TeamOverviewCareerSummarySection({
               ))}
             </ul>
           )}
-
-          {/* Doplňkové stavy */}
-          <div className="mt-1 space-y-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-3 text-xs">
+          <div className="space-y-1.5 rounded-[16px] border border-slate-200/80 bg-slate-50/70 px-4 py-3 text-xs">
             <p className="flex items-center justify-between gap-2">
-              <span className="text-[color:var(--wp-text-secondary)]">Chybí data / doplnění</span>
-              <span className="font-semibold tabular-nums text-[color:var(--wp-text)]">
-                {pageModel.careerTeamSummary.needsAttentionDataCount}
-              </span>
+              <span className="text-slate-500">Chybí data</span>
+              <span className="font-semibold tabular-nums text-slate-900">{pageModel.careerTeamSummary.needsAttentionDataCount}</span>
             </p>
             <p className="flex items-center justify-between gap-2">
-              <span className="text-[color:var(--wp-text-secondary)]">Ruční ověření</span>
-              <span className="font-semibold tabular-nums text-[color:var(--wp-text)]">
-                {pageModel.careerTeamSummary.manualOrPartialCount}
-              </span>
+              <span className="text-slate-500">Ruční ověření</span>
+              <span className="font-semibold tabular-nums text-slate-900">{pageModel.careerTeamSummary.manualOrPartialCount}</span>
             </p>
             <p className="flex items-center justify-between gap-2">
-              <span className="text-[color:var(--wp-text-secondary)]">V adaptaci</span>
-              <span className="font-semibold tabular-nums text-[color:var(--wp-text)]">
-                {pageModel.careerTeamSummary.startersInAdaptationCount}
-              </span>
+              <span className="text-slate-500">V adaptaci</span>
+              <span className="font-semibold tabular-nums text-slate-900">{pageModel.careerTeamSummary.startersInAdaptationCount}</span>
             </p>
           </div>
         </div>
 
         {/* Stav evaluace */}
-        <div className="lg:col-span-4 space-y-2.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-            Stav evaluace
-          </p>
+        <div className="space-y-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Stav evaluace</p>
           <ul className="space-y-1.5">
             {STATUS_ROWS.map((label) => {
               const c = pageModel.careerTeamSummary.byManagerLabel[label] ?? 0;
               if (c === 0) return null;
               return (
                 <li key={label} className="flex items-center justify-between gap-2 text-xs">
-                  <span className={STATUS_STYLES[label] ?? "text-[color:var(--wp-text-secondary)]"}>
-                    {label}
-                  </span>
-                  <span className="font-semibold tabular-nums text-[color:var(--wp-text)]">{c}</span>
+                  <span className={STATUS_STYLES[label] ?? "text-slate-500"}>{label}</span>
+                  <span className="font-semibold tabular-nums text-slate-900">{c}</span>
                 </li>
               );
             })}
@@ -263,15 +276,13 @@ export function TeamOverviewCareerSummarySection({
         </div>
 
         {/* Doporučená 1:1 */}
-        <div className="lg:col-span-4 space-y-2.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--wp-text-tertiary)]">
-            Doporučená 1:1 (kariéra)
-          </p>
+        <div className="space-y-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Doporučená 1:1</p>
           {pageModel.careerTeamSummary.topAttention.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 px-3 py-3">
-              <p className="font-semibold text-sm text-[color:var(--wp-text)]">Na dobré cestě</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]">
-                Z kariérního pohledu nikdo nezasahuje — udržujte pravidelný kontakt.
+            <div className="rounded-[16px] border border-slate-200/80 bg-slate-50/70 px-4 py-3">
+              <p className="text-[13px] font-bold text-slate-900">Na dobré cestě</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                Z kariérního pohledu nikdo nezasahuje.
               </p>
             </div>
           ) : (
@@ -284,14 +295,14 @@ export function TeamOverviewCareerSummarySection({
                     <button
                       type="button"
                       onClick={() => selectMember(x.userId)}
-                      className="group block w-full rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5 text-left transition hover:border-violet-200 hover:bg-violet-50/60"
+                      className="group block w-full rounded-[16px] border border-slate-200/80 bg-slate-50/70 px-4 py-3 text-left transition hover:border-violet-200 hover:bg-violet-50/60"
                     >
                       <div className="flex items-center gap-2">
-                        <p className="text-xs font-semibold text-[color:var(--wp-text)]">{name}</p>
-                        <ChevronRight className="ml-auto h-3.5 w-3.5 text-violet-400 opacity-0 transition group-hover:opacity-100" aria-hidden />
+                        <p className="text-[12px] font-extrabold text-slate-900">{name}</p>
+                        <ChevronRight className="ml-auto h-3 w-3 text-violet-400 opacity-0 transition group-hover:opacity-100" aria-hidden />
                       </div>
-                      <p className="mt-0.5 text-[11px] font-bold text-violet-800/90">{x.managerProgressLabel}</p>
-                      <p className="mt-0.5 text-[11px] text-[color:var(--wp-text-secondary)] line-clamp-1">{x.reason}</p>
+                      <p className="mt-0.5 text-[11px] font-bold text-violet-700">{x.managerProgressLabel}</p>
+                      <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{x.reason}</p>
                     </button>
                   </li>
                 );
@@ -302,13 +313,12 @@ export function TeamOverviewCareerSummarySection({
       </div>
 
       {!hasTracks && members.length > 0 ? (
-        <div className="mx-5 mb-5 rounded-2xl border border-amber-200/60 bg-amber-50/40 px-4 py-2.5 sm:mx-6 sm:mb-6">
-          <p className="text-xs text-amber-950/90">
-            <span className="font-semibold">Příležitost:</span> bez vyplněných kariérních větví zůstávají souhrny obecnější. Údaje doplníte v{" "}
+        <div className="mx-7 mb-6 rounded-[16px] border border-amber-200/60 bg-amber-50/40 px-4 py-2.5">
+          <p className="text-xs text-amber-900/90">
+            <span className="font-semibold">Příležitost:</span> bez vyplněných kariérních větví zůstávají souhrny obecnější.{" "}
             <Link href="/portal/team-overview#sprava-tymu" className="underline hover:text-amber-800">
-              Týmový přehled → Správa týmu
+              Doplnit v Správa týmu →
             </Link>
-            .
           </p>
         </div>
       ) : null}

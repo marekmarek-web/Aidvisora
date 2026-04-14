@@ -44,7 +44,7 @@ function TreeBranch({
   newcomerUserIds?: Set<string>;
 }) {
   return (
-    <ul className={clsx("space-y-6", depth > 0 && "mt-6 pl-10")}>
+    <ul className={clsx("space-y-4", depth > 0 && "mt-4 pl-8")}>
       {nodes.map((node) => {
         const below = countDescendants(node);
         const isSelf = node.userId === currentUserId;
@@ -83,76 +83,91 @@ function TreeBranch({
             <div className="relative">
               {depth > 0 ? (
                 <>
-                  <span className="pointer-events-none absolute -left-10 top-6 h-px w-10 bg-slate-300" />
-                  <span className="pointer-events-none absolute -left-10 -top-6 h-12 w-px bg-slate-300" />
+                  <span className="pointer-events-none absolute -left-8 top-5 h-px w-8 bg-slate-200" />
+                  <span className="pointer-events-none absolute -left-8 -top-4 h-9 w-px bg-slate-200" />
                 </>
               ) : null}
               <div
                 className={clsx(
-                  "group flex flex-wrap items-center gap-x-2 gap-y-2 rounded-[24px] border px-5 py-5 text-sm transition",
-                  depth === 0 && "border-slate-800 bg-[#16192b] text-white shadow-xl shadow-slate-900/10",
-                  depth > 0 && "bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]",
-                  isSelf && depth > 0 && "border-indigo-200/80 bg-indigo-50/70",
-                  isSelected && !isSelf && depth > 0 && "border-violet-200/80 bg-violet-50/80",
-                  !isSelf && !isSelected && depth > 0 && "border-slate-200/80 hover:-translate-y-0.5 hover:border-slate-300"
+                  "group flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[20px] border px-5 py-4 text-sm transition",
+                  depth === 0 && "border-slate-800 bg-[#16192b] text-white shadow-[0_12px_30px_rgba(22,25,43,0.18)]",
+                  depth > 0 && "bg-white",
+                  isSelf && depth > 0 && "border-indigo-200/80 bg-indigo-50/60",
+                  isSelected && !isSelf && depth > 0 && "border-violet-300/80 bg-violet-50/80",
+                  !isSelf && !isSelected && depth > 0 && "border-slate-200/80 hover:border-slate-300 hover:-translate-y-px"
                 )}
               >
-              {isSelf && (
-                <UserCircle className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
-              )}
-              {onSelectMember ? (
-                <button
-                  type="button"
-                  onClick={() => onSelectMember(node.userId)}
-                  className={clsx(
-                    "font-semibold text-left text-sm hover:underline",
+                {isSelf && depth > 0 && (
+                  <UserCircle className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+                )}
+                {onSelectMember ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelectMember(node.userId)}
+                    className={clsx(
+                      "text-left text-[14px] font-extrabold transition hover:underline",
+                      depth === 0
+                        ? "text-white"
+                        : isSelected
+                          ? "text-violet-900"
+                          : isSelf
+                            ? "text-indigo-900"
+                            : "text-slate-900 hover:text-[#16192b]"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ) : (
+                  <Link
+                    href={`/portal/team-overview/${node.userId}${memberDetailQuery}`}
+                    className="text-left text-[14px] font-extrabold text-slate-900 transition hover:text-[#16192b] hover:underline"
+                  >
+                    {label}
+                  </Link>
+                )}
+                <span className={clsx("text-[11px] font-medium", depth === 0 ? "text-slate-400" : "text-slate-400")}>
+                  {node.roleName}
+                </span>
+                {m != null && (
+                  <span className={clsx("text-[11px] font-semibold tabular-nums", depth === 0 ? "text-slate-300" : "text-slate-500")}>
+                    {formatTeamOverviewProduction(m.productionThisPeriod)}
+                  </span>
+                )}
+                {classification && classification.kind !== "neutral" && (
+                  <span className={clsx(
+                    "rounded-[10px] border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em]",
                     depth === 0
-                      ? "text-white"
-                      : isSelected
-                        ? "text-violet-900"
-                        : isSelf
-                          ? "text-indigo-900"
-                          : "text-[color:var(--wp-text)] hover:text-indigo-600"
-                  )}
-                >
-                  {label}
-                </button>
-              ) : (
+                      ? "border-white/10 bg-white/10 text-white"
+                      : "border-slate-200 bg-slate-50 text-slate-600"
+                  )}>
+                    {classification.labelCs}
+                  </span>
+                )}
+                {health && health.labelCs && (
+                  <span className="rounded-[10px] border border-amber-200/70 bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold text-amber-800">
+                    {health.labelCs}
+                  </span>
+                )}
+                {below > 0 && (
+                  <span className={clsx(
+                    "rounded-[10px] border px-2.5 py-1 text-[10px] font-extrabold",
+                    depth === 0
+                      ? "border-white/10 bg-white/10 text-slate-300"
+                      : "border-slate-200 bg-white text-slate-400"
+                  )}>
+                    +{below}
+                  </span>
+                )}
                 <Link
                   href={`/portal/team-overview/${node.userId}${memberDetailQuery}`}
-                  className="font-semibold text-sm text-[color:var(--wp-text)] hover:text-indigo-600 hover:underline"
+                  className={clsx(
+                    "ml-auto text-[10px] font-extrabold uppercase tracking-[0.14em] opacity-0 transition group-hover:opacity-100",
+                    depth === 0 ? "text-slate-300 hover:text-white" : "text-slate-400 hover:text-[#16192b]"
+                  )}
+                  title="Plný detail"
                 >
-                  {label}
+                  <ChevronRight className="h-4 w-4" aria-hidden />
                 </Link>
-              )}
-              <span className={clsx("text-[11px]", depth === 0 ? "text-slate-400" : "text-[color:var(--wp-text-tertiary)]")}>{node.roleName}</span>
-              {m != null && (
-                <span className="text-[10px] text-[color:var(--wp-text-secondary)]">
-                  · {formatTeamOverviewProduction(m.productionThisPeriod)}
-                </span>
-              )}
-              {classification && classification.kind !== "neutral" && (
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                  {classification.labelCs}
-                </span>
-              )}
-              {health && health.labelCs && (
-                <span className="rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-900">
-                  {health.labelCs}
-                </span>
-              )}
-              {below > 0 && (
-                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-[color:var(--wp-text-secondary)]">
-                  +{below}
-                </span>
-              )}
-              <Link
-                href={`/portal/team-overview/${node.userId}${memberDetailQuery}`}
-                className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-[color:var(--wp-text-tertiary)] opacity-0 transition group-hover:opacity-100 hover:text-indigo-600"
-                title="Plný detail"
-              >
-                Detail
-              </Link>
               </div>
             </div>
             {node.children.length > 0 && (
@@ -197,12 +212,12 @@ export function TeamStructurePanel({
 }) {
   if (roots.length === 0) {
     return (
-      <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3.5">
-          <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
-          <h2 className="text-base font-black text-[color:var(--wp-text)]">Struktura týmu</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/50 px-7 py-4">
+          <Network className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+          <h2 className="text-[17px] font-black tracking-tight text-slate-950">Struktura týmu</h2>
         </div>
-        <p className="px-5 py-4 text-sm text-[color:var(--wp-text-secondary)]">
+        <p className="px-7 py-5 text-sm text-slate-500">
           V tomto rozsahu zatím nejsou data o struktuře. Zkontrolujte nastavení nadřízených v týmu.
         </p>
       </section>
@@ -210,30 +225,30 @@ export function TeamStructurePanel({
   }
 
   return (
-      <section className="mb-6 overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-      <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/40 px-6 py-4">
-        <Network className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden />
-        <h2 className="text-lg font-black tracking-tight text-[color:var(--wp-text)]">Struktura týmu</h2>
-        <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--wp-text-tertiary)]">
+    <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/40 px-7 py-4">
+        <Network className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+        <h2 className="text-[17px] font-black tracking-tight text-slate-950">Struktura týmu</h2>
+        <span className="ml-auto text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
           {scope === "me" ? "Osobní rozsah" : `${roots.length} ${roots.length === 1 ? "kořen" : "kořenů"}`}
         </span>
       </div>
 
-      <div className="relative overflow-hidden p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-50" />
-        <div className="relative z-10 min-h-[620px] overflow-x-auto">
-        <div className="mx-auto max-w-[1120px] pt-8">
-          <TreeBranch
-            nodes={roots}
-            currentUserId={currentUserId}
-            depth={0}
-            memberDetailQuery={memberDetailQuery}
-            selectedUserId={selectedUserId}
-            onSelectMember={onSelectMember}
-            metricsByUser={metricsByUser}
-            newcomerUserIds={newcomerUserIds}
-          />
-        </div>
+      <div className="relative overflow-hidden px-7 py-7">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
+        <div className="relative z-10 min-h-[560px] overflow-x-auto">
+          <div className="mx-auto max-w-[1080px]">
+            <TreeBranch
+              nodes={roots}
+              currentUserId={currentUserId}
+              depth={0}
+              memberDetailQuery={memberDetailQuery}
+              selectedUserId={selectedUserId}
+              onSelectMember={onSelectMember}
+              metricsByUser={metricsByUser}
+              newcomerUserIds={newcomerUserIds}
+            />
+          </div>
         </div>
       </div>
     </section>
