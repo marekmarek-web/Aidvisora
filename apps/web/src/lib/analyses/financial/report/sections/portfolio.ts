@@ -74,7 +74,7 @@ export function renderPortfolio(ctx: SectionCtx): string {
     <div class="callout info">
       <span class="callout-icon">📊</span>
       <div><strong>Investiční profil: ${esc(profile)}</strong>
-      Portfolio je navrženo tak, aby odpovídalo vašemu rizikovému profilu a investičnímu horizontu.</div>
+      Tato stránka popisuje <strong>modelační scénář</strong> z průvodce analýzy (ne automaticky totéž jako evidence skutečných smluv v CRM). Odhad budoucí hodnoty jednotlivých řádků vychází ze stejného výpočetního modelu jako shrnutí analýzy.</div>
     </div>
   </div>
 </section>`;

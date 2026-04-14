@@ -23,12 +23,17 @@ export type FaCanonicalInvestmentOverviewRow = {
   contributionSummary: string;
   horizonLabel: string | null;
   futureValueFormatted: string | null;
+  /** Částka FV v Kč pro součty v UI/reportu; null pokud FV nejde spočítat. */
+  futureValueAmount: number | null;
   /** Krátké české vysvětlení odhadu FV (bez technických kódů). */
   futureValueNotes: string[];
 };
 
 const FV_NON_GUARANTEE_CS =
   "Jedná se o orientační modelaci — není to záruka výnosu ani budoucí hodnoty.";
+
+const EVIDENCE_SCOPE_CS =
+  "Řádek vychází ze skutečné smlouvy v evidenci (zápis v CRM po schválení a publikaci).";
 
 function fundOrStrategyLine(p: CanonicalProduct): string | null {
   const d = p.segmentDetail;
@@ -99,6 +104,7 @@ export function buildFaCanonicalInvestmentOverviewRows(
     });
 
     const notes: string[] = [];
+    notes.push(EVIDENCE_SCOPE_CS);
     if (fv) {
       notes.push(fv.sourceExplanation);
       notes.push(FV_NON_GUARANTEE_CS);
@@ -113,6 +119,7 @@ export function buildFaCanonicalInvestmentOverviewRows(
       contributionSummary: contributionSummary(p),
       horizonLabel: horizonLabel(p),
       futureValueFormatted: fv ? `${fv.amount.toLocaleString("cs-CZ")} Kč` : null,
+      futureValueAmount: fv ? fv.amount : null,
       futureValueNotes: notes,
     });
   }

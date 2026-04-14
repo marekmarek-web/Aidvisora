@@ -10,6 +10,7 @@ import { getFaFundDetailForReport, getFaFundLogoUrl } from './fund-library/fa-fu
 import { safeMonthlySavingsCzk } from './company-risk-premium';
 import { buildPremiumReportHTML } from './report/index';
 import type { FaCanonicalInvestmentOverviewRow } from './fa-canonical-investment-overview';
+import { modelingAnnualPercentForStrategyInvestment } from './fa-strategy-fv-bridge';
 import {
   totalIncome,
   totalExpense,
@@ -597,8 +598,8 @@ function renderInvestmentsRows(data: FinancialAnalysisData): string {
   return invs
     .filter((i) => (i.amount || 0) > 0)
     .map((i) => {
-      const displayRate = Math.max(0, (i.annualRate || 0) - (conservative ? 0.02 : 0));
-      const fv = i.computed?.fv ?? 0;
+      const displayRate = modelingAnnualPercentForStrategyInvestment(i, conservative) / 100;
+      const fv = investmentFv(i, conservative);
       const logoHtml = renderLogoOrFallback(getFaFundLogoUrl(i.productKey), getProductName(i.productKey));
       return `<tr><td>${logoHtml}<span class="fund-name">${getProductName(i.productKey)}</span></td><td><span class="${getBadgeClass(i.type)}">${getTypeName(i.type)}</span></td><td style="text-align:right; font-variant-numeric: tabular-nums;">${i.type === 'lump' ? formatCzk(i.amount ?? 0) : formatCurrencyMonthly(i.amount ?? 0)}</td><td><span class="yield-pill">${formatPercent(displayRate)}</span></td><td style="text-align:right; font-weight:700; color:#0073ea; font-variant-numeric: tabular-nums;">${formatCzk(Math.round(fv))}</td></tr>`;
     })
@@ -613,7 +614,7 @@ function renderInvestmentsTotal(data: FinancialAnalysisData): string {
   invs.forEach((i) => {
     if (i.type === 'lump') totalLump += i.amount ?? 0;
     else totalMonthly += i.amount ?? 0;
-    totalFV += i.computed?.fv ?? 0;
+    totalFV += investmentFv(i, conservative);
   });
   return `<tr><td colspan="5" style="padding: 3mm;"><div class="total-summary-bar"><strong style="font-size: 10pt; color: #1f1c2e;">CELKEM</strong><div style="display: flex; gap: 3mm;"><div class="total-chip"><span class="total-chip-label">Jednorázově:</span><span class="total-chip-value">${formatCzk(totalLump)}</span></div><div class="total-chip"><span class="total-chip-label">Měsíčně:</span><span class="total-chip-value">${formatCurrencyMonthly(totalMonthly)}</span></div></div><div class="total-fv">${formatCzk(Math.round(totalFV))}</div></div></td></tr>`;
 }
@@ -711,8 +712,8 @@ function renderProductDetailPages(
     const name = getProductName(inv.productKey);
     const amount = inv.amount ?? 0;
     const typeName = getTypeName(inv.type);
-    const fv = inv.computed?.fv ?? 0;
-    const displayRate = Math.max(0, (inv.annualRate ?? 0) - (conservative ? 0.02 : 0));
+    const fv = investmentFv(inv, conservative);
+    const displayRate = modelingAnnualPercentForStrategyInvestment(inv, conservative) / 100;
     const badgeClass = inv.type === 'lump' ? 'inv-badge inv-badge-lump' : inv.type === 'pension' ? 'inv-badge inv-badge-pension' : 'inv-badge inv-badge-monthly';
     const productLogoHtml = renderLogoOrFallback(getFaFundLogoUrl(inv.productKey), getProductName(inv.productKey), 'width: 40px; height: 40px; object-fit: contain; margin-right: 3mm; flex-shrink: 0;');
     html += `
@@ -814,8 +815,9 @@ function renderProductDetailPages(
 }
 
 function renderGoalCoverage(data: FinancialAnalysisData): string {
+  const conservative = data.strategy?.conservativeMode ?? false;
   const totalTarget = (data.goals || []).reduce((acc, g) => acc + (g.computed?.fvTarget ?? 0), 0);
-  const totalFV = (data.investments || []).reduce((acc, i) => acc + (i.computed?.fv ?? 0), 0);
+  const totalFV = (data.investments || []).reduce((acc, i) => acc + investmentFv(i, conservative), 0);
   const coverage = totalTarget > 0 ? (totalFV / totalTarget) * 100 : 0;
   const diff = totalFV - totalTarget;
   const status = diff >= 0 ? 'Pokryto' : 'Chybí';

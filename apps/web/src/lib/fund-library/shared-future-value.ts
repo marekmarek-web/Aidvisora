@@ -64,6 +64,7 @@ function resolveAnnualRatePercent(
   fvSourceType: FvSourceType,
   resolvedFundId: string | null,
   resolvedFundCategory: ResolvedFundCategory | null,
+  manualAnnualRatePercent: number | null | undefined,
 ): number | null {
   if (fvSourceType === "fund-library" && resolvedFundId) {
     const fund = fundByKey.get(resolvedFundId);
@@ -76,7 +77,50 @@ function resolveAnnualRatePercent(
     return HEURISTIC_ANNUAL_RATE_PERCENT[resolvedFundCategory] ?? null;
   }
 
+  if (fvSourceType === "manual") {
+    const m = manualAnnualRatePercent;
+    if (m == null || !Number.isFinite(m) || m <= 0) return null;
+    return m;
+  }
+
   return null;
+}
+
+function resolveHorizonYearsFromPortalInput(input: PortalFvInputs): number | null {
+  const ex = input.horizonYearsExplicit;
+  if (ex != null && Number.isFinite(ex)) {
+    const y = Math.round(ex);
+    if (y > 0 && y <= 80) return y;
+  }
+  return parseInvestmentHorizonYears(input.investmentHorizon ?? null);
+}
+
+/** Budoucí hodnota jednorázového vkladu po N letech, nominální model (složené úročení). */
+export function futureValueOfLumpSum(
+  lumpAmount: number,
+  horizonYears: number,
+  annualRatePercent: number,
+): number | null {
+  if (!(lumpAmount > 0) || !(horizonYears > 0) || !(annualRatePercent > 0)) return null;
+  const fv = lumpAmount * Math.pow(1 + annualRatePercent / 100, horizonYears);
+  if (!Number.isFinite(fv) || fv <= 0) return null;
+  return Math.round(fv);
+}
+
+/**
+ * Výsledná modelová sazba (% p.a.) po zohlednění volitelné úpravy (např. konzervativnější režim analýzy).
+ * Používá stejnou logiku jako výpočet FV u portfolia / evidence.
+ */
+export function resolvePortalFvAnnualRatePercentAdjusted(input: PortalFvInputs): number | null {
+  const base = resolveAnnualRatePercent(
+    input.fvSourceType as FvSourceType,
+    input.resolvedFundId ?? null,
+    input.resolvedFundCategory ?? null,
+    input.manualAnnualRatePercent ?? null,
+  );
+  if (base == null) return null;
+  const adj = input.annualRateAdjustmentPercentPoints ?? 0;
+  return Math.max(0.01, base + adj);
 }
 
 /** Budoucí hodnota pravidelných měsíčních vkladů (konec období), nominální model. */
@@ -100,10 +144,23 @@ export type PortalFvInputs = {
   resolvedFundId: string | null | undefined;
   resolvedFundCategory: ResolvedFundCategory | null | undefined;
   investmentHorizon: string | null | undefined;
+  /**
+   * Horizont v celých letech — např. krok strategie ve finanční analýze.
+   * Má přednost před parsováním textu v `investmentHorizon`.
+   */
+  horizonYearsExplicit?: number | null | undefined;
   /** Preferovaná měsíční částka (již po agregaci z pojistného / příspěvku). */
   monthlyContribution: number | null | undefined;
   /** Roční příspěvek — použije se jen když měsíční chybí nebo je 0. */
   annualContribution: number | null | undefined;
+  /** Jednorázová investice — pokud je > 0 a chybí pravidelná platba, počítá se FV jednorázového vkladu. */
+  lumpContribution?: number | null | undefined;
+  /**
+   * Modelová roční sazba v % p.a. (např. 7 = 7 %) pro režim `manual`.
+   */
+  manualAnnualRatePercent?: number | null | undefined;
+  /** Posun sazby v procentních bodech (např. -2 u konzervativnějšího režimu). */
+  annualRateAdjustmentPercentPoints?: number | null | undefined;
 };
 
 export type PortalFvResult = {
@@ -118,10 +175,16 @@ export type PortalFvResult = {
  * Vrací null, pokud chybí kterýkoliv vstup nutný k zodpovědnému odhadu.
  */
 export function computePortalInvestmentFutureValue(input: PortalFvInputs): PortalFvResult | null {
-  const { fvSourceType, resolvedFundId, resolvedFundCategory, investmentHorizon } = input;
-  if (fvSourceType !== "fund-library" && fvSourceType !== "heuristic-fallback") return null;
+  const { fvSourceType } = input;
+  if (
+    fvSourceType !== "fund-library" &&
+    fvSourceType !== "heuristic-fallback" &&
+    fvSourceType !== "manual"
+  ) {
+    return null;
+  }
 
-  const horizonYears = parseInvestmentHorizonYears(investmentHorizon ?? null);
+  const horizonYears = resolveHorizonYearsFromPortalInput(input);
   if (horizonYears == null) return null;
 
   let monthly = input.monthlyContribution ?? null;
@@ -129,22 +192,33 @@ export function computePortalInvestmentFutureValue(input: PortalFvInputs): Porta
     const annual = input.annualContribution ?? null;
     if (annual != null && annual > 0) monthly = annual / 12;
   }
-  if (monthly == null || monthly <= 0) return null;
 
-  const rate = resolveAnnualRatePercent(
-    fvSourceType,
-    resolvedFundId ?? null,
-    resolvedFundCategory ?? null,
-  );
+  const lump = input.lumpContribution ?? null;
+  const useLumpPath =
+    lump != null &&
+    lump > 0 &&
+    (monthly == null || monthly <= 0) &&
+    !(input.annualContribution != null && input.annualContribution > 0);
+
+  if (!useLumpPath && (monthly == null || monthly <= 0)) return null;
+
+  const rate = resolvePortalFvAnnualRatePercentAdjusted(input);
   if (rate == null) return null;
 
-  const fv = futureValueOfMonthlyContributions(monthly, horizonYears, rate);
+  let fv: number | null;
+  if (useLumpPath) {
+    fv = futureValueOfLumpSum(lump!, horizonYears, rate);
+  } else {
+    fv = futureValueOfMonthlyContributions(monthly!, horizonYears, rate);
+  }
   if (fv == null || !Number.isFinite(fv) || fv <= 0) return null;
 
   const sourceExplanation =
     fvSourceType === "fund-library"
       ? "Odhad vychází z modelové roční sazby uvedené u fondu v evidenci produktů."
-      : "Odhad vychází z obecné kategorie investice (zjednodušený model).";
+      : fvSourceType === "heuristic-fallback"
+        ? "Odhad vychází z obecné kategorie investice (zjednodušený model)."
+        : "Odhad vychází z modelové roční sazby zadané v analýze (krok strategie).";
 
   return { amount: Math.round(fv), horizonYears, sourceExplanation };
 }

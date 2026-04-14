@@ -5,6 +5,7 @@
 
 import type { FinancialAnalysisData, GoalEntry, InvestmentEntry } from './types';
 import { investmentFv } from './calculations';
+import { modelingAnnualPercentForStrategyInvestment } from './fa-strategy-fv-bridge';
 import { getProductName } from './formatters';
 
 /** Growth chart: year-by-year projected portfolio value. */
@@ -29,8 +30,8 @@ export function getGrowthChartData(data: FinancialAnalysisData): {
     let total = 0;
     investments.forEach((inv) => {
       const amt = inv.amount ?? 0;
-      let r = inv.annualRate ?? 0.07;
-      if (conservative) r = Math.max(0, r - 0.02);
+      const ratePct = modelingAnnualPercentForStrategyInvestment(inv, conservative);
+      const r = ratePct / 100;
       const maxY = inv.years ?? 10;
       const n = Math.min(year, maxY);
       if (inv.type === 'lump') {

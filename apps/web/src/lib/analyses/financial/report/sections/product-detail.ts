@@ -2,6 +2,7 @@ import type { SectionCtx } from '../types';
 import { esc, fmtBigCzk, fmtPct, investmentLabel, investmentPillClass, investmentAmountLabel, colorForIndex, nextSection, getProductDisplayName } from '../helpers';
 import type { InvestmentEntry, FundDetail } from '../../types';
 import { getFaFundDetailForReport, getFaFundLogoUrl } from '../../fund-library/fa-fund-bridge';
+import { investmentFv } from '../../calculations';
 
 /** Max. `topN` řádků + jeden součet „Ostatní“ (tisk — méně přelévání na 2. stranu). */
 function collapseWeightRows(
@@ -66,19 +67,9 @@ function renderGallery(images: string[], isLogo = false): string {
   return `<div class="${cls}">${images.map((img) => `<div class="product-gallery-item"><img src="${esc(img)}" alt="" class="product-gallery-image" onerror="this.parentElement&&this.parentElement.remove()"></div>`).join('')}</div>`;
 }
 
-function computeFV(inv: InvestmentEntry): number {
-  const rate = inv.annualRate ?? 0.08;
-  const years = inv.years ?? 20;
-  const months = years * 12;
-  if (inv.type === 'monthly' || inv.type === 'pension') {
-    const r = rate / 12;
-    return inv.amount * ((Math.pow(1 + r, months) - 1) / r);
-  }
-  return inv.amount * Math.pow(1 + rate, years);
-}
-
 export function renderProductDetails(ctx: SectionCtx): string {
   const { data, theme } = ctx;
+  const conservativeMode = data.strategy?.conservativeMode ?? false;
   const investments = (data.investments ?? []).filter(
     (inv: InvestmentEntry) => inv.amount > 0,
   );
@@ -93,7 +84,7 @@ export function renderProductDetails(ctx: SectionCtx): string {
     const pillClass = detail.category
       ? (catLower.includes("etf") ? "pill-blue" : catLower.includes("penz") ? "pill-gold" : "pill-green")
       : investmentPillClass(inv);
-    const fv = computeFV(inv);
+    const fv = investmentFv(inv, conservativeMode);
     const years = inv.years ?? 20;
     const num = nextSection(ctx.sectionCounter);
 

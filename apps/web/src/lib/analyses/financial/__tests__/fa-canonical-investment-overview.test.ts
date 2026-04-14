@@ -56,7 +56,8 @@ describe("buildFaCanonicalInvestmentOverviewRows", () => {
     expect(rows[0].contributionSummary).toMatch(/Pravidelně/);
     expect(rows[0].horizonLabel).toBe("15 let");
     expect(rows[0].futureValueFormatted).not.toBeNull();
-    expect(rows[0].futureValueNotes.join(" ")).toMatch(/evidence|fond|kategorie|orientační|záruka/i);
+    expect(rows[0].futureValueAmount).not.toBeNull();
+    expect(rows[0].futureValueNotes.join(" ")).toMatch(/evidence|fond|kategorie|orientační|záruka|smlouv/i);
   });
 
   it("still emits a row when FV cannot be computed (missing inputs)", () => {
@@ -73,6 +74,7 @@ describe("buildFaCanonicalInvestmentOverviewRows", () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].futureValueFormatted).toBeNull();
-    expect(rows[0].futureValueNotes).toEqual([]);
+    expect(rows[0].futureValueAmount).toBeNull();
+    expect(rows[0].futureValueNotes.join(" ")).toMatch(/evidence|smlouv/i);
   });
 });

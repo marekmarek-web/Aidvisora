@@ -1,6 +1,7 @@
 import type { FinancialAnalysisData } from '../types';
 import { financialAnalysisReportTitle } from '../formatters';
 import type { ReportTheme, BuildPremiumReportOptions, SectionCtx } from './types';
+import { recomputeInvestmentsFv } from '../charts';
 import { esc } from './helpers';
 import { ELEGANT_CSS, ELEGANT_FONTS } from './themes/elegant';
 import { MODERN_CSS, MODERN_FONTS } from './themes/modern';
@@ -61,8 +62,14 @@ export function buildPremiumReportHTML(
   const includeCompany = options?.includeCompany ?? data.includeCompany ?? false;
   const sectionCounter = { n: 1 };
 
+  const investments = recomputeInvestmentsFv(
+    data.investments ?? [],
+    data.strategy?.conservativeMode ?? false,
+  );
+  const dataForReport: FinancialAnalysisData = { ...data, investments };
+
   const ctx: SectionCtx = {
-    data,
+    data: dataForReport,
     theme,
     branding,
     sectionCounter,

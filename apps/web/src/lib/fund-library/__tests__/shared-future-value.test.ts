@@ -106,4 +106,49 @@ describe("computePortalInvestmentFutureValue", () => {
     expect(r).not.toBeNull();
     expect(r!.sourceExplanation).toContain("fondu");
   });
+
+  it("uses explicit horizon years when text horizon missing", () => {
+    const r = computePortalInvestmentFutureValue({
+      fvSourceType: "heuristic-fallback",
+      resolvedFundId: null,
+      resolvedFundCategory: "equity",
+      investmentHorizon: null,
+      horizonYearsExplicit: 12,
+      monthlyContribution: 2000,
+      annualContribution: null,
+    });
+    expect(r).not.toBeNull();
+    expect(r!.horizonYears).toBe(12);
+  });
+
+  it("supports manual rate source", () => {
+    const r = computePortalInvestmentFutureValue({
+      fvSourceType: "manual",
+      resolvedFundId: null,
+      resolvedFundCategory: null,
+      investmentHorizon: null,
+      horizonYearsExplicit: 10,
+      monthlyContribution: 1000,
+      annualContribution: null,
+      manualAnnualRatePercent: 6,
+    });
+    expect(r).not.toBeNull();
+    expect(r!.sourceExplanation).toMatch(/analýz/i);
+  });
+
+  it("computes lump FV via shared path", () => {
+    const r = computePortalInvestmentFutureValue({
+      fvSourceType: "manual",
+      resolvedFundId: null,
+      resolvedFundCategory: null,
+      investmentHorizon: null,
+      horizonYearsExplicit: 10,
+      monthlyContribution: null,
+      annualContribution: null,
+      lumpContribution: 100_000,
+      manualAnnualRatePercent: 5,
+    });
+    expect(r).not.toBeNull();
+    expect(r!.amount).toBeGreaterThan(100_000);
+  });
 });

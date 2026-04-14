@@ -5,6 +5,7 @@
 
 import type { FinancialAnalysisData, CashflowIncomes, CashflowExpenses, GoalEntry, InvestmentEntry, InsuranceExpenseItem, BenefitVsSalaryComparison, CompanyFinance } from './types';
 import { RENTA_INFLATION, RENTA_WITHDRAWAL_RATE, BENEFIT_OPTIMIZATION } from './constants';
+import { computeStrategyInvestmentFv } from './fa-strategy-fv-bridge';
 
 /** Options for benefit vs salary comparison (optional owner tax savings for director/owner). */
 export interface ComputeBenefitVsSalaryOptions extends BenefitVsSalaryOptions {
@@ -239,14 +240,9 @@ export function fvRegular(monthlyAmount: number, years: number, annualRate: numb
   return monthlyAmount * (Math.pow(1 + r, n) - 1) / r;
 }
 
-/** Single investment FV (lump / monthly / pension). */
+/** Single investment FV (lump / monthly / pension) — sdílený kalkulátor jako u portfolia a evidence smluv. */
 export function investmentFv(inv: InvestmentEntry, conservativeMode: boolean): number {
-  const amt = inv.amount ?? 0;
-  let r = inv.annualRate ?? 0.07;
-  if (conservativeMode) r = Math.max(0, r - 0.02);
-  const years = inv.years ?? 10;
-  if (inv.type === 'lump') return fvLump(amt, years, r);
-  return fvRegular(amt, years, r);
+  return computeStrategyInvestmentFv(inv, conservativeMode);
 }
 
 /** Sum of all investments FV and breakdown (lump total, monthly total). */

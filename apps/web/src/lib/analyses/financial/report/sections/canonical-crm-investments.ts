@@ -1,11 +1,19 @@
 import type { SectionCtx } from "../types";
-import { nextSection, esc } from "../helpers";
+import { nextSection, esc, fmtBigCzk } from "../helpers";
 
 export function renderCanonicalCrmInvestments(ctx: SectionCtx): string {
   const rows = ctx.canonicalInvestmentOverview ?? [];
   if (rows.length === 0) return "";
 
   const num = nextSection(ctx.sectionCounter);
+  const sumFv = rows.reduce((s, r) => s + (r.futureValueAmount ?? 0), 0);
+  const sumRow =
+    sumFv > 0
+      ? `<tr class="total">
+        <td colspan="5" class="bold">Součet orientační FV z evidence (řádky, kde šel odhad spočítat)</td>
+        <td class="r bold">${esc(fmtBigCzk(sumFv))}</td>
+      </tr>`
+      : "";
 
   const body = rows
     .map((r) => {
@@ -37,8 +45,8 @@ export function renderCanonicalCrmInvestments(ctx: SectionCtx): string {
       <div class="sec-number">${num} — Evidence</div>
       <div class="sec-title">Investice z evidence smluv</div>
       <div class="sec-desc">
-        Přehled investičních a penzijních produktů podle stejných údajů jako v klientském portálu a v záložce Produkty u klienta.
-        Odhad budoucí hodnoty vychází ze stejného modelu jako u zveřejněného portfolia — pouze tam, kde jsou v evidenci vyplněné potřebné údaje.
+        Přehled investičních a penzijních produktů podle stejných údajů jako v klientském portálu a v záložce Produkty u klienta — jde o
+        <strong> evidenci skutečných smluv</strong>, nikoli o modelační mřížku z kroku strategie. Odhad budoucí hodnoty vychází ze stejného modelu jako u zveřejněného portfolia — pouze tam, kde jsou v evidenci vyplněné potřebné údaje.
       </div>
     </div>
 
@@ -55,7 +63,7 @@ export function renderCanonicalCrmInvestments(ctx: SectionCtx): string {
             <th class="r">Odhad budoucí hodnoty</th>
           </tr>
         </thead>
-        <tbody>${body}</tbody>
+        <tbody>${body}${sumRow}</tbody>
       </table>
     </div>
 

@@ -1,12 +1,19 @@
 import type { SectionCtx } from '../types';
 import { nextSection, fmtBigCzk, renderProjectionSVG } from '../helpers';
 import type { InvestmentEntry } from '../../types';
+import { investmentFv } from '../../calculations';
+import { modelingAnnualPercentForStrategyInvestment } from '../../fa-strategy-fv-bridge';
 
-function blendedAnnualRate(investments: InvestmentEntry[], maxHorizon: number): number {
+function blendedAnnualRate(
+  investments: InvestmentEntry[],
+  maxHorizon: number,
+  conservativeMode: boolean,
+): number {
   let num = 0;
   let den = 0;
   for (const inv of investments) {
-    const rate = inv.annualRate ?? 0.08;
+    const ratePct = modelingAnnualPercentForStrategyInvestment(inv, conservativeMode);
+    const rate = ratePct / 100;
     const years = Math.min(inv.years ?? maxHorizon, maxHorizon);
     if (inv.type === 'lump') {
       num += rate * inv.amount;
@@ -132,29 +139,27 @@ export function renderProjection(ctx: SectionCtx): string {
     (inv: InvestmentEntry) => inv.amount > 0,
   );
 
+  const conservativeMode = data.strategy?.conservativeMode ?? false;
+
   let totalFV = 0;
   let maxHorizon = 0;
   let monthlyTotal = 0;
   let lumpTotal = 0;
 
   investments.forEach((inv: InvestmentEntry) => {
-    const rate = inv.annualRate ?? 0.08;
     const years = inv.years ?? 20;
     maxHorizon = Math.max(maxHorizon, years);
-    const months = years * 12;
+    totalFV += investmentFv(inv, conservativeMode);
     if (inv.type === 'monthly' || inv.type === 'pension') {
-      const r = rate / 12;
-      totalFV += inv.amount * ((Math.pow(1 + r, months) - 1) / r);
       monthlyTotal += inv.amount;
     } else {
-      totalFV += inv.amount * Math.pow(1 + rate, years);
       lumpTotal += inv.amount;
     }
   });
 
   const totalInvested = monthlyTotal * maxHorizon * 12 + lumpTotal;
   const gain = totalFV - totalInvested;
-  const ratePct = blendedAnnualRate(investments, maxHorizon) * 100;
+  const ratePct = blendedAnnualRate(investments, maxHorizon, conservativeMode) * 100;
 
   const chartSvg = renderProjectionSVG(totalFV, maxHorizon, monthlyTotal, theme);
 
@@ -174,7 +179,7 @@ export function renderProjection(ctx: SectionCtx): string {
     <div class="sec-header">
       <div class="sec-number">${num} — Projekce</div>
       <div class="sec-title">Růstová projekce</div>
-      <div class="sec-desc">Odhad budoucí hodnoty investic na základě průměrného ročního zhodnocení a pravidelných vkladů. Níže můžete parametry upravit (pouze v elektronické verzi).</div>
+      <div class="sec-desc">Tato stránka shrnuje <strong>modelační scénář</strong> z kroku strategie (mřížka produktů) — není totéž jako součet z evidence skutečných smluv v CRM. Odhad budoucí hodnoty vychází ze stejného výpočetního modelu jako shrnutí analýzy; níže můžete parametry upravit (pouze v elektronické verzi).</div>
     </div>
 
     <div class="kpi-row kpi-row-3" style="margin-bottom:var(--s8,32px)">

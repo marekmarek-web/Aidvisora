@@ -95,6 +95,7 @@ export function StepSummary() {
   const netWorth = selectNetWorth(data);
   const totalGoals = selectTotalTargetCapital(data);
   const portfolioFv = selectPortfolioFv(data);
+  const sumEvidenceFvCzk = crmInvestments.reduce((s, r) => s + (r.futureValueAmount ?? 0), 0);
   const clientName = data.client?.name || "Klient";
 
   const reportOptions = (data as unknown as Record<string, unknown>)._provenance
@@ -251,9 +252,27 @@ export function StepSummary() {
           <div className="mt-1 text-lg font-bold text-indigo-700 dark:text-indigo-300">{formatCzk(totalGoals)}</div>
         </div>
         <div className="bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl p-6 shadow-sm">
-          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">Projekce portfolia (FV)</span>
+          <span className="text-xs text-[color:var(--wp-text-secondary)] uppercase font-bold tracking-wider block">
+            Modelace strategie (orientační součet)
+          </span>
           <div className="text-lg font-bold text-[color:var(--wp-text)] mt-1">{formatCzk(portfolioFv)}</div>
+          <p className="text-xs text-[color:var(--wp-text-secondary)] mt-2 leading-snug">
+            Součet odhadů z mřížky v kroku strategie — není to automaticky totéž jako součet z evidence smluv níže.
+          </p>
         </div>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)] max-w-4xl">
+        <p className="font-semibold text-[color:var(--wp-text)] mb-1">Jak číst dva přehledy vedle sebe</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            <strong className="text-[color:var(--wp-text)]">Evidence skutečných investic</strong> — produkty zapsané u klienta v CRM po schválení; odhad budoucí hodnoty používá stejný model jako klientské portfolio.
+          </li>
+          <li>
+            <strong className="text-[color:var(--wp-text)]">Modelace v kroku strategie</strong> — vámi zadaný návrhový scénář v průvodci analýzy; slouží k porovnání variant, není závazným stavem smluv.
+          </li>
+          <li>Orientační odhad není záruka budoucího výnosu ani konečné částky.</li>
+        </ul>
       </div>
 
       <div className="mb-8">
@@ -262,8 +281,14 @@ export function StepSummary() {
           Investice z evidence smluv
         </h3>
         <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4 max-w-3xl">
-          Stejné údaje jako v klientském portfoliu a v záložce Produkty — bez paralelního čtení z nestrukturovaných polí. Odhad budoucí hodnoty používá stejný model jako portál.
+          Stejné údaje jako v klientském portfoliu a v záložce Produkty u klienta. Odhad budoucí hodnoty vychází ze stejného výpočtu jako u zveřejněného portfolia — jen tam, kde jsou v evidenci potřebné údaje.
         </p>
+        {data.clientId && crmInvestments.length > 0 && sumEvidenceFvCzk > 0 && (
+          <p className="text-sm font-semibold text-[color:var(--wp-text)] mb-3">
+            Součet orientační FV z evidence (řádky, kde šel odhad spočítat):{" "}
+            <span className="text-indigo-700 dark:text-indigo-300">{formatCzk(sumEvidenceFvCzk)}</span>
+          </p>
+        )}
         {!data.clientId ? (
           <div className="rounded-xl border border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-5 text-sm text-[color:var(--wp-text-secondary)]">
             Propojte analýzu s klientem v úvodním kroku, aby se zde zobrazil přehled investičních a penzijních smluv z evidence.
