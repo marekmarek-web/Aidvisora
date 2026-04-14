@@ -789,14 +789,27 @@ export function ContactsPageClient({
       </ListPageShell>
 
       {permanentDeleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="permanent-delete-title">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="permanent-delete-title"
+          aria-describedby="permanent-delete-desc"
+          onKeyDown={(e) => { if (e.key === "Escape" && !permanentDeleteBusy) setPermanentDeleteOpen(false); }}
+        >
           <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-[color:var(--wp-surface-card-border)]">
-            <h3 id="permanent-delete-title" className="text-lg font-black text-[color:var(--wp-text)]">
-              Trvale smazat kontakty?
-            </h3>
-            <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <h3 id="permanent-delete-title" className="text-lg font-black text-[color:var(--wp-text)]">
+                Trvale smazat {selectedIds.size === 1 ? "klienta" : "klienty"}?
+              </h3>
+            </div>
+            <p id="permanent-delete-desc" className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
               Chystáte se nenávratně odstranit <strong>{selectedIds.size}</strong> kontakt
-              {selectedIds.size === 1 ? "" : "ů"} včetně navázaných záznamů, které databáze propojuje s kontaktem (např. smlouvy, dokumenty, zprávy podle nastavení mazání).
+              {selectedIds.size === 1 ? "" : selectedIds.size < 5 ? "y" : "ů"} včetně
+              navázaných záznamů (smlouvy, dokumenty, zprávy).
               Tuto akci nelze vrátit zpět.
             </p>
             <div className="flex justify-end gap-3 pt-2">
@@ -804,9 +817,10 @@ export function ContactsPageClient({
                 type="button"
                 onClick={() => setPermanentDeleteOpen(false)}
                 disabled={permanentDeleteBusy}
-                className="rounded-xl px-4 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
+                autoFocus
+                className="rounded-xl px-5 py-2.5 text-sm font-bold border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-card)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
               >
-                Zrušit
+                Ne
               </button>
               <button
                 type="button"
@@ -814,7 +828,7 @@ export function ContactsPageClient({
                 disabled={permanentDeleteBusy}
                 className="rounded-xl px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 min-h-[44px]"
               >
-                {permanentDeleteBusy ? "Mažu…" : "Ano, trvale smazat"}
+                {permanentDeleteBusy ? "Mažu…" : "Ano, smazat"}
               </button>
             </div>
           </div>

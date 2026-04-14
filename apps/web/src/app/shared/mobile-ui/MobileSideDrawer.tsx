@@ -22,7 +22,6 @@ import {
   Target,
   UsersRound,
   UserPlus,
-  Zap,
   ScanLine,
   LogOut,
 } from "lucide-react";
@@ -76,7 +75,6 @@ function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSec
     { href: "/portal/messages", label: "Zprávy", Icon: MessageCircle },
     { href: "/portal/calendar", label: "Kalendář", Icon: Calendar },
     { href: "/portal/notes", label: "Zápisky", Icon: FileText },
-    { href: "/portal/action-center", label: "Akční centrum", Icon: Zap },
   ];
 
   const databaze: DrawerNavItem[] = [

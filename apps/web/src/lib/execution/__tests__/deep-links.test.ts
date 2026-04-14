@@ -48,8 +48,8 @@ describe("resolveDeepLink", () => {
 });
 
 describe("utility links", () => {
-  it("buildActionCenterDeepLink", () => {
-    expect(buildActionCenterDeepLink()).toBe("/portal/action-center");
+  it("buildActionCenterDeepLink redirects to dashboard after removal", () => {
+    expect(buildActionCenterDeepLink()).toBe("/portal/today");
   });
 
   it("buildNotificationDeepLink", () => {

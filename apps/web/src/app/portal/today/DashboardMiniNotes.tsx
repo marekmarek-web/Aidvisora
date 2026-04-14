@@ -72,6 +72,18 @@ function savePinned(ids: Set<string>) {
   } catch {}
 }
 
+function useIsCompact(breakpoint = 1200) {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setCompact(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setCompact(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return compact;
+}
+
 export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNoteForBoard[] }) {
   const [positions, setPositions] = useState<Record<string, Position>>(loadPositions);
   const [pinned, setPinned] = useState<Set<string>>(loadPinned);
@@ -79,6 +91,7 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const boardRef = useRef<HTMLDivElement>(null);
+  const isCompact = useIsCompact();
 
   const notes = initialNotes.slice(0, 8);
   if (notes.length === 0) {
@@ -182,64 +195,101 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
           </Link>
         </div>
       </div>
-      <div
-        ref={boardRef}
-        className="relative min-h-[280px] overflow-hidden cursor-crosshair bg-[color:var(--wp-surface-muted)]/50"
-        style={{
-          backgroundImage: "radial-gradient(circle, #cbd5e1 1.5px, transparent 0)",
-          backgroundSize: "20px 20px",
-        }}
-      >
-        {sortedNotes.map((note) => {
-          const pos = getPosition(note.id, notes.indexOf(note));
-          const isDragging = draggingId === note.id;
-          const isPinned = pinned.has(note.id);
-          const title = contentTitle(note.content);
-          const preview = contentBodyPreview(note.content, 60);
-          const domainStyle = getDomainStyle(note.domain ?? "");
-
-          return (
-            <div
-              key={note.id}
-              onPointerDown={(e) => handlePointerDown(e, note.id)}
-              style={{
-                position: "absolute",
-                left: pos.x,
-                top: pos.y,
-                zIndex: isDragging ? 999 : pos.z,
-                touchAction: "none",
-              }}
-              className={`
-                w-[160px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 shadow-md backdrop-blur-sm transition-shadow cursor-grab active:cursor-grabbing
-                ${isDragging ? "shadow-lg ring-2 ring-indigo-400/30 scale-105" : "hover:shadow-lg"}
-                ${isPinned ? "ring-1 ring-amber-300/50" : ""}
-              `}
-            >
-              <div className="flex items-center justify-between px-2 py-1 border-b border-[color:var(--wp-surface-card-border)]">
-                <span className="p-1.5 rounded-lg text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] cursor-grab active:cursor-grabbing touch-none shrink-0" aria-label="Chytit a přesunout">
-                  <GripVertical size={16} />
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => togglePin(note.id, e)}
-                  className={`p-1 rounded-lg ${isPinned ? "bg-amber-100 text-amber-600" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
-                  aria-label={isPinned ? "Odepnout" : "Připnout"}
-                >
-                  <Pin size={10} className={isPinned ? "fill-current" : ""} />
-                </button>
+      {isCompact ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 bg-[color:var(--wp-surface-muted)]/50">
+          {sortedNotes.map((note) => {
+            const isPinned = pinned.has(note.id);
+            const title = contentTitle(note.content);
+            const preview = contentBodyPreview(note.content, 60);
+            const domainStyle = getDomainStyle(note.domain ?? "");
+            return (
+              <div
+                key={note.id}
+                className={`rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 shadow-md ${isPinned ? "ring-1 ring-amber-300/50" : ""}`}
+              >
+                <div className="flex items-center justify-between px-2 py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                  <span className="p-1 text-[color:var(--wp-text-tertiary)]"><GripVertical size={14} /></span>
+                  <button
+                    type="button"
+                    onClick={(e) => togglePin(note.id, e)}
+                    className={`p-1 rounded-lg ${isPinned ? "bg-amber-100 text-amber-600" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
+                    aria-label={isPinned ? "Odepnout" : "Připnout"}
+                  >
+                    <Pin size={10} className={isPinned ? "fill-current" : ""} />
+                  </button>
+                </div>
+                <Link href={`/portal/notes?note=${note.id}`} className="block p-2 text-inherit no-underline">
+                  <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
+                    {note.domain ?? "jiné"}
+                  </span>
+                  <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
+                  {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
+                  {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
+                </Link>
               </div>
-              <Link href={`/portal/notes?note=${note.id}`} className="block p-2 text-inherit no-underline" onClick={(e) => isDragging && e.preventDefault()}>
-                <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
-                  {note.domain ?? "jiné"}
-                </span>
-                <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
-                {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
-                {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
-              </Link>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div
+          ref={boardRef}
+          className="relative min-h-[280px] overflow-hidden cursor-crosshair bg-[color:var(--wp-surface-muted)]/50"
+          style={{
+            backgroundImage: "radial-gradient(circle, #cbd5e1 1.5px, transparent 0)",
+            backgroundSize: "20px 20px",
+          }}
+        >
+          {sortedNotes.map((note) => {
+            const pos = getPosition(note.id, notes.indexOf(note));
+            const isDragging = draggingId === note.id;
+            const isPinned = pinned.has(note.id);
+            const title = contentTitle(note.content);
+            const preview = contentBodyPreview(note.content, 60);
+            const domainStyle = getDomainStyle(note.domain ?? "");
+
+            return (
+              <div
+                key={note.id}
+                onPointerDown={(e) => handlePointerDown(e, note.id)}
+                style={{
+                  position: "absolute",
+                  left: pos.x,
+                  top: pos.y,
+                  zIndex: isDragging ? 999 : pos.z,
+                  touchAction: "none",
+                }}
+                className={`
+                  w-[160px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 shadow-md backdrop-blur-sm transition-shadow cursor-grab active:cursor-grabbing
+                  ${isDragging ? "shadow-lg ring-2 ring-indigo-400/30 scale-105" : "hover:shadow-lg"}
+                  ${isPinned ? "ring-1 ring-amber-300/50" : ""}
+                `}
+              >
+                <div className="flex items-center justify-between px-2 py-1 border-b border-[color:var(--wp-surface-card-border)]">
+                  <span className="p-1.5 rounded-lg text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] cursor-grab active:cursor-grabbing touch-none shrink-0" aria-label="Chytit a přesunout">
+                    <GripVertical size={16} />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => togglePin(note.id, e)}
+                    className={`p-1 rounded-lg ${isPinned ? "bg-amber-100 text-amber-600" : "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"}`}
+                    aria-label={isPinned ? "Odepnout" : "Připnout"}
+                  >
+                    <Pin size={10} className={isPinned ? "fill-current" : ""} />
+                  </button>
+                </div>
+                <Link href={`/portal/notes?note=${note.id}`} className="block p-2 text-inherit no-underline" onClick={(e) => isDragging && e.preventDefault()}>
+                  <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
+                    {note.domain ?? "jiné"}
+                  </span>
+                  <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
+                  {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
+                  {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

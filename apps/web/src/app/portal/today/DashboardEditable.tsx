@@ -590,10 +590,10 @@ export function DashboardEditable(props: DashboardEditableProps) {
                 })}
               </div>
               <Link
-                href="/portal/today"
+                href="/portal/contacts"
                 className="text-xs font-semibold text-indigo-600 hover:underline mt-2 inline-block"
               >
-                Servisní přehled
+                Přehled klientů
               </Link>
             </div>
           );
@@ -751,7 +751,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
               : id === "activeDeals"
                 ? "Otevřít Board"
                 : id === "clientCare"
-                  ? "Servisní přehled"
+                  ? "Přehled klientů"
                   : id === "financialAnalyses"
                     ? "Všechny analýzy"
                     : id === "businessPlan"

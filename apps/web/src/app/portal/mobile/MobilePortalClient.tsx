@@ -119,10 +119,6 @@ const PipelineScreen = dynamic(
   () => import("./screens/PipelineScreen").then((m) => m.PipelineScreen),
   { loading: () => <RouteLoadingSkeleton /> },
 );
-const ActionCenterPortalClient = dynamic(
-  () => import("../action-center/ActionCenterPortalClient").then((m) => m.ActionCenterPortalClient),
-  { loading: () => <RouteLoadingSkeleton /> },
-);
 const ScanPage = dynamic(() => import("../scan/page"), {
   loading: () => <RouteLoadingSkeleton />,
 });
@@ -487,7 +483,6 @@ export function MobilePortalClient({
   const onMindmapHubRoute = pathname === "/portal/mindmap" || pathname === "/portal/mindmap/";
   const onMindmapMapRoute = Boolean(mindmapMapId);
   const onHouseholdsListRoute = pathname === "/portal/households";
-  const onActionCenterRoute = pathname.startsWith("/portal/action-center");
 
   const browserPluginLikelyAvailable =
     !Capacitor.isNativePlatform() ||
@@ -759,7 +754,6 @@ export function MobilePortalClient({
 
     // Pathname-based section / hub routes
     if (onHouseholdsListRoute) return <HouseholdsListMobileScreen />;
-    if (onActionCenterRoute) return <ActionCenterPortalClient />;
     if (onMindmapHubRoute) return <MindmapHubMobileScreen />;
     if (onMessagesRoute) return <MessagesMobileScreen />;
     if (onNotesRoute) return <NotesMobileScreen />;

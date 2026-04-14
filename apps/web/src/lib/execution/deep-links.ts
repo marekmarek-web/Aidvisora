@@ -39,8 +39,9 @@ export function resolveDeepLink(entityType: string, entityId: string): string {
   }
 }
 
+/** @deprecated Action center has been removed. Redirects to dashboard. */
 export function buildActionCenterDeepLink(): string {
-  return "/portal/action-center";
+  return "/portal/today";
 }
 
 export function buildNotificationDeepLink(notificationId: string): string {

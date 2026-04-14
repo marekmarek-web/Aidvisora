@@ -117,18 +117,33 @@ function downloadProductionCsv(data: ProductionSummary, periodLabel: string) {
   URL.revokeObjectURL(url);
 }
 
+function buildMonthOptions(): { value: string; label: string }[] {
+  const now = new Date();
+  const options: { value: string; label: string }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const iso = d.toISOString().slice(0, 10);
+    const label = d.toLocaleString("cs-CZ", { month: "long", year: "numeric" });
+    options.push({ value: iso, label: label.charAt(0).toUpperCase() + label.slice(1) });
+  }
+  return options;
+}
+
 export function PortalProductionView() {
   const [period, setPeriod] = useState<PeriodType>("month");
+  const [refDate, setRefDate] = useState<string | undefined>(undefined);
   const [data, setData] = useState<ProductionSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const monthOptions = useMemo(() => buildMonthOptions(), []);
+
   useEffect(() => {
     setLoading(true);
-    getProductionSummary(period)
+    getProductionSummary(period, refDate)
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period, refDate]);
 
   const bySegment = useMemo(() => {
     if (!data) return [];
@@ -200,6 +215,22 @@ export function PortalProductionView() {
                 </button>
               ))}
             </div>
+            {period === "month" && (
+              <select
+                value={refDate ?? ""}
+                onChange={(e) => setRefDate(e.target.value || undefined)}
+                className="px-3 py-2 rounded-[var(--wp-radius-sm)] text-xs font-semibold border min-h-[44px] appearance-none cursor-pointer"
+                style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)", color: "var(--wp-text)" }}
+                aria-label="Období"
+              >
+                <option value="">Aktuální měsíc</option>
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               type="button"
               onClick={handleExport}
