@@ -368,6 +368,21 @@ export type ExtractionDocument = {
       bankCode?: string;
       paymentMethod?: string;
     } | null;
+    /** Identity / document data (OP, platnost, vydal, lékař) */
+    identityData?: {
+      idCardNumber?: string;
+      idCardIssuedBy?: string;
+      idCardValidUntil?: string;
+      idCardIssuedAt?: string;
+      generalPractitioner?: string;
+    } | null;
+    /** Fund resolution data for investment products */
+    fundResolution?: {
+      resolvedFundId?: string | null;
+      resolvedFundCategory?: string | null;
+      fvSourceType?: string | null;
+      resolvedFundName?: string | null;
+    } | null;
   };
   /** From GET review `pipelineInsights` — routing, preprocess, payment preview. */
   pipelineInsights?: {

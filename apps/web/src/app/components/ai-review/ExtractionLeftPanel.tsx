@@ -456,6 +456,11 @@ const ENFORCEMENT_FIELD_LABELS: Record<string, string> = {
   address: "Adresa",
   birthDate: "Datum narození",
   personalId: "Rodné číslo",
+  idCardNumber: "Číslo dokladu / OP",
+  idCardIssuedBy: "Doklad vydal",
+  idCardValidUntil: "Platnost dokladu do",
+  idCardIssuedAt: "Datum vydání dokladu",
+  generalPractitioner: "Praktický lékař",
   contractNumber: "Číslo smlouvy",
   institutionName: "Pojišťovna / instituce",
   insurer: "Pojišťovna",
@@ -480,7 +485,11 @@ const ENFORCEMENT_FIELD_LABELS: Record<string, string> = {
 };
 
 function humanizeEnforcementFieldKey(fieldKey: string): string {
-  return ENFORCEMENT_FIELD_LABELS[fieldKey] ?? fieldKey;
+  const local = ENFORCEMENT_FIELD_LABELS[fieldKey];
+  if (local) return local;
+  if (/^[a-z][a-zA-Z0-9_]*$/.test(fieldKey) && fieldKey.includes("_")) return "Údaj k ověření";
+  if (/^[a-z][a-zA-Z]*[A-Z]/.test(fieldKey)) return "Údaj k ověření";
+  return ENFORCEMENT_FIELD_LABELS[fieldKey] ?? "Údaj k ověření";
 }
 
 /** Build a fieldKey → {applyPolicyLabel, requiresConfirmation} lookup from extracted groups */
@@ -1826,6 +1835,37 @@ function ExtraRecommendationsCard({
   );
 }
 
+/* ─── Document Finality Warning ─────────────────────────────────── */
+
+function DocumentFinalityWarning({ doc }: { doc: ExtractionDocument }) {
+  const publishHints = doc.canonicalFields?.publishHints;
+  const classifierJson = doc.extractionTrace?.aiClassifierJson as Record<string, string> | undefined;
+  const docType = classifierJson?.documentType?.toLowerCase?.() ?? doc.documentType?.toLowerCase?.() ?? "";
+
+  const isFinalContract =
+    publishHints?.contractPublishable === true &&
+    !publishHints?.sensitiveAttachmentOnly &&
+    !publishHints?.needsSplit &&
+    !publishHints?.reviewOnly &&
+    (docType === "contract" || docType.includes("contract"));
+
+  if (isFinalContract) return null;
+
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+      <div>
+        <p className="text-sm font-semibold text-amber-800">
+          Dokument není označen jako finální smlouva
+        </p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          Ověřte typ dokumentu podle originálu. Pokud se jedná o finální smlouvu, upravte klasifikaci.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Left Panel ───────────────────────────────────────────── */
 
 type LeftPanelProps = {
@@ -1958,6 +1998,7 @@ export function ExtractionLeftPanel({
               onApproveAndApply={onApproveAndApply}
               editedFields={editedFields}
             />
+            <DocumentFinalityWarning doc={doc} />
             <AIRecommendationsCard
               recommendations={doc.recommendations}
               dismissedMap={state.dismissedRecommendations}

@@ -276,5 +276,20 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
   ]);
   if (risksMerged.length > 0) out.risks = risksMerged;
 
+  // Fund-library resolution backbone fields (Fáze 1)
+  if (typeof p.resolvedFundId === "string" && p.resolvedFundId.trim()) {
+    out.resolvedFundId = p.resolvedFundId.trim();
+  }
+  if (typeof p.resolvedFundCategory === "string" && p.resolvedFundCategory.trim()) {
+    out.resolvedFundCategory = p.resolvedFundCategory.trim();
+  }
+  if (typeof p.fvSourceType === "string" && p.fvSourceType.trim()) {
+    out.fvSourceType = p.fvSourceType.trim();
+  }
+
+  // Praktický lékař (u ŽP)
+  const gp = p.generalPractitioner ?? p.practitioner ?? p.doctor;
+  if (typeof gp === "string" && gp.trim()) out.generalPractitioner = gp.trim();
+
   return out;
 }

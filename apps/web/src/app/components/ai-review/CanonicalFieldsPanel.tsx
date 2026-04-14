@@ -21,10 +21,13 @@ import {
   Info,
   Stethoscope,
   Lock,
+  IdCard,
+  BookOpen,
 } from "lucide-react";
 import type { ExtractionDocument } from "@/lib/ai-review/types";
 import { normalizeDateForAdvisorDisplay, normalizePaymentFrequency } from "@/lib/ai/canonical-date-normalize";
 import { humanizeReviewReasonLine, labelDocumentType } from "@/lib/ai-review/czech-labels";
+import { labelFundCategory, labelFvSourceType } from "@/lib/ai-review/label-dictionary";
 
 type CanonicalFields = NonNullable<ExtractionDocument["canonicalFields"]>;
 
@@ -327,10 +330,49 @@ function PaymentDataSection({ pay }: { pay: NonNullable<CanonicalFields["payment
   );
 }
 
+// ─── IdentityData section ─────────────────────────────────────────────────────
+
+function IdentityDataSection({ id }: { id: NonNullable<CanonicalFields["identityData"]> }) {
+  const hasAny = id.idCardNumber || id.idCardIssuedBy || id.idCardValidUntil || id.idCardIssuedAt || id.generalPractitioner;
+  if (!hasAny) return null;
+  return (
+    <Section icon={IdCard} title="Doklad totožnosti">
+      {id.idCardNumber && <Row label="Číslo dokladu / OP" value={id.idCardNumber} />}
+      {id.idCardIssuedBy && <Row label="Doklad vydal" value={id.idCardIssuedBy} />}
+      {id.idCardIssuedAt && (
+        <Row label="Datum vydání" value={normalizeDateForAdvisorDisplay(id.idCardIssuedAt)} />
+      )}
+      {id.idCardValidUntil && (
+        <Row label="Platnost do" value={normalizeDateForAdvisorDisplay(id.idCardValidUntil)} />
+      )}
+      {id.generalPractitioner && <Row label="Praktický lékař" value={id.generalPractitioner} />}
+    </Section>
+  );
+}
+
+// ─── FundResolution section ───────────────────────────────────────────────────
+
+function FundResolutionSection({ fr }: { fr: NonNullable<CanonicalFields["fundResolution"]> }) {
+  const hasAny = fr.resolvedFundId || fr.resolvedFundCategory || fr.fvSourceType;
+  if (!hasAny) return null;
+  return (
+    <Section icon={BookOpen} title="Fond a budoucí hodnota">
+      {fr.resolvedFundName && <Row label="Fond" value={fr.resolvedFundName} />}
+      {fr.resolvedFundId && !fr.resolvedFundName && <Row label="Fond (ID)" value={fr.resolvedFundId} />}
+      {fr.resolvedFundCategory && (
+        <Row label="Kategorie fondu" value={labelFundCategory(fr.resolvedFundCategory)} />
+      )}
+      {fr.fvSourceType && (
+        <Row label="Zdroj pro výpočet FV" value={labelFvSourceType(fr.fvSourceType)} />
+      )}
+    </Section>
+  );
+}
+
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CanonicalFieldsPanel({ canonicalFields }: { canonicalFields: CanonicalFields }) {
-  const { packetMeta, publishHints, participants, insuredRisks, healthQuestionnaires, investmentData, paymentData } = canonicalFields;
+  const { packetMeta, publishHints, participants, insuredRisks, healthQuestionnaires, investmentData, paymentData, identityData, fundResolution } = canonicalFields;
 
   const hasContent =
     packetMeta?.isBundle ||
@@ -339,7 +381,9 @@ export function CanonicalFieldsPanel({ canonicalFields }: { canonicalFields: Can
     (insuredRisks?.length ?? 0) > 0 ||
     healthQuestionnaires?.some((q) => q.questionnairePresent) ||
     investmentData ||
-    paymentData;
+    paymentData ||
+    identityData ||
+    fundResolution;
 
   if (!hasContent) return null;
 
@@ -365,7 +409,9 @@ export function CanonicalFieldsPanel({ canonicalFields }: { canonicalFields: Can
       {healthQuestionnaires?.some((q) => q.questionnairePresent) && (
         <HealthSection hqs={healthQuestionnaires!} />
       )}
+      {identityData && <IdentityDataSection id={identityData} />}
       {investmentData && <InvestmentSection inv={investmentData} />}
+      {fundResolution && <FundResolutionSection fr={fundResolution} />}
       {paymentData && <PaymentDataSection pay={paymentData} />}
     </div>
   );

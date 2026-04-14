@@ -356,6 +356,14 @@ const FIELD_LABELS: Record<string, string> = {
   loanLinkedCoverageFlag: "Napojení na úvěr",
   primaryParties: "Hlavní strany dokumentu",
   financialTerms: "Finanční údaje",
+  idCardNumber: "Číslo dokladu / OP",
+  idCardIssuedBy: "Doklad vydal",
+  idCardValidUntil: "Platnost dokladu do",
+  idCardIssuedAt: "Datum vydání dokladu",
+  generalPractitioner: "Praktický lékař",
+  resolvedFundId: "Fond (dle knihovny)",
+  resolvedFundCategory: "Kategorie fondu",
+  fvSourceType: "Zdroj pro výpočet FV",
 };
 
 const FIELD_GROUP_MAP: Record<string, string> = {
@@ -374,6 +382,11 @@ const FIELD_GROUP_MAP: Record<string, string> = {
   occupation: "clientProfile",
   sports: "clientProfile",
   policyholder: "clientProfile",
+  idCardNumber: "clientProfile",
+  idCardIssuedBy: "clientProfile",
+  idCardValidUntil: "clientProfile",
+  idCardIssuedAt: "clientProfile",
+  generalPractitioner: "clientProfile",
   participantFullName: "clientProfile",
   investorFullName: "clientProfile",
   employeeFullName: "clientProfile",
@@ -1786,8 +1799,10 @@ export function mapApiToExtractionDocument(
       const hq = extracted.healthQuestionnaires as Array<Record<string, unknown>> | null | undefined;
       const inv = extracted.investmentData as Record<string, unknown> | null | undefined;
       const pay = extracted.paymentData as Record<string, unknown> | null | undefined;
+      const ident = extracted.identityData as Record<string, unknown> | null | undefined;
+      const fr = extracted.fundResolution as Record<string, unknown> | null | undefined;
 
-      if (!pm && !ph && !pts && !ir && !hq && !inv && !pay) return undefined;
+      if (!pm && !ph && !pts && !ir && !hq && !inv && !pay && !ident && !fr) return undefined;
 
       return {
         packetMeta: pm ? {
@@ -1850,6 +1865,19 @@ export function mapApiToExtractionDocument(
           iban: typeof pay.iban === "string" ? pay.iban : undefined,
           bankCode: typeof pay.bankCode === "string" ? pay.bankCode : undefined,
           paymentMethod: typeof pay.paymentMethod === "string" ? pay.paymentMethod : undefined,
+        } : null,
+        identityData: ident ? {
+          idCardNumber: typeof ident.idCardNumber === "string" ? ident.idCardNumber : undefined,
+          idCardIssuedBy: typeof ident.idCardIssuedBy === "string" ? ident.idCardIssuedBy : undefined,
+          idCardValidUntil: typeof ident.idCardValidUntil === "string" ? ident.idCardValidUntil : undefined,
+          idCardIssuedAt: typeof ident.idCardIssuedAt === "string" ? ident.idCardIssuedAt : undefined,
+          generalPractitioner: typeof ident.generalPractitioner === "string" ? ident.generalPractitioner : undefined,
+        } : null,
+        fundResolution: fr ? {
+          resolvedFundId: typeof fr.resolvedFundId === "string" ? fr.resolvedFundId : undefined,
+          resolvedFundCategory: typeof fr.resolvedFundCategory === "string" ? fr.resolvedFundCategory : undefined,
+          fvSourceType: typeof fr.fvSourceType === "string" ? fr.fvSourceType : undefined,
+          resolvedFundName: typeof fr.resolvedFundName === "string" ? fr.resolvedFundName : undefined,
         } : null,
       };
     })(),

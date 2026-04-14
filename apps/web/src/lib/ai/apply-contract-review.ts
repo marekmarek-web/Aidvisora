@@ -148,6 +148,10 @@ type ExistingContactSnapshot = {
   birthDate: string | null;
   personalId: string | null;
   idCardNumber: string | null;
+  idCardIssuedBy: string | null;
+  idCardValidUntil: string | null;
+  idCardIssuedAt: string | null;
+  generalPractitioner: string | null;
   street: string | null;
   city: string | null;
   zip: string | null;
@@ -325,7 +329,7 @@ export function selectExistingContractId(
 const CONTACT_MERGE_FIELDS: Array<{
   fieldKey: keyof Pick<
     ExistingContactSnapshot,
-    "firstName" | "lastName" | "email" | "phone" | "personalId" | "idCardNumber" | "street" | "city" | "zip" | "birthDate"
+    "firstName" | "lastName" | "email" | "phone" | "personalId" | "idCardNumber" | "idCardIssuedBy" | "idCardValidUntil" | "idCardIssuedAt" | "generalPractitioner" | "street" | "city" | "zip" | "birthDate"
   >;
   payloadKeys: string[];
   normalize?: (v: string) => string | null;
@@ -336,6 +340,10 @@ const CONTACT_MERGE_FIELDS: Array<{
   { fieldKey: "phone", payloadKeys: ["phone"] },
   { fieldKey: "personalId", payloadKeys: ["personalId"] },
   { fieldKey: "idCardNumber", payloadKeys: ["idCardNumber"] },
+  { fieldKey: "idCardIssuedBy", payloadKeys: ["idCardIssuedBy", "issuingAuthority"] },
+  { fieldKey: "idCardValidUntil", payloadKeys: ["idCardValidUntil", "expiryDate"] },
+  { fieldKey: "idCardIssuedAt", payloadKeys: ["idCardIssuedAt", "issuedDate"] },
+  { fieldKey: "generalPractitioner", payloadKeys: ["generalPractitioner"] },
   { fieldKey: "street", payloadKeys: ["street", "address"] },
   { fieldKey: "city", payloadKeys: ["city"] },
   { fieldKey: "zip", payloadKeys: ["zip"] },
@@ -369,6 +377,10 @@ async function updateExistingContactFromPayloadWithMerge(
       birthDate: contacts.birthDate,
       personalId: contacts.personalId,
       idCardNumber: contacts.idCardNumber,
+      idCardIssuedBy: contacts.idCardIssuedBy,
+      idCardValidUntil: contacts.idCardValidUntil,
+      idCardIssuedAt: contacts.idCardIssuedAt,
+      generalPractitioner: contacts.generalPractitioner,
       street: contacts.street,
       city: contacts.city,
       zip: contacts.zip,

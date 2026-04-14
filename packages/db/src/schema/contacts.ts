@@ -22,6 +22,14 @@ export const contacts = pgTable("contacts", {
   personalId: text("personal_id"),
   /** Číslo občanského průkazu (volitelné). */
   idCardNumber: text("id_card_number"),
+  /** Kdo doklad vydal (úřad). */
+  idCardIssuedBy: text("id_card_issued_by"),
+  /** Platnost dokladu do (ISO date string). */
+  idCardValidUntil: date("id_card_valid_until", { mode: "string" }),
+  /** Datum vydání dokladu (ISO date string). */
+  idCardIssuedAt: date("id_card_issued_at", { mode: "string" }),
+  /** Praktický lékař (relevantní u ŽP). */
+  generalPractitioner: text("general_practitioner"),
   street: text("street"),
   city: text("city"),
   zip: text("zip"),

@@ -54,5 +54,50 @@ export type PortfolioAttributes = {
   targetAmount?: string;
   /** Předpokládaná budoucí hodnota (z modelace / ilustrace) */
   expectedFutureValue?: string;
+
+  // ─── Fund-library resolution (Fáze 1 backbone) ────────────────────────────
+  /**
+   * FK/slug do fond-library katalogu (nullable).
+   * Vyplněno jen pokud fond existuje v knihovně.
+   */
+  resolvedFundId?: string | null;
+  /**
+   * Fallback kategorie fondu pro heuristický FV výpočet.
+   * Vyplněno, když fond neexistuje v knihovně.
+   */
+  resolvedFundCategory?: ResolvedFundCategory | null;
+  /**
+   * Zdroj dat pro FV výpočet:
+   * - 'fund-library' = fond nalezen v knihovně
+   * - 'heuristic-fallback' = klasifikace do kategorie
+   * - 'manual' = ruční zadání poradcem
+   * - null = FV nelze vypočítat
+   */
+  fvSourceType?: FvSourceType | null;
+
+  // ─── Identity fields (pro propsat do kontaktu) ─────────────────────────────
+  /** Praktický lékař (u ŽP, pokud je v dokumentu) */
+  generalPractitioner?: string;
+
   [key: string]: unknown;
 };
+
+export const RESOLVED_FUND_CATEGORIES = [
+  "equity",
+  "balanced",
+  "conservative",
+  "bond",
+  "real_estate",
+  "dps_dynamic",
+  "dps_balanced",
+  "dps_conservative",
+  "unknown",
+] as const;
+export type ResolvedFundCategory = (typeof RESOLVED_FUND_CATEGORIES)[number];
+
+export const FV_SOURCE_TYPES = [
+  "fund-library",
+  "heuristic-fallback",
+  "manual",
+] as const;
+export type FvSourceType = (typeof FV_SOURCE_TYPES)[number];
