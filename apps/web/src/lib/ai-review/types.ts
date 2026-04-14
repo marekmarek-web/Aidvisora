@@ -105,10 +105,36 @@ export type ClientMatchCandidate = {
   displayName?: string;
 };
 
+/**
+ * Stav pracovního kroku — business čeština pro UI.
+ *
+ * - available:        Krok je dostupný a lze ho provést / spustit.
+ * - executed:         Krok byl úspěšně proveden.
+ * - skipped:          Krok byl přeskočen (automaticky nebo poradcem).
+ * - recommended:      Krok je doporučení — nelze ho spustit automaticky, poradce rozhodne.
+ * - cannot_auto:      Krok nelze provést automaticky — vyžaduje ruční akci mimo systém.
+ */
+export type DraftActionStatus =
+  | "available"
+  | "executed"
+  | "skipped"
+  | "recommended"
+  | "cannot_auto";
+
+export const DRAFT_ACTION_STATUS_LABELS: Record<DraftActionStatus, string> = {
+  available: "Dostupné",
+  executed: "Provedeno",
+  skipped: "Přeskočeno",
+  recommended: "Doporučeno ručně",
+  cannot_auto: "Nelze provést automaticky",
+};
+
 export type DraftAction = {
   type: string;
   label: string;
   payload: Record<string, unknown>;
+  status?: DraftActionStatus;
+  statusNote?: string;
 };
 
 /** Rozhodnutí párování klienta (stejné hodnoty jako v DB / extraction trace). */

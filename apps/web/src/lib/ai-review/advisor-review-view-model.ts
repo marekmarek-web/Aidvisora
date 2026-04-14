@@ -101,14 +101,19 @@ function sensitivityLine(env: DocumentReviewEnvelope): string {
   return "Standardní osobní údaje — bez zvláštní citlivé kategorie v metadatech.";
 }
 
-const MAX_ADVISOR_BRIEF_LENGTH = 2000;
+/**
+ * Max délka stručného shrnutí pro poradce — CRM-usable, ne esej.
+ * Cíl: 3–5 vět, max ~500 znaků.
+ */
+const MAX_ADVISOR_BRIEF_LENGTH = 500;
 const RAW_CODE_PATTERN = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}\b/g;
 
 /**
  * Sanitize LLM-generated advisor summary:
  * - strip raw snake_case pipeline codes,
- * - enforce max length,
- * - prefer Czech content (warn if mostly non-Czech).
+ * - enforce max length (short, CRM-usable),
+ * - strip English-sounding sentences (heuristic),
+ * - prefer Czech content.
  */
 function sanitizeAdvisorBrief(
   raw: string | undefined,
@@ -122,44 +127,50 @@ function sanitizeAdvisorBrief(
     const human = getReasonMessage(match);
     return human && human !== match ? human : "";
   });
-  text = text.replace(/\s{2,}/g, " ").trim();
+
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const czechSentences = sentences.filter((s) => {
+    const hasCzechChars = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/.test(s);
+    const looksEnglish = /\b(the|this|document|was|has|been|with|from|for|that|which|contains|including)\b/i.test(s);
+    return hasCzechChars || !looksEnglish;
+  });
+
+  text = (czechSentences.length > 0 ? czechSentences : sentences)
+    .slice(0, 5)
+    .join(" ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
   if (text.length > MAX_ADVISOR_BRIEF_LENGTH) {
     text = text.slice(0, MAX_ADVISOR_BRIEF_LENGTH).replace(/\s+\S*$/, "") + "…";
   }
 
-  const ef = envelope.extractedFields;
-  const productName = str(ef.productName?.value);
-  const contractNum = str(ef.contractNumber?.value);
-  if (productName && !text.includes(productName)) {
-    const mentionsAlternate =
-      text.toLowerCase().includes(productName.toLowerCase().slice(0, 10));
-    if (!mentionsAlternate) {
-      text = `Produkt: ${productName}. ${text}`;
-    }
-  }
-  if (contractNum && text.includes(contractNum)) {
-    // ok, consistent
-  }
-
   return text || undefined;
 }
 
+/**
+ * Deterministický krátký brief — fakta z extrakce, max 3–5 řádků, česky, CRM-ready.
+ */
 function buildDeterministicBrief(env: DocumentReviewEnvelope, recognition: string): string | undefined {
   const parts: string[] = [];
   if (recognition) parts.push(recognition);
   const product = str(fv(env, "productName"));
   const insurer = str(fv(env, "insurer")) || str(fv(env, "institutionName"));
-  if (product || insurer) parts.push([product, insurer].filter(Boolean).join(" — "));
+  if (product && insurer) {
+    parts.push(`${product}, ${insurer}`);
+  } else if (product || insurer) {
+    parts.push(product || insurer);
+  }
   const cn = str(fv(env, "contractNumber"));
   if (cn) parts.push(`Č. smlouvy: ${cn}`);
-  const mn = str(fv(env, "modelationId"));
-  if (mn && mn !== cn) parts.push(`Č. modelace: ${mn}`);
   const lifecycle = env.documentClassification.lifecycleStatus;
   if (lifecycle === "proposal" || lifecycle === "modelation" || lifecycle === "illustration") {
-    parts.push("Dokument je označen jako návrh/modelace, ne finální smlouva.");
+    parts.push("Návrh/modelace — ne finální smlouva.");
   }
-  return parts.length > 0 ? parts.join(". ") + "." : undefined;
+  if (env.contentFlags?.containsPaymentInstructions) {
+    parts.push("Obsahuje platební pokyny.");
+  }
+  return parts.length > 0 ? parts.join(". ").replace(/\.\./g, ".") : undefined;
 }
 
 const PAYMENT_GATE_MESSAGES: Record<string, string> = {
@@ -259,12 +270,96 @@ function buildPaymentSyncPreview(envelope: DocumentReviewEnvelope): PaymentSyncP
   };
 }
 
+/**
+ * Akce, které se provedou automaticky při zápisu do CRM (create contract, payment, client).
+ * Po apply se stav přepne na "executed".
+ */
+const AUTO_EXECUTE_ON_APPLY = new Set([
+  "create_or_update_contract_record",
+  "create_or_update_contract_production",
+  "create_contract",
+  "create_payment_setup",
+  "create_payment_setup_for_portal",
+  "create_payment",
+  "create_new_client",
+  "create_client",
+  "link_existing_client",
+  "create_notification",
+  "create_followup_email_draft",
+  "draft_email",
+  "mark_as_supporting_document",
+]);
+
+/**
+ * Akce, které se spouští inline v UI (task, opportunity, pipeline deal).
+ */
+const INLINE_EXECUTABLE = new Set([
+  "create_task",
+  "create_service_task",
+  "create_service_review_task",
+  "create_task_followup",
+  "create_manual_review_task",
+  "schedule_consultation",
+  "create_opportunity",
+  "create_or_update_pipeline_deal",
+  "create_or_update_business_plan_item",
+]);
+
+/**
+ * Akce, které systém nemůže provést automaticky — jsou jen doporučení.
+ */
+const RECOMMENDATION_ONLY = new Set([
+  "propose_financial_analysis_update",
+  "propose_financial_analysis_refresh",
+  "prepare_comparison",
+  "request_manual_review",
+  "request_contract_mapping",
+  "update_income_profile",
+  "create_income_verification_record",
+]);
+
+/**
+ * Akce, kde musí poradce přejít jinam a provést akci ručně.
+ */
+const CANNOT_AUTO = new Set([
+  "resolve_client_match",
+  "attach_to_existing_client",
+  "attach_to_existing_contract",
+  "attach_to_client_documents",
+  "attach_to_client_or_company",
+  "attach_to_existing_financing_deal",
+  "attach_to_business_client",
+  "attach_to_loan_or_financing_deal",
+  "link_client",
+  "link_household",
+  "create_or_link_company_entity",
+  "create_service_task",
+]);
+
+function resolveInitialActionStatus(type: string): DraftAction["status"] {
+  if (AUTO_EXECUTE_ON_APPLY.has(type)) return "available";
+  if (INLINE_EXECUTABLE.has(type)) return "available";
+  if (RECOMMENDATION_ONLY.has(type)) return "recommended";
+  if (CANNOT_AUTO.has(type)) return "cannot_auto";
+  return "recommended";
+}
+
+function resolveStatusNote(type: string): string | undefined {
+  if (AUTO_EXECUTE_ON_APPLY.has(type)) return "Provede se automaticky při zápisu do CRM";
+  if (INLINE_EXECUTABLE.has(type)) return undefined;
+  if (RECOMMENDATION_ONLY.has(type)) return "Doporučení — rozhodněte podle situace";
+  if (CANNOT_AUTO.has(type)) return "Vyžaduje ruční akci";
+  return undefined;
+}
+
 function mergeWorkActions(envelope: DocumentReviewEnvelope): DraftAction[] {
   const deterministic = buildAllDraftActions(envelope) as DraftAction[];
   const fromLlm: DraftAction[] = (envelope.suggestedActions ?? []).map((a, i) => ({
     type: a.type?.trim() || `workflow_suggestion_${i}`,
     label: a.label?.trim() || "Návrh kroku",
     payload: (a.payload ?? {}) as Record<string, unknown>,
+    status: "recommended" as const,
+    statusNote: "Návrh z AI — rozhodněte podle situace",
   }));
   const merged = pruneRedundantDraftActions([...deterministic, ...fromLlm] as DraftActionBase[]);
   const seenByType = new Set<string>();
@@ -276,7 +371,11 @@ function mergeWorkActions(envelope: DocumentReviewEnvelope): DraftAction[] {
     if (seenByType.has(typeKey) || seenByLabel.has(labelKey)) continue;
     seenByType.add(typeKey);
     seenByLabel.add(labelKey);
-    out.push(a as DraftAction);
+    out.push({
+      ...(a as DraftAction),
+      status: (a as DraftAction).status ?? resolveInitialActionStatus(a.type),
+      statusNote: (a as DraftAction).statusNote ?? resolveStatusNote(a.type),
+    });
   }
   return out.slice(0, 10);
 }

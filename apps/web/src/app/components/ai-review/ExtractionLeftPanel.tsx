@@ -31,6 +31,7 @@ import {
   XCircle,
   MinusCircle,
   Pencil,
+  Lightbulb,
 } from "lucide-react";
 
 import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
@@ -264,12 +265,12 @@ function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
         <ListChecks size={14} className="text-indigo-500" /> Přehled pro poradce
       </h3>
       <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4 leading-relaxed">
-        Strukturovaný výstup z extrakce — interní podklad, ne náhrada vašeho posouzení.
+        Klíčové údaje z dokumentu. Ověřte oproti originálu.
       </p>
       {ar.llmExecutiveBrief ? (
         <div className="mb-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2 flex items-center gap-2">
-            <Sparkles size={14} className="text-indigo-500" /> Shrnutí (AI)
+            <Sparkles size={14} className="text-indigo-500" /> Stručné shrnutí
           </p>
           <div className="text-sm font-medium text-[color:var(--wp-text)] leading-relaxed break-words whitespace-pre-wrap">
             {ar.llmExecutiveBrief}
@@ -1059,8 +1060,10 @@ function WorkActionsCard({
   editedFields?: Record<string, string>;
 }) {
   const [busyAction, setBusyAction] = React.useState<string | null>(null);
+  const [executedActions, setExecutedActions] = React.useState<Set<string>>(new Set());
   const actions = doc.draftActions ?? [];
   const publishOutcome = doc.applyResultPayload?.publishOutcome;
+  const markExecuted = (key: string) => setExecutedActions((prev) => new Set([...prev, key]));
 
   if (doc.isApplied && publishOutcome) {
     const modeColorMap: Record<string, string> = {
@@ -1114,7 +1117,7 @@ function WorkActionsCard({
         <Wrench size={14} className="text-indigo-500" /> Navrhované pracovní kroky
       </h3>
       <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4">
-        Kliknutím otevřete příslušnou sekci portálu. Automatické akce se provedou při schválení nebo při zápisu do CRM.
+        Akce označené jako „Dostupné" se provedou při zápisu do CRM. Doporučení vyžadují vaše rozhodnutí.
       </p>
       {actions.length === 0 ? (
         <p className="text-sm text-[color:var(--wp-text-secondary)]">
@@ -1127,6 +1130,32 @@ function WorkActionsCard({
             const baseClass =
               "flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-3 border transition-colors w-full text-left";
             const isBusy = busyAction === actionKey;
+            const isLocallyExecuted = executedActions.has(actionKey);
+            const effectiveStatus = isLocallyExecuted ? "executed" as const : (a.status ?? "available" as const);
+
+            if (effectiveStatus === "executed") {
+              return (
+                <li key={actionKey}>
+                  <div className={`${baseClass} text-emerald-700 bg-emerald-50/60 border-emerald-200 cursor-default`}>
+                    <Check size={15} className="text-emerald-500 shrink-0" />
+                    <span className="flex-1">{a.label}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">Provedeno</span>
+                  </div>
+                </li>
+              );
+            }
+
+            if (effectiveStatus === "skipped") {
+              return (
+                <li key={actionKey}>
+                  <div className={`${baseClass} text-slate-500 bg-slate-50/60 border-slate-200 cursor-default opacity-60`}>
+                    <MinusCircle size={15} className="text-slate-400 shrink-0" />
+                    <span className="flex-1 line-through">{a.label}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">Přeskočeno</span>
+                  </div>
+                </li>
+              );
+            }
 
             if (a.type === "link_existing_client") {
               const cid = typeof a.payload?.clientId === "string" ? a.payload.clientId : null;
@@ -1156,6 +1185,7 @@ function WorkActionsCard({
                       setBusyAction(actionKey);
                       try {
                         await onExecuteDraftAction(a);
+                        markExecuted(actionKey);
                       } finally {
                         setBusyAction(null);
                       }
@@ -1264,6 +1294,7 @@ function WorkActionsCard({
                       setBusyAction(actionKey);
                       try {
                         await onExecuteDraftAction(a);
+                        markExecuted(actionKey);
                       } finally {
                         setBusyAction(null);
                       }
@@ -1278,6 +1309,54 @@ function WorkActionsCard({
                     <span className="flex-1">{a.label}</span>
                     <ArrowRight size={14} className="text-indigo-400 shrink-0" />
                   </button>
+                </li>
+              );
+            }
+
+            if (effectiveStatus === "recommended") {
+              const recHref = resolveActionHref(a);
+              return (
+                <li key={actionKey}>
+                  {recHref ? (
+                    <Link href={recHref} className={`${baseClass} text-amber-800 bg-amber-50/40 border-amber-200 hover:bg-amber-100`}>
+                      <Lightbulb size={15} className="text-amber-500 shrink-0" />
+                      <span className="flex-1">{a.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">Doporučení</span>
+                    </Link>
+                  ) : (
+                    <div className={`${baseClass} text-amber-800 bg-amber-50/40 border-amber-200 cursor-default`}>
+                      <Lightbulb size={15} className="text-amber-500 shrink-0" />
+                      <span className="flex-1">{a.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">Doporučení</span>
+                    </div>
+                  )}
+                  {a.statusNote && (
+                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 ml-10 leading-snug">{a.statusNote}</p>
+                  )}
+                </li>
+              );
+            }
+
+            if (effectiveStatus === "cannot_auto") {
+              const caHref = resolveActionHref(a);
+              return (
+                <li key={actionKey}>
+                  {caHref ? (
+                    <Link href={caHref} className={`${baseClass} text-slate-700 bg-slate-50/60 border-slate-200 hover:bg-slate-100`}>
+                      <ExternalLink size={15} className="text-slate-500 shrink-0" />
+                      <span className="flex-1">{a.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">Ruční akce</span>
+                    </Link>
+                  ) : (
+                    <div className={`${baseClass} text-slate-700 bg-slate-50/60 border-slate-200 cursor-default`}>
+                      <ExternalLink size={15} className="text-slate-500 shrink-0" />
+                      <span className="flex-1">{a.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">Ruční akce</span>
+                    </div>
+                  )}
+                  {a.statusNote && (
+                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 ml-10 leading-snug">{a.statusNote}</p>
+                  )}
                 </li>
               );
             }
@@ -1301,11 +1380,11 @@ function WorkActionsCard({
               <li
                 key={actionKey}
                 className={`${baseClass} text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)]/50 border-[color:var(--wp-surface-card-border)] cursor-default`}
-                title="Tato akce se provede automaticky při schválení"
+                title="Provede se automaticky při zápisu do CRM"
               >
                 <ArrowRight size={15} className="text-indigo-400 shrink-0" />
                 <span className="flex-1">{a.label}</span>
-                <span className="text-[10px] text-[color:var(--wp-text-tertiary)] font-normal shrink-0">při schválení</span>
+                <span className="text-[10px] text-[color:var(--wp-text-tertiary)] font-normal shrink-0">při zápisu do CRM</span>
               </li>
             );
           })}
@@ -1388,9 +1467,9 @@ function ExtractionDiagnosticsCard({ doc }: { doc: ExtractionDocument }) {
   const { diagnostics: d } = doc;
 
   const ocrLabel: Record<string, string> = {
-    good: "Dobrá",
-    fair: "Průměrná",
-    poor: "Špatná",
+    good: "Dobrá — údaje by měly být spolehlivé",
+    fair: "Průměrná — doporučujeme zkontrolovat klíčové údaje",
+    poor: "Nízká — údaje je potřeba ručně ověřit oproti originálu",
   };
   const ocrColor: Record<string, string> = {
     good: "text-emerald-600",

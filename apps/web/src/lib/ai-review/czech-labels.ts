@@ -122,28 +122,31 @@ export function formatAiClassifierForAdvisor(c: AiClassifierLike): string {
 /** Důvody kontroly z pipeline — doplnění nad standardní registry reason-codes. */
 const EXTRA_REASON_CS: Record<string, string> = {
   hybrid_contract_signals_detected:
-    "V dokumentu jsou signály více typů smluv — ověřte, že klasifikace odpovídá obsahu.",
+    "V dokumentu jsou prvky více typů smluv — ověřte, že rozpoznaný typ odpovídá skutečnosti.",
   direct_extraction_unsupported_flag:
-    "Pro tento typ dokumentu není dostupná přímá extrakce — doplňte údaje ručně.",
-  scan_or_ocr_unusable: "Text ze skenu nelze spolehlivě přečíst — nahrajte PDF s textovou vrstvou nebo lepší sken.",
+    "Tento typ dokumentu neumíme plně automaticky zpracovat — doplňte údaje ručně.",
+  scan_or_ocr_unusable: "Dokument se nepodařilo spolehlivě přečíst. Zkuste nahrát čitelnější verzi nebo PDF s textovou vrstvou.",
   partial_extraction_coerced:
-    "Část údajů byla dopočítána nebo doplněna heuristikou — ověřte je oproti originálu.",
+    "Některé údaje byly dopočítány z kontextu — ověřte je oproti originálu.",
   partial_extraction_merged_into_stub:
-    "Částečná extrakce byla sloučena do přehledu — zkontrolujte úplnost polí.",
-  payment_data_missing: "Chybí nebo nejsou dostatečně jisté platební údaje.",
-  low_evidence_required: "Nedostatečná evidence v dokumentu — údaje ověřte u klienta nebo v příloze.",
-  combined_single_call: "Zpracování v jednom kroku (kombinovaný režim).",
-  pipeline_defensive_legacy_extract: "Použita záložní extrakční větev — výsledek zkontrolujte.",
-  ai_review_router_manual: "Typ dokumentu vyžaduje ruční rozhodnutí poradce.",
-  router_review_required_defensive: "Kontrola doporučena (obezřetná větev zpracování).",
-  product_family_text_override: "Úprava rodiny produktu podle textu dokumentu.",
-  router_input_text_override: "Úprava vstupu routeru podle textu dokumentu.",
-  combined_dip_dps_type_override: "Úprava typu DIP/DPS podle obsahu dokumentu.",
-  policyholder_missing: "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.",
-  "policyholder missing": "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.",
-  document_family_unknown: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
-  "document family unknown": "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
-  document_family_unclassified: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.",
+    "Údaje byly nalezeny jen částečně — zkontrolujte úplnost oproti dokumentu.",
+  payment_data_missing: "Platební údaje chybí nebo nejsou dostatečně jisté. Doplňte je ručně.",
+  low_evidence_required: "V dokumentu není dostatek informací — ověřte údaje u klienta nebo v příloze.",
+  combined_single_call: "Dokument zpracován v jednom kroku.",
+  pipeline_defensive_legacy_extract: "Byla použita záložní metoda zpracování — zkontrolujte výsledek.",
+  ai_review_router_manual: "Tento typ dokumentu vyžaduje vaše rozhodnutí.",
+  router_review_required_defensive: "Doporučujeme zkontrolovat výsledek zpracování.",
+  product_family_text_override: "Rodina produktu byla upřesněna podle obsahu dokumentu.",
+  router_input_text_override: "Zpracování bylo upraveno podle textu dokumentu.",
+  combined_dip_dps_type_override: "Typ DIP/DPS byl upřesněn podle obsahu dokumentu.",
+  policyholder_missing: "Údaje o pojistníkovi nebyly nalezeny s dostatečnou jistotou — ověřte v dokumentu nebo doplňte ručně.",
+  "policyholder missing": "Údaje o pojistníkovi nebyly nalezeny s dostatečnou jistotou — ověřte v dokumentu nebo doplňte ručně.",
+  document_family_unknown: "Rodina produktu nebyla rozpoznána — ověřte typ dokumentu podle jeho obsahu.",
+  "document family unknown": "Rodina produktu nebyla rozpoznána — ověřte typ dokumentu podle jeho obsahu.",
+  document_family_unclassified: "Rodina produktu nebyla rozpoznána — ověřte typ dokumentu podle jeho obsahu.",
+  low_classifier_confidence: "Typ dokumentu nebyl rozpoznán s dostatečnou jistotou — ověřte, zda odpovídá skutečnosti.",
+  no_markdown_content_for_pdf: "Z dokumentu se nepodařilo získat čitelný text. Zkuste nahrát čitelnější verzi.",
+  scan_pending_ocr: "Dokument čeká na rozpoznání textu ze skenu. Zkuste to za chvíli znovu.",
 };
 
 const PATH_PREFIX_RE =

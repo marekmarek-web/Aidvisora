@@ -15,68 +15,68 @@ export type ReasonCode = {
 
 const REGISTRY: ReasonCode[] = [
   // Preprocessing
-  { code: "preprocess_failed", severity: "warning", humanMessage: "Adobe preprocessing selhal — extrakce proběhla na surových datech.", retryRecommended: true, retryStrategy: "adobe_retry" },
-  { code: "preprocess_timeout", severity: "warning", humanMessage: "Preprocessing vypršel — zkuste dokument znovu.", retryRecommended: true, retryStrategy: "adobe_retry" },
-  { code: "low_text_coverage", severity: "warning", humanMessage: "Nízké pokrytí textu — scan nebo obrázek bez kvalitního OCR.", retryRecommended: false },
+  { code: "preprocess_failed", severity: "warning", humanMessage: "Předzpracování dokumentu se nezdařilo — zpracování proběhlo na původním souboru. Zkuste dokument nahrát znovu.", retryRecommended: true, retryStrategy: "adobe_retry" },
+  { code: "preprocess_timeout", severity: "warning", humanMessage: "Předzpracování trvalo příliš dlouho. Zkuste dokument nahrát znovu.", retryRecommended: true, retryStrategy: "adobe_retry" },
+  { code: "low_text_coverage", severity: "warning", humanMessage: "Dokument se nepodařilo spolehlivě přečíst — pravděpodobně jde o scan nebo obrázek. Zkuste nahrát čitelnější verzi.", retryRecommended: false },
 
   // Classification
-  { code: "low_classification_confidence", severity: "warning", humanMessage: "Nízká jistota klasifikace — typ dokumentu nejistý.", retryRecommended: false },
-  { code: "unsupported_document_type", severity: "blocking", humanMessage: "Nepodporovaný typ dokumentu — nelze automaticky zpracovat.", retryRecommended: false },
-  { code: "ambiguous_classification", severity: "warning", humanMessage: "Typ dokumentu je nejednoznačný — vyžaduje ruční ověření.", retryRecommended: false },
+  { code: "low_classification_confidence", severity: "warning", humanMessage: "Typ dokumentu nebyl rozpoznán s dostatečnou jistotou — ověřte, zda odpovídá skutečnosti.", retryRecommended: false },
+  { code: "unsupported_document_type", severity: "blocking", humanMessage: "Tento typ dokumentu zatím neumíme automaticky zpracovat. Přiřaďte ho ručně.", retryRecommended: false },
+  { code: "ambiguous_classification", severity: "warning", humanMessage: "Typ dokumentu je nejednoznačný — zkontrolujte, zda odpovídá obsahu.", retryRecommended: false },
 
   // Extraction
-  { code: "schema_validation_failed", severity: "blocking", humanMessage: "Extrahovaná data neprošla validací schématu.", retryRecommended: true, retryStrategy: "extraction_retry" },
-  { code: "extraction_parse_error", severity: "blocking", humanMessage: "AI vrátila nevalidní JSON — extrakce selhala.", retryRecommended: true, retryStrategy: "extraction_retry" },
-  { code: "rate_limit_exceeded", severity: "blocking", humanMessage: "Dosažen limit API volání — zkuste znovu za chvíli.", retryRecommended: true, retryStrategy: "backoff_retry" },
+  { code: "schema_validation_failed", severity: "blocking", humanMessage: "Údaje z dokumentu neprošly kontrolou — zkuste ho nahrát znovu.", retryRecommended: true, retryStrategy: "extraction_retry" },
+  { code: "extraction_parse_error", severity: "blocking", humanMessage: "Zpracování dokumentu se nezdařilo. Zkuste ho nahrát znovu.", retryRecommended: true, retryStrategy: "extraction_retry" },
+  { code: "rate_limit_exceeded", severity: "blocking", humanMessage: "Služba je momentálně přetížená. Zkuste to prosím za minutu.", retryRecommended: true, retryStrategy: "backoff_retry" },
 
   // Payment
-  { code: "payment_missing_critical_fields", severity: "blocking", humanMessage: "Platební pokyny — chybí klíčové údaje (částka, účet).", retryRecommended: false },
-  { code: "payment_missing_identifier", severity: "warning", humanMessage: "Platební pokyny — chybí variabilní symbol nebo jiný identifikátor.", retryRecommended: false },
-  { code: "payment_low_confidence", severity: "warning", humanMessage: "Platební údaje mají nízkou jistotu — doporučena kontrola.", retryRecommended: false },
+  { code: "payment_missing_critical_fields", severity: "blocking", humanMessage: "V platebních pokynech chybí klíčové údaje — částka nebo číslo účtu.", retryRecommended: false },
+  { code: "payment_missing_identifier", severity: "warning", humanMessage: "V platebních pokynech chybí variabilní symbol nebo jiný identifikátor. Doplňte ručně.", retryRecommended: false },
+  { code: "payment_low_confidence", severity: "warning", humanMessage: "Platební údaje byly nalezeny jen částečně — doporučujeme je zkontrolovat oproti dokumentu.", retryRecommended: false },
 
   // Quality / OCR
-  { code: "low_ocr_quality", severity: "warning", humanMessage: "Nízká kvalita OCR — výsledek může být nepřesný.", retryRecommended: false },
-  { code: "scan_blur_detected", severity: "info", humanMessage: "Rozmazaný scan — snížená přesnost extrakce.", retryRecommended: false },
-  { code: "scan_low_contrast", severity: "info", humanMessage: "Nízký kontrast scanu.", retryRecommended: false },
+  { code: "low_ocr_quality", severity: "warning", humanMessage: "Dokument se nepodařilo spolehlivě přečíst. Údaje je potřeba ručně zkontrolovat.", retryRecommended: false },
+  { code: "scan_blur_detected", severity: "info", humanMessage: "Scan je rozmazaný — některé údaje mohou být nepřesné. Zkontrolujte je oproti originálu.", retryRecommended: false },
+  { code: "scan_low_contrast", severity: "info", humanMessage: "Scan má nízký kontrast — zkontrolujte údaje oproti originálu.", retryRecommended: false },
 
   // Client matching
-  { code: "ambiguous_client_match", severity: "blocking", humanMessage: "Více možných shod klientů — potvrďte ručně.", retryRecommended: false },
-  { code: "near_match_advisory", severity: "warning", humanMessage: "Pravděpodobná shoda klienta — ověřte výběr před zápisem.", retryRecommended: false },
-  { code: "no_client_match", severity: "warning", humanMessage: "Nenalezena shoda klienta v CRM.", retryRecommended: false },
+  { code: "ambiguous_client_match", severity: "blocking", humanMessage: "V CRM existuje více možných klientů — vyberte správného před zápisem.", retryRecommended: false },
+  { code: "near_match_advisory", severity: "warning", humanMessage: "Nalezena pravděpodobná shoda s klientem v CRM — ověřte, zda jde o správnou osobu.", retryRecommended: false },
+  { code: "no_client_match", severity: "warning", humanMessage: "Klient nebyl nalezen v CRM. Potvrďte vytvoření nového záznamu, nebo vyberte existujícího.", retryRecommended: false },
 
   // Apply gates
-  { code: "proposal_not_final", severity: "warning", humanMessage: "Dokument je návrh/modelace — aplikace jako finální smlouva vyžaduje override.", retryRecommended: false },
-  { code: "envelope_classification_conflict", severity: "blocking", humanMessage: "Konflikt klasifikace — typ neodpovídá obsahu.", retryRecommended: false },
+  { code: "proposal_not_final", severity: "warning", humanMessage: "Dokument vypadá jako návrh nebo modelace, ne jako finální smlouva.", retryRecommended: false },
+  { code: "envelope_classification_conflict", severity: "blocking", humanMessage: "Rozpoznaný typ neodpovídá obsahu dokumentu — zkontrolujte a opravte klasifikaci.", retryRecommended: false },
 
   // Pipeline
-  { code: "pipeline_failed_step", severity: "blocking", humanMessage: "Pipeline selhala v jednom z kroků — zkontrolujte detail.", retryRecommended: true, retryStrategy: "manual_escalation" },
+  { code: "pipeline_failed_step", severity: "blocking", humanMessage: "Zpracování se zastavilo v jednom z kroků. Zkuste dokument nahrát znovu.", retryRecommended: true, retryStrategy: "manual_escalation" },
 
   // Extraction confidence & quality
-  { code: "low_confidence", severity: "warning", humanMessage: "Nízká jistota extrakce — zkontrolujte výsledek.", retryRecommended: false },
-  { code: "critical_review_warning", severity: "blocking", humanMessage: "Kritické upozornění extrakce — dokument vyžaduje ruční kontrolu.", retryRecommended: false },
-  { code: "incomplete_required_data", severity: "warning", humanMessage: "Chybí povinné údaje — doplňte ručně nebo ověřte s klientem.", retryRecommended: false },
-  { code: "sensitive_section_detected", severity: "warning", humanMessage: "Dokument obsahuje citlivé osobní údaje.", retryRecommended: false },
-  { code: "low_text_coverage_estimate", severity: "warning", humanMessage: "Nízké pokrytí textu v dokumentu — pravděpodobně scan bez OCR.", retryRecommended: false },
-  { code: "adobe_preprocess_failed_fallback", severity: "warning", humanMessage: "Adobe preprocessing selhal — extrakce proběhla na surových datech.", retryRecommended: true },
-  { code: "model_flagged", severity: "warning", humanMessage: "Model označil dokument ke kontrole.", retryRecommended: false },
+  { code: "low_confidence", severity: "warning", humanMessage: "Některé údaje byly nalezeny jen částečně — důkladně je zkontrolujte oproti dokumentu.", retryRecommended: false },
+  { code: "critical_review_warning", severity: "blocking", humanMessage: "Dokument vyžaduje vaši ruční kontrolu před dalším zpracováním.", retryRecommended: false },
+  { code: "incomplete_required_data", severity: "warning", humanMessage: "Některé povinné údaje chybí. Doplňte je ručně nebo ověřte s klientem.", retryRecommended: false },
+  { code: "sensitive_section_detected", severity: "warning", humanMessage: "Dokument obsahuje citlivé osobní údaje — zpracovávejte v souladu s GDPR.", retryRecommended: false },
+  { code: "low_text_coverage_estimate", severity: "warning", humanMessage: "Dokument se nepodařilo spolehlivě přečíst — pravděpodobně jde o scan. Zkuste nahrát čitelnější verzi.", retryRecommended: false },
+  { code: "adobe_preprocess_failed_fallback", severity: "warning", humanMessage: "Předzpracování se nezdařilo — zpracování proběhlo na původním souboru. Výsledek zkontrolujte.", retryRecommended: true },
+  { code: "model_flagged", severity: "warning", humanMessage: "Dokument byl označen ke kontrole — ověřte klíčové údaje.", retryRecommended: false },
 
   // Document lifecycle
-  { code: "proposal_not_final_contract", severity: "warning", humanMessage: "Dokument je návrh smlouvy — není to finální smlouva.", retryRecommended: false },
-  { code: "offer_not_binding_contract", severity: "warning", humanMessage: "Dokument je nabídka — není to závazná smlouva.", retryRecommended: false },
-  { code: "proposal_or_modelation_not_final_contract", severity: "warning", humanMessage: "Modelace, kalkulace nebo ilustrace — nejedná se o finální smlouvu.", retryRecommended: false },
-  { code: "supporting_document_review", severity: "info", humanMessage: "Podpůrný dokument vyžaduje ruční kontrolu.", retryRecommended: false },
+  { code: "proposal_not_final_contract", severity: "warning", humanMessage: "Dokument je návrh smlouvy — nejde o finální podepsanou smlouvu.", retryRecommended: false },
+  { code: "offer_not_binding_contract", severity: "warning", humanMessage: "Dokument je nabídka — nejde o závaznou smlouvu.", retryRecommended: false },
+  { code: "proposal_or_modelation_not_final_contract", severity: "warning", humanMessage: "Jde o modelaci, kalkulaci nebo ilustraci — ne o finální smlouvu.", retryRecommended: false },
+  { code: "supporting_document_review", severity: "info", humanMessage: "Podpůrný dokument — zkontrolujte, zda obsahuje relevantní informace.", retryRecommended: false },
 
   // Payment
-  { code: "payment_needs_review", severity: "warning", humanMessage: "Platební pokyny vyžadují ruční kontrolu.", retryRecommended: false },
-  { code: "payment_extraction_failed", severity: "blocking", humanMessage: "Extrakce platebních pokynů selhala.", retryRecommended: true },
-  { code: "payment_validation_needs_review", severity: "warning", humanMessage: "Validace platebních údajů vyžaduje ruční kontrolu.", retryRecommended: false },
+  { code: "payment_needs_review", severity: "warning", humanMessage: "Platební pokyny vyžadují vaši kontrolu před zápisem.", retryRecommended: false },
+  { code: "payment_extraction_failed", severity: "blocking", humanMessage: "Platební pokyny se nepodařilo automaticky přečíst. Zadejte je ručně.", retryRecommended: true },
+  { code: "payment_validation_needs_review", severity: "warning", humanMessage: "Platební údaje neprošly kontrolou — ověřte je oproti dokumentu.", retryRecommended: false },
 
   // Matching
-  { code: "missing_existing_contract_match", severity: "warning", humanMessage: "Nenalezena odpovídající existující smlouva v CRM.", retryRecommended: false },
+  { code: "missing_existing_contract_match", severity: "warning", humanMessage: "Odpovídající smlouva nebyla nalezena v CRM.", retryRecommended: false },
 
-  // Advisor-facing extraction gaps (UI / pipeline hints)
-  { code: "policyholder_missing", severity: "warning", humanMessage: "Údaje o pojistníkovi nejsou dostatečně jisté — ověřte je v dokumentu nebo doplňte ručně.", retryRecommended: false },
-  { code: "document_family_unknown", severity: "warning", humanMessage: "Rodina produktu nebyla spolehlivě rozpoznána — ověřte typ dokumentu podle obsahu.", retryRecommended: false },
+  // Advisor-facing extraction gaps
+  { code: "policyholder_missing", severity: "warning", humanMessage: "Údaje o pojistníkovi nebyly nalezeny s dostatečnou jistotou — ověřte v dokumentu nebo doplňte ručně.", retryRecommended: false },
+  { code: "document_family_unknown", severity: "warning", humanMessage: "Rodina produktu nebyla rozpoznána — ověřte typ dokumentu podle jeho obsahu.", retryRecommended: false },
 ];
 
 const CODE_MAP = new Map<string, ReasonCode>(REGISTRY.map((r) => [r.code, r]));

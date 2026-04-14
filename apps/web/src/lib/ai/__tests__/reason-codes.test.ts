@@ -21,7 +21,7 @@ describe("reason-codes", () => {
   });
 
   it("getReasonMessage returns human message", () => {
-    expect(getReasonMessage("rate_limit_exceeded")).toContain("limit");
+    expect(getReasonMessage("rate_limit_exceeded")).toContain("přetížená");
   });
 
   it("getReasonMessage returns code itself for unknown", () => {

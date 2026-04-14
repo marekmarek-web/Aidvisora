@@ -144,16 +144,15 @@ export function buildHumanSummary(params: {
   // Scan/OCR quality — relevant for all document types
   const modeStr = inputMode as string;
   if (modeStr === "scanned_pdf" || modeStr === "image_document") {
-    parts.push("Dokument je scan — ověřte klíčové údaje oproti originálu.");
+    parts.push("Dokument je scan — údaje je potřeba ručně zkontrolovat oproti originálu.");
   } else if (modeStr === "mixed_pdf") {
-    parts.push("Dokument obsahuje scan i text — některé části mohou vyžadovat kontrolu.");
+    parts.push("Dokument obsahuje scan i textovou vrstvu — některé části mohou vyžadovat kontrolu.");
   }
 
-  // Confidence — only surface if genuinely low
   if (confidence < 0.5) {
-    parts.push("Nízká kvalita čtení — důkladně zkontrolujte všechny údaje.");
+    parts.push("Dokument se nepodařilo spolehlivě přečíst — důkladně zkontrolujte všechny údaje.");
   } else if (confidence < 0.65) {
-    parts.push("Doporučuji ověřit klíčové položky oproti PDF.");
+    parts.push("Některé údaje byly nalezeny jen částečně — doporučujeme je ověřit oproti dokumentu.");
   }
 
   // Actionable review reasons only
@@ -175,16 +174,21 @@ export function buildHumanSummary(params: {
 function humanizeReviewReasonForAdvisorSummary(code: string): string | null {
   const t = code.trim();
   const map: Record<string, string> = {
-    partial_extraction_coerced: "Část údajů byla dopočítána z kontextu — ověřte je v PDF.",
-    partial_extraction_merged_into_stub: "Výstup byl zjednodušen — zkontrolujte hodnoty oproti dokumentu.",
-    proposal_or_modelation_not_final_contract: "Dokument vypadá jako modelace, kalkulace nebo ilustrace, ne jako finální smlouva.",
-    proposal_not_final_contract: "Rozpoznání ukazuje spíš na návrh než na finální smlouvu.",
-    hybrid_contract_signals_detected: "V dokumentu jsou prvky smlouvy i modelace — ověřte typ dokumentu.",
-    scan_or_ocr_unusable: "OCR nemělo dost spolehlivý text — důkladně zkontrolujte pole.",
-    ambiguous_client_match: "V CRM je více možných klientů — vyberte správného.",
+    partial_extraction_coerced: "Některé údaje byly dopočítány z kontextu — ověřte je oproti dokumentu.",
+    partial_extraction_merged_into_stub: "Údaje byly nalezeny jen částečně — zkontrolujte úplnost.",
+    proposal_or_modelation_not_final_contract: "Jde o modelaci nebo ilustraci, ne o finální smlouvu.",
+    proposal_not_final_contract: "Dokument vypadá jako návrh, ne jako finální smlouva.",
+    hybrid_contract_signals_detected: "V dokumentu jsou prvky více typů smluv — ověřte rozpoznaný typ.",
+    scan_or_ocr_unusable: "Dokument se nepodařilo spolehlivě přečíst — zkontrolujte všechny údaje.",
+    ambiguous_client_match: "V CRM existuje více možných klientů — vyberte správného.",
     near_match_advisory:
-      "Existuje pravděpodobná shoda s klientem v CRM — ověřte ji, nebo zvolte jiného klienta.",
-    incomplete_payment_details: "Platební údaje nejsou kompletní — doplňte nebo ověřte.",
+      "Nalezena pravděpodobná shoda s klientem v CRM — ověřte, zda jde o správnou osobu.",
+    incomplete_payment_details: "Platební údaje nejsou kompletní — doplňte chybějící hodnoty.",
+    low_classifier_confidence: "Typ dokumentu nebyl rozpoznán s dostatečnou jistotou.",
+    low_ocr_quality: "Dokument se nepodařilo spolehlivě přečíst — údaje zkontrolujte.",
+    low_text_coverage: "Text dokumentu se nepodařilo spolehlivě přečíst.",
+    low_text_coverage_estimate: "Text dokumentu se nepodařilo spolehlivě přečíst.",
+    no_markdown_content_for_pdf: "Z dokumentu se nepodařilo získat čitelný text.",
   };
   if (map[t]) return map[t];
   if (/^[a-z][a-z0-9_]*$/i.test(t) && t.includes("_")) return null;
@@ -284,17 +288,17 @@ export function buildHumanErrorMessage(params: {
 
   if (inputMode === "scanned_pdf" || inputMode === "image_document") {
     if (errorMessage?.includes("OCR") || errorMessage?.includes("scan")) {
-      return "Dokument je scan a kvalita OCR je nízká. Zkuste nahrát dokument ve vyšší kvalitě nebo jako textové PDF.";
+      return "Dokument se nepodařilo spolehlivě přečíst. Zkuste nahrát čitelnější dokument nebo PDF s textovou vrstvou.";
     }
-    return "Dokument je scan. Nepodařilo se ho dostatečně přečíst pro automatické zpracování.";
+    return "Dokument je scan a nepodařilo se ho automaticky zpracovat. Zkuste nahrát čitelnější verzi.";
   }
 
   if (primaryType === "unsupported_or_unknown") {
-    return "Dokument byl rozpoznán jako nepodporovaný typ. Můžete ho přiřadit ručně.";
+    return "Tento typ dokumentu zatím neumíme automaticky zpracovat. Můžete ho přiřadit ručně.";
   }
 
   if (errorMessage?.includes("schema") || errorMessage?.includes("schéma")) {
-    return "Dokument byl rozpoznán, ale jeho struktura neodpovídá očekávanému formátu. Zkuste ruční kontrolu.";
+    return "Struktura dokumentu neodpovídá očekávanému formátu. Zkontrolujte dokument ručně.";
   }
 
   if (errorMessage?.includes("Klasifikace")) {

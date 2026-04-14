@@ -88,6 +88,8 @@ export interface DraftActionBase {
   type: DraftActionType;
   label: string;
   payload: Record<string, unknown>;
+  status?: "available" | "executed" | "skipped" | "recommended" | "cannot_auto";
+  statusNote?: string;
 }
 
 export interface ReviewQueueItem {
