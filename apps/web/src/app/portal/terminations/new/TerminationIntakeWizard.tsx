@@ -75,14 +75,15 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
 
 const STEP_LABELS = ["Instituce a smlouva", "Režim a termín", "Dokončit výstup"] as const;
 
+// Aidvisora Dark Mode 2030
 const TERMINATION_FIELD_CLASS =
-  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
-const TERMINATION_LABEL_CLASS = "mb-2 block text-xs font-medium text-slate-600";
+  "h-12 w-full min-h-[44px] rounded-2xl border border-white/5 bg-[#111836]/60 px-4 text-sm text-slate-200 outline-none transition focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-500";
+const TERMINATION_LABEL_CLASS = "mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400";
 const TERMINATION_TEXTAREA_CLASS =
-  "min-h-[104px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
+  "min-h-[104px] w-full rounded-2xl border border-white/5 bg-[#111836]/60 px-4 py-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 resize-none";
 const TERMINATION_DATE_INPUT_CLASS =
-  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100";
-const TERMINATION_DATE_LABEL_CLASS = "mb-2 block text-xs font-medium text-slate-600";
+  "h-12 w-full min-h-[44px] rounded-2xl border border-white/5 bg-[#111836]/60 px-4 text-sm text-slate-200 outline-none transition focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10";
+const TERMINATION_DATE_LABEL_CLASS = "mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400";
 
 type Props = {
   prefill: TerminationWizardPrefill;
@@ -681,7 +682,7 @@ export function TerminationIntakeWizard({
     setError(null);
     setPartialSavedOk(null);
     if (requestStatus !== "intake") {
-      setError("Rozepsaný koncept lze ukládat jen ve stavu „intake“. Použijte Dokončit žádost.");
+      setError("Rozepsaný koncept lze ukládat jen ve stavu „intake". Použijte Dokončit žádost.");
       return;
     }
     if (!canWrite) {
@@ -742,7 +743,7 @@ export function TerminationIntakeWizard({
       return;
     }
     if (!insurerQuery.trim()) {
-      setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané“.");
+      setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané".");
       return;
     }
     startTransition(async () => {
@@ -768,7 +769,7 @@ export function TerminationIntakeWizard({
   const contextBanner = useMemo(() => {
     if (prefill.mode === "crm") {
       return (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-400">
           Kontext: smlouva z CRM
           {prefill.contactLabel ? ` · klient ${prefill.contactLabel}` : ""}
           {prefill.contractId ? ` · smlouva ${prefill.contractId.slice(0, 8)}…` : ""}
@@ -777,14 +778,14 @@ export function TerminationIntakeWizard({
     }
     if (prefill.mode === "contact_only") {
       return (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-400">
           Kontext: klient bez vybrané smlouvy
           {prefill.contactLabel ? ` · ${prefill.contactLabel}` : ""} – doplňte údaje nebo nahrajte dokument.
         </p>
       );
     }
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-400">
         Kontext: obecný intak – zvažte vybrat klienta v kontaktech pro předvyplnění.
       </p>
     );
@@ -792,8 +793,8 @@ export function TerminationIntakeWizard({
 
   const aiBanner =
     sourceFromAi ? (
-      <p className="text-sm text-indigo-900 bg-indigo-50 border border-indigo-200 rounded-2xl px-3 py-2">
-        Otevřeno z AI asistenta – žádost bude označena zdrojem „ai_chat“. Ověřte údaje a výsledek pravidel.
+      <p className="text-sm text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-3 py-2">
+        Otevřeno z AI asistenta – žádost bude označena zdrojem „ai_chat". Ověřte údaje a výsledek pravidel.
       </p>
     ) : null;
 
@@ -846,6 +847,7 @@ export function TerminationIntakeWizard({
             ? "Rychlá akce"
             : "Ruční zadání";
 
+  // Stepper — Dark Mode 2030
   const stepper = (
     <div className="grid gap-3 md:grid-cols-3">
       {STEP_LABELS.map((label, index) => {
@@ -865,23 +867,28 @@ export function TerminationIntakeWizard({
             }}
             className={cx(
               "rounded-2xl border px-4 py-3 text-left transition min-h-[44px]",
-              active && "border-violet-200 bg-violet-50 shadow-sm",
-              done && "border-emerald-200 bg-emerald-50",
-              !active && !done && "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
+              active && "border-indigo-500/40 bg-indigo-500/10 shadow-sm",
+              done && "border-emerald-500/30 bg-emerald-500/10",
+              !active && !done && "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
             )}
           >
             <div className="flex items-center gap-3">
               <div
                 className={cx(
                   "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shrink-0",
-                  active && "bg-violet-600 text-white",
+                  active && "bg-indigo-600 text-white",
                   done && "bg-emerald-500 text-white",
-                  !active && !done && "bg-slate-100 text-slate-600",
+                  !active && !done && "bg-white/10 text-slate-400",
                 )}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
               </div>
-              <div className="text-sm font-semibold text-slate-900">{label}</div>
+              <div className={cx(
+                "text-sm font-semibold",
+                active && "text-white",
+                done && "text-emerald-300",
+                !active && !done && "text-slate-400",
+              )}>{label}</div>
             </div>
           </button>
         );
@@ -892,760 +899,785 @@ export function TerminationIntakeWizard({
   const contactDocsHref = contactId ? `/portal/contacts/${contactId}?tab=dokumenty` : "/portal/contacts/new";
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
-            Výpověď smlouvy
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Vyberte klienta, instituci a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
-          </p>
-          {contextBanner}
-          {aiBanner}
-        </div>
-        <div
-          className={cx(
-            "inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-semibold",
-            isComplete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900",
-          )}
-        >
-          {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-          {isComplete ? "Připraveno k dokončení" : "Doplňte chybějící údaje"}
-        </div>
+    <div className="relative min-h-screen bg-[#040814]">
+      {/* Ambient glow blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/8 blur-[100px]" />
       </div>
 
-      {draftLoadError ? (
-        <p className="text-sm text-red-600" role="alert">
-          {draftLoadError}
-        </p>
-      ) : null}
-
-      {partialRequestId ? (
-        <p className="text-xs text-slate-500 font-mono">Koncept: {partialRequestId}</p>
-      ) : null}
-
-      {partialSavedOk ? (
-        <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2">
-          {partialSavedOk}
-        </p>
-      ) : null}
-
-      {finalizeOkMsg ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 space-y-2">
-          <p>{finalizeOkMsg}</p>
-          {partialRequestId ? (
-            <Link
-              href={`/portal/terminations/${partialRequestId}`}
-              className="inline-flex font-semibold text-violet-700 underline"
-            >
-              Otevřít detail žádosti
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-
-      {!canWrite ? (
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Nemáte oprávnění vytvářet žádosti (potřebná role s úpravou kontaktů).
-        </p>
-      ) : null}
-
-      {previewGapMessages.length > 0 ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-xs font-semibold text-amber-900 mb-1">Chybějící údaje</p>
-          <ul className="list-disc pl-4 space-y-0.5">
-            {previewGapMessages.map((m) => (
-              <li key={m} className="text-xs text-amber-900">{m}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {segmentSuggestionBanner ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
-          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-          <p className="text-sm text-blue-900">{segmentSuggestionBanner}</p>
-          <button
-            type="button"
-            onClick={() => setSegmentSuggestionBanner(null)}
-            className="ml-auto text-xs text-blue-600 underline shrink-0"
+      <div className="relative mx-auto max-w-[1000px] space-y-6 px-4 pb-32 pt-6 sm:px-6">
+        {/* Hlavička */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
+              Výpověď smlouvy
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Vyberte klienta, instituci a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
+            </p>
+            {contextBanner}
+            {aiBanner}
+          </div>
+          <div
+            className={cx(
+              "inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-semibold",
+              isComplete
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-400",
+            )}
           >
-            Zavřít
-          </button>
-        </div>
-      ) : null}
-
-      {uploadError ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-          Nahrání dokumentu: {uploadError}
-        </p>
-      ) : null}
-      {aiExtractMsg ? (
-        <p
-          className={`rounded-2xl border px-4 py-3 text-sm ${
-            aiExtractMsg.startsWith("AI extrakce selhala")
-              ? "border-amber-200 bg-amber-50 text-amber-950"
-              : "border-emerald-200 bg-emerald-50 text-emerald-900"
-          }`}
-          role="status"
-        >
-          {aiExtractMsg}
-        </p>
-      ) : null}
-
-      {stepper}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-        }}
-        className="space-y-6"
-      >
-        <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-          {wizardStep === 0 ? (
-            <div className="space-y-6">
-              <div className="grid gap-3 md:grid-cols-3">
-                <button
-                  type="button"
-                  disabled={prefill.mode !== "crm"}
-                  onClick={() => setSourceCard("crm")}
-                  className={cx(
-                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
-                    sourceCard === "crm"
-                      ? "border-violet-200 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
-                    prefill.mode !== "crm" && "opacity-50 cursor-not-allowed",
-                  )}
-                >
-                  <div
-                    className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
-                      sourceCard === "crm"
-                        ? "bg-violet-600 text-white"
-                        : "bg-slate-50 text-slate-500",
-                    )}
-                  >
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm font-semibold text-slate-900">Vybrat z CRM</div>
-                  <div className="mt-1 text-sm leading-6 text-slate-500">
-                    Nejrychlejší cesta s předvyplněním údajů.
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceCard("upload")}
-                  className={cx(
-                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
-                    sourceCard === "upload"
-                      ? "border-violet-200 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
-                  )}
-                >
-                  <div
-                    className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
-                      sourceCard === "upload"
-                        ? "bg-violet-600 text-white"
-                        : "bg-slate-50 text-slate-500",
-                    )}
-                  >
-                    <Upload className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm font-semibold text-slate-900">Nahrát smlouvu</div>
-                  <div className="mt-1 text-sm leading-6 text-slate-500">
-                    AI přečte instituci, číslo smlouvy a pojistníka.
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceCard("manual")}
-                  className={cx(
-                    "rounded-3xl border p-4 text-left transition min-h-[44px]",
-                    sourceCard === "manual"
-                      ? "border-violet-200 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40",
-                  )}
-                >
-                  <div
-                    className={cx(
-                      "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
-                      sourceCard === "manual"
-                        ? "bg-violet-600 text-white"
-                        : "bg-slate-50 text-slate-500",
-                    )}
-                  >
-                    <Building2 className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm font-semibold text-slate-900">Vyplnit ručně</div>
-                  <div className="mt-1 text-sm leading-6 text-slate-500">
-                    Pro cizí smlouvy nebo nový případ.
-                  </div>
-                </button>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                <SearchCombobox
-                  variant="termination"
-                  label="Instituce"
-                  placeholder="Začněte psát název instituce…"
-                  query={insurerQuery}
-                  onQueryChange={onInsurerQueryChange}
-                  items={insurerItems}
-                  selectedId={selectedInsurerRegistryId}
-                  onSelect={(item) => onInsurerPick(item)}
-                  isLoading={insurerSearchBusy}
-                />
-                <SearchCombobox
-                  variant="termination"
-                  label="Klient"
-                  placeholder="Vyhledejte jméno klienta…"
-                  helperText="Vyberte kontakt ze seznamu."
-                  query={clientQuery}
-                  onQueryChange={(q) => {
-                    setClientQuery(q);
-                  }}
-                  items={clientItems}
-                  selectedId={contactId}
-                  onSelect={onClientPick}
-                  isLoading={clientSearchBusy}
-                />
-                <div>
-                  <label className={TERMINATION_LABEL_CLASS}>Číslo smlouvy</label>
-                  <input
-                    value={contractNumber}
-                    onChange={(e) => setContractNumber(e.target.value)}
-                    className={TERMINATION_FIELD_CLASS}
-                  />
-                </div>
-                <FriendlyDateInput
-                  label="Počátek pojištění"
-                  value={contractStartDate}
-                  onChange={setContractStartDate}
-                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                />
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Adresa pro odeslání</div>
-                    <div className="mt-1 text-sm text-slate-900">
-                      {deliveryAddressLine ??
-                        "Vyberte instituci ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
-                    </div>
-                    {registryDeliveryMeta?.channelHint ? (
-                      <div className="mt-2 text-xs leading-5 text-slate-500">
-                        Kanál: {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              {sourceCard === "upload" ? (
-                <div className="space-y-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf,image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void onFileSelected(f);
-                      e.target.value = "";
-                    }}
-                  />
-                  <div
-                    className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-6 cursor-pointer hover:border-violet-300 transition"
-                    onClick={() => fileInputRef.current?.click()}
-                    onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
-                    role="button"
-                    tabIndex={0}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const f = e.dataTransfer.files?.[0];
-                      if (f) void onFileSelected(f);
-                    }}
-                  >
-                    <Upload className="h-8 w-8 text-slate-500" />
-                    <div className="text-sm font-medium text-slate-900">
-                      {uploadBusy || aiExtractBusy
-                        ? uploadBusy
-                          ? "Nahrávám soubor…"
-                          : "AI čte dokument…"
-                        : sourceDocumentId.trim()
-                          ? "Soubor nahrán — klikněte pro nový"
-                          : "Přetáhněte soubor nebo klikněte pro výběr"}
-                    </div>
-                    <div className="text-xs text-slate-500">PDF nebo obrázek, max 20 MB</div>
-                  </div>
-                  {sourceDocumentId.trim() ? (
-                    <p className="text-xs text-slate-500 font-mono">
-                      Dok: {sourceDocumentId.slice(0, 16)}…
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                <div>
-                  <label className={TERMINATION_LABEL_CLASS}>Identifikátor dokumentu ve vašich souborech (volitelné)</label>
-                  <input
-                    value={sourceDocumentId}
-                    onChange={(e) => setSourceDocumentId(e.target.value)}
-                    className={`${TERMINATION_FIELD_CLASS} font-mono text-xs`}
-                    placeholder="UUID dokumentu z CRM"
-                  />
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                    <Link href={contactDocsHref} className="font-semibold text-violet-600 underline">
-                      Otevřít dokumenty klienta
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-900 cursor-pointer min-h-[44px]">
-                <input
-                  type="checkbox"
-                  checked={uncertainInsurer}
-                  onChange={(e) => setUncertainInsurer(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-200"
-                />
-                Nejsem si jistý institucí nebo adresou, chci to poslat do kontroly
-              </label>
-            </div>
-          ) : null}
-
-          {wizardStep === 1 ? (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Režim a termín ukončení</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Zvolte segment a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
-                </p>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div>
-                  <label className={TERMINATION_LABEL_CLASS}>Segment</label>
-                  <select
-                    value={productSegment}
-                    onChange={(e) => void onSegmentChange(e.target.value)}
-                    className={TERMINATION_FIELD_CLASS}
-                  >
-                    {segments.map((s) => (
-                      <option key={s} value={s}>
-                        {segmentLabel(s)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={TERMINATION_LABEL_CLASS}>Způsob ukončení</label>
-                  <select
-                    value={terminationMode}
-                    onChange={(e) => {
-                      const v = e.target.value as TerminationMode;
-                      setTerminationMode(v);
-                      if (v === "end_of_insurance_period") setEffectiveManual(false);
-                      if (v === "within_two_months_from_inception") setSubmissionManual(false);
-                    }}
-                    className={TERMINATION_FIELD_CLASS}
-                  >
-                    {MODE_OPTIONS.filter((m) =>
-                      isTerminationModeAllowedForSegment(m.value, productSegment),
-                    ).map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  {!isTerminationModeAllowedForSegment(terminationMode, productSegment) && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      Zvolený způsob ukončení není obvykle dostupný pro segment{" "}
-                      {segmentLabel(productSegment)}. Byl automaticky přepnut.
-                    </p>
-                  )}
-                </div>
-                {terminationMode === "within_two_months_from_inception" ? (
-                  <FriendlyDateInput
-                    label="Datum podání výpovědi (den doručení)"
-                    value={requestedSubmissionDate}
-                    onChange={(v) => {
-                      setSubmissionManual(true);
-                      setRequestedSubmissionDate(v);
-                    }}
-                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                  />
-                ) : (
-                  <FriendlyDateInput
-                    label="Požadované datum účinnosti (volitelné)"
-                    value={requestedEffectiveDate}
-                    onChange={(v) => {
-                      setEffectiveManual(true);
-                      setRequestedEffectiveDate(v);
-                    }}
-                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                  />
-                )}
-                <FriendlyDateInput
-                  label="Výroční den"
-                  value={contractAnniversaryDate}
-                  onChange={(v) => {
-                    setAnniversaryManual(true);
-                    setContractAnniversaryDate(v);
-                  }}
-                  inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                  labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                />
-                <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-violet-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-slate-900">
-                        {terminationMode === "within_two_months_from_inception"
-                          ? "Termíny (náhled)"
-                          : "Navržené datum účinnosti (náhled)"}
-                      </div>
-                      {terminationMode === "within_two_months_from_inception" ? (
-                        <div className="mt-1 space-y-1 text-sm text-slate-900">
-                          <div>
-                            <span className="font-medium text-slate-600">Datum podání: </span>
-                            {submissionPreviewLabel}
-                          </div>
-                          <div>
-                            <span className="font-medium text-slate-600">Účinnost (pravidla): </span>
-                            {effectivePreviewLabel}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-1 text-sm text-slate-900">{effectivePreviewLabel}</div>
-                      )}
-                      <div className="mt-2 text-xs leading-5 text-slate-500">
-                        {terminationMode === "end_of_insurance_period" && contractAnniversaryDate.trim()
-                          ? `Doplněno automaticky z výročního dne smlouvy. Po dokončení žádosti pravidla ověří přesné datum s ohledem na 6týdenní výpovědní lhůtu.`
-                          : terminationMode === "within_two_months_from_inception"
-                            ? twoMonthDeadline
-                              ? twoMonthOpen
-                                ? `Zákonná lhůta pro výpověď do 2 měsíců od sjednání platí do ${formatIsoDateForUiCs(twoMonthDeadline)}. Účinnost je typicky den doručení (datum podání) — po uložení žádosti ji dopočítají pravidla.`
-                                : `Zákonná lhůta pro výpověď do 2 měsíců od sjednání pravděpodobně uplynula (limit byl ${formatIsoDateForUiCs(twoMonthDeadline)}). Pravidla to potvrdí po odeslání.`
-                              : "Zadejte počátek pojištění v kroku 1 — pak se automaticky vypočítá lhůta."
-                            : terminationMode === "fixed_calendar_date"
-                              ? "Zadejte požadované datum ručně. Pravidla ověří, zda je datum přípustné."
-                              : "Po dokončení žádosti pravidla dopočítají definitivní datum."}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="lg:col-span-2">
-                  <label className={TERMINATION_LABEL_CLASS}>Přílohy</label>
-                  <textarea
-                    value={attachmentsDeclared}
-                    onChange={(e) => setAttachmentsDeclared(e.target.value)}
-                    placeholder="Například: kopie technického průkazu, zelená karta…"
-                    rows={4}
-                    className={TERMINATION_TEXTAREA_CLASS}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {wizardStep === 2 ? (
-            <div className="space-y-6">
-              {/* Detail fields: policyholder, place, note */}
-              <details className="rounded-2xl border border-slate-200">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900 select-none">
-                  Upřesnit pojistníka a poznámku
-                </summary>
-                <div className="space-y-4 p-4 pt-2">
-                  <fieldset className="rounded-2xl border border-slate-200 p-3 space-y-2">
-                    <legend className="text-xs font-medium text-slate-600 px-1">Pojistník v dopise</legend>
-                    <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
-                      <input
-                        type="radio"
-                        name="ph-kind"
-                        checked={policyholderKind === "person"}
-                        onChange={() => setPolicyholderKind("person")}
-                        className="h-4 w-4"
-                      />
-                      Fyzická osoba (jméno z kontaktu)
-                    </label>
-                    <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer">
-                      <input
-                        type="radio"
-                        name="ph-kind"
-                        checked={policyholderKind === "company"}
-                        onChange={() => setPolicyholderKind("company")}
-                        className="h-4 w-4"
-                      />
-                      Právnická osoba / firma
-                    </label>
-                    {policyholderKind === "company" ? (
-                      <div className="grid gap-2 pt-1">
-                        <input
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
-                          className={TERMINATION_FIELD_CLASS}
-                          placeholder="Obchodní firma"
-                        />
-                        <input
-                          value={authorizedPersonName}
-                          onChange={(e) => setAuthorizedPersonName(e.target.value)}
-                          className={TERMINATION_FIELD_CLASS}
-                          placeholder="Oprávněná osoba (podpis)"
-                        />
-                        <input
-                          value={authorizedPersonRole}
-                          onChange={(e) => setAuthorizedPersonRole(e.target.value)}
-                          className={TERMINATION_FIELD_CLASS}
-                          placeholder="Role (volitelné)"
-                        />
-                      </div>
-                    ) : null}
-                  </fieldset>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Adresa pojistníka – ulice (doplní dopis, není-li v CRM)</label>
-                      <input
-                        value={policyholderAddressLine1Override}
-                        onChange={(e) => setPolicyholderAddressLine1Override(e.target.value)}
-                        className={TERMINATION_FIELD_CLASS}
-                        placeholder="Např. Sněmovní 4"
-                      />
-                    </div>
-                    <div>
-                      <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Adresa pojistníka – PSČ a město</label>
-                      <input
-                        value={policyholderAddressLine2Override}
-                        onChange={(e) => setPolicyholderAddressLine2Override(e.target.value)}
-                        className={TERMINATION_FIELD_CLASS}
-                        placeholder="Např. 118 00 Praha 1"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Místo v záhlaví dopisu (volitelné)</label>
-                    <input
-                      value={placeOverride}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setPlaceOverride(v);
-                        const iso = letterHeaderDateIso.trim();
-                        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-                          setLetterPlainTextDraft((prev) =>
-                            replaceTerminationLetterPlaceDateLine(prev, v, iso),
-                          );
-                        }
-                      }}
-                      className={TERMINATION_FIELD_CLASS}
-                      placeholder="např. Praha"
-                    />
-                  </div>
-
-                  {terminationMode === "after_claim" ? (
-                    <FriendlyDateInput
-                      label="Datum oznámení / pojistné události (volitelné)"
-                      value={claimEventDate}
-                      onChange={setClaimEventDate}
-                      inputClassName={TERMINATION_DATE_INPUT_CLASS}
-                      labelClassName={TERMINATION_DATE_LABEL_CLASS}
-                    />
-                  ) : null}
-
-                  <div>
-                    <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>
-                      Interní poznámka pro kontrolu (volitelné)
-                    </label>
-                    <textarea
-                      value={advisorNoteForReview}
-                      onChange={(e) => setAdvisorNoteForReview(e.target.value)}
-                      rows={3}
-                      className={TERMINATION_TEXTAREA_CLASS}
-                      placeholder="Viditelné v náhledu, ne v textu dopisu vůči instituci."
-                    />
-                  </div>
-                </div>
-              </details>
-
-              {/* Advisor confirmation checkpoint – povinné před exportem */}
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-semibold text-amber-900 mb-2">Potvrzení poradce před exportem</p>
-                <p className="text-xs text-amber-800 mb-3">
-                  Aidvisora generuje návrh dokumentu na základě zadaných údajů. Zodpovědnost za
-                  správnost výstupu, jeho odeslání a právní důsledky nese poradce.
-                </p>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={advisorConfirmed}
-                    onChange={(e) => setAdvisorConfirmed(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-amber-300"
-                  />
-                  <span className="text-sm text-amber-950">
-                    Zkontroloval/a jsem pojistníka, číslo smlouvy, pojišťovnu, adresu a datum
-                    účinnosti. Výstup je připraven k odeslání a přebírám za něj odpovědnost.
-                  </span>
-                </label>
-              </div>
-
-              {previewSyncBusy ? (
-                <p className="text-xs text-slate-500">Aktualizuji náhled…</p>
-              ) : null}
-
-              {partialRequestId ? (
-                <TerminationFinishOutputLayout
-                  key={partialRequestId}
-                  requestId={partialRequestId}
-                  letterPlainTextDraft={letterPlainTextDraft}
-                  onLetterPlainTextDraftChange={onLetterPlainTextDraftChange}
-                  letterServerSyncKey={letterServerSyncKey}
-                  letterHeaderDateIso={letterHeaderDateIso}
-                  onLetterHeaderDateIsoChange={(iso) => {
-                    setLetterHeaderDateIso(iso);
-                    const t = iso.trim();
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
-                      setLetterPlainTextDraft((prev) =>
-                        replaceTerminationLetterPlaceDateLine(prev, placeOverride, t),
-                      );
-                    }
-                  }}
-                  leftPanel={{
-                    clientName: clientQuery.trim() || null,
-                    insurerName: insurerQuery.trim() || null,
-                    insurerAddress: registryDeliveryMeta?.addressLine ?? null,
-                    contractNumber: contractNumber.trim() || null,
-                    terminationModeLabel: MODE_OPTIONS.find((m) => m.value === terminationMode)?.label ?? terminationMode,
-                    effectiveDateLabel:
-                      finishLetterVm?.computedEffectiveDate || finishLetterVm?.requestedEffectiveDate
-                        ? formatCzDate(
-                            finishLetterVm.computedEffectiveDate ?? finishLetterVm.requestedEffectiveDate ?? "",
-                          )
-                        : effectivePreviewLabel,
-                    submissionDateLabel:
-                      terminationMode === "within_two_months_from_inception"
-                        ? submissionPreviewLabel
-                        : null,
-                    deliveryChannelHint: registryDeliveryMeta?.channelHint ?? null,
-                  }}
-                  onBuildResult={(data: TerminationLetterBuildResult) => {
-                    setPreviewGapMessages(data.validityReasons);
-                    setFinishLetterVm(data.viewModel);
-                  }}
-                />
-              ) : (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-                  {previewSyncBusy ? "Připravuji koncept pro náhled…" : "Náhled bude k dispozici po uložení konceptu."}
-                </div>
-              )}
-            </div>
-          ) : null}
+            {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            {isComplete ? "Připraveno k dokončení" : "Doplňte chybějící údaje"}
+          </div>
         </div>
 
-        {error ? (
-          <p className="text-sm text-red-600" role="alert">
-            {error}
+        {draftLoadError ? (
+          <p className="text-sm text-red-400" role="alert">
+            {draftLoadError}
           </p>
         ) : null}
 
-        <div className="mt-6 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <span className="rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700">
-              {sourceFooterLabel}
-            </span>
-            <span>
-              {wizardStep === 2 ? "Toto je finální náhled před exportem." : "Vyplňte údaje a pokračujte na další krok."}
-            </span>
+        {partialRequestId ? (
+          <p className="text-xs text-slate-500 font-mono">Koncept: {partialRequestId}</p>
+        ) : null}
+
+        {partialSavedOk ? (
+          <p className="text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-3 py-2">
+            {partialSavedOk}
+          </p>
+        ) : null}
+
+        {finalizeOkMsg ? (
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300 space-y-2">
+            <p>{finalizeOkMsg}</p>
+            {partialRequestId ? (
+              <Link
+                href={`/portal/terminations/${partialRequestId}`}
+                className="inline-flex font-semibold text-indigo-400 underline"
+              >
+                Otevřít detail žádosti
+              </Link>
+            ) : null}
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={wizardStep === 0}
-                onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-                className="h-11 min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 disabled:opacity-40"
-              >
-                Zpět
-              </button>
-              {contactId ? (
-                <Link
-                  href={`/portal/contacts/${contactId}`}
-                  className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
-                >
-                  Zrušit
-                </Link>
-              ) : (
-                <Link
-                  href="/portal/today"
-                  className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
-                >
-                  Zrušit
-                </Link>
-              )}
+        ) : null}
+
+        {!canWrite ? (
+          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            Nemáte oprávnění vytvářet žádosti (potřebná role s úpravou kontaktů).
+          </p>
+        ) : null}
+
+        {previewGapMessages.length > 0 ? (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+            <p className="text-xs font-semibold text-amber-300 mb-1">Chybějící údaje</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {previewGapMessages.map((m) => (
+                <li key={m} className="text-xs text-amber-300">{m}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {segmentSuggestionBanner ? (
+          <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+            <p className="text-sm text-blue-300">{segmentSuggestionBanner}</p>
+            <button
+              type="button"
+              onClick={() => setSegmentSuggestionBanner(null)}
+              className="ml-auto text-xs text-blue-400 underline shrink-0"
+            >
+              Zavřít
+            </button>
+          </div>
+        ) : null}
+
+        {uploadError ? (
+          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+            Nahrání dokumentu: {uploadError}
+          </p>
+        ) : null}
+        {aiExtractMsg ? (
+          <p
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              aiExtractMsg.startsWith("AI extrakce selhala")
+                ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+            }`}
+            role="status"
+          >
+            {aiExtractMsg}
+          </p>
+        ) : null}
+
+        {stepper}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+          }}
+          className="space-y-6"
+        >
+          {/* Hlavní formulářový panel — Glassmorphism */}
+          <div className="rounded-[30px] border border-white/10 bg-[#0F1528]/80 backdrop-blur-3xl p-6 shadow-[-30px_0_60px_rgba(0,0,0,0.6)] sm:p-8">
+            {wizardStep === 0 ? (
+              <div className="space-y-6">
+                {/* Source karty */}
+                <div className="grid gap-3 md:grid-cols-3">
+                  <button
+                    type="button"
+                    disabled={prefill.mode !== "crm"}
+                    onClick={() => setSourceCard("crm")}
+                    className={cx(
+                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      sourceCard === "crm"
+                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
+                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                      prefill.mode !== "crm" && "opacity-50 cursor-not-allowed",
+                    )}
+                  >
+                    <div
+                      className={cx(
+                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        sourceCard === "crm"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-white/5 text-slate-400",
+                      )}
+                    >
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className={cx(
+                      "text-sm font-semibold",
+                      sourceCard === "crm" ? "text-white" : "text-slate-300",
+                    )}>Vybrat z CRM</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                      Nejrychlejší cesta s předvyplněním údajů.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSourceCard("upload")}
+                    className={cx(
+                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      sourceCard === "upload"
+                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
+                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                    )}
+                  >
+                    <div
+                      className={cx(
+                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        sourceCard === "upload"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-white/5 text-slate-400",
+                      )}
+                    >
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <div className={cx(
+                      "text-sm font-semibold",
+                      sourceCard === "upload" ? "text-white" : "text-slate-300",
+                    )}>Nahrát smlouvu</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                      AI přečte instituci, číslo smlouvy a pojistníka.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSourceCard("manual")}
+                    className={cx(
+                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      sourceCard === "manual"
+                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
+                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                    )}
+                  >
+                    <div
+                      className={cx(
+                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        sourceCard === "manual"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-white/5 text-slate-400",
+                      )}
+                    >
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <div className={cx(
+                      "text-sm font-semibold",
+                      sourceCard === "manual" ? "text-white" : "text-slate-300",
+                    )}>Vyplnit ručně</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                      Pro cizí smlouvy nebo nový případ.
+                    </div>
+                  </button>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <SearchCombobox
+                    variant="termination"
+                    label="Instituce"
+                    placeholder="Začněte psát název instituce…"
+                    query={insurerQuery}
+                    onQueryChange={onInsurerQueryChange}
+                    items={insurerItems}
+                    selectedId={selectedInsurerRegistryId}
+                    onSelect={(item) => onInsurerPick(item)}
+                    isLoading={insurerSearchBusy}
+                  />
+                  <SearchCombobox
+                    variant="termination"
+                    label="Klient"
+                    placeholder="Vyhledejte jméno klienta…"
+                    helperText="Vyberte kontakt ze seznamu."
+                    query={clientQuery}
+                    onQueryChange={(q) => {
+                      setClientQuery(q);
+                    }}
+                    items={clientItems}
+                    selectedId={contactId}
+                    onSelect={onClientPick}
+                    isLoading={clientSearchBusy}
+                  />
+                  <div>
+                    <label className={TERMINATION_LABEL_CLASS}>Číslo smlouvy</label>
+                    <input
+                      value={contractNumber}
+                      onChange={(e) => setContractNumber(e.target.value)}
+                      className={TERMINATION_FIELD_CLASS}
+                    />
+                  </div>
+                  <FriendlyDateInput
+                    label="Počátek pojištění"
+                    value={contractStartDate}
+                    onChange={setContractStartDate}
+                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                  />
+                </div>
+
+                {/* Adresa pro odeslání */}
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-white">Adresa pro odeslání</div>
+                      <div className="mt-1 text-sm text-slate-300">
+                        {deliveryAddressLine ??
+                          "Vyberte instituci ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
+                      </div>
+                      {registryDeliveryMeta?.channelHint ? (
+                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                          Kanál: {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {sourceCard === "upload" ? (
+                  <div className="space-y-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void onFileSelected(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div
+                      className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 p-6 cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition"
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const f = e.dataTransfer.files?.[0];
+                        if (f) void onFileSelected(f);
+                      }}
+                    >
+                      <Upload className="h-8 w-8 text-slate-400" />
+                      <div className="text-sm font-medium text-slate-200">
+                        {uploadBusy || aiExtractBusy
+                          ? uploadBusy
+                            ? "Nahrávám soubor…"
+                            : "AI čte dokument…"
+                          : sourceDocumentId.trim()
+                            ? "Soubor nahrán — klikněte pro nový"
+                            : "Přetáhněte soubor nebo klikněte pro výběr"}
+                      </div>
+                      <div className="text-xs text-slate-500">PDF nebo obrázek, max 20 MB</div>
+                    </div>
+                    {sourceDocumentId.trim() ? (
+                      <p className="text-xs text-slate-500 font-mono">
+                        Dok: {sourceDocumentId.slice(0, 16)}…
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div>
+                    <label className={TERMINATION_LABEL_CLASS}>Identifikátor dokumentu ve vašich souborech (volitelné)</label>
+                    <input
+                      value={sourceDocumentId}
+                      onChange={(e) => setSourceDocumentId(e.target.value)}
+                      className={`${TERMINATION_FIELD_CLASS} font-mono text-xs`}
+                      placeholder="UUID dokumentu z CRM"
+                    />
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                      <Link href={contactDocsHref} className="font-semibold text-indigo-400 underline">
+                        Otevřít dokumenty klienta
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 cursor-pointer min-h-[44px] hover:bg-white/[0.07] transition">
+                  <input
+                    type="checkbox"
+                    checked={uncertainInsurer}
+                    onChange={(e) => setUncertainInsurer(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-white/10 accent-indigo-500"
+                  />
+                  Nejsem si jistý institucí nebo adresou, chci to poslat do kontroly
+                </label>
+              </div>
+            ) : null}
+
+            {wizardStep === 1 ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Režim a termín ukončení</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Zvolte segment a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
+                  </p>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div>
+                    <label className={TERMINATION_LABEL_CLASS}>Segment</label>
+                    <select
+                      value={productSegment}
+                      onChange={(e) => void onSegmentChange(e.target.value)}
+                      className={`${TERMINATION_FIELD_CLASS} appearance-none cursor-pointer`}
+                    >
+                      {segments.map((s) => (
+                        <option key={s} value={s} className="bg-[#0F1528] text-slate-200">
+                          {segmentLabel(s)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={TERMINATION_LABEL_CLASS}>Způsob ukončení</label>
+                    <select
+                      value={terminationMode}
+                      onChange={(e) => {
+                        const v = e.target.value as TerminationMode;
+                        setTerminationMode(v);
+                        if (v === "end_of_insurance_period") setEffectiveManual(false);
+                        if (v === "within_two_months_from_inception") setSubmissionManual(false);
+                      }}
+                      className={`${TERMINATION_FIELD_CLASS} appearance-none cursor-pointer`}
+                    >
+                      {MODE_OPTIONS.filter((m) =>
+                        isTerminationModeAllowedForSegment(m.value, productSegment),
+                      ).map((m) => (
+                        <option key={m.value} value={m.value} className="bg-[#0F1528] text-slate-200">
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    {!isTerminationModeAllowedForSegment(terminationMode, productSegment) && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        Zvolený způsob ukončení není obvykle dostupný pro segment{" "}
+                        {segmentLabel(productSegment)}. Byl automaticky přepnut.
+                      </p>
+                    )}
+                  </div>
+                  {terminationMode === "within_two_months_from_inception" ? (
+                    <FriendlyDateInput
+                      label="Datum podání výpovědi (den doručení)"
+                      value={requestedSubmissionDate}
+                      onChange={(v) => {
+                        setSubmissionManual(true);
+                        setRequestedSubmissionDate(v);
+                      }}
+                      inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                      labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                    />
+                  ) : (
+                    <FriendlyDateInput
+                      label="Požadované datum účinnosti (volitelné)"
+                      value={requestedEffectiveDate}
+                      onChange={(v) => {
+                        setEffectiveManual(true);
+                        setRequestedEffectiveDate(v);
+                      }}
+                      inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                      labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                    />
+                  )}
+                  <FriendlyDateInput
+                    label="Výroční den"
+                    value={contractAnniversaryDate}
+                    onChange={(v) => {
+                      setAnniversaryManual(true);
+                      setContractAnniversaryDate(v);
+                    }}
+                    inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                    labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                  />
+                  {/* Info box — datum účinnosti náhled */}
+                  <div className="lg:col-span-2 rounded-3xl border border-indigo-500/20 bg-indigo-500/8 p-4">
+                    <div className="flex items-start gap-3">
+                      <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-white">
+                          {terminationMode === "within_two_months_from_inception"
+                            ? "Termíny (náhled)"
+                            : "Navržené datum účinnosti (náhled)"}
+                        </div>
+                        {terminationMode === "within_two_months_from_inception" ? (
+                          <div className="mt-1 space-y-1 text-sm text-slate-200">
+                            <div>
+                              <span className="font-medium text-slate-400">Datum podání: </span>
+                              {submissionPreviewLabel}
+                            </div>
+                            <div>
+                              <span className="font-medium text-slate-400">Účinnost (pravidla): </span>
+                              {effectivePreviewLabel}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-sm text-slate-200">{effectivePreviewLabel}</div>
+                        )}
+                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                          {terminationMode === "end_of_insurance_period" && contractAnniversaryDate.trim()
+                            ? `Doplněno automaticky z výročního dne smlouvy. Po dokončení žádosti pravidla ověří přesné datum s ohledem na 6týdenní výpovědní lhůtu.`
+                            : terminationMode === "within_two_months_from_inception"
+                              ? twoMonthDeadline
+                                ? twoMonthOpen
+                                  ? `Zákonná lhůta pro výpověď do 2 měsíců od sjednání platí do ${formatIsoDateForUiCs(twoMonthDeadline)}. Účinnost je typicky den doručení (datum podání) — po uložení žádosti ji dopočítají pravidla.`
+                                  : `Zákonná lhůta pro výpověď do 2 měsíců od sjednání pravděpodobně uplynula (limit byl ${formatIsoDateForUiCs(twoMonthDeadline)}). Pravidla to potvrdí po odeslání.`
+                                : "Zadejte počátek pojištění v kroku 1 — pak se automaticky vypočítá lhůta."
+                              : terminationMode === "fixed_calendar_date"
+                                ? "Zadejte požadované datum ručně. Pravidla ověří, zda je datum přípustné."
+                                : "Po dokončení žádosti pravidla dopočítají definitivní datum."}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <label className={TERMINATION_LABEL_CLASS}>Přílohy</label>
+                    <textarea
+                      value={attachmentsDeclared}
+                      onChange={(e) => setAttachmentsDeclared(e.target.value)}
+                      placeholder="Například: kopie technického průkazu, zelená karta…"
+                      rows={4}
+                      className={TERMINATION_TEXTAREA_CLASS}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {wizardStep === 2 ? (
+              <div className="space-y-6">
+                {/* Detail fields: policyholder, place, note */}
+                <details className="rounded-2xl border border-white/10">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-white select-none hover:bg-white/5 rounded-2xl transition">
+                    Upřesnit pojistníka a poznámku
+                  </summary>
+                  <div className="space-y-4 p-4 pt-2">
+                    <fieldset className="rounded-2xl border border-white/10 p-3 space-y-2">
+                      <legend className="text-xs font-medium text-slate-400 px-1">Pojistník v dopise</legend>
+                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-300">
+                        <input
+                          type="radio"
+                          name="ph-kind"
+                          checked={policyholderKind === "person"}
+                          onChange={() => setPolicyholderKind("person")}
+                          className="h-4 w-4 accent-indigo-500"
+                        />
+                        Fyzická osoba (jméno z kontaktu)
+                      </label>
+                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-300">
+                        <input
+                          type="radio"
+                          name="ph-kind"
+                          checked={policyholderKind === "company"}
+                          onChange={() => setPolicyholderKind("company")}
+                          className="h-4 w-4 accent-indigo-500"
+                        />
+                        Právnická osoba / firma
+                      </label>
+                      {policyholderKind === "company" ? (
+                        <div className="grid gap-2 pt-1">
+                          <input
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            className={TERMINATION_FIELD_CLASS}
+                            placeholder="Obchodní firma"
+                          />
+                          <input
+                            value={authorizedPersonName}
+                            onChange={(e) => setAuthorizedPersonName(e.target.value)}
+                            className={TERMINATION_FIELD_CLASS}
+                            placeholder="Oprávněná osoba (podpis)"
+                          />
+                          <input
+                            value={authorizedPersonRole}
+                            onChange={(e) => setAuthorizedPersonRole(e.target.value)}
+                            className={TERMINATION_FIELD_CLASS}
+                            placeholder="Role (volitelné)"
+                          />
+                        </div>
+                      ) : null}
+                    </fieldset>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Adresa pojistníka – ulice (doplní dopis, není-li v CRM)</label>
+                        <input
+                          value={policyholderAddressLine1Override}
+                          onChange={(e) => setPolicyholderAddressLine1Override(e.target.value)}
+                          className={TERMINATION_FIELD_CLASS}
+                          placeholder="Např. Sněmovní 4"
+                        />
+                      </div>
+                      <div>
+                        <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Adresa pojistníka – PSČ a město</label>
+                        <input
+                          value={policyholderAddressLine2Override}
+                          onChange={(e) => setPolicyholderAddressLine2Override(e.target.value)}
+                          className={TERMINATION_FIELD_CLASS}
+                          placeholder="Např. 118 00 Praha 1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>Místo v záhlaví dopisu (volitelné)</label>
+                      <input
+                        value={placeOverride}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setPlaceOverride(v);
+                          const iso = letterHeaderDateIso.trim();
+                          if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+                            setLetterPlainTextDraft((prev) =>
+                              replaceTerminationLetterPlaceDateLine(prev, v, iso),
+                            );
+                          }
+                        }}
+                        className={TERMINATION_FIELD_CLASS}
+                        placeholder="např. Praha"
+                      />
+                    </div>
+
+                    {terminationMode === "after_claim" ? (
+                      <FriendlyDateInput
+                        label="Datum oznámení / pojistné události (volitelné)"
+                        value={claimEventDate}
+                        onChange={setClaimEventDate}
+                        inputClassName={TERMINATION_DATE_INPUT_CLASS}
+                        labelClassName={TERMINATION_DATE_LABEL_CLASS}
+                      />
+                    ) : null}
+
+                    <div>
+                      <label className={`${TERMINATION_DATE_LABEL_CLASS} mb-1`}>
+                        Interní poznámka pro kontrolu (volitelné)
+                      </label>
+                      <textarea
+                        value={advisorNoteForReview}
+                        onChange={(e) => setAdvisorNoteForReview(e.target.value)}
+                        rows={3}
+                        className={TERMINATION_TEXTAREA_CLASS}
+                        placeholder="Viditelné v náhledu, ne v textu dopisu vůči instituci."
+                      />
+                    </div>
+                  </div>
+                </details>
+
+                {/* Potvrzení poradce před exportem */}
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+                  <p className="text-sm font-semibold text-amber-300 mb-2">Potvrzení poradce před exportem</p>
+                  <p className="text-xs text-amber-300/80 mb-3">
+                    Aidvisora generuje návrh dokumentu na základě zadaných údajů. Zodpovědnost za
+                    správnost výstupu, jeho odeslání a právní důsledky nese poradce.
+                  </p>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={advisorConfirmed}
+                      onChange={(e) => setAdvisorConfirmed(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-amber-500/40 accent-indigo-500"
+                    />
+                    <span className="text-sm text-amber-200">
+                      Zkontroloval/a jsem pojistníka, číslo smlouvy, pojišťovnu, adresu a datum
+                      účinnosti. Výstup je připraven k odeslání a přebírám za něj odpovědnost.
+                    </span>
+                  </label>
+                </div>
+
+                {previewSyncBusy ? (
+                  <p className="text-xs text-slate-400">Aktualizuji náhled…</p>
+                ) : null}
+
+                {partialRequestId ? (
+                  <TerminationFinishOutputLayout
+                    key={partialRequestId}
+                    requestId={partialRequestId}
+                    letterPlainTextDraft={letterPlainTextDraft}
+                    onLetterPlainTextDraftChange={onLetterPlainTextDraftChange}
+                    letterServerSyncKey={letterServerSyncKey}
+                    letterHeaderDateIso={letterHeaderDateIso}
+                    onLetterHeaderDateIsoChange={(iso) => {
+                      setLetterHeaderDateIso(iso);
+                      const t = iso.trim();
+                      if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+                        setLetterPlainTextDraft((prev) =>
+                          replaceTerminationLetterPlaceDateLine(prev, placeOverride, t),
+                        );
+                      }
+                    }}
+                    leftPanel={{
+                      clientName: clientQuery.trim() || null,
+                      insurerName: insurerQuery.trim() || null,
+                      insurerAddress: registryDeliveryMeta?.addressLine ?? null,
+                      contractNumber: contractNumber.trim() || null,
+                      terminationModeLabel: MODE_OPTIONS.find((m) => m.value === terminationMode)?.label ?? terminationMode,
+                      effectiveDateLabel:
+                        finishLetterVm?.computedEffectiveDate || finishLetterVm?.requestedEffectiveDate
+                          ? formatCzDate(
+                              finishLetterVm.computedEffectiveDate ?? finishLetterVm.requestedEffectiveDate ?? "",
+                            )
+                          : effectivePreviewLabel,
+                      submissionDateLabel:
+                        terminationMode === "within_two_months_from_inception"
+                          ? submissionPreviewLabel
+                          : null,
+                      deliveryChannelHint: registryDeliveryMeta?.channelHint ?? null,
+                    }}
+                    onBuildResult={(data: TerminationLetterBuildResult) => {
+                      setPreviewGapMessages(data.validityReasons);
+                      setFinishLetterVm(data.viewModel);
+                    }}
+                  />
+                ) : (
+                  <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
+                    {previewSyncBusy ? "Připravuji koncept pro náhled…" : "Náhled bude k dispozici po uložení konceptu."}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {/* Action bar */}
+          <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0F1528]/80 backdrop-blur-xl px-5 py-4 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]">
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+              <span className="rounded-full border border-indigo-500/20 bg-indigo-500/15 px-3 py-1 font-medium text-indigo-300">
+                {sourceFooterLabel}
+              </span>
+              <span>
+                {wizardStep === 2 ? "Toto je finální náhled před exportem." : "Vyplňte údaje a pokračujte na další krok."}
+              </span>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <button
-                type="button"
-                disabled={!canWrite || isPending}
-                onClick={() => void onSavePartial()}
-                className="h-11 min-h-[44px] rounded-2xl border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 disabled:opacity-50"
-              >
-                {isPending ? "Ukládám…" : "Uložit rozepsané"}
-              </button>
-              {wizardStep < STEP_LABELS.length - 1 ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (wizardStep === 1 && canWrite && requestStatus === "intake") {
-                      setError(null);
-                      const ok = await persistIntakeDraftForPreview();
-                      if (!ok) return;
-                    }
-                    setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
-                  }}
-                  className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20"
+                  disabled={wizardStep === 0}
+                  onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
+                  className="h-11 min-h-[44px] rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 disabled:opacity-40 hover:bg-white/10 transition"
                 >
-                  Další krok
-                  <ChevronRight className="h-4 w-4" />
+                  Zpět
                 </button>
-              ) : null}
-              {wizardStep === STEP_LABELS.length - 1 ? (
-                <>
-                  {!advisorConfirmed && (
-                    <p className="text-xs text-amber-700 self-center">
-                      Nejdříve potvrďte správnost výstupu výše.
-                    </p>
-                  )}
+                {contactId ? (
+                  <Link
+                    href={`/portal/contacts/${contactId}`}
+                    className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 hover:bg-white/10 transition"
+                  >
+                    Zrušit
+                  </Link>
+                ) : (
+                  <Link
+                    href="/portal/today"
+                    className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 hover:bg-white/10 transition"
+                  >
+                    Zrušit
+                  </Link>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={!canWrite || isPending}
+                  onClick={() => void onSavePartial()}
+                  className="h-11 min-h-[44px] rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-4 text-sm font-semibold text-indigo-300 disabled:opacity-50 hover:bg-indigo-500/20 transition"
+                >
+                  {isPending ? "Ukládám…" : "Uložit rozepsané"}
+                </button>
+                {wizardStep < STEP_LABELS.length - 1 ? (
                   <button
                     type="button"
-                    disabled={!canWrite || isPending || !partialRequestId || !advisorConfirmed}
-                    onClick={() => onExportPdf()}
-                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50"
+                    onClick={async () => {
+                      if (wizardStep === 1 && canWrite && requestStatus === "intake") {
+                        setError(null);
+                        const ok = await persistIntakeDraftForPreview();
+                        if (!ok) return;
+                      }
+                      setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
+                    }}
+                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-500 transition"
                   >
-                    Exportovat PDF
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canWrite || isPending || !advisorConfirmed}
-                    onClick={() => onCompleteRequest()}
-                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
-                  >
-                    Dokončit žádost
+                    Další krok
                     <ChevronRight className="h-4 w-4" />
                   </button>
-                </>
-              ) : null}
+                ) : null}
+                {wizardStep === STEP_LABELS.length - 1 ? (
+                  <>
+                    {!advisorConfirmed && (
+                      <p className="text-xs text-amber-400 self-center">
+                        Nejdříve potvrďte správnost výstupu výše.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      disabled={!canWrite || isPending || !partialRequestId || !advisorConfirmed}
+                      onClick={() => onExportPdf()}
+                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-slate-300 shadow-sm disabled:opacity-50 hover:bg-white/10 transition"
+                    >
+                      Exportovat PDF
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canWrite || isPending || !advisorConfirmed}
+                      onClick={() => onCompleteRequest()}
+                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 disabled:opacity-50 hover:bg-indigo-500 transition"
+                    >
+                      Dokončit žádost
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
