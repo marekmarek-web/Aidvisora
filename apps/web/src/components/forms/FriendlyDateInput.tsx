@@ -54,7 +54,11 @@ export function FriendlyDateInput({
       } else {
         if (digitLen >= 8) setError(v.message || null);
         else setError(null);
-        onChange("");
+        /* Během úpravy nesmíme poslat prázdné ISO — rodič by resetoval `value` a efekt
+         * by celé pole přepsal na „“, takže jediný backspace by smazal celý řádek. */
+        if (!display.trim()) {
+          onChange("");
+        }
       }
     },
     [onChange],
