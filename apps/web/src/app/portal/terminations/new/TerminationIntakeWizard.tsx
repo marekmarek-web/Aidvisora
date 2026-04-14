@@ -682,7 +682,7 @@ export function TerminationIntakeWizard({
     setError(null);
     setPartialSavedOk(null);
     if (requestStatus !== "intake") {
-      setError("Rozepsaný koncept lze ukládat jen ve stavu „intake". Použijte Dokončit žádost.");
+      setError("Rozepsaný koncept lze ukládat jen ve stavu „intake“. Použijte Dokončit žádost.");
       return;
     }
     if (!canWrite) {
@@ -743,7 +743,7 @@ export function TerminationIntakeWizard({
       return;
     }
     if (!insurerQuery.trim()) {
-      setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané".");
+      setError("Vyplňte název instituce před dokončením, nebo použijte „Uložit rozepsané“.");
       return;
     }
     startTransition(async () => {

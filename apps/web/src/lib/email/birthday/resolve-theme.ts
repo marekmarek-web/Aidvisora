@@ -1,6 +1,6 @@
 import type { BirthdayEmailTheme } from "./types";
 import { isBirthdayEmailTheme } from "./types";
-import { resolveBirthdayDecorImagePublicPath } from "./public-urls";
+import { resolveBirthdayDecorImagePublicPath } from "./public-urls-server";
 
 export function parseBirthdayThemePreference(
   raw: string | null | undefined,
