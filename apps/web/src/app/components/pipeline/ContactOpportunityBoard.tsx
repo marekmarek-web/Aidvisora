@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, startTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, LayoutList, Briefcase, AlertCircle, Info } from "lucide-react";
+import { LayoutList, Briefcase, AlertCircle, Info } from "lucide-react";
 import { getPipelineByContact } from "@/app/actions/pipeline";
 import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import { PipelineBoardDynamic } from "@/app/dashboard/pipeline/PipelineBoardDynamic";
@@ -109,8 +109,6 @@ export function ContactOpportunityBoard({
     { id: contactId, firstName: contactFirstName ?? "", lastName: contactLastName ?? "" },
   ];
 
-  const totalOpportunities = stages.reduce((sum, s) => sum + s.opportunities.length, 0);
-  const isEmpty = totalOpportunities === 0 && stages.length > 0;
   const noStages = stages.length === 0;
 
   const header = (
@@ -184,30 +182,10 @@ export function ContactOpportunityBoard({
           </div>
         )}
 
-        {!loading && !loadError && !noStages && isEmpty && !openCreateStageId && (
-          <div className="flex flex-col items-center justify-center rounded-[var(--wp-radius-sm)] border-2 border-dashed border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/50 p-8 min-h-[200px]">
-            <CheckCircle2 size={40} className="text-[color:var(--wp-text-tertiary)] mb-3" />
-            <h2 className="text-lg font-bold text-[color:var(--wp-text)] mb-1">Tento klient zatím nemá žádný obchod</h2>
-            <p className="text-sm text-[color:var(--wp-text-secondary)] text-center mb-4">
-              Vytvořte první obchod a přiřaďte ho do příslušného stupně.
-            </p>
-            {!readOnly && (
-              <CreateActionButton
-                type="button"
-                onClick={() => firstStageId && setOpenCreateStageId(firstStageId)}
-                disabled={!firstStageId}
-                icon={Briefcase}
-              >
-                Vytvořit první obchod
-              </CreateActionButton>
-            )}
-            <p className="text-xs text-[color:var(--wp-text-tertiary)] mt-4 text-center">
-              Později zde budete moci založit obchod z AI příležitosti.
-            </p>
-          </div>
-        )}
-
-        {!loading && !loadError && !noStages && (!isEmpty || openCreateStageId) && (
+        {/* Nástěnku vždy mountovat, jakmile existují fáze — i bez obchodů. Jinak se po kliknutí „Vytvořit“
+            odmountuje celý board: parent předá initialOpenCreateStageId, PipelineBoard zavolá onOpenCreateConsumed,
+            openCreateStageId se vymaže a podmínka (!isEmpty || openCreateStageId) zpětně skryje board dřív než modal. */}
+        {!loading && !loadError && !noStages && (
           <PipelineBoardDynamic
             stages={stages}
             contacts={contactsForCreate}
