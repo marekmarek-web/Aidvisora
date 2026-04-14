@@ -75,15 +75,15 @@ const MODE_OPTIONS: { value: TerminationMode; label: string }[] = [
 
 const STEP_LABELS = ["Instituce a smlouva", "Režim a termín", "Dokončit výstup"] as const;
 
-// Aidvisora Dark Mode 2030
+// Aidvisora 2027 Light Design
 const TERMINATION_FIELD_CLASS =
-  "h-12 w-full min-h-[44px] rounded-2xl border border-white/5 bg-[#111836]/60 px-4 text-sm text-slate-200 outline-none transition focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-500";
-const TERMINATION_LABEL_CLASS = "mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400";
+  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 outline-none transition focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 placeholder:text-slate-400";
+const TERMINATION_LABEL_CLASS = "mb-2 ml-1 block text-[10px] font-black uppercase tracking-widest text-slate-400";
 const TERMINATION_TEXTAREA_CLASS =
-  "min-h-[104px] w-full rounded-2xl border border-white/5 bg-[#111836]/60 px-4 py-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 resize-none";
+  "min-h-[104px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 resize-none";
 const TERMINATION_DATE_INPUT_CLASS =
-  "h-12 w-full min-h-[44px] rounded-2xl border border-white/5 bg-[#111836]/60 px-4 text-sm text-slate-200 outline-none transition focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10";
-const TERMINATION_DATE_LABEL_CLASS = "mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400";
+  "h-12 w-full min-h-[44px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 outline-none transition focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50";
+const TERMINATION_DATE_LABEL_CLASS = "mb-2 ml-1 block text-[10px] font-black uppercase tracking-widest text-slate-400";
 
 type Props = {
   prefill: TerminationWizardPrefill;
@@ -769,7 +769,7 @@ export function TerminationIntakeWizard({
   const contextBanner = useMemo(() => {
     if (prefill.mode === "crm") {
       return (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm font-medium text-slate-500 mt-1">
           Kontext: smlouva z CRM
           {prefill.contactLabel ? ` · klient ${prefill.contactLabel}` : ""}
           {prefill.contractId ? ` · smlouva ${prefill.contractId.slice(0, 8)}…` : ""}
@@ -778,14 +778,14 @@ export function TerminationIntakeWizard({
     }
     if (prefill.mode === "contact_only") {
       return (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm font-medium text-slate-500 mt-1">
           Kontext: klient bez vybrané smlouvy
           {prefill.contactLabel ? ` · ${prefill.contactLabel}` : ""} – doplňte údaje nebo nahrajte dokument.
         </p>
       );
     }
     return (
-      <p className="text-sm text-slate-400">
+      <p className="text-sm font-medium text-slate-500 mt-1">
         Kontext: obecný intak – zvažte vybrat klienta v kontaktech pro předvyplnění.
       </p>
     );
@@ -793,7 +793,7 @@ export function TerminationIntakeWizard({
 
   const aiBanner =
     sourceFromAi ? (
-      <p className="text-sm text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-3 py-2">
+      <p className="text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-2xl px-3 py-2">
         Otevřeno z AI asistenta – žádost bude označena zdrojem „ai_chat". Ověřte údaje a výsledek pravidel.
       </p>
     ) : null;
@@ -847,9 +847,9 @@ export function TerminationIntakeWizard({
             ? "Rychlá akce"
             : "Ruční zadání";
 
-  // Stepper — Dark Mode 2030
+  // Stepper — 2027 Light Design
   const stepper = (
-    <div className="grid gap-3 md:grid-cols-3">
+    <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
       {STEP_LABELS.map((label, index) => {
         const active = index === wizardStep;
         const done = index < wizardStep;
@@ -866,30 +866,28 @@ export function TerminationIntakeWizard({
               setWizardStep(index);
             }}
             className={cx(
-              "rounded-2xl border px-4 py-3 text-left transition min-h-[44px]",
-              active && "border-indigo-500/40 bg-indigo-500/10 shadow-sm",
-              done && "border-emerald-500/30 bg-emerald-500/10",
-              !active && !done && "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+              "flex shrink-0 items-center gap-3 rounded-[20px] border px-4 py-3 text-left transition min-h-[44px] sm:flex-1",
+              active && "border-indigo-200 bg-white shadow-md ring-4 ring-indigo-50",
+              done && "border-emerald-100 bg-emerald-50/50 text-emerald-700",
+              !active && !done && "border-slate-100 bg-white text-slate-400 opacity-60",
             )}
           >
-            <div className="flex items-center gap-3">
-              <div
-                className={cx(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shrink-0",
-                  active && "bg-indigo-600 text-white",
-                  done && "bg-emerald-500 text-white",
-                  !active && !done && "bg-white/10 text-slate-400",
-                )}
-              >
-                {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-              </div>
-              <div className={cx(
-                "text-sm font-semibold",
-                active && "text-white",
-                done && "text-emerald-300",
-                !active && !done && "text-slate-400",
-              )}>{label}</div>
+            <div
+              className={cx(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black transition-colors",
+                active && "bg-indigo-600 text-white shadow-sm",
+                done && "bg-emerald-500 text-white",
+                !active && !done && "bg-slate-100 text-slate-400",
+              )}
+            >
+              {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
             </div>
+            <span className={cx(
+              "whitespace-nowrap text-sm font-bold",
+              active && "text-indigo-900",
+              done && "text-emerald-800",
+              !active && !done && "text-slate-500",
+            )}>{label}</span>
           </button>
         );
       })}
@@ -899,21 +897,15 @@ export function TerminationIntakeWizard({
   const contactDocsHref = contactId ? `/portal/contacts/${contactId}?tab=dokumenty` : "/portal/contacts/new";
 
   return (
-    <div className="relative min-h-screen bg-[#040814]">
-      {/* Ambient glow blobs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/8 blur-[100px]" />
-      </div>
-
-      <div className="relative mx-auto max-w-[1000px] space-y-6 px-4 pb-32 pt-6 sm:px-6">
+    <div className="min-h-screen bg-[#f8fafc] pb-32">
+      <div className="mx-auto max-w-[1000px] space-y-6 px-4 pb-10 pt-6 sm:px-6">
         {/* Hlavička */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
               Výpověď smlouvy
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+            <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-slate-500">
               Vyberte klienta, instituci a typ ukončení. V posledním kroku zkontrolujte náhled dopisu před dokončením.
             </p>
             {contextBanner}
@@ -921,10 +913,10 @@ export function TerminationIntakeWizard({
           </div>
           <div
             className={cx(
-              "inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-xs font-semibold",
+              "inline-flex h-fit shrink-0 items-center gap-2 self-start rounded-xl border px-4 py-2.5 text-xs font-bold uppercase tracking-widest shadow-sm",
               isComplete
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                : "border-amber-500/30 bg-amber-500/10 text-amber-400",
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-amber-200 bg-amber-50 text-amber-700",
             )}
           >
             {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
@@ -933,28 +925,28 @@ export function TerminationIntakeWizard({
         </div>
 
         {draftLoadError ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {draftLoadError}
           </p>
         ) : null}
 
         {partialRequestId ? (
-          <p className="text-xs text-slate-500 font-mono">Koncept: {partialRequestId}</p>
+          <p className="text-xs text-slate-400 font-mono">Koncept: {partialRequestId}</p>
         ) : null}
 
         {partialSavedOk ? (
-          <p className="text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-3 py-2">
+          <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2">
             {partialSavedOk}
           </p>
         ) : null}
 
         {finalizeOkMsg ? (
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300 space-y-2">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 space-y-2">
             <p>{finalizeOkMsg}</p>
             {partialRequestId ? (
               <Link
                 href={`/portal/terminations/${partialRequestId}`}
-                className="inline-flex font-semibold text-indigo-400 underline"
+                className="inline-flex font-semibold text-indigo-600 underline"
               >
                 Otevřít detail žádosti
               </Link>
@@ -963,30 +955,30 @@ export function TerminationIntakeWizard({
         ) : null}
 
         {!canWrite ? (
-          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             Nemáte oprávnění vytvářet žádosti (potřebná role s úpravou kontaktů).
           </p>
         ) : null}
 
         {previewGapMessages.length > 0 ? (
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-            <p className="text-xs font-semibold text-amber-300 mb-1">Chybějící údaje</p>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-xs font-semibold text-amber-700 mb-1">Chybějící údaje</p>
             <ul className="list-disc pl-4 space-y-0.5">
               {previewGapMessages.map((m) => (
-                <li key={m} className="text-xs text-amber-300">{m}</li>
+                <li key={m} className="text-xs text-amber-700">{m}</li>
               ))}
             </ul>
           </div>
         ) : null}
 
         {segmentSuggestionBanner ? (
-          <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
-            <p className="text-sm text-blue-300">{segmentSuggestionBanner}</p>
+          <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <p className="text-sm text-blue-700">{segmentSuggestionBanner}</p>
             <button
               type="button"
               onClick={() => setSegmentSuggestionBanner(null)}
-              className="ml-auto text-xs text-blue-400 underline shrink-0"
+              className="ml-auto text-xs text-blue-600 underline shrink-0"
             >
               Zavřít
             </button>
@@ -994,7 +986,7 @@ export function TerminationIntakeWizard({
         ) : null}
 
         {uploadError ? (
-          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
             Nahrání dokumentu: {uploadError}
           </p>
         ) : null}
@@ -1002,8 +994,8 @@ export function TerminationIntakeWizard({
           <p
             className={`rounded-2xl border px-4 py-3 text-sm ${
               aiExtractMsg.startsWith("AI extrakce selhala")
-                ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
-                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
             }`}
             role="status"
           >
@@ -1019,39 +1011,39 @@ export function TerminationIntakeWizard({
           }}
           className="space-y-6"
         >
-          {/* Hlavní formulářový panel — Glassmorphism */}
-          <div className="rounded-[30px] border border-white/10 bg-[#0F1528]/80 backdrop-blur-3xl p-6 shadow-[-30px_0_60px_rgba(0,0,0,0.6)] sm:p-8">
+          {/* Hlavní formulářový panel */}
+          <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             {wizardStep === 0 ? (
               <div className="space-y-6">
                 {/* Source karty */}
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-3">
                   <button
                     type="button"
                     disabled={prefill.mode !== "crm"}
                     onClick={() => setSourceCard("crm")}
                     className={cx(
-                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      "rounded-[24px] border-2 p-6 text-left transition duration-200 group min-h-[44px]",
                       sourceCard === "crm"
-                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
-                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                        ? "border-indigo-500 bg-indigo-50/30 shadow-md"
+                        : "border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50",
                       prefill.mode !== "crm" && "opacity-50 cursor-not-allowed",
                     )}
                   >
                     <div
                       className={cx(
-                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        "mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
                         sourceCard === "crm"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white/5 text-slate-400",
+                          ? "bg-indigo-100 text-indigo-600"
+                          : "bg-slate-100 text-slate-500 group-hover:text-indigo-500",
                       )}
                     >
                       <FileText className="h-5 w-5" />
                     </div>
                     <div className={cx(
-                      "text-sm font-semibold",
-                      sourceCard === "crm" ? "text-white" : "text-slate-300",
+                      "text-base font-bold mb-1",
+                      sourceCard === "crm" ? "text-indigo-900" : "text-slate-800",
                     )}>Vybrat z CRM</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                    <div className="text-xs font-medium text-slate-500">
                       Nejrychlejší cesta s předvyplněním údajů.
                     </div>
                   </button>
@@ -1059,27 +1051,27 @@ export function TerminationIntakeWizard({
                     type="button"
                     onClick={() => setSourceCard("upload")}
                     className={cx(
-                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      "rounded-[24px] border-2 p-6 text-left transition duration-200 group min-h-[44px]",
                       sourceCard === "upload"
-                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
-                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                        ? "border-indigo-500 bg-indigo-50/30 shadow-md"
+                        : "border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50",
                     )}
                   >
                     <div
                       className={cx(
-                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        "mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
                         sourceCard === "upload"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white/5 text-slate-400",
+                          ? "bg-indigo-100 text-indigo-600"
+                          : "bg-slate-100 text-slate-500 group-hover:text-indigo-500",
                       )}
                     >
                       <Upload className="h-5 w-5" />
                     </div>
                     <div className={cx(
-                      "text-sm font-semibold",
-                      sourceCard === "upload" ? "text-white" : "text-slate-300",
+                      "text-base font-bold mb-1",
+                      sourceCard === "upload" ? "text-indigo-900" : "text-slate-800",
                     )}>Nahrát smlouvu</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                    <div className="text-xs font-medium text-slate-500">
                       AI přečte instituci, číslo smlouvy a pojistníka.
                     </div>
                   </button>
@@ -1087,27 +1079,27 @@ export function TerminationIntakeWizard({
                     type="button"
                     onClick={() => setSourceCard("manual")}
                     className={cx(
-                      "rounded-3xl border p-4 text-left transition min-h-[44px]",
+                      "rounded-[24px] border-2 p-6 text-left transition duration-200 group min-h-[44px]",
                       sourceCard === "manual"
-                        ? "border-indigo-500/50 bg-indigo-500/10 shadow-sm"
-                        : "border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5",
+                        ? "border-indigo-500 bg-indigo-50/30 shadow-md"
+                        : "border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50",
                     )}
                   >
                     <div
                       className={cx(
-                        "mb-3 flex h-11 w-11 items-center justify-center rounded-2xl",
+                        "mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
                         sourceCard === "manual"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white/5 text-slate-400",
+                          ? "bg-indigo-600 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-500 group-hover:text-indigo-500",
                       )}
                     >
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div className={cx(
-                      "text-sm font-semibold",
-                      sourceCard === "manual" ? "text-white" : "text-slate-300",
+                      "text-base font-bold mb-1",
+                      sourceCard === "manual" ? "text-indigo-900" : "text-slate-800",
                     )}>Vyplnit ručně</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-400">
+                    <div className="text-xs font-medium text-slate-500">
                       Pro cizí smlouvy nebo nový případ.
                     </div>
                   </button>
@@ -1157,17 +1149,17 @@ export function TerminationIntakeWizard({
                 </div>
 
                 {/* Adresa pro odeslání */}
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+                <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-4 md:p-5">
+                  <div className="flex items-start gap-4">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" />
                     <div>
-                      <div className="text-sm font-semibold text-white">Adresa pro odeslání</div>
-                      <div className="mt-1 text-sm text-slate-300">
+                      <div className="text-sm font-bold text-indigo-900">Adresa pro odeslání</div>
+                      <div className="mt-1 text-sm font-medium text-slate-500">
                         {deliveryAddressLine ??
                           "Vyberte instituci ze seznamu nebo zadejte název — přesná adresa se doplní z registru po vyhodnocení."}
                       </div>
                       {registryDeliveryMeta?.channelHint ? (
-                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                        <div className="mt-2 text-xs leading-5 text-slate-500">
                           Kanál: {terminationDeliveryChannelLabel(registryDeliveryMeta.channelHint)}
                         </div>
                       ) : null}
@@ -1189,7 +1181,7 @@ export function TerminationIntakeWizard({
                       }}
                     />
                     <div
-                      className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 p-6 cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition"
+                      className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-6 cursor-pointer hover:border-violet-300 hover:bg-slate-50 transition"
                       onClick={() => fileInputRef.current?.click()}
                       onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
                       role="button"
@@ -1202,7 +1194,7 @@ export function TerminationIntakeWizard({
                       }}
                     >
                       <Upload className="h-8 w-8 text-slate-400" />
-                      <div className="text-sm font-medium text-slate-200">
+                      <div className="text-sm font-medium text-slate-600">
                         {uploadBusy || aiExtractBusy
                           ? uploadBusy
                             ? "Nahrávám soubor…"
@@ -1229,19 +1221,19 @@ export function TerminationIntakeWizard({
                       placeholder="UUID dokumentu z CRM"
                     />
                     <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                      <Link href={contactDocsHref} className="font-semibold text-indigo-400 underline">
+                      <Link href={contactDocsHref} className="font-semibold text-indigo-600 underline">
                         Otevřít dokumenty klienta
                       </Link>
                     </div>
                   </div>
                 )}
 
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 cursor-pointer min-h-[44px] hover:bg-white/[0.07] transition">
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 cursor-pointer min-h-[44px] hover:bg-slate-100 transition mt-2">
                   <input
                     type="checkbox"
                     checked={uncertainInsurer}
                     onChange={(e) => setUncertainInsurer(e.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-white/10 accent-indigo-500"
+                    className="h-4 w-4 rounded border-slate-300 accent-indigo-500"
                   />
                   Nejsem si jistý institucí nebo adresou, chci to poslat do kontroly
                 </label>
@@ -1251,8 +1243,8 @@ export function TerminationIntakeWizard({
             {wizardStep === 1 ? (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Režim a termín ukončení</h2>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <h2 className="text-xl font-black text-slate-900 mb-1">Režim a termín ukončení</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
                     Zvolte segment a způsob ukončení. Datum účinnosti lze doplnit podle potřeby.
                   </p>
                 </div>
@@ -1266,7 +1258,7 @@ export function TerminationIntakeWizard({
                       className={`${TERMINATION_FIELD_CLASS} appearance-none cursor-pointer`}
                     >
                       {segments.map((s) => (
-                        <option key={s} value={s} className="bg-[#0F1528] text-slate-200">
+                        <option key={s} value={s} className="bg-white text-slate-800">
                           {segmentLabel(s)}
                         </option>
                       ))}
@@ -1287,13 +1279,13 @@ export function TerminationIntakeWizard({
                       {MODE_OPTIONS.filter((m) =>
                         isTerminationModeAllowedForSegment(m.value, productSegment),
                       ).map((m) => (
-                        <option key={m.value} value={m.value} className="bg-[#0F1528] text-slate-200">
+                        <option key={m.value} value={m.value} className="bg-white text-slate-800">
                           {m.label}
                         </option>
                       ))}
                     </select>
                     {!isTerminationModeAllowedForSegment(terminationMode, productSegment) && (
-                      <p className="mt-1 text-xs text-amber-400">
+                      <p className="mt-1 text-xs text-amber-600">
                         Zvolený způsob ukončení není obvykle dostupný pro segment{" "}
                         {segmentLabel(productSegment)}. Byl automaticky přepnut.
                       </p>
@@ -1333,30 +1325,30 @@ export function TerminationIntakeWizard({
                     labelClassName={TERMINATION_DATE_LABEL_CLASS}
                   />
                   {/* Info box — datum účinnosti náhled */}
-                  <div className="lg:col-span-2 rounded-3xl border border-indigo-500/20 bg-indigo-500/8 p-4">
-                    <div className="flex items-start gap-3">
-                      <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+                  <div className="lg:col-span-2 rounded-3xl border border-purple-100 bg-purple-50/50 p-4 md:p-5">
+                    <div className="flex items-start gap-4">
+                      <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-purple-500" />
                       <div className="flex-1">
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-purple-900 mb-1">
                           {terminationMode === "within_two_months_from_inception"
                             ? "Termíny (náhled)"
                             : "Navržené datum účinnosti (náhled)"}
                         </div>
                         {terminationMode === "within_two_months_from_inception" ? (
-                          <div className="mt-1 space-y-1 text-sm text-slate-200">
+                          <div className="mt-1 space-y-1 text-base font-black text-slate-900">
                             <div>
-                              <span className="font-medium text-slate-400">Datum podání: </span>
+                              <span className="text-sm font-medium text-slate-500">Datum podání: </span>
                               {submissionPreviewLabel}
                             </div>
                             <div>
-                              <span className="font-medium text-slate-400">Účinnost (pravidla): </span>
+                              <span className="text-sm font-medium text-slate-500">Účinnost (pravidla): </span>
                               {effectivePreviewLabel}
                             </div>
                           </div>
                         ) : (
-                          <div className="mt-1 text-sm text-slate-200">{effectivePreviewLabel}</div>
+                          <div className="mt-1 text-lg font-black text-slate-900">{effectivePreviewLabel}</div>
                         )}
-                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                        <div className="mt-2 text-xs leading-5 text-purple-700/70">
                           {terminationMode === "end_of_insurance_period" && contractAnniversaryDate.trim()
                             ? `Doplněno automaticky z výročního dne smlouvy. Po dokončení žádosti pravidla ověří přesné datum s ohledem na 6týdenní výpovědní lhůtu.`
                             : terminationMode === "within_two_months_from_inception"
@@ -1389,14 +1381,14 @@ export function TerminationIntakeWizard({
             {wizardStep === 2 ? (
               <div className="space-y-6">
                 {/* Detail fields: policyholder, place, note */}
-                <details className="rounded-2xl border border-white/10">
-                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-white select-none hover:bg-white/5 rounded-2xl transition">
+                <details className="rounded-2xl border border-slate-200">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900 select-none hover:bg-slate-50 rounded-2xl transition">
                     Upřesnit pojistníka a poznámku
                   </summary>
                   <div className="space-y-4 p-4 pt-2">
-                    <fieldset className="rounded-2xl border border-white/10 p-3 space-y-2">
-                      <legend className="text-xs font-medium text-slate-400 px-1">Pojistník v dopise</legend>
-                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-300">
+                    <fieldset className="rounded-2xl border border-slate-200 p-3 space-y-2">
+                      <legend className="text-xs font-medium text-slate-600 px-1">Pojistník v dopise</legend>
+                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-700">
                         <input
                           type="radio"
                           name="ph-kind"
@@ -1406,7 +1398,7 @@ export function TerminationIntakeWizard({
                         />
                         Fyzická osoba (jméno z kontaktu)
                       </label>
-                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-300">
+                      <label className="flex items-center gap-2 text-sm min-h-[40px] cursor-pointer text-slate-700">
                         <input
                           type="radio"
                           name="ph-kind"
@@ -1506,9 +1498,9 @@ export function TerminationIntakeWizard({
                 </details>
 
                 {/* Potvrzení poradce před exportem */}
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-                  <p className="text-sm font-semibold text-amber-300 mb-2">Potvrzení poradce před exportem</p>
-                  <p className="text-xs text-amber-300/80 mb-3">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 md:p-6">
+                  <p className="text-sm font-black text-amber-900 mb-2">Potvrzení poradce před exportem</p>
+                  <p className="text-xs font-medium text-amber-800/80 mb-3">
                     Aidvisora generuje návrh dokumentu na základě zadaných údajů. Zodpovědnost za
                     správnost výstupu, jeho odeslání a právní důsledky nese poradce.
                   </p>
@@ -1517,9 +1509,9 @@ export function TerminationIntakeWizard({
                       type="checkbox"
                       checked={advisorConfirmed}
                       onChange={(e) => setAdvisorConfirmed(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-amber-500/40 accent-indigo-500"
+                      className="mt-0.5 h-4 w-4 rounded border-amber-300 accent-indigo-500"
                     />
-                    <span className="text-sm text-amber-200">
+                    <span className="text-sm text-amber-800">
                       Zkontroloval/a jsem pojistníka, číslo smlouvy, pojišťovnu, adresu a datum
                       účinnosti. Výstup je připraven k odeslání a přebírám za něj odpovědnost.
                     </span>
@@ -1527,7 +1519,7 @@ export function TerminationIntakeWizard({
                 </div>
 
                 {previewSyncBusy ? (
-                  <p className="text-xs text-slate-400">Aktualizuji náhled…</p>
+                  <p className="text-xs text-slate-500">Aktualizuji náhled…</p>
                 ) : null}
 
                 {partialRequestId ? (
@@ -1571,7 +1563,7 @@ export function TerminationIntakeWizard({
                     }}
                   />
                 ) : (
-                  <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
                     {previewSyncBusy ? "Připravuji koncept pro náhled…" : "Náhled bude k dispozici po uložení konceptu."}
                   </div>
                 )}
@@ -1580,18 +1572,18 @@ export function TerminationIntakeWizard({
           </div>
 
           {error ? (
-            <p className="text-sm text-red-400" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
 
           {/* Action bar */}
-          <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0F1528]/80 backdrop-blur-xl px-5 py-4 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]">
-            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-              <span className="rounded-full border border-indigo-500/20 bg-indigo-500/15 px-3 py-1 font-medium text-indigo-300">
+          <div className="mt-6 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+              <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600">
                 {sourceFooterLabel}
               </span>
-              <span>
+              <span className="font-medium">
                 {wizardStep === 2 ? "Toto je finální náhled před exportem." : "Vyplňte údaje a pokračujte na další krok."}
               </span>
             </div>
@@ -1601,21 +1593,21 @@ export function TerminationIntakeWizard({
                   type="button"
                   disabled={wizardStep === 0}
                   onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
-                  className="h-11 min-h-[44px] rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 disabled:opacity-40 hover:bg-white/10 transition"
+                  className="h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition shadow-sm"
                 >
                   Zpět
                 </button>
                 {contactId ? (
                   <Link
                     href={`/portal/contacts/${contactId}`}
-                    className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 hover:bg-white/10 transition"
+                    className="inline-flex h-11 min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
                   >
                     Zrušit
                   </Link>
                 ) : (
                   <Link
                     href="/portal/today"
-                    className="inline-flex h-11 min-h-[44px] items-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-300 hover:bg-white/10 transition"
+                    className="inline-flex h-11 min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm"
                   >
                     Zrušit
                   </Link>
@@ -1626,7 +1618,7 @@ export function TerminationIntakeWizard({
                   type="button"
                   disabled={!canWrite || isPending}
                   onClick={() => void onSavePartial()}
-                  className="h-11 min-h-[44px] rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-4 text-sm font-semibold text-indigo-300 disabled:opacity-50 hover:bg-indigo-500/20 transition"
+                  className="h-11 min-h-[44px] rounded-xl border border-violet-200 bg-violet-50 px-5 text-sm font-bold text-violet-700 disabled:opacity-50 hover:bg-violet-100 transition"
                 >
                   {isPending ? "Ukládám…" : "Uložit rozepsané"}
                 </button>
@@ -1641,7 +1633,7 @@ export function TerminationIntakeWizard({
                       }
                       setWizardStep((s) => Math.min(STEP_LABELS.length - 1, s + 1));
                     }}
-                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-500 transition"
+                    className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700 active:scale-95 transition"
                   >
                     Další krok
                     <ChevronRight className="h-4 w-4" />
@@ -1650,7 +1642,7 @@ export function TerminationIntakeWizard({
                 {wizardStep === STEP_LABELS.length - 1 ? (
                   <>
                     {!advisorConfirmed && (
-                      <p className="text-xs text-amber-400 self-center">
+                      <p className="text-xs text-amber-600 self-center">
                         Nejdříve potvrďte správnost výstupu výše.
                       </p>
                     )}
@@ -1658,7 +1650,7 @@ export function TerminationIntakeWizard({
                       type="button"
                       disabled={!canWrite || isPending || !partialRequestId || !advisorConfirmed}
                       onClick={() => onExportPdf()}
-                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-slate-300 shadow-sm disabled:opacity-50 hover:bg-white/10 transition"
+                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 hover:bg-slate-50 transition"
                     >
                       Exportovat PDF
                     </button>
@@ -1666,7 +1658,7 @@ export function TerminationIntakeWizard({
                       type="button"
                       disabled={!canWrite || isPending || !advisorConfirmed}
                       onClick={() => onCompleteRequest()}
-                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 disabled:opacity-50 hover:bg-indigo-500 transition"
+                      className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-8 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/25 disabled:opacity-50 hover:bg-indigo-700 active:scale-95 transition"
                     >
                       Dokončit žádost
                       <ChevronRight className="h-4 w-4" />

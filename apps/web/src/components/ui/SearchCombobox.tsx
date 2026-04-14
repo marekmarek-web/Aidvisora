@@ -79,7 +79,7 @@ export function SearchCombobox({
 
   const labelClass =
     variant === "termination"
-      ? "mb-2 block text-sm font-medium text-slate-800"
+      ? "mb-2 ml-1 block text-[10px] font-black uppercase tracking-widest text-slate-400"
       : "mb-2 block text-xs font-medium text-[color:var(--wp-text-muted)]";
 
   return (
