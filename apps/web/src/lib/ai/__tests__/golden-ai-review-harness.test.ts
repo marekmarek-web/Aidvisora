@@ -39,6 +39,7 @@ const { mockChainable } = vi.hoisted(() => {
     chain.insert = vi.fn().mockImplementation(self);
     chain.values = vi.fn().mockImplementation(self);
     chain.returning = vi.fn().mockResolvedValue([]);
+    chain.onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
     chain.update = vi.fn().mockImplementation(self);
     chain.set = vi.fn().mockImplementation(self);
     chain.transaction = vi.fn().mockImplementation(async (cb: unknown) => {
@@ -50,9 +51,11 @@ const { mockChainable } = vi.hoisted(() => {
 });
 
 vi.mock("db", () => ({
-  db: { ...mockChainable(), transaction: vi.fn() },
+  // Do not overwrite `transaction` — applyContractReview must run the transaction callback.
+  db: mockChainable(),
   eq: vi.fn(),
   and: vi.fn(),
+  ilike: vi.fn(),
   isNull: vi.fn(),
   isNotNull: vi.fn(),
   desc: vi.fn(),
@@ -62,10 +65,13 @@ vi.mock("db", () => ({
   documents: {},
   contractUploadReviews: {},
   contracts: {},
+  partners: {},
+  products: {},
   tasks: {},
   auditLog: {},
   clientPaymentSetups: {},
   contractReviewCorrections: {},
+  userProfiles: { userId: "user_id" },
   contractSegments: ["ZP", "IP", "INV", "UV", "HYPO", "PEN", "MAJ", "ODV", "POV", "AUTO"],
 }));
 
@@ -119,6 +125,7 @@ function baseEnvelope(
     extractedFields: {
       contractNumber: { value: "ZP-123456", status: "extracted", confidence: 0.92 },
       insurer: { value: "Česká pojišťovna", status: "extracted", confidence: 0.91 },
+      fullName: { value: "Jana Testová", status: "extracted", confidence: 0.9 },
       policyStartDate: { value: "2024-01-01", status: "extracted", confidence: 0.88 },
     },
     evidence: [],

@@ -43,6 +43,10 @@ import { computeAccessVerdict } from "@/lib/auth/access-verdict";
 import { resolveFundFromPortfolioAttributes } from "@/lib/fund-library/fund-resolution";
 import { resolveApplyClientContactId } from "@/lib/ai/apply-client-resolution";
 import { buildContactMergePayloadFromExtractedEnvelope } from "@/lib/ai/draft-actions";
+import {
+  ensureUserProfileRowForAdvisor,
+  formatContractAdvisorFkApplyError,
+} from "@/lib/db/ensure-user-profile-for-contract-fk";
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
 
@@ -527,6 +531,16 @@ export async function applyContractReview(
   }
   if (!tenantId || !tenantId.trim()) {
     return { ok: false, error: "Apply guard: tenantId chybí — nelze izolovat data tenanta." };
+  }
+
+  // FK contracts.advisor_id / confirmed_by_user_id → user_profiles: same as manual createContract
+  try {
+    await ensureUserProfileRowForAdvisor(userId);
+  } catch (ensureErr) {
+    return {
+      ok: false,
+      error: formatContractAdvisorFkApplyError(ensureErr),
+    };
   }
 
   // ── Slice 1: Idempotency — reviewStatus=applied alone is terminal (even if payload is null) ──
@@ -1050,8 +1064,11 @@ export async function applyContractReview(
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Aplikace do CRM selhala.";
-    return { ok: false, error: message };
+    const formatted = formatContractAdvisorFkApplyError(err);
+    return {
+      ok: false,
+      error: formatted.trim() ? formatted : "Aplikace do CRM selhala.",
+    };
   }
 
   const contactIdForPortal = resultPayload.linkedClientId ?? resultPayload.createdClientId ?? null;

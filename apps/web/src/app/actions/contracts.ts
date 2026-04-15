@@ -13,7 +13,6 @@ import {
   contractUploadReviews,
   tenants,
   clientPaymentSetups,
-  userProfiles,
 } from "db";
 import { eq, and, asc, or, isNull, inArray, desc, sql } from "db";
 import { contractSegments } from "db";
@@ -25,6 +24,7 @@ import {
   type ContractFormState,
 } from "@/lib/contracts/contract-form-payload";
 import { breadcrumbContractAiReviewMissingSourceReview } from "@/lib/observability/contract-review-sentry";
+import { ensureUserProfileRowForAdvisor } from "@/lib/db/ensure-user-profile-for-contract-fk";
 
 export type ContractRow = {
   id: string;
@@ -297,25 +297,6 @@ function pgErrorMeta(e: unknown): { code?: string; detail?: string; constraint?:
 /** Když Postgres FK detail nerozpoznáme — neutrální text (ne jen „kontakt/partner“). */
 const FK_VIOLATION_FALLBACK_MESSAGE =
   "Neplatná vazba v databázi. Zkontrolujte klienta, workspace a výběr partnera či produktu z katalogu.";
-
-/**
- * Databáze může mít FK `contracts.advisor_id` (a případně `confirmed_by_user_id`) → `user_profiles.user_id`.
- * `onConflictDoNothing` neřeší částečně „prázdný“ stav; UPSERT vždy zajistí kompatibilní řádek.
- */
-async function ensureUserProfileRowForAdvisor(userId: string): Promise<void> {
-  const uid = userId.trim();
-  if (!uid) return;
-  await db
-    .insert(userProfiles)
-    .values({
-      userId: uid,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: userProfiles.userId,
-      set: { updatedAt: new Date() },
-    });
-}
 
 /** Čitelná hláška z Postgres FK detailu (klient / tenant / partner / produkt). */
 function fkViolationUserMessage(detail: string | undefined, constraint?: string): string | null {
