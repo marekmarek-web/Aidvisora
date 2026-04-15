@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
  * Surgical demo publish path harness:
- *   AMUNDI DIP → Jiří Chlumecký → full apply → downstream verification
+ *   sample PDF (or DEMO_PDF_PATH) → contact → full apply → downstream verification
  *
  * Usage:
  *   pnpm demo:publish-harness
  *   pnpm demo:publish-harness -- --tenant <uuid> --user <uuid> --contact <uuid>
  *
  * Env overrides:
- *   DEMO_TENANT_ID, DEMO_USER_ID, DEMO_CONTACT_ID
+ *   DEMO_TENANT_ID, DEMO_USER_ID, DEMO_CONTACT_ID, DEMO_PDF_PATH (absolute or relative path to PDF)
  */
 
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -193,6 +194,7 @@ async function main() {
       tenant: { type: "string" },
       user: { type: "string" },
       contact: { type: "string" },
+      pdf: { type: "string" },
       output: { type: "string", short: "o" },
     },
     allowPositionals: false,
@@ -220,14 +222,18 @@ async function main() {
     : path.resolve(repoRoot, `fixtures/golden-ai-review/eval-outputs/demo-publish-harness-${ts}`);
   mkdirSync(outputDir, { recursive: true });
 
-  const pdfPath = path.resolve(
-    repoRoot,
-    "fixtures/golden-ai-review/eval-outputs/painful-subset-1776266814/subset-input/AMUNDI DIP.pdf"
-  );
+  const defaultPdfRel = "fixtures/golden-ai-review/eval-outputs/painful-subset-1776266814/subset-input/AMUNDI DIP.pdf";
+  const pdfPathRaw =
+    values.pdf?.trim() || process.env.DEMO_PDF_PATH?.trim() || "";
+  const pdfPath = pdfPathRaw
+    ? path.resolve(pdfPathRaw)
+    : path.resolve(repoRoot, defaultPdfRel);
   if (!existsSync(pdfPath)) {
-    console.error(`AMUNDI DIP.pdf not found at ${pdfPath}`);
+    console.error(`PDF not found at ${pdfPath}`);
     process.exit(1);
   }
+  const inputBasename = path.basename(pdfPath);
+  const storageSlug = inputBasename.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "_");
 
   console.info("[harness] Starting demo publish harness…");
   console.info(`[harness] PDF: ${pdfPath}`);
@@ -238,7 +244,7 @@ async function main() {
 
   const report: DemoReport = {
     generatedAt: new Date().toISOString(),
-    inputDocument: "AMUNDI DIP.pdf",
+    inputDocument: inputBasename,
     matchedClient: null,
     pipelineOk: false,
     pipelineError: null,
@@ -298,7 +304,7 @@ async function main() {
           preprocessMode: "demo_publish_harness",
           preprocessWarnings: textHint ? [] : ["no_local_pdf_text_hint"],
         },
-        sourceFileName: "AMUNDI DIP.pdf",
+        sourceFileName: inputBasename,
       }
     );
 
@@ -342,7 +348,7 @@ async function main() {
     const { buildAllDraftActions } = await import("@/lib/ai/draft-actions");
     const { evaluateApplyReadiness } = await import("@/lib/ai/quality-gates");
 
-    const seg = segmentDocumentPacket(textHint ?? "", null, "AMUNDI DIP.pdf");
+    const seg = segmentDocumentPacket(textHint ?? "", null, inputBasename);
     applyCanonicalNormalizationToEnvelope(
       envelope as Parameters<typeof applyCanonicalNormalizationToEnvelope>[0],
       seg.packetMeta
@@ -358,12 +364,12 @@ async function main() {
 
     console.info("[harness] Step 3: Applying contract review (real DB transaction)…");
 
-    const syntheticReviewId = `demo-harness-${ts}`;
+    const syntheticReviewId = randomUUID();
     const reviewRow = {
       id: syntheticReviewId,
       tenantId,
-      fileName: "AMUNDI DIP.pdf",
-      storagePath: "demo-harness/AMUNDI-DIP.pdf",
+      fileName: inputBasename,
+      storagePath: `demo-harness/${storageSlug}`,
       mimeType: "application/pdf",
       sizeBytes: null,
       processingStatus: "extracted" as const,

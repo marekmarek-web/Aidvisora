@@ -222,7 +222,10 @@ function PortalShellInner({
   /** Kalendář — vlastní workspace bez globálního top baru (search, +Nový, profil). */
   const isCalendarWorkspace =
     pathname === "/portal/calendar" || pathname.startsWith("/portal/calendar/");
-  const hidePortalTopHeader = pathname === "/portal/pipeline" || isCalendarWorkspace;
+  /** Board — stejně jako pipeline víc místa na tabulku, bez globálního top baru. */
+  const isBoardWorkspace = pathname === "/portal/board" || pathname.startsWith("/portal/board/");
+  const hidePortalTopHeader =
+    pathname === "/portal/pipeline" || isCalendarWorkspace || isBoardWorkspace;
   const { hasSharedFiles } = useShareIntent();
   const { shouldShowSoftPrompt, requestSystemPermission, markSoftPromptSeen } = usePushNotifications({
     onPushNotificationActionPerformed: (action) => {

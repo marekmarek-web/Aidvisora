@@ -30,6 +30,7 @@ import { BaseModal } from "@/app/components/BaseModal";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { PRODUCT_COLUMNS } from "@/app/board/seed-data";
 import { Filter, ArrowUpDown } from "lucide-react";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 const GROUP_COLORS = ["#579bfc", "#00c875", "#fdab3d", "#a25ddc", "#ff642e", "#ffcb00", "#037f4c", "#333333"];
 
@@ -73,6 +74,7 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
   }, [initialBoard]);
 
   const router = useRouter();
+  const confirm = useConfirm();
   const [board, setBoard] = useState<Board>(() => fallback.board);
   const [activeViewId, setActiveViewId] = useState(() => fallback.activeViewId);
   const [selection, setSelection] = useState<Set<string>>(new Set());
@@ -549,18 +551,43 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     setBoard((b) => ({ ...b, groups: b.groups.map((g) => ({ ...g, collapsed: true })) }));
   }, []);
   const onClearSelection = useCallback(() => setSelection(new Set()), []);
-  const onDeleteSelected = useCallback(() => {
+  const onDeleteSelected = useCallback(async () => {
+    const ids = [...selection];
+    if (ids.length === 0) return;
+
+    const ok = await confirm({
+      title: ids.length === 1 ? "Smazat položku" : "Smazat vybrané položky",
+      message:
+        ids.length === 1
+          ? "Opravdu chcete smazat tuto položku z plánu? Tuto akci nelze vrátit zpět."
+          : "Opravdu chcete smazat všechny vybrané položky z plánu? Tuto akci nelze vrátit zpět.",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    if (dbViewId) {
+      try {
+        await deleteBoardItemsAction(ids);
+      } catch (e) {
+        console.error("[board] deleteBoardItems failed", e);
+        return;
+      }
+    }
+
+    const idSet = new Set(ids);
     setBoard((b) => {
       const nextItems = { ...b.items };
       const nextGroups = b.groups.map((g) => ({
         ...g,
-        itemIds: g.itemIds.filter((id) => !selection.has(id)),
+        itemIds: g.itemIds.filter((id) => !idSet.has(id)),
       }));
-      selection.forEach((id) => delete nextItems[id]);
+      ids.forEach((id) => delete nextItems[id]);
       return { ...b, items: nextItems, groups: nextGroups };
     });
+    setSelectedItemId((cur) => (cur && idSet.has(cur) ? null : cur));
     setSelection(new Set());
-  }, [selection]);
+  }, [selection, confirm, dbViewId]);
   useEffect(() => {
     if (selectedItemId) {
       getContactsList()

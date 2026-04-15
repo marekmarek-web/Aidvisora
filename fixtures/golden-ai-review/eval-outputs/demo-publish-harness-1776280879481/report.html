@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Demo Publish Harness Report</title>
+<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:6px 10px;text-align:left}
+tr.pass td:nth-child(2){color:green;font-weight:bold}tr.fail td:nth-child(2){color:red;font-weight:bold}
+h1{font-size:1.4rem}h2{font-size:1.1rem;margin-top:1.5rem}</style></head><body>
+<h1>Demo Publish Harness Report</h1>
+<p><strong>Generated:</strong> 2026-04-15T19:21:19.481Z</p>
+<p><strong>Input:</strong> <code>AMUNDI DIP.pdf</code></p>
+<p><strong>Client:</strong> Jiří Chlumecký (<code>10cc19a4-4e8d-4250-b6a6-3b657d536c67</code>)</p>
+<h2>Pipeline</h2>
+<p>OK: ano · Segment: DIP · Contract#: —</p>
+
+<h2>Apply</h2>
+<p>OK: ne · Contract ID: <code>—</code> · Payment setup: <code>—</code></p>
+<p style="color:red">Pre-apply validace selhala: Číslo smlouvy musí být vyplněno pro dokumenty životního cyklu: smlouva, návrh, potvrzení.; Jméno pojistníka / klienta / účastníka musí být vyplněno.; Název partnera (pojišťovna, banka, fond) musí být vyplněn.</p>
+<h2>Downstream Checks</h2>
+<table><tr><th>Check</th><th>Result</th><th>Detail</th></tr>
+<tr class="fail"><td>Contract/product artifact created</td><td>FAIL</td><td>Pre-apply validace selhala: Číslo smlouvy musí být vyplněno pro dokumenty životního cyklu: smlouva, návrh, potvrzení.; Jméno pojistníka / klienta / účastníka musí být vyplněno.; Název partnera (pojišťovna, banka, fond) musí být vyplněn.</td></tr>
+<tr class="fail"><td>Advisor product card / products tab readable</td><td>FAIL</td><td>Not checked (no contract)</td></tr>
+<tr class="fail"><td>Client portal / Portfolio readable</td><td>FAIL</td><td>Not checked</td></tr>
+<tr class="pass"><td>Client portal / Platby a příkazy</td><td>PASS</td><td>No payment setup rows for this contact (document may not contain payment data)</td></tr>
+<tr class="pass"><td>Coverage / payment setup propagated</td><td>PASS</td><td>No payment data in document (acceptable for DIP without explicit payment instructions)</td></tr>
+<tr class="fail"><td>FV (fund valuation) visibility</td><td>FAIL</td><td>unavailable</td></tr>
+<tr class="pass"><td>No ghost success without downstream data</td><td>PASS</td><td>Consistent</td></tr>
+</table>
+<h2>Blocking Issues</h2><ul><li>Apply failed: Pre-apply validace selhala: Číslo smlouvy musí být vyplněno pro dokumenty životního cyklu: smlouva, návrh, potvrzení.; Jméno pojistníka / klienta / účastníka musí být vyplněno.; Název partnera (pojišťovna, banka, fond) musí být vyplněn.</li></ul>
+</body></html>
