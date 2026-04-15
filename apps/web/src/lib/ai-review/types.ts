@@ -113,13 +113,15 @@ export type ClientMatchCandidate = {
  * - skipped:          Krok byl přeskočen (automaticky nebo poradcem).
  * - recommended:      Krok je doporučení — nelze ho spustit automaticky, poradce rozhodne.
  * - cannot_auto:      Krok nelze provést automaticky — vyžaduje ruční akci mimo systém.
+ * - not_applicable:   Krok se na tento dokument nevztahuje (žádná mrtvá CTA).
  */
 export type DraftActionStatus =
   | "available"
   | "executed"
   | "skipped"
   | "recommended"
-  | "cannot_auto";
+  | "cannot_auto"
+  | "not_applicable";
 
 export const DRAFT_ACTION_STATUS_LABELS: Record<DraftActionStatus, string> = {
   available: "Dostupné",
@@ -127,6 +129,7 @@ export const DRAFT_ACTION_STATUS_LABELS: Record<DraftActionStatus, string> = {
   skipped: "Přeskočeno",
   recommended: "Doporučeno ručně",
   cannot_auto: "Nelze provést automaticky",
+  not_applicable: "Nevztahuje se",
 };
 
 export type DraftAction = {

@@ -1,3 +1,8 @@
+/**
+ * Draft actions built here are rendered in AI Review as stateful steps (`available` | `executed` | `skipped` |
+ * `not_applicable`). Call sites must not surface interactive CTAs for rows marked not applicable or already
+ * consumed by apply/publish.
+ */
 import type { ExtractedContractSchema } from "./extraction-schemas";
 import type { DraftActionBase, DraftActionType } from "./review-queue";
 import type { DocumentReviewEnvelope } from "./document-review-types";

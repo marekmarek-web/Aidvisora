@@ -1054,6 +1054,161 @@ function resolveActionHref(action: DraftAction): string | null {
   return ACTION_ROUTE_MAP[action.type] ?? null;
 }
 
+/** Po zápisu do CRM — žádné návrhové CTA; jen stavové řádky podle `applyResultPayload`. */
+function PublishedWorkflowStepsCard({ doc }: { doc: ExtractionDocument }) {
+  const p = doc.applyResultPayload;
+  const o = p?.publishOutcome;
+  if (!p || !o) return null;
+
+  type Row = { key: string; label: string; status: "executed" | "skipped" | "not_applicable"; hint?: string };
+  const rows: Row[] = [];
+
+  const clientId = p.createdClientId ?? p.linkedClientId;
+  if (clientId) {
+    rows.push({
+      key: "client",
+      label: p.createdClientId ? "Klient založen v CRM" : "Propojeno s existujícím klientem",
+      status: "executed",
+    });
+  } else {
+    rows.push({
+      key: "client",
+      label: "Záznam klienta v CRM",
+      status: "not_applicable",
+      hint: "Bez nového ani propojeného klienta",
+    });
+  }
+
+  const supporting = p.policyEnforcementTrace?.supportingDocumentGuard === true;
+  const isSupportingMode =
+    o.mode === "supporting_doc_only" || o.mode === "internal_document_only" || supporting;
+
+  if (p.createdContractId) {
+    rows.push({ key: "contract", label: "Smlouva / produkt zapsán do CRM", status: "executed" });
+  } else if (isSupportingMode && p.linkedDocumentId) {
+    rows.push({
+      key: "doclink",
+      label: "Dokument v dokumentech klienta",
+      status: "executed",
+    });
+  } else if (isSupportingMode) {
+    rows.push({
+      key: "contract",
+      label: "Smlouva / produkt zapsán",
+      status: "skipped",
+      hint: o.label,
+    });
+  } else if (p.linkedDocumentId) {
+    rows.push({
+      key: "doclink",
+      label: "Dokument připojen (bez nové smlouvy)",
+      status: "executed",
+    });
+  } else if (o.mode === "publish_partial_failure") {
+    rows.push({
+      key: "contract",
+      label: "Smlouva / produkt",
+      status: "skipped",
+      hint: "Parciální výsledek zápisu",
+    });
+  } else {
+    rows.push({
+      key: "contract",
+      label: "Nová smlouva v CRM",
+      status: "not_applicable",
+      hint: "Bez vytvořeného produktového záznamu",
+    });
+  }
+
+  if (o.paymentOutcome === "payment_setup_published") {
+    rows.push({
+      key: "pay",
+      label: "Platební instrukce do portálu",
+      status: "executed",
+      hint: p.createdPaymentSetupId ? undefined : "Zapsáno (bez ID v odpovědi serveru)",
+    });
+  } else if (o.paymentOutcome === "payment_setup_skipped") {
+    rows.push({
+      key: "pay",
+      label: "Platební instrukce",
+      status: "skipped",
+      hint: "Nezapsáno — neplatí pro tento výsledek nebo bylo vyloučeno",
+    });
+  }
+
+  if (p.createdTaskId) {
+    rows.push({ key: "task", label: "Úkol ze zápisu", status: "executed" });
+  }
+
+  const rowClass =
+    "flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-3 border w-full text-left";
+  const badge = (s: Row["status"]) => {
+    if (s === "executed")
+      return (
+        <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
+          Provedeno
+        </span>
+      );
+    if (s === "skipped")
+      return (
+        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+          Přeskočeno
+        </span>
+      );
+    return (
+      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded shrink-0">
+        Nevztahuje se
+      </span>
+    );
+  };
+
+  return (
+    <div
+      data-section="workflow"
+      className="bg-[color:var(--wp-surface-card)] rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-4 md:p-5"
+    >
+      <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3 flex items-center gap-2">
+        <Wrench size={14} className="text-indigo-500" /> Pracovní kroky po zápisu
+      </h3>
+      <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4 leading-relaxed">
+        Stav podle skutečného výsledku zápisu (žádné další návrhové akce z tohoto dokumentu).
+      </p>
+      <ul className="space-y-2">
+        {rows.map((r) => (
+          <li key={r.key}>
+            <div
+              className={`${rowClass} cursor-default ${
+                r.status === "executed"
+                  ? "text-emerald-800 bg-emerald-50/60 border-emerald-200"
+                  : r.status === "skipped"
+                    ? "text-slate-600 bg-slate-50/60 border-slate-200"
+                    : "text-slate-500 bg-slate-50/40 border-slate-200/80 opacity-90"
+              }`}
+            >
+              {r.status === "executed" ? (
+                <Check size={15} className="text-emerald-500 shrink-0" />
+              ) : r.status === "skipped" ? (
+                <MinusCircle size={15} className="text-slate-400 shrink-0" />
+              ) : (
+                <MinusCircle size={15} className="text-slate-300 shrink-0" />
+              )}
+              <span className="flex-1 min-w-0">
+                {r.label}
+                {r.hint ? (
+                  <span className="block text-[11px] font-normal text-[color:var(--wp-text-tertiary)] mt-0.5">
+                    {r.hint}
+                  </span>
+                ) : null}
+              </span>
+              {badge(r.status)}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function WorkActionsCard({
   doc,
   onExecuteDraftAction,
@@ -1082,9 +1237,8 @@ function WorkActionsCard({
     setAttachOpen(true);
   };
 
-  // Jedna pravdivá lišta výsledku je v AIReviewExtractionShell — neopakovat stejný text v levém panelu.
   if (doc.isApplied && publishOutcome) {
-    return null;
+    return <PublishedWorkflowStepsCard doc={doc} />;
   }
 
   if (doc.isApplied) {
@@ -1093,11 +1247,12 @@ function WorkActionsCard({
         data-section="workflow"
         className="bg-emerald-50 rounded-[20px] border border-emerald-200 shadow-sm p-4 md:p-5"
       >
-        <h3 className="text-[11px] font-black uppercase tracking-widest text-emerald-800 mb-3 flex items-center gap-2">
+        <h3 className="text-[11px] font-black uppercase tracking-widest text-emerald-800 mb-2 flex items-center gap-2">
           <Check size={14} /> Zapsáno do CRM
         </h3>
-        <p className="text-sm text-emerald-700 font-medium">
-          Dokument byl zpracován a zapsán do CRM.
+        <p className="text-sm text-emerald-800 font-medium leading-relaxed">
+          Dokument byl zapsán. U starších položek nemusí být uložený strukturovaný výsledek — podrobnosti jsou v horní
+          liště nebo v CRM.
         </p>
       </div>
     );
@@ -1111,8 +1266,9 @@ function WorkActionsCard({
       <h3 className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] mb-3 flex items-center gap-2">
         <Wrench size={14} className="text-indigo-500" /> Navrhované pracovní kroky
       </h3>
-      <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4">
-        Akce označené jako „Dostupné" se provedou při zápisu do CRM. Doporučení vyžadují vaše rozhodnutí.
+      <p className="text-xs text-[color:var(--wp-text-tertiary)] mb-4 leading-relaxed">
+        Stav kroků: dostupné → provedeno / přeskočeno / nevztažitelné. Návrhové akce zapsané přes CRM zmizí po úspěšném
+        zápisu — nahradí je výsledek níže.
       </p>
       {actions.length === 0 ? (
         <p className="text-sm text-[color:var(--wp-text-secondary)]">
@@ -1148,6 +1304,23 @@ function WorkActionsCard({
                     <span className="flex-1 line-through">{a.label}</span>
                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">Přeskočeno</span>
                   </div>
+                </li>
+              );
+            }
+
+            if (effectiveStatus === "not_applicable") {
+              return (
+                <li key={actionKey}>
+                  <div className={`${baseClass} text-slate-400 bg-slate-50/40 border-slate-200/90 cursor-default`}>
+                    <MinusCircle size={15} className="text-slate-300 shrink-0" />
+                    <span className="flex-1">{a.label}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      Nevztahuje se
+                    </span>
+                  </div>
+                  {a.statusNote ? (
+                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 ml-10 leading-snug">{a.statusNote}</p>
+                  ) : null}
                 </li>
               );
             }
@@ -2042,7 +2215,7 @@ export function ExtractionLeftPanel({
               onSelectClient={onSelectClient}
               editedFields={editedFields}
             />
-            <DocumentFinalityWarning doc={doc} />
+            {!doc.isApplied ? <DocumentFinalityWarning doc={doc} /> : null}
           </div>
         </div>
       </div>

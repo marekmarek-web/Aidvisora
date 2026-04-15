@@ -550,7 +550,7 @@ export function AIReviewExtractionShell({
   }, [doc, state.dismissedRecommendations, state.editedFields, toast]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -953,7 +953,7 @@ export function AIReviewExtractionShell({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left panel */}
         <section
-          className={`flex min-h-0 w-full min-w-0 flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] lg:w-[55%] ${
+          className={`flex min-h-0 w-full min-w-0 flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] lg:max-w-[48%] lg:flex-[0_0_48%] ${
             state.showPdfOnMobile ? "hidden lg:flex" : "flex"
           }`}
         >

@@ -660,7 +660,7 @@ export default function ContractReviewDetailPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3">
       {doc.processingStatus === "blocked" ? (
         <div
           role="status"
