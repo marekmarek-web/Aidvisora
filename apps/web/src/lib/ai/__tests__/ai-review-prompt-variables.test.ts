@@ -82,3 +82,89 @@ describe("capAiReviewPromptString", () => {
     expect(c).toContain("truncated");
   });
 });
+
+/**
+ * REGRESSION: IŽP / life insurance pipeline — missing optional section vars crash (400)
+ *
+ * Previously, section vars (investment_section_text, payment_section_text, etc.) were only
+ * populated when bundleSectionTexts was non-null. Stored OpenAI Prompt Builder templates
+ * that reference these as template variables returned HTTP 400 "Missing prompt variables"
+ * for non-bundle IŽP documents.
+ *
+ * Fix: always populate section vars with safe defaults.
+ */
+describe("REGRESSION: optional section vars always present — no 400 from stored prompts", () => {
+  it("section vars present with safe defaults when bundleSectionTexts is null (non-bundle IŽP doc)", () => {
+    const vars = buildAiReviewExtractionPromptVariables({
+      documentText: "IŽP Generali smlouva č. 1234567890",
+      classificationReasons: ["life_insurance_investment_contract"],
+      adobeSignals: "none",
+      filename: "IŽP - Generali.pdf",
+    });
+    // Must never be absent — absence causes OpenAI 400 "Missing prompt variables"
+    expect(vars).toHaveProperty("investment_section_text");
+    expect(vars).toHaveProperty("payment_section_text");
+    expect(vars).toHaveProperty("contractual_section_text");
+    expect(vars).toHaveProperty("health_section_text");
+    expect(vars).toHaveProperty("attachment_section_text");
+    expect(vars).toHaveProperty("bundle_section_context");
+    // Safe defaults — not empty strings (empty strings fail Prompt Builder validation)
+    expect(vars.investment_section_text).toBe("(not available)");
+    expect(vars.payment_section_text).toBe("(not available)");
+    expect(vars.contractual_section_text).toBe("(not available)");
+    expect(vars.health_section_text).toBe("(not available)");
+  });
+
+  it("camelCase mirrors also always present", () => {
+    const vars = buildAiReviewExtractionPromptVariables({
+      documentText: "IŽP smlouva",
+      classificationReasons: [],
+      adobeSignals: "none",
+      filename: "izp.pdf",
+    });
+    expect(vars.investmentSectionText).toBe("(not available)");
+    expect(vars.paymentSectionText).toBe("(not available)");
+    expect(vars.contractualSectionText).toBe("(not available)");
+    expect(vars.healthSectionText).toBe("(not available)");
+  });
+
+  it("bundle docs with real section texts override the defaults", () => {
+    const vars = buildAiReviewExtractionPromptVariables({
+      documentText: "bundle full text",
+      classificationReasons: [],
+      adobeSignals: "none",
+      filename: "bundle.pdf",
+      bundleSectionTexts: {
+        contractualText: "Smluvní část smlouvy",
+        investmentText: "Investiční strategie: Vyvážená",
+        paymentText: "IBAN: CZ1234567890",
+      },
+    });
+    expect(vars.contractual_section_text).toContain("Smluvní část");
+    expect(vars.investment_section_text).toContain("Vyvážená");
+    expect(vars.payment_section_text).toContain("IBAN");
+    // Sections not provided fall back to "(not available)"
+    expect(vars.health_section_text).toBe("(not available)");
+    expect(vars.attachment_section_text).toBe("(not available)");
+  });
+
+  it("empty string bundleSectionTexts fields fall back to (not available), not empty", () => {
+    const vars = buildAiReviewExtractionPromptVariables({
+      documentText: "doc",
+      classificationReasons: [],
+      adobeSignals: "none",
+      filename: "doc.pdf",
+      bundleSectionTexts: {
+        contractualText: "",
+        healthText: "   ",
+        investmentText: null,
+        paymentText: undefined,
+      },
+    });
+    // All null/empty/whitespace → "(not available)"
+    expect(vars.contractual_section_text).toBe("(not available)");
+    expect(vars.health_section_text).toBe("(not available)");
+    expect(vars.investment_section_text).toBe("(not available)");
+    expect(vars.payment_section_text).toBe("(not available)");
+  });
+});

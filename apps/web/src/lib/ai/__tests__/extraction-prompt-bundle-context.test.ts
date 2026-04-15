@@ -263,19 +263,43 @@ describe("BC10: sectionTexts and bundleHint both appear in prompt", () => {
   });
 });
 
-// ─── BC11: No sectionTexts → no section vars in prompt variables ──────────────
+// ─── BC11: No sectionTexts → safe default "(not available)" for all section vars ──────────
+//
+// CHANGED: section vars are always present to avoid OpenAI 400 "Missing prompt variables".
+// Non-bundle docs get "(not available)" as default; bundle docs with real slices get actual text.
 
-describe("BC11: no sectionTexts → no section-specific prompt variables", () => {
-  it("variables object lacks section keys when bundleSectionTexts not provided", () => {
+describe("BC11: no sectionTexts → safe default values present for all section vars", () => {
+  it("section vars are present with safe defaults when bundleSectionTexts not provided", () => {
     const vars = buildAiReviewExtractionPromptVariables({
       documentText: "full text",
       classificationReasons: [],
       adobeSignals: "none",
       filename: "test.pdf",
     });
-    expect(vars).not.toHaveProperty("contractual_section_text");
-    expect(vars).not.toHaveProperty("health_section_text");
-    expect(vars).not.toHaveProperty("bundle_section_context");
+    expect(vars).toHaveProperty("contractual_section_text");
+    expect(vars).toHaveProperty("health_section_text");
+    expect(vars).toHaveProperty("investment_section_text");
+    expect(vars).toHaveProperty("payment_section_text");
+    expect(vars).toHaveProperty("attachment_section_text");
+    expect(vars).toHaveProperty("bundle_section_context");
+    expect(vars.contractual_section_text).toBe("(not available)");
+    expect(vars.health_section_text).toBe("(not available)");
+    expect(vars.investment_section_text).toBe("(not available)");
+    expect(vars.payment_section_text).toBe("(not available)");
+    expect(vars.attachment_section_text).toBe("(not available)");
+  });
+
+  it("camelCase mirrors also present with safe defaults", () => {
+    const vars = buildAiReviewExtractionPromptVariables({
+      documentText: "full text",
+      classificationReasons: [],
+      adobeSignals: "none",
+      filename: "test.pdf",
+    });
+    expect(vars.contractualSectionText).toBe("(not available)");
+    expect(vars.healthSectionText).toBe("(not available)");
+    expect(vars.investmentSectionText).toBe("(not available)");
+    expect(vars.paymentSectionText).toBe("(not available)");
   });
 });
 

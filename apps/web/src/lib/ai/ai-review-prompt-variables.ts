@@ -279,25 +279,38 @@ export function buildAiReviewExtractionPromptVariables(
   out.classificationReasons = out.classification_reasons;
   out.adobeSignals = out.adobe_signals;
 
-  // Section-specific variables for bundle-context enrichment.
+  // Section-specific variables — always populated to avoid OpenAI 400 "Missing prompt variables"
+  // when the stored Prompt Builder template references these as template variables.
+  // Non-bundle / single-section docs get "(not available)" as safe default;
+  // bundle docs with real section slices get the actual text.
+  const cap = (t: string | null | undefined) =>
+    t?.trim()
+      ? (t.length > SECTION_VAR_MAX ? t.slice(0, SECTION_VAR_MAX) + "\n…[zkráceno]" : t.trim())
+      : "(not available)";
+
   if (params.bundleSectionTexts) {
-    const cap = (t: string | null | undefined) =>
-      t?.trim()
-        ? (t.length > SECTION_VAR_MAX ? t.slice(0, SECTION_VAR_MAX) + "\n…[zkráceno]" : t.trim())
-        : "(not available)";
     out.contractual_section_text = cap(params.bundleSectionTexts.contractualText);
     out.health_section_text = cap(params.bundleSectionTexts.healthText);
     out.investment_section_text = cap(params.bundleSectionTexts.investmentText);
     out.payment_section_text = cap(params.bundleSectionTexts.paymentText);
     out.attachment_section_text = cap(params.bundleSectionTexts.attachmentText);
     out.bundle_section_context = buildBundleSectionContextVar(params.bundleSectionTexts);
-    // camelCase mirrors
-    out.contractualSectionText = out.contractual_section_text;
-    out.healthSectionText = out.health_section_text;
-    out.investmentSectionText = out.investment_section_text;
-    out.paymentSectionText = out.payment_section_text;
-    out.bundleSectionContext = out.bundle_section_context;
+  } else {
+    // Safe defaults — prevent 400 from stored prompts that declare these as template variables.
+    out.contractual_section_text = "(not available)";
+    out.health_section_text = "(not available)";
+    out.investment_section_text = "(not available)";
+    out.payment_section_text = "(not available)";
+    out.attachment_section_text = "(not available)";
+    out.bundle_section_context = "";
   }
+  // camelCase mirrors for templates that use camelCase variable ids
+  out.contractualSectionText = out.contractual_section_text;
+  out.healthSectionText = out.health_section_text;
+  out.investmentSectionText = out.investment_section_text;
+  out.paymentSectionText = out.payment_section_text;
+  out.attachmentSectionText = out.attachment_section_text;
+  out.bundleSectionContext = out.bundle_section_context;
 
   return out;
 }

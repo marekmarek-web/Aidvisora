@@ -314,6 +314,12 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     }
   }
 
+  // Prompt Builder templates may declare section variables even for non-bundle docs.
+  // Pass empty object instead of null so downstream `buildAiReviewExtractionPromptVariables`
+  // always supplies contractual/health/investment/payment placeholders (avoids 400 missing vars).
+  // Combined-extraction treats all-empty sections as single TEXT DOKUMENTU blob (see buildSectionAwareDocumentBlock).
+  const pipelineBundleSectionTexts: BundleSectionTexts = bundleSectionTexts ?? {};
+
   let pdfAcroFormFieldRows: PdfFormFieldRow[] | null = null;
   if (mimeType === "application/pdf" && preprocessedUrl) {
     try {
@@ -330,7 +336,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
     sourceFileName: path.basename(storagePath),
     bundleHint,
     structuredSource,
-    bundleSectionTexts,
+    bundleSectionTexts: pipelineBundleSectionTexts,
     pdfAcroFormFieldRows,
   });
   const pipelineDurationMs = Date.now() - pipelineStartedAt;
