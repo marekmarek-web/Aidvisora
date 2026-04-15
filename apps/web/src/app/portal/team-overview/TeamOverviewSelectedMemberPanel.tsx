@@ -61,17 +61,22 @@ export function TeamOverviewSelectedMemberPanel({
   if (loading) {
     return (
       <aside
-        className={clsx(PANEL_CLASS, "flex flex-col p-7")}
+        className={clsx(PANEL_CLASS, "flex min-h-full flex-1 flex-col")}
         aria-busy="true"
         aria-label="Načítání detailu člena"
       >
-        <div className="mb-6 h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden />
-        <div className="space-y-4">
-          <SkeletonBlock className="h-4 w-2/5 rounded-lg bg-white/10" />
-          <SkeletonBlock className="h-8 w-4/5 rounded-xl bg-white/10" />
-          <SkeletonBlock className="h-28 rounded-[18px] bg-white/[0.06]" />
-          <SkeletonBlock className="h-24 rounded-[18px] bg-white/[0.06]" />
-          <SkeletonBlock className="h-20 rounded-[18px] bg-white/[0.06]" />
+        <div className="flex flex-1 flex-col px-8 pb-8 pt-8">
+          <div className="mb-6 h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden />
+          <div className="space-y-4">
+            <SkeletonBlock className="h-4 w-2/5 rounded-lg bg-white/10" />
+            <SkeletonBlock className="h-9 w-4/5 rounded-xl bg-white/10" />
+            <SkeletonBlock className="h-32 rounded-[18px] bg-white/[0.06]" />
+            <SkeletonBlock className="h-24 rounded-[18px] bg-white/[0.06]" />
+          </div>
+          <div className="mt-auto space-y-3 pt-10">
+            <SkeletonBlock className="h-20 rounded-[18px] bg-white/[0.04]" />
+            <SkeletonBlock className="h-14 rounded-[18px] bg-white/[0.04]" />
+          </div>
         </div>
       </aside>
     );
@@ -112,23 +117,41 @@ export function TeamOverviewSelectedMemberPanel({
     }
 
     return (
-      <aside className={clsx(PANEL_CLASS, "flex flex-col")}>
-        <div className="flex flex-1 flex-col justify-center px-7 py-10">
-          <div className="mb-6 h-px w-full bg-gradient-to-r from-transparent via-white/25 to-transparent" aria-hidden />
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-500">Souhrn člena</p>
-          <h2 className="mt-4 text-[22px] font-black leading-tight tracking-tight text-white">Vyberte člena týmu</h2>
-          <p className="mt-3 max-w-[22rem] text-[14px] leading-relaxed text-slate-300">
-            Klikněte na řádek v <span className="font-semibold text-white/95">Lidé</span> nebo{" "}
-            <span className="font-semibold text-white/95">Kariéra</span>, na uzel ve{" "}
-            <span className="font-semibold text-white/95">Struktuře</span>, nebo na jméno v přehledu pozornosti či cadence.
-          </p>
-          <p className="mt-4 text-[12px] leading-relaxed text-slate-500">
-            V tomto panelu se zobrazí kariéra, plnění cíle, coaching a akce 1:1 / CRM — ve stejném rytmu ve všech záložkách
-            přehledu.
-          </p>
-        </div>
-        <div className="border-t border-white/10 px-7 py-4 text-center">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-600">Žádný výběr</p>
+      <aside className={clsx(PANEL_CLASS, "flex min-h-full flex-1 flex-col")}>
+        <div className="flex min-h-full flex-1 flex-col px-8 pb-8 pt-8">
+          <div className="h-px w-full shrink-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden />
+          <div className="mt-7 flex flex-1 flex-col">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-500">Souhrn člena</p>
+            <h2 className="mt-3 text-[24px] font-black leading-[1.15] tracking-tight text-white">Vyberte člena týmu</h2>
+            <p className="mt-3 text-[14px] leading-relaxed text-slate-300">
+              Klikněte na řádek v <span className="font-semibold text-white">Lidé</span> nebo{" "}
+              <span className="font-semibold text-white">Kariéra</span>, na uzel ve{" "}
+              <span className="font-semibold text-white">Struktuře</span>, nebo na jméno v přehledu pozornosti či cadence.
+            </p>
+            <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
+              Stejný panel se používá ve všech záložkách — žádný druhý detailový průvodce.
+            </p>
+            <div className="mt-8 rounded-[18px] border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-5 py-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">Po výběru uvidíte</p>
+              <ul className="mt-4 space-y-3 text-[13px] leading-snug text-slate-300">
+                <li className="flex gap-2">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-400/90" aria-hidden />
+                  Skupinu, větev a plnění cíle včetně trendu
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-violet-400/90" aria-hidden />
+                  Další kariérní krok, blokace a coaching / 1:1
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-sky-400/90" aria-hidden />
+                  Rychlé akce: 1:1, úkol, progres, CRM karta
+                </li>
+              </ul>
+            </div>
+            <p className="mt-auto border-t border-white/10 pt-6 text-center text-[11px] leading-relaxed text-slate-600">
+              Pravý sloupec je zarovnaný s přehledem vlevo a zůstává prázdný, dokud nevyberete člena.
+            </p>
+          </div>
         </div>
       </aside>
     );
@@ -192,7 +215,7 @@ export function TeamOverviewSelectedMemberPanel({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-7 pb-8 pt-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-7 pb-8 pt-5">
         {outsideFilter && (
           <div
             className="rounded-[12px] border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-[11px] text-amber-200"

@@ -134,11 +134,11 @@ export function TeamOverviewPremiumShell({
 
         {runtimeChecksSlot}
 
-        {/* MAIN LAYOUT: vyvážený grid, aside drží výšku kvůli empty panel parity */}
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,400px)] xl:items-start">
-          <div className="min-w-0 space-y-5">{children}</div>
-          <div className="flex min-h-0 min-w-0 flex-col xl:sticky xl:top-6 xl:max-h-[calc(100vh-6rem)] xl:self-start">
-            <div className="flex min-h-[min(720px,calc(100vh-7.5rem))] flex-1 flex-col">{aside}</div>
+        {/* MAIN LAYOUT: aside stejná výšková osa jako hlavní sloupec (empty i detail) */}
+        <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(368px,404px)] xl:items-start">
+          <div className="min-w-0 space-y-6">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-col xl:sticky xl:top-6 xl:max-h-[calc(100vh-5.5rem)] xl:self-start">
+            <div className="flex min-h-[min(76vh,calc(100vh-6.5rem))] w-full flex-1 flex-col">{aside}</div>
           </div>
         </div>
       </div>
@@ -170,7 +170,7 @@ export function TeamOverviewPremiumBriefingDark({
     : "Tým je ve stabilním stavu. Pokračujte v pravidelném rytmu 1:1 a kariérních krocích.";
 
   return (
-    <section className="rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+    <section className="rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.055)]">
       {/* Hero briefing */}
       <div className="border-b border-slate-100 px-7 pb-6 pt-7">
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">

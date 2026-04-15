@@ -64,7 +64,7 @@ export function TeamRhythmPanel({
 
   return (
     <section
-      className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"
+      className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.055)]"
       aria-labelledby="team-rhythm-heading"
     >
       {/* Header */}

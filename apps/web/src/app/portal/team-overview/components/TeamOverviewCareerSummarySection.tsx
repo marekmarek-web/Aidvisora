@@ -81,7 +81,7 @@ export function TeamOverviewCareerSummarySection({
       aria-labelledby="team-career-growth-heading"
     >
       {/* Header */}
-      <div className="border-b border-slate-100 px-7 py-5">
+      <div className="border-b border-slate-100 px-7 py-6">
         {(periodLabel || scopeLabel) ? (
           <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
             {periodLabel ? <span>{periodLabel}</span> : null}
@@ -98,7 +98,7 @@ export function TeamOverviewCareerSummarySection({
               <Briefcase className="h-5 w-5 shrink-0 text-violet-600" aria-hidden />
               Kariérní přehled
             </h2>
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
               {hasTracks
                 ? `${pageModel.careerTeamSummary.byTrack.reduce((s, t) => s + t.count, 0)} lidí v kariérních větvích`
                 : "Doplňte kariérní větve pro detailnější přehled."}
@@ -114,7 +114,7 @@ export function TeamOverviewCareerSummarySection({
       </div>
 
       {/* 3 stat cards — jednotná výška karet */}
-      <div className="grid grid-cols-1 gap-4 border-b border-slate-100 px-7 py-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 border-b border-slate-100 px-7 py-6 sm:grid-cols-3">
         <div className="flex min-h-[112px] flex-col justify-between rounded-[20px] border border-emerald-200/70 bg-emerald-50/60 px-5 py-4">
           <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-700/80">Připraveno k posunu</p>
           <p className="mt-2 text-[30px] font-black leading-none tabular-nums text-emerald-900">{statBuckets.readyToAdvance}</p>
@@ -182,13 +182,13 @@ export function TeamOverviewCareerSummarySection({
                       <span className="text-[12px] font-black text-slate-900 tabular-nums">{readiness}%</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-100/80 px-4 py-4">
+                  <td className="border-b border-slate-100/80 px-4 py-4 align-middle">
                     {ce.missingRequirements[0]?.labelCs ? (
-                      <span className="inline-flex items-center rounded-[10px] border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-extrabold text-rose-600">
+                      <span className="inline-flex min-h-[32px] items-center rounded-[10px] border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-extrabold text-rose-600">
                         {ce.missingRequirements[0].labelCs}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-[10px] border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold text-emerald-700">
+                      <span className="inline-flex min-h-[32px] items-center rounded-[10px] border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold text-emerald-700">
                         Připraveno k posunu
                       </span>
                     )}

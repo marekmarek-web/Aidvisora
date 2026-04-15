@@ -401,7 +401,7 @@ export function TeamOverviewView({
         />
       </div>
       {selectedMemberForStrip && visibleMembers.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-7 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-7 py-3.5">
           <p className="text-[12px] font-extrabold text-slate-600">
             Vybráno:{" "}
             <span className="text-[#16192b]">{displayName(selectedMemberForStrip)}</span>
@@ -539,7 +539,7 @@ export function TeamOverviewView({
   );
 
   const cockpitBody = (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <TeamOverviewPremiumBriefingDark
         periodLabel={periodLabelActive}
         scopeLabel={scopeLabelActive}
@@ -548,7 +548,7 @@ export function TeamOverviewView({
       />
       <TeamOverviewCockpitFourCards kpis={kpis} inProductionCount={inProductionCount} loading={loading} />
       <TeamOverviewPerformanceTrendSection performanceOverTime={performanceOverTime} />
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <TeamOverviewAttentionSection
           variant="firstFold"
           scope={scope}

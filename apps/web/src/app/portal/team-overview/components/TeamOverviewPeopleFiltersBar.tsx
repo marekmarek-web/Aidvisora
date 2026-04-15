@@ -24,7 +24,7 @@ export function TeamOverviewPeopleFiltersBar({
   totalCount: number;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3" id="lide-v-tymu">
+    <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4" id="lide-v-tymu">
       <div className="relative min-w-[min(100%,220px)] flex-1 max-w-sm">
         <Search
           className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
