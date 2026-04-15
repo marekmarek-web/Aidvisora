@@ -50,6 +50,27 @@ function categoryIcon(cat: PaymentSegmentCategory) {
   }
 }
 
+function categoryColors(cat: PaymentSegmentCategory): { icon: string; label: string } {
+  switch (cat) {
+    case "bydleni":
+      return { icon: "bg-blue-50 text-blue-600", label: "text-blue-700" };
+    case "uvery":
+      return { icon: "bg-cyan-50 text-cyan-600", label: "text-cyan-700" };
+    case "pojisteni_osob":
+      return { icon: "bg-rose-50 text-rose-600", label: "text-rose-700" };
+    case "penze":
+      return { icon: "bg-emerald-50 text-emerald-600", label: "text-emerald-700" };
+    case "investice":
+      return { icon: "bg-purple-50 text-purple-600", label: "text-purple-700" };
+    case "pojisteni_majetku":
+      return { icon: "bg-orange-50 text-orange-500", label: "text-orange-600" };
+    case "pojisteni_vozidel":
+      return { icon: "bg-slate-100 text-slate-600", label: "text-slate-600" };
+    default:
+      return { icon: "bg-indigo-50 text-indigo-600", label: "text-indigo-700" };
+  }
+}
+
 function CopyMiniButton({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
   return (
@@ -154,89 +175,91 @@ export function ClientPaymentsView({
               const acct = instruction.accountNumber?.trim() ?? "";
               const acctLabel = acct ? accountFieldLabel(acct) : "Účet";
 
+              const colors = categoryColors(cat);
+
               return (
                 <article
                   key={rowKey}
-                  className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md hover:border-indigo-200 transition-all"
+                  className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-all group"
                 >
-                  <div className="p-5 border-b border-slate-50 bg-slate-50/50 flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-indigo-600 shrink-0">
-                        <CatIcon size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-widest text-indigo-700">
+                  <div className="p-5 border-b border-slate-50 flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${colors.icon}`}>
+                      <CatIcon size={24} strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${colors.label}`}>
                           {PAYMENT_CATEGORY_LABELS[cat]}
                         </p>
-                        <h3 className="font-bold text-slate-900 text-sm leading-snug mt-1 line-clamp-2">
-                          {instruction.productName || segmentLabel(instruction.segment)}
-                        </h3>
-                        {institution ? (
-                          <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{institution}</p>
-                        ) : null}
+                        <span
+                          className={`shrink-0 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${paymentContractStatusBadgeClasses(instruction.linkedContractPortfolioStatus)}`}
+                        >
+                          {paymentContractStatusBadgeLabel(instruction.linkedContractPortfolioStatus)}
+                        </span>
                       </div>
+                      <h3 className="font-bold text-slate-900 text-[15px] leading-snug mt-1 line-clamp-2">
+                        {instruction.productName || segmentLabel(instruction.segment)}
+                      </h3>
+                      {institution ? (
+                        <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{institution}</p>
+                      ) : null}
                     </div>
-                    <span
-                      className={`shrink-0 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${paymentContractStatusBadgeClasses(instruction.linkedContractPortfolioStatus)}`}
-                    >
-                      {paymentContractStatusBadgeLabel(instruction.linkedContractPortfolioStatus)}
-                    </span>
                   </div>
 
-                  <div className="p-5 flex-1 flex flex-col gap-4 text-sm">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Částka</p>
-                      <p className="text-lg font-black text-slate-900">{formatPortalPrimaryAmountLine(instruction)}</p>
+                  <div className="p-5 flex-1 flex flex-col gap-4 text-sm bg-slate-50/30">
+                    <div className="flex items-end justify-between gap-2">
+                      <div>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Částka k úhradě</span>
+                        <span className="text-2xl font-black text-slate-900">{formatPortalPrimaryAmountLine(instruction)}</span>
+                      </div>
+                      {freqRow ? (
+                        <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm shrink-0">
+                          {freqRow}
+                        </span>
+                      ) : null}
                     </div>
 
-                    {freqRow ? (
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Frekvence</p>
-                        <p className="text-sm font-semibold text-slate-800">{freqRow}</p>
-                      </div>
-                    ) : null}
-
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-2">
                       {acct ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                            <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               {acctLabel}
-                            </p>
-                            <p className="font-mono text-slate-800 font-bold text-xs break-all">{acct}</p>
+                            </span>
+                            <span className="font-mono text-slate-800 font-bold text-sm break-all">{acct}</span>
                           </div>
                           <CopyMiniButton text={acct.replace(/\s+/g, "")} label="Kopírovat" />
                         </div>
                       ) : null}
                       {vs ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                            <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               Variabilní symbol
-                            </p>
-                            <p className="font-bold text-slate-800 text-sm">{vs}</p>
+                            </span>
+                            <span className="font-bold text-slate-800 text-sm font-mono">{vs}</span>
                           </div>
                           <CopyMiniButton text={vs} label="Kopírovat" />
                         </div>
                       ) : null}
                       {instruction.specificSymbol ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                            <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               Specifický symbol
-                            </p>
-                            <p className="font-bold text-slate-800 text-sm">{instruction.specificSymbol}</p>
+                            </span>
+                            <span className="font-bold text-slate-800 text-sm font-mono">{instruction.specificSymbol}</span>
                           </div>
                           <CopyMiniButton text={instruction.specificSymbol} label="Kopírovat" />
                         </div>
                       ) : null}
                       {instruction.constantSymbol ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                            <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               Konstantní symbol
-                            </p>
-                            <p className="font-bold text-slate-800 text-sm">{instruction.constantSymbol}</p>
+                            </span>
+                            <span className="font-bold text-slate-800 text-sm font-mono">{instruction.constantSymbol}</span>
                           </div>
                           <CopyMiniButton text={instruction.constantSymbol} label="Kopírovat" />
                         </div>
@@ -251,10 +274,10 @@ export function ClientPaymentsView({
                       <button
                         type="button"
                         onClick={() => setSelectedIndex(index)}
-                        className="mt-auto w-full min-h-[48px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-800 text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors inline-flex items-center justify-center gap-2"
+                        className="mt-auto w-full min-h-[48px] rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-black uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2"
                       >
-                        <QrCode size={18} />
-                        QR platba
+                        <QrCode size={16} />
+                        Zobrazit QR kód
                       </button>
                     ) : null}
                   </div>
