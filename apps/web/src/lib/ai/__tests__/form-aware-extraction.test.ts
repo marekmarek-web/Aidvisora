@@ -97,6 +97,19 @@ describe("form-aware extraction", () => {
     expect(env.extractedFields.intermediaryCompany?.value).toBe("BEplan finanční plánování s.r.o.");
   });
 
+  it("maps institution/recipient form bank fields to recipientAccount, not client bankAccount", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    const rows: PdfFormFieldRow[] = [
+      { page: 1, fieldName: "customer.joinedBank", fieldValue: "123456789/0800" },
+      { page: 2, fieldName: "issuer.joinedBank", fieldValue: "9988776655/0710" },
+    ];
+    env.debug = { pdfAcroFormFields: rows };
+    applyPdfFormFieldTruthToEnvelope(env, rows);
+    expect(env.extractedFields.bankAccount?.value).toBe("123456789");
+    expect(env.extractedFields.bankCode?.value).toBe("0800");
+    expect(String(env.extractedFields.recipientAccount?.value)).toContain("9988776655");
+  });
+
   it("maps distributor.* prefix to intermediary, not client name", () => {
     const env = minimalEnvelope("investment_subscription_document");
     env.extractedFields = {

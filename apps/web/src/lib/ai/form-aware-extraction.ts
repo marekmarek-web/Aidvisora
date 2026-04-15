@@ -64,6 +64,9 @@ const LABEL_ONLY_NORMALIZED = new Set(
     "investiční společnost",
     "smlouva o upisu",
     "smlouva o úpisu",
+    "navrh smlouvy o upisu",
+    "návrh smlouvy o úpisu",
+    "navrh smlouvy o úpisu",
     "predpokladana vyse investice",
     "předpokládaná výše investice",
   ].map((s) => normalizeLoose(s)),
@@ -93,6 +96,7 @@ export function isPlausibleLabelOnlyValue(raw: unknown): boolean {
   // Document / section titles mistaken for contract numbers or names (no policy id digits)
   if (!/\d/.test(s) && /^smlouva\s+o\s+/i.test(s)) return true;
   if (!/\d/.test(s) && /^(návrh|dodatek|příloha)\s+smlouvy/i.test(s)) return true;
+  if (!/\d/.test(s) && /^návrh\s+smlouvy\s+o\s+/i.test(s)) return true;
   // Repeated label words without digits (e.g. "číslo smlouvy investora")
   if (!/\d/.test(s) && /^[\p{L}\s\/\-:]+$/u.test(s) && n.split(/\s+/).length <= 6) {
     const words = n.split(/\s+/).filter(Boolean);
@@ -148,6 +152,7 @@ type CanonicalKey =
   | "phone"
   | "permanentAddress"
   | "bankAccount"
+  | "recipientAccount"
   | "bankCode"
   | "oneOffAmount"
   | "investmentPremium"
@@ -171,6 +176,29 @@ function parseDomesticBankLine(raw: string): { account: string; bankCode?: strin
     return { account: m[1]!.replace(/\s/g, ""), bankCode: m[2]! };
   }
   return { account: t.replace(/\s/g, "") };
+}
+
+/**
+ * Distinguish client/investor bank fields from institution/platform/recipient payment targets
+ * using only generic PDF field-path semantics (no issuer/vendor lists).
+ */
+function bankFieldTargetsClient(name: string): boolean {
+  const n = name.toLowerCase();
+  if (
+    /recipient|payee|beneficiary|creditor|institution|platform|issuer|investmentcompany|investment\.|spravce|správce|fondmanager|fundmanager|issuerbank|platformbank|institutionbank|payment\.(to|receiver|target)|platba.*(prijem|příjem)|ucet.*(instituc|spravce)/i.test(
+      n,
+    )
+  ) {
+    return false;
+  }
+  if (
+    /(^|\.)(customer|client|investor|participant|policyholder|insured|klient|ucastnik|účastník)\./i.test(n) ||
+    /^person\./i.test(n)
+  ) {
+    return true;
+  }
+  // Default: ambiguous standalone widgets (e.g. "joinedBank") — treat as client for subscription forms
+  return true;
 }
 
 /**
@@ -241,10 +269,21 @@ function mapRowToCanonical(row: PdfFormFieldRow, primary: PrimaryDocumentType): 
   }
 
   if (/joinedbank|bankaccount|accountnumber|iban|domesticaccount/i.test(name)) {
+    if (/(^|\.)distributor\.|(^|\.)intermediary\.|(^|\.)broker\.|(^|\.)consultant\.|(^|\.)agent\.|^vazany/i.test(name)) {
+      return out;
+    }
     const parsed = parseDomesticBankLine(val);
-    out.push({ key: "bankAccount", value: parsed.account, page });
-    if (parsed.bankCode) {
-      out.push({ key: "bankCode", value: parsed.bankCode, page });
+    const forClient = bankFieldTargetsClient(name);
+    if (forClient) {
+      out.push({ key: "bankAccount", value: parsed.account, page });
+      if (parsed.bankCode) {
+        out.push({ key: "bankCode", value: parsed.bankCode, page });
+      }
+    } else {
+      // Institution / platform collection account — never merge into client bankAccount
+      const combined =
+        parsed.bankCode && parsed.account ? `${parsed.account}/${parsed.bankCode}` : val.trim().replace(/\s/g, "");
+      out.push({ key: "recipientAccount", value: combined || parsed.account, page });
     }
     return out;
   }
@@ -345,7 +384,9 @@ export function applyPdfFormFieldTruthToEnvelope(
           ? "intermediary_block"
           : key === "bankAccount" || key === "bankCode"
             ? "payment_block"
-            : "client_block";
+            : key === "recipientAccount"
+              ? "payment_block"
+              : "client_block";
     ef[key] = makeCell(value, {
       page,
       sourceKind: sk,
@@ -367,6 +408,8 @@ export function stripLabelOnlyExtractionValues(envelope: DocumentReviewEnvelope)
     "insuredPersonName",
     "contractNumber",
     "proposalNumber",
+    "proposalNumber_or_contractNumber",
+    "contractNumber_or_proposalNumber",
     "productName",
     "personalId",
     "birthDate",
@@ -377,6 +420,7 @@ export function stripLabelOnlyExtractionValues(envelope: DocumentReviewEnvelope)
     "idCardIssuedBy",
     "idCardValidUntil",
     "bankAccount",
+    "recipientAccount",
     "bankCode",
     "oneOffAmount",
     "investmentPremium",

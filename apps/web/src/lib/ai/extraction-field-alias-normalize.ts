@@ -13,6 +13,7 @@ import {
 import { applySemanticContractUnderstanding } from "./contract-semantic-understanding";
 import {
   applyPdfFormFieldTruthToEnvelope,
+  isPlausibleLabelOnlyValue,
   stripLabelOnlyExtractionValues,
 } from "./form-aware-extraction";
 import type { PdfFormFieldRow } from "@/lib/documents/processing/pdf-acroform-extract";
@@ -319,13 +320,15 @@ function salvageCanonicalFieldsFromTextishCells(
     );
     if (contractMatch?.[1]) {
       const candidate = contractMatch[1].trim();
-      const existingModelationId = ef.modelationId?.value != null ? String(ef.modelationId.value) : "";
-      if (candidate !== existingModelationId) {
-        ef.contractNumber = {
-          value: candidate,
-          status: "inferred_low_confidence",
-          confidence: 0.68,
-        };
+      if (!isPlausibleLabelOnlyValue(candidate)) {
+        const existingModelationId = ef.modelationId?.value != null ? String(ef.modelationId.value) : "";
+        if (candidate !== existingModelationId) {
+          ef.contractNumber = {
+            value: candidate,
+            status: "inferred_low_confidence",
+            confidence: 0.68,
+          };
+        }
       }
     }
   }
@@ -442,7 +445,9 @@ function pullFromFinancialTerms(envelope: DocumentReviewEnvelope): void {
       !valuePresent(ef.contractNumber) &&
       (lk.includes("contract") || lk.includes("policy") || lk.includes("smlouv"))
     ) {
-      ef.contractNumber = { value: str, status: "extracted", confidence: 0.7 };
+      if (!isPlausibleLabelOnlyValue(str)) {
+        ef.contractNumber = { value: str, status: "extracted", confidence: 0.7 };
+      }
     }
     if (!valuePresent(ef.totalMonthlyPremium) && (lk.includes("premium") || lk.includes("pojistn"))) {
       ef.totalMonthlyPremium = { value: str, status: "extracted", confidence: 0.7 };
@@ -822,13 +827,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "celkovaCastka",
         "amountDue",
       ]);
-      mergeFromAliases(ef, "contractNumber", [
-        "accountNumber",
-        "investicniUcet",
-        "cisloSmlouvy",
-        "cisloUctu",
-        "smlouvaCislo",
-      ]);
+      mergeFromAliases(ef, "contractNumber", ["cisloSmlouvy", "smlouvaCislo"]);
       mergeFromAliases(ef, "intermediaryName", [
         "advisorName",
         "brokerName",
@@ -1046,6 +1045,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
     case "investment_payment_instruction":
       mergeFromAliases(ef, "provider", ["institutionName", "insurer", "payerBank", "recipientName"]);
       mergeFromAliases(ef, "contractReference", ["contractNumber", "policyNumber", "referenceNumber"]);
+      mergeFromAliases(ef, "bankAccount", ["recipientAccount"]);
       break;
 
     case "insurance_policy_change_or_service_doc":
@@ -1306,9 +1306,15 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   // Leasing/financing docs: bank/lender must NOT be labeled insurer
   const isLeasingOrFinancing = primary === "generic_financial_document";
 
-  // For loan/mortgage/leasing: DO NOT promote institutionName → insurer (bank/lender is not an insurer).
+  const isPureInvestmentForm =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement" ||
+    primary === "investment_modelation" ||
+    primary === "investment_payment_instruction";
+
+  // For loan/mortgage/leasing/investment: DO NOT promote institutionName → insurer (bank/lender/asset manager is not an insurer).
   // For insurance docs: apply the normal alias so insurer is always populated.
-  if (!isLoanOrMortgage && !isLeasingOrFinancing) {
+  if (!isLoanOrMortgage && !isLeasingOrFinancing && !isPureInvestmentForm) {
     mergeFromAliases(ef, "insurer", [
       "institutionName",
       "insuranceCompany",
@@ -1444,8 +1450,18 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
 
   mergeFromAliases(ef, "variableSymbol", ["vs", "varSymbol", "variable_symbol"]);
 
+  mergeFromAliases(ef, "recipientAccount", [
+    "institutionBankAccount",
+    "platformBankAccount",
+    "recipientBankAccount",
+    "issuerBankAccount",
+    "investmentRecipientAccount",
+  ]);
+
   mergeFromAliases(ef, "bankAccount", [
-    "recipientAccount",
+    "clientBankAccount",
+    "investorBankAccount",
+    "customerBankAccount",
     "paymentAccount",
     "payoutAccount",
     "payout_account",
@@ -1547,6 +1563,15 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   salvageCanonicalFieldsFromTextishCells(ef, {
     skipContractNumberSalvage: isModelationDoc,
   });
+  stripLabelOnlyExtractionValues(envelope);
+  if (isPureInvestmentForm) {
+    if (valuePresent(ef.insurer)) {
+      ef.insurer = { value: null, status: "not_applicable" as const, confidence: 1 };
+    }
+    if (valuePresent(ef.policyholderName)) {
+      ef.policyholderName = { value: null, status: "not_applicable" as const, confidence: 1 };
+    }
+  }
   sanitizeExtractedPaymentAccountAndVariableSymbol(envelope);
   normalizeExtractedFieldDates(ef);
   normalizeExtractedFieldFrequencies(ef);

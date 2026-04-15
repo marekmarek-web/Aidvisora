@@ -221,6 +221,20 @@ describe("applyExtractedFieldAliasNormalizations", () => {
     expect(warnings.filter((w) => w.code === "MISSING_REQUIRED_FIELD")).toHaveLength(0);
   });
 
+  it("investment_subscription_document: clears mistaken insurer; does not use bank account as contract number", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      insurer: { value: "Test Asset Management", status: "extracted", confidence: 0.75, evidenceSnippet: "x" },
+      institutionName: { value: "Test Asset Management", status: "extracted", confidence: 0.9, evidenceSnippet: "x" },
+      accountNumber: { value: "123456789/0800", status: "extracted", confidence: 0.85, evidenceSnippet: "x" },
+      cisloSmlouvy: { value: "INV-2026-42", status: "extracted", confidence: 0.88, evidenceSnippet: "x" },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.insurer?.status).toBe("not_applicable");
+    expect(env.extractedFields.contractNumber?.value).toBe("INV-2026-42");
+    expect(String(env.extractedFields.contractNumber?.value ?? "")).not.toMatch(/123456789/);
+  });
+
   it("maps pension_contract provider and participantFullName aliases", () => {
     const env = minimalEnvelope("pension_contract");
     env.extractedFields = {

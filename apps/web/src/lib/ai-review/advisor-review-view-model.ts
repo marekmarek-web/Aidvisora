@@ -50,10 +50,14 @@ function formatMoneyLine(env: DocumentReviewEnvelope): string {
   if (vs) parts.push(`VS ${vs}`);
   const iban = str(fv(env, "iban"));
   const acc = str(fv(env, "bankAccount")) || str(fv(env, "accountNumber"));
+  const recipientAcc = str(fv(env, "recipientAccount"));
   const bankCode = str(fv(env, "bankCode"));
   if (iban) parts.push(`IBAN: ${iban}`);
   else if (acc) {
     parts.push(`Účet: ${formatDomesticAccountDisplayLine(acc, bankCode)}`);
+  }
+  if (recipientAcc && recipientAcc !== acc) {
+    parts.push(`Příjemce (instituce): ${formatDomesticAccountDisplayLine(recipientAcc, "")}`);
   }
   const pt = str(fv(env, "paymentType"));
   if (/trval|standing|direct/i.test(pt) || /trvalý/i.test(pt)) {
