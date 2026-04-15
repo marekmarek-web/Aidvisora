@@ -1,3 +1,6 @@
 # Live eval reports (may contain paths / metadata)
 *.json
 !/.gitignore
+
+# Batch lab smoke / local runs
+batch-smoke-out/
