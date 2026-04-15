@@ -13,7 +13,6 @@ import {
   getContractAiProvenance,
 } from "@/app/actions/contracts";
 import type { ContractRow, ContractAiProvenanceResult } from "@/app/actions/contracts";
-import { ContractPendingFieldsGuard } from "./ContractPendingFieldsGuard";
 import {
   getPotentialDuplicateContractPairs,
   mergeDuplicateContracts,
@@ -21,14 +20,13 @@ import {
 import { ProductPicker } from "@/app/components/aidvisora/ProductPicker";
 import type { ProductPickerValue } from "@/app/components/aidvisora/ProductPicker";
 import { segmentLabel } from "@/app/lib/segment-labels";
-import { ZpRatingBadge } from "@/app/components/aidvisora/ZpRatingBadge";
 import { EUCS_ZP_DISCLAIMER } from "@/data/insurance-ratings";
 import { ConfirmDeleteModal } from "@/app/components/ConfirmDeleteModal";
 import { NewContractWizard } from "@/app/components/aidvisora/NewContractWizard";
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { ContractParametersFields } from "@/app/components/aidvisora/ContractParametersFields";
-import { FileText, ScrollText, FileCheck } from "lucide-react";
+import { FileText, ScrollText } from "lucide-react";
 import Link from "next/link";
 import {
   initialContractFormState,
@@ -36,11 +34,10 @@ import {
   validateContractFormForSubmit,
 } from "@/lib/contracts/contract-form-payload";
 import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
-import { getSegmentUiGroup, segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
+import { segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
 import { annualPremiumFromMonthlyInput } from "@/lib/contracts/annual-premium-from-monthly";
-import { ContractProvenanceLine } from "@/app/components/aidvisora/ContractProvenanceLine";
 import { mapContractToCanonicalProduct } from "@/lib/client-portfolio/canonical-contract-read";
-import { LifeInsuranceProductOverviewCard } from "./LifeInsuranceProductOverviewCard";
+import { CanonicalProductAdvisorOverviewCard } from "./CanonicalProductAdvisorOverviewCard";
 
 export function ContractsSection({ contactId }: { contactId: string }) {
   const router = useRouter();
@@ -313,173 +310,58 @@ export function ContractsSection({ contactId }: { contactId: string }) {
           </ul>
         </div>
       ) : null}
-      {mainList.some((c) => c.segment === "ZP") ? (
-        <div className="mb-6 space-y-3">
-          <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] uppercase tracking-wide">
-            Přehled životního pojištění
+      <section className="mb-6 space-y-3" aria-label="Poradenský přehled produktů">
+        <div>
+          <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] uppercase tracking-wide">Přehled držby</p>
+          <p className="text-xs text-[color:var(--wp-text-muted)] mt-1 max-w-3xl leading-relaxed">
+            Stejná kanonická evidence jako v klientském portfoliu — údaje zapisujeme jen tam, kde je máme; chybějící pole zůstávají prázdná.
           </p>
-          <div className="grid gap-3 md:grid-cols-1 xl:grid-cols-2">
-            {mainList
-              .filter((c) => c.segment === "ZP")
-              .map((c) => (
-                <LifeInsuranceProductOverviewCard key={`zp-overview-${c.id}`} product={mapContractToCanonicalProduct(c)} />
-              ))}
-          </div>
         </div>
-      ) : null}
+        {mainList.length === 0 ? (
+          <div className="rounded-[var(--wp-radius-lg)] border border-dashed border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)]/40 px-4 py-8 text-center">
+            <p className="text-sm font-medium text-[color:var(--wp-text)]">Zatím žádná smlouva v tomto přehledu</p>
+            <p className="text-xs text-[color:var(--wp-text-muted)] mt-2 max-w-md mx-auto">
+              Po přidání smlouvy nebo po schválení pro klienta se zde zobrazí karty podle segmentu — včetně detailů z evidence (rizika u životního pojištění, fondy u investic, limity u majetku a vozidel atd.).
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-1 xl:grid-cols-2">
+            {mainList.map((c) => (
+              <CanonicalProductAdvisorOverviewCard
+                key={c.id}
+                contactId={contactId}
+                contract={c}
+                product={mapContractToCanonicalProduct(c)}
+                provenance={provenanceMap[c.id]}
+                variant="published"
+                onEdit={() => startEdit(c)}
+                onDelete={() => setDeleteConfirmId(c.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
       {pendingList.length > 0 ? (
         <div className="mb-4 rounded-[var(--wp-radius)] border border-indigo-200 bg-indigo-50/60 px-4 py-3">
           <p className="text-sm font-semibold text-indigo-950 mb-2">Čeká na publikaci do klientské zóny</p>
-          <ul className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-1 xl:grid-cols-2">
             {pendingList.map((c) => (
-              <li
+              <CanonicalProductAdvisorOverviewCard
                 key={c.id}
-                className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] px-4 py-3 text-sm"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <span className="min-w-0">
-                    {c.contractNumber ? (
-                      <>
-                        <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
-                        <span className="text-[color:var(--wp-text-muted)]"> · </span>
-                      </>
-                    ) : null}
-                    {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
-                    {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
-                      ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
-                      : ""}
-                    {c.partnerName && (
-                      <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />
-                    )}
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                      <ContractProvenanceLine
-                        sourceKind={c.sourceKind}
-                        sourceDocumentId={c.sourceDocumentId}
-                        sourceContractReviewId={c.sourceContractReviewId}
-                        advisorConfirmedAt={c.advisorConfirmedAt}
-                      />
-                    </span>
-                  </span>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => void handleApproveForClient(c.id)}
-                      disabled={publishBusyId === c.id}
-                      className="rounded-[var(--wp-radius)] bg-emerald-600 text-white px-3 py-2 text-sm font-semibold min-h-[44px] hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      {publishBusyId === c.id ? "Zveřejňuji…" : "Schválit pro klienta"}
-                    </button>
-                    <Link
-                      href={`/portal/terminations/new?contactId=${encodeURIComponent(contactId)}&contractId=${encodeURIComponent(c.id)}`}
-                      className="inline-flex items-center justify-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm font-semibold text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
-                    >
-                      Výpověď
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => startEdit(c)}
-                      className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px] border border-[color:var(--wp-border)]"
-                    >
-                      Upravit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteConfirmId(c.id)}
-                      className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]"
-                    >
-                      Smazat
-                    </button>
-                  </div>
-                </div>
-                {provenanceMap[c.id] !== undefined && (() => {
-                  const prov = provenanceMap[c.id];
-                  if (prov?.supportingDocumentGuard) {
-                    return (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 leading-none mt-1">
-                        <FileCheck className="w-3 h-3 text-slate-400" aria-hidden />
-                        Podkladový dokument — evidenční záznam bez potvrzovacího toku
-                      </span>
-                    );
-                  }
-                  return (
-                    <ContractPendingFieldsGuard
-                      contractId={c.id}
-                      provenance={prov}
-                    />
-                  );
-                })()}
-              </li>
+                contactId={contactId}
+                contract={c}
+                product={mapContractToCanonicalProduct(c)}
+                provenance={provenanceMap[c.id]}
+                variant="pending"
+                onEdit={() => startEdit(c)}
+                onDelete={() => setDeleteConfirmId(c.id)}
+                onApproveForClient={() => void handleApproveForClient(c.id)}
+                publishBusy={publishBusyId === c.id}
+              />
             ))}
-          </ul>
+          </div>
         </div>
       ) : null}
-      <ul className="space-y-3 mb-4">
-        {mainList.map((c) => (
-          <li
-            key={c.id}
-            className="flex flex-col gap-2 rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-4 py-3 text-sm"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 min-h-[44px]">
-              <span className="min-w-0">
-                {c.contractNumber ? (
-                  <>
-                    <span className="font-medium text-[color:var(--wp-text)]">č. {c.contractNumber}</span>
-                    <span className="text-[color:var(--wp-text-muted)]"> · </span>
-                  </>
-                ) : null}
-                {segmentLabel(c.segment)} – {c.partnerName || c.productName || "—"}
-                {c.premiumAmount && getSegmentUiGroup(c.segment) !== "lending"
-                  ? ` • ${Number(c.premiumAmount).toLocaleString("cs-CZ")} Kč`
-                  : ""}
-                {c.partnerName && <ZpRatingBadge partnerName={c.partnerName} productName={c.productName ?? undefined} segment={c.segment} />}
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--wp-text-muted)] mt-1">
-                  <span>
-                    {c.visibleToClient === false ? "Skryto v klientské zóně" : "V klientské zóně"}
-                    {c.portfolioStatus && c.portfolioStatus !== "active" ? ` · ${c.portfolioStatus}` : ""}
-                  </span>
-                  <ContractProvenanceLine
-                    sourceKind={c.sourceKind}
-                    sourceDocumentId={c.sourceDocumentId}
-                    sourceContractReviewId={c.sourceContractReviewId}
-                    advisorConfirmedAt={c.advisorConfirmedAt}
-                  />
-                </span>
-              </span>
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <Link
-                  href={`/portal/terminations/new?contactId=${encodeURIComponent(contactId)}&contractId=${encodeURIComponent(c.id)}`}
-                  className="inline-flex items-center justify-center rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm font-semibold text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
-                >
-                  Výpověď
-                </Link>
-                <button type="button" onClick={() => startEdit(c)} className="px-3 py-2 rounded-[var(--wp-radius)] text-[var(--wp-accent)] font-medium hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]">
-                  Upravit
-                </button>
-                <button type="button" onClick={() => setDeleteConfirmId(c.id)} className="px-3 py-2 rounded-[var(--wp-radius)] text-red-600 font-medium hover:bg-red-50 min-h-[44px]">
-                  Smazat
-                </button>
-              </div>
-            </div>
-            {provenanceMap[c.id] !== undefined && (() => {
-              const prov = provenanceMap[c.id];
-              if (prov?.supportingDocumentGuard) {
-                return (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 leading-none mt-1">
-                    <FileCheck className="w-3 h-3 text-slate-400" aria-hidden />
-                    Podkladový dokument — evidenční záznam bez potvrzovacího toku
-                  </span>
-                );
-              }
-              return (
-                <ContractPendingFieldsGuard
-                  contractId={c.id}
-                  provenance={prov}
-                />
-              );
-            })()}
-          </li>
-        ))}
-      </ul>
       <NewContractWizard
         open={wizardOpen}
         contactId={contactId}
