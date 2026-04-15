@@ -18,7 +18,7 @@ vi.mock("db", () => ({
   asc: () => ({}),
   desc: () => ({}),
 }));
-import { isMatchingAmbiguous, computeMatchVerdict } from "../client-matching";
+import { isMatchingAmbiguous, computeMatchVerdict, extractSignals } from "../client-matching";
 import type { ClientMatchCandidate } from "../review-queue";
 
 // Threshold: confidenceFromScore maps score >= 0.34 → high, >= 0.25 → medium
@@ -152,6 +152,32 @@ describe("client-matching", () => {
       ];
       const r = computeMatchVerdict(candidates);
       expect(r.verdict).toBe("existing_match");
+    });
+  });
+
+  describe("extractSignals (envelope)", () => {
+    it("uses participantFullName when clientFullName is empty", () => {
+      const envelope = {
+        documentClassification: { primaryType: "pension_contract" },
+        extractedFields: {
+          participantFullName: { value: "Martin Kondratiev", status: "extracted" as const },
+        },
+      };
+      const s = extractSignals(envelope as never);
+      expect(s.fullNameNorm).toBeTruthy();
+      expect(s.fullNameNorm).toContain("martin");
+      expect(s.fullNameNorm).toContain("kondratiev");
+    });
+
+    it("uses provider for institution hint alongside insurer", () => {
+      const envelope = {
+        documentClassification: { primaryType: "pension_contract" },
+        extractedFields: {
+          provider: { value: "Conseq penzijní společnost, a.s.", status: "extracted" as const },
+        },
+      };
+      const s = extractSignals(envelope as never);
+      expect(s.institutionNorm.length).toBeGreaterThan(5);
     });
   });
 });

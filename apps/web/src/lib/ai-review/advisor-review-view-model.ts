@@ -108,6 +108,8 @@ function sensitivityLine(env: DocumentReviewEnvelope): string {
  */
 const MAX_ADVISOR_BRIEF_LENGTH = 500;
 const RAW_CODE_PATTERN = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}\b/g;
+/** e.g. `combined_dip_dps_type_override:dps_keywords` from classification reasons */
+const INTERNAL_REASON_CODE_WITH_SUFFIX = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+:[a-z0-9_]+\b/gi;
 
 /**
  * Sanitize LLM-generated advisor summary:
@@ -136,15 +138,18 @@ function scrubInternalPipelineLabelsFromAdvisorText(text: string): string {
   return t;
 }
 
-function sanitizeAdvisorBrief(
+export function sanitizeAdvisorBrief(
   raw: string | undefined,
-  envelope: DocumentReviewEnvelope
+  _envelope: DocumentReviewEnvelope
 ): string | undefined {
   if (!raw) return undefined;
   let text = raw.trim();
   if (!text) return undefined;
 
   text = scrubInternalPipelineLabelsFromAdvisorText(text);
+
+  text = text.replace(INTERNAL_REASON_CODE_WITH_SUFFIX, "");
+  text = text.replace(/\b(?:dps|dip)_keywords\b/gi, "");
 
   text = text.replace(RAW_CODE_PATTERN, (match) => {
     const human = getReasonMessage(match);

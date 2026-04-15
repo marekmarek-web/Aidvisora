@@ -522,6 +522,11 @@ function shouldSuppressLoanFieldForLifeInsurance(
   return isLifeInsuranceDocumentContext(primaryType, productFamily);
 }
 
+/** Úvěrové pole `lender` nesmí být u DPS/penze (často duplicita k provider / hlavičce instituce). */
+function shouldSuppressLenderForPensionContract(fKey: string, primaryType?: string): boolean {
+  return primaryType === "pension_contract" && fKey === "lender";
+}
+
 const HIDDEN_REASON_CODES = new Set([
   "partial_extraction_coerced",
   "partial_extraction_merged_into_stub",
@@ -908,10 +913,14 @@ function fieldLabelForKeyAndFamily(rawKey: string, productFamily?: string, prima
  * only show the most canonical one (provider > institutionName > insurer).
  */
 function getInstitutionDuplicateKeysToSuppress(
-  ef: Record<string, { value?: unknown; status?: string } | undefined>
+  ef: Record<string, { value?: unknown; status?: string } | undefined>,
+  primaryType?: string,
 ): Set<string> {
   const suppress = new Set<string>();
-  const INSTITUTION_KEYS = ["provider", "institutionName", "insurer"] as const;
+  const INSTITUTION_KEYS =
+    primaryType === "pension_contract"
+      ? (["provider", "institutionName", "insurer", "lender"] as const)
+      : (["provider", "institutionName", "insurer"] as const);
   const vals = INSTITUTION_KEYS.map((k) => {
     const v = ef[k]?.value;
     return v != null ? String(v).trim().toLowerCase() : null;
@@ -958,7 +967,7 @@ function flattenEnvelopeToGroups(
   const paymentConflict = efRaw ? detectPaymentFrequencyConflict(efRaw) : { hasConflict: false };
   const contractConflict = efRaw ? detectContractVsVariableSymbolConflict(efRaw) : { hasConflict: false };
   // Pre-compute institution dedup: suppress redundant provider/institutionName/insurer fields
-  const institutionDupKeys = efRaw ? getInstitutionDuplicateKeysToSuppress(efRaw) : new Set<string>();
+  const institutionDupKeys = efRaw ? getInstitutionDuplicateKeysToSuppress(efRaw, primaryType) : new Set<string>();
 
   const ef = envelope.extractedFields as
     | Record<string, { value?: unknown; status?: string; confidence?: number }>
@@ -967,6 +976,7 @@ function flattenEnvelopeToGroups(
     for (const [fKey, fObj] of Object.entries(ef)) {
       if (!fObj || typeof fObj !== "object" || fKey.startsWith("_")) continue;
       if (shouldSuppressLoanFieldForLifeInsurance(fKey, primaryType, productFamily)) continue;
+      if (shouldSuppressLenderForPensionContract(fKey, primaryType)) continue;
       const rawVal = fObj.value;
 
       // Institution dedup: suppress redundant institution labels with identical values

@@ -111,7 +111,8 @@ function fullNameFromParts(firstRaw?: string | null, lastRaw?: string | null, fu
   return [first, last].filter(Boolean).join(" ");
 }
 
-function extractSignals(
+/** Exported for unit tests — envelope identity fields must stay in sync with CRM matching. */
+export function extractSignals(
   extracted: ExtractedContractSchema | DocumentReviewEnvelope
 ): {
   fullNameNorm: string;
@@ -133,6 +134,9 @@ function extractSignals(
       fields.investorFullName?.value ??
       fields.insuredPersonName?.value ??
       fields.clientFullName?.value ??
+      fields.participantFullName?.value ??
+      fields.fullName?.value ??
+      fields.policyholderName?.value ??
       ""
     );
     const firstName = String(fields.clientFirstName?.value ?? "");
@@ -144,7 +148,13 @@ function extractSignals(
     const companyId = String(fields.companyId?.value ?? fields.employerIco?.value ?? "");
     const address = String(fields.address?.value ?? fields.permanentAddress?.value ?? "");
     const employer = String(fields.employerName?.value ?? "");
-    const institution = String(fields.insurer?.value ?? fields.lender?.value ?? fields.bankName?.value ?? "");
+    const institution = String(
+      fields.insurer?.value ??
+      fields.provider?.value ??
+      fields.lender?.value ??
+      fields.bankName?.value ??
+      ""
+    );
     return {
       fullNameNorm: fullNameFromParts(firstName, lastName, fullName),
       birthDateNorm: normalizeDate(birthDate),
@@ -277,7 +287,8 @@ export async function findClientCandidates(
     })
     .from(contacts)
     .where(eq(contacts.tenantId, tenantId))
-    .limit(400);
+    // Scan cap per review — large tenants rely on indexed signals (RČ, e-mail, …) or exact-name pre-query below.
+    .limit(2000);
 
   for (const r of allContacts) {
     let score = 0;

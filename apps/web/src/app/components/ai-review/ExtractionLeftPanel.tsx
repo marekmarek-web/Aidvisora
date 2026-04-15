@@ -1990,7 +1990,14 @@ export function ExtractionLeftPanel({
           <ReviewAttentionBanner
             warningCount={doc.diagnostics.warningCount}
             errorCount={doc.diagnostics.errorCount}
-            onShowProblems={() => onFilterChange("error")}
+            onShowProblems={() => {
+              const w = doc.diagnostics.warningCount;
+              const e = doc.diagnostics.errorCount;
+              if (w > 0) onFilterChange("warning");
+              else if (e > 0) onFilterChange("error");
+              else onFilterChange("all");
+              scrollToSection("data");
+            }}
           />
 
           <div data-section="diagnostics">
