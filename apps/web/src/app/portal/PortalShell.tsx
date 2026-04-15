@@ -220,7 +220,9 @@ function PortalShellInner({
     pathname === "/portal/contracts/review/" ||
     /^\/portal\/contracts\/review\/[^/]+\/?$/.test(pathname);
   /** Obchodní nástěnka — bez globálního top baru (search, +Nový, profil). */
-  const hidePortalTopHeader = pathname === "/portal/pipeline";
+  const isCalendarWorkspace =
+    pathname === "/portal/calendar" || pathname.startsWith("/portal/calendar/");
+  const hidePortalTopHeader = pathname === "/portal/pipeline" || isCalendarWorkspace;
   const { hasSharedFiles } = useShareIntent();
   const { shouldShowSoftPrompt, requestSystemPermission, markSoftPromptSeen } = usePushNotifications({
     onPushNotificationActionPerformed: (action) => {
@@ -405,7 +407,9 @@ function PortalShellInner({
               isAiReviewWorkspace
                 ? "flex flex-col flex-1 min-h-0 overflow-hidden"
                 : hidePortalTopHeader
-                  ? "flex flex-col flex-1 min-h-0 overflow-hidden px-4 pb-5 pt-2 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-2"
+                  ? isCalendarWorkspace
+                    ? "flex flex-col flex-1 min-h-0 overflow-hidden px-0 pb-0 pt-0 md:px-1 md:pb-2 md:pt-1 lg:px-2 lg:pb-3 lg:pt-2"
+                    : "flex flex-col flex-1 min-h-0 overflow-hidden px-4 pb-5 pt-2 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-2"
                   : "px-4 pb-5 pt-4 md:px-5 md:pb-6 lg:px-4 lg:pb-5 lg:pt-3",
             )}>
               {children}
