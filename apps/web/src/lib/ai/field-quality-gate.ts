@@ -316,7 +316,7 @@ function isClientIdentityField(key: string): boolean {
 
 /** Groups that should be hidden for supporting/reference documents */
 export const SUPPRESS_GROUPS_FOR_SUPPORTING = new Set([
-  "contract", "contractCore", "coverage", "risks", "investments",
+  "contract", "contractCore", "coverage", "risks", "insuredRisks", "lifeInsuredPersons", "investments",
   "product", "paymentsCore",
 ]);
 

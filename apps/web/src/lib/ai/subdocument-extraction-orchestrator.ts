@@ -36,7 +36,8 @@ import {
   buildSectionFidelitySummary,
   type SectionFidelitySummary,
 } from "./extraction-evidence-fidelity";
-import type { DocumentReviewEnvelope } from "./document-review-types";
+import type { DocumentReviewEnvelope, ExtractedField } from "./document-review-types";
+import { hasFullContractShell } from "./contract-semantic-understanding";
 import type {
   PacketMeta,
   PacketSubdocumentCandidate,
@@ -394,6 +395,19 @@ function runPaymentSectionDetection(
   const paymentCandidates = candidatesByType(candidates, "payment_instruction", 0.4);
   if (paymentCandidates.length === 0) {
     return { type: "skipped", reason: "no_payment_section_candidates" };
+  }
+
+  const primary = envelope.documentClassification?.primaryType ?? "";
+  const isLifeInsurance =
+    primary.startsWith("life_insurance") ||
+    primary === "life_insurance_contract" ||
+    primary === "life_insurance_final_contract";
+  const ef = envelope.extractedFields as Record<string, ExtractedField | undefined> | undefined;
+  if (isLifeInsurance && ef && hasFullContractShell(ef)) {
+    return {
+      type: "skipped",
+      reason: "life_insurance_contract_with_payment_section",
+    };
   }
 
   const confidence = Math.max(...paymentCandidates.map((c) => c.confidence));

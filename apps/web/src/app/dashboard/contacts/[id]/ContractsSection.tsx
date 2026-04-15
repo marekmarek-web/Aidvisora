@@ -39,6 +39,8 @@ import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
 import { getSegmentUiGroup, segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
 import { annualPremiumFromMonthlyInput } from "@/lib/contracts/annual-premium-from-monthly";
 import { ContractProvenanceLine } from "@/app/components/aidvisora/ContractProvenanceLine";
+import { mapContractToCanonicalProduct } from "@/lib/client-portfolio/canonical-contract-read";
+import { LifeInsuranceProductOverviewCard } from "./LifeInsuranceProductOverviewCard";
 
 export function ContractsSection({ contactId }: { contactId: string }) {
   const router = useRouter();
@@ -309,6 +311,20 @@ export function ContractsSection({ contactId }: { contactId: string }) {
               );
             })}
           </ul>
+        </div>
+      ) : null}
+      {mainList.some((c) => c.segment === "ZP") ? (
+        <div className="mb-6 space-y-3">
+          <p className="text-xs font-semibold text-[color:var(--wp-text-muted)] uppercase tracking-wide">
+            Přehled životního pojištění
+          </p>
+          <div className="grid gap-3 md:grid-cols-1 xl:grid-cols-2">
+            {mainList
+              .filter((c) => c.segment === "ZP")
+              .map((c) => (
+                <LifeInsuranceProductOverviewCard key={`zp-overview-${c.id}`} product={mapContractToCanonicalProduct(c)} />
+              ))}
+          </div>
         </div>
       ) : null}
       {pendingList.length > 0 ? (

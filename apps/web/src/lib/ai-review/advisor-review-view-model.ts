@@ -116,6 +116,18 @@ const RAW_CODE_PATTERN = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}\b/g;
  * - strip English-sounding sentences (heuristic),
  * - prefer Czech content.
  */
+/** Odstraní interní pipeline názvy typů dokumentů z textu pro poradce (žádné `insurance_contract` v UI). */
+function scrubInternalPipelineLabelsFromAdvisorText(text: string): string {
+  let t = text.replace(/\binsurance_contract\b/gi, "životní pojistná smlouva");
+  t = t.replace(
+    /\blife_insurance_contract\b/gi,
+    getDocumentTypeLabel("life_insurance_contract") ?? "Životní pojištění",
+  );
+  t = t.replace(/\blife_insurance_final_contract\b/gi, "Finální životní pojistná smlouva");
+  t = t.replace(/\bpolicyholder\b/gi, "pojistník");
+  return t;
+}
+
 function sanitizeAdvisorBrief(
   raw: string | undefined,
   envelope: DocumentReviewEnvelope
@@ -123,6 +135,8 @@ function sanitizeAdvisorBrief(
   if (!raw) return undefined;
   let text = raw.trim();
   if (!text) return undefined;
+
+  text = scrubInternalPipelineLabelsFromAdvisorText(text);
 
   text = text.replace(RAW_CODE_PATTERN, (match) => {
     const human = getReasonMessage(match);

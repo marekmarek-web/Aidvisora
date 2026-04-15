@@ -72,7 +72,8 @@ const SECTION_LABELS: Record<string, string> = {
   clientProfile: "Klient",
   contractCore: "Smlouva",
   paymentsCore: "Platby",
-  insuredRisks: "Rizika a připojištění",
+  insuredRisks: "Rizika",
+  lifeInsuredPersons: "Pojištěné osoby",
   intermediary: "Zprostředkovatel",
   investments: "Investice",
   beneficiaries: "Oprávněné osoby",
@@ -94,6 +95,7 @@ const SECTION_ICONS: Record<string, string> = {
   contractCore: "FileText",
   paymentsCore: "Building2",
   insuredRisks: "Shield",
+  lifeInsuredPersons: "User",
   intermediary: "Building2",
   investments: "Heart",
   beneficiaries: "User",
@@ -415,7 +417,8 @@ const FIELD_GROUP_MAP: Record<string, string> = {
   selectedCoverages: "insuredRisks",
   riders: "insuredRisks",
   insuredRisks: "insuredRisks",
-  insuredPersons: "insuredRisks",
+  insuredPersons: "lifeInsuredPersons",
+  insuredPersonName: "lifeInsuredPersons",
   insuredObject: "insuredRisks",
   insuredAddress: "insuredRisks",
   coverageLimit: "insuredRisks",
@@ -460,11 +463,11 @@ const FIELD_GROUP_MAP: Record<string, string> = {
   proposedFunds: "investments",
   beneficiaries: "beneficiaries",
   beneficiary: "beneficiaries",
-  secondInsuredName: "clientProfile",
-  secondInsuredPersonalId: "clientProfile",
-  secondInsuredBirthDate: "clientProfile",
+  secondInsuredName: "lifeInsuredPersons",
+  secondInsuredPersonalId: "lifeInsuredPersons",
+  secondInsuredBirthDate: "lifeInsuredPersons",
   coBorrowerName: "clientProfile",
-  insuredPersonName: "clientProfile",
+  coinsured: "lifeInsuredPersons",
   manualCoverageNotes: "insuredRisks",
   rawCoverageText: "insuredRisks",
   manualFillClientText: "clientProfile",
@@ -477,6 +480,45 @@ const FIELD_GROUP_MAP: Record<string, string> = {
   payoutAccount: "paymentsCore",
   firstPaymentAmount: "paymentsCore",
 };
+
+/** Úvěrová pole se u životního pojištění nesmí zobrazovat (žádný mapování do úvěrového segmentu). */
+const LOAN_DOMAIN_FIELD_KEYS = new Set([
+  "lender",
+  "loanAmount",
+  "loanPrincipal",
+  "principalAmount",
+  "creditAmount",
+  "loanLinkedCoverageFlag",
+  "detectedLoanPayments",
+  "scheduleRows",
+  "loanMaturity",
+  "loanEndDate",
+  "interestRate",
+  "accountForRepayment",
+  "payoutAccount",
+  "totalPayments",
+  "recurringPayments",
+]);
+
+function isLifeInsuranceDocumentContext(primaryType?: string, productFamily?: string): boolean {
+  const pt = primaryType ?? "";
+  const pf = (productFamily ?? "").toLowerCase();
+  return (
+    pt.startsWith("life_insurance") ||
+    pt === "life_insurance_contract" ||
+    pt === "life_insurance_final_contract" ||
+    pf === "life_insurance"
+  );
+}
+
+function shouldSuppressLoanFieldForLifeInsurance(
+  fKey: string,
+  primaryType?: string,
+  productFamily?: string,
+): boolean {
+  if (!LOAN_DOMAIN_FIELD_KEYS.has(fKey)) return false;
+  return isLifeInsuranceDocumentContext(primaryType, productFamily);
+}
 
 const HIDDEN_REASON_CODES = new Set([
   "partial_extraction_coerced",
@@ -922,6 +964,7 @@ function flattenEnvelopeToGroups(
   if (ef && typeof ef === "object") {
     for (const [fKey, fObj] of Object.entries(ef)) {
       if (!fObj || typeof fObj !== "object" || fKey.startsWith("_")) continue;
+      if (shouldSuppressLoanFieldForLifeInsurance(fKey, primaryType, productFamily)) continue;
       const rawVal = fObj.value;
 
       // Institution dedup: suppress redundant institution labels with identical values
@@ -1084,6 +1127,7 @@ function flattenEnvelopeToGroups(
     "clientProfile",
     "contractCore",
     "insuredRisks",
+    "lifeInsuredPersons",
     "paymentsCore",
     "intermediary",
     "investments",
@@ -1183,6 +1227,7 @@ function flattenPayload(
     "clientProfile",
     "contractCore",
     "insuredRisks",
+    "lifeInsuredPersons",
     "paymentsCore",
     "intermediary",
     "investments",
@@ -1259,6 +1304,20 @@ function buildRecommendations(
   return recs;
 }
 
+/** Nahradí nízkoúrovňové pipeline řetězce v diagnostice (diagnostika extrakce) lidskou češtinou. */
+function humanizeAdvisorDiagnosticNote(raw: string): string {
+  const s = raw.trim();
+  if (!s) return s;
+  if (s === "text_pdf" || /^text_pdf$/i.test(s)) return "Dokument má textovou vrstvu (PDF).";
+  if (/page_images:not_implemented|page_images:/i.test(s)) {
+    return "Náhled stránkových obrázků není k dispozici — pracuje se s textem dokumentu.";
+  }
+  if (/^Režim vstupu:\s*text_pdf/i.test(s)) return "Dokument má textovou vrstvu (PDF).";
+  if (/^Režim extrakce:/i.test(s)) return s.replace(/^Režim extrakce:\s*/i, "Způsob zpracování: ");
+  if (/^Režim vstupu:/i.test(s)) return s.replace(/^Režim vstupu:\s*/i, "Typ vstupu: ");
+  return s;
+}
+
 function buildDiagnostics(
   detail: ApiReviewDetail,
   groups: ExtractedGroup[]
@@ -1271,9 +1330,14 @@ function buildDiagnostics(
 
   const notes: string[] = [];
   const trace = detail.extractionTrace as { failedStep?: string; warnings?: string[] } | undefined;
-  if (trace?.warnings) notes.push(...trace.warnings);
-  if (detail.extractionMode) notes.push(`Režim extrakce: ${detail.extractionMode}`);
-  if (detail.inputMode) notes.push(`Režim vstupu: ${detail.inputMode}`);
+  if (trace?.warnings) {
+    for (const w of trace.warnings) {
+      const h = humanizeAdvisorDiagnosticNote(w);
+      if (h) notes.push(h);
+    }
+  }
+  if (detail.extractionMode) notes.push(humanizeAdvisorDiagnosticNote(`Režim extrakce: ${detail.extractionMode}`));
+  if (detail.inputMode) notes.push(humanizeAdvisorDiagnosticNote(String(detail.inputMode)));
   if (errorCount > 0) notes.push(`${errorCount} údajů nenalezeno`);
   if (warningCount > 0) notes.push(`${warningCount} údajů s nižší jistotou`);
 

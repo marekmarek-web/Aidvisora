@@ -22,6 +22,10 @@ export type PortfolioPersonEntry = {
 export type PortfolioRiskEntry = {
   label: string;
   amount?: string;
+  /** Konec pojištění u dílčího krytí, pokud je v dokumentu uveden */
+  coverageEnd?: string;
+  /** Měsíční rizikové pojistné u dílčího krytí */
+  monthlyRiskPremium?: string;
   personRef?: string;
   description?: string;
 };
@@ -77,6 +81,17 @@ export type PortfolioAttributes = {
   fvSourceType?: FvSourceType | null;
 
   // ─── Identity fields (pro propsat do kontaktu) ─────────────────────────────
+  /** Variabilní symbol pro běžné pojistné (read-only přehled) */
+  paymentVariableSymbol?: string;
+  /** Zobrazení účtu pro úhradu (bez přepisu) */
+  paymentAccountDisplay?: string;
+  /** Frekvence plateb — lidský text z dokumentu */
+  paymentFrequencyLabel?: string;
+  /** Druhý účet (např. mimořádné pojistné), pokud je v dokumentu */
+  extraPaymentAccountDisplay?: string;
+  /** Investiční pojistné / složka — text z dokumentu */
+  investmentPremiumLabel?: string;
+
   /** Praktický lékař (u ŽP, pokud je v dokumentu) */
   generalPractitioner?: string;
 

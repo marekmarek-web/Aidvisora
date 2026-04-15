@@ -101,7 +101,8 @@ export function hasStrongPensionParticipantSignals(ef: Record<string, ExtractedF
   return contrib;
 }
 
-function hasFullContractShell(ef: Record<string, ExtractedField | undefined>): boolean {
+/** Exported for bundle/orchestrator guards — finální smlouva má číslo, instituci a datum. */
+export function hasFullContractShell(ef: Record<string, ExtractedField | undefined>): boolean {
   const hasRef = isPresent(ef.contractNumber) || isPresent(ef.proposalNumber);
   const hasInst = isPresent(ef.insurer) || isPresent(ef.institutionName);
   const hasDate =
@@ -366,6 +367,54 @@ export function suppressNonlifeRiskPremiumWithoutStrongEvidence(
 /**
  * Single entry: mutates envelope.extractedFields and contentFlags in place.
  */
+/**
+ * Finální životní pojistná smlouva nesmí skončit jako „jen platební instrukce“ nebo „jen podklad“,
+ * pokud má kompletní smluvní obal (číslo, instituce, datum) a jde o finální lifecycle.
+ * Obecné pravidlo — bez vendor regexů; neaplikuje se na AML-only ani na bundle needsSplit.
+ */
+export function reconcilePublishHintsForFinalLifeInsuranceContract(
+  envelope: DocumentReviewEnvelope,
+): void {
+  const dc = envelope.documentClassification;
+  const ef = envelope.extractedFields as Record<string, ExtractedField | undefined>;
+  if (!dc) return;
+  const primary = dc.primaryType ?? "unsupported_or_unknown";
+  const isLife =
+    primary.startsWith("life_insurance") ||
+    primary === "life_insurance_contract" ||
+    primary === "life_insurance_final_contract";
+  if (!isLife) return;
+  if (dc.lifecycleStatus !== "final_contract") return;
+  if (!hasFullContractShell(ef)) return;
+
+  const ph = envelope.publishHints;
+  if (!ph) return;
+  if (ph.needsSplit) return;
+
+  const reasons = ph.reasons ?? [];
+  if (reasons.includes("aml_fatca_section_only_no_publishable_contract")) return;
+
+  const blockedByPaymentOnly = reasons.includes("payment_instruction_only_no_contract");
+  const looksSupporting =
+    ph.sensitiveAttachmentOnly === true ||
+    ph.contractPublishable === false ||
+    ph.reviewOnly === true;
+  if (!blockedByPaymentOnly && !looksSupporting) return;
+
+  const nextReasons = [
+    ...reasons.filter((r) => r !== "payment_instruction_only_no_contract"),
+    "life_insurance_final_contract_recovered",
+  ];
+  envelope.publishHints = {
+    contractPublishable: true,
+    reviewOnly: false,
+    needsSplit: ph.needsSplit,
+    needsManualValidation: ph.needsManualValidation,
+    sensitiveAttachmentOnly: false,
+    reasons: nextReasons,
+  };
+}
+
 export function applySemanticContractUnderstanding(envelope: DocumentReviewEnvelope): void {
   const ef = envelope.extractedFields as Record<string, ExtractedField | undefined>;
   let primary = envelope.documentClassification?.primaryType ?? "unsupported_or_unknown";
@@ -381,4 +430,5 @@ export function applySemanticContractUnderstanding(envelope: DocumentReviewEnvel
   clearNonLifeEmptyInvestmentNoise(primary, ef);
   reconcileAnnualVsMonthlyPremiumFields(ef);
   suppressNonlifeRiskPremiumWithoutStrongEvidence(primary, ef);
+  reconcilePublishHintsForFinalLifeInsuranceContract(envelope);
 }

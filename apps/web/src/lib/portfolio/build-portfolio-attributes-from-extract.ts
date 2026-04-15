@@ -156,7 +156,30 @@ function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
             : undefined;
     const description =
       typeof r.description === "string" ? r.description.trim() : typeof r.note === "string" ? r.note.trim() : undefined;
-    out.push({ label, amount, personRef, description });
+    const coverageEnd =
+      typeof r.coverageEnd === "string"
+        ? r.coverageEnd.trim()
+        : typeof r.termEnd === "string"
+          ? r.termEnd.trim()
+          : typeof r.policyEnd === "string"
+            ? r.policyEnd.trim()
+            : typeof r.endDate === "string"
+              ? r.endDate.trim()
+              : undefined;
+    const monthlyRiskPremium =
+      typeof r.monthlyRiskPremium === "string"
+        ? r.monthlyRiskPremium.trim()
+        : typeof r.riskPremiumMonthly === "string"
+          ? r.riskPremiumMonthly.trim()
+          : undefined;
+    out.push({
+      label,
+      amount,
+      ...(coverageEnd ? { coverageEnd } : {}),
+      ...(monthlyRiskPremium ? { monthlyRiskPremium } : {}),
+      personRef,
+      description,
+    });
   }
   return out;
 }
@@ -208,8 +231,17 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
   const root = extracted as Record<string, unknown>;
   const p = flattenExtractForPortfolio(root);
   const out: Record<string, unknown> = {};
-  const loan = p.loanAmount ?? p.loanPrincipal ?? p.principalAmount ?? p.creditAmount;
-  if (loan != null && loan !== "") out.loanPrincipal = typeof loan === "string" ? loan : String(loan);
+  const dc = root.documentClassification as Record<string, unknown> | undefined;
+  const primaryType = typeof dc?.primaryType === "string" ? dc.primaryType : "";
+  const lifeInsuranceContext =
+    primaryType.startsWith("life_insurance") ||
+    primaryType === "life_insurance_contract" ||
+    primaryType === "life_insurance_final_contract";
+
+  if (!lifeInsuranceContext) {
+    const loan = p.loanAmount ?? p.loanPrincipal ?? p.principalAmount ?? p.creditAmount;
+    if (loan != null && loan !== "") out.loanPrincipal = typeof loan === "string" ? loan : String(loan);
+  }
   const sum = p.sumInsured ?? p.totalCoverage ?? p.insuredAmount;
   if (sum != null && sum !== "") out.sumInsured = typeof sum === "string" ? sum : String(sum);
   if (p.insuredPersons != null) out.insuredPersons = p.insuredPersons;
@@ -253,11 +285,13 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
     if (lines.length) out.coverageLines = lines;
   }
 
-  const fix = p.fixationUntil ?? p.rateFixationEnd ?? p.interestFixationUntil ?? p.fixationEndDate;
-  if (typeof fix === "string" && fix.trim()) out.loanFixationUntil = fix.trim();
+  if (!lifeInsuranceContext) {
+    const fix = p.fixationUntil ?? p.rateFixationEnd ?? p.interestFixationUntil ?? p.fixationEndDate;
+    if (typeof fix === "string" && fix.trim()) out.loanFixationUntil = fix.trim();
 
-  const mat = p.maturityDate ?? p.loanMaturity ?? p.splatnost ?? p.loanEndDate;
-  if (typeof mat === "string" && mat.trim()) out.loanMaturityDate = mat.trim();
+    const mat = p.maturityDate ?? p.loanMaturity ?? p.splatnost ?? p.loanEndDate;
+    if (typeof mat === "string" && mat.trim()) out.loanMaturityDate = mat.trim();
+  }
 
   const partiesPersons = collectPersonsFromParties(root.parties);
   const insuredFromFlat = collectPersonsFromInsuredPersons(p.insuredPersons);
@@ -325,6 +359,19 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
   // Praktický lékař (u ŽP)
   const gp = p.generalPractitioner ?? p.practitioner ?? p.doctor;
   if (typeof gp === "string" && gp.trim()) out.generalPractitioner = gp.trim();
+
+  if (lifeInsuranceContext) {
+    const vs = p.variableSymbol;
+    if (typeof vs === "string" && vs.trim()) out.paymentVariableSymbol = vs.trim();
+    const ba = p.bankAccount ?? p.recipientAccount ?? p.paymentAccountNumber;
+    if (typeof ba === "string" && ba.trim()) out.paymentAccountDisplay = ba.trim();
+    const freq = p.paymentFrequency ?? p.premiumFrequency;
+    if (typeof freq === "string" && freq.trim()) out.paymentFrequencyLabel = freq.trim();
+    const invp = p.investmentPremium;
+    if (typeof invp === "string" && invp.trim()) out.investmentPremiumLabel = invp.trim();
+    const extraAcc = p.extraPaymentAccount ?? p.accountForExtraPremium;
+    if (typeof extraAcc === "string" && extraAcc.trim()) out.extraPaymentAccountDisplay = extraAcc.trim();
+  }
 
   return out;
 }

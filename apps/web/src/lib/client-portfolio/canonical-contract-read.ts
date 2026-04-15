@@ -120,6 +120,12 @@ export type LifeInsuranceDetail = {
   persons: PortfolioPersonEntry[];
   risks: PortfolioRiskEntry[];
   generalPractitioner: string | null;
+  paymentVariableSymbol?: string | null;
+  paymentAccountDisplay?: string | null;
+  paymentFrequencyLabel?: string | null;
+  extraPaymentAccountDisplay?: string | null;
+  investmentStrategy?: string | null;
+  investmentPremiumLabel?: string | null;
 };
 
 export type VehicleDetail = {
@@ -271,6 +277,12 @@ function buildLifeInsuranceDetail(
     persons: safePersons(attrs.persons),
     risks: safeRisks(attrs.risks),
     generalPractitioner: safeString(attrs.generalPractitioner),
+    paymentVariableSymbol: safeString(attrs.paymentVariableSymbol),
+    paymentAccountDisplay: safeString(attrs.paymentAccountDisplay),
+    paymentFrequencyLabel: safeString(attrs.paymentFrequencyLabel),
+    extraPaymentAccountDisplay: safeString(attrs.extraPaymentAccountDisplay),
+    investmentStrategy: safeString(attrs.investmentStrategy),
+    investmentPremiumLabel: safeString(attrs.investmentPremiumLabel),
   };
 }
 

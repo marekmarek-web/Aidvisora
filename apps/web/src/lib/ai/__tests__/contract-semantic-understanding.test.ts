@@ -284,4 +284,25 @@ describe("contract-semantic-understanding", () => {
     applySemanticContractUnderstanding(env);
     expect(env.extractedFields.intermediaryCompany?.status).toBe("not_applicable");
   });
+
+  it("finální životní smlouva: po semantice se obnoví publikovatelnost, pokud ji blokovala jen platební sekce", () => {
+    const env = bareEnvelope("life_insurance_contract", "final_contract");
+    env.extractedFields = {
+      contractNumber: { value: "123", status: "extracted", confidence: 0.9 },
+      insurer: { value: "ACME", status: "extracted", confidence: 0.9 },
+      policyStartDate: { value: "2026-01-01", status: "extracted", confidence: 0.9 },
+    };
+    env.publishHints = {
+      contractPublishable: false,
+      reviewOnly: true,
+      needsSplit: false,
+      needsManualValidation: false,
+      sensitiveAttachmentOnly: true,
+      reasons: ["payment_instruction_only_no_contract"],
+    };
+    applySemanticContractUnderstanding(env);
+    expect(env.publishHints?.contractPublishable).toBe(true);
+    expect(env.publishHints?.sensitiveAttachmentOnly).toBe(false);
+    expect(env.publishHints?.reasons?.some((r) => r === "life_insurance_final_contract_recovered")).toBe(true);
+  });
 });
