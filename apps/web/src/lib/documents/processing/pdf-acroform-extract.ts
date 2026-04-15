@@ -15,6 +15,18 @@ export type PdfFormFieldRow = {
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_PAGES = 80;
 
+/** Minimal pdf.js document surface used here (avoids tight coupling to pdfjs-dist typings). */
+type PdfJsPage = {
+  getAnnotations: (opts?: { intent?: string }) => Promise<Array<Record<string, unknown>>>;
+  cleanup: () => void;
+};
+
+type PdfJsDocument = {
+  numPages: number;
+  getPage: (pageIndex: number) => Promise<PdfJsPage>;
+  destroy: () => Promise<void>;
+};
+
 function isNoiseValue(raw: string): boolean {
   const s = raw.trim();
   if (!s) return true;
@@ -33,7 +45,7 @@ export async function extractPdfAcroFormFieldsFromUrl(fileUrl: string): Promise<
 
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  let doc: { destroy: () => Promise<void>; numPages: number } | null = null;
+  let doc: PdfJsDocument | null = null;
   try {
     const response = await fetch(fileUrl, { signal: controller.signal });
     if (!response.ok) {
@@ -41,7 +53,7 @@ export async function extractPdfAcroFormFieldsFromUrl(fileUrl: string): Promise<
     }
     const buffer = await response.arrayBuffer();
     const task = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-    doc = await task.promise;
+    doc = (await task.promise) as PdfJsDocument;
     const numPages = Math.min(doc.numPages, MAX_PAGES);
     const out: PdfFormFieldRow[] = [];
 
