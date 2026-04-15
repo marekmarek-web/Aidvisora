@@ -21,6 +21,7 @@ import {
   promoteLooseFundAllocationToInvestmentFunds,
   promoteLooseIsinToCanonical,
 } from "./savings-investment-semantics";
+import { buildCanonicalPaymentPayload, isPaymentSyncReady } from "./payment-field-contract";
 
 function isPresent(cell: ExtractedField | undefined): cell is ExtractedField {
   if (!cell) return false;
@@ -104,7 +105,7 @@ export function hasStrongPensionParticipantSignals(ef: Record<string, ExtractedF
 /** Exported for bundle/orchestrator guards — finální smlouva má číslo, instituci a datum. */
 export function hasFullContractShell(ef: Record<string, ExtractedField | undefined>): boolean {
   const hasRef = isPresent(ef.contractNumber) || isPresent(ef.proposalNumber);
-  const hasInst = isPresent(ef.insurer) || isPresent(ef.institutionName);
+  const hasInst = isPresent(ef.insurer) || isPresent(ef.institutionName) || isPresent(ef.provider);
   const hasDate =
     isPresent(ef.policyStartDate) ||
     isPresent(ef.effectiveDate) ||
@@ -367,14 +368,75 @@ export function suppressNonlifeRiskPremiumWithoutStrongEvidence(
 /**
  * Single entry: mutates envelope.extractedFields and contentFlags in place.
  */
+const LOAN_PRIMARY_TYPES: PrimaryDocumentType[] = [
+  "consumer_loan_contract",
+  "consumer_loan_with_payment_protection",
+  "mortgage_document",
+];
+
+/** Úvěrová pole v neúvěrovém segmentu = šum z modelu / křížové mapování — vyčistit. */
+const CROSS_SEGMENT_LOAN_FIELD_KEYS = [
+  "loanAmount",
+  "loanPrincipal",
+  "principalAmount",
+  "creditAmount",
+  "installmentAmount",
+  "monthlyInstallment",
+  "installmentCount",
+  "interestRate",
+  "rpsn",
+  "loanEndDate",
+  "loanMaturity",
+  "accountForRepayment",
+  "lender",
+] as const;
+
 /**
- * Finální životní pojistná smlouva nesmí skončit jako „jen platební instrukce“ nebo „jen podklad“,
- * pokud má kompletní smluvní obal (číslo, instituce, datum) a jde o finální lifecycle.
+ * Odstraní úvěrová pole u životního / investičního dokumentu (žádný vendor regex — jen segment).
+ */
+export function suppressCrossSegmentLoanFields(
+  primary: PrimaryDocumentType,
+  ef: Record<string, ExtractedField | undefined>,
+): void {
+  if (LOAN_PRIMARY_TYPES.includes(primary)) return;
+  for (const key of CROSS_SEGMENT_LOAN_FIELD_KEYS) {
+    const c = ef[key];
+    if (!c || !isPresent(c)) continue;
+    ef[key] = {
+      value: null,
+      status: "not_applicable",
+      confidence: 1,
+      evidenceSnippet: "[semantic] Úvěrové pole u neúvěrového typu dokumentu — potlačeno.",
+    };
+  }
+}
+
+/**
+ * Obsahuje dokument platební sekci, ale bez cílových údajů vhodných pro synchronizaci → pouze informativní.
+ */
+export function reconcilePaymentInformationalSemantics(envelope: DocumentReviewEnvelope): void {
+  const prev = envelope.contentFlags ?? {
+    isFinalContract: false,
+    isProposalOnly: false,
+    containsPaymentInstructions: false,
+    containsClientData: false,
+    containsAdvisorData: false,
+    containsMultipleDocumentSections: false,
+  };
+  if (!prev.containsPaymentInstructions) return;
+  const syncReady = isPaymentSyncReady(buildCanonicalPaymentPayload(envelope));
+  envelope.contentFlags = {
+    ...prev,
+    paymentInformationalOnly: syncReady ? false : true,
+  };
+}
+
+/**
+ * Finální životní / investiční smlouva nesmí být degradována na „jen platební instrukci“ / podklad,
+ * pokud má kompletní smluvní obal (číslo, instituce/správce, datum) a finální lifecycle.
  * Obecné pravidlo — bez vendor regexů; neaplikuje se na AML-only ani na bundle needsSplit.
  */
-export function reconcilePublishHintsForFinalLifeInsuranceContract(
-  envelope: DocumentReviewEnvelope,
-): void {
+export function reconcilePublishHintsForFinalNonLoanContract(envelope: DocumentReviewEnvelope): void {
   const dc = envelope.documentClassification;
   const ef = envelope.extractedFields as Record<string, ExtractedField | undefined>;
   if (!dc) return;
@@ -383,9 +445,14 @@ export function reconcilePublishHintsForFinalLifeInsuranceContract(
     primary.startsWith("life_insurance") ||
     primary === "life_insurance_contract" ||
     primary === "life_insurance_final_contract";
-  if (!isLife) return;
+  const isInvestmentFinalContract =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement" ||
+    primary === "life_insurance_investment_contract";
+  if (!isLife && !isInvestmentFinalContract) return;
   if (dc.lifecycleStatus !== "final_contract") return;
   if (!hasFullContractShell(ef)) return;
+  if (isInvestmentFinalContract && !isPresent(ef.investorFullName) && !isPresent(ef.fullName)) return;
 
   const ph = envelope.publishHints;
   if (!ph) return;
@@ -401,9 +468,12 @@ export function reconcilePublishHintsForFinalLifeInsuranceContract(
     ph.reviewOnly === true;
   if (!blockedByPaymentOnly && !looksSupporting) return;
 
+  const recoveryReason = isLife
+    ? "life_insurance_final_contract_recovered"
+    : "investment_final_contract_recovered";
   const nextReasons = [
     ...reasons.filter((r) => r !== "payment_instruction_only_no_contract"),
-    "life_insurance_final_contract_recovered",
+    recoveryReason,
   ];
   envelope.publishHints = {
     contractPublishable: true,
@@ -413,6 +483,13 @@ export function reconcilePublishHintsForFinalLifeInsuranceContract(
     sensitiveAttachmentOnly: false,
     reasons: nextReasons,
   };
+}
+
+/** @deprecated Use reconcilePublishHintsForFinalNonLoanContract — alias pro zpětnou kompatibilitu. */
+export function reconcilePublishHintsForFinalLifeInsuranceContract(
+  envelope: DocumentReviewEnvelope,
+): void {
+  reconcilePublishHintsForFinalNonLoanContract(envelope);
 }
 
 export function applySemanticContractUnderstanding(envelope: DocumentReviewEnvelope): void {
@@ -430,5 +507,7 @@ export function applySemanticContractUnderstanding(envelope: DocumentReviewEnvel
   clearNonLifeEmptyInvestmentNoise(primary, ef);
   reconcileAnnualVsMonthlyPremiumFields(ef);
   suppressNonlifeRiskPremiumWithoutStrongEvidence(primary, ef);
-  reconcilePublishHintsForFinalLifeInsuranceContract(envelope);
+  suppressCrossSegmentLoanFields(primary, ef);
+  reconcilePublishHintsForFinalNonLoanContract(envelope);
+  reconcilePaymentInformationalSemantics(envelope);
 }

@@ -109,6 +109,60 @@ function fvFromEnvelope(ef: DocumentReviewEnvelope["extractedFields"], keys: str
   return "";
 }
 
+/** Účetní role pro cílový účet pro příjem plateb (CRM) — nezaměňovat s klientským účtem z výpisu. */
+const CLIENT_SOURCE_KINDS_FOR_ACCOUNT = new Set([
+  "client_block",
+  "policyholder_block",
+  "investor_block",
+  "owner_block",
+]);
+
+function shouldPreferRecipientAccountForPayment(primary: PrimaryDocumentType): boolean {
+  return (
+    primary.startsWith("life_insurance") ||
+    primary === "life_insurance_investment_contract" ||
+    primary.startsWith("investment") ||
+    primary === "pension_contract"
+  );
+}
+
+/**
+ * Pro život/investice/penze: preferuj účet příjemce (správce) před `bankAccount`, pokud je
+ * bankAccount z klientského bloku (jinak by šlo o klientský účet, ne o příjem pro CRM).
+ */
+export function fvAccountNumberForPaymentSync(
+  ef: Record<string, { value?: unknown; sourceKind?: string } | undefined>,
+  primary: PrimaryDocumentType,
+): string {
+  const order = shouldPreferRecipientAccountForPayment(primary)
+    ? [
+        "recipientAccount",
+        "collectionAccount",
+        "institutionBankAccount",
+        "institutionCollectionAccount",
+        "bankAccount",
+        "accountNumber",
+      ]
+    : ["bankAccount", "accountNumber", "recipientAccount"];
+
+  for (const k of order) {
+    const cell = ef[k];
+    if (!cell || cell.value == null) continue;
+    const s = String(cell.value).trim();
+    if (!s || s === "—" || s === "Nenalezeno") continue;
+    if (
+      shouldPreferRecipientAccountForPayment(primary) &&
+      k === "bankAccount" &&
+      cell.sourceKind &&
+      CLIENT_SOURCE_KINDS_FOR_ACCOUNT.has(cell.sourceKind)
+    ) {
+      continue;
+    }
+    return s;
+  }
+  return "";
+}
+
 /**
  * Build a canonical payment payload from a DocumentReviewEnvelope.
  * This is the ONE function that both draft-actions and apply-contract-review
@@ -122,6 +176,11 @@ export function buildCanonicalPaymentPayload(envelope: DocumentReviewEnvelope): 
     if (spec.canonical === "amount") {
       const semanticAmount = selectCanonicalPaymentAmount(ef, ctx);
       result.amount = semanticAmount || fvFromEnvelope(ef, spec.envelopeKeys);
+    } else if (spec.canonical === "accountNumber") {
+      result.accountNumber = fvAccountNumberForPaymentSync(
+        ef as Record<string, { value?: unknown; sourceKind?: string } | undefined>,
+        ctx.primaryType,
+      );
     } else {
       result[spec.canonical] = fvFromEnvelope(ef, spec.envelopeKeys);
     }
@@ -165,6 +224,13 @@ export function buildCanonicalPaymentPayloadFromRaw(
         result.amount = semanticAmount;
         continue;
       }
+    }
+    if (spec.canonical === "accountNumber") {
+      result.accountNumber = fvAccountNumberForPaymentSync(
+        ef as Record<string, { value?: unknown; sourceKind?: string } | undefined>,
+        primaryType,
+      );
+      continue;
     }
     for (const k of spec.envelopeKeys) {
       const cell = ef[k];

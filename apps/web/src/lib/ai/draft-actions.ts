@@ -7,7 +7,11 @@ import {
   computeDraftPremiumsFromEnvelope,
   pickFirstAmount,
 } from "./contract-draft-premiums";
-import { buildCanonicalPaymentPayload, buildCanonicalPaymentPayloadFromRaw } from "./payment-field-contract";
+import {
+  buildCanonicalPaymentPayload,
+  buildCanonicalPaymentPayloadFromRaw,
+  isPaymentSyncReady,
+} from "./payment-field-contract";
 
 function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -807,12 +811,15 @@ export function buildAllDraftActions(
   actions.push(buildDraftEmailSuggestion(legacy));
   actions.push(buildNotificationDraft(maybeEnvelope));
 
-  // For payment types: also add payment setup if content flags indicate payment data
+  // For payment types: doplnit platební návrh jen pokud jde o publikovatelný slice (ne čistě informativní blok).
   const hasPaymentFlag = maybeEnvelope.contentFlags?.containsPaymentInstructions;
   const isPaymentType = maybeEnvelope.documentClassification.primaryType === "payment_instruction" ||
     maybeEnvelope.documentClassification.primaryType === "investment_payment_instruction";
   if (hasPaymentFlag && !isPaymentType && !requested.includes("create_payment_setup")) {
-    actions.push(buildPaymentSetupDraft(maybeEnvelope));
+    const infoOnly = maybeEnvelope.contentFlags?.paymentInformationalOnly === true;
+    if (!infoOnly && isPaymentSyncReady(buildCanonicalPaymentPayload(maybeEnvelope))) {
+      actions.push(buildPaymentSetupDraft(maybeEnvelope));
+    }
   }
 
   if (maybeEnvelope.documentClassification.lifecycleStatus === "final_contract") {

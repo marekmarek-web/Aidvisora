@@ -370,6 +370,8 @@ export const documentReviewEnvelopeSchema = z.object({
     isFinalContract: z.boolean().default(false),
     isProposalOnly: z.boolean().default(false),
     containsPaymentInstructions: z.boolean().default(false),
+    /** Platební sekce je jen popisná — nesmí sama spustit CRM platební setup. */
+    paymentInformationalOnly: z.boolean().optional(),
     containsClientData: z.boolean().default(false),
     containsAdvisorData: z.boolean().default(false),
     containsMultipleDocumentSections: z.boolean().default(false),
@@ -377,6 +379,7 @@ export const documentReviewEnvelopeSchema = z.object({
     isFinalContract: false,
     isProposalOnly: false,
     containsPaymentInstructions: false,
+    paymentInformationalOnly: undefined,
     containsClientData: false,
     containsAdvisorData: false,
     containsMultipleDocumentSections: false,

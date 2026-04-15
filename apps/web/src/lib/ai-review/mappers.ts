@@ -488,33 +488,35 @@ const FIELD_GROUP_MAP: Record<string, string> = {
   firstPaymentAmount: "paymentsCore",
 };
 
-/** Úvěrová pole se u životního pojištění nesmí zobrazovat (žádný mapování do úvěrového segmentu). */
+/** Úvěrová pole u neúvěrových segmentů (životní, investice, …) nesmí zobrazovat úvěrové labely. */
 const LOAN_DOMAIN_FIELD_KEYS = new Set([
   "lender",
   "loanAmount",
   "loanPrincipal",
   "principalAmount",
   "creditAmount",
+  "installmentAmount",
+  "monthlyInstallment",
+  "installmentCount",
   "loanLinkedCoverageFlag",
   "detectedLoanPayments",
   "scheduleRows",
   "loanMaturity",
   "loanEndDate",
   "interestRate",
+  "rpsn",
   "accountForRepayment",
   "payoutAccount",
   "totalPayments",
   "recurringPayments",
 ]);
 
-function isLifeInsuranceDocumentContext(primaryType?: string, productFamily?: string): boolean {
+function isLoanMortgageDocumentContext(primaryType?: string): boolean {
   const pt = primaryType ?? "";
-  const pf = (productFamily ?? "").toLowerCase();
   return (
-    pt.startsWith("life_insurance") ||
-    pt === "life_insurance_contract" ||
-    pt === "life_insurance_final_contract" ||
-    pf === "life_insurance"
+    pt === "mortgage_document" ||
+    pt === "consumer_loan_contract" ||
+    pt === "consumer_loan_with_payment_protection"
   );
 }
 
@@ -524,7 +526,15 @@ function shouldSuppressLoanFieldForLifeInsurance(
   productFamily?: string,
 ): boolean {
   if (!LOAN_DOMAIN_FIELD_KEYS.has(fKey)) return false;
-  return isLifeInsuranceDocumentContext(primaryType, productFamily);
+  if (isLoanMortgageDocumentContext(primaryType)) return false;
+  const pt = primaryType ?? "";
+  const pf = (productFamily ?? "").toLowerCase();
+  return (
+    pt.startsWith("life_insurance") ||
+    pt.startsWith("investment") ||
+    pf === "life_insurance" ||
+    pf === "investment"
+  );
 }
 
 /** Úvěrové pole `lender` nesmí být u DPS/penze (často duplicita k provider / hlavičce instituce). */
