@@ -37,6 +37,7 @@ import type { StageWithOpportunities } from "@/app/actions/pipeline";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import type { NotesBoardStoredPosition } from "@/app/actions/notes-board-positions";
 import type { ContactNamePickerRow } from "@/app/actions/contacts";
+import { pixelsToBoardUnits } from "@/lib/board/notes-board-units";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
@@ -320,7 +321,10 @@ function NotesVisionBoardInner({
     if (w <= 0 || h <= 0) return;
     const px = Math.max(0, e.clientX - boardRect.left - dragOffset.x);
     const py = Math.max(0, e.clientY - boardRect.top - dragOffset.y);
-    setPosition(draggingId, dragIndexRef.current, { x: Math.min(1, px / w), y: Math.min(1, py / h) });
+    setPosition(draggingId, dragIndexRef.current, {
+      x: pixelsToBoardUnits(px, w),
+      y: pixelsToBoardUnits(py, h),
+    });
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -587,8 +591,8 @@ function NotesVisionBoardInner({
           const spawnPxY = bh / 2 - 150 + (Math.random() * 40 - 20);
           const newZ = maxZIndex + 1;
           setMaxZIndex(newZ);
-          const xRel = bw > 0 ? Math.min(1, Math.max(0, spawnPxX / bw)) : 0.5;
-          const yRel = bh > 0 ? Math.min(1, Math.max(0, spawnPxY / bh)) : 0.5;
+          const xRel = bw > 0 ? pixelsToBoardUnits(spawnPxX, bw) : 0.5;
+          const yRel = bh > 0 ? pixelsToBoardUnits(spawnPxY, bh) : 0.5;
           persistPositions({
             ...latestPositionsRef.current,
             [newId]: { x: xRel, y: yRel, z: newZ, pinned: false },
@@ -643,7 +647,7 @@ function NotesVisionBoardInner({
       <style>{`
         .notes-dot-grid {
           background-image: radial-gradient(var(--wp-canvas-dot-color) 1.5px, transparent 0);
-          background-size: 28px 28px;
+          background-size: clamp(18px, 1.75cqw, 28px) clamp(18px, 1.75cqw, 28px);
         }
         .notes-glass-card {
           background: color-mix(in srgb, var(--wp-surface-card) 94%, transparent);
@@ -779,10 +783,11 @@ function NotesVisionBoardInner({
 
       <main
         ref={boardRef}
-        className={`relative flex-1 min-h-[min(420px,58dvh)] cursor-crosshair overflow-auto notes-dot-grid md:min-h-[min(560px,72vh)] ${
+        className={`relative [container-type:inline-size] flex-1 min-h-[min(420px,58dvh)] cursor-crosshair overflow-auto md:min-h-[min(560px,72vh)] ${
           isMobile && mobileTab === "board" ? "mx-4 max-h-[min(70dvh,520px)] rounded-xl border border-[color:var(--wp-surface-card-border)]" : ""
         } ${isMobile && mobileTab === "feed" ? "hidden" : ""}`}
       >
+        <div className="pointer-events-none absolute inset-0 z-0 notes-dot-grid" aria-hidden />
         {notes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-auto flex max-w-md flex-col items-center rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-10 text-center shadow-2xl backdrop-blur-xl">
@@ -826,7 +831,7 @@ function NotesVisionBoardInner({
                 touchAction: "none",
               }}
               className={`
-                notes-glass-card w-[min(100%,clamp(220px,min(28vw,85vw),350px))] max-w-[min(100%,350px)] xl:max-w-[320px] 2xl:max-w-[350px] rounded-2xl border transition-shadow duration-300
+                notes-glass-card w-[min(100%,clamp(220px,28cqw,350px))] max-w-[min(100%,350px)] rounded-2xl border transition-shadow duration-300
                 ${isDragging ? "shadow-2xl scale-[1.02] cursor-grabbing opacity-95" : "shadow-lg cursor-grab hover:shadow-xl"}
                 ${pos.pinned ? `border-[color:var(--wp-border-strong)] shadow-[0_0_20px_-5px_rgba(0,0,0,0.1)] ${design.glow}` : "border-[color:var(--wp-surface-card-border)]"}
               `}
@@ -865,48 +870,50 @@ function NotesVisionBoardInner({
                   </button>
                 </div>
               </div>
-              <div className="p-4 xl:p-5">
-                <div className="flex justify-between items-center mb-3 xl:mb-4">
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] xl:text-[10px] font-bold tracking-wide uppercase border ${design.color}`}>
+              <div className="p-[clamp(0.875rem,2.5cqw,1.25rem)]">
+                <div className="flex justify-between items-center mb-[clamp(0.75rem,2cqw,1rem)]">
+                  <div
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-bold tracking-wide uppercase border text-[clamp(9px,2.2cqw,10px)] ${design.color}`}
+                  >
                     {design.icon}
                     {DOMAINS.find((d) => d.value === note.domain)?.label ?? note.domain}
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] xl:text-xs font-bold text-[color:var(--wp-text-tertiary)]">
+                  <div className="flex items-center gap-1.5 font-bold text-[color:var(--wp-text-tertiary)] text-[clamp(10px,2.4cqw,12px)]">
                     <Calendar size={12} />
                     {formatDateCZ(note.meetingAt)}
                   </div>
                 </div>
-                <h3 className="font-bold text-[color:var(--wp-text)] text-base xl:text-lg leading-tight mb-2 pr-2">
+                <h3 className="font-bold text-[color:var(--wp-text)] leading-tight mb-2 pr-2 text-[clamp(0.9375rem,2.8cqw,1.125rem)]">
                   {contentTitle(note.content)}
                 </h3>
                 {note.opportunityId ? (
-                  <div className="mb-3 xl:mb-4">
+                  <div className="mb-[clamp(0.75rem,2cqw,1rem)]">
                     <Link
                       href={`/portal/pipeline/${note.opportunityId}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-500/10 px-2.5 py-1 text-[10px] xl:text-[11px] font-bold uppercase tracking-wide text-indigo-700 hover:bg-indigo-500/15"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-500/10 px-2.5 py-1 font-bold uppercase tracking-wide text-indigo-700 hover:bg-indigo-500/15 text-[clamp(9px,2.2cqw,11px)]"
                     >
                       <Briefcase size={12} />
                       Navázáno na obchod
                     </Link>
                   </div>
                 ) : null}
-                <div className="flex items-center gap-2 mb-3 xl:mb-4">
+                <div className="flex items-center gap-2 mb-[clamp(0.75rem,2cqw,1rem)]">
                   <div className="w-6 h-6 rounded-full bg-[color:var(--wp-surface-muted)] flex items-center justify-center border border-[color:var(--wp-surface-card-border)]">
                     <User size={12} className="text-[color:var(--wp-text-secondary)]" />
                   </div>
-                  <span className="text-xs xl:text-sm font-bold text-[color:var(--wp-text-secondary)]">{note.contactName}</span>
+                  <span className="font-bold text-[color:var(--wp-text-secondary)] text-[clamp(11px,2.5cqw,14px)]">{note.contactName}</span>
                 </div>
                 <div className="border-t border-[color:var(--wp-surface-card-border)] pt-3 space-y-3">
-                  <p className="text-[12px] xl:text-[13px] text-[color:var(--wp-text-secondary)] leading-relaxed font-medium">
+                  <p className="text-[color:var(--wp-text-secondary)] leading-relaxed font-medium text-[clamp(11px,2.6cqw,13px)]">
                     {contentBody(note.content) || <span className="text-[color:var(--wp-text-tertiary)] italic">Bez obsahu…</span>}
                   </p>
                   {contentRecommendation(note.content) && (
-                    <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-2.5 xl:p-3">
-                      <div className="flex items-center gap-1.5 text-[10px] xl:text-xs font-bold text-amber-700 uppercase tracking-wide mb-1">
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-[clamp(0.625rem,2cqw,0.75rem)]">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-700 uppercase tracking-wide mb-1 text-[clamp(9px,2.2cqw,12px)]">
                         <CheckCircle2 size={12} /> Další kroky
                       </div>
-                      <p className="text-[12px] xl:text-[13px] text-amber-900 leading-relaxed font-medium">
+                      <p className="text-amber-900 leading-relaxed font-medium text-[clamp(11px,2.6cqw,13px)]">
                         {contentRecommendation(note.content)}
                       </p>
                     </div>
