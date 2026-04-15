@@ -68,6 +68,18 @@ describe("validateWriteThroughResult", () => {
     expect(violations.some((v) => v.includes("document linkage result unknown"))).toBe(true);
   });
 
+  it("supporting/attach-only: does not require createdContractId when isSupportingDocumentOnly", () => {
+    const violations = validateWriteThroughResult(
+      {
+        linkedClientId: "contact-123",
+        linkedDocumentId: "doc-789",
+      },
+      { isSupportingDocumentOnly: true },
+    );
+    expect(violations.some((v) => v.includes("contract"))).toBe(false);
+    expect(violations).toHaveLength(0);
+  });
+
   it("passes with payment setup present (optional)", () => {
     const violations = validateWriteThroughResult({
       linkedClientId: "contact-123",

@@ -8,7 +8,10 @@ import { db } from "db";
 import { contacts, contractUploadReviews } from "db";
 import { eq, and, asc, inArray, isNull, sql, desc, or } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
-import { parseContractWizardPrefillFromReviewData } from "@/lib/contracts/contact-wizard-prefill-from-ai-review";
+import {
+  parseContractWizardPrefillFromReviewData,
+  shouldSuppressContractWizardPrefillAfterApply,
+} from "@/lib/contracts/contact-wizard-prefill-from-ai-review";
 import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
 
 export type ContactRow = {
@@ -946,6 +949,7 @@ async function loadContactContractWizardPrefill(contactId: string): Promise<Cont
         id: contractUploadReviews.id,
         extractedPayload: contractUploadReviews.extractedPayload,
         draftActions: contractUploadReviews.draftActions,
+        applyResultPayload: contractUploadReviews.applyResultPayload,
       })
       .from(contractUploadReviews)
       .where(
@@ -964,6 +968,10 @@ async function loadContactContractWizardPrefill(contactId: string): Promise<Cont
 
     const row = rows[0];
     if (!row) return null;
+
+    if (shouldSuppressContractWizardPrefillAfterApply(row.applyResultPayload)) {
+      return null;
+    }
 
     const parsed = parseContractWizardPrefillFromReviewData(row.extractedPayload, row.draftActions);
     if (Object.keys(parsed).length === 0) return null;

@@ -116,23 +116,34 @@ export type WriteThroughExpectedState = {
  * Used in integration tests and optionally in audit logging.
  *
  * Generic: validates structural completeness, not business values.
+ *
+ * @param options.isSupportingDocumentOnly — attach-only publish (supporting / internal outcome):
+ *   contract row is intentionally absent; do not flag missing `createdContractId`.
  */
-export function validateWriteThroughResult(payload: {
-  createdClientId?: string;
-  linkedClientId?: string;
-  createdContractId?: string;
-  linkedDocumentId?: string;
-  documentLinkWarning?: string;
-  createdPaymentSetupId?: string;
-}): string[] {
+export type ValidateWriteThroughOptions = {
+  isSupportingDocumentOnly?: boolean;
+};
+
+export function validateWriteThroughResult(
+  payload: {
+    createdClientId?: string;
+    linkedClientId?: string;
+    createdContractId?: string;
+    linkedDocumentId?: string;
+    documentLinkWarning?: string;
+    createdPaymentSetupId?: string;
+  },
+  options?: ValidateWriteThroughOptions,
+): string[] {
   const violations: string[] = [];
+  const supportingOnly = options?.isSupportingDocumentOnly === true;
 
   const contactId = payload.createdClientId ?? payload.linkedClientId;
   if (!contactId) {
     violations.push("write_through: no contact created or linked after apply");
   }
 
-  if (!payload.createdContractId) {
+  if (!supportingOnly && !payload.createdContractId) {
     violations.push("write_through: no contract row created/updated after apply");
   }
 

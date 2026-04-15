@@ -41,14 +41,23 @@ describe("1. Final contract publish creates full artifact set", () => {
     expect(violations).toHaveLength(0);
   });
 
-  it("document-only result (no createdContractId) is a write-through violation", () => {
+  it("document-only result (no createdContractId) is a write-through violation for final-contract path", () => {
     const payload: ApplyResultPayload = {
       linkedClientId: "contact-1",
       linkedDocumentId: "doc-1",
-      // No createdContractId — this is the attach-only bug
+      // No createdContractId — invalid for final contract publish
     };
     const violations = validateWriteThroughResult(payload);
     expect(violations.some((v) => v.includes("contract"))).toBe(true);
+  });
+
+  it("supporting attach-only: validateWriteThroughResult allows missing contract when flagged", () => {
+    const payload: ApplyResultPayload = {
+      linkedClientId: "contact-1",
+      linkedDocumentId: "doc-support",
+    };
+    const violations = validateWriteThroughResult(payload, { isSupportingDocumentOnly: true });
+    expect(violations).toHaveLength(0);
   });
 
   it("contract artifact with visibleToClient=true passes portal filter", () => {

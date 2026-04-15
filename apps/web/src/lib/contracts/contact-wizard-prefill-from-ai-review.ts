@@ -117,3 +117,26 @@ export function parseContractWizardPrefillFromReviewData(
 
   return out;
 }
+
+/**
+ * Canonical publish spine (AI Review → CRM): after apply, do not offer F5 „Nová smlouva“
+ * wizard prefill when the review already produced the CRM artifact or was attach-only.
+ * Generic: reads only `applyResultPayload` shape (createdContractId, publishOutcome.mode).
+ */
+export function shouldSuppressContractWizardPrefillAfterApply(applyResultPayload: unknown): boolean {
+  const p = applyResultPayload as Record<string, unknown> | null | undefined;
+  if (!p || typeof p !== "object") return false;
+
+  const cid = p.createdContractId;
+  if (typeof cid === "string" && cid.trim().length > 0) {
+    return true;
+  }
+
+  const po = p.publishOutcome as { mode?: string } | undefined;
+  const mode = po?.mode;
+  if (mode === "supporting_doc_only" || mode === "internal_document_only") {
+    return true;
+  }
+
+  return false;
+}
