@@ -7,6 +7,9 @@ import type { PrimaryDocumentType, DocumentLifecycleStatus } from "./document-re
 import type { InputMode } from "./input-mode-detection";
 
 const TYPE_LABELS: Record<string, string> = {
+  /** Normalizované / zkrácené pipeline aliasy — nesmí se propisovat do UI jako anglické kódy. */
+  insurance_contract: "životní pojistnou smlouvu",
+  investment_contract: "investiční smlouvu nebo rámcovou smlouvu",
   life_insurance_final_contract: "pojistnou smlouvu k životnímu pojištění",
   life_insurance_contract: "smlouvu k životnímu pojištění",
   life_insurance_investment_contract: "smlouvu k investičnímu životnímu pojištění",

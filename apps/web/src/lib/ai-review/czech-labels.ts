@@ -84,9 +84,13 @@ export function labelProductSubtype(code: string): string {
 const PIPELINE_NORMALIZED: Record<string, string> = {
   insurance_modelation: "Modelace / návrh životního pojištění (nezávazná projekce)",
   insurance_proposal: "Návrh životního pojištění",
+  insurance_contract: "Životní pojistná smlouva",
+  investment_contract: "Investiční smlouva / rámcová smlouva",
+  investment_subscription_document: "Upisovací dokument k investici",
   life_insurance_contract: "Životní pojištění — smlouva",
   life_insurance: "Životní pojištění",
   nonlife_insurance_contract: "Neživotní pojištění — smlouva",
+  non_life_insurance_contract: "Neživotní pojištění — smlouva",
   consumer_loan: "Spotřebitelský úvěr",
   mortgage: "Hypotéka",
   investment: "Investice",
@@ -158,6 +162,63 @@ const EXTRA_REASON_CS: Record<string, string> = {
     "Čekání na čitelný text překročilo časový limit — stav byl ukončen. Znovu spusťte zpracování nebo nahrajte PDF s textovou vrstvou.",
 };
 
+/** Časté názvy polí z interních cest — bez anglických identifikátorů v UI. */
+const EXTRACTED_PATH_LEAF_CS: Record<string, string> = {
+  contractNumber: "číslo smlouvy",
+  contractStartDate: "datum začátku smlouvy",
+  policyStartDate: "datum začátku smlouvy",
+  investmentStrategy: "investiční strategie",
+  fundStrategy: "investiční strategie",
+  policyholder: "pojistník",
+  policyholderName: "pojistník",
+  institutionName: "instituce",
+  fullName: "jméno klienta",
+};
+
+/**
+ * Poslední vrstva: žádné interní tokeny v textu pro poradce (shrnutí, důvody, diagnostika, PDF export).
+ * Idempotentní — bezpečné volat vícekrát.
+ */
+export function sanitizeAdvisorVisibleText(raw: string): string {
+  let t = raw.trim();
+  if (!t) return t;
+
+  t = t.replace(
+    /\b(?:extractedFields|documentClassification|documentMeta|publishHints|packetMeta|parties|financialTerms)\.([a-zA-Z][a-zA-Z0-9_]*)\b/g,
+    (_m, leaf: string) => EXTRACTED_PATH_LEAF_CS[leaf] ?? "údaj v dokumentu",
+  );
+  t = t.replace(/\bextractedFields\b/gi, "údaje v dokumentu");
+
+  const ORDERED: Array<[RegExp, string]> = [
+    [/\blife_insurance_investment_contract\b/gi, "investiční životní pojištění"],
+    [/\blife_insurance_final_contract\b/gi, "životní pojistná smlouva"],
+    [/\blife_insurance_contract\b/gi, "životní pojištění"],
+    [/\bnon_life_insurance_contract\b/gi, "neživotní pojištění"],
+    [/\bnonlife_insurance_contract\b/gi, "neživotní pojištění"],
+    [/\binsurance_contract\b/gi, "životní pojistná smlouva"],
+    [/\binvestment_subscription_document\b/gi, "upisovací dokument k investici"],
+    [/\binvestment_contract\b/gi, "investiční smlouva"],
+    [/\binvestment_service_agreement\b/gi, "smlouva o investičních službách"],
+    [/\bpage_images:not_implemented\b/gi, "náhled stránek jako obrázků není k dispozici — pracuje se s textem dokumentu"],
+    [/\bpage_images:[a-z0-9_]+\b/gi, "zpracování probíhá z textu dokumentu"],
+    [/\btext_pdf\b/gi, "PDF s textovou vrstvou"],
+    [/\bscanned_pdf\b/gi, "naskenované PDF"],
+    [/\bimage_document\b/gi, "dokument jako obrázek"],
+    [/\bmixed_pdf\b/gi, "PDF se smíšeným obsahem"],
+    [/\bcontractStartDate\b/gi, "datum začátku smlouvy"],
+    [/\bpolicyStartDate\b/gi, "datum začátku smlouvy"],
+    [/\bfundStrategy\b/gi, "investiční strategie"],
+    [/\binvestmentStrategy\b/gi, "investiční strategie"],
+    [/\bpolicyholder\b/gi, "pojistník"],
+  ];
+  for (const [re, rep] of ORDERED) {
+    t = t.replace(re, rep);
+  }
+
+  t = t.replace(/\s{2,}/g, " ").replace(/\s*·\s*·+/g, " · ").trim();
+  return t;
+}
+
 const PATH_PREFIX_RE =
   /^(?:extractedFields|documentClassification|documentMeta|publishHints|packetMeta|parties|financialTerms)\./i;
 
@@ -228,7 +289,7 @@ export function humanizeReviewReasonLine(raw: string): string {
       (prefix.length > 0 && !/^[a-z0-9_]+$/i.test(prefix)
         ? prefix
         : "Kontrola dokumentu");
-    if (!suffix) return leftLabel;
+    if (!suffix) return sanitizeAdvisorVisibleText(leftLabel);
     const subParts = suffix.split(",").map((s) => s.trim()).filter(Boolean);
     const rightBits = subParts.map((s) => {
       const r = resolveOneReasonToken(s);
@@ -237,27 +298,27 @@ export function humanizeReviewReasonLine(raw: string): string {
       const msg = getReasonMessage(nk);
       return msg !== nk ? msg : "Podrobnost ke kontrole";
     });
-    return `${leftLabel}: ${rightBits.join(", ")}`;
+    return sanitizeAdvisorVisibleText(`${leftLabel}: ${rightBits.join(", ")}`);
   }
 
   const stripped = stripInternalPathPrefixes(t);
   const single = resolveOneReasonToken(stripped);
-  if (single) return single;
+  if (single) return sanitizeAdvisorVisibleText(single);
 
   const nk = normalizeReasonKey(stripped);
   const fromRegistry = getReasonMessage(nk);
-  if (fromRegistry !== nk) return fromRegistry;
-  if (EXTRA_REASON_CS[nk]) return EXTRA_REASON_CS[nk];
+  if (fromRegistry !== nk) return sanitizeAdvisorVisibleText(fromRegistry);
+  if (EXTRA_REASON_CS[nk]) return sanitizeAdvisorVisibleText(EXTRA_REASON_CS[nk]);
 
   if (/^[a-z][a-z0-9_]*$/i.test(stripped) && stripped.includes("_")) {
-    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
+    return sanitizeAdvisorVisibleText("Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.");
   }
   // Zachovat již české věty z API / validace (nejsou to interní kódy).
   if (/[áčďéěíňóřšťúůýž]/i.test(stripped)) {
-    return stripped;
+    return sanitizeAdvisorVisibleText(stripped);
   }
   if (stripped.length > 0 && stripped.length < 200 && /[\s]/.test(stripped)) {
-    return "Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.";
+    return sanitizeAdvisorVisibleText("Výstup zpracování vyžaduje ověření — porovnejte s dokumentem.");
   }
-  return "Kontrola dokumentu";
+  return sanitizeAdvisorVisibleText("Kontrola dokumentu");
 }

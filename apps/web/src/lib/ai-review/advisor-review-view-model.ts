@@ -4,7 +4,7 @@ import { buildAllDraftActions, pruneRedundantDraftActions } from "../ai/draft-ac
 import type { DraftActionBase } from "../ai/review-queue";
 import { getDocumentTypeLabel } from "../ai/document-messages";
 import { getReasonMessage } from "../ai/reason-codes";
-import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "./czech-labels";
+import { formatAiClassifierForAdvisor, humanizeReviewReasonLine, sanitizeAdvisorVisibleText } from "./czech-labels";
 import type { AdvisorReviewViewModel, DraftAction, PaymentSyncPreview } from "./types";
 import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-date-normalize";
 import {
@@ -118,24 +118,9 @@ const INTERNAL_REASON_CODE_WITH_SUFFIX = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+:[a-z0-
  * - strip English-sounding sentences (heuristic),
  * - prefer Czech content.
  */
-/** Odstraní interní pipeline názvy typů dokumentů z textu pro poradce (žádné `insurance_contract` v UI). */
+/** LLM shrnutí + dedikovaná sanitizace (nad rámec sanitizeAdvisorVisibleText). */
 function scrubInternalPipelineLabelsFromAdvisorText(text: string): string {
-  let t = text.replace(/\binsurance_contract\b/gi, "životní pojistná smlouva");
-  t = t.replace(/\binvestment_contract\b/gi, "investiční smlouva / rámcová smlouva");
-  t = t.replace(/\blife_insurance_investment_contract\b/gi, "investiční životní pojištění");
-  t = t.replace(
-    /\blife_insurance_contract\b/gi,
-    getDocumentTypeLabel("life_insurance_contract") ?? "Životní pojištění",
-  );
-  t = t.replace(/\binvestment_subscription_document\b/gi, "upisovací dokument k investici");
-  t = t.replace(/\binvestment_service_agreement\b/gi, "smlouva o investičních službách");
-  t = t.replace(/\blife_insurance_final_contract\b/gi, "Finální životní pojistná smlouva");
-  t = t.replace(/\bpolicyholder\b/gi, "pojistník");
-  t = t.replace(/\bcontractStartDate\b/gi, "datum začátku smlouvy");
-  t = t.replace(/\bpolicyStartDate\b/gi, "datum začátku smlouvy");
-  t = t.replace(/\bfundStrategy\b/gi, "investiční strategie");
-  t = t.replace(/\binvestmentStrategy\b/gi, "investiční strategie");
-  return t;
+  return sanitizeAdvisorVisibleText(text);
 }
 
 export function sanitizeAdvisorBrief(
@@ -173,7 +158,8 @@ export function sanitizeAdvisorBrief(
     text = text.slice(0, MAX_ADVISOR_BRIEF_LENGTH).replace(/\s+\S*$/, "") + "…";
   }
 
-  return text || undefined;
+  const finalized = text ? sanitizeAdvisorVisibleText(text) : undefined;
+  return finalized || undefined;
 }
 
 /**

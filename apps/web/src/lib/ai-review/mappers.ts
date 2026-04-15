@@ -18,7 +18,12 @@ import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-
 import { formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
 import type { DocumentReviewEnvelope } from "../ai/document-review-types";
 import type { InputMode } from "../ai/input-mode-detection";
-import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "./czech-labels";
+import {
+  formatAiClassifierForAdvisor,
+  humanizeReviewReasonLine,
+  labelNormalizedPipelineClassification,
+  sanitizeAdvisorVisibleText,
+} from "./czech-labels";
 import { advisorFieldPresentation, advisorFieldPresentationWithEvidence, shouldCountFieldForAttentionBanner } from "./advisor-confidence-policy";
 import type { EvidenceTier, SourceKind } from "../ai/document-review-types";
 import {
@@ -641,30 +646,44 @@ function humanizeReasonForAdvisor(reason: string): string | null {
   // Suppress snake_case internal routing codes
   if (/^[a-z][a-z0-9_]*$/.test(reason) && reason.includes("_") && reason.length > 40) return null;
 
-  if (reason === "low_confidence") return "AI si výsledkem není dost jistá. Ověřte hlavní údaje oproti dokumentu.";
+  if (reason === "low_confidence") {
+    return sanitizeAdvisorVisibleText(
+      "AI si výsledkem není dost jistá. Ověřte hlavní údaje oproti dokumentu.",
+    );
+  }
   if (reason === "scan_or_ocr_unusable") {
-    return "OCR nepřečetlo dokument dost spolehlivě. Doplňte údaje ručně nebo použijte kvalitnější PDF.";
+    return sanitizeAdvisorVisibleText(
+      "Text dokumentu nebyl spolehlivě rozpoznán. Doplňte údaje ručně nebo použijte kvalitnější PDF.",
+    );
   }
   if (reason === "ambiguous_client_match") {
-    return "V CRM je více možných klientů — vyberte správného.";
+    return sanitizeAdvisorVisibleText("V CRM je více možných klientů — vyberte správného.");
   }
   if (reason === "near_match_advisory") {
-    return "Pravděpodobná shoda s klientem — ověřte výběr před zápisem, nebo zvolte jiného klienta.";
+    return sanitizeAdvisorVisibleText(
+      "Pravděpodobná shoda s klientem — ověřte výběr před zápisem, nebo zvolte jiného klienta.",
+    );
   }
   if (reason === "llm_client_match_ambiguous") {
-    return "AI si není jistá výběrem klienta v CRM. Vyberte správného kandidáta ručně.";
+    return sanitizeAdvisorVisibleText(
+      "AI si není jistá výběrem klienta v CRM. Vyberte správného kandidáta ručně.",
+    );
   }
   if (reason === "incomplete_payment_details") {
-    return "Platební údaje nejsou kompletní — doplňte nebo ověřte.";
+    return sanitizeAdvisorVisibleText("Platební údaje nejsou kompletní — doplňte nebo ověřte.");
   }
   if (reason === "policyholder_missing") {
-    return "Zkontrolujte pojistníka nebo klienta. Extrakce ho zatím nepotvrdila dost jistě.";
+    return sanitizeAdvisorVisibleText(
+      "Zkontrolujte pojistníka nebo klienta. Extrakce ho zatím nepotvrdila dost jistě.",
+    );
   }
   if (reason === "payment_data_missing") {
-    return "Platební údaje se nepodařilo spolehlivě vytěžit. Ověřte je v dokumentu.";
+    return sanitizeAdvisorVisibleText("Platební údaje se nepodařilo spolehlivě vytěžit. Ověřte je v dokumentu.");
   }
   if (reason === "missing_existing_contract_match") {
-    return "Jde o změnový dokument, ale v CRM se nepodařilo najít navázanou existující smlouvu.";
+    return sanitizeAdvisorVisibleText(
+      "Jde o změnový dokument, ale v CRM se nepodařilo najít navázanou existující smlouvu.",
+    );
   }
   return humanizeReviewReasonLine(reason);
 }
@@ -689,14 +708,18 @@ function humanizeValidationMessage(
   const label = fieldLabelForPath(warning.field);
   if (warning.code === "MISSING_REQUIRED_FIELD" && label) {
     return {
-      title: `${label} chybí`,
-      description: `Údaj „${label}" se nepodařilo spolehlivě najít. Ověřte ho v PDF nebo doplňte ručně.`,
+      title: sanitizeAdvisorVisibleText(`${label} chybí`),
+      description: sanitizeAdvisorVisibleText(
+        `Údaj „${label}" se nepodařilo spolehlivě najít. Ověřte ho v PDF nebo doplňte ručně.`,
+      ),
     };
   }
   if (warning.code === "LOW_EVIDENCE_REQUIRED" && label) {
     return {
-      title: `${label} potřebuje ověření`,
-      description: `AI našla údaj „${label}", ale má k němu slabý důkaz. Porovnejte ho prosím s dokumentem.`,
+      title: sanitizeAdvisorVisibleText(`${label} potřebuje ověření`),
+      description: sanitizeAdvisorVisibleText(
+        `AI našla údaj „${label}", ale má k němu slabý důkaz. Porovnejte ho prosím s dokumentem.`,
+      ),
     };
   }
   if (warning.code === "extraction_schema_validation") {
@@ -704,21 +727,27 @@ function humanizeValidationMessage(
       return null;
     }
     return {
-      title: "Struktura extrakce potřebuje kontrolu",
-      description: "Výstup měl neúplnou nebo technicky nekonzistentní strukturu. Hodnoty si ověřte podle PDF.",
+      title: sanitizeAdvisorVisibleText("Struktura výstupu potřebuje kontrolu"),
+      description: sanitizeAdvisorVisibleText(
+        "Některé údaje nebyly úplné nebo byly neurčité. Ověřte hodnoty podle PDF.",
+      ),
     };
   }
   if (warning.code === "partial_extraction_coerced") {
     return {
-      title: "Výsledek byl částečně opraven",
-      description: "AI vrátila neúplnou strukturu. Zachovali jsme nalezená pole, ale hodnoty zkontrolujte podle PDF.",
+      title: sanitizeAdvisorVisibleText("Výsledek byl částečně doplněn"),
+      description: sanitizeAdvisorVisibleText(
+        "Některé údaje chyběly nebo byly nejasné — doplnili jsme je z kontextu. Ověřte je podle PDF.",
+      ),
     };
   }
   return {
-    title: label ? `Ověřit ${label}` : "Validační upozornění",
-    description: INTERNAL_PATH_KEYWORDS.some((kw) => warning.message.includes(kw))
-      ? "AI narazila na technickou nekonzistenci výstupu. Ověřte dotčené údaje podle PDF."
-      : warning.message,
+    title: sanitizeAdvisorVisibleText(label ? `Ověřit ${label}` : "Upozornění ke kontrole"),
+    description: sanitizeAdvisorVisibleText(
+      INTERNAL_PATH_KEYWORDS.some((kw) => warning.message.includes(kw))
+        ? "Automatická kontrola našla nesoulad v údajích. Ověřte dotčené hodnoty podle PDF."
+        : humanizeReviewReasonLine(warning.message),
+    ),
   };
 }
 
@@ -1320,14 +1349,26 @@ function buildRecommendations(
 function humanizeAdvisorDiagnosticNote(raw: string): string {
   const s = raw.trim();
   if (!s) return s;
-  if (s === "text_pdf" || /^text_pdf$/i.test(s)) return "Dokument má textovou vrstvu (PDF).";
-  if (/page_images:not_implemented|page_images:/i.test(s)) {
-    return "Náhled stránkových obrázků není k dispozici — pracuje se s textem dokumentu.";
+  if (s === "text_pdf" || /^text_pdf$/i.test(s)) {
+    return sanitizeAdvisorVisibleText("Dokument má textovou vrstvu.");
   }
-  if (/^Režim vstupu:\s*text_pdf/i.test(s)) return "Dokument má textovou vrstvu (PDF).";
-  if (/^Režim extrakce:/i.test(s)) return s.replace(/^Režim extrakce:\s*/i, "Způsob zpracování: ");
-  if (/^Režim vstupu:/i.test(s)) return s.replace(/^Režim vstupu:\s*/i, "Typ vstupu: ");
-  return s;
+  if (/page_images:not_implemented|page_images:/i.test(s)) {
+    return sanitizeAdvisorVisibleText(
+      "Náhled jednotlivých stránek jako obrázků není k dispozici — pracuje se s textem dokumentu.",
+    );
+  }
+  if (/^Režim vstupu:\s*text_pdf/i.test(s)) {
+    return sanitizeAdvisorVisibleText("Dokument má textovou vrstvu.");
+  }
+  if (/^Režim extrakce:/i.test(s)) {
+    const rest = s.replace(/^Režim extrakce:\s*/i, "").trim();
+    return sanitizeAdvisorVisibleText(`Způsob zpracování: ${humanizeAdvisorDiagnosticNote(rest)}`);
+  }
+  if (/^Režim vstupu:/i.test(s)) {
+    const rest = s.replace(/^Režim vstupu:\s*/i, "").trim();
+    return sanitizeAdvisorVisibleText(`Typ vstupu: ${humanizeAdvisorDiagnosticNote(rest)}`);
+  }
+  return sanitizeAdvisorVisibleText(s);
 }
 
 function buildDiagnostics(
@@ -1422,8 +1463,8 @@ function buildSummary(
     containsPaymentInstructions: contentFlags.containsPaymentInstructions ?? false,
     reasonsForReview: detail.reasonsForReview as string[] | undefined,
   });
-  // Removed tech suffix ("AI vytěžila X z Y polí") — diagnostics shown separately in Technické detaily
-  return humanSummary;
+  // Removed tech suffix ("AI vytěžila X z Y polí") — diagnostics shown separately v panelu diagnostiky
+  return sanitizeAdvisorVisibleText(humanSummary);
 }
 
 /**
@@ -1588,9 +1629,10 @@ function appendSyntheticEnvelopeGroups(
     rw.forEach((w, i) => {
       if (!w?.message?.trim()) return;
       if (HIDDEN_REVIEW_WARNING_CODES.has(w.code ?? "")) return;
-      const msg = w.message.trim();
+      const rawMsg = w.message.trim();
       // Skip messages that reference internal JSON paths — not meaningful to advisors.
-      if (INTERNAL_PATH_KEYWORDS.some((kw) => msg.includes(kw))) return;
+      if (INTERNAL_PATH_KEYWORDS.some((kw) => rawMsg.includes(kw))) return;
+      const msg = humanizeReviewReasonLine(rawMsg);
       if (seenStatusMessages.has(msg)) return;
       seenStatusMessages.add(msg);
       statusFields.push(
@@ -1751,8 +1793,9 @@ export function mapApiToExtractionDocument(
   if (aiRaw && (aiRaw.documentType || aiRaw.productFamily)) {
     documentTypeLabel = formatAiClassifierForAdvisor(aiRaw);
   } else if (norm && norm !== baseType) {
-    documentTypeLabel = `${humanPrimaryTypeHeading(baseType)} · ${norm}`;
+    documentTypeLabel = `${humanPrimaryTypeHeading(baseType)} · ${labelNormalizedPipelineClassification(norm)}`;
   }
+  documentTypeLabel = sanitizeAdvisorVisibleText(documentTypeLabel);
 
   const advisorReview = looksLikeDocumentEnvelope(extracted)
     ? buildAdvisorReviewViewModel({
