@@ -81,4 +81,18 @@ describe("shouldSuppressContractWizardPrefillAfterApply (canonical publish spine
       }),
     ).toBe(false);
   });
+
+  it("suppresses after partial publish when contract row id is present (no second wizard)", () => {
+    expect(
+      shouldSuppressContractWizardPrefillAfterApply({
+        createdContractId: "550e8400-e29b-41d4-a716-446655440000",
+        publishOutcome: {
+          mode: "publish_partial_failure",
+          paymentOutcome: "payment_setup_skipped",
+          label: "Parciální",
+          visibleToClient: true,
+        },
+      }),
+    ).toBe(true);
+  });
 });

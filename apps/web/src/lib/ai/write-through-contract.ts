@@ -9,6 +9,12 @@
  * apply-coverage-from-review.ts, and the portal read queries.
  */
 
+import type {
+  ApplyPublishOutcome,
+  ApplyResultPayload,
+  ContractReviewRow,
+} from "@/lib/ai/review-queue-repository";
+
 export type WriteThroughExpectedState = {
   /**
    * 1. CONTACT
@@ -154,4 +160,134 @@ export function validateWriteThroughResult(
   }
 
   return violations;
+}
+
+// ── Publish outcome + post-apply bridge (canonical publish spine) ─────────────
+
+export type ContractAnalysisBridgeSuggestion = {
+  id: string;
+  label: string;
+  href: string;
+  type: "analysis" | "service_action";
+};
+
+type PayloadWithBridge = ApplyResultPayload & {
+  bridgeSuggestions?: ContractAnalysisBridgeSuggestion[];
+};
+
+/**
+ * True when publish produced a real CRM contract row and/or payment setup.
+ * Intentionally excludes `createdTaskId`: apply does not auto-create tasks, so task IDs
+ * must not drive downstream CTAs or “success” affordances (no ghost artifacts).
+ */
+export function hasPublishArtifactsForBridge(payload: ApplyResultPayload | null | undefined): boolean {
+  if (!payload) return false;
+  return Boolean(payload.createdContractId || payload.createdPaymentSetupId);
+}
+
+/**
+ * Phase 5A: Deterministicky spočítá publish outcome z výsledku apply.
+ * Jeden zdroj pravdy — volán z applyContractReviewDrafts a čten v UI.
+ * Neobsahuje žádnou vendor/PDF logiku.
+ *
+ * Truthful outcome enforcement:
+ * - product_published_visible_to_client vyžaduje reálný createdContractId v DB
+ * - payment_setup_published vyžaduje reálný createdPaymentSetupId v DB
+ * - bez těchto artefaktů nelze vrátit zelený outcome
+ */
+export function computePublishOutcome(
+  payload: ApplyResultPayload | null | undefined,
+  isSupportingDocument: boolean,
+): ApplyPublishOutcome {
+  const hasContract = typeof payload?.createdContractId === "string" && payload.createdContractId.length > 0;
+  const hasPaymentSetup =
+    typeof payload?.createdPaymentSetupId === "string" && payload.createdPaymentSetupId.length > 0;
+  const hasLinkedDoc = Boolean(payload?.linkedDocumentId);
+  const hasDocWarning = Boolean(payload?.documentLinkWarning);
+  const supportingGuard =
+    isSupportingDocument || payload?.policyEnforcementTrace?.supportingDocumentGuard === true;
+
+  const paymentOutcome: ApplyPublishOutcome["paymentOutcome"] = hasPaymentSetup
+    ? "payment_setup_published"
+    : "payment_setup_skipped";
+
+  if (hasContract && hasDocWarning) {
+    return {
+      mode: "publish_partial_failure",
+      paymentOutcome,
+      visibleToClient: true,
+      label: "Smlouva/produkt zapsán, propojení dokumentu selhalo (parciální výsledek).",
+    };
+  }
+
+  if (supportingGuard && !hasContract) {
+    return {
+      mode: "supporting_doc_only",
+      paymentOutcome: "payment_setup_skipped",
+      visibleToClient: false,
+      label: "Podkladový dokument pouze přiložen — smlouva/produkt nevznikl.",
+    };
+  }
+
+  if (hasContract) {
+    return {
+      mode: "product_published_visible_to_client",
+      paymentOutcome,
+      visibleToClient: true,
+      label: "Smlouva/produkt zapsán do CRM a zobrazen v klientském portálu.",
+    };
+  }
+
+  if (hasLinkedDoc && !hasContract) {
+    return {
+      mode: "internal_document_only",
+      paymentOutcome: "payment_setup_skipped",
+      visibleToClient: false,
+      label: "Dokument přiložen ke kontaktu — smlouva/produkt nevznikl.",
+    };
+  }
+
+  return {
+    mode: "supporting_doc_only",
+    paymentOutcome: "payment_setup_skipped",
+    visibleToClient: false,
+    label: "Zapsáno bez vytvoření smlouvy/produktu.",
+  };
+}
+
+export function mapContractReviewToBridgePayload(params: {
+  review: ContractReviewRow;
+  payload: ApplyResultPayload | null | undefined;
+}): PayloadWithBridge {
+  const base = params.payload ?? {};
+  const suggestions: ContractAnalysisBridgeSuggestion[] = [];
+
+  if (hasPublishArtifactsForBridge(base)) {
+    suggestions.push({
+      id: "open-analyses",
+      label: "Otevřít finanční analýzy",
+      href: "/portal/analyses",
+      type: "analysis",
+    });
+    suggestions.push({
+      id: "open-service-actions",
+      label: "Založit servisní akci",
+      href: "/portal/tasks?filter=service",
+      type: "service_action",
+    });
+  }
+
+  if ((params.review.reasonsForReview ?? []).length > 0) {
+    suggestions.push({
+      id: "review-warnings",
+      label: "Zkontrolovat AI varování v detailu",
+      href: `/portal/contracts/review/${params.review.id}`,
+      type: "analysis",
+    });
+  }
+
+  return {
+    ...base,
+    bridgeSuggestions: suggestions,
+  };
 }

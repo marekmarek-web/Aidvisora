@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { computePublishOutcome } from "@/lib/ai/contracts-analyses-bridge";
+import { computePublishOutcome } from "@/lib/ai/write-through-contract";
 import type { ApplyResultPayload } from "@/lib/ai/review-queue-repository";
 
 function basePayload(overrides: Partial<ApplyResultPayload> = {}): ApplyResultPayload {

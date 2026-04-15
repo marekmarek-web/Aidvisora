@@ -11,7 +11,7 @@ import type { ContractReviewRow } from "@/lib/ai/review-queue-repository";
 import { mergeFieldEditsIntoExtractedPayload } from "@/lib/ai-review/mappers";
 import { applyContractReview } from "@/lib/ai/apply-contract-review";
 import { isSupportingDocumentOnly } from "@/lib/ai/apply-policy-enforcement";
-import { mapContractReviewToBridgePayload, computePublishOutcome } from "@/lib/ai/contracts-analyses-bridge";
+import { mapContractReviewToBridgePayload, computePublishOutcome } from "@/lib/ai/write-through-contract";
 import { tryBuildPaymentSetupDraftFromRawPayload } from "@/lib/ai/draft-actions";
 import {
   breadcrumbContractReviewPaymentGate,

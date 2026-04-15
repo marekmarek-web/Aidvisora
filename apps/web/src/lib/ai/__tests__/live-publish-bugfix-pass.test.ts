@@ -17,13 +17,16 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { computePublishOutcome } from "@/lib/ai/contracts-analyses-bridge";
-import { validateWriteThroughResult } from "../write-through-contract";
+import {
+  computePublishOutcome,
+  mapContractReviewToBridgePayload,
+  validateWriteThroughResult,
+} from "../write-through-contract";
 import {
   aggregatePortfolioMetrics,
   segmentToPortfolioGroup,
 } from "@/lib/client-portfolio/read-model";
-import type { ApplyResultPayload } from "@/lib/ai/review-queue-repository";
+import type { ApplyResultPayload, ContractReviewRow } from "@/lib/ai/review-queue-repository";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. Final contract publish → contract artifact + linked document + product visible
@@ -353,5 +356,52 @@ describe("8. Truthful guard: payment_setup_published requires real paymentSetupI
     const outcome = computePublishOutcome(payload, false);
     expect(outcome.mode).toBe("internal_document_only");
     expect(outcome.paymentOutcome).toBe("payment_setup_skipped");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 9. Bridge suggestions: real CRM artifacts only (not legacy createdTaskId)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("9. Bridge suggestions: publish artifacts only (no createdTaskId ghost)", () => {
+  const minimalReview = { id: "rev-1", reasonsForReview: [] } as unknown as ContractReviewRow;
+
+  it("does not emit analysis/service bridge when only createdTaskId is set", () => {
+    const out = mapContractReviewToBridgePayload({
+      review: minimalReview,
+      payload: {
+        linkedClientId: "c1",
+        createdTaskId: "task-1",
+      },
+    });
+    const ids = (out.bridgeSuggestions ?? []).map((s) => s.id);
+    expect(ids).not.toContain("open-analyses");
+    expect(ids).not.toContain("open-service-actions");
+  });
+
+  it("emits analysis/service bridge when contract row exists", () => {
+    const out = mapContractReviewToBridgePayload({
+      review: minimalReview,
+      payload: {
+        linkedClientId: "c1",
+        createdContractId: "550e8400-e29b-41d4-a716-446655440000",
+      },
+    });
+    const ids = (out.bridgeSuggestions ?? []).map((s) => s.id);
+    expect(ids).toContain("open-analyses");
+    expect(ids).toContain("open-service-actions");
+  });
+
+  it("emits analysis/service bridge when payment setup was published without contract row", () => {
+    const out = mapContractReviewToBridgePayload({
+      review: minimalReview,
+      payload: {
+        linkedClientId: "c1",
+        createdPaymentSetupId: "ps-1",
+      },
+    });
+    const ids = (out.bridgeSuggestions ?? []).map((s) => s.id);
+    expect(ids).toContain("open-analyses");
+    expect(ids).toContain("open-service-actions");
   });
 });
