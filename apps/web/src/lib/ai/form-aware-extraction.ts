@@ -22,16 +22,19 @@ const LABEL_ONLY_NORMALIZED = new Set(
     "client",
     "pojistnik",
     "pojisteny",
-    "pojistence",
     "distributor",
     "zprostredkovatel",
     "zprostředkovatel",
+    "vazany zastupce",
+    "vázaný zástupce",
     "makler",
     "makléř",
     "poradce",
     "pojistnikpojisteny",
     "pojistník",
     "pojištěný",
+    "ucastnik",
+    "účastník",
     "jméno",
     "prijmeni",
     "příjmení",
@@ -51,8 +54,18 @@ const LABEL_ONLY_NORMALIZED = new Set(
     "ucet",
     "účet",
     "banka",
+    "kod banky",
+    "kód banky",
     "instituce",
     "poskytovatel",
+    "pojistovna",
+    "pojišťovna",
+    "investicni spolecnost",
+    "investiční společnost",
+    "smlouva o upisu",
+    "smlouva o úpisu",
+    "predpokladana vyse investice",
+    "předpokládaná výše investice",
   ].map((s) => normalizeLoose(s)),
 );
 
@@ -77,6 +90,9 @@ export function isPlausibleLabelOnlyValue(raw: unknown): boolean {
   if (/^investor\s*:?\s*$/i.test(s)) return true;
   if (/^pojistník\s*:?\s*$/i.test(s)) return true;
   if (/^pojištěný\s*:?\s*$/i.test(s)) return true;
+  // Document / section titles mistaken for contract numbers or names (no policy id digits)
+  if (!/\d/.test(s) && /^smlouva\s+o\s+/i.test(s)) return true;
+  if (!/\d/.test(s) && /^(návrh|dodatek|příloha)\s+smlouvy/i.test(s)) return true;
   // Repeated label words without digits (e.g. "číslo smlouvy investora")
   if (!/\d/.test(s) && /^[\p{L}\s\/\-:]+$/u.test(s) && n.split(/\s+/).length <= 6) {
     const words = n.split(/\s+/).filter(Boolean);
@@ -176,10 +192,15 @@ function mapRowToCanonical(row: PdfFormFieldRow, primary: PrimaryDocumentType): 
     primary === "pension_contract" ||
     primary === "generic_financial_document";
 
-  if (/(^|\.)joinedname$/i.test(name) || /(customer|client|policyholder|insured)\.fullname$/i.test(name)) {
+  const isClientPersonField =
+    /(^|\.)joinedname$/i.test(name) ||
+    /(customer|client|policyholder|insured|participant|investor)\.fullname$/i.test(name) ||
+    /(customer|client|policyholder|insured)\.name$/i.test(name);
+
+  if (isClientPersonField && !/(consultant|distributor|broker|intermediary|agent|vazany|makl)/i.test(name)) {
     out.push({ key: "fullName", value: val, page });
     out.push({ key: "clientFullName", value: val, page });
-    if (isInvestmentish || /investor|investment|participant/i.test(name)) {
+    if (isInvestmentish || /investor|investment|participant|policyholder|insured/i.test(name)) {
       out.push({ key: "investorFullName", value: val, page });
     }
     return out;
@@ -234,14 +255,25 @@ function mapRowToCanonical(row: PdfFormFieldRow, primary: PrimaryDocumentType): 
     return out;
   }
 
-  if (lower === "companysign" || /issuer|institution\.name|investmentcompany/i.test(name)) {
+  if (
+    lower === "companysign" ||
+    /issuer|institution\.name|investmentcompany|pojistitel|insurer\.name|company\.issuer/i.test(name)
+  ) {
     if (/\b(a\.s\.|s\.r\.o\.|společnost|spořitelna|banka|pojišťovna|investiční)/i.test(val)) {
       out.push({ key: "institutionName", value: val, page });
     }
     return out;
   }
 
-  if (/^consultant\./i.test(name) || /intermediary\.|broker\.|agent\./i.test(name)) {
+  if (
+    /^consultant\./i.test(name) ||
+    /^distributor\./i.test(name) ||
+    /^intermediary\./i.test(name) ||
+    /^broker\./i.test(name) ||
+    /^agent\./i.test(name) ||
+    /^vazany/i.test(name) ||
+    /(?:^|\.)intermediary\.|(?:^|\.)broker\.|(?:^|\.)agent\./i.test(name)
+  ) {
     if (/company|firm|s\.r\.o|a\.s/i.test(name)) {
       out.push({ key: "intermediaryCompany", value: val, page });
     } else if (/name|person|phone|email/i.test(name)) {
@@ -336,6 +368,19 @@ export function stripLabelOnlyExtractionValues(envelope: DocumentReviewEnvelope)
     "contractNumber",
     "proposalNumber",
     "productName",
+    "personalId",
+    "birthDate",
+    "email",
+    "phone",
+    "permanentAddress",
+    "idCardNumber",
+    "idCardIssuedBy",
+    "idCardValidUntil",
+    "bankAccount",
+    "bankCode",
+    "oneOffAmount",
+    "investmentPremium",
+    "institutionName",
   ];
   for (const k of keys) {
     const cell = ef[k];
