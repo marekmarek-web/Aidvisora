@@ -28,7 +28,7 @@ import {
   updateMeetingNote,
   deleteMeetingNote,
   summarizeMeetingNotes,
-  attachMeetingNoteToOpportunity,
+  createOpportunityFromMeetingNote,
 } from "@/app/actions/meeting-notes";
 import { saveNotesBoardPositions } from "@/app/actions/notes-board-positions";
 import { getPipeline } from "@/app/actions/pipeline";
@@ -246,6 +246,7 @@ function NotesVisionBoardInner({
   const [attachNote, setAttachNote] = useState<MeetingNoteForBoard | null>(null);
   const [pipelineStages, setPipelineStages] = useState<StageWithOpportunities[]>([]);
   const [attachStageId, setAttachStageId] = useState<string>("");
+  const [attachDealTitle, setAttachDealTitle] = useState("");
   const [attachLoading, setAttachLoading] = useState(false);
   const [attachSaving, setAttachSaving] = useState(false);
 
@@ -347,6 +348,7 @@ function NotesVisionBoardInner({
 
   const openAttachToDeal = useCallback(async (note: MeetingNoteForBoard) => {
     setAttachNote(note);
+    setAttachDealTitle(contentTitle(note.content));
     setAttachLoading(true);
     try {
       const stages = await getPipeline();
@@ -364,20 +366,21 @@ function NotesVisionBoardInner({
     setAttachNote(null);
     setPipelineStages([]);
     setAttachStageId("");
+    setAttachDealTitle("");
   }, []);
 
-  const handleAttachToOpportunity = async (opportunityId: string) => {
-    if (!attachNote) return;
+  const handleCreateDealFromNote = async () => {
+    if (!attachNote || !attachStageId) return;
     setAttachSaving(true);
     try {
-      await attachMeetingNoteToOpportunity(attachNote.id, opportunityId);
+      await createOpportunityFromMeetingNote(attachNote.id, attachStageId, attachDealTitle);
       const next = { ...positions };
       delete next[attachNote.id];
       persistPositions(next);
       await reload();
       closeAttachModal();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Chyba při přiřazení.");
+      alert(err instanceof Error ? err.message : "Chyba při vytváření obchodu.");
     } finally {
       setAttachSaving(false);
     }
@@ -605,8 +608,6 @@ function NotesVisionBoardInner({
     ? notes.filter((n) => noteMatchesSearch(n, searchQuery))
     : notes;
 
-  const oppsInAttachStage = pipelineStages.find((s) => s.id === attachStageId)?.opportunities ?? [];
-
   useEffect(() => {
     if (!attachNote || pipelineStages.length === 0) return;
     if (!pipelineStages.some((s) => s.id === attachStageId)) {
@@ -763,8 +764,8 @@ function NotesVisionBoardInner({
                       type="button"
                       onClick={() => void openAttachToDeal(note)}
                       className="shrink-0 w-12 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] flex items-center justify-center text-indigo-600 shadow-sm active:scale-[0.98]"
-                      title="Přiřadit k obchodu"
-                      aria-label="Přiřadit k obchodu"
+                      title="Převést do obchodu"
+                      aria-label="Převést do obchodu"
                     >
                       <Briefcase size={20} />
                     </button>
@@ -840,7 +841,7 @@ function NotesVisionBoardInner({
                       void openAttachToDeal(note);
                     }}
                     className="p-1.5 rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)] hover:text-indigo-600 hover:shadow-sm transition-all"
-                    title="Přiřadit k obchodu"
+                    title="Převést do obchodu"
                   >
                     <Briefcase size={14} />
                   </button>
@@ -941,7 +942,7 @@ function NotesVisionBoardInner({
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[color:var(--wp-overlay-scrim)] p-4 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-[color:var(--wp-surface-card)] rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border border-[color:var(--wp-surface-card-border)]">
             <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-6 py-4 shrink-0">
-              <h2 className="text-lg font-bold text-[color:var(--wp-text)] pr-2">Přiřadit k obchodu</h2>
+              <h2 className="text-lg font-bold text-[color:var(--wp-text)] pr-2">Nový obchod ze zápisku</h2>
               <button
                 type="button"
                 onClick={closeAttachModal}
@@ -958,7 +959,7 @@ function NotesVisionBoardInner({
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-4">
               {attachLoading ? (
-                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání obchodů…</p>
+                <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Načítání fází…</p>
               ) : pipelineStages.length === 0 ? (
                 <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
                   Žádné fáze obchodů nebo nemáte oprávnění k příležitostem.
@@ -966,7 +967,7 @@ function NotesVisionBoardInner({
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Fáze</label>
+                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Fáze pipeline</label>
                     <CustomDropdown
                       value={attachStageId}
                       onChange={(id) => setAttachStageId(id)}
@@ -977,33 +978,26 @@ function NotesVisionBoardInner({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">Obchod</label>
-                    {oppsInAttachStage.length === 0 ? (
-                      <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
-                        V této fázi nejsou otevřené obchody.
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {oppsInAttachStage.map((o) => (
-                          <li key={o.id}>
-                            <button
-                              type="button"
-                              disabled={attachSaving}
-                              onClick={() => void handleAttachToOpportunity(o.id)}
-                              className="w-full min-h-[44px] text-left rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all disabled:opacity-50"
-                            >
-                              <span className="font-semibold text-[color:var(--wp-text)] block">{o.title}</span>
-                              <span className="text-xs text-[color:var(--wp-text-tertiary)]">{o.contactName}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    <label htmlFor="attach-deal-title" className="block text-sm font-bold text-[color:var(--wp-text-secondary)] mb-2">
+                      Název obchodu
+                    </label>
+                    <input
+                      id="attach-deal-title"
+                      type="text"
+                      value={attachDealTitle}
+                      onChange={(e) => setAttachDealTitle(e.target.value)}
+                      placeholder="Název případu v pipeline"
+                      disabled={attachSaving}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-semibold border border-[color:var(--wp-input-border)] bg-[color:var(--wp-input-bg)] text-[color:var(--wp-text)] outline-none focus:ring-2 focus:ring-[color:var(--wp-header-input-focus-ring)] focus:border-[color:var(--wp-header-input-focus-border)] disabled:opacity-50"
+                    />
+                    <p className="mt-2 text-xs text-[color:var(--wp-text-tertiary)] leading-relaxed">
+                      Založí se nový otevřený obchod ve zvolené fázi a zápisek k němu připojíme. Typ případu odpovídá oblasti zápisku; klient se přenese z pole zápisku, pokud je vyplněný.
+                    </p>
                   </div>
                 </>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] flex justify-end shrink-0">
+            <div className="px-6 py-4 border-t border-[color:var(--wp-surface-card-border)] flex flex-wrap justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={closeAttachModal}
@@ -1012,6 +1006,13 @@ function NotesVisionBoardInner({
               >
                 Zrušit
               </button>
+              <CreateActionButton
+                type="button"
+                disabled={attachSaving || attachLoading || !attachStageId || pipelineStages.length === 0}
+                onClick={() => void handleCreateDealFromNote()}
+              >
+                {attachSaving ? "Vytvářím…" : "Vytvořit obchod"}
+              </CreateActionButton>
             </div>
           </div>
         </div>
@@ -1197,7 +1198,7 @@ function NotesVisionBoardInner({
                     }}
                     disabled={saving}
                     className="flex items-center justify-center w-12 h-12 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm disabled:opacity-50"
-                    title="Přiřadit k obchodu"
+                    title="Převést do obchodu"
                   >
                     <Briefcase size={18} />
                   </button>

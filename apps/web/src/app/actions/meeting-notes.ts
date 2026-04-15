@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { noteTemplates, meetingNotes, contacts, opportunities } from "db";
 import { eq, and, desc, isNull } from "db";
+import { createOpportunity } from "./pipeline";
 
 export type TemplateRow = { id: string; name: string; domain: string };
 
@@ -262,9 +263,77 @@ export async function updateMeetingNote(
     .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.id, id)));
 }
 
+function caseTypeFromMeetingNoteDomain(domain: string): string {
+  switch (domain) {
+    case "hypo":
+      return "hypotéka";
+    case "investice":
+      return "investice";
+    case "pojisteni":
+      return "pojištění";
+    case "uvery":
+      return "úvěr";
+    case "dps":
+      return "jiné";
+    case "komplex":
+      return "jiné";
+    default:
+      return "jiné";
+  }
+}
+
+function meetingNoteTitleFromContent(content: unknown): string {
+  if (!content || typeof content !== "object" || content === null) return "";
+  const c = content as Record<string, unknown>;
+  if (typeof c.title === "string" && c.title.trim()) return c.title.trim();
+  const obsah = c.obsah;
+  if (typeof obsah === "string" && obsah.trim()) return obsah.split("\n")[0].slice(0, 200).trim();
+  return "";
+}
+
 /**
- * Přiřadí zápisek k obchodu; contact_id převezme z obchodu.
+ * Vytvoří nový obchod ve zvolené fázi a přiřadí k němu zápisek (stejně jako attachMeetingNoteToOpportunity).
  */
+export async function createOpportunityFromMeetingNote(
+  noteId: string,
+  stageId: string,
+  titleOverride?: string | null
+): Promise<string | null> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "meeting_notes:write")) throw new Error("Forbidden");
+  if (!hasPermission(auth.roleName, "opportunities:write")) throw new Error("Forbidden");
+
+  const [note] = await db
+    .select({
+      id: meetingNotes.id,
+      domain: meetingNotes.domain,
+      content: meetingNotes.content,
+      contactId: meetingNotes.contactId,
+      opportunityId: meetingNotes.opportunityId,
+    })
+    .from(meetingNotes)
+    .where(and(eq(meetingNotes.tenantId, auth.tenantId), eq(meetingNotes.id, noteId)))
+    .limit(1);
+  if (!note) throw new Error("Zápisek nebyl nalezen.");
+  if (note.opportunityId) throw new Error("Zápisek je už přiřazen k obchodu.");
+
+  const rawTitle = (titleOverride?.trim() || meetingNoteTitleFromContent(note.content) || "Obchod ze zápisku").trim();
+  const title = rawTitle.slice(0, 500);
+  const caseType = caseTypeFromMeetingNoteDomain(note.domain ?? "");
+
+  const newId = await createOpportunity({
+    title,
+    caseType,
+    contactId: note.contactId ?? undefined,
+    stageId,
+  });
+  if (!newId) throw new Error("Obchod se nepodařilo vytvořit.");
+
+  await attachMeetingNoteToOpportunity(noteId, newId);
+  return newId;
+}
+
+/** Přiřadí zápisek k existujícímu obchodu; contact_id převezme z obchodu. */
 export async function attachMeetingNoteToOpportunity(noteId: string, opportunityId: string) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "meeting_notes:write")) throw new Error("Forbidden");
