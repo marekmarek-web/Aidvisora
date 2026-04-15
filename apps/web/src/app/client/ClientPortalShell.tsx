@@ -30,7 +30,7 @@ export function ClientPortalShell({
           fullName={fullName}
         />
         <main className="flex-1 client-dot-grid client-custom-scrollbar overflow-y-auto">
-          <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto w-full">{children}</div>
+          <div className="relative z-10 p-4 sm:p-5 lg:p-6 max-w-[1400px] mx-auto w-full">{children}</div>
           <ClientMaterialRequestToastStack />
         </main>
       </div>

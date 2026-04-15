@@ -179,6 +179,14 @@
   --wp-space-6: 24px;
   --wp-space-8: 32px;
 
+  /**
+   * Portal chrome — výšky/padding přepisované v @media (desktop density).
+   * Základ = současné hodnoty; na notebooku (md–xl) hubenější, na širokém monitoru uvolnění.
+   */
+  --wp-portal-header-height: 6rem;
+  --wp-portal-header-search-min-h: 48px;
+  --wp-portal-quick-new-min-h: 48px;
+
   /* ── Radius scale (DASHBOARD.txt: 10, 20, 30, 32) ── */
   --wp-radius-xs: 4px;
   --wp-radius-sm: 8px;
@@ -228,6 +236,58 @@
   /* ── Motion: respect prefer-reduced-motion (use in JS or utility classes) ── */
   --wp-duration-drawer: 300ms;
   --wp-duration-modal: 200ms;
+}
+
+/**
+ * Desktop density (100% zoom v Chrome — notebook jako primární cíl).
+ * Mobil (< 768px) beze změny. Střední desktop hubenější; velmi široké okno se vrátí k původnějšímu dýchání.
+ */
+@media (min-width: 768px) {
+  :root {
+    --wp-space-1: 3px;
+    --wp-space-2: 6px;
+    --wp-space-3: 10px;
+    --wp-space-4: 14px;
+    --wp-space-5: 18px;
+    --wp-space-6: 22px;
+    --wp-space-8: 28px;
+    --wp-fs-xs: 11px;
+    --wp-fs-sm: 12px;
+    --wp-line-height: 1.38;
+    --wp-portal-header-height: 5rem;
+    --wp-portal-header-search-min-h: 40px;
+    --wp-portal-quick-new-min-h: 44px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --wp-space-4: 15px;
+    --wp-space-5: 19px;
+    --wp-space-6: 23px;
+    --wp-space-8: 30px;
+    --wp-portal-header-height: 5.5rem;
+    --wp-portal-header-search-min-h: 44px;
+    --wp-portal-quick-new-min-h: 46px;
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --wp-space-1: 4px;
+    --wp-space-2: 8px;
+    --wp-space-3: 12px;
+    --wp-space-4: 16px;
+    --wp-space-5: 20px;
+    --wp-space-6: 24px;
+    --wp-space-8: 32px;
+    --wp-fs-xs: 12px;
+    --wp-fs-sm: 13px;
+    --wp-line-height: 1.4;
+    --wp-portal-header-height: 6rem;
+    --wp-portal-header-search-min-h: 48px;
+    --wp-portal-quick-new-min-h: 48px;
+  }
 }
 
 @media (prefer-reduced-motion: reduce) {

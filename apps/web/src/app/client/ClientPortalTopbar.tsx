@@ -43,9 +43,9 @@ export function ClientPortalTopbar({
   }, [fullName]);
 
   return (
-    <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 lg:px-8 py-4 shadow-sm">
-      <div className="mx-auto w-full max-w-[1400px] flex items-center justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-display font-black text-slate-900 tracking-tight">
+    <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-100 px-4 sm:px-5 lg:px-6 py-3 sm:py-3 shadow-sm">
+      <div className="mx-auto w-full max-w-[1400px] flex items-center justify-between gap-3 sm:gap-4">
+        <h1 className="text-lg sm:text-xl font-display font-black text-slate-900 tracking-tight">
           {pageTitle}
         </h1>
         <div className="flex items-center gap-3">

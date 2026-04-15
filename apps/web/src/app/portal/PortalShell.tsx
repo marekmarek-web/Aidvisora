@@ -308,9 +308,9 @@ function PortalShellInner({
               </svg>
             </button>
             {/* Desktop: inline search. Mobile: icon → opens overlay with search */}
-            <div className="flex min-h-[48px] min-w-0 flex-1 items-center md:max-w-md">
+            <div className="flex min-h-[var(--wp-portal-header-search-min-h,48px)] min-w-0 flex-1 items-center md:max-w-md">
               {isDesktop && (
-                <Suspense fallback={<div className="h-12 w-48 rounded-2xl bg-[color:var(--wp-header-input-bg)] animate-pulse" aria-hidden />}>
+                <Suspense fallback={<div className="h-[var(--wp-portal-header-search-min-h,48px)] w-48 rounded-2xl bg-[color:var(--wp-header-input-bg)] animate-pulse" aria-hidden />}>
                   <PortalHeaderSearch ref={headerSearchRef} variant="header" />
                 </Suspense>
               )}
