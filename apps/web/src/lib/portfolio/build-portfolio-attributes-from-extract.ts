@@ -212,9 +212,38 @@ function mergePersonLists(lists: PortfolioPersonEntry[][]): PortfolioPersonEntry
   return out;
 }
 
+function mergeInvestmentFundsArrays(
+  prev: unknown,
+  next: unknown,
+): Array<{ name: string; allocation?: string; isin?: string }> | undefined {
+  const out: Array<{ name: string; allocation?: string; isin?: string }> = [];
+  const seen = new Set<string>();
+  const push = (arr: unknown) => {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (!item || typeof item !== "object") continue;
+      const r = item as Record<string, unknown>;
+      const name = typeof r.name === "string" ? r.name.trim() : "";
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        name,
+        ...(typeof r.allocation === "string" ? { allocation: r.allocation } : {}),
+        ...(typeof r.isin === "string" ? { isin: r.isin } : {}),
+      });
+    }
+  };
+  push(prev);
+  push(next);
+  return out.length ? out : undefined;
+}
+
 /**
  * Sloučení při aplikaci review: pole `persons` a `risks` z nového extraktu přepisují stará,
  * ostatní klíče se dělají mělkým merge (next přebíjí prev).
+ * Investment: `investmentFunds` se sjednocují; platební detaily doplňují mezery bez mazání produktové identity.
  */
 export function mergePortfolioAttributesForApply(
   prev: Record<string, unknown>,
@@ -223,6 +252,21 @@ export function mergePortfolioAttributesForApply(
   const merged: Record<string, unknown> = { ...prev, ...next };
   if (Array.isArray(next.persons)) merged.persons = next.persons;
   if (Array.isArray(next.risks)) merged.risks = next.risks;
+  const mergedFunds = mergeInvestmentFundsArrays(prev.investmentFunds, next.investmentFunds);
+  if (mergedFunds) merged.investmentFunds = mergedFunds;
+
+  const paymentKeys = [
+    "paymentVariableSymbol",
+    "paymentAccountDisplay",
+    "paymentFrequencyLabel",
+    "extraPaymentAccountDisplay",
+  ] as const;
+  for (const k of paymentKeys) {
+    const nv = next[k];
+    const pv = prev[k];
+    if (nv != null && nv !== "") merged[k] = nv;
+    else if (pv != null && pv !== "") merged[k] = pv;
+  }
   return merged;
 }
 
@@ -237,6 +281,19 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
     primaryType.startsWith("life_insurance") ||
     primaryType === "life_insurance_contract" ||
     primaryType === "life_insurance_final_contract";
+
+  const productFamily = typeof dc?.productFamily === "string" ? dc.productFamily : "";
+  const flatSegment =
+    typeof p.segment === "string"
+      ? p.segment.trim().toUpperCase()
+      : typeof (root as { segment?: string }).segment === "string"
+        ? (root as { segment?: string }).segment!.trim().toUpperCase()
+        : "";
+  const investmentExtractionContext =
+    !lifeInsuranceContext &&
+    (productFamily.toLowerCase() === "investment" ||
+      (primaryType.includes("investment") && !primaryType.includes("life_insurance")) ||
+      (flatSegment === "INV" || flatSegment === "DIP" || flatSegment === "DPS"));
 
   if (!lifeInsuranceContext) {
     const loan = p.loanAmount ?? p.loanPrincipal ?? p.principalAmount ?? p.creditAmount;
@@ -295,7 +352,10 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
 
   const partiesPersons = collectPersonsFromParties(root.parties);
   const insuredFromFlat = collectPersonsFromInsuredPersons(p.insuredPersons);
-  const persons = mergePersonLists([partiesPersons, insuredFromFlat]);
+  let persons = mergePersonLists([partiesPersons, insuredFromFlat]);
+  if (investmentExtractionContext && persons.length > 0) {
+    persons = persons.filter((x) => x.role !== "policyholder");
+  }
   if (persons.length > 0) out.persons = persons;
 
   /**
@@ -371,6 +431,15 @@ export function buildPortfolioAttributesFromExtracted(extracted: unknown): Recor
     if (typeof invp === "string" && invp.trim()) out.investmentPremiumLabel = invp.trim();
     const extraAcc = p.extraPaymentAccount ?? p.accountForExtraPremium;
     if (typeof extraAcc === "string" && extraAcc.trim()) out.extraPaymentAccountDisplay = extraAcc.trim();
+  }
+
+  if (investmentExtractionContext) {
+    const vs = p.variableSymbol;
+    if (typeof vs === "string" && vs.trim()) out.paymentVariableSymbol = vs.trim();
+    const ba = p.bankAccount ?? p.recipientAccount ?? p.paymentAccountNumber ?? p.iban;
+    if (typeof ba === "string" && ba.trim()) out.paymentAccountDisplay = ba.trim();
+    const freq = p.paymentFrequency ?? p.premiumFrequency;
+    if (typeof freq === "string" && freq.trim()) out.paymentFrequencyLabel = freq.trim();
   }
 
   return out;

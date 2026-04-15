@@ -16,6 +16,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   selectExistingContractId,
   buildContactUpdatePatch,
+  resolveSegmentForContractApply,
+  resolveContractReferenceForApply,
 } from "../apply-contract-review";
 import { resolveFieldMerge } from "../field-merge-policy";
 import { isSupportingDocumentOnly } from "../apply-policy-enforcement";
@@ -76,6 +78,29 @@ describe("Scenario 1: re-apply same review → no duplicate contract", () => {
       sourceContractReviewId: null,
     });
     expect(result).toBe("contract-existing");
+  });
+
+  it("investment family: matches by contract ref when lookup segment defaulted to ZP but row is INV", () => {
+    const candidatesInv = [
+      {
+        id: "inv-1",
+        contractNumber: "7023398569",
+        partnerName: "Amundi",
+        productName: "Pravidelné investování",
+        startDate: null,
+        segment: "INV",
+        sourceContractReviewId: null,
+      },
+    ];
+    const result = selectExistingContractId(candidatesInv, {
+      contractNumber: "7023398569",
+      institutionName: "Amundi",
+      productName: "Platební instrukce",
+      effectiveDate: null,
+      segment: "ZP",
+      sourceContractReviewId: null,
+    });
+    expect(result).toBe("inv-1");
   });
 
   it("different reviewId does NOT match existing contract by review", () => {
@@ -433,6 +458,31 @@ describe("Slice 3: selectExistingContractId — dedupe edge cases", () => {
     });
     // Per current segmentMatches logic: candidateSegment "zp" !== wantedSegment "dps" → no match
     expect(result).toBeNull();
+  });
+});
+
+describe("Investment apply helpers", () => {
+  it("resolveSegmentForContractApply infers INV from investment documentClassification when action segment empty", () => {
+    const seg = resolveSegmentForContractApply(
+      {},
+      {
+        documentClassification: { primaryType: "investment_payment_instruction", productFamily: "investment" },
+      },
+    );
+    expect(seg).toBe("INV");
+  });
+
+  it("resolveContractReferenceForApply reads contract ref from extractedFields when enforced payload is empty", () => {
+    const ref = resolveContractReferenceForApply(
+      {},
+      {},
+      {
+        extractedFields: {
+          contractNumber: { value: "7023398569", status: "extracted" },
+        },
+      },
+    );
+    expect(ref).toBe("7023398569");
   });
 });
 

@@ -91,6 +91,18 @@ describe("canonical-contract-read", () => {
         expect(product.segmentDetail.investmentStrategy).toBeNull();
       }
     });
+
+    it("prefers concrete fund name over generic marketing label on canonical productName", () => {
+      const product = mapContractToCanonicalProduct(
+        makeContract({
+          productName: "Pravidelné investování RYTMUS",
+          portfolioAttributes: {
+            investmentFunds: [{ name: "iShares MSCI World UCITS ETF", allocation: "100%" }],
+          },
+        }),
+      );
+      expect(product.productName).toBe("iShares MSCI World UCITS ETF");
+    });
   });
 
   describe("life insurance detail (ZP)", () => {

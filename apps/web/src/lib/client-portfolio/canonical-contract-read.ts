@@ -239,6 +239,30 @@ function firstFundAllocation(attrs: Record<string, unknown>): string | null {
   return safeString(first?.allocation);
 }
 
+function isGenericInvestmentMarketingLabel(name: string | null | undefined): boolean {
+  if (!name || !String(name).trim()) return false;
+  const n = String(name).toLowerCase();
+  return (
+    /\b(rytmus|pravideln|investov|platform|program|balíč|balic|servis|předběž|predbez)\b/i.test(n) &&
+    !/\b(etf|ucits|fond|fund|msci|index|akci|dluhopis|bond|strategy|strategi|ishares)\b/i.test(n)
+  );
+}
+
+/** Prefer concrete fund / ETF name over generic platform marketing for pure investment segments. */
+function resolveDisplayProductName(
+  contract: RawContractInput,
+  attrs: Record<string, unknown>,
+): string | null {
+  const inv = new Set(["INV", "DIP"]);
+  if (!inv.has(contract.segment)) return contract.productName;
+  const fund = firstFundName(attrs);
+  const marketing = contract.productName;
+  if (fund && marketing && isGenericInvestmentMarketingLabel(marketing) && !isGenericInvestmentMarketingLabel(fund)) {
+    return fund;
+  }
+  return marketing ?? fund ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Per-segment detail builders
 // ---------------------------------------------------------------------------
@@ -397,6 +421,7 @@ export function mapContractToCanonicalProduct(
   contract: RawContractInput,
 ): CanonicalProduct {
   const attrs = (contract.portfolioAttributes ?? {}) as Record<string, unknown>;
+  const displayProductName = resolveDisplayProductName(contract, attrs);
 
   return {
     id: contract.id,
@@ -404,7 +429,7 @@ export function mapContractToCanonicalProduct(
     segment: contract.segment,
     segmentLabel: SEGMENT_LABEL_MAP[contract.segment] ?? contract.segment,
     partnerName: contract.partnerName,
-    productName: contract.productName,
+    productName: displayProductName,
     premiumMonthly: safeNumber(contract.premiumAmount),
     premiumAnnual: safeNumber(contract.premiumAnnual),
     contractNumber: contract.contractNumber,

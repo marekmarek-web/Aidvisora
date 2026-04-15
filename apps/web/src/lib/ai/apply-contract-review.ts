@@ -50,6 +50,144 @@ import {
 
 const VALID_SEGMENTS = new Set<string>(contractSegments);
 
+/** INV/DIP/DPS — same business contract ref must dedupe across product vs payment-instruction applies. */
+const INVESTMENT_CONTRACT_SEGMENTS = new Set<string>(["INV", "DIP", "DPS"]);
+
+function readCellFromExtractedFields(
+  ef: Record<string, unknown> | undefined,
+  keys: string[]
+): string | null {
+  if (!ef) return null;
+  for (const key of keys) {
+    const cell = ef[key];
+    if (!cell || typeof cell !== "object") continue;
+    const v = (cell as { value?: unknown }).value;
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+/**
+ * Resolves contract reference when enforcement nulls contractNumber but the ref exists
+ * on the raw draft action, envelope root, or extractedFields cells (investment family).
+ */
+export function resolveContractReferenceForApply(
+  enforcedPayload: Record<string, unknown>,
+  rawActionPayload: Record<string, unknown>,
+  extractedPayload: Record<string, unknown>,
+): string | null {
+  const candidates = [
+    enforcedPayload.contractNumber,
+    enforcedPayload.contractReference,
+    rawActionPayload.contractNumber,
+    rawActionPayload.contractReference,
+    extractedPayload.contractNumber,
+    extractedPayload.contractReference,
+    extractedPayload.proposalNumber,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  const ef = extractedPayload.extractedFields as Record<string, unknown> | undefined;
+  return readCellFromExtractedFields(ef, [
+    "contractNumber",
+    "contractReference",
+    "proposalNumber",
+    "proposalNumber_or_contractNumber",
+  ]);
+}
+
+function inferInvestmentSegmentFromEnvelope(extractedPayload: Record<string, unknown>): string | null {
+  const dc = extractedPayload.documentClassification as Record<string, unknown> | undefined;
+  const primary = typeof dc?.primaryType === "string" ? dc.primaryType : "";
+  const family = typeof dc?.productFamily === "string" ? dc.productFamily : "";
+  if (family.toLowerCase() === "investment") return "INV";
+  if (primary.includes("life_insurance")) return null;
+  if (primary.includes("investment")) return "INV";
+  const seg = typeof extractedPayload.segment === "string" ? extractedPayload.segment.trim() : "";
+  if (INVESTMENT_CONTRACT_SEGMENTS.has(seg)) return seg;
+  return null;
+}
+
+/**
+ * Avoids defaulting missing segment to ZP for investment document families (payment instructions
+ * often omit segment while product-bearing docs use INV/DIP/DPS).
+ */
+export function resolveSegmentForContractApply(
+  actionPayload: Record<string, unknown>,
+  extractedPayload: Record<string, unknown>,
+): string {
+  const raw = (actionPayload.segment as string)?.trim();
+  if (raw && VALID_SEGMENTS.has(raw)) return raw;
+  const inferred = inferInvestmentSegmentFromEnvelope(extractedPayload);
+  if (inferred) return inferred;
+  const envSeg = typeof extractedPayload.segment === "string" ? extractedPayload.segment.trim() : "";
+  if (envSeg && VALID_SEGMENTS.has(envSeg)) return envSeg;
+  return validateSegment(raw);
+}
+
+function investmentSegmentDedupeCompatible(
+  lookupSeg: string | null | undefined,
+  candidateSeg: string | null | undefined,
+): boolean {
+  const ls = normalizeComparableText(lookupSeg);
+  const cs = normalizeComparableText(candidateSeg);
+  if (!ls || !cs) return false;
+  const inv = new Set(["inv", "dip", "dps"]);
+  const lInv = inv.has(ls);
+  const cInv = inv.has(cs);
+  if (lInv && cInv) return true;
+  // Payment-instruction drafts often default segment to ZP while the canonical row is investment.
+  // Do not match the inverse (lookup=investment, candidate=ZP) — avoids collapsing unrelated rows.
+  if (cInv && ls === "zp") return true;
+  return false;
+}
+
+function firstFundNameFromAttrs(attrs: Record<string, unknown>): string | null {
+  const funds = attrs.investmentFunds;
+  if (!Array.isArray(funds) || funds.length === 0) return null;
+  const first = funds[0] as { name?: string } | undefined;
+  return hasNonEmptyText(first?.name) ? String(first!.name).trim() : null;
+}
+
+function isLikelyPaymentOnlyProductLabel(name: string | null | undefined): boolean {
+  if (!hasNonEmptyText(name)) return false;
+  const n = name!.toLowerCase();
+  return (
+    n.includes("platb") ||
+    n.includes("payment") ||
+    n.includes("instrukc") ||
+    n.includes("variabilní") ||
+    n.includes("variabilni") ||
+    n.includes("sepa") ||
+    n.includes("informativ")
+  );
+}
+
+/** Prefers concrete fund / strategy over payment-instruction or generic marketing titles. */
+export function pickStrongerInvestmentProductName(
+  existing: string | null,
+  incoming: string | null,
+  attrs: Record<string, unknown>,
+  segment: string,
+): string | null {
+  if (!INVESTMENT_CONTRACT_SEGMENTS.has(segment)) return preferExistingValue(existing, incoming);
+  const fund = firstFundNameFromAttrs(attrs);
+  const chosen = preferExistingValue(existing, incoming);
+  if (fund && isLikelyPaymentOnlyProductLabel(chosen)) return fund;
+  if (fund && isLikelyPaymentOnlyProductLabel(incoming) && !hasNonEmptyText(existing)) return fund;
+  if (
+    fund &&
+    hasNonEmptyText(chosen) &&
+    !isLikelyPaymentOnlyProductLabel(chosen) &&
+    fund.length > chosen.length + 8 &&
+    /\b(etf|ucits|fond|fund|msci|index|akci|dluhopis|bond|strategy|strategi)\b/i.test(fund)
+  ) {
+    return fund;
+  }
+  return chosen;
+}
+
 /**
  * Catalog FK resolution: find partnerId/productId by name (case-insensitive fuzzy match).
  * Soft-fail by design — returns nulls when catalog entry not found.
@@ -294,6 +432,15 @@ export function selectExistingContractId(
         normalizeContractIdentifier(candidate.contractNumber) === wantedContractNumber
     );
     if (byContractNumber) return byContractNumber.id;
+
+    // Investment family: one doc may carry INV/DIP while a payment-instruction draft defaulted to ZP.
+    // Same ref must still resolve to the single canonical investment contract row.
+    const byContractNumberInvestmentFamily = candidates.find(
+      (candidate) =>
+        normalizeContractIdentifier(candidate.contractNumber) === wantedContractNumber &&
+        investmentSegmentDedupeCompatible(lookup.segment, candidate.segment)
+    );
+    if (byContractNumberInvestmentFamily) return byContractNumberInvestmentFamily.id;
   }
 
   if (wantedPartner && wantedProduct) {
@@ -758,19 +905,22 @@ export async function applyContractReview(
           const ep = contractEnforce.enforcedPayload;
 
           // contractNumber: manual_required → null (nesmí se tvářit jako potvrzené)
-          const contractNumber = (ep.contractNumber as string)?.trim() || null;
+          const contractNumberResolved =
+            resolveContractReferenceForApply(ep, action.payload, extractedPayloadForEnforcement) ??
+            (ep.contractNumber as string)?.trim() ??
+            null;
           const productName = (ep.productName as string)?.trim() || null;
           const institutionName =
             (ep.institutionName as string)?.trim() ||
             (action.payload.institutionName as string)?.trim() ||
             null;
           const effectiveDate = (ep.effectiveDate as string)?.trim() || null;
-          const segment = validateSegment(action.payload.segment as string);
+          const segment = resolveSegmentForContractApply(action.payload, extractedPayloadForEnforcement);
           const existingContractId = await findExistingContractId(
             tenantId,
             effectiveContactId,
             {
-              contractNumber,
+              contractNumber: contractNumberResolved,
               institutionName,
               productName,
               effectiveDate,
@@ -807,7 +957,14 @@ export async function applyContractReview(
               .limit(1);
             const prevAttrs =
               (existingRow?.portfolioAttributes as Record<string, unknown> | undefined) ?? {};
+            const mergedAttrsForTitle = mergePortfolioAttributesForApply(prevAttrs, attrsFromReview);
             const preserveManualLineage = existingRow?.sourceKind === "manual";
+            const mergedProductName = pickStrongerInvestmentProductName(
+              existingRow?.productName ?? null,
+              productName,
+              mergedAttrsForTitle,
+              segment,
+            );
 
             // Catalog FK: resolve only if not already set on existing row
             const resolvedFKs =
@@ -815,7 +972,7 @@ export async function applyContractReview(
                 ? await resolveCatalogFKs(
                     tenantId,
                     institutionName,
-                    productName,
+                    mergedProductName,
                     segment,
                     tx as unknown as typeof db
                   ).catch(() => ({ partnerId: null, productId: null }))
@@ -829,8 +986,8 @@ export async function applyContractReview(
                 segment,
                 type: segment,
                 partnerName: preferExistingValue(existingRow?.partnerName, institutionName),
-                productName: preferExistingValue(existingRow?.productName, productName),
-                contractNumber: preferExistingValue(existingRow?.contractNumber, contractNumber),
+                productName: mergedProductName,
+                contractNumber: preferExistingValue(existingRow?.contractNumber, contractNumberResolved),
                 startDate: preferExistingValue(existingRow?.startDate, normalizedStartDate),
                 premiumAmount: preferExistingValue(existingRow?.premiumAmount, premiumAmountRaw),
                 premiumAnnual: preferExistingValue(existingRow?.premiumAnnual, premiumAnnualRaw),
@@ -839,7 +996,7 @@ export async function applyContractReview(
                 confirmedByUserId: userId,
                 visibleToClient: true,
                 portfolioStatus: "active",
-                portfolioAttributes: mergePortfolioAttributesForApply(prevAttrs, attrsFromReview),
+                portfolioAttributes: mergedAttrsForTitle,
                 extractionConfidence,
                 ...(resolvedFKs.partnerId ? { partnerId: resolvedFKs.partnerId } : {}),
                 ...(resolvedFKs.productId ? { productId: resolvedFKs.productId } : {}),
@@ -853,12 +1010,18 @@ export async function applyContractReview(
           // zachytí konflikt (race condition), fallback na SELECT existujícího záznamu místo pádu.
           let insertedContractId: string | null = null;
           try {
+            const insertProductName = pickStrongerInvestmentProductName(
+              null,
+              productName,
+              attrsFromReview,
+              segment,
+            );
             // Catalog FK resolution for new contract (soft-fail: null if not found)
             const newFKs = institutionName
               ? await resolveCatalogFKs(
                   tenantId,
                   institutionName,
-                  productName,
+                  insertProductName,
                   segment,
                   tx as unknown as typeof db
                 ).catch(() => ({ partnerId: null, productId: null }))
@@ -873,8 +1036,8 @@ export async function applyContractReview(
                 segment,
                 type: segment,
                 partnerName: institutionName,
-                productName,
-                contractNumber,
+                productName: insertProductName,
+                contractNumber: contractNumberResolved,
                 startDate: normalizedStartDate,
                 premiumAmount: premiumAmountRaw,
                 premiumAnnual: premiumAnnualRaw,
@@ -899,13 +1062,13 @@ export async function applyContractReview(
               (insertErr.message.includes("unique") ||
                 insertErr.message.includes("duplicate") ||
                 insertErr.message.includes("23505"));
-            if (isUniqueViolation && contractNumber) {
+            if (isUniqueViolation && contractNumberResolved) {
               try {
                 Sentry.addBreadcrumb({
                   category: "contract_review.apply",
                   level: "warning",
                   message: "contract_insert_unique_conflict_fallback",
-                  data: { reviewId, tenantId, contractNumber: contractNumber.slice(0, 50) },
+                  data: { reviewId, tenantId, contractNumber: contractNumberResolved.slice(0, 50) },
                 });
                 const [conflicted] = await tx
                   .select({ id: contracts.id })
@@ -913,7 +1076,7 @@ export async function applyContractReview(
                   .where(
                     and(
                       eq(contracts.tenantId, tenantId),
-                      eq(contracts.contractNumber, contractNumber)
+                      eq(contracts.contractNumber, contractNumberResolved)
                     )
                   )
                   .limit(1);
