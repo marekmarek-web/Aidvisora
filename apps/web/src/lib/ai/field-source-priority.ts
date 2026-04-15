@@ -491,6 +491,33 @@ function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, Extracte
       }
     }
   }
+
+  // ── Institution / provider / lender enrichment from parties ──────────────
+  const INSTITUTION_ROLES = new Set([
+    "provider", "insurer", "lender", "bank", "pension_company",
+    "investment_company", "institution", "creditor", "pojistitel",
+    "pojišťovna", "banka", "věřitel", "správce",
+  ]);
+  if (!isPresent(ef["institutionName"])) {
+    for (const party of partyList) {
+      const role = typeof party.role === "string" ? party.role.toLowerCase() : "";
+      if (!INSTITUTION_ROLES.has(role)) continue;
+      const instName = typeof party.fullName === "string" ? party.fullName.trim() :
+        typeof party.name === "string" ? party.name.trim() :
+        typeof party.companyName === "string" ? party.companyName.trim() : null;
+      if (instName && instName.length > 2) {
+        ef["institutionName"] = {
+          value: instName,
+          status: "extracted",
+          evidenceTier: "explicit_section_block",
+          sourceKind: "provider_header",
+          sourceLabel: `z účastníků (role: ${role})`,
+          confidence: 0.85,
+        };
+        break;
+      }
+    }
+  }
 }
 
 // ─── Mixed-section guard ──────────────────────────────────────────────────────

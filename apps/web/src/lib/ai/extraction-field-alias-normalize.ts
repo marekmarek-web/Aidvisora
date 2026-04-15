@@ -404,9 +404,11 @@ function salvageLifecycleRequiredFieldsFromText(
   // ── Contract number / reference salvage ──────────────────────────────────
   if (!valuePresent(ef.contractNumber) && !valuePresent(ef.proposalNumber_or_contractNumber)) {
     const patterns = [
-      /(?:č(?:\.|íslo)\s*(?:smlouvy|návrhu|úvěru|dohody))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:č(?:\.|íslo)\s*(?:smlouvy|návrhu|úvěru|dohody|pojistky))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
       /(?:smlouva\s+č(?:\.|íslo)?|evidenční\s+č(?:\.|íslo)?|ref(?:\.|erenční\s+č(?:\.|íslo)?))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
-      /(?:contract\s*(?:no|number|ref)|agreement\s*(?:no|number)|loan\s*(?:no|number))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:contract\s*(?:no|number|ref)|agreement\s*(?:no|number)|loan\s*(?:no|number)|policy\s*(?:no|number))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:smlouva\s+o\s+(?:úvěru|hypotéce|hypotečním\s+úvěru|spotřebitelském\s+úvěru|doplňkovém\s+penzijním|penzijním\s+připojištění|investičních\s+službách)\s+č(?:\.|íslo)?)[.\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:úvěrová\s+smlouva|hypoteční\s+smlouva|penzijní\s+smlouva)\s+č(?:\.|íslo)?[.\s]*([A-Z0-9][\w\/-]{3,})/i,
     ];
     for (const rx of patterns) {
       const m = blob.match(rx);
@@ -436,8 +438,9 @@ function salvageLifecycleRequiredFieldsFromText(
 
   if (!hasClientName) {
     const clientPatterns = [
-      /(?:investor|klient|účastník|dlužník|žadatel|pojistník|navrhovatel|objednavatel|objednatel|příjemce úvěru)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
-      /(?:jméno\s+a\s+příjmení|celé\s+jméno|full\s*name)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
+      /(?:investor|klient|účastník|dlužník|žadatel|pojistník|navrhovatel|objednavatel|objednatel|příjemce úvěru|upisovatel|zákazník)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
+      /(?:jméno\s+a\s+příjmení|celé\s+jméno|full\s*name|příjmení\s+a\s+jméno)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
+      /(?:smluvní\s+strana|první\s+smluvní\s+strana|klient\s*\/\s*investor|klient\s*\/\s*účastník|klient\s*\/\s*dlužník)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
     ];
     for (const rx of clientPatterns) {
       const m = blob.match(rx);
@@ -481,7 +484,8 @@ function salvageLifecycleRequiredFieldsFromText(
     }
     if (!valuePresent(ef.institutionName)) {
       const providerPatterns = [
-        /(?:poskytovatel|věřitel|banka|správce|penzijní společnost|investiční společnost|instituce|fond)[:\s]+([^\n,]{3,80})/i,
+        /(?:poskytovatel|věřitel|banka|správce|penzijní společnost|investiční společnost|instituce|fond|obchodník s cennými papíry|správcovská společnost|finanční instituce|pojistitel|pojišťovna|pronajímatel|leasingová společnost)[:\s]+([^\n,]{3,80})/i,
+        /(?:druhá\s+smluvní\s+strana|poskytovatel\s+(?:úvěru|služeb|financování))[:\s]+([^\n,]{3,80})/i,
       ];
       for (const rx of providerPatterns) {
         const m = blob.match(rx);
@@ -907,6 +911,9 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "penzijniSpolecnost",
         "fundManager",
         "administrator",
+        "companyName",
+        "spravcovskaSpolecnost",
+        "pensionFundName",
       ]);
       mergeFromAliases(ef, "institutionName", [
         "provider",
@@ -916,6 +923,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "penzijniSpolecnost",
         "pensionFundName",
         "fundManager",
+        "spravcovskaSpolecnost",
       ]);
       // For pension contracts, `insurer` holds the pension company name which was extracted under
       // the insurance vocabulary. Promote its value to `provider`, then suppress `insurer` so
@@ -991,6 +999,11 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "assetManager",
         "investicniSpolecnost",
         "spravce",
+        "obchodnikSCennymPapiry",
+        "securitiesDealer",
+        "managementCompany",
+        "spravcovskaSpolecnost",
+        "companyName",
       ]);
       mergeFromAliases(ef, "institutionName", [
         "provider",
@@ -999,6 +1012,10 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "assetManager",
         "investicniSpolecnost",
         "spravce",
+        "obchodnikSCennymPapiry",
+        "securitiesDealer",
+        "managementCompany",
+        "spravcovskaSpolecnost",
       ]);
       mergeFromAliases(ef, "investorFullName", [
         "fullName",
@@ -1009,6 +1026,9 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "investor",
         "investorJmeno",
         "clientName",
+        "subscriberName",
+        "upisovatel",
+        "zakaznik",
       ]);
       mergeFromAliases(ef, "fullName", [
         "investorFullName",
@@ -1017,6 +1037,7 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "investor",
         "klient",
         "ucastnik",
+        "subscriberName",
       ]);
       mergeFromAliases(ef, "isin", [
         "isinCode",
@@ -1048,7 +1069,16 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "celkovaCastka",
         "amountDue",
       ]);
-      mergeFromAliases(ef, "contractNumber", ["cisloSmlouvy", "smlouvaCislo"]);
+      mergeFromAliases(ef, "contractNumber", [
+        "cisloSmlouvy",
+        "smlouvaCislo",
+        "contractId",
+        "agreementNumber",
+        "subscriptionNumber",
+        "cisloUpisu",
+        "upisCislo",
+        "referenceNumber",
+      ]);
       mergeFromAliases(ef, "intermediaryName", [
         "advisorName",
         "brokerName",
@@ -1488,6 +1518,19 @@ const DESCRIPTIVE_KEY_MAP: Record<string, string> = {
   "Klient/Investor": "investorFullName",
   "Oprávněná osoba": "beneficiary",
   "Obmyšlená osoba": "beneficiary",
+  "Zákazník": "fullName",
+  "Klient / Účastník": "participantFullName",
+  "Klient/Účastník": "participantFullName",
+  "Klient / Dlužník": "borrowerName",
+  "Účastník DPS": "participantFullName",
+  "Účastník smlouvy": "participantFullName",
+  "Upisovatel": "investorFullName",
+  "Správcovská společnost": "provider",
+  "Obchodník s cennými papíry": "provider",
+  "Obchodník": "provider",
+  "Leasingová společnost": "lender",
+  "Financující společnost": "lender",
+  "Pronajímatel": "lender",
   // English descriptive keys
   "client": "fullName",
   "client_name": "fullName",
@@ -1816,6 +1859,102 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   // - Prevents intermediary from containing institution signatories
   // - Resolves fullName / firstName / lastName deduplication
   applyFieldSourcePriorityAndEvidence(envelope);
+  // Final lifecycle cross-population: tagFromParties (inside evidence pass above) may
+  // have populated fullName or institutionName from parties AFTER promoteLifecycleRequiredAliases
+  // already ran. Re-run the lightweight cross-population so domain-specific fields
+  // (investorFullName, participantFullName, borrowerName, provider, lender) and
+  // composite references also benefit from parties-sourced data.
+  finalLifecycleCanonicalPromotion(ef, primary);
+}
+
+/**
+ * Lightweight final pass that ensures canonical required fields used by pre-apply
+ * validation are populated from any available data. Runs AFTER evidence tagging
+ * + tagFromParties so that parties-sourced enrichments propagate correctly.
+ *
+ * Only touches lifecycle document types. No vendor hardcodes.
+ */
+function finalLifecycleCanonicalPromotion(
+  ef: Record<string, ExtractedField>,
+  primary: PrimaryDocumentType,
+): void {
+  const isLifecycle =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement" ||
+    primary === "pension_contract" ||
+    primary === "mortgage_document" ||
+    primary === "consumer_loan_contract" ||
+    primary === "consumer_loan_with_payment_protection" ||
+    primary === "generic_financial_document" ||
+    primary === "life_insurance_contract" ||
+    primary === "life_insurance_final_contract" ||
+    primary === "life_insurance_investment_contract" ||
+    primary === "life_insurance_proposal" ||
+    primary === "nonlife_insurance_contract" ||
+    primary === "liability_insurance_offer";
+  if (!isLifecycle) return;
+
+  const isInvestment =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement";
+  const isPension = primary === "pension_contract";
+  const isLoan =
+    primary === "mortgage_document" ||
+    primary === "consumer_loan_contract" ||
+    primary === "consumer_loan_with_payment_protection";
+
+  // ── Client name: fullName → domain-specific aliases ───────────────────────
+  if (valuePresent(ef.fullName)) {
+    if (isInvestment && !valuePresent(ef.investorFullName)) {
+      ef.investorFullName = cloneCellFrom(ef.fullName!);
+    }
+    if (isPension && !valuePresent(ef.participantFullName)) {
+      ef.participantFullName = cloneCellFrom(ef.fullName!);
+    }
+    if (isLoan && !valuePresent(ef.borrowerName)) {
+      ef.borrowerName = cloneCellFrom(ef.fullName!);
+    }
+  }
+
+  // ── Reverse: domain-specific → fullName ───────────────────────────────────
+  if (!valuePresent(ef.fullName)) {
+    const nameAliases = [
+      "clientFullName", "investorFullName", "participantFullName",
+      "borrowerName", "policyholderName", "policyholder",
+      "clientName", "applicantName", "investorName", "participantName",
+    ];
+    for (const alias of nameAliases) {
+      if (valuePresent(ef[alias])) {
+        ef.fullName = cloneCellFrom(ef[alias]!);
+        break;
+      }
+    }
+  }
+
+  // ── Institution: cross-populate provider/lender/insurer ↔ institutionName ─
+  if (!valuePresent(ef.institutionName)) {
+    const instAliases = ["provider", "insurer", "lender", "bankName", "pensionFundName"];
+    for (const alias of instAliases) {
+      if (valuePresent(ef[alias])) {
+        ef.institutionName = cloneCellFrom(ef[alias]!);
+        break;
+      }
+    }
+  }
+  if (isLoan && !valuePresent(ef.lender) && valuePresent(ef.institutionName)) {
+    ef.lender = cloneCellFrom(ef.institutionName!);
+  }
+  if ((isInvestment || isPension) && !valuePresent(ef.provider) && valuePresent(ef.institutionName)) {
+    ef.provider = cloneCellFrom(ef.institutionName!);
+  }
+
+  // ── Contract number: ensure composite references are filled ────────────────
+  if (!valuePresent(ef.proposalNumber_or_contractNumber) && valuePresent(ef.contractNumber)) {
+    ef.proposalNumber_or_contractNumber = cloneCellFrom(ef.contractNumber!);
+  }
+  if (!valuePresent(ef.contractNumber_or_proposalNumber) && valuePresent(ef.contractNumber)) {
+    ef.contractNumber_or_proposalNumber = cloneCellFrom(ef.contractNumber!);
+  }
 }
 
 // ─── Participant role alias map ───────────────────────────────────────────────

@@ -123,6 +123,8 @@ export function validateBeforeApply(
       ef,
       "policyholderName",
       "fullName",
+      "clientFullName",
+      "investorFullName",
       "investorName",
       "borrowerName",
       "participantFullName",
