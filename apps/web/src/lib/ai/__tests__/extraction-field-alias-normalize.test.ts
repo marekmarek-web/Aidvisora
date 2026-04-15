@@ -252,6 +252,187 @@ describe("applyExtractedFieldAliasNormalizations", () => {
   });
 });
 
+// ─── Lifecycle required fields: contract number / client / partner ─────────────
+// These tests verify that the three fields pre-apply validation checks
+// (contractNumber, fullName/investorName/etc, institutionName/provider/lender)
+// are properly populated across lifecycle document families.
+
+describe("lifecycle required fields — investment docs", () => {
+  it("promotes investorFullName → fullName when LLM sets investorFullName only", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      investorFullName: { value: "Karel Novák", status: "extracted", confidence: 0.85 },
+      provider: { value: "Amundi CR", status: "extracted", confidence: 0.88 },
+      contractNumber: { value: "DIP-2026/42", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.fullName?.value).toBe("Karel Novák");
+    expect(env.extractedFields.institutionName?.value).toBe("Amundi CR");
+  });
+
+  it("promotes provider → institutionName for investment_service_agreement", () => {
+    const env = minimalEnvelope("investment_service_agreement");
+    env.extractedFields = {
+      provider: { value: "Codya investiční společnost, a.s.", status: "extracted", confidence: 0.85 },
+      clientFullName: { value: "Petr Patroch", status: "extracted", confidence: 0.82 },
+      contractNumber: { value: "IS-12345", status: "extracted", confidence: 0.80 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.institutionName?.value).toContain("Codya");
+    expect(env.extractedFields.fullName?.value).toBe("Petr Patroch");
+    expect(env.extractedFields.investorFullName?.value).toBe("Petr Patroch");
+  });
+
+  it("does not use document title as contract number", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      contractNumber: { value: "Smlouva o úpisu cenných papírů", status: "extracted", confidence: 0.7 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.contractNumber?.status).toBe("missing");
+  });
+});
+
+describe("lifecycle required fields — DPS / pension docs", () => {
+  it("populates fullName + participantFullName from accountHolderName", () => {
+    const env = minimalEnvelope("pension_contract");
+    env.extractedFields = {
+      accountHolderName: { value: "Jiří Plachý", status: "extracted", confidence: 0.85 },
+      institutionName: { value: "KB Penzijní společnost, a.s.", status: "extracted", confidence: 0.88 },
+      contractNumber: { value: "DPS-789", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.fullName?.value).toBe("Jiří Plachý");
+    expect(env.extractedFields.participantFullName?.value).toBe("Jiří Plachý");
+    expect(env.extractedFields.provider?.value).toContain("KB Penzijní");
+  });
+
+  it("populates institutionName from pensionCompany alias", () => {
+    const env = minimalEnvelope("pension_contract");
+    env.extractedFields = {
+      pensionCompany: { value: "Conseq penzijní společnost, a.s.", status: "extracted", confidence: 0.85 },
+      fullName: { value: "Jan Novák", status: "extracted", confidence: 0.82 },
+      contractNumber: { value: "DPS-001", status: "extracted", confidence: 0.80 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.provider?.value).toContain("Conseq");
+    expect(env.extractedFields.institutionName?.value).toContain("Conseq");
+  });
+});
+
+describe("lifecycle required fields — loan / mortgage docs", () => {
+  it("promotes lender → institutionName for mortgage_document", () => {
+    const env = minimalEnvelope("mortgage_document");
+    env.extractedFields = {
+      bankName: { value: "Česká spořitelna, a.s.", status: "extracted", confidence: 0.88 },
+      dluznik: { value: "Marie Dvořáková", status: "extracted", confidence: 0.85 },
+      cisloSmlouvy: { value: "HU-2026/1234", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.lender?.value).toContain("spořitelna");
+    expect(env.extractedFields.institutionName?.value).toContain("spořitelna");
+    expect(env.extractedFields.fullName?.value).toBe("Marie Dvořáková");
+    expect(env.extractedFields.contractNumber?.value).toBe("HU-2026/1234");
+  });
+
+  it("promotes creditor → lender + institutionName for consumer_loan_contract", () => {
+    const env = minimalEnvelope("consumer_loan_contract");
+    env.extractedFields = {
+      creditor: { value: "ČSOB, a.s.", status: "extracted", confidence: 0.88 },
+      borrowerName: { value: "Tomáš Svoboda", status: "extracted", confidence: 0.85 },
+      contractId: { value: "SU-999", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.lender?.value).toContain("ČSOB");
+    expect(env.extractedFields.institutionName?.value).toContain("ČSOB");
+    expect(env.extractedFields.fullName?.value).toBe("Tomáš Svoboda");
+    expect(env.extractedFields.contractNumber?.value).toBe("SU-999");
+  });
+});
+
+describe("lifecycle required fields — text salvage", () => {
+  it("salvages contract number from evidence text for investment docs", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      someNotes: {
+        value: "Smlouva číslo INV-2026/42 ze dne 1.3.2026",
+        status: "extracted",
+        confidence: 0.65,
+        evidenceSnippet: "investor: Karel Novák, poskytovatel: Amundi CR, investiční společnost, a.s.",
+      },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.contractNumber?.value).toBe("INV-2026/42");
+  });
+
+  it("salvages institution name from evidence snippet for pension docs", () => {
+    const env = minimalEnvelope("pension_contract");
+    env.extractedFields = {
+      someField: {
+        value: "Doplňkové penzijní spoření",
+        status: "extracted",
+        confidence: 0.6,
+        evidenceSnippet: "KB Penzijní společnost, a.s. - smlouva o DPS, účastník: Jan Plachý",
+      },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.institutionName?.value).toContain("KB Penzijní společnost");
+  });
+
+  it("does not confuse intermediary with client", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      investorFullName: { value: "Karel Novák", status: "extracted", confidence: 0.85 },
+      intermediaryName: { value: "Karel Novák", status: "extracted", confidence: 0.7 },
+      provider: { value: "Test Invest a.s.", status: "extracted", confidence: 0.88 },
+      contractNumber: { value: "DIP-42", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.investorFullName?.value).toBe("Karel Novák");
+    expect(env.extractedFields.intermediaryName?.status).toBe("not_applicable");
+  });
+
+  it("does not confuse institution with client name", () => {
+    const env = minimalEnvelope("pension_contract");
+    env.extractedFields = {
+      fullName: { value: "KB Penzijní společnost, a.s.", status: "extracted", confidence: 0.7 },
+      institutionName: { value: "KB Penzijní společnost, a.s.", status: "extracted", confidence: 0.88 },
+      contractNumber: { value: "DPS-001", status: "extracted", confidence: 0.82 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    // field-source-priority should clear fullName if it's actually an institution
+    // The institution field should stay
+    expect(env.extractedFields.institutionName?.value).toContain("KB Penzijní");
+  });
+});
+
+describe("lifecycle required fields — provider extraction generic", () => {
+  it("extracts institution from text with a.s. / s.r.o. suffix", () => {
+    const env = minimalEnvelope("investment_service_agreement");
+    env.extractedFields = {
+      description: {
+        value: "Tato smlouva je uzavřena mezi Conseq Investment Management, a.s. a investorem",
+        status: "extracted",
+        confidence: 0.6,
+      },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.institutionName?.value).toContain("Conseq");
+  });
+
+  it("does not hardcode specific vendors", () => {
+    const env = minimalEnvelope("investment_subscription_document");
+    env.extractedFields = {
+      provider: { value: "XYZ Hypothetical Invest, a.s.", status: "extracted", confidence: 0.85 },
+      investorFullName: { value: "Test Osoba", status: "extracted", confidence: 0.82 },
+      contractNumber: { value: "XYZ-001", status: "extracted", confidence: 0.80 },
+    };
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.institutionName?.value).toContain("XYZ Hypothetical");
+    expect(env.extractedFields.fullName?.value).toBe("Test Osoba");
+  });
+});
+
 describe("runVerificationPass readability", () => {
   it("skips LOW_EVIDENCE_REQUIRED on text_pdf with good coverage when value present and confidence ok", () => {
     const env = minimalEnvelope("life_insurance_investment_contract");

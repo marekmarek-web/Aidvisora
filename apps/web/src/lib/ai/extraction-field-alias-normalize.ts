@@ -316,7 +316,7 @@ function salvageCanonicalFieldsFromTextishCells(
 
   if (!opts?.skipContractNumberSalvage && !valuePresent(ef.contractNumber)) {
     const contractMatch = blob.match(
-      /(?:pojistná smlouva(?:\s+číslo)?|číslo smlouvy|číslo pojistné smlouvy|contract number|policy number)[:\s]*([A-Z0-9\/-]{5,})/i
+      /(?:pojistná smlouva(?:\s+číslo)?|číslo smlouvy|číslo pojistné smlouvy|číslo návrhu|číslo úvěru|evidenční číslo|číslo dohody|referenční číslo|contract number|policy number|loan number|agreement number|reference number)[:\s]*([A-Z0-9\/-]{4,})/i
     );
     if (contractMatch?.[1]) {
       const candidate = contractMatch[1].trim();
@@ -366,6 +366,202 @@ function salvageCanonicalFieldsFromTextishCells(
         };
       }
     }
+  }
+}
+
+/**
+ * Last-resort salvage for the three lifecycle-required fields that pre-apply
+ * validation checks: contractNumber, client name, and partner/institution name.
+ *
+ * Runs AFTER all alias normalizations and type-specific mappings. Mines the full
+ * text blob from extractedFields + evidence for generic patterns common to
+ * investment, pension, mortgage, and loan documents.
+ *
+ * No vendor hardcodes — patterns are structural (header lines, party blocks, refs).
+ */
+function salvageLifecycleRequiredFieldsFromText(
+  ef: Record<string, ExtractedField>,
+  primary: PrimaryDocumentType,
+): void {
+  const chunks = Object.values(ef)
+    .flatMap((cell) => [asSearchableText(cell?.value), cell?.evidenceSnippet ?? ""])
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  if (chunks.length === 0) return;
+  const blob = chunks.join("\n");
+
+  const isLifecycleDoc =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement" ||
+    primary === "pension_contract" ||
+    primary === "mortgage_document" ||
+    primary === "consumer_loan_contract" ||
+    primary === "consumer_loan_with_payment_protection" ||
+    primary === "generic_financial_document";
+
+  if (!isLifecycleDoc) return;
+
+  // ── Contract number / reference salvage ──────────────────────────────────
+  if (!valuePresent(ef.contractNumber) && !valuePresent(ef.proposalNumber_or_contractNumber)) {
+    const patterns = [
+      /(?:č(?:\.|íslo)\s*(?:smlouvy|návrhu|úvěru|dohody))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:smlouva\s+č(?:\.|íslo)?|evidenční\s+č(?:\.|íslo)?|ref(?:\.|erenční\s+č(?:\.|íslo)?))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+      /(?:contract\s*(?:no|number|ref)|agreement\s*(?:no|number)|loan\s*(?:no|number))[:\s]*([A-Z0-9][\w\/-]{3,})/i,
+    ];
+    for (const rx of patterns) {
+      const m = blob.match(rx);
+      if (m?.[1]) {
+        const candidate = m[1].trim();
+        if (!isPlausibleLabelOnlyValue(candidate) && /\d/.test(candidate)) {
+          ef.contractNumber = {
+            value: candidate,
+            status: "inferred_low_confidence",
+            confidence: 0.62,
+            evidenceSnippet: "[lifecycle_salvage] contract reference from text",
+          };
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Client / person name salvage ──────────────────────────────────────────
+  const hasClientName =
+    valuePresent(ef.fullName) ||
+    valuePresent(ef.clientFullName) ||
+    valuePresent(ef.investorFullName) ||
+    valuePresent(ef.participantFullName) ||
+    valuePresent(ef.borrowerName) ||
+    valuePresent(ef.policyholderName);
+
+  if (!hasClientName) {
+    const clientPatterns = [
+      /(?:investor|klient|účastník|dlužník|žadatel|pojistník|navrhovatel|objednavatel|objednatel|příjemce úvěru)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
+      /(?:jméno\s+a\s+příjmení|celé\s+jméno|full\s*name)[:\s]+([\p{Lu}][\p{Ll}]+(?:\s+[\p{Lu}][\p{Ll}]+){1,3})/u,
+    ];
+    for (const rx of clientPatterns) {
+      const m = blob.match(rx);
+      if (m?.[1]) {
+        const candidate = m[1].trim();
+        if (!isPlausibleLabelOnlyValue(candidate) && candidate.length > 3) {
+          ef.fullName = {
+            value: candidate,
+            status: "inferred_low_confidence",
+            confidence: 0.60,
+            evidenceSnippet: "[lifecycle_salvage] client name from text",
+          };
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Partner / institution / provider name salvage ─────────────────────────
+  const hasPartner =
+    valuePresent(ef.institutionName) ||
+    valuePresent(ef.insurer) ||
+    valuePresent(ef.provider) ||
+    valuePresent(ef.lender) ||
+    valuePresent(ef.bankName);
+
+  if (!hasPartner) {
+    const instMatch = blob.match(
+      /([\p{Lu}][\p{L}\w ]{1,60}(?:a\.s\.|s\.r\.o\.|spořitelna|banka|pojišťovna|investiční společnost|penzijní společnost|stavební spořitelna|Capital|Asset Management|Invest)(?:[,.\s]+a\.s\.)?)/iu
+    );
+    if (instMatch?.[1]) {
+      const candidate = instMatch[1].trim().replace(/[,.\s]+$/, "");
+      if (candidate.length > 3 && !isPlausibleLabelOnlyValue(candidate)) {
+        ef.institutionName = {
+          value: candidate,
+          status: "inferred_low_confidence",
+          confidence: 0.58,
+          evidenceSnippet: "[lifecycle_salvage] institution name from text",
+        };
+      }
+    }
+    if (!valuePresent(ef.institutionName)) {
+      const providerPatterns = [
+        /(?:poskytovatel|věřitel|banka|správce|penzijní společnost|investiční společnost|instituce|fond)[:\s]+([^\n,]{3,80})/i,
+      ];
+      for (const rx of providerPatterns) {
+        const m = blob.match(rx);
+        if (m?.[1]) {
+          const candidate = m[1].trim();
+          if (candidate.length > 3 && !isPlausibleLabelOnlyValue(candidate)) {
+            ef.institutionName = {
+              value: candidate,
+              status: "inferred_low_confidence",
+              confidence: 0.55,
+              evidenceSnippet: "[lifecycle_salvage] provider from text pattern",
+            };
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Final promotion: ensure the specific keys that pre-apply validation checks
+ * (fullName, investorFullName, participantFullName, borrowerName, provider,
+ * institutionName, lender) are populated from any available lifecycle-specific
+ * aliases. Runs AFTER all other normalization as a last-chance fallback.
+ */
+function promoteLifecycleRequiredAliases(
+  ef: Record<string, ExtractedField>,
+  primary: PrimaryDocumentType,
+): void {
+  const isInvestment =
+    primary === "investment_subscription_document" ||
+    primary === "investment_service_agreement";
+  const isPension = primary === "pension_contract";
+  const isLoan =
+    primary === "mortgage_document" ||
+    primary === "consumer_loan_contract" ||
+    primary === "consumer_loan_with_payment_protection";
+
+  // Ensure fullName is populated from any domain-specific name field
+  if (!valuePresent(ef.fullName)) {
+    const nameAliases = [
+      "clientFullName", "investorFullName", "participantFullName",
+      "borrowerName", "policyholderName", "clientName", "applicantName",
+      "investorName", "participantName", "dluznik", "klient",
+    ];
+    for (const alias of nameAliases) {
+      if (valuePresent(ef[alias])) {
+        ef.fullName = cloneCellFrom(ef[alias]!);
+        break;
+      }
+    }
+  }
+
+  // Ensure domain-specific name fields are populated from fullName
+  if (isInvestment && !valuePresent(ef.investorFullName) && valuePresent(ef.fullName)) {
+    ef.investorFullName = cloneCellFrom(ef.fullName!);
+  }
+  if (isPension && !valuePresent(ef.participantFullName) && valuePresent(ef.fullName)) {
+    ef.participantFullName = cloneCellFrom(ef.fullName!);
+  }
+  if (isLoan && !valuePresent(ef.borrowerName) && valuePresent(ef.fullName)) {
+    ef.borrowerName = cloneCellFrom(ef.fullName!);
+  }
+
+  // Ensure institution/partner fields are cross-populated
+  if (!valuePresent(ef.institutionName)) {
+    const instAliases = ["provider", "insurer", "lender", "bankName", "pensionFundName"];
+    for (const alias of instAliases) {
+      if (valuePresent(ef[alias])) {
+        ef.institutionName = cloneCellFrom(ef[alias]!);
+        break;
+      }
+    }
+  }
+  if (isLoan && !valuePresent(ef.lender) && valuePresent(ef.institutionName)) {
+    ef.lender = cloneCellFrom(ef.institutionName!);
+  }
+  if ((isInvestment || isPension) && !valuePresent(ef.provider) && valuePresent(ef.institutionName)) {
+    ef.provider = cloneCellFrom(ef.institutionName!);
   }
 }
 
@@ -476,6 +672,13 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "financialInstitution",
         "veritel",
         "poskytovatelUveru",
+      ]);
+      mergeFromAliases(ef, "institutionName", [
+        "lender",
+        "bankName",
+        "creditor",
+        "loanProvider",
+        "financialInstitution",
       ]);
       mergeFromAliases(ef, "loanAmount", [
         "principal",
@@ -595,6 +798,13 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "hypotecniBanka",
         "poskytovatelHypoteky",
       ]);
+      mergeFromAliases(ef, "institutionName", [
+        "lender",
+        "bankName",
+        "creditor",
+        "mortgageBank",
+        "hypotecniBanka",
+      ]);
       mergeFromAliases(ef, "documentStatus", [
         "documentType",
         "documentKind",
@@ -703,6 +913,9 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
         "insurer",
         "pensionProvider",
         "pensionCompany",
+        "penzijniSpolecnost",
+        "pensionFundName",
+        "fundManager",
       ]);
       // For pension contracts, `insurer` holds the pension company name which was extracted under
       // the insurance vocabulary. Promote its value to `provider`, then suppress `insurer` so
@@ -773,6 +986,14 @@ function applyPrimaryTypeSpecificAliases(primary: PrimaryDocumentType, ef: Recor
       mergeFromAliases(ef, "provider", [
         "institutionName",
         "insurer",
+        "platform",
+        "fundManager",
+        "assetManager",
+        "investicniSpolecnost",
+        "spravce",
+      ]);
+      mergeFromAliases(ef, "institutionName", [
+        "provider",
         "platform",
         "fundManager",
         "assetManager",
@@ -1240,6 +1461,14 @@ const DESCRIPTIVE_KEY_MAP: Record<string, string> = {
   "Investiční smlouva / úpis": "contractNumber",
   "Investiční strategie": "investmentStrategy",
   "Produkt": "productName",
+  "Poskytovatel": "provider",
+  "Správce": "provider",
+  "Penzijní společnost": "provider",
+  "Investiční společnost": "provider",
+  "Fond": "provider",
+  "Instituce": "institutionName",
+  "Poskytovatel úvěru": "lender",
+  "Hypoteční banka": "lender",
   "Rizika a připojištění": "coverages",
   "Druhý pojištěný": "secondInsuredName",
   "2. pojištěný": "secondInsuredName",
@@ -1577,6 +1806,10 @@ export function applyExtractedFieldAliasNormalizations(envelope: DocumentReviewE
   normalizeExtractedFieldFrequencies(ef);
   // Generic lifecycle, segment, institution, and payment-meaning reconciliation (before evidence tiers).
   applySemanticContractUnderstanding(envelope);
+  // Last-resort text-mining for lifecycle-required fields (contract number, client name, institution).
+  salvageLifecycleRequiredFieldsFromText(ef, primary);
+  // Ensure domain-specific required fields are cross-populated so pre-apply validation finds them.
+  promoteLifecycleRequiredAliases(ef, primary);
   // Evidence tagging and source priority enforcement:
   // - Tags each field with evidenceTier + sourceKind
   // - Prevents client fields from containing institution names
