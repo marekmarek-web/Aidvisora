@@ -10,7 +10,15 @@ import {
   paymentSegmentCategory,
   type PaymentSegmentCategory,
 } from "@/lib/products/canonical-payment-read";
-import { formatPaymentFrequencyCs } from "@/lib/client-portal/payment-display-cs";
+import {
+  accountFieldLabel,
+  formatPortalPrimaryAmountLine,
+  institutionDisplayName,
+  isPortalPaymentQrActionEligible,
+  portalFrequencyLabel,
+  portalPaymentsViewKind,
+  variableSymbolDisplay,
+} from "@/lib/client-portal/portal-payments-read-model";
 import { QrPaymentModal } from "../QrPaymentModal";
 
 type ClientPaymentsViewProps = {
@@ -40,20 +48,6 @@ function categoryIcon(cat: PaymentSegmentCategory) {
     default:
       return CreditCard;
   }
-}
-
-function formatPaymentAmountLine(instruction: PaymentInstruction): string {
-  const amount = Number(instruction.amount ?? "");
-  const freq = formatPaymentFrequencyCs(instruction.frequency);
-  const freqSuffix = freq ? ` · ${freq}` : instruction.frequency?.trim() ? ` · ${instruction.frequency.trim()}` : "";
-
-  if (Number.isFinite(amount) && amount > 0) {
-    const cur = instruction.currency?.trim();
-    const suffix = cur && cur.toUpperCase() !== "CZK" ? ` ${cur}` : " Kč";
-    return `${amount.toLocaleString("cs-CZ")}${suffix}${freqSuffix}`;
-  }
-  if (instruction.note?.trim()) return instruction.note;
-  return "Dle smlouvy";
 }
 
 function CopyMiniButton({ text, label }: { text: string; label: string }) {
@@ -93,6 +87,7 @@ export function ClientPaymentsView({
   embeddedInMobileShell = false,
 }: ClientPaymentsViewProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const viewKind = portalPaymentsViewKind(paymentsLoadFailed, paymentInstructions.length);
 
   const selectedPayment = useMemo(() => {
     if (selectedIndex == null) return null;
@@ -103,7 +98,7 @@ export function ClientPaymentsView({
       partnerName: payment.partnerName,
       productName: payment.productName,
       accountNumber: payment.accountNumber,
-      amountLabel: formatPaymentAmountLine(payment),
+      amountLabel: formatPortalPrimaryAmountLine(payment),
       variableSymbol: payment.variableSymbol || payment.contractNumber || null,
       specificSymbol: payment.specificSymbol,
       constantSymbol: payment.constantSymbol,
@@ -122,7 +117,7 @@ export function ClientPaymentsView({
         </div>
       ) : null}
 
-      {paymentsLoadFailed ? (
+      {viewKind === "load_failed" ? (
         <div className="bg-white rounded-[24px] border border-rose-100 shadow-sm p-8 sm:p-10 text-center space-y-3">
           <p className="text-slate-800 font-semibold">Platební údaje se nepodařilo načíst</p>
           <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
@@ -130,7 +125,7 @@ export function ClientPaymentsView({
             nemění.
           </p>
         </div>
-      ) : paymentInstructions.length === 0 ? (
+      ) : viewKind === "empty" ? (
         <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8 sm:p-10 text-center space-y-3">
           <p className="text-slate-600 font-semibold">Žádné platební údaje nejsou v portálu k dispozici</p>
           <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
@@ -152,7 +147,12 @@ export function ClientPaymentsView({
                 variableSymbol: instruction.variableSymbol,
               });
               const rowKey = instruction.paymentSetupId ?? instruction.contractId ?? `${dedup}-${index}`;
-              const vs = instruction.variableSymbol || instruction.contractNumber || "—";
+              const institution = institutionDisplayName(instruction.partnerName);
+              const vs = variableSymbolDisplay(instruction);
+              const freqRow = portalFrequencyLabel(instruction);
+              const qrEligible = isPortalPaymentQrActionEligible(instruction);
+              const acct = instruction.accountNumber?.trim() ?? "";
+              const acctLabel = acct ? accountFieldLabel(acct) : "Účet";
 
               return (
                 <article
@@ -171,7 +171,9 @@ export function ClientPaymentsView({
                         <h3 className="font-bold text-slate-900 text-sm leading-snug mt-1 line-clamp-2">
                           {instruction.productName || segmentLabel(instruction.segment)}
                         </h3>
-                        <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{instruction.partnerName}</p>
+                        {institution ? (
+                          <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{institution}</p>
+                        ) : null}
                       </div>
                     </div>
                     <span
@@ -184,28 +186,39 @@ export function ClientPaymentsView({
                   <div className="p-5 flex-1 flex flex-col gap-4 text-sm">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Částka</p>
-                      <p className="text-lg font-black text-slate-900">{formatPaymentAmountLine(instruction)}</p>
+                      <p className="text-lg font-black text-slate-900">{formatPortalPrimaryAmountLine(instruction)}</p>
                     </div>
 
+                    {freqRow ? (
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Frekvence</p>
+                        <p className="text-sm font-semibold text-slate-800">{freqRow}</p>
+                      </div>
+                    ) : null}
+
                     <div className="space-y-2">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
-                            Účet
-                          </p>
-                          <p className="font-mono text-slate-800 font-bold text-xs break-all">{instruction.accountNumber}</p>
+                      {acct ? (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                              {acctLabel}
+                            </p>
+                            <p className="font-mono text-slate-800 font-bold text-xs break-all">{acct}</p>
+                          </div>
+                          <CopyMiniButton text={acct.replace(/\s+/g, "")} label="Kopírovat" />
                         </div>
-                        <CopyMiniButton text={instruction.accountNumber.replace(/\s+/g, "")} label="Kopírovat" />
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
-                            Variabilní symbol
-                          </p>
-                          <p className="font-bold text-slate-800 text-sm">{vs}</p>
+                      ) : null}
+                      {vs ? (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                              Variabilní symbol
+                            </p>
+                            <p className="font-bold text-slate-800 text-sm">{vs}</p>
+                          </div>
+                          <CopyMiniButton text={vs} label="Kopírovat" />
                         </div>
-                        {vs !== "—" ? <CopyMiniButton text={vs} label="Kopírovat" /> : null}
-                      </div>
+                      ) : null}
                       {instruction.specificSymbol ? (
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                           <div className="min-w-0">
@@ -234,14 +247,16 @@ export function ClientPaymentsView({
                       <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3">{instruction.note}</p>
                     ) : null}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedIndex(index)}
-                      className="mt-auto w-full min-h-[48px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-800 text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <QrCode size={18} />
-                      QR platba
-                    </button>
+                    {qrEligible ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIndex(index)}
+                        className="mt-auto w-full min-h-[48px] rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-800 text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors inline-flex items-center justify-center gap-2"
+                      >
+                        <QrCode size={18} />
+                        QR platba
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               );
