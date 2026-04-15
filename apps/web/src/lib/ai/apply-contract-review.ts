@@ -9,7 +9,7 @@ import {
   contractSegments,
   type ClientPaymentSetupPaymentType,
 } from "db";
-import { eq, and, isNotNull, ilike } from "db";
+import { eq, and, or, isNull, isNotNull, ilike } from "db";
 import * as Sentry from "@sentry/nextjs";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
@@ -206,27 +206,19 @@ async function resolveCatalogFKs(
   if (!partnerName) return { partnerId: null, productId: null };
 
   const partnerRows = await tx
-    .select({ id: partners.id, name: partners.name })
+    .select({ id: partners.id, name: partners.name, tenantId: partners.tenantId })
     .from(partners)
     .where(
       and(
         ilike(partners.name, partnerName.trim()),
         eq(partners.segment, segment),
-        // Global partners have tenantId null; tenant-specific partners override globals.
-        // Prefer tenant-specific match, fallback to global.
+        or(eq(partners.tenantId, tenantId), isNull(partners.tenantId)),
       )
     )
     .limit(10);
 
-  // Prefer tenant-specific partner over global
-  const tenantPartner = partnerRows.find((p) => {
-    const row = p as { id: string; name: string; tenantId?: string | null };
-    return row.tenantId === tenantId;
-  });
-  const globalPartner = partnerRows.find((p) => {
-    const row = p as { id: string; name: string; tenantId?: string | null };
-    return !row.tenantId;
-  });
+  const tenantPartner = partnerRows.find((p) => p.tenantId === tenantId);
+  const globalPartner = partnerRows.find((p) => !p.tenantId);
   const resolvedPartner = tenantPartner ?? globalPartner ?? null;
 
   if (!resolvedPartner) {
@@ -887,6 +879,8 @@ export async function applyContractReview(
         resultPayload.linkedClientId = effectiveContactId;
       }
 
+      let resolvedContractNumberForPaymentSync: string | null = null;
+
       for (const action of draftActions) {
         if (
           (action.type === "create_contract" ||
@@ -1008,6 +1002,8 @@ export async function applyContractReview(
               })
               .where(eq(contracts.id, existingContractId));
             resultPayload.createdContractId = existingContractId;
+            resolvedContractNumberForPaymentSync =
+              preferExistingValue(existingRow?.contractNumber, contractNumberResolved) ?? null;
             continue;
           }
           // Slice 3: Race-safe INSERT — pokud app-level dedupe nic nenašel ale DB unique index
@@ -1099,7 +1095,10 @@ export async function applyContractReview(
               throw insertErr;
             }
           }
-          if (insertedContractId) resultPayload.createdContractId = insertedContractId;
+          if (insertedContractId) {
+            resultPayload.createdContractId = insertedContractId;
+            resolvedContractNumberForPaymentSync = contractNumberResolved;
+          }
         } else if (action.type === "create_task") {
           // Auto-task off: tasks are NOT created automatically during CRM write / publish flow.
           // Advisor can still create tasks manually from the draft actions UI.
@@ -1131,10 +1130,16 @@ export async function applyContractReview(
             continue;
           }
 
-          // Akce pro applyPaymentSetupAction s enforcovaným payloadem
+          const enforcedPaymentPayload = resolvedContractNumberForPaymentSync
+            ? {
+                ...paymentEnforce.enforcedPayload,
+                contractReference: resolvedContractNumberForPaymentSync,
+                contractNumber: resolvedContractNumberForPaymentSync,
+              }
+            : paymentEnforce.enforcedPayload;
           const enforcedPaymentAction = {
             ...action,
-            payload: paymentEnforce.enforcedPayload,
+            payload: enforcedPaymentPayload,
           };
 
           const paymentSetupResult = await applyPaymentSetupAction(tx as unknown as typeof db, {
@@ -1159,6 +1164,20 @@ export async function applyContractReview(
           action.type === "create_notification"
         ) {
           // No DB write - these are UI-only suggestions
+        }
+      }
+
+      if (!isSupporting && !resultPayload.createdContractId && effectiveContactId) {
+        const hasContractAction = draftActions.some(
+          (a) =>
+            a.type === "create_contract" ||
+            a.type === "create_or_update_contract_record" ||
+            a.type === "create_or_update_contract_production",
+        );
+        if (hasContractAction) {
+          throw new Error(
+            "Aplikace do CRM: smlouva/produkt nebyl vytvořen — downstream artefakt chybí.",
+          );
         }
       }
     });

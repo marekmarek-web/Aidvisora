@@ -522,14 +522,31 @@ function buildClientMatchDraftAction(
   }
 
   if (verdict === "existing_match" || verdict === "near_match") {
+    if (!top?.clientId) {
+      return {
+        type: "create_new_client",
+        label: "Vytvořit nového klienta",
+        payload: {
+          firstName: legacy.client?.firstName ?? "",
+          lastName: legacy.client?.lastName ?? "",
+          fullName: legacy.client?.fullName,
+          email: legacy.client?.email,
+          phone: legacy.client?.phone,
+          birthDate: legacy.client?.birthDate,
+          personalId: legacy.client?.personalId,
+          companyId: legacy.client?.companyId,
+          address: legacy.client?.address,
+        },
+      };
+    }
     return {
       type: "link_existing_client",
       label: verdict === "existing_match" ? "Propojit s klientem" : "Potvrdit klienta",
       payload: {
-        clientId: top?.clientId ?? null,
-        displayName: top?.displayName ?? null,
-        score: top?.score ?? null,
-        reasons: top?.reasons ?? [],
+        clientId: top.clientId,
+        displayName: top.displayName ?? null,
+        score: top.score ?? null,
+        reasons: top.reasons ?? [],
         verdict,
       },
     };
