@@ -654,9 +654,9 @@ function NotesVisionBoardInner({
           background-image: radial-gradient(var(--wp-canvas-dot-color) 1.5px, transparent 0);
           background-size: clamp(18px, 1.75cqw, 28px) clamp(18px, 1.75cqw, 28px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-dot-grid {
-            background-size: clamp(12px, 2cqw, 22px) clamp(12px, 2cqw, 22px);
+            background-size: clamp(10px, 1.65cqw, 18px) clamp(10px, 1.65cqw, 18px);
           }
         }
         @container (min-width: 1600px) {
@@ -672,15 +672,16 @@ function NotesVisionBoardInner({
         /* Board cards: size/density scales with container; positions stay %-based (0–1 units). */
         .notes-board-card {
           box-sizing: border-box;
-          width: min(100%, clamp(200px, 26cqw, 340px));
-          max-width: min(100%, 340px);
-          min-height: min(11.5rem, 40cqw);
+          width: min(100%, clamp(188px, 24cqw, 300px));
+          max-width: min(100%, 300px);
+          min-height: min(10.75rem, 38cqw);
         }
-        @container (max-width: 1024px) {
+        /* Notebook / běžný desktop: board container často 1100–1400px — dřív max 1024px minulý tier. */
+        @container (max-width: 1440px) {
           .notes-board-card {
-            width: min(100%, clamp(168px, 30cqw, 260px));
-            max-width: min(100%, 260px);
-            min-height: min(9.25rem, 46cqw);
+            width: min(100%, clamp(136px, 24cqw, 212px));
+            max-width: min(100%, 212px);
+            min-height: min(7.5rem, 36cqw);
           }
         }
         @container (min-width: 1600px) {
@@ -696,11 +697,11 @@ function NotesVisionBoardInner({
           justify-content: space-between;
           border-bottom: 1px solid var(--wp-surface-card-border);
           background: color-mix(in srgb, var(--wp-surface-muted) 90%, transparent);
-          padding: 0.625rem 1rem;
+          padding: 0.5625rem 0.875rem;
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-card-header {
-            padding: 0.5rem 0.75rem;
+            padding: 0.4rem 0.625rem;
           }
         }
         @container (min-width: 1600px) {
@@ -709,11 +710,11 @@ function NotesVisionBoardInner({
           }
         }
         .notes-board-card-body {
-          padding: clamp(0.75rem, 2.2cqw, 1.125rem);
+          padding: clamp(0.6875rem, 2cqw, 1rem);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-card-body {
-            padding: clamp(0.5rem, 2.4cqw, 0.875rem);
+            padding: clamp(0.375rem, 2cqw, 0.6875rem);
           }
         }
         @container (min-width: 1600px) {
@@ -725,137 +726,137 @@ function NotesVisionBoardInner({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: clamp(0.5rem, 1.6cqw, 0.875rem);
-          gap: 0.375rem;
+          margin-bottom: clamp(0.4375rem, 1.45cqw, 0.75rem);
+          gap: 0.3125rem;
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-meta-row {
-            margin-bottom: clamp(0.375rem, 1.8cqw, 0.625rem);
+            margin-bottom: clamp(0.25rem, 1.5cqw, 0.5rem);
           }
         }
         .notes-board-card-title {
           font-weight: 700;
-          line-height: 1.25;
-          margin-bottom: 0.5rem;
-          padding-right: 0.5rem;
+          line-height: 1.22;
+          margin-bottom: 0.4375rem;
+          padding-right: 0.4375rem;
           color: var(--wp-text);
-          font-size: clamp(0.9375rem, 2.8cqw, 1.125rem);
+          font-size: clamp(0.875rem, 2.6cqw, 1.0625rem);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-card-title {
-            font-size: clamp(0.8125rem, 3cqw, 1rem);
-            margin-bottom: 0.375rem;
+            font-size: clamp(0.75rem, 2.75cqw, 0.9375rem);
+            margin-bottom: 0.3125rem;
           }
         }
         .notes-board-client-row {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          margin-bottom: clamp(0.5rem, 1.6cqw, 0.875rem);
+          gap: 0.4375rem;
+          margin-bottom: clamp(0.4375rem, 1.45cqw, 0.75rem);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-client-row {
-            margin-bottom: clamp(0.375rem, 1.8cqw, 0.625rem);
+            margin-bottom: clamp(0.25rem, 1.5cqw, 0.5rem);
           }
         }
         .notes-board-body-stack {
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
+          gap: 0.625rem;
           border-top: 1px solid var(--wp-surface-card-border);
-          padding-top: 0.75rem;
+          padding-top: 0.625rem;
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-body-stack {
-            gap: 0.5rem;
-            padding-top: 0.5rem;
+            gap: 0.375rem;
+            padding-top: 0.4375rem;
           }
         }
         .notes-board-body-text {
           color: var(--wp-text-secondary);
-          line-height: 1.625;
+          line-height: 1.5;
           font-weight: 500;
-          font-size: clamp(11px, 2.6cqw, 13px);
+          font-size: clamp(10.5px, 2.45cqw, 12.5px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-body-text {
-            font-size: clamp(10px, 2.8cqw, 12px);
+            font-size: clamp(9.5px, 2.55cqw, 11px);
           }
         }
         .notes-board-dalsi-box {
           background: rgb(255 251 235 / 0.5);
           border: 1px solid rgb(254 243 199);
-          border-radius: 0.5rem;
-          padding: clamp(0.5rem, 1.8cqw, 0.75rem);
+          border-radius: 0.375rem;
+          padding: clamp(0.4375rem, 1.65cqw, 0.6875rem);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-dalsi-box {
-            padding: clamp(0.375rem, 2cqw, 0.625rem);
+            padding: clamp(0.3125rem, 1.75cqw, 0.5rem);
           }
         }
         .notes-board-dalsi-head {
           display: flex;
           align-items: center;
-          gap: 0.375rem;
+          gap: 0.3125rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.025em;
+          letter-spacing: 0.02em;
           color: rgb(180 83 9);
-          margin-bottom: 0.25rem;
-          font-size: clamp(9px, 2.2cqw, 12px);
+          margin-bottom: 0.1875rem;
+          font-size: clamp(8.5px, 2.05cqw, 11px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-dalsi-head {
-            font-size: clamp(8px, 2.4cqw, 11px);
-            margin-bottom: 0.125rem;
-            gap: 0.25rem;
+            font-size: clamp(7.5px, 2.15cqw, 10px);
+            margin-bottom: 0.1rem;
+            gap: 0.1875rem;
           }
         }
         .notes-board-dalsi-text {
           color: rgb(120 53 15);
-          line-height: 1.625;
+          line-height: 1.5;
           font-weight: 500;
-          font-size: clamp(11px, 2.6cqw, 13px);
+          font-size: clamp(10.5px, 2.45cqw, 12.5px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-dalsi-text {
-            font-size: clamp(10px, 2.8cqw, 12px);
+            font-size: clamp(9.5px, 2.55cqw, 11px);
           }
         }
         .notes-board-chip {
-          font-size: clamp(9px, 2.2cqw, 10px);
+          font-size: clamp(8.5px, 2.05cqw, 9.5px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-chip {
-            font-size: clamp(8px, 2.5cqw, 9px);
+            font-size: clamp(7.5px, 2.15cqw, 8.5px);
           }
         }
         .notes-board-date {
           font-weight: 700;
           color: var(--wp-text-tertiary);
-          font-size: clamp(10px, 2.4cqw, 12px);
+          font-size: clamp(9.5px, 2.25cqw, 11.5px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-date {
-            font-size: clamp(9px, 2.6cqw, 11px);
+            font-size: clamp(8.5px, 2.35cqw, 10.5px);
           }
         }
         .notes-board-contact-name {
           font-weight: 700;
           color: var(--wp-text-secondary);
-          font-size: clamp(11px, 2.5cqw, 14px);
+          font-size: clamp(10.5px, 2.35cqw, 13px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-contact-name {
-            font-size: clamp(10px, 2.7cqw, 12px);
+            font-size: clamp(9.5px, 2.45cqw, 11px);
           }
         }
         .notes-board-pipeline-link {
-          font-size: clamp(9px, 2.2cqw, 11px);
+          font-size: clamp(8.5px, 2.05cqw, 10.5px);
         }
-        @container (max-width: 1024px) {
+        @container (max-width: 1440px) {
           .notes-board-pipeline-link {
-            font-size: clamp(8px, 2.4cqw, 10px);
+            font-size: clamp(7.5px, 2.15cqw, 9.5px);
           }
         }
         .notes-no-scrollbar::-webkit-scrollbar { display: none; }
@@ -1091,7 +1092,7 @@ function NotesVisionBoardInner({
                   {contentTitle(note.content)}
                 </h3>
                 {note.opportunityId ? (
-                  <div className="mb-[clamp(0.5rem,1.6cqw,0.75rem)]">
+                  <div className="mb-[clamp(0.25rem,1.25cqw,0.5rem)]">
                     <Link
                       href={`/portal/pipeline/${note.opportunityId}`}
                       onClick={(e) => e.stopPropagation()}
