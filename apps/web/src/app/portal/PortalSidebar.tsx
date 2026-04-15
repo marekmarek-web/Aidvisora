@@ -482,7 +482,7 @@ export function PortalSidebar({
         {/* Header – collapsed: mark; expanded: full logo → public/logos */}
         <div
           className={[
-            "h-24 flex items-center justify-between flex-shrink-0 border-b px-5 md:px-6",
+            "flex h-20 min-h-[5rem] items-center justify-between flex-shrink-0 border-b px-4 md:h-[4.5rem] md:min-h-[4.5rem] md:px-5",
             isDark ? "border-white/5" : "border-[color:var(--wp-surface-card-border)]/50",
           ].join(" ")}
         >
@@ -505,7 +505,7 @@ export function PortalSidebar({
                 key="logo-big"
                 src="/logos/Aidvisora%20logo%20new.png"
                 alt="Aidvisora"
-                className="h-16 max-h-16 w-auto max-w-full object-contain object-left flex-shrink-0"
+                className="h-14 max-h-14 w-auto max-w-full object-contain object-left flex-shrink-0"
                 style={isDark ? { filter: "brightness(0) invert(1)" } : undefined}
               />
             )}
@@ -524,7 +524,7 @@ export function PortalSidebar({
                 className={[
                   "hidden md:flex h-8 w-8 shrink-0 items-center justify-center transition-all",
                   contentCollapsed
-                    ? "absolute -right-4 top-8 z-50 rounded-full bg-indigo-600 text-white shadow-lg hover:scale-110"
+                    ? "absolute -right-4 top-7 z-50 rounded-full bg-indigo-600 text-white shadow-lg hover:scale-110"
                     : [
                         "rounded-full border border-transparent",
                         isDark
@@ -563,7 +563,7 @@ export function PortalSidebar({
 
         {/* Search – main banner txt: py-5, rounded-[16px], Command + K */}
         {!contentCollapsed && (
-          <div className="relative z-10 flex-shrink-0 px-5 py-5 transition-all duration-300 md:px-6">
+          <div className="relative z-10 flex-shrink-0 px-4 py-3 transition-all duration-300 md:px-5 md:py-3.5">
             <div className="relative">
               <Search
                 size={18}
@@ -575,7 +575,7 @@ export function PortalSidebar({
                 placeholder="Hledat v menu..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-h-[48px] w-full rounded-2xl border border-[color:var(--wp-sidebar-search-border)] bg-[color:var(--wp-sidebar-search-bg)] py-3 pl-11 pr-16 text-sm font-semibold text-[color:var(--wp-sidebar-search-text)] outline-none transition-all placeholder:font-medium placeholder:text-[color:var(--wp-sidebar-search-placeholder)] focus:border-[color:var(--wp-sidebar-search-focus-border)] focus:bg-[color:var(--wp-sidebar-search-focus-bg)] focus:ring-4 focus:ring-[color:var(--wp-sidebar-search-focus-ring)]"
+                className="min-h-[44px] w-full rounded-2xl border border-[color:var(--wp-sidebar-search-border)] bg-[color:var(--wp-sidebar-search-bg)] py-2.5 pl-11 pr-16 text-sm font-semibold text-[color:var(--wp-sidebar-search-text)] outline-none transition-all placeholder:font-medium placeholder:text-[color:var(--wp-sidebar-search-placeholder)] focus:border-[color:var(--wp-sidebar-search-focus-border)] focus:bg-[color:var(--wp-sidebar-search-focus-bg)] focus:ring-4 focus:ring-[color:var(--wp-sidebar-search-focus-ring)]"
                 aria-label="Hledat v menu"
               />
               <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-50">
@@ -587,7 +587,7 @@ export function PortalSidebar({
         )}
 
         {/* Nav – sekce, specialBg, AI položka, D&D */}
-        <nav className="flex-1 space-y-6 overflow-y-auto pb-6 pt-2 hide-scrollbar">
+        <nav className="flex-1 space-y-4 overflow-y-auto pb-5 pt-2 hide-scrollbar md:space-y-5">
           {filteredSections.map((group, groupIdx) => (
             <div
               key={group.id}

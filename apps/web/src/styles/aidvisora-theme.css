@@ -272,7 +272,8 @@
   }
 }
 
-@media (min-width: 1536px) {
+/* Plné „uvolněné“ tokeny až na velmi širokém viewportu — při 1536px dřív vypadalo UI zase nafoukle. */
+@media (min-width: 1920px) {
   :root {
     --wp-space-1: 4px;
     --wp-space-2: 8px;

@@ -77,6 +77,27 @@
     overflow: hidden;
     overscroll-behavior: none;
   }
+
+  /**
+   * Viditelná hustota na desktopu (100% zoom v Chrome): Tailwind `p-*`, `gap-*`, `text-*` jsou v rem.
+   * Bez této úpravy mění jen `--wp-space-*`, které většina obrazovek vůbec nepoužívá.
+   * Mobil <768px beze změny; velmi široké okno mírně uvolníme; od ~1920px téměř původní měřítko.
+   */
+  @media (min-width: 768px) {
+    html {
+      font-size: 89%;
+    }
+  }
+  @media (min-width: 1536px) {
+    html {
+      font-size: 92%;
+    }
+  }
+  @media (min-width: 1920px) {
+    html {
+      font-size: 100%;
+    }
+  }
 }
 
 @layer utilities {
