@@ -215,7 +215,10 @@ function PortalShellInner({
   const router = useRouter();
   const pathname = usePathname();
   /** AI Review workspace (list + detail) — dedicated workspace without portal chrome (header, search, +Nový). */
-  const isAiReviewWorkspace = /^\/portal\/contracts\/review(?:\/[^/]+)?\/?$/.test(pathname);
+  const isAiReviewWorkspace =
+    pathname === "/portal/contracts/review" ||
+    pathname === "/portal/contracts/review/" ||
+    /^\/portal\/contracts\/review\/[^/]+\/?$/.test(pathname);
   /** Obchodní nástěnka — bez globálního top baru (search, +Nový, profil). */
   const hidePortalTopHeader = pathname === "/portal/pipeline";
   const { hasSharedFiles } = useShareIntent();
