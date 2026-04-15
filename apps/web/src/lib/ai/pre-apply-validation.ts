@@ -106,7 +106,13 @@ export function validateBeforeApply(
 
   // ── Rule 1: contractNumber required for binding lifecycles ─────────────────
   if (!isSupporting && lifecycle && LIFECYCLE_REQUIRES_CONTRACT_NUMBER.has(lifecycle)) {
-    const contractNumber = fieldValue(ef, "contractNumber", "proposalNumber", "proposalNumber_or_contractNumber");
+    const contractNumber = fieldValue(
+      ef,
+      "contractNumber", "proposalNumber", "proposalNumber_or_contractNumber",
+      "contractNumber_or_proposalNumber", "existingPolicyNumber",
+      "accountOrReference", "referenceNumber", "businessCaseNumber",
+      "loanContractNumber", "policyNumber",
+    );
     if (!contractNumber) {
       issues.push({
         rule: "contract_number_required",
@@ -122,6 +128,7 @@ export function validateBeforeApply(
     const holder = fieldValue(
       ef,
       "policyholderName",
+      "policyholder",
       "fullName",
       "clientFullName",
       "investorFullName",
@@ -130,7 +137,9 @@ export function validateBeforeApply(
       "participantFullName",
       "participantName",
       "clientName",
-      "applicantName"
+      "applicantName",
+      "customerName",
+      "customer",
     );
     if (!holder) {
       issues.push({
@@ -152,7 +161,11 @@ export function validateBeforeApply(
       "lender",
       "institutionName",
       "provider",
-      "pensionFundName"
+      "pensionFundName",
+      "companyName",
+      "platform",
+      "fundManager",
+      "assetManager",
     );
     if (!partner) {
       issues.push({

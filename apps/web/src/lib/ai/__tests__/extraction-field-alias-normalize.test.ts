@@ -630,3 +630,52 @@ describe("runVerificationPass readability", () => {
     expect(warnings.filter((w) => w.code === "LOW_EVIDENCE_REQUIRED")).toHaveLength(0);
   });
 });
+
+describe("salvageLifecycleRequiredFieldsFromText — insurance document types", () => {
+  it("salvages contractNumber for life_insurance_contract from evidence snippets", () => {
+    const env = minimalEnvelope("life_insurance_contract");
+    env.extractedFields = {
+      productName: {
+        value: "Flexi životní pojištění",
+        status: "extracted",
+        confidence: 0.9,
+        evidenceSnippet: "Pojistná smlouva číslo INS998877. Pojistník: Karel Dvořák",
+      },
+    } as never;
+    applyExtractedFieldAliasNormalizations(env);
+    const ef = env.extractedFields as Record<string, { value?: unknown }>;
+    expect(ef.contractNumber?.value).toBeTruthy();
+  });
+
+  it("salvages client name for nonlife_insurance_contract from evidence snippets", () => {
+    const env = minimalEnvelope("nonlife_insurance_contract");
+    env.extractedFields = {
+      productName: {
+        value: "Autopojištění Optimum",
+        status: "extracted",
+        confidence: 0.85,
+        evidenceSnippet: "Číslo smlouvy: NP123456 pojistník: Marie Nováková Pojišťovna: Kooperativa",
+      },
+    } as never;
+    applyExtractedFieldAliasNormalizations(env);
+    const ef = env.extractedFields as Record<string, { value?: unknown }>;
+    const hasClient =
+      ef.policyholderName?.value || ef.fullName?.value || ef.clientFullName?.value;
+    expect(hasClient).toBeTruthy();
+  });
+
+  it("does NOT salvage for non-lifecycle document types", () => {
+    const env = minimalEnvelope("payroll_statement" as never);
+    env.extractedFields = {
+      someField: {
+        value: "data",
+        status: "extracted",
+        confidence: 0.9,
+        evidenceSnippet: "Smlouva číslo: X999999 Pojistník: Test Test",
+      },
+    } as never;
+    applyExtractedFieldAliasNormalizations(env);
+    const ef = env.extractedFields as Record<string, { value?: unknown }>;
+    expect(ef.contractNumber?.value).toBeUndefined();
+  });
+});

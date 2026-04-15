@@ -70,7 +70,7 @@ function resolveDisplayStatus(
   if (!cell) return undefined;
   const s = cell.status;
   if (s === "extracted" || s === "found") return "Nalezeno";
-  if (s === "inferred" || s === "derived") return "Odvozeno";
+  if (s === "inferred" || s === "derived" || s === "inferred_low_confidence") return "Odvozeno";
   if (s === "missing" || s === "not_found" || !cell.value) return "Chybí";
   // Fallback: pokud existuje evidenceTier
   if (cell.evidenceTier === "direct") return "Nalezeno";
@@ -166,6 +166,11 @@ const CONTACT_PAYLOAD_FIELD_MAP: Record<string, string> = {
   street: "address",
   city: "address",
   zip: "address",
+  idCardNumber: "idCardNumber",
+  idCardIssuedBy: "idCardIssuedBy",
+  idCardValidUntil: "idCardValidUntil",
+  idCardIssuedAt: "idCardIssuedAt",
+  generalPractitioner: "generalPractitioner",
 };
 
 const PAYMENT_PAYLOAD_FIELD_MAP: Record<string, string> = {

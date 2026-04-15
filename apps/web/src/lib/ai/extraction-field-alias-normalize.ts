@@ -397,7 +397,13 @@ function salvageLifecycleRequiredFieldsFromText(
     primary === "mortgage_document" ||
     primary === "consumer_loan_contract" ||
     primary === "consumer_loan_with_payment_protection" ||
-    primary === "generic_financial_document";
+    primary === "generic_financial_document" ||
+    primary === "life_insurance_contract" ||
+    primary === "life_insurance_final_contract" ||
+    primary === "life_insurance_investment_contract" ||
+    primary === "life_insurance_proposal" ||
+    primary === "nonlife_insurance_contract" ||
+    primary === "liability_insurance_offer";
 
   if (!isLifecycleDoc) return;
 

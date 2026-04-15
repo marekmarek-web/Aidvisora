@@ -390,6 +390,20 @@ export function buildContactMergePayloadFromExtractedEnvelope(
     personalId: c.personalId,
     companyId: c.companyId,
     address: c.address,
+    idCardNumber:
+      fieldValue(maybeEnvelope, "idCardNumber") ??
+      fieldValue(maybeEnvelope, "documentNumber") ?? "",
+    idCardIssuedBy:
+      fieldValue(maybeEnvelope, "idCardIssuedBy") ??
+      fieldValue(maybeEnvelope, "issuingAuthority") ?? "",
+    idCardValidUntil:
+      fieldValue(maybeEnvelope, "idCardValidUntil") ??
+      fieldValue(maybeEnvelope, "expiryDate") ?? "",
+    idCardIssuedAt:
+      fieldValue(maybeEnvelope, "idCardIssuedAt") ??
+      fieldValue(maybeEnvelope, "issuedDate") ?? "",
+    generalPractitioner:
+      fieldValue(maybeEnvelope, "generalPractitioner") ?? "",
   };
 }
 
@@ -492,11 +506,41 @@ export type DraftActionMatchContext = {
   candidates?: Array<{ clientId: string; displayName?: string; score: number; reasons?: string[] }>;
 };
 
+function buildNewClientPayload(
+  legacy: ReturnType<typeof toLegacyProjection>,
+  envelope?: DocumentReviewEnvelope | null,
+): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    firstName: legacy.client?.firstName ?? "",
+    lastName: legacy.client?.lastName ?? "",
+    fullName: legacy.client?.fullName,
+    email: legacy.client?.email,
+    phone: legacy.client?.phone,
+    birthDate: legacy.client?.birthDate,
+    personalId: legacy.client?.personalId,
+    companyId: legacy.client?.companyId,
+    address: legacy.client?.address,
+  };
+  if (envelope) {
+    const fv = (k: string) => {
+      const v = fieldValue(envelope, k);
+      return v != null ? String(v).trim() : "";
+    };
+    base.idCardNumber = fv("idCardNumber") || fv("documentNumber");
+    base.idCardIssuedBy = fv("idCardIssuedBy") || fv("issuingAuthority");
+    base.idCardValidUntil = fv("idCardValidUntil") || fv("expiryDate");
+    base.idCardIssuedAt = fv("idCardIssuedAt") || fv("issuedDate");
+    base.generalPractitioner = fv("generalPractitioner");
+  }
+  return base;
+}
+
 function buildClientMatchDraftAction(
   verdict: "existing_match" | "near_match" | "ambiguous_match" | "no_match" | null | undefined,
   candidates: DraftActionMatchContext["candidates"],
   legacy: ReturnType<typeof toLegacyProjection>,
   isSupportingDoc: boolean,
+  envelope?: DocumentReviewEnvelope | null,
 ): DraftActionBase | null {
   // Supporting/info documents must never emit create-client flow.
   if (isSupportingDoc) return null;
@@ -507,17 +551,7 @@ function buildClientMatchDraftAction(
     return {
       type: "create_new_client",
       label: "Vytvořit nového klienta",
-      payload: {
-        firstName: legacy.client?.firstName ?? "",
-        lastName: legacy.client?.lastName ?? "",
-        fullName: legacy.client?.fullName,
-        email: legacy.client?.email,
-        phone: legacy.client?.phone,
-        birthDate: legacy.client?.birthDate,
-        personalId: legacy.client?.personalId,
-        companyId: legacy.client?.companyId,
-        address: legacy.client?.address,
-      },
+      payload: buildNewClientPayload(legacy, envelope),
     };
   }
 
@@ -526,17 +560,7 @@ function buildClientMatchDraftAction(
       return {
         type: "create_new_client",
         label: "Vytvořit nového klienta",
-        payload: {
-          firstName: legacy.client?.firstName ?? "",
-          lastName: legacy.client?.lastName ?? "",
-          fullName: legacy.client?.fullName,
-          email: legacy.client?.email,
-          phone: legacy.client?.phone,
-          birthDate: legacy.client?.birthDate,
-          personalId: legacy.client?.personalId,
-          companyId: legacy.client?.companyId,
-          address: legacy.client?.address,
-        },
+        payload: buildNewClientPayload(legacy, envelope),
       };
     }
     return {
@@ -595,6 +619,7 @@ export function buildAllDraftActions(
       matchContext?.candidates,
       legacy,
       isSupportingDoc,
+      maybeEnvelope,
     );
     if (clientAction) actions.push(clientAction);
   }

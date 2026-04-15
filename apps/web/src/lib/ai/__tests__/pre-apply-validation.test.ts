@@ -157,6 +157,56 @@ describe("validateBeforeApply", () => {
   });
 });
 
+describe("validateBeforeApply — alias-expanded fields", () => {
+  it("accepts policyNumber as contractNumber alias", () => {
+    const env = makeEnvelope({
+      ef: {
+        policyNumber: { value: "POL-999", status: "extracted" },
+        policyholderName: { value: "Jan Novák", status: "extracted" },
+        partnerName: { value: "Allianz", status: "extracted" },
+      },
+    });
+    const result = validateBeforeApply(env, "ZP");
+    expect(result.issues.find((i) => i.rule === "contract_number_required")).toBeUndefined();
+  });
+
+  it("accepts customerName as policyholder alias", () => {
+    const env = makeEnvelope({
+      ef: {
+        contractNumber: { value: "C-123", status: "extracted" },
+        customerName: { value: "Eva Malá", status: "extracted" },
+        insurer: { value: "ČSOB", status: "extracted" },
+      },
+    });
+    const result = validateBeforeApply(env, "ZP");
+    expect(result.issues.find((i) => i.rule === "policyholder_name_required")).toBeUndefined();
+  });
+
+  it("accepts companyName as institution alias", () => {
+    const env = makeEnvelope({
+      ef: {
+        contractNumber: { value: "C-456", status: "extracted" },
+        policyholderName: { value: "Petr Novotný", status: "extracted" },
+        companyName: { value: "NN Životní pojišťovna", status: "extracted" },
+      },
+    });
+    const result = validateBeforeApply(env, "ZP");
+    expect(result.issues.find((i) => i.rule === "institution_name_required")).toBeUndefined();
+  });
+
+  it("rejects missing value even with alias key present", () => {
+    const env = makeEnvelope({
+      ef: {
+        policyNumber: { value: "", status: "missing" },
+        policyholderName: { value: "Jan", status: "extracted" },
+        insurer: { value: "XYZ", status: "extracted" },
+      },
+    });
+    const result = validateBeforeApply(env, "ZP");
+    expect(result.issues.find((i) => i.rule === "contract_number_required")).toBeDefined();
+  });
+});
+
 describe("lifecycle helpers", () => {
   it("isBindingLifecycle returns true for final_contract", () => {
     expect(isBindingLifecycle("final_contract")).toBe(true);

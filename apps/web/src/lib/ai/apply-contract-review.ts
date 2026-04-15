@@ -37,6 +37,7 @@ import {
 } from "@/lib/ai/apply-policy-enforcement";
 import { validateBeforeApply } from "./pre-apply-validation";
 import type { DocumentReviewEnvelope } from "./document-review-types";
+import { applyExtractedFieldAliasNormalizations } from "./extraction-field-alias-normalize";
 import {
   resolveFieldMerge,
   type ContactSourceKind,
@@ -701,6 +702,11 @@ export async function applyContractReview(
 
   // ── Slice 1: Pre-apply validation — runs BEFORE transaction boundary ──
   const extractedEnvelope = (row.extractedPayload as DocumentReviewEnvelope | null) ?? ({} as DocumentReviewEnvelope);
+  // Re-run alias normalization to ensure all promotions/salvage run with latest logic,
+  // even for payloads stored by an older pipeline version.
+  if (extractedEnvelope.documentClassification && extractedEnvelope.extractedFields) {
+    applyExtractedFieldAliasNormalizations(extractedEnvelope);
+  }
   const segmentForValidation = validateSegment(
     (row.extractedPayload as Record<string, unknown> | null)?.segment as string | undefined
   );
