@@ -86,8 +86,16 @@ function normalizeOnePerson(raw: unknown, role: PortfolioPersonRole): PortfolioP
         : typeof r.rc === "string"
           ? r.rc.trim()
           : undefined;
-  if (!name && !birthDate && !personalId) return null;
-  return { role, name, birthDate, personalId };
+  const idCardNumber =
+    typeof r.idCardNumber === "string"
+      ? r.idCardNumber.trim()
+      : typeof r.op === "string"
+        ? r.op.trim()
+        : typeof r.documentNumber === "string"
+          ? r.documentNumber.trim()
+          : undefined;
+  if (!name && !birthDate && !personalId && !idCardNumber) return null;
+  return { role, name, birthDate, personalId, ...(idCardNumber ? { idCardNumber } : {}) };
 }
 
 function collectPersonsFromParties(parties: unknown): PortfolioPersonEntry[] {
@@ -244,7 +252,7 @@ function mergePersonLists(lists: PortfolioPersonEntry[][]): PortfolioPersonEntry
   const out: PortfolioPersonEntry[] = [];
   for (const list of lists) {
     for (const p of list) {
-      const key = `${p.role}|${p.name ?? ""}|${p.personalId ?? ""}|${p.birthDate ?? ""}`;
+      const key = `${p.role}|${p.name ?? ""}|${p.personalId ?? ""}|${p.birthDate ?? ""}|${p.idCardNumber ?? ""}`;
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(p);

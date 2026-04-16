@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ContactContractsOverview } from "./ContactContractsOverview";
-import { ContactManualPaymentSection } from "./ContactManualPaymentSection";
-import { ManualPaymentSetupModal } from "./ManualPaymentSetupModal";
+import { ManualPaymentSetupModal, type ManualPaymentSetupPrefill } from "./ManualPaymentSetupModal";
 
 export function ContactPortfolioWithPaymentModal({
   contactId,
@@ -12,14 +11,17 @@ export function ContactPortfolioWithPaymentModal({
   contactId: string;
   baseQueryNoTab: string;
 }) {
+  const [modalPrefill, setModalPrefill] = useState<ManualPaymentSetupPrefill | undefined>();
   const [modalOpen, setModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const openModal = useCallback(() => setModalOpen(true), []);
+  const openModal = useCallback((prefill?: ManualPaymentSetupPrefill) => {
+    setModalPrefill(prefill);
+    setModalOpen(true);
+  }, []);
   const closeModal = useCallback(() => setModalOpen(false), []);
 
   function handleSaved() {
-    setRefreshKey((k) => k + 1);
+    setModalOpen(false);
   }
 
   return (
@@ -30,17 +32,12 @@ export function ContactPortfolioWithPaymentModal({
         onOpenPaymentModal={openModal}
       />
 
-      <ContactManualPaymentSection
-        key={refreshKey}
-        contactId={contactId}
-        onOpenModal={openModal}
-      />
-
       {modalOpen && (
         <ManualPaymentSetupModal
           contactId={contactId}
           onClose={closeModal}
           onSaved={handleSaved}
+          prefill={modalPrefill}
         />
       )}
     </>

@@ -129,12 +129,14 @@ function ContractDetailCard({
   onToggle,
   contactId,
   onDelete,
+  onOpenPaymentModal,
 }: {
   contract: ContractRow;
   isExpanded: boolean;
   onToggle: () => void;
   contactId: string;
   onDelete: (id: string) => void;
+  onOpenPaymentModal?: (prefill?: { providerName?: string; productName?: string; segment?: string; variableSymbol?: string }) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -243,7 +245,7 @@ function ContractDetailCard({
 
   return (
     <div
-      className={`bg-[color:var(--wp-surface-card)] rounded-[20px] border transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md ${
+      className={`bg-[color:var(--wp-surface-card)] rounded-[20px] border transition-all duration-200 shadow-sm hover:shadow-md ${
         isExpanded
           ? "border-indigo-300 ring-2 ring-indigo-50"
           : "border-[color:var(--wp-surface-card-border)] hover:border-indigo-200"
@@ -325,7 +327,25 @@ function ContractDetailCard({
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] shadow-lg z-20 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] shadow-xl overflow-hidden z-50">
+                {onOpenPaymentModal && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onOpenPaymentModal({
+                        providerName: product.partnerName ?? undefined,
+                        productName: product.productName ?? undefined,
+                        segment: product.segment,
+                        variableSymbol: product.contractNumber ?? undefined,
+                      });
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors text-left"
+                  >
+                    <PayCard size={14} /> Doplnit platební instrukci
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handleVypoved(); }}
@@ -642,7 +662,7 @@ export function ContactContractsOverview({
 }: {
   contactId: string;
   baseQueryNoTab: string;
-  onOpenPaymentModal?: () => void;
+  onOpenPaymentModal?: (prefill?: { providerName?: string; productName?: string; segment?: string; variableSymbol?: string }) => void;
 }) {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -700,7 +720,7 @@ export function ContactContractsOverview({
           {onOpenPaymentModal && (
             <button
               type="button"
-              onClick={onOpenPaymentModal}
+              onClick={() => onOpenPaymentModal()}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] text-xs font-black uppercase tracking-widest transition-all shrink-0 min-h-[40px] flex-1 sm:flex-initial"
             >
               <PayCard size={15} strokeWidth={2.5} aria-hidden /> Doplnit platební instrukci
@@ -771,6 +791,7 @@ export function ContactContractsOverview({
                       onToggle={() => setExpandedId((prev) => (prev === c.id ? null : c.id))}
                       contactId={contactId}
                       onDelete={handleDelete}
+                      onOpenPaymentModal={onOpenPaymentModal}
                     />
                   ))}
                 </div>

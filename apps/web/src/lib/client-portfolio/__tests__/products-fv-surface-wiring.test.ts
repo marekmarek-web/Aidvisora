@@ -254,9 +254,10 @@ describe("Segment-specific rendering: detail rows smoke", () => {
     );
     const rows = canonicalPortfolioDetailRows(product);
     const labels = rows.map((r) => r.label);
+    expect(labels).toContain("Číslo smlouvy");
     expect(labels).toContain("Pojišťovna");
     expect(labels).toContain("Měsíční pojistné");
-    expect(labels).toContain("Osoby ve smlouvě");
+    expect(labels).toContain("Osoba (Pojistník)");
     expect(labels).toContain("Pojistné krytí");
     expect(labels).not.toContain("Fond / třída");
     expect(labels).not.toContain("Investiční horizont");

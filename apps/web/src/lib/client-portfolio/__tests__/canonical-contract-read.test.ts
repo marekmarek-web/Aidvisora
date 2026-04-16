@@ -106,20 +106,29 @@ describe("canonical-contract-read", () => {
   });
 
   describe("life insurance detail (ZP)", () => {
-    it("extracts ŽP fields", () => {
+       it("extracts ŽP fields", () => {
       const product = mapContractToCanonicalProduct(
         makeContract({
           segment: "ZP",
           partnerName: "Kooperativa",
           premiumAmount: "1200",
           premiumAnnual: "14400",
+          contractNumber: "ZP-2022-001",
           startDate: "2022-03-01",
           anniversaryDate: "2052-03-01",
           portfolioAttributes: {
             sumInsured: "500000",
-            persons: [{ role: "insured", name: "Jan Novák" }],
+            persons: [
+              {
+                role: "insured",
+                name: "Jan Novák",
+                personalId: "900101/1234",
+                idCardNumber: "OP999888",
+              },
+            ],
             risks: [{ label: "Smrt", amount: "500000" }],
             generalPractitioner: "MUDr. Novotný",
+            idCardNumber: "AB123456",
           },
         }),
       );
@@ -130,8 +139,12 @@ describe("canonical-contract-read", () => {
         expect(product.segmentDetail.annualPremium).toBe(14400);
         expect(product.segmentDetail.sumInsured).toBe("500000");
         expect(product.segmentDetail.persons).toHaveLength(1);
+        expect(product.segmentDetail.persons[0].personalId).toBe("900101/1234");
+        expect(product.segmentDetail.persons[0].idCardNumber).toBe("OP999888");
         expect(product.segmentDetail.risks).toHaveLength(1);
         expect(product.segmentDetail.generalPractitioner).toBe("MUDr. Novotný");
+        expect(product.segmentDetail.idCardNumber).toBe("AB123456");
+        expect(product.contractNumber).toBe("ZP-2022-001");
       }
     });
 
@@ -142,6 +155,7 @@ describe("canonical-contract-read", () => {
       if (product.segmentDetail?.kind === "life_insurance") {
         expect(product.segmentDetail.persons).toEqual([]);
         expect(product.segmentDetail.risks).toEqual([]);
+        expect(product.segmentDetail.idCardNumber).toBeNull();
       }
     });
 

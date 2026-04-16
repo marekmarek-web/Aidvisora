@@ -46,6 +46,26 @@ export function resolvePortalFundLogoPath(p: CanonicalProduct): string | null {
   return fundLibraryLogoPathForPortal(p.fvReadiness.resolvedFundId);
 }
 
+/**
+ * Když je v jednom textovém poli krytí dvakrát stejný seznam (např. chyba zdroje),
+ * sjednotí části oddělené středníkem bez změny pořadí prvního výskytu.
+ */
+export function dedupeSemicolonSeparatedPhrases(line: string): string {
+  const parts = line
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of parts) {
+    const k = p.normalize("NFC").replace(/\s+/g, " ").toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(p);
+  }
+  return out.join("; ");
+}
+
 export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = [];
   const d = p.segmentDetail;
@@ -65,6 +85,8 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
     }
     if (d.targetAmount) rows.push({ label: "Cílová částka", value: d.targetAmount });
   } else if (d?.kind === "life_insurance") {
+    const cn = p.contractNumber?.trim();
+    if (cn) rows.push({ label: "Číslo smlouvy", value: cn });
     if (d.insurer) rows.push({ label: "Pojišťovna", value: d.insurer });
     if (d.startDate) rows.push({ label: "Počátek", value: formatDisplayDateCs(d.startDate) || d.startDate });
     if (d.endDate) rows.push({ label: "Výročí / konec pojistné doby", value: formatDisplayDateCs(d.endDate) || d.endDate });
@@ -72,6 +94,12 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
       rows.push({ label: "Měsíční pojistné", value: `${d.monthlyPremium.toLocaleString("cs-CZ")} Kč` });
     }
     if (d.sumInsured) rows.push({ label: "Pojistná částka", value: d.sumInsured });
+    if (d.generalPractitioner?.trim()) {
+      rows.push({ label: "Praktický lékař", value: d.generalPractitioner.trim() });
+    }
+    if (d.idCardNumber?.trim()) {
+      rows.push({ label: "Číslo dokladu (OP/pas)", value: d.idCardNumber.trim() });
+    }
     if (d.persons.length) {
       const PERSON_ROLE_LABELS: Record<string, string> = {
         policyholder: "Pojistník",
@@ -80,17 +108,28 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
         beneficiary: "Oprávněná osoba",
         other: "Osoba",
       };
-      const personSummaryParts: string[] = d.persons.map((person) => {
+      for (const person of d.persons) {
         const roleLabel = PERSON_ROLE_LABELS[person.role] ?? "Osoba";
-        return person.name || (person.birthDate ? `nar. ${formatDisplayDateCs(person.birthDate) || person.birthDate}` : roleLabel);
-      });
-      rows.push({ label: "Osoby ve smlouvě", value: personSummaryParts.join(", ") });
+        const parts: string[] = [];
+        if (person.name?.trim()) parts.push(person.name.trim());
+        const bd = person.birthDate?.trim();
+        if (bd) parts.push(`nar. ${formatDisplayDateCs(bd) || bd}`);
+        const rc = person.personalId?.trim();
+        if (rc) parts.push(`rodné číslo ${rc}`);
+        const op = person.idCardNumber?.trim();
+        if (op) parts.push(`č. dokladu: ${op}`);
+        const value = parts.length > 0 ? parts.join(" · ") : roleLabel;
+        rows.push({ label: `Osoba (${roleLabel})`, value });
+      }
     }
     if (d.risks.length) {
       const riskParts: string[] = d.risks.map((risk) =>
         risk.amount ? `${risk.label}: ${risk.amount}` : risk.label,
       );
-      rows.push({ label: "Pojistné krytí", value: riskParts.join("; ") });
+      rows.push({
+        label: "Pojistné krytí",
+        value: dedupeSemicolonSeparatedPhrases(riskParts.join("; ")),
+      });
     }
   } else if (d?.kind === "vehicle") {
     rows.push({ label: "Typ", value: d.subtype === "HAV" ? "Havarijní pojištění" : "Povinné ručení" });

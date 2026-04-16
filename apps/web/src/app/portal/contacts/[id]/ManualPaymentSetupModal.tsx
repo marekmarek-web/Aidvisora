@@ -54,18 +54,34 @@ const EMPTY_FORM: FormState = {
   visibleToClient: true,
 };
 
+export type ManualPaymentSetupPrefill = {
+  providerName?: string;
+  productName?: string;
+  segment?: string;
+  variableSymbol?: string;
+};
+
 export function ManualPaymentSetupModal({
   contactId,
   onClose,
   onSaved,
+  prefill,
 }: {
   contactId: string;
   onClose: () => void;
   /** Zavoláno po úspěšném uložení — nadřazená komponenta může obnovit seznam. */
   onSaved: () => void;
+  /** Volitelné předvyplnění z kontextu smlouvy. */
+  prefill?: ManualPaymentSetupPrefill;
 }) {
   const [partners, setPartners] = useState<PartnerOption[]>([]);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>({
+    ...EMPTY_FORM,
+    ...(prefill?.providerName ? { providerName: prefill.providerName } : {}),
+    ...(prefill?.productName ? { productName: prefill.productName } : {}),
+    ...(prefill?.segment ? { segment: prefill.segment } : {}),
+    ...(prefill?.variableSymbol ? { variableSymbol: prefill.variableSymbol } : {}),
+  });
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);

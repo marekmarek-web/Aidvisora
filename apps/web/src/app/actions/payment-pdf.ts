@@ -176,7 +176,7 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
       contractSegment: sql<string | null>`(
         SELECT c.segment FROM contracts c
         WHERE c.tenant_id = ${clientPaymentSetups.tenantId}
-          AND c.contact_id = ${clientPaymentSetups.contactId}
+          AND c.client_id = ${clientPaymentSetups.contactId}
           AND c.contract_number = ${clientPaymentSetups.contractNumber}
           AND c.archived_at IS NULL
         LIMIT 1
@@ -184,7 +184,7 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
       contractPortfolioStatus: sql<string | null>`(
         SELECT c.portfolio_status FROM contracts c
         WHERE c.tenant_id = ${clientPaymentSetups.tenantId}
-          AND c.contact_id = ${clientPaymentSetups.contactId}
+          AND c.client_id = ${clientPaymentSetups.contactId}
           AND c.contract_number = ${clientPaymentSetups.contractNumber}
           AND c.archived_at IS NULL
         LIMIT 1

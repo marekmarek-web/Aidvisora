@@ -17,6 +17,8 @@ export type PortfolioPersonEntry = {
   name?: string;
   birthDate?: string;
   personalId?: string;
+  /** Číslo dokladu u dané osoby (extrakt), pokud je uvedeno zvláť od pojistníka. */
+  idCardNumber?: string;
 };
 
 export type PortfolioRiskEntry = {

@@ -121,6 +121,8 @@ export type LifeInsuranceDetail = {
   persons: PortfolioPersonEntry[];
   risks: PortfolioRiskEntry[];
   generalPractitioner: string | null;
+  /** Číslo OP / pas z dokumentu (portfolio_attributes), obvykle u pojistníka. */
+  idCardNumber: string | null;
   paymentVariableSymbol?: string | null;
   paymentAccountDisplay?: string | null;
   paymentFrequencyLabel?: string | null;
@@ -305,6 +307,7 @@ function buildLifeInsuranceDetail(
     persons: safePersons(attrs.persons),
     risks: safeRisks(attrs.risks),
     generalPractitioner: safeString(attrs.generalPractitioner),
+    idCardNumber: safeString(attrs.idCardNumber),
     paymentVariableSymbol: safeString(attrs.paymentVariableSymbol),
     paymentAccountDisplay: safeString(attrs.paymentAccountDisplay),
     paymentFrequencyLabel: safeString(attrs.paymentFrequencyLabel),
