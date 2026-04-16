@@ -1370,6 +1370,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         {onPaymentsRoute ? (
           <ClientPaymentsView
             paymentInstructions={initialData.paymentInstructions}
+            paymentsLoadFailed={initialData.paymentsLoadFailed}
             embeddedInMobileShell
           />
         ) : null}

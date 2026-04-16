@@ -91,7 +91,7 @@ export function QrPaymentModal({ open, onClose, payment }: QrPaymentModalProps) 
           <h3 className="text-xl font-black text-slate-900">QR Platba</h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800"
+            className="min-h-[44px] min-w-[44px] rounded-full border border-slate-200 bg-white text-slate-500 hover:text-slate-800 grid place-items-center touch-manipulation"
             aria-label="Zavřít QR modal"
           >
             <X size={16} />

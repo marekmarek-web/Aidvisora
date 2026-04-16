@@ -21,7 +21,7 @@ import {
   portalPaymentsViewKind,
   variableSymbolDisplay,
 } from "@/lib/client-portal/portal-payments-read-model";
-import { resolveInstitutionLogo, institutionInitials } from "@/lib/institutions/institution-logo";
+import { resolveInstitutionLogo } from "@/lib/institutions/institution-logo";
 import { QrPaymentModal } from "../QrPaymentModal";
 
 type ClientPaymentsViewProps = {
@@ -88,23 +88,11 @@ function CopyMiniButton({ text, label }: { text: string; label: string }) {
           /* ignore */
         }
       }}
-      className="shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition-colors"
+      className="shrink-0 min-h-[44px] min-w-[64px] rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition-colors touch-manipulation"
     >
       {done ? "Hotovo" : label}
     </button>
   );
-}
-
-function InstitutionLogo({ name }: { name: string | null | undefined }) {
-  const logo = resolveInstitutionLogo(name);
-  if (logo) {
-    return (
-      <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center shrink-0">
-        <Image src={logo.src} alt={logo.alt} width={48} height={48} className="object-contain p-1" unoptimized />
-      </div>
-    );
-  }
-  return null;
 }
 
 function paymentContractStatusBadgeClasses(linkedStatus: string | null | undefined): string {
@@ -143,7 +131,7 @@ export function ClientPaymentsView({
   }, [selectedIndex, paymentInstructions]);
 
   return (
-    <div className="space-y-6 sm:space-y-8 client-fade-in">
+    <div className="space-y-6 sm:space-y-8 client-fade-in min-w-0 w-full">
       {!embeddedInMobileShell ? (
         <div>
           <h2 className="text-2xl sm:text-3xl font-display font-black text-slate-900 tracking-tight">Platby a příkazy</h2>
@@ -272,7 +260,7 @@ export function ClientPaymentsView({
                       ) : null}
                       {instruction.specificSymbol ? (
                         <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               Specifický symbol
                             </span>
@@ -283,7 +271,7 @@ export function ClientPaymentsView({
                       ) : null}
                       {instruction.constantSymbol ? (
                         <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                               Konstantní symbol
                             </span>
@@ -302,7 +290,7 @@ export function ClientPaymentsView({
                       <button
                         type="button"
                         onClick={() => setSelectedIndex(index)}
-                        className="mt-auto w-full min-h-[48px] rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-black uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2"
+                        className="mt-auto w-full min-h-[48px] rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-black uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
                       >
                         <QrCode size={16} />
                         Zobrazit QR kód

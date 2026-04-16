@@ -48,6 +48,8 @@ export type ClientPortalSessionBundle = {
   unreadNotificationsCount: number;
   unreadMessagesCount: number;
   paymentInstructions: PaymentInstruction[];
+  /** True when payment instructions failed to load — prevents false empty state in portal. */
+  paymentsLoadFailed: boolean;
   advisorMaterialRequests: MaterialRequestListItem[];
   financialSummaryRaw: ClientFinancialSummaryView;
   /** Jen dokumenty zveřejněné klientovi — pro odkaz „související dokument“ v portfoliu (web + mobil). */
