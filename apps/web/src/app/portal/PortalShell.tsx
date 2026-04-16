@@ -34,6 +34,8 @@ const SIDEBAR_STORAGE_KEY = "portal-sidebar";
 const PORTAL_SIDEBAR_FLOAT_INSET_PX = 20;
 /** Mezera mezi sidebar kartou a hlavním panelem. */
 const PORTAL_SIDEBAR_MAIN_GAP_PX = 16;
+/** Levý „peek“ pruh pro otevření draweru myší na mobilu (sliding nav). */
+const PORTAL_SIDEBAR_EDGE_PEEK_PX = 14;
 const SIDEBAR_WIDTH_MIN = 240;
 const SIDEBAR_WIDTH_MAX = 320;
 const SIDEBAR_WIDTH_DEFAULT = 300;
@@ -244,6 +246,23 @@ function PortalShellInner({
     setSidebarDrawerOpen(false);
   }, [setSidebarDrawerOpen]);
 
+  const [pointerFineHover, setPointerFineHover] = useState(false);
+  useEffect(() => {
+    const mqHover = window.matchMedia("(hover: hover)");
+    const mqFine = window.matchMedia("(pointer: fine)");
+    const update = () => setPointerFineHover(mqHover.matches && mqFine.matches);
+    update();
+    mqHover.addEventListener("change", update);
+    mqFine.addEventListener("change", update);
+    return () => {
+      mqHover.removeEventListener("change", update);
+      mqFine.removeEventListener("change", update);
+    };
+  }, []);
+
+  const slidingNavMode = !isDesktop || narrowDesktopOverlay;
+  const sidebarEdgePeekWidthPx = narrowDesktopOverlay ? mainMarginPx : PORTAL_SIDEBAR_EDGE_PEEK_PX;
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -292,6 +311,14 @@ function PortalShellInner({
           mobileDrawerOpen={sidebarDrawerOpen}
           onMobileDrawerClose={closeMobileSidebarDrawer}
         />
+        {slidingNavMode && !sidebarDrawerOpen && pointerFineHover ? (
+          <div
+            className="fixed left-0 top-0 bottom-0 z-overlay pointer-events-auto"
+            style={{ width: sidebarEdgePeekWidthPx }}
+            aria-hidden
+            onMouseEnter={() => setSidebarDrawerOpen(true)}
+          />
+        ) : null}
         <div
           className={clsx(
             "relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col pb-[var(--safe-area-bottom)] max-md:min-h-0",
