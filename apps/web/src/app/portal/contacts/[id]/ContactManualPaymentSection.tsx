@@ -21,7 +21,7 @@ import {
 } from "@/app/actions/manual-payment-setup";
 import { getPartnersForTenant } from "@/app/actions/contracts";
 import { resolveInstitutionLogo, institutionInitials } from "@/lib/institutions/institution-logo";
-import { SEGMENT_LABELS } from "db";
+import { SEGMENT_LABELS } from "@/lib/db-constants";
 
 type PartnerOption = { id: string; name: string; segment: string };
 
